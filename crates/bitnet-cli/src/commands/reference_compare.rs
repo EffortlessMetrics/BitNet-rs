@@ -8,6 +8,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+const REQUIRED_QWEN3_CHECKPOINT_STAGES: &[&str] = &[
+    "decode.input_embedding",
+    "block.attention_norm",
+    "attention.q_proj",
+    "attention.k_proj",
+    "attention.v_proj",
+    "attention.q_rope",
+    "model.final_norm",
+    "lm_head.logits",
+];
+
+const CHECKPOINT_SAMPLE_ATOL: f64 = 1.0e-4;
+
 /// Validate and normalize an external-reference comparison artifact.
 #[derive(Args, Debug)]
 pub struct ReferenceCompareCommand {
@@ -113,10 +126,12 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
             "first_divergence": first_divergence,
             "reference": side_summary(&artifact["reference"]),
             "bitnet_rs": side_summary(bitnet_side(artifact)),
+            "checkpoints": checkpoint_comparison_summary(artifact),
         },
         "may_claim": [
             "The artifact is machine-checkable against an external reference run.",
             "First divergence evidence can separate tokenizer, prompt-template, decode, logits, and text-decoding issues.",
+            "For checkpoint artifacts, bounded internal tensor summaries can localize shared transformer math drift before final logits.",
             "For BitNet CPU artifacts, strict loader, tokenizer, backend, kernel, and fallback evidence was checked."
         ],
         "must_not_claim": [
@@ -137,6 +152,7 @@ fn validate_artifact(artifact: &Value) -> Vec<&'static str> {
             "backend_reference_compare"
                 | "slm_reference_divergence"
                 | "bitnet_cpu_reference_compare"
+                | "slm_reference_checkpoint_compare"
         )
     ) {
         failures.push("artifact_kind");
@@ -168,6 +184,10 @@ fn validate_artifact(artifact: &Value) -> Vec<&'static str> {
     }
     validate_side("reference", &artifact["reference"], &mut failures);
     validate_side("bitnet_rs", bitnet_side(artifact), &mut failures);
+    if is_checkpoint_artifact(artifact) {
+        validate_checkpoint_side("reference", &artifact["reference"], &mut failures);
+        validate_checkpoint_side("bitnet_rs", bitnet_side(artifact), &mut failures);
+    }
     if bitnet_artifact {
         validate_bitnet_contract(artifact, &mut failures);
     }
@@ -201,6 +221,48 @@ fn validate_side(label: &'static str, side: &Value, failures: &mut Vec<&'static 
     }
     if side["text"].as_str().is_none() {
         failures.push(if label == "reference" { "reference_text" } else { "bitnet_rs_text" });
+    }
+}
+
+fn validate_checkpoint_side(label: &'static str, side: &Value, failures: &mut Vec<&'static str>) {
+    let Some(checkpoints) = side.get("checkpoints").and_then(Value::as_array) else {
+        failures.push(if label == "reference" {
+            "reference_checkpoints"
+        } else {
+            "bitnet_rs_checkpoints"
+        });
+        return;
+    };
+    if checkpoints.is_empty() {
+        failures.push(if label == "reference" {
+            "reference_checkpoints"
+        } else {
+            "bitnet_rs_checkpoints"
+        });
+        return;
+    }
+    let has_required = REQUIRED_QWEN3_CHECKPOINT_STAGES
+        .iter()
+        .all(|stage| checkpoint_by_stage(side, stage).is_some());
+    if !has_required {
+        failures.push(if label == "reference" {
+            "reference_required_checkpoints"
+        } else {
+            "bitnet_rs_required_checkpoints"
+        });
+    }
+    for stage in REQUIRED_QWEN3_CHECKPOINT_STAGES {
+        let Some(checkpoint) = checkpoint_by_stage(side, stage) else {
+            continue;
+        };
+        if !checkpoint_payload_is_complete(checkpoint) {
+            failures.push(if label == "reference" {
+                "reference_checkpoint_payload"
+            } else {
+                "bitnet_rs_checkpoint_payload"
+            });
+            break;
+        }
     }
 }
 
@@ -264,6 +326,11 @@ fn first_divergence(artifact: &Value) -> Option<Value> {
             &bitnet["prompt_ids"],
         ));
     }
+    if is_checkpoint_artifact(artifact)
+        && let Some(divergence) = first_checkpoint_divergence(&artifact["reference"], bitnet)
+    {
+        return Some(divergence);
+    }
     let generated_divergence = first_id_divergence(
         ids(reference.get("generated_ids"))?,
         ids(bitnet.get("generated_ids"))?,
@@ -326,6 +393,111 @@ fn first_divergence(artifact: &Value) -> Option<Value> {
         ));
     }
     None
+}
+
+fn first_checkpoint_divergence(reference: &Value, bitnet: &Value) -> Option<Value> {
+    for (index, stage) in REQUIRED_QWEN3_CHECKPOINT_STAGES.iter().enumerate() {
+        let reference_checkpoint = checkpoint_by_stage(reference, stage)?;
+        let bitnet_checkpoint = checkpoint_by_stage(bitnet, stage)?;
+        if reference_checkpoint["dims"] != bitnet_checkpoint["dims"] {
+            return Some(divergence(
+                "checkpoint",
+                "shared_transformer_math_checkpoint_shape",
+                index,
+                reference_checkpoint,
+                bitnet_checkpoint,
+            ));
+        }
+        if checkpoint_metadata_differ(reference_checkpoint, bitnet_checkpoint) {
+            return Some(divergence(
+                "checkpoint",
+                "shared_transformer_math_checkpoint_values",
+                index,
+                reference_checkpoint,
+                bitnet_checkpoint,
+            ));
+        }
+        if checkpoint_values_differ(reference_checkpoint, bitnet_checkpoint) {
+            return Some(divergence(
+                "checkpoint",
+                "shared_transformer_math_checkpoint_values",
+                index,
+                reference_checkpoint,
+                bitnet_checkpoint,
+            ));
+        }
+    }
+    None
+}
+
+fn checkpoint_by_stage<'a>(side: &'a Value, stage: &str) -> Option<&'a Value> {
+    side.get("checkpoints")?
+        .as_array()?
+        .iter()
+        .find(|checkpoint| checkpoint["stage"].as_str() == Some(stage))
+}
+
+fn checkpoint_payload_is_complete(checkpoint: &Value) -> bool {
+    checkpoint["stage"].as_str().is_some_and(|stage| !stage.is_empty())
+        && checkpoint
+            .get("dims")
+            .and_then(Value::as_array)
+            .is_some_and(|dims| !dims.is_empty() && dims.iter().all(|dim| dim.as_u64().is_some()))
+        && checkpoint["dtype"].as_str().is_some_and(|dtype| !dtype.is_empty())
+        && checkpoint["len"].as_u64().is_some()
+        && checkpoint["finite"].as_u64().is_some()
+        && checkpoint["nonfinite"].as_u64().is_some()
+        && checkpoint["mean"].as_f64().is_some()
+        && checkpoint["rms"].as_f64().is_some()
+        && checkpoint["min"].as_f64().is_some()
+        && checkpoint["max"].as_f64().is_some()
+        && checkpoint["checksum"].as_f64().is_some()
+        && numeric_array(checkpoint.get("sample")).is_some_and(|sample| !sample.is_empty())
+}
+
+fn checkpoint_metadata_differ(reference: &Value, bitnet: &Value) -> bool {
+    reference["dtype"] != bitnet["dtype"]
+        || reference["len"] != bitnet["len"]
+        || reference["finite"] != bitnet["finite"]
+        || reference["nonfinite"] != bitnet["nonfinite"]
+}
+
+fn checkpoint_values_differ(reference: &Value, bitnet: &Value) -> bool {
+    if let Some(max_abs_diff) = bitnet
+        .get("max_abs_diff_vs_reference")
+        .and_then(Value::as_f64)
+        .or_else(|| reference.get("max_abs_diff_vs_bitnet_rs").and_then(Value::as_f64))
+    {
+        return max_abs_diff > CHECKPOINT_SAMPLE_ATOL;
+    }
+
+    for field in ["mean", "rms", "min", "max", "checksum"] {
+        let Some(reference_value) = reference.get(field).and_then(Value::as_f64) else {
+            return true;
+        };
+        let Some(bitnet_value) = bitnet.get(field).and_then(Value::as_f64) else {
+            return true;
+        };
+        if (reference_value - bitnet_value).abs() > CHECKPOINT_SAMPLE_ATOL {
+            return true;
+        }
+    }
+
+    match (numeric_array(reference.get("sample")), numeric_array(bitnet.get("sample"))) {
+        (Some(reference_sample), Some(bitnet_sample))
+            if reference_sample.len() == bitnet_sample.len() =>
+        {
+            reference_sample
+                .iter()
+                .zip(bitnet_sample.iter())
+                .any(|(left, right)| (left - right).abs() > CHECKPOINT_SAMPLE_ATOL)
+        }
+        _ => false,
+    }
+}
+
+fn numeric_array(value: Option<&Value>) -> Option<Vec<f64>> {
+    value?.as_array()?.iter().map(Value::as_f64).collect()
 }
 
 fn first_id_divergence(left: Vec<u64>, right: Vec<u64>) -> Option<usize> {
@@ -402,12 +574,58 @@ fn side_summary(side: &Value) -> Value {
         "text": side["text"],
         "chosen_id": chosen_id(side),
         "topk_step0": topk(side).cloned().unwrap_or(Value::Null),
+        "checkpoints": checkpoint_side_summary(side),
     })
 }
 
 fn is_bitnet_artifact(artifact: &Value) -> bool {
     artifact["model_family"].as_str() == Some("bitnet")
         || artifact["artifact_kind"].as_str() == Some("bitnet_cpu_reference_compare")
+}
+
+fn is_checkpoint_artifact(artifact: &Value) -> bool {
+    artifact["artifact_kind"].as_str() == Some("slm_reference_checkpoint_compare")
+}
+
+fn checkpoint_side_summary(side: &Value) -> Value {
+    let stages = side
+        .get("checkpoints")
+        .and_then(Value::as_array)
+        .map(|checkpoints| {
+            checkpoints
+                .iter()
+                .filter_map(|checkpoint| checkpoint["stage"].as_str())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    json!({
+        "count": stages.len(),
+        "stages": stages,
+    })
+}
+
+fn checkpoint_comparison_summary(artifact: &Value) -> Value {
+    if !is_checkpoint_artifact(artifact) {
+        return Value::Null;
+    }
+    let reference = &artifact["reference"];
+    let bitnet = bitnet_side(artifact);
+    let missing_reference = REQUIRED_QWEN3_CHECKPOINT_STAGES
+        .iter()
+        .filter(|stage| checkpoint_by_stage(reference, stage).is_none())
+        .copied()
+        .collect::<Vec<_>>();
+    let missing_bitnet = REQUIRED_QWEN3_CHECKPOINT_STAGES
+        .iter()
+        .filter(|stage| checkpoint_by_stage(bitnet, stage).is_none())
+        .copied()
+        .collect::<Vec<_>>();
+    json!({
+        "required_stages": REQUIRED_QWEN3_CHECKPOINT_STAGES,
+        "missing_reference_stages": missing_reference,
+        "missing_bitnet_rs_stages": missing_bitnet,
+        "sample_atol": CHECKPOINT_SAMPLE_ATOL,
+    })
 }
 
 fn string_at<'a>(value: &'a Value, paths: &[&[&str]]) -> Option<&'a str> {
@@ -522,6 +740,70 @@ mod tests {
         })
     }
 
+    fn checkpoint(stage: &str, sample: &[f64]) -> Value {
+        json!({
+            "stage": stage,
+            "dtype": "F32",
+            "dims": [1, sample.len()],
+            "len": sample.len(),
+            "finite": sample.len(),
+            "nonfinite": 0,
+            "mean": 0.0,
+            "rms": 1.0,
+            "min": -1.0,
+            "max": 1.0,
+            "checksum": sample.iter().sum::<f64>(),
+            "sample": sample,
+        })
+    }
+
+    fn checkpoint_artifact(bitnet_q_proj_sample: &[f64]) -> Value {
+        let reference_checkpoints = REQUIRED_QWEN3_CHECKPOINT_STAGES
+            .iter()
+            .map(|stage| checkpoint(stage, &[0.1, 0.2, 0.3]))
+            .collect::<Vec<_>>();
+        let bitnet_checkpoints = REQUIRED_QWEN3_CHECKPOINT_STAGES
+            .iter()
+            .map(|stage| {
+                if *stage == "attention.q_proj" {
+                    checkpoint(stage, bitnet_q_proj_sample)
+                } else {
+                    checkpoint(stage, &[0.1, 0.2, 0.3])
+                }
+            })
+            .collect::<Vec<_>>();
+
+        json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "slm_reference_checkpoint_compare",
+            "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+            "model_family": "qwen3",
+            "prompt_text": "What is 2+2?",
+            "prompt_template": "qwen",
+            "bos": false,
+            "reference": {
+                "backend": "known-good-reference",
+                "kernel": "reference",
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [19],
+                "text": "4",
+                "topk_step0": [[19, 10.0], [20, 1.0]],
+                "chosen_id": 19,
+                "checkpoints": reference_checkpoints
+            },
+            "bitnet_rs": {
+                "backend": "cpu-rust",
+                "kernel": "dense-q8_0-reference",
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [4594],
+                "text": "ł",
+                "topk_step0": [[4594, 10.0], [19, 1.0]],
+                "chosen_id": 4594,
+                "checkpoints": bitnet_checkpoints
+            }
+        })
+    }
+
     #[test]
     fn reference_divergence_passes_matching_artifact() {
         let report =
@@ -558,6 +840,108 @@ mod tests {
         assert_eq!(
             report["comparison"]["first_divergence"]["classification"],
             "logits_or_shared_transformer_math"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_records_checkpoint_mismatch_before_logits() {
+        let report = build_reference_divergence_receipt(
+            Path::new("compare.json"),
+            &checkpoint_artifact(&[0.1, 9.0, 0.3]),
+        );
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_values"
+        );
+        assert_eq!(
+            report["comparison"]["first_divergence"]["reference"]["stage"],
+            "attention.q_proj"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_requires_checkpoint_pack_for_checkpoint_artifacts() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        if let Some(reference) = input["reference"].as_object_mut() {
+            reference.remove("checkpoints");
+        }
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], false);
+        assert!(
+            report["validation"]["failed_rules"]
+                .as_array()
+                .is_some_and(|failed| failed.iter().any(|rule| rule == "reference_checkpoints"))
+        );
+    }
+
+    #[test]
+    fn reference_divergence_requires_complete_checkpoint_payloads() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        if let Some(checkpoint) =
+            input["reference"]["checkpoints"].get_mut(0).and_then(Value::as_object_mut)
+        {
+            checkpoint.remove("sample");
+        }
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], false);
+        assert!(report["validation"]["failed_rules"].as_array().is_some_and(|failed| {
+            failed.iter().any(|rule| rule == "reference_checkpoint_payload")
+        }));
+    }
+
+    #[test]
+    fn reference_divergence_records_checkpoint_shape_mismatch() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        input["bitnet_rs"]["checkpoints"][2]["dims"] = json!([1, 4]);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_shape"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_records_checkpoint_checksum_mismatch() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        input["bitnet_rs"]["checkpoints"][2]["checksum"] = json!(9.0);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_values"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_honors_checkpoint_max_abs_diff() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        input["bitnet_rs"]["checkpoints"][2]["max_abs_diff_vs_reference"] = json!(0.01);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_values"
         );
     }
 
