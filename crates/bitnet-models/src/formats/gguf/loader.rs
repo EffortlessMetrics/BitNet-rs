@@ -871,27 +871,32 @@ impl GgufLoader {
         config: &BitNetConfig,
     ) -> Result<()> {
         let tensor_names = reader.tensor_names();
-        let has_any = |candidates: &[String]| -> bool {
+        Self::validate_strict_tensor_authority_names(&tensor_names, config)
+    }
+
+    fn validate_strict_tensor_authority_names(
+        tensor_names: &[&str],
+        config: &BitNetConfig,
+    ) -> Result<()> {
+        let has_any = |candidates: &[&str]| -> bool {
             candidates.iter().any(|candidate| tensor_names.iter().any(|name| name == candidate))
         };
 
         let mut missing = Vec::new();
 
-        if !has_any(&[
-            "token_embd.weight".to_string(),
-            "tok_embeddings.weight".to_string(),
-            "embed_tokens.weight".to_string(),
-            "model.embed_tokens.weight".to_string(),
-            "transformer.wte.weight".to_string(),
-        ]) {
+        let has_embeddings = has_any(&[
+            "token_embd.weight",
+            "tok_embeddings.weight",
+            "embed_tokens.weight",
+            "model.embed_tokens.weight",
+            "transformer.wte.weight",
+        ]);
+        if !has_embeddings {
             missing.push("token embedding weight".to_string());
         }
 
-        if !has_any(&[
-            "output.weight".to_string(),
-            "lm_head.weight".to_string(),
-            "model.lm_head.weight".to_string(),
-        ]) {
+        let has_output = has_any(&["output.weight", "lm_head.weight", "model.lm_head.weight"]);
+        if !has_output && !has_embeddings {
             missing.push("output/lm head weight".to_string());
         }
 
@@ -918,7 +923,10 @@ impl GgufLoader {
                             .map(move |suffix| format!("{}.{}.{}", prefix, layer_idx, suffix))
                     })
                     .collect();
-                if !has_any(&candidates) {
+                let has_group = candidates
+                    .iter()
+                    .any(|candidate| tensor_names.iter().any(|name| name == candidate));
+                if !has_group {
                     missing.push(format!("layer {} tensor group {:?}", layer_idx, suffix_group));
                 }
             }
@@ -1891,5 +1899,51 @@ impl GgufLoader {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn one_layer_config() -> BitNetConfig {
+        let mut config = BitNetConfig::default();
+        config.model.num_layers = 1;
+        config
+    }
+
+    fn one_layer_names_with_embedding() -> Vec<&'static str> {
+        vec![
+            "token_embd.weight",
+            "blk.0.attn_q.weight",
+            "blk.0.attn_k.weight",
+            "blk.0.attn_v.weight",
+            "blk.0.attn_output.weight",
+            "blk.0.ffn_gate.weight",
+            "blk.0.ffn_up.weight",
+            "blk.0.ffn_down.weight",
+            "blk.0.attn_norm.weight",
+            "blk.0.ffn_norm.weight",
+        ]
+    }
+
+    #[test]
+    fn strict_tensor_authority_allows_tied_lm_head_from_embeddings() {
+        let names = one_layer_names_with_embedding();
+
+        GgufLoader::validate_strict_tensor_authority_names(&names, &one_layer_config())
+            .expect("tied lm_head should be valid when token embeddings are present");
+    }
+
+    #[test]
+    fn strict_tensor_authority_rejects_missing_logits_source() {
+        let mut names = one_layer_names_with_embedding();
+        names.retain(|name| *name != "token_embd.weight");
+
+        let err = GgufLoader::validate_strict_tensor_authority_names(&names, &one_layer_config())
+            .expect_err("missing embeddings and output head should be rejected");
+        let msg = err.to_string();
+        assert!(msg.contains("token embedding weight"), "got: {msg}");
+        assert!(msg.contains("output/lm head weight"), "got: {msg}");
     }
 }
