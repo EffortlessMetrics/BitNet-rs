@@ -1020,9 +1020,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008Y"
-status = "blocked"
-pr = 4696
-branch = "codex/slm-cpu-008y-blocked"
+status = "ready"
+branch = "codex/slm-cpu-008y-reference-checkpoints"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
