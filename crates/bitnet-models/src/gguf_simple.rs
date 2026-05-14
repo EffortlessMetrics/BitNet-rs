@@ -711,6 +711,11 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
 fn extract_config_from_gguf(reader: &GgufReader) -> Result<bitnet_common::BitNetConfig> {
     let mut config = bitnet_common::BitNetConfig::default();
 
+    if let Some(architecture) = reader.get_string_metadata("general.architecture") {
+        config.model.apply_architecture_defaults(&architecture);
+        tracing::debug!("Applied architecture defaults from general.architecture={architecture}");
+    }
+
     tracing::trace!(
         "Extracting config from GGUF (defaults: hidden={}, n_heads={}, n_kv_heads={})",
         config.model.hidden_size,
