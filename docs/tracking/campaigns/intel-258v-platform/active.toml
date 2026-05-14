@@ -3410,8 +3410,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-003"
-status = "in_progress"
+status = "pr_open"
+pr = 4721
 branch = "codex/lunar-lake/LNL258V-OP-003-openvino-ask-evidence"
+head_sha = "9bd37b412c3d193b95491c54de38ddd1c8235275"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

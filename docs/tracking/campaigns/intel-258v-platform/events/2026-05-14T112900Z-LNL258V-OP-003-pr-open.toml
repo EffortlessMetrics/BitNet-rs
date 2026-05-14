@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T11:29:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4721
+branch = "codex/lunar-lake/LNL258V-OP-003-openvino-ask-evidence"
+head_sha = "9bd37b412c3d193b95491c54de38ddd1c8235275"
+summary = "Opened LNL258V-OP-003 to index OpenVINO GPU/NPU operator-ask receipts in Lunar Lake operator readiness."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4721",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The PR updates OpenVINO GPU/NPU candidate routes to use the existing bounded operator-ask receipts as answer-gate evidence.",
+  "LLMPipeline smoke receipts remain supporting evidence and the OpenVINO phase-runner remains phase evidence.",
+  "Dense Qwen CPU remains the default ask route; no new inference, broad dense SLM quality, speedup, Arc/NPU acceleration, native OpenCL proof, native NPU proof, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
