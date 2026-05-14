@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T03:18:39Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-004"
+event = "pr_open"
+pr = 4686
+head_sha = "ba69e50c43572131133b87ec31d3a6c0cdde3190"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4686 for M4-BITNET-ASK-004 BitNet `bitnet mac ask` operator repair guidance.",
+  "The PR prints compact stderr repair steps for accepted tokenizer authority, tokenizer SHA checks, model cache fetch/verify, explicit GGUF verification, and `bitnet mac models` cache inspection while keeping durable failure receipts.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad performance, and speedup claims remain disabled.",
+]
