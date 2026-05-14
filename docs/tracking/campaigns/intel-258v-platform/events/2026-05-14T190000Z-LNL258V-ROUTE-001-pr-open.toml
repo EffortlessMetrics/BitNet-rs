@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T19:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4771
+branch = "codex/lunar-lake/LNL258V-ROUTE-001-promotion-ledger"
+head_sha = "c91dd8905d06c5c8b0164bd12647d09b02c0b4ff"
+summary = "Opened LNL258V-ROUTE-001 to add a policy-only Lunar Lake route promotion ledger."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4771",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+]
+
+notes = [
+  "The PR adds `bitnet lunar-lake promote` and a committed route promotion ledger from existing readiness and comparison receipts.",
+  "Dense Qwen CPU is promoted for regression_tiny, ask_short, and ask_normal; OpenVINO GPU/NPU remain candidates until benchmark-qualified speedup or power evidence plus profile regression evidence exists.",
+  "No new inference, broad dense SLM quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or runtime auto-dispatch change is claimed.",
+]

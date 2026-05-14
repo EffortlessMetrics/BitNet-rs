@@ -1,0 +1,261 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_route_promotion_ledger",
+  "proof_stage": "route_promotion_policy_recorded",
+  "created_utc": "2026-05-14T17:15:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "promotion_ready": true,
+  "default_route_id": "dense_slm_default_cpu",
+  "auto_route_policy": {
+    "policy_stage": "policy_only_no_auto_dispatch_change",
+    "default_route": "dense_slm_default_cpu",
+    "hidden_fallback_allowed": false,
+    "cpu_default_until_profile_promoted": true,
+    "candidate_routes_require_profile_promotion": true,
+    "route_reason_required": true,
+    "notes": [
+      "dense Qwen CPU remains the user-facing auto/default route",
+      "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion",
+      "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists"
+    ]
+  },
+  "workload_profiles": [
+    {
+      "profile_id": "regression_tiny",
+      "prompt_tokens": "<=64",
+      "output_tokens": "<=32",
+      "purpose": "cheap strict regression smoke for local runs",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": []
+    },
+    {
+      "profile_id": "ask_short",
+      "prompt_tokens": "<=64",
+      "output_tokens": "<=32",
+      "purpose": "one-off short prompt and short answer",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ]
+    },
+    {
+      "profile_id": "ask_normal",
+      "prompt_tokens": "<=512",
+      "output_tokens": "<=128",
+      "purpose": "default local assistant question profile",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ]
+    },
+    {
+      "profile_id": "prefill_heavy",
+      "prompt_tokens": ">=2048",
+      "output_tokens": "<=64",
+      "purpose": "long prompt with short answer where GPU/NPU prefill may earn promotion",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ]
+    },
+    {
+      "profile_id": "decode_heavy",
+      "prompt_tokens": "<=256",
+      "output_tokens": ">=512",
+      "purpose": "long answer where steady decode throughput must be measured",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ]
+    },
+    {
+      "profile_id": "structured",
+      "prompt_tokens": "<=512",
+      "output_tokens": "<=256",
+      "purpose": "bounded JSON or tool-style output with deterministic answer gates",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu"
+      ]
+    },
+    {
+      "profile_id": "bitnet_strict_reference",
+      "prompt_tokens": "fixed BitNet corpus",
+      "output_tokens": "bounded",
+      "purpose": "BitNet CPU semantic/performance reference, not general dense SLM ask",
+      "promoted_route": "bitnet_reference_cpu",
+      "candidate_routes": []
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "dense_slm_default_cpu",
+      "status": "promoted",
+      "promoted_for": [
+        "regression_tiny",
+        "ask_short",
+        "ask_normal"
+      ],
+      "blocked_for": [
+        "accelerator_required",
+        "bitnet_strict_reference"
+      ],
+      "required_evidence": [
+        "fallback_used=false",
+        "operator_regression_or_comparison_ready",
+        "answer_gate",
+        "phase_timing"
+      ],
+      "present_evidence": [
+        "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+        "slm-phase-warm-session-qwen25-cpu.json"
+      ],
+      "missing_evidence": [],
+      "selected_backend": "cpu-rust",
+      "runtime_api": "cpu",
+      "fallback_policy": "strict_no_fallback",
+      "answer_gate_evidence": "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+      "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "phase_timing_present": true,
+      "speedup_claim": false,
+      "acceleration_claim": false,
+      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "reason": "Dense Qwen CPU is promoted as the default route because answer gates, phase evidence, strict no-fallback identity, and comparison readiness are present."
+    },
+    {
+      "route_id": "bitnet_reference_cpu",
+      "status": "promoted",
+      "promoted_for": [
+        "bitnet_strict_reference"
+      ],
+      "blocked_for": [
+        "general_dense_slm_ask",
+        "auto_default"
+      ],
+      "required_evidence": [
+        "fallback_used=false",
+        "operator_regression_or_comparison_ready",
+        "corrected_cpu_reference_bundle",
+        "direct_bitnetcpp_boundary",
+        "first_token_classifier",
+        "bitnet_external_reference_boundary",
+        "bitnet_i2s_perf_evidence"
+      ],
+      "present_evidence": [
+        "cpu-reference-bundle-after-semantic-fix.json",
+        "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json"
+      ],
+      "missing_evidence": [],
+      "selected_backend": "intel-258v-cpu-avx2",
+      "runtime_api": "cpu",
+      "fallback_policy": "strict_no_fallback",
+      "answer_gate_evidence": "cpu-reference-bundle-after-semantic-fix.json",
+      "phase_evidence": "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+      "fallback_used": false,
+      "answer_gate_passed": null,
+      "phase_timing_present": false,
+      "speedup_claim": false,
+      "acceleration_claim": false,
+      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "reason": "BitNet CPU is promoted only as the strict BitNet reference route; dense Qwen CPU remains the default user-facing route."
+    },
+    {
+      "route_id": "dense_slm_openvino_gpu_candidate",
+      "status": "candidate",
+      "promoted_for": [],
+      "blocked_for": [
+        "auto_default",
+        "cold_start"
+      ],
+      "required_evidence": [
+        "fallback_used=false",
+        "operator_regression_or_comparison_ready",
+        "answer_gate",
+        "phase_timing",
+        "benchmark_qualified_speedup_or_power_advantage",
+        "profile_regression_bundle"
+      ],
+      "present_evidence": [
+        "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+      ],
+      "missing_evidence": [
+        "benchmark_qualified_speedup_or_power_advantage",
+        "profile_regression_bundle"
+      ],
+      "selected_backend": "openvino-gpu",
+      "runtime_api": "openvino_genai",
+      "fallback_policy": "strict_no_fallback",
+      "answer_gate_evidence": "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+      "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "phase_timing_present": true,
+      "speedup_claim": false,
+      "acceleration_claim": false,
+      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "reason": "OpenVINO GPU has bounded answer and phase evidence with fallback=false, but remains a candidate until a workload-profile speedup or power advantage is recorded."
+    },
+    {
+      "route_id": "dense_slm_openvino_npu_candidate",
+      "status": "candidate",
+      "promoted_for": [],
+      "blocked_for": [
+        "auto_default",
+        "dynamic_decode",
+        "beam_search",
+        "parallel_sampling"
+      ],
+      "required_evidence": [
+        "fallback_used=false",
+        "operator_regression_or_comparison_ready",
+        "answer_gate",
+        "phase_timing",
+        "benchmark_qualified_speedup_or_power_advantage",
+        "profile_regression_bundle",
+        "npu_int4_static_greedy_constraints"
+      ],
+      "present_evidence": [
+        "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+      ],
+      "missing_evidence": [
+        "benchmark_qualified_speedup_or_power_advantage",
+        "profile_regression_bundle"
+      ],
+      "selected_backend": "openvino-npu",
+      "runtime_api": "openvino_genai",
+      "fallback_policy": "strict_no_fallback",
+      "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+      "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "phase_timing_present": true,
+      "speedup_claim": false,
+      "acceleration_claim": false,
+      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "reason": "OpenVINO NPU has bounded INT4 dense SLM answer and phase evidence with fallback=false, but remains a candidate until profile-specific advantage and constraints are recorded."
+    }
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "cpu_is_truth_path": true,
+    "dense_slm_default_is_cpu_until_speedup_qualified": true,
+    "openvino_gpu_npu_are_candidates_not_speedup_claims": true,
+    "arc_bitnet_full_inference_claimed": false,
+    "npu_bitnet_full_inference_claimed": false,
+    "qk256_accelerator_decode_claimed": false,
+    "hidden_fallback_allowed": false
+  }
+}

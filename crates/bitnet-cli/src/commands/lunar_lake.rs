@@ -36,6 +36,7 @@ const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
 const NPU_FFN: &str = "npu-bitnet-ffn-subgraph-parity.json";
 const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
 const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
+const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
 
 /// Lunar Lake operator commands.
@@ -112,6 +113,33 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the comparison receipt reports drift.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Build a profile-aware route promotion ledger from the operator evidence.
+    Promote {
+        /// Artifact root containing the 258V receipts to index.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Operator readiness receipt to evaluate. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = OPERATOR_READINESS)]
+        operator_receipt: PathBuf,
+
+        /// Operator comparison receipt to evaluate. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = OPERATOR_COMPARISON)]
+        comparison_receipt: PathBuf,
+
+        /// Output JSON promotion ledger to file.
+        #[arg(long)]
+        json_out: Option<PathBuf>,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the promotion ledger cannot safely preserve CPU as the default route.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -242,7 +270,7 @@ pub struct RegressionCheck {
     pub notes: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeComparisonReceipt {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -263,7 +291,7 @@ pub struct LunarLakeComparisonReceipt {
     pub claim_boundary: ClaimBoundary,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RouteComparison {
     pub route_id: String,
     pub role: String,
@@ -279,6 +307,69 @@ pub struct RouteComparison {
     pub acceleration_claim: bool,
     pub route_reason: String,
     pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeRoutePromotionLedger {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub operator_receipt: String,
+    pub comparison_receipt: String,
+    pub promotion_ready: bool,
+    pub default_route_id: String,
+    pub auto_route_policy: AutoRoutePolicy,
+    pub workload_profiles: Vec<WorkloadProfile>,
+    pub routes: Vec<RoutePromotion>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: ClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AutoRoutePolicy {
+    pub policy_stage: String,
+    pub default_route: String,
+    pub hidden_fallback_allowed: bool,
+    pub cpu_default_until_profile_promoted: bool,
+    pub candidate_routes_require_profile_promotion: bool,
+    pub route_reason_required: bool,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkloadProfile {
+    pub profile_id: String,
+    pub prompt_tokens: String,
+    pub output_tokens: String,
+    pub purpose: String,
+    pub promoted_route: Option<String>,
+    pub candidate_routes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RoutePromotion {
+    pub route_id: String,
+    pub status: String,
+    pub promoted_for: Vec<String>,
+    pub blocked_for: Vec<String>,
+    pub required_evidence: Vec<String>,
+    pub present_evidence: Vec<String>,
+    pub missing_evidence: Vec<String>,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_policy: String,
+    pub answer_gate_evidence: Option<String>,
+    pub phase_evidence: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub phase_timing_present: Option<bool>,
+    pub speedup_claim: bool,
+    pub acceleration_claim: bool,
+    pub last_evidence_utc: String,
+    pub reason: String,
 }
 
 impl LunarLakeCommand {
@@ -344,6 +435,30 @@ impl LunarLakeCommand {
                 write_or_print_comparison_receipt(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.comparison_ready {
                     bail!("Lunar Lake comparison failed: {}", receipt.gaps.join("; "));
+                }
+                Ok(())
+            }
+            LunarLakeAction::Promote {
+                artifact_root,
+                operator_receipt,
+                comparison_receipt,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_route_promotion_ledger_with_created_utc(
+                    artifact_root,
+                    operator_receipt,
+                    comparison_receipt,
+                    created_utc,
+                )?;
+                write_or_print_route_promotion_ledger(&receipt, json_out.as_deref())?;
+                if *strict && !receipt.promotion_ready {
+                    bail!("Lunar Lake route promotion ledger failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -727,6 +842,93 @@ pub fn build_comparison_receipt_with_created_utc(
     })
 }
 
+pub fn build_route_promotion_ledger_with_created_utc(
+    root: &Path,
+    operator_receipt: &Path,
+    comparison_receipt: &Path,
+    created_utc: String,
+) -> Result<LunarLakeRoutePromotionLedger> {
+    let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
+    let comparison_receipt_path = resolve_receipt_path(root, comparison_receipt);
+    let operator: LunarLakeOperatorReceipt = read_json_receipt(&operator_receipt_path)?;
+    let comparison: LunarLakeComparisonReceipt = read_json_receipt(&comparison_receipt_path)?;
+
+    let mut gaps = Vec::new();
+    if !operator.operator_ready {
+        gaps.push(format!("operator receipt not ready: {}", operator.gaps.join("; ")));
+    }
+    if !comparison.comparison_ready {
+        gaps.push(format!("comparison receipt not ready: {}", comparison.gaps.join("; ")));
+    }
+    if operator.machine_id != comparison.machine_id {
+        gaps.push(format!(
+            "machine_id mismatch: operator={} comparison={}",
+            operator.machine_id, comparison.machine_id
+        ));
+    }
+    if operator.default_route.route_id != DEFAULT_ASK_ROUTE {
+        gaps.push(format!(
+            "default route changed from {DEFAULT_ASK_ROUTE} to {}",
+            operator.default_route.route_id
+        ));
+    }
+    if operator.claim_boundary.hidden_fallback_allowed {
+        gaps.push("operator claim boundary allows hidden fallback".to_string());
+    }
+
+    let routes = operator
+        .routes
+        .iter()
+        .map(|route| promote_route(route, &operator, &comparison))
+        .collect::<Vec<_>>();
+
+    let default_promoted = routes
+        .iter()
+        .any(|route| route.route_id == DEFAULT_ASK_ROUTE && route.status == "promoted");
+    if !default_promoted {
+        gaps.push("dense Qwen CPU default route is not promoted".to_string());
+    }
+    for route in &routes {
+        if route.acceleration_claim {
+            gaps.push(format!("route {} claims acceleration", route.route_id));
+        }
+        if route.speedup_claim {
+            gaps.push(format!("route {} claims speedup before profile promotion", route.route_id));
+        }
+    }
+
+    let promotion_ready = gaps.is_empty();
+    Ok(LunarLakeRoutePromotionLedger {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_route_promotion_ledger".to_string(),
+        proof_stage: "route_promotion_policy_recorded".to_string(),
+        created_utc,
+        machine_id: operator.machine_id.clone(),
+        artifact_root: path_string(root),
+        operator_receipt: path_string(&operator_receipt_path),
+        comparison_receipt: path_string(&comparison_receipt_path),
+        promotion_ready,
+        default_route_id: operator.default_route.route_id.clone(),
+        auto_route_policy: AutoRoutePolicy {
+            policy_stage: "policy_only_no_auto_dispatch_change".to_string(),
+            default_route: DEFAULT_ASK_ROUTE.to_string(),
+            hidden_fallback_allowed: false,
+            cpu_default_until_profile_promoted: true,
+            candidate_routes_require_profile_promotion: true,
+            route_reason_required: true,
+            notes: vec![
+                "dense Qwen CPU remains the user-facing auto/default route".to_string(),
+                "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion".to_string(),
+                "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists".to_string(),
+            ],
+        },
+        workload_profiles: workload_profiles(),
+        routes,
+        gaps,
+        claim_boundary: operator.claim_boundary,
+    })
+}
+
 pub fn load_operator_ask_route(
     root: &Path,
     operator_receipt: &Path,
@@ -1026,6 +1228,25 @@ fn write_or_print_comparison_receipt(
     Ok(())
 }
 
+fn write_or_print_route_promotion_ledger(
+    receipt: &LunarLakeRoutePromotionLedger,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake route promotion ledger written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
 fn read_json_receipt<T: DeserializeOwned>(path: &Path) -> Result<T> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("failed to parse {}", path.display()))
@@ -1084,6 +1305,282 @@ fn compare_route(route: &OperatorRoute, evidence: &[EvidenceStatus]) -> RouteCom
         route_reason: route.route_reason.clone(),
         notes,
     }
+}
+
+fn promote_route(
+    route: &OperatorRoute,
+    operator: &LunarLakeOperatorReceipt,
+    comparison: &LunarLakeComparisonReceipt,
+) -> RoutePromotion {
+    let attached = attached_route_evidence(route, &operator.evidence);
+    let comparison_route = comparison.routes.iter().find(|item| item.route_id == route.route_id);
+    let evidence_ready = comparison_route.is_some_and(|item| item.evidence_ready)
+        && attached.iter().all(|item| item.present && item.issues.is_empty());
+    let fallback_used = if attached.is_empty() {
+        None
+    } else {
+        Some(attached.iter().any(|item| item.fallback_used == Some(true)))
+    };
+    let answer_gate_passed = attached.iter().filter_map(|item| item.answer_gate_passed).next();
+    let phase_timing_present = attached.iter().filter_map(|item| item.phase_timing_present).next();
+    let speedup_claim = attached.iter().any(|item| item.speedup_claim == Some(true));
+    let mut present_evidence = Vec::new();
+    let mut missing_evidence = Vec::new();
+    for file_name in [&route.answer_gate_evidence, &route.phase_evidence].into_iter().flatten() {
+        match evidence_for_file(&operator.evidence, file_name) {
+            Some(item) if item.present && item.issues.is_empty() => {
+                present_evidence.push(file_name.clone());
+            }
+            Some(item) => {
+                missing_evidence.push(format!("{file_name}: {}", item.issues.join(", ")));
+            }
+            None => missing_evidence.push(format!("{file_name}: not indexed")),
+        }
+    }
+
+    let mut required_evidence = vec![
+        "fallback_used=false".to_string(),
+        "operator_regression_or_comparison_ready".to_string(),
+    ];
+    let (status, promoted_for, blocked_for, reason) = match route.route_id.as_str() {
+        DEFAULT_ASK_ROUTE => {
+            required_evidence.push("answer_gate".to_string());
+            required_evidence.push("phase_timing".to_string());
+            if evidence_ready
+                && fallback_used == Some(false)
+                && answer_gate_passed == Some(true)
+                && phase_timing_present == Some(true)
+                && !route.acceleration_claim
+                && !speedup_claim
+            {
+                (
+                    "promoted".to_string(),
+                    vec![
+                        "regression_tiny".to_string(),
+                        "ask_short".to_string(),
+                        "ask_normal".to_string(),
+                    ],
+                    vec!["accelerator_required".to_string(), "bitnet_strict_reference".to_string()],
+                    "Dense Qwen CPU is promoted as the default route because answer gates, phase evidence, strict no-fallback identity, and comparison readiness are present.".to_string(),
+                )
+            } else {
+                (
+                    "blocked".to_string(),
+                    vec![],
+                    vec!["all_profiles".to_string()],
+                    "Dense Qwen CPU cannot be promoted until answer, phase, fallback, and comparison evidence are clean.".to_string(),
+                )
+            }
+        }
+        "bitnet_reference_cpu" => {
+            required_evidence.push("corrected_cpu_reference_bundle".to_string());
+            required_evidence.push("direct_bitnetcpp_boundary".to_string());
+            required_evidence.push("first_token_classifier".to_string());
+            required_evidence.push("bitnet_external_reference_boundary".to_string());
+            required_evidence.push("bitnet_i2s_perf_evidence".to_string());
+            if evidence_ready
+                && fallback_used == Some(false)
+                && !route.acceleration_claim
+                && !speedup_claim
+            {
+                (
+                    "promoted".to_string(),
+                    vec!["bitnet_strict_reference".to_string()],
+                    vec!["general_dense_slm_ask".to_string(), "auto_default".to_string()],
+                    "BitNet CPU is promoted only as the strict BitNet reference route; dense Qwen CPU remains the default user-facing route.".to_string(),
+                )
+            } else {
+                (
+                    "blocked".to_string(),
+                    vec![],
+                    vec!["bitnet_strict_reference".to_string()],
+                    "BitNet CPU reference route lacks clean no-fallback reference/perf evidence."
+                        .to_string(),
+                )
+            }
+        }
+        "dense_slm_openvino_gpu_candidate" => {
+            required_evidence.push("answer_gate".to_string());
+            required_evidence.push("phase_timing".to_string());
+            required_evidence.push("benchmark_qualified_speedup_or_power_advantage".to_string());
+            required_evidence.push("profile_regression_bundle".to_string());
+            if evidence_ready
+                && fallback_used == Some(false)
+                && answer_gate_passed == Some(true)
+                && phase_timing_present == Some(true)
+                && !route.acceleration_claim
+                && !speedup_claim
+            {
+                missing_evidence.push("benchmark_qualified_speedup_or_power_advantage".to_string());
+                missing_evidence.push("profile_regression_bundle".to_string());
+                (
+                    "candidate".to_string(),
+                    vec![],
+                    vec!["auto_default".to_string(), "cold_start".to_string()],
+                    "OpenVINO GPU has bounded answer and phase evidence with fallback=false, but remains a candidate until a workload-profile speedup or power advantage is recorded.".to_string(),
+                )
+            } else {
+                (
+                    "blocked".to_string(),
+                    vec![],
+                    vec!["all_profiles".to_string()],
+                    "OpenVINO GPU route cannot be considered for promotion until candidate evidence is clean.".to_string(),
+                )
+            }
+        }
+        "dense_slm_openvino_npu_candidate" => {
+            required_evidence.push("answer_gate".to_string());
+            required_evidence.push("phase_timing".to_string());
+            required_evidence.push("benchmark_qualified_speedup_or_power_advantage".to_string());
+            required_evidence.push("profile_regression_bundle".to_string());
+            required_evidence.push("npu_int4_static_greedy_constraints".to_string());
+            if evidence_ready
+                && fallback_used == Some(false)
+                && answer_gate_passed == Some(true)
+                && phase_timing_present == Some(true)
+                && !route.acceleration_claim
+                && !speedup_claim
+            {
+                missing_evidence.push("benchmark_qualified_speedup_or_power_advantage".to_string());
+                missing_evidence.push("profile_regression_bundle".to_string());
+                (
+                    "candidate".to_string(),
+                    vec![],
+                    vec![
+                        "auto_default".to_string(),
+                        "dynamic_decode".to_string(),
+                        "beam_search".to_string(),
+                        "parallel_sampling".to_string(),
+                    ],
+                    "OpenVINO NPU has bounded INT4 dense SLM answer and phase evidence with fallback=false, but remains a candidate until profile-specific advantage and constraints are recorded.".to_string(),
+                )
+            } else {
+                (
+                    "blocked".to_string(),
+                    vec![],
+                    vec!["all_profiles".to_string()],
+                    "OpenVINO NPU route cannot be considered for promotion until candidate evidence is clean.".to_string(),
+                )
+            }
+        }
+        _ => (
+            if evidence_ready { "candidate" } else { "blocked" }.to_string(),
+            vec![],
+            vec!["auto_default".to_string()],
+            "Additional route is not promoted by the Lunar Lake route policy.".to_string(),
+        ),
+    };
+
+    RoutePromotion {
+        route_id: route.route_id.clone(),
+        status,
+        promoted_for,
+        blocked_for,
+        required_evidence,
+        present_evidence,
+        missing_evidence,
+        selected_backend: route.selected_backend.clone(),
+        runtime_api: route.runtime_api.clone(),
+        fallback_policy: route.fallback_policy.clone(),
+        answer_gate_evidence: route.answer_gate_evidence.clone(),
+        phase_evidence: route.phase_evidence.clone(),
+        fallback_used,
+        answer_gate_passed,
+        phase_timing_present,
+        speedup_claim,
+        acceleration_claim: route.acceleration_claim,
+        last_evidence_utc: operator.created_utc.clone(),
+        reason,
+    }
+}
+
+fn attached_route_evidence<'a>(
+    route: &OperatorRoute,
+    evidence: &'a [EvidenceStatus],
+) -> Vec<&'a EvidenceStatus> {
+    [&route.answer_gate_evidence, &route.phase_evidence]
+        .into_iter()
+        .flatten()
+        .filter_map(|file_name| evidence_for_file(evidence, file_name))
+        .collect()
+}
+
+fn workload_profiles() -> Vec<WorkloadProfile> {
+    vec![
+        WorkloadProfile {
+            profile_id: "regression_tiny".to_string(),
+            prompt_tokens: "<=64".to_string(),
+            output_tokens: "<=32".to_string(),
+            purpose: "cheap strict regression smoke for local runs".to_string(),
+            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
+            candidate_routes: vec![],
+        },
+        WorkloadProfile {
+            profile_id: "ask_short".to_string(),
+            prompt_tokens: "<=64".to_string(),
+            output_tokens: "<=32".to_string(),
+            purpose: "one-off short prompt and short answer".to_string(),
+            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+        },
+        WorkloadProfile {
+            profile_id: "ask_normal".to_string(),
+            prompt_tokens: "<=512".to_string(),
+            output_tokens: "<=128".to_string(),
+            purpose: "default local assistant question profile".to_string(),
+            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+        },
+        WorkloadProfile {
+            profile_id: "prefill_heavy".to_string(),
+            prompt_tokens: ">=2048".to_string(),
+            output_tokens: "<=64".to_string(),
+            purpose: "long prompt with short answer where GPU/NPU prefill may earn promotion"
+                .to_string(),
+            promoted_route: None,
+            candidate_routes: vec![
+                DEFAULT_ASK_ROUTE.to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+        },
+        WorkloadProfile {
+            profile_id: "decode_heavy".to_string(),
+            prompt_tokens: "<=256".to_string(),
+            output_tokens: ">=512".to_string(),
+            purpose: "long answer where steady decode throughput must be measured".to_string(),
+            promoted_route: None,
+            candidate_routes: vec![
+                DEFAULT_ASK_ROUTE.to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+        },
+        WorkloadProfile {
+            profile_id: "structured".to_string(),
+            prompt_tokens: "<=512".to_string(),
+            output_tokens: "<=256".to_string(),
+            purpose: "bounded JSON or tool-style output with deterministic answer gates"
+                .to_string(),
+            promoted_route: None,
+            candidate_routes: vec![DEFAULT_ASK_ROUTE.to_string()],
+        },
+        WorkloadProfile {
+            profile_id: "bitnet_strict_reference".to_string(),
+            prompt_tokens: "fixed BitNet corpus".to_string(),
+            output_tokens: "bounded".to_string(),
+            purpose: "BitNet CPU semantic/performance reference, not general dense SLM ask"
+                .to_string(),
+            promoted_route: Some("bitnet_reference_cpu".to_string()),
+            candidate_routes: vec![],
+        },
+    ]
 }
 
 fn evidence_for_file<'a>(
@@ -1451,6 +1948,99 @@ mod tests {
 
         assert!(!comparison.comparison_ready);
         assert!(comparison.gaps.iter().any(|gap| gap.contains("regression bundle failed")));
+        Ok(())
+    }
+
+    #[test]
+    fn route_promotion_promotes_cpu_default_and_keeps_accelerators_candidate() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+
+        assert!(ledger.promotion_ready, "{:?}", ledger.gaps);
+        let Some(cpu) = ledger.routes.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        else {
+            bail!("missing cpu route");
+        };
+        assert_eq!(cpu.status, "promoted");
+        assert!(cpu.promoted_for.contains(&"ask_normal".to_string()));
+        let Some(gpu) =
+            ledger.routes.iter().find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+        else {
+            bail!("missing gpu route");
+        };
+        assert_eq!(gpu.status, "candidate");
+        assert!(
+            gpu.missing_evidence
+                .contains(&"benchmark_qualified_speedup_or_power_advantage".to_string())
+        );
+        assert_eq!(ledger.auto_route_policy.default_route, DEFAULT_ASK_ROUTE);
+        assert!(ledger.auto_route_policy.candidate_routes_require_profile_promotion);
+        Ok(())
+    }
+
+    #[test]
+    fn route_promotion_blocks_when_operator_comparison_failed() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), true)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+
+        assert!(!ledger.promotion_ready);
+        assert!(ledger.gaps.iter().any(|gap| gap.contains("operator receipt not ready")));
+        assert!(
+            ledger
+                .routes
+                .iter()
+                .any(|route| route.route_id == DEFAULT_ASK_ROUTE && route.status == "blocked")
+        );
         Ok(())
     }
 
