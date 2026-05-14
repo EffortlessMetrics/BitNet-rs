@@ -69,7 +69,7 @@ Revert the audit report and any docs-only references.
 
 ## Work item: CUDA-DENSE-051
 
-Status: planned
+Status: in progress
 Campaign item: `CUDA-DENSE-051`
 Blocked by: CUDA-DENSE-050
 
@@ -99,7 +99,18 @@ bitnet_packed_i2s_qk256_proof = false
 ### Proof command
 
 ```powershell
-cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-ask --device nvidia-rtx-5070-ti-cuda --model <qwen2.5-0.5b-q8_0.gguf> --question "What is 2+2? Answer with only the number." --max-new-tokens 1 --temperature 0 --strict-cuda --json-out ci\hardware\windows-9950x3d-rtx5070ti\<date>\dense-qwen25-q8-one-token-cuda.json
+cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-one-token-strict-cuda --model <qwen2.5-0.5b-q8_0.gguf> --prompt "What is 2+2? Answer with only the number." --json-out ci\hardware\windows-9950x3d-rtx5070ti\<date>\dense-qwen25-q8-one-token-cuda.json
+```
+
+On Windows, run this from a Visual Studio x64 developer shell with the CUDA
+toolkit `bin` and `lib\x64` paths present so cudarc and Candle resolve the same
+CUDA dynamic-linking mode. Non-Windows advisory lanes use fallback dynamic
+loading so tracker and ripr checks do not require CUDA driver libraries.
+
+### Receipt path
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json
 ```
 
 ### Rollback

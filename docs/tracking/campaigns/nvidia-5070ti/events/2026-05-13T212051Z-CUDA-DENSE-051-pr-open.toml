@@ -1,0 +1,16 @@
+timestamp = "2026-05-13T21:20:51Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-051"
+event = "pr_open"
+actor = "codex"
+branch = "cuda/dense-qwen25-one-token-proof"
+pr = 4645
+head_sha = "e974e40ec7ecc43fc66d215232b7f337cfa3a802"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened draft PR #4645 for the dense Qwen2.5 0.5B Q8_0 one-token strict RTX 5070 Ti CUDA proof refresh.",
+  "The PR commits the 2026-05-13 receipt, aligns BitNet cudarc link mode with Candle CUDA, and updates tracker/report/plan references.",
+  "The PR keeps speedup, BitNet packed I2S/QK256, short-decode, chat, server, and crates.io/docs.rs badge readiness claims out of scope.",
+]
