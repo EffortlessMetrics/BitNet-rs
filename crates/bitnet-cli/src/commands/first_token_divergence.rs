@@ -114,6 +114,7 @@ fn build_first_token_divergence_receipt(
             items.iter().map(|case| classify_case(case, scalar, avx2, bos_id)).collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    let reference_evidence = summarize_reference_evidence(external_reference);
     let case_summaries = cases.iter().map(|case| &case["classification"]).collect::<Vec<_>>();
     let scalar_avx2_parity_passed = answer_parity["summary"]["failed"].as_u64() == Some(0)
         && answer_parity["summary"]["first_divergence"].is_null();
@@ -129,13 +130,7 @@ fn build_first_token_divergence_receipt(
                     .then(|| case["classification"].clone())
             })
         })
-        .unwrap_or_else(|| {
-            json!({
-                "first_divergence_stage": "unknown",
-                "classification": "no_cases_available",
-                "evidence_boundary": "no_external_reference_cases_available"
-            })
-        });
+        .unwrap_or_else(|| no_divergence_summary(&cases));
     let classification = first_divergence["classification"].as_str().unwrap_or("unknown");
 
     json!({
@@ -183,8 +178,10 @@ fn build_first_token_divergence_receipt(
             "generated_text_trimmed_avx2_matches": count_bool(&cases, &["comparisons", "reference_avx2_generated_text_trimmed_match"]),
             "generated_text_trimmed_scalar_avx2_matches": count_scalar_avx2_text_matches(&cases),
             "scalar_avx2_parity_passed": scalar_avx2_parity_passed,
-            "reference_generated_token_ids_available": external_reference["summary"]["reference_generated_token_ids_available"].clone(),
-            "reference_logits_available": external_reference["summary"]["reference_logits_available"].clone(),
+            "cases_with_reference_generated_token_ids": reference_evidence.cases_with_generated_token_ids,
+            "cases_with_reference_first_token_topk_logits": reference_evidence.cases_with_first_token_topk_logits,
+            "reference_generated_token_ids_available": reference_evidence.generated_token_ids_available,
+            "reference_logits_available": reference_evidence.first_token_logits_available,
             "first_divergence": first_divergence,
             "classification": classification,
             "next_required_evidence": external_reference["summary"]["next_required_evidence"].clone(),
@@ -207,6 +204,62 @@ fn build_first_token_divergence_receipt(
                 "QK256 decode correctness"
             ]
         }
+    })
+}
+
+#[derive(Default)]
+struct ReferenceEvidenceSummary {
+    cases_with_generated_token_ids: usize,
+    cases_with_first_token_topk_logits: usize,
+    generated_token_ids_available: bool,
+    first_token_logits_available: bool,
+}
+
+fn summarize_reference_evidence(external_reference: &Value) -> ReferenceEvidenceSummary {
+    let cases = external_reference["cases"].as_array().map(Vec::as_slice).unwrap_or(&[]);
+    let mut summary = ReferenceEvidenceSummary::default();
+    for case in cases {
+        if ids(case.get("generated_token_ids").unwrap_or(&Value::Null))
+            .is_some_and(|ids| !ids.is_empty())
+        {
+            summary.cases_with_generated_token_ids += 1;
+        }
+        if reference_first_token_topk(case)
+            .and_then(Value::as_array)
+            .is_some_and(|items| !items.is_empty())
+        {
+            summary.cases_with_first_token_topk_logits += 1;
+        }
+    }
+    summary.generated_token_ids_available =
+        !cases.is_empty() && summary.cases_with_generated_token_ids == cases.len();
+    summary.first_token_logits_available =
+        !cases.is_empty() && summary.cases_with_first_token_topk_logits == cases.len();
+    summary
+}
+
+fn no_divergence_summary(cases: &[Value]) -> Value {
+    if cases.is_empty() {
+        return json!({
+            "first_divergence_stage": "unknown",
+            "classification": "no_cases_available",
+            "evidence_boundary": "no_external_reference_cases_available"
+        });
+    }
+    if cases
+        .iter()
+        .all(|case| case["classification"]["first_divergence_stage"].as_str() == Some("none"))
+    {
+        return json!({
+            "first_divergence_stage": "none",
+            "classification": "no_divergence_at_first_generated_token",
+            "evidence_boundary": "all_available_reference_first_generated_token_ids_match_local_cpu"
+        });
+    }
+    json!({
+        "first_divergence_stage": "unknown",
+        "classification": "no_nonmatching_or_inconclusive_cases_selected",
+        "evidence_boundary": "case_classifications_did_not_select_a_divergence_boundary"
     })
 }
 
@@ -269,10 +322,15 @@ fn classify_case(reference_case: &Value, scalar: &Value, avx2: &Value, bos_id: u
     let reference_text = reference_case["reference_generated_text"].as_str().unwrap_or_default();
     let reference_text_matches_scalar = trimmed_eq(reference_text, scalar_answer);
     let reference_text_matches_avx2 = trimmed_eq(reference_text, avx2_answer);
-    let reference_first_token = reference_case["first_generated_token_id"].as_u64();
-    let reference_has_generated_ids =
-        reference_case["generated_token_ids_available"].as_bool().unwrap_or(false);
-    let reference_has_logits = reference_case["logits_available"].as_bool().unwrap_or(false);
+    let reference_generated_ids =
+        ids(reference_case.get("generated_token_ids").unwrap_or(&Value::Null)).unwrap_or_default();
+    let reference_first_token = reference_case["first_generated_token_id"]
+        .as_u64()
+        .or_else(|| reference_generated_ids.first().copied());
+    let reference_has_generated_ids = !reference_generated_ids.is_empty();
+    let reference_topk_logits = reference_first_token_topk(reference_case);
+    let reference_has_logits =
+        reference_topk_logits.and_then(Value::as_array).is_some_and(|items| !items.is_empty());
 
     let classification = classify_case_boundary(
         case_id,
@@ -296,9 +354,12 @@ fn classify_case(reference_case: &Value, scalar: &Value, avx2: &Value, bos_id: u
             "prompt_token_ids": reference_prompt_ids,
             "generated_text": reference_case["reference_generated_text"].clone(),
             "first_generated_token_id": reference_case["first_generated_token_id"].clone(),
+            "derived_first_generated_token_id": reference_first_token,
             "decoded_first_token": reference_case["decoded_first_token"].clone(),
+            "generated_token_ids": reference_generated_ids,
             "generated_token_ids_available": reference_has_generated_ids,
             "logits_available": reference_has_logits,
+            "first_token_top_k_logits": reference_topk_logits.cloned().unwrap_or(Value::Null),
             "missing_reference_fields": reference_case["missing_reference_fields"].clone(),
         },
         "scalar": local_case_summary(scalar_case),
@@ -451,6 +512,10 @@ fn topk_step0(case: &Value) -> Option<&Value> {
 
 fn ids(value: &Value) -> Option<Vec<u64>> {
     value.as_array()?.iter().map(Value::as_u64).collect()
+}
+
+fn reference_first_token_topk(case: &Value) -> Option<&Value> {
+    case.get("first_token_top_k_logits").or_else(|| case.get("first_token_topk_logits"))
 }
 
 fn has_local_bos_prefix(reference: &[u64], local: &[u64], bos_id: u64) -> bool {
@@ -694,5 +759,60 @@ mod tests {
         assert_eq!(receipt["summary"]["generated_text_trimmed_scalar_matches"], 1);
         assert_eq!(receipt["summary"]["generated_text_trimmed_avx2_matches"], 1);
         assert_eq!(receipt["summary"]["generated_text_trimmed_scalar_avx2_matches"], 1);
+    }
+
+    #[test]
+    fn derives_reference_first_token_from_direct_generated_ids() {
+        let mut reference = external(&[1502, 25], "4");
+        reference["cases"][0]["generated_token_ids"] = json!([220, 19]);
+        reference["cases"][0]["generated_token_ids_available"] = json!(false);
+        reference["summary"]["reference_generated_token_ids_available"] = json!(false);
+        let scalar = corpus("math", &[128000, 1502, 25], &[220, 19], " 4", "i2_s-scalar-reference");
+        let avx2 = corpus("math", &[128000, 1502, 25], &[220, 19], " 4", "i2_s-avx2-reference");
+
+        let receipt = build_first_token_divergence_receipt(
+            &inputs(),
+            &reference,
+            &prompt_audit(),
+            &scalar,
+            &avx2,
+            &parity(),
+        );
+
+        assert_eq!(receipt["cases"][0]["reference"]["generated_token_ids_available"], true);
+        assert_eq!(receipt["cases"][0]["reference"]["derived_first_generated_token_id"], 220);
+        assert_eq!(receipt["summary"]["reference_generated_token_ids_available"], true);
+        assert_eq!(receipt["summary"]["first_divergence"]["first_divergence_stage"], "none");
+        assert_eq!(
+            receipt["summary"]["first_divergence"]["classification"],
+            "no_divergence_at_first_generated_token"
+        );
+    }
+
+    #[test]
+    fn direct_reference_generated_ids_classify_generated_token_mismatch() {
+        let mut reference = external(&[1502, 25], "9");
+        reference["cases"][0]["generated_token_ids"] = json!([24]);
+        let scalar = corpus("math", &[128000, 1502, 25], &[220, 19], " 4", "i2_s-scalar-reference");
+        let avx2 = corpus("math", &[128000, 1502, 25], &[220, 19], " 4", "i2_s-avx2-reference");
+
+        let receipt = build_first_token_divergence_receipt(
+            &inputs(),
+            &reference,
+            &prompt_audit(),
+            &scalar,
+            &avx2,
+            &parity(),
+        );
+
+        assert_eq!(
+            receipt["summary"]["first_divergence"]["first_divergence_stage"],
+            "generated_token"
+        );
+        assert_eq!(
+            receipt["summary"]["first_divergence"]["classification"],
+            "generated_token_mismatch_reference_logits_unavailable"
+        );
+        assert_eq!(receipt["summary"]["reference_generated_token_ids_available"], true);
     }
 }

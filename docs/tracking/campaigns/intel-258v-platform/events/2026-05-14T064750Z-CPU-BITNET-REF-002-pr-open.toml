@@ -1,0 +1,17 @@
+timestamp = "2026-05-14T06:47:50Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-REF-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4710
+head_sha = "0f8ddab487ff78cfa39c65b9f7122dac86433e29"
+actor = "codex"
+branch = "codex/lunar-lake/CPU-BITNET-REF-002-direct-token-classifier"
+summary = "Opened CPU-BITNET-REF-002 to harden the BitNet first-token divergence classifier for future direct reference generated-token evidence."
+
+notes = [
+  "The PR derives the reference first generated token from direct generated_token_ids when present.",
+  "The classifier now reports all-matching direct first-token evidence as no divergence instead of falling through to an unknown summary.",
+  "The current committed external BitNet.cpp artifact remains text-only; generated-token parity, first-token logits parity, answer quality, speed, Arc, NPU, QK256 changes, and full model correctness remain non-claims.",
+]
