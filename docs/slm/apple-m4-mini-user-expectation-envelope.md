@@ -249,6 +249,15 @@ Those receipts prove one explicit accepted-artifact smoke run, not BitNet chat,
 serve, full Metal inference, QK256 on Apple Silicon, or a broad performance
 envelope.
 
+For BitNet warm reuse proof, use the dedicated fixed-prompt route. It loads the
+accepted model/tokenizer once, runs a small repeated-prompt set, writes per-turn
+receipts plus an aggregate receipt, and still does not enable BitNet chat or
+serve:
+
+```bash
+bitnet mac bitnet-warm
+```
+
 Use `regression` for receipt-only drift checks against matching M4 dense SLM
 envelopes:
 
