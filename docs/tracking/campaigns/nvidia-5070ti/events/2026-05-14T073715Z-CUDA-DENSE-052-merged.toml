@@ -2,13 +2,14 @@ timestamp = "2026-05-14T07:37:15Z"
 campaign = "nvidia-5070ti"
 item = "CUDA-DENSE-052"
 event = "merged"
-actor = "codex"
 from = "pr_open"
 to = "merged"
+actor = "codex"
 branch = "cuda/dense-qwen25-short-decode-unblock"
 pr = 4695
+head_sha = "e13c4d483db9ce797086f34e4e4dbe3011da1799"
 merge_sha = "928c72621598be6486bf7614d800aa0268a3962f"
-summary = "Merged CUDA-DENSE-052 current-source dense Qwen short-decode strict RTX 5070 Ti CUDA proof."
+summary = "Marked CUDA-DENSE-052 merged after the current-source Qwen2.5 short-decode strict RTX 5070 Ti CUDA proof landed."
 
 artifacts = [
   "https://github.com/EffortlessMetrics/BitNet-rs/pull/4695",
@@ -17,7 +18,7 @@ artifacts = [
 ]
 
 notes = [
-  "The merged receipt records selected_backend=nvidia-rtx-5070-ti-cuda, route=dense_regular_llm_cuda, runtime_api=cuda, and fallback_used=false.",
-  "CPU and CUDA generated token IDs match for the recorded 8-token greedy decode.",
-  "Speedup, server readiness, general dense GGUF CUDA readiness, full CUDA residency, and BitNet packed I2_S/QK256 claims remain false.",
+  "The merged PR records dense_regular_llm_cuda routing, selected nvidia-rtx-5070-ti-cuda backend identity, runtime_api=cuda, fallback_used=false, CPU/CUDA generated-token equality, kernel stats, transfer stats, and bounded decoded text.",
+  "The PR keeps speedup, server readiness, general dense GGUF CUDA readiness, full CUDA residency, and BitNet packed I2_S/QK256 claims false.",
+  "This tracker closeout only reconciles live GitHub state for PR #4695.",
 ]
