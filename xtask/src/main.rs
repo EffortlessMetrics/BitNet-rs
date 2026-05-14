@@ -40,6 +40,7 @@ use std::{
 use walkdir::WalkDir;
 mod apple_m4;
 mod bench_receipt;
+mod bitnet_reference_plan;
 mod campaign;
 mod check_greedy_argmax;
 mod ci;
@@ -1699,6 +1700,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
 }
 
 fn real_main() -> Result<()> {
+    if bitnet_reference_plan::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
     if llm_experience::maybe_dispatch_from_env()? {
         return Ok(());
     }
