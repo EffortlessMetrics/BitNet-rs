@@ -1982,18 +1982,17 @@ mod tests {
         )?;
 
         assert!(ledger.promotion_ready, "{:?}", ledger.gaps);
-        let cpu = ledger
-            .routes
-            .iter()
-            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
-            .expect("cpu route");
+        let Some(cpu) = ledger.routes.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        else {
+            bail!("missing cpu route");
+        };
         assert_eq!(cpu.status, "promoted");
         assert!(cpu.promoted_for.contains(&"ask_normal".to_string()));
-        let gpu = ledger
-            .routes
-            .iter()
-            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
-            .expect("gpu route");
+        let Some(gpu) =
+            ledger.routes.iter().find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+        else {
+            bail!("missing gpu route");
+        };
         assert_eq!(gpu.status, "candidate");
         assert!(
             gpu.missing_evidence
