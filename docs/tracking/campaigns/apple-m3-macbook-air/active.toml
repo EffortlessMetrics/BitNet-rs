@@ -321,10 +321,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-004B"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator"
 pr = 4785
-head_sha = "e66e46ef0ab03839eecbb44975c7849655856ce9"
+head_sha = "3df6b435908e3cb8fb98a86367732a9b3ca891f1"
+merge_sha = "2ddc425a5ff2f4914b6c077f75cc6c8f80528188"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

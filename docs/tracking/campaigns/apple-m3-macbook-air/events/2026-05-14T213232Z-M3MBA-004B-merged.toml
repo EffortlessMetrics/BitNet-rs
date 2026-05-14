@@ -1,0 +1,25 @@
+timestamp = "2026-05-14T21:32:32Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-004B"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator"
+pr = 4785
+head_sha = "3df6b435908e3cb8fb98a86367732a9b3ca891f1"
+merge_sha = "2ddc425a5ff2f4914b6c077f75cc6c8f80528188"
+summary = "Merged the live M3 Air dense Qwen operator profile receipts and M3 backend-label validation fixes."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4785",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator-profiles",
+  "docs/reports/apple-silicon-macbook-m3-air-qwen-operator.md",
+]
+
+notes = [
+  "The merged operator profile ran Qwen2.5 0.5B Q8_0 on the M3 Air dense CPU path with apple-m3-air-cpu-neon requested and selected, fallback_used=false, operator warm profiles warm_16, warm_32, and warm_64, allocation audit enabled, and power, thermal, storage, model hash, tokenizer, and receipt-check context recorded.",
+  "The CLI validation path now rejects stale M4 allocation-audit scope labels in M3 Air operator receipts and preserves M3-specific warm-session prompt artifact kinds.",
+  "This evidence is dense Qwen SLM diagnostic operator profiling only; it does not prove BitNet behavior, M4 Mac mini performance, Metal inference, MPSGraph model inference, Neural Engine execution, or QK256 support.",
+]
