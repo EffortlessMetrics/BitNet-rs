@@ -41,6 +41,19 @@ Later v2 reports should publish one directory per supported dense model:
 ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json
 ```
 
+The live `answer-corpus` run must pass the matching supported dense model ID so
+the aggregate receipt is pinned to the model catalog instead of inheriting the
+default model block from the shared corpus YAML:
+
+```bash
+target/release/bitnet --device apple-m4-cpu-neon answer-corpus \
+  --model <verified-cache-path>/<model-file>.gguf \
+  --model-id <model-id> \
+  --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json \
+  --per-prompt-timeout-seconds 240
+```
+
 Each report should include:
 
 - model source, file, SHA256, quantization, tokenizer authority, and prompt

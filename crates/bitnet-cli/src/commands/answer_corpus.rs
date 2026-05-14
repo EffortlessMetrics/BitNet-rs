@@ -1,6 +1,6 @@
 //! Answer corpus runner for CPU-first and Apple M4 local-answer baselines.
 
-use crate::planner_receipts;
+use crate::{model_cache, planner_receipts};
 use anyhow::{Context, Result};
 use clap::{Args, ValueEnum};
 use serde::{Deserialize, Serialize};
@@ -91,6 +91,10 @@ pub struct AnswerCorpusCommand {
     /// Official BitNet GGUF model path.
     #[arg(long, value_name = "PATH")]
     pub model: PathBuf,
+
+    /// Supported dense Apple M4 model ID used to stamp SLM aggregate receipt identity.
+    #[arg(long, value_name = "MODEL_ID")]
+    pub model_id: Option<String>,
 
     /// Explicit tokenizer path. If omitted, the run path must resolve one strictly.
     #[arg(long, value_name = "PATH")]
@@ -183,6 +187,7 @@ impl AnswerCorpusCommand {
             anyhow::bail!("--cpu-kernel avx512 requested but AVX512 is unavailable on this host");
         }
         let artifact_kind = answer_corpus_artifact_kind(&device, &corpus.artifact_kind);
+        let model_identity = AnswerCorpusModelIdentity::resolve(self.model_id.as_deref(), &corpus)?;
         let default_timeout_seconds = effective_default_timeout_seconds(
             self.per_prompt_timeout_seconds,
             corpus.defaults.per_prompt_timeout_seconds,
@@ -216,6 +221,7 @@ impl AnswerCorpusCommand {
             };
             rows.push(row);
         }
+        ensure_rows_match_model_identity(&rows, &model_identity)?;
 
         let total = rows.len();
         let passed = rows.iter().filter(|row| row["quality"]["passed"] == true).count();
@@ -249,12 +255,52 @@ impl AnswerCorpusCommand {
             .to_string();
         let top_level_fallback_used =
             rows.iter().any(|row| row["backend"]["fallback_used"].as_bool().unwrap_or(false));
-        let top_level_model_family =
-            corpus.model.family.as_deref().unwrap_or("unknown").to_string();
-        let top_level_model_architecture =
-            corpus.model.architecture.as_deref().unwrap_or("unknown").to_string();
-        let top_level_quantization =
-            corpus.model.quant_format.as_deref().unwrap_or("unknown").to_string();
+        let model_id_pinned = model_identity.id.is_some();
+        let top_level_model_family = if model_id_pinned {
+            model_identity.family.clone().unwrap_or_else(|| "unknown".to_string())
+        } else {
+            aggregate_case_str(&rows, &["model", "family"])
+                .map(str::to_string)
+                .or_else(|| model_identity.family.clone())
+                .unwrap_or_else(|| "unknown".to_string())
+        };
+        let top_level_model_architecture = if model_id_pinned {
+            model_identity.architecture.clone().unwrap_or_else(|| "unknown".to_string())
+        } else {
+            aggregate_case_str(&rows, &["model", "architecture"])
+                .map(str::to_string)
+                .or_else(|| model_identity.architecture.clone())
+                .unwrap_or_else(|| "unknown".to_string())
+        };
+        let top_level_quantization = if model_id_pinned {
+            model_identity.quant_format.clone().unwrap_or_else(|| "unknown".to_string())
+        } else {
+            aggregate_case_str(&rows, &["model", "quant_format"])
+                .map(str::to_string)
+                .or_else(|| model_identity.quant_format.clone())
+                .unwrap_or_else(|| "unknown".to_string())
+        };
+        let top_level_model_repo = if model_id_pinned {
+            model_identity.repo.clone()
+        } else {
+            aggregate_case_str(&rows, &["model", "repo"])
+                .map(str::to_string)
+                .unwrap_or_else(|| model_identity.repo.clone())
+        };
+        let top_level_model_file = if model_id_pinned {
+            model_identity.file.clone()
+        } else {
+            aggregate_case_str(&rows, &["model", "file"])
+                .map(str::to_string)
+                .unwrap_or_else(|| model_identity.file.clone())
+        };
+        let top_level_model_sha256 = if model_id_pinned {
+            model_identity.sha256.clone()
+        } else {
+            aggregate_case_str(&rows, &["model", "sha256"])
+                .map(str::to_string)
+                .or_else(|| model_identity.sha256.clone())
+        };
         let top_level_tokenizer_source = aggregate_case_str(&rows, &["tokenizer", "source"])
             .unwrap_or(aggregate_tokenizer)
             .to_string();
@@ -280,9 +326,9 @@ impl AnswerCorpusCommand {
             "runtime_api": top_level_runtime_api,
             "fallback_used": top_level_fallback_used,
             "backend_lane": top_level_backend_lane,
-            "model_family": top_level_model_family,
-            "model_architecture": top_level_model_architecture,
-            "quantization": top_level_quantization,
+            "model_family": top_level_model_family.clone(),
+            "model_architecture": top_level_model_architecture.clone(),
+            "quantization": top_level_quantization.clone(),
             "tokenizer_source": top_level_tokenizer_source,
             "prompt_template": corpus.defaults.prompt_template.as_str(),
             "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
@@ -295,16 +341,20 @@ impl AnswerCorpusCommand {
                 "selected_case_ids": selected_case_ids,
             },
             "model": {
-                "repo": corpus.model.repo,
-                "file": corpus.model.file,
-                "sha256": corpus.model.sha256,
-                "family": corpus.model.family,
-                "architecture": corpus.model.architecture,
-                "quant_format": corpus.model.quant_format,
+                "id": model_identity.id,
+                "repo": top_level_model_repo,
+                "revision": model_identity.revision,
+                "file": top_level_model_file,
+                "sha256": top_level_model_sha256,
+                "bytes": model_identity.bytes,
+                "family": top_level_model_family,
+                "architecture": top_level_model_architecture,
+                "quant_format": top_level_quantization,
                 "path": self.model.display().to_string(),
                 "loader_mode": "real_gguf",
                 "fallback_loader_used": false,
                 "tokenizer": aggregate_tokenizer,
+                "tokenizer_authority": model_identity.tokenizer_authority,
                 "tokenizer_path": self.tokenizer.as_ref().map(|path| path.display().to_string()),
                 "answer_ready_artifact_available": answer_ready_artifact_available,
                 "answer_ready": corpus.model.answer_ready,
@@ -685,6 +735,70 @@ struct CorpusModel {
     tokenizer_authority: Option<CorpusTokenizerAuthority>,
 }
 
+#[derive(Debug, Clone)]
+struct AnswerCorpusModelIdentity {
+    id: Option<String>,
+    repo: String,
+    revision: Option<String>,
+    file: String,
+    sha256: Option<String>,
+    bytes: Option<u64>,
+    family: Option<String>,
+    architecture: Option<String>,
+    quant_format: Option<String>,
+    tokenizer_authority: Option<String>,
+}
+
+impl AnswerCorpusModelIdentity {
+    fn resolve(model_id: Option<&str>, corpus: &AnswerCorpus) -> Result<Self> {
+        let Some(model_id) = model_id else {
+            return Ok(Self::from_corpus(&corpus.model));
+        };
+        if corpus.artifact_kind != "slm_answer_corpus" {
+            anyhow::bail!(
+                "answer-corpus --model-id is only supported for slm_answer_corpus receipts; corpus `{}` has artifact_kind `{}`",
+                corpus.name,
+                corpus.artifact_kind
+            );
+        }
+        let metadata = model_cache::apple_m4_slm_model_receipt_metadata(model_id)?;
+        Ok(Self::from_apple_m4_slm_model(metadata))
+    }
+
+    fn from_corpus(model: &CorpusModel) -> Self {
+        Self {
+            id: None,
+            repo: model.repo.clone(),
+            revision: None,
+            file: model.file.clone(),
+            sha256: model.sha256.clone(),
+            bytes: None,
+            family: model.family.clone(),
+            architecture: model.architecture.clone(),
+            quant_format: model.quant_format.clone(),
+            tokenizer_authority: model
+                .tokenizer_authority
+                .as_ref()
+                .map(|authority| authority.source.clone()),
+        }
+    }
+
+    fn from_apple_m4_slm_model(metadata: model_cache::AppleM4SlmModelReceiptMetadata) -> Self {
+        Self {
+            id: Some(metadata.id.to_string()),
+            repo: metadata.repo.to_string(),
+            revision: Some(metadata.revision.to_string()),
+            file: metadata.file.to_string(),
+            sha256: Some(metadata.sha256.to_string()),
+            bytes: Some(metadata.bytes),
+            family: Some(metadata.family.to_string()),
+            architecture: Some(metadata.architecture.to_string()),
+            quant_format: Some(metadata.quantization.to_string()),
+            tokenizer_authority: Some(metadata.tokenizer_authority.to_string()),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 struct CorpusAnswerReady {
     state: String,
@@ -833,6 +947,51 @@ fn aggregate_case_str<'a>(rows: &'a [Value], path: &[&str]) -> Option<&'a str> {
         }
         cursor.as_str()
     })
+}
+
+fn ensure_rows_match_model_identity(
+    rows: &[Value],
+    identity: &AnswerCorpusModelIdentity,
+) -> Result<()> {
+    let Some(model_id) = identity.id.as_deref() else {
+        return Ok(());
+    };
+
+    let mut mismatches = Vec::new();
+    for row in rows {
+        let Some(case_id) = row.get("id").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(model) = row.get("model") else {
+            continue;
+        };
+        for (field, expected) in [
+            ("file", Some(identity.file.as_str())),
+            ("sha256", identity.sha256.as_deref()),
+            ("family", identity.family.as_deref()),
+            ("architecture", identity.architecture.as_deref()),
+            ("quant_format", identity.quant_format.as_deref()),
+        ] {
+            let Some(expected) = expected else {
+                continue;
+            };
+            let observed = model.get(field).and_then(Value::as_str);
+            if observed != Some(expected) {
+                mismatches.push(format!(
+                    "{case_id}.model.{field}: expected `{expected}`, observed `{}`",
+                    observed.unwrap_or("<missing>")
+                ));
+            }
+        }
+    }
+
+    if !mismatches.is_empty() {
+        anyhow::bail!(
+            "answer-corpus --model-id `{model_id}` does not match child run model metadata: {}",
+            mismatches.join("; ")
+        );
+    }
+    Ok(())
 }
 
 fn validate_answer_corpus_inputs(

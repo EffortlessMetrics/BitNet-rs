@@ -409,6 +409,20 @@ pub(crate) struct VerifiedCachedModel {
     pub support_note: String,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct AppleM4SlmModelReceiptMetadata {
+    pub id: &'static str,
+    pub repo: &'static str,
+    pub revision: &'static str,
+    pub file: &'static str,
+    pub sha256: &'static str,
+    pub bytes: u64,
+    pub family: &'static str,
+    pub architecture: &'static str,
+    pub quantization: &'static str,
+    pub tokenizer_authority: &'static str,
+}
+
 #[derive(Debug, Serialize)]
 struct PruneResult {
     id: String,
@@ -1973,6 +1987,46 @@ fn supported_model(id: &str) -> Result<&'static SupportedModel> {
         let known = SUPPORTED_MODELS.iter().map(|model| model.id).collect::<Vec<_>>().join(", ");
         anyhow!("unsupported model `{id}`. Supported models: {known}")
     })
+}
+
+pub(crate) fn apple_m4_slm_model_receipt_metadata(
+    id: &str,
+) -> Result<AppleM4SlmModelReceiptMetadata> {
+    let Some(model) = find_supported_model(id) else {
+        anyhow::bail!(
+            "unsupported Apple M4 dense SLM model `{id}`. Selectable dense Apple M4 models: {}",
+            selectable_apple_m4_slm_model_ids()
+        );
+    };
+    if !model.apple_m4_cpu_neon_supported {
+        anyhow::bail!(
+            "model `{}` is not selectable for dense Apple M4 SLM answer-corpus receipts. Selectable dense Apple M4 models: {}",
+            model.id,
+            selectable_apple_m4_slm_model_ids()
+        );
+    }
+
+    Ok(AppleM4SlmModelReceiptMetadata {
+        id: model.id,
+        repo: model.repo,
+        revision: model.revision,
+        file: model.filename,
+        sha256: model.sha256,
+        bytes: model.bytes,
+        family: "qwen",
+        architecture: model.architecture,
+        quantization: model.quantization,
+        tokenizer_authority: model.tokenizer_pre,
+    })
+}
+
+fn selectable_apple_m4_slm_model_ids() -> String {
+    SUPPORTED_MODELS
+        .iter()
+        .filter(|model| model.apple_m4_cpu_neon_supported)
+        .map(|model| model.id)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn find_supported_model(id: &str) -> Option<&'static SupportedModel> {
