@@ -1,0 +1,25 @@
+timestamp = "2026-05-14T02:41:45Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ASK-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4668
+merge_sha = "24af16e381ac834ee2ecaaa8ae9d79be14c8a377"
+branch = "codex/lunar-lake/LNL258V-ASK-003-operator-ask-identity"
+summary = "Marked LNL258V-ASK-003 merged after PR #4668 landed the Lunar Lake operator ask receipt identity hardening."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4668",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-source-run.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-brief-source-run.json",
+]
+
+notes = [
+  "The merged PR adds top-level operator ask receipt fields for requested_backend, selected_backend, runtime_api, fallback_used, backend_lane, selected kernel/runtime, model family/architecture, quantization, tokenizer source, prompt template, route id, answer gate, and claim boundary.",
+  "The bounded Qwen2.5 CPU math receipts preserve fallback_used=false and source-run evidence.",
+  "No broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S claim is made.",
+]
