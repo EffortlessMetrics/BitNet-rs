@@ -655,3 +655,50 @@ must_not_claim = [
   "MPSGraph inference is proven.",
   "Broad BitNet chat quality or performance is proven.",
 ]
+
+[[work_item]]
+id = "M4-BITNET-ASK-005"
+status = "pr_open"
+pr = 4688
+branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-005-doctor-readiness"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-ASK-004"]
+acceptance = "Add advisory BitNet one-shot ask readiness into `bitnet mac doctor` receipts so operators can see the supported-ask catalog row, cached model readiness, accepted external tokenizer path/SHA status, fetch/verify/model commands, example cached ask command, and unchanged BitNet chat/serve/Metal claim boundaries without making dense SLM doctor fail when optional BitNet artifacts are absent."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_doctor",
+  "cargo test --locked -p bitnet-cli --bin bitnet bitnet_mac_ask_readiness",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "`bitnet mac doctor` receipts include advisory BitNet one-shot ask readiness for cache/tokenizer/catalog repair without enabling BitNet chat or serve.",
+]
+must_not_claim = [
+  "BitNet chat works.",
+  "BitNet serve works.",
+  "Full apple-m4-metal model inference works.",
+  "Apple M4 Metal participates in autoregressive BitNet decode.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad BitNet chat quality or performance is proven.",
+]

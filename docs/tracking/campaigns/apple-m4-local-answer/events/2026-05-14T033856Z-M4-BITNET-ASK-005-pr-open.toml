@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T03:38:56Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-005"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 4688
+head_sha = "5a15420c187940cd986dcf1be3fdc195f6bc0072"
+
+notes = [
+  "Opened PR #4688 for advisory BitNet one-shot ask readiness in `bitnet mac doctor` receipts.",
+  "The PR reports supported-ask catalog readiness, cache/tokenizer status, repair commands, an example cached ask command, and unchanged BitNet chat/serve/Metal claim boundaries.",
+  "The doctor readiness section remains advisory and does not make dense SLM doctor fail when optional BitNet artifacts are absent.",
+]

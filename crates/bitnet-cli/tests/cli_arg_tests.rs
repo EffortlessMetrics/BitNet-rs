@@ -829,6 +829,21 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
     assert_eq!(receipt_json["result"], "fail");
     assert_eq!(receipt_json["checks"]["cache"]["ready"], false);
     assert_eq!(receipt_json["checks"]["unsupported_backend"]["rejected"], true);
+    assert_eq!(receipt_json["checks"]["bitnet_ask"]["checked"], true);
+    assert_eq!(receipt_json["checks"]["bitnet_ask"]["advisory"], true);
+    assert_eq!(receipt_json["checks"]["bitnet_ask"]["blocks_doctor"], false);
+    assert_eq!(
+        receipt_json["checks"]["bitnet_ask"]["model"]["id"],
+        "microsoft-bitnet-b1.58-2B-4T-i2s"
+    );
+    assert_eq!(receipt_json["checks"]["bitnet_ask"]["claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["checks"]["bitnet_ask"]["claim_boundary"]["serve_enabled"], false);
+    assert!(
+        receipt_json["checks"]["bitnet_ask"]["commands"]["models"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("bitnet mac models")
+    );
     assert_eq!(receipt_json["mac_claim_boundary"]["bitnet_quality_claimed"], false);
     Ok(())
 }
