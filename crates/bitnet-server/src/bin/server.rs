@@ -1,7 +1,7 @@
 //! BitNet server binary with comprehensive monitoring
 
 use anyhow::Result;
-use bitnet_server::{BitNetServer, ServerConfig};
+use bitnet_server::{BitNetServer, DeviceConfig, ServerConfig};
 use bitnet_startup_contract_guard::{ContractPolicy, RuntimeComponent, evaluate_and_emit};
 use clap::Parser;
 use tracing::info;
@@ -92,6 +92,7 @@ async fn main() -> Result<()> {
     config.server.port = args.port;
     config.server.default_model_path = Some(args.model);
     config.server.default_tokenizer_path = args.tokenizer;
+    config.server.default_device = parse_default_device_arg(&args.device)?;
 
     // Override monitoring settings
     config.monitoring.prometheus_enabled = args.prometheus;
@@ -122,6 +123,29 @@ async fn main() -> Result<()> {
 
     info!("Server stopped");
     Ok(())
+}
+
+fn parse_default_device_arg(device: &str) -> Result<DeviceConfig> {
+    device.parse()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_default_device_arg;
+    use bitnet_server::DeviceConfig;
+
+    #[test]
+    fn parses_strict_rtx_5070_ti_cuda_device_arg() {
+        assert_eq!(
+            parse_default_device_arg("nvidia-rtx-5070-ti-cuda").unwrap(),
+            DeviceConfig::NvidiaRtx5070TiCuda
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_device_arg() {
+        assert!(parse_default_device_arg("generic-fast-gpu").is_err());
+    }
 }
 
 /// Wait for shutdown signals
