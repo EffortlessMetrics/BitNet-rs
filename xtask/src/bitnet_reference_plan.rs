@@ -20,6 +20,8 @@ const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "a770_semantic_quality_proven",
 ];
 
+const A770_BITNET_QK256_ROUTE_ID: &str = "a770.bitnet.i2s.qk256";
+
 #[derive(Debug)]
 pub struct ReferencePlanArgs<'a> {
     pub model_contract: &'a Path,
@@ -233,6 +235,13 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "setup_command_pwsh": "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -Force -SkipPatches",
         },
         "rust_commands": {
+            "proof_identity": {
+                "model_contract": path_to_string(args.model_contract),
+                "a770_kernel_route": A770_BITNET_QK256_ROUTE_ID,
+                "cpu_command_declares_kernel_route": false,
+                "a770_command_declares_kernel_route": true,
+                "policy": "model contract binds both Rust receipts; kernel route binds only the strict A770 receipt"
+            },
             "cpu_argv": rust_cli_argv(
                 "cpu",
                 &model_path,
@@ -241,7 +250,9 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 args.system_prompt,
                 args.prompt,
                 args.max_new_tokens,
-                "target/a770-diagnostic/reference-plan-cpu.json"
+                "target/a770-diagnostic/reference-plan-cpu.json",
+                Some(args.model_contract),
+                None
             ),
             "a770_argv": rust_cli_argv(
                 "intel-arc-a770-opencl",
@@ -251,7 +262,9 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 args.system_prompt,
                 args.prompt,
                 args.max_new_tokens,
-                "target/a770-diagnostic/reference-plan-a770.json"
+                "target/a770-diagnostic/reference-plan-a770.json",
+                Some(args.model_contract),
+                Some(A770_BITNET_QK256_ROUTE_ID)
             ),
         },
         "decision": {
@@ -440,6 +453,8 @@ fn rust_cli_argv(
     prompt: &str,
     max_new_tokens: usize,
     json_out: &str,
+    proof_model_contract: Option<&Path>,
+    proof_kernel_route: Option<&str>,
 ) -> Vec<String> {
     let features =
         if device.contains("a770") || device.contains("opencl") { "opencl" } else { "cpu" };
@@ -483,6 +498,14 @@ fn rust_cli_argv(
         "--json-out".to_string(),
         json_out.to_string(),
     ]);
+    if let Some(model_contract) = proof_model_contract {
+        argv.push("--proof-model-contract".to_string());
+        argv.push(path_to_string(model_contract));
+    }
+    if let Some(kernel_route) = proof_kernel_route {
+        argv.push("--proof-kernel-route".to_string());
+        argv.push(kernel_route.to_string());
+    }
     argv
 }
 
@@ -557,7 +580,19 @@ mod tests {
 
     #[test]
     fn rust_cli_argv_keeps_a770_and_cpu_feature_routes_separate() {
-        let cpu = rust_cli_argv("cpu", "m.gguf", "tok.json", "raw", None, "x", 1, "cpu.json");
+        let contract = Path::new("docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml");
+        let cpu = rust_cli_argv(
+            "cpu",
+            "m.gguf",
+            "tok.json",
+            "raw",
+            None,
+            "x",
+            1,
+            "cpu.json",
+            Some(contract),
+            None,
+        );
         let a770 = rust_cli_argv(
             "intel-arc-a770-opencl",
             "m.gguf",
@@ -567,10 +602,25 @@ mod tests {
             "x",
             1,
             "a770.json",
+            Some(contract),
+            Some(A770_BITNET_QK256_ROUTE_ID),
         );
         assert!(cpu.windows(2).any(|args| args == ["--features", "cpu"]));
         assert!(a770.windows(2).any(|args| args == ["--features", "opencl"]));
         assert!(a770.windows(2).any(|args| args == ["--device", "intel-arc-a770-opencl"]));
+        assert!(
+            cpu.windows(2)
+                .any(|args| args == ["--proof-model-contract", contract.to_str().unwrap()])
+        );
+        assert!(
+            a770.windows(2)
+                .any(|args| args == ["--proof-model-contract", contract.to_str().unwrap()])
+        );
+        assert!(!cpu.iter().any(|arg| arg == "--proof-kernel-route"));
+        assert!(
+            a770.windows(2)
+                .any(|args| args == ["--proof-kernel-route", A770_BITNET_QK256_ROUTE_ID])
+        );
     }
 
     #[test]
