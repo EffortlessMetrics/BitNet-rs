@@ -1,10 +1,21 @@
 use bitnet_qk256_dispatch::{
-    Qk256DispatchBackend, forward_qk256, forward_qk256_with_backend, qk256_dispatch_status,
+    Qk256DispatchBackend, forward_qk256, forward_qk256_with_backend, qk256_dispatch_counters,
+    qk256_dispatch_status, reset_qk256_dispatch_counters,
 };
 use candle_core::{Device, Tensor};
+use std::sync::{Mutex, MutexGuard};
+
+static COUNTER_LOCK: Mutex<()> = Mutex::new(());
+
+fn counter_guard() -> MutexGuard<'static, ()> {
+    COUNTER_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 #[test]
 fn forward_qk256_supports_rank2_input() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
@@ -18,6 +29,9 @@ fn forward_qk256_supports_rank2_input() {
 
 #[test]
 fn forward_qk256_explicit_cpu_backend_matches_default() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
@@ -37,6 +51,9 @@ fn forward_qk256_explicit_cpu_backend_matches_default() {
 
 #[test]
 fn forward_qk256_supports_rank3_input() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 2 * 2 * 256], (2, 2, 256), &device).unwrap();
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
@@ -54,6 +71,9 @@ fn forward_qk256_supports_rank3_input() {
 
 #[test]
 fn forward_qk256_rejects_dimension_mismatch() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 128], (1, 128), &device).unwrap();
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
@@ -65,6 +85,9 @@ fn forward_qk256_rejects_dimension_mismatch() {
 #[cfg(not(feature = "opencl"))]
 #[test]
 fn forward_qk256_opencl_backend_requires_opencl_feature() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
@@ -82,6 +105,8 @@ fn forward_qk256_opencl_backend_requires_opencl_feature() {
 
 #[test]
 fn qk256_dispatch_status_keeps_opencl_non_claiming() {
+    let _guard = counter_guard();
+
     let status = qk256_dispatch_status();
 
     assert_eq!(status.compiled_opencl, cfg!(feature = "opencl"));
@@ -100,10 +125,61 @@ fn qk256_dispatch_status_keeps_opencl_non_claiming() {
     }
 }
 
+#[test]
+fn qk256_dispatch_counters_track_cpu_successes_and_rows() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
+    let device = Device::Cpu;
+    let input = Tensor::from_vec(vec![1.0f32; 2 * 2 * 256], (2, 2, 256), &device).unwrap();
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
+
+    forward_qk256(&input, &qk, "layers.0.feed_forward.up_proj.weight.qk256_qs").unwrap();
+
+    let counters = qk256_dispatch_counters();
+    assert_eq!(counters.cpu_calls, 1);
+    assert_eq!(counters.cpu_successes, 1);
+    assert_eq!(counters.cpu_input_rows, 4);
+    assert_eq!(counters.opencl_calls, 0);
+    assert_eq!(counters.opencl_successes, 0);
+    assert_eq!(counters.opencl_input_rows, 0);
+
+    reset_qk256_dispatch_counters();
+    assert_eq!(qk256_dispatch_counters(), Default::default());
+}
+
+#[cfg(not(feature = "opencl"))]
+#[test]
+fn qk256_dispatch_counters_track_failed_opencl_attempts_without_success() {
+    let _guard = counter_guard();
+    reset_qk256_dispatch_counters();
+
+    let device = Device::Cpu;
+    let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
+
+    let err = forward_qk256_with_backend(
+        &input,
+        &qk,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Qk256DispatchBackend::OpenCl,
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("opencl feature is disabled"));
+    let counters = qk256_dispatch_counters();
+    assert_eq!(counters.opencl_calls, 1);
+    assert_eq!(counters.opencl_successes, 0);
+    assert_eq!(counters.opencl_input_rows, 1);
+    assert_eq!(counters.cpu_calls, 0);
+}
+
 #[cfg(feature = "opencl")]
 #[test]
 fn qk256_opencl_source_matches_ggml_no_scale_mapping() {
     use bitnet_qk256_dispatch::{QK256_OPENCL_KERNEL_NAME, QK256_OPENCL_KERNEL_SRC};
+
+    let _guard = counter_guard();
 
     assert_eq!(QK256_OPENCL_KERNEL_NAME, "qk256_gemm_no_scale");
     assert!(QK256_OPENCL_KERNEL_SRC.contains("__kernel void qk256_gemm_no_scale"));
