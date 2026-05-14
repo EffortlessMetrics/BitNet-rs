@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T06:12:51Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-WARM-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "in_progress"
+pr = 4705
+head_sha = "52ad2bdc6281da719839c4908d7da2e7adbc51d7"
+
+notes = [
+  "Opened PR #4705 to expose the accepted BitNet fixed-prompt warm route in Apple M4 operator catalog and readiness metadata.",
+  "`bitnet mac models`, `bitnet mac doctor`, local-server `/models`, and `mac serve-check` now surface fixed-prompt warm readiness metadata only.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims remain disabled.",
+]
