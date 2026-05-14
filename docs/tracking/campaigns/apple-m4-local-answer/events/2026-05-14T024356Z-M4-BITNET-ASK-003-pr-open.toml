@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T02:43:56Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-003"
+event = "pr_open"
+pr = 4680
+head_sha = "35e37929b8d8f66ebea018126e1fe50491ee58d4"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4680 for M4-BITNET-ASK-003 one-shot BitNet `bitnet mac ask` partial-failure receipts.",
+  "The PR writes durable setup/generation failure receipts with failure stage, repair guidance, timeout-boundary status, fallback_used=false, and empty partial generation.",
+  "BitNet chat, BitNet serve, full Metal inference, Apple QK256, Neural Engine, MPSGraph, broad BitNet quality, and broad performance claims remain disabled.",
+]

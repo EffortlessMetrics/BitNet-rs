@@ -22,8 +22,9 @@ envelope. A local Apple CPU/NEON release receipt now records the strict shared
 answer corpus passing with fallback disabled and explicit artifact/tokenizer
 authority. #4637 wires that evidence into an explicit one-shot
 `bitnet mac ask` route guarded by accepted GGUF/tokenizer identity and a
-`supported-ask` catalog state. BitNet `mac chat` and `mac serve` remain
-disabled, and a fresh user-route runtime receipt is still a follow-up proof.
+`supported-ask` catalog state. #4647 adds the first user-route runtime receipt,
+and #4651 adds progress/status UX for slow one-shot runs. BitNet `mac chat`
+and `mac serve` remain disabled.
 
 ## End State
 
@@ -67,6 +68,7 @@ disabled, and a fresh user-route runtime receipt is still a follow-up proof.
 | M4-BITNET-ASK-000 | merged | #4637 added an explicit one-shot BitNet `bitnet mac ask` route gated by accepted Microsoft I2_S GGUF and external tokenizer identity, marked BitNet as `supported-ask`, and kept BitNet chat/serve disabled without claiming a fresh runtime smoke. |
 | M4-BITNET-ASK-001 | merged | Local receipt `ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json` proves the user-facing BitNet `bitnet mac ask` route completed one strict Apple M4 CPU/NEON prompt with fallback_used=false, text `2+2 equals 4.`, generated token IDs, accepted model/tokenizer identity, and timing fields; merged in #4647. |
 | M4-BITNET-ASK-002 | merged | #4651 added explicit `--progress` status milestones for slow one-shot `bitnet mac ask` runs and `--quiet` suppression for scripts while keeping generated text on stdout and BitNet chat/server/Metal claims disabled. |
+| M4-BITNET-ASK-003 | in_progress | Add durable partial-failure receipts for BitNet `bitnet mac ask` setup and generation failures, with repair guidance and unchanged chat/server/Metal claim boundaries. |
 
 ## Review Policy
 

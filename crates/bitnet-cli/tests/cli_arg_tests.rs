@@ -610,8 +610,20 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 
 #[test]
 fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt = dir.path().join("bitnet-ask-missing-tokenizer-authority.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
     bitnet()
-        .args(["mac", "ask", "What is 2+2?", "--model-id", "microsoft-bitnet-b1.58-2B-4T-i2s"])
+        .args([
+            "mac",
+            "ask",
+            "What is 2+2?",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("requires explicit tokenizer authority"))
@@ -622,11 +634,12 @@ fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
 }
 
 #[test]
-fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
+fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
-    let tokenizer = dir.path().join("tokenizer.json");
-    std::fs::write(&tokenizer, b"{\"not\":\"the accepted tokenizer\"}")?;
+    let receipt = dir.path().join("bitnet-ask-failure.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
     let tokenizer_str = tokenizer.to_string_lossy().into_owned();
 
     bitnet()
@@ -640,11 +653,69 @@ fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
             "missing-bitnet.gguf",
             "--tokenizer",
             tokenizer_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("tokenizer is missing"))
+        .stderr(predicate::str::contains("failure receipt written"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
+    assert_eq!(receipt_json["status"], "failed");
+    assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["generation"]["generated_tokens"], 0);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_mac_ask_failure"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let tokenizer = dir.path().join("tokenizer.json");
+    let receipt = dir.path().join("bitnet-ask-tokenizer-failure.json");
+    std::fs::write(&tokenizer, b"{\"not\":\"the accepted tokenizer\"}")?;
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            "What is 2+2?",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
         ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("requires tokenizer SHA256"))
+        .stderr(predicate::str::contains("failure receipt written"))
         .stderr(predicate::str::contains("accepted GGUF").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
+    assert_eq!(receipt_json["failure"]["stage"], "tokenizer_verify_failed");
+    assert_eq!(
+        receipt_json["tokenizer"]["expected_sha256"],
+        "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+    );
     Ok(())
 }
 
