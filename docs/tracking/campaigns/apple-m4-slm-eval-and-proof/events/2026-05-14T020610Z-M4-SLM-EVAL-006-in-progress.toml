@@ -1,0 +1,13 @@
+timestamp = "2026-05-14T02:06:10Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started dense SLM eval summary regression comparison for the Mac regression tooling.",
+  "The implementation compares only matching apple_m4_slm_eval_summary reports with identical model, tokenizer, corpus, backend, stability, and claim-boundary context.",
+  "The thresholds are advisory regression thresholds and do not create broad model-quality, broad performance, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, or speedup claims.",
+]

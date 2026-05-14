@@ -152,6 +152,41 @@ does not record a separate memory-drift series. The summary schema therefore
 records `memory_drift_mb=0.0` with
 `memory_drift_source=not_recorded_by_warm_session_receipt`.
 
+## Regression Comparison
+
+`M4-SLM-EVAL-006` wires the per-model summary reports into the existing Mac
+regression command:
+
+```bash
+bitnet mac regression \
+  ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q8_0/summary.json \
+  --baseline ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q8_0/summary.json \
+  --json
+```
+
+The comparison is advisory by default. `--fail-on-drift` can turn advisory
+warnings into a non-zero command for release or nightly gates, but the
+thresholds remain regression thresholds, not speed guarantees or broad quality
+claims.
+
+Summary reports can only be compared when the identity and claim context match:
+artifact kind, M4 machine ID, model ID, model SHA, tokenizer authority, prompt
+template, seeded corpus name and seed, backend, fallback status, resident
+quality status, and dense-SLM-only claim-boundary flags. A model, tokenizer,
+corpus, backend, or claim-boundary change requires a new baseline instead of a
+drift comparison.
+
+The current advisory thresholds watch for:
+
+- seeded-corpus score or deterministic scorer-rate decreases;
+- input, output, or decode throughput drops;
+- cold-load, tokenizer-load, prompt-tokenize, prefill, TTFT, sampling, or total
+  wall-time increases;
+- peak-memory increases.
+
+The same comparison is available through `bitnet mac receipts-check
+--regression-baseline` for committed report validation jobs.
+
 ## CI Tiers
 
 Generic PR CI stays lightweight. The Tier 0 workflow is:
