@@ -101,6 +101,25 @@ fn layer_norm_with_optional_bias(
     }
 }
 
+fn optional_layer_norm_with_optional_bias(
+    normalized_shape: usize,
+    eps: f64,
+    vb: VarBuilder,
+) -> candle_core::Result<Option<LayerNorm>> {
+    let weight = match vb.get((normalized_shape,), "weight") {
+        Ok(weight) => weight,
+        Err(err) => {
+            tracing::debug!("Optional norm weight missing; skipping [{}]: {err}", normalized_shape);
+            return Ok(None);
+        }
+    };
+
+    match vb.get((normalized_shape,), "bias") {
+        Ok(bias) => Ok(Some(LayerNorm::new(weight, bias, eps))),
+        Err(_) => Ok(Some(LayerNorm::new_no_bias(weight, eps))),
+    }
+}
+
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
     sin: Tensor,
@@ -196,6 +215,7 @@ pub struct MultiHeadAttention {
     k_proj: Linear,
     v_proj: Linear,
     o_proj: Linear,
+    sub_layernorm: Option<LayerNorm>,
     rope: Option<RotaryEmbedding>,
     layer_idx: usize, // Layer index for QK256 weight name generation
     qk256_backend: Qk256DispatchBackend,
@@ -211,6 +231,7 @@ impl MultiHeadAttention {
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
         let head_dim = hidden_size / n_heads;
+        let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
 
         if !hidden_size.is_multiple_of(n_heads) {
             return Err(BitNetError::Validation(format!(
@@ -257,6 +278,8 @@ impl MultiHeadAttention {
         let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
         let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
         let o_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("o_proj"))?;
+        let sub_layernorm =
+            optional_layer_norm_with_optional_bias(hidden_size, eps, vb.pp("sub_layernorm"))?;
 
         let rope = RotaryEmbedding::new(
             head_dim,
@@ -275,6 +298,7 @@ impl MultiHeadAttention {
             k_proj,
             v_proj,
             o_proj,
+            sub_layernorm,
             rope,
             layer_idx,
             qk256_backend,
@@ -547,6 +571,10 @@ impl MultiHeadAttention {
             seq_len,
             self.n_heads * self.head_dim,
         ])?;
+        let attn_output = match &self.sub_layernorm {
+            Some(norm) => norm.forward(&attn_output)?,
+            None => attn_output,
+        };
 
         self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)
     }
@@ -617,6 +645,7 @@ pub struct FeedForward {
     gate_proj: Linear,
     up_proj: Linear,
     down_proj: Linear,
+    sub_layernorm: Option<LayerNorm>,
     layer_idx: usize, // Layer index for QK256 weight name generation
     qk256_backend: Qk256DispatchBackend,
 }
@@ -642,6 +671,11 @@ impl FeedForward {
                 intermediate_size,
                 hidden_size,
                 vb.pp("down_proj"),
+            )?,
+            sub_layernorm: optional_layer_norm_with_optional_bias(
+                intermediate_size,
+                config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5),
+                vb.pp("sub_layernorm"),
             )?,
             layer_idx,
             qk256_backend,
@@ -679,6 +713,10 @@ impl FeedForward {
         }
 
         let hidden = gate.mul(&up)?;
+        let hidden = match &self.sub_layernorm {
+            Some(norm) => norm.forward(&hidden)?,
+            None => hidden,
+        };
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -1673,6 +1711,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(bitnet_env)]
     fn test_layer_norm_with_optional_bias() -> candle_core::Result<()> {
         // Test layer_norm_with_optional_bias helper with no-bias LayerNorm path
         let device = Device::Cpu;
@@ -1712,6 +1751,38 @@ mod tests {
     }
 
     #[test]
+    fn test_optional_layer_norm_with_optional_bias() -> candle_core::Result<()> {
+        let device = Device::Cpu;
+        let hidden_size = 64;
+        let eps = 1e-5;
+
+        use std::collections::HashMap;
+
+        let empty_vb = VarBuilder::from_tensors(HashMap::new(), DType::F32, &device);
+        assert!(
+            optional_layer_norm_with_optional_bias(hidden_size, eps, empty_vb)?.is_none(),
+            "missing optional norm weight should skip the layer"
+        );
+
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let layer_norm = optional_layer_norm_with_optional_bias(hidden_size, eps, vb)?
+            .expect("weight-only optional norm should build a no-bias LayerNorm");
+
+        let input_data: Vec<f32> =
+            (0..hidden_size).map(|i| (i as f32 / hidden_size as f32).cos()).collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+
+        let output = layer_norm.forward(&input)?;
+        assert_eq!(output.shape(), input.shape());
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial_test::serial(bitnet_env)]
     fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {
         let device = Device::Cpu;
         let hidden_size = 64;
