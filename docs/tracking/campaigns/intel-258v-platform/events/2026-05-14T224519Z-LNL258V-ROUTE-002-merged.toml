@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T22:45:19Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4798
+branch = "codex/lunar-lake/LNL258V-ROUTE-002-profile-comparison"
+head_sha = "5ce9a52a4a0e106cb37717628d17cd24f7ace699"
+merge_sha = "e9004b01bfbca15f51a98fb30651566cd0a1d93c"
+summary = "Marked LNL258V-ROUTE-002 merged after the Lunar Lake route profile comparison landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4798",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+]
+
+notes = [
+  "The merged profile comparison indexes promoted and candidate Lunar Lake dense Qwen CPU, OpenVINO GPU, OpenVINO NPU, and BitNet CPU reference route evidence across fixed workload profiles.",
+  "Dense Qwen CPU remains promoted for regression_tiny, ask_short, and ask_normal; OpenVINO GPU/NPU remain candidates until benchmark-qualified profile advantage and profile regression evidence exists.",
+  "No new inference, broad dense SLM answer quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
