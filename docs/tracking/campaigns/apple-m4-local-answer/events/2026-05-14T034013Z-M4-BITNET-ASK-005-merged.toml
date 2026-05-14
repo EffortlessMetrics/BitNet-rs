@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T03:40:13Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-005"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 4688
+head_sha = "527ee14474a209c84c6b70221978bd15b547ac33"
+merge_sha = "d67519d2547ec5b65d46594f8f191c068027f662"
+
+notes = [
+  "Merged PR #4688 with advisory BitNet one-shot ask readiness in `bitnet mac doctor` receipts.",
+  "The merged route reports supported-ask catalog state, cached model readiness, accepted tokenizer path/SHA status, repair commands, an example cached ask command, and explicit disabled chat/serve/Metal boundaries.",
+  "No BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad performance, or speedup claim was added.",
+]
