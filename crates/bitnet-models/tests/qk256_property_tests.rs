@@ -15,7 +15,7 @@
 
 use bitnet_models::quant::i2s_qk256::{
     I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256, gemv_qk256_row,
-    unpack_qk256_block,
+    pack_qk256_codes_for_cols, unpack_qk256_block,
 };
 use proptest::prelude::*;
 
@@ -125,15 +125,9 @@ proptest! {
         codes in qk256_codes(QK256_BLOCK),
         input in random_input_vector(QK256_BLOCK),
     ) {
-        // Pack codes into bytes (4 codes per byte)
-        let mut packed = [0u8; QK256_PACKED_BYTES];
-        for (i, chunk) in codes.chunks(4).enumerate() {
-            let mut byte = 0u8;
-            for (j, &code) in chunk.iter().enumerate() {
-                byte |= code << (j * 2);
-            }
-            packed[i] = byte;
-        }
+        let packed: [u8; QK256_PACKED_BYTES] = pack_qk256_codes_for_cols(&codes, QK256_BLOCK)
+            .try_into()
+            .expect("QK256 block packs into 64 bytes");
 
         // Compute QK256 result
         let qk256_result = gemv_qk256_row(&packed, &input, QK256_BLOCK);
@@ -161,15 +155,9 @@ proptest! {
         input in random_input_vector(QK256_BLOCK),
         cols in 1usize..=255, // Tail only (< QK256_BLOCK)
     ) {
-        // Pack codes
-        let mut packed = [0u8; QK256_PACKED_BYTES];
-        for (i, chunk) in codes.chunks(4).enumerate() {
-            let mut byte = 0u8;
-            for (j, &code) in chunk.iter().enumerate() {
-                byte |= code << (j * 2);
-            }
-            packed[i] = byte;
-        }
+        let packed: [u8; QK256_PACKED_BYTES] = pack_qk256_codes_for_cols(&codes, QK256_BLOCK)
+            .try_into()
+            .expect("QK256 block packs into 64 bytes");
 
         // Compute QK256 result with limited cols
         let qk256_result = gemv_qk256_row(&packed, &input, cols);
@@ -223,17 +211,12 @@ proptest! {
 
                 let codes_in_block = QK256_BLOCK.min(cols - block_idx * QK256_BLOCK);
 
-                for byte_idx in 0..QK256_PACKED_BYTES {
-                    let mut byte = 0u8;
-                    for j in 0..4 {
-                        let code_idx = block_start_code + byte_idx * 4 + j;
-                        if byte_idx * 4 + j < codes_in_block {
-                            let code = codes[code_idx];
-                            byte |= code << (j * 2);
-                        }
-                    }
-                    packed_data[block_start_byte + byte_idx] = byte;
-                }
+                let packed_block = pack_qk256_codes_for_cols(
+                    &codes[block_start_code..block_start_code + codes_in_block],
+                    codes_in_block,
+                );
+                packed_data[block_start_byte..block_start_byte + QK256_PACKED_BYTES]
+                    .copy_from_slice(&packed_block[..QK256_PACKED_BYTES]);
             }
         }
 
@@ -425,16 +408,12 @@ proptest! {
 
                 let codes_in_block = QK256_BLOCK.min(cols - block_idx * QK256_BLOCK);
 
-                for byte_idx in 0..QK256_PACKED_BYTES {
-                    let mut byte = 0u8;
-                    for j in 0..4 {
-                        if byte_idx * 4 + j < codes_in_block {
-                            let code_idx = block_start_code + byte_idx * 4 + j;
-                            byte |= codes[code_idx] << (j * 2);
-                        }
-                    }
-                    packed_data[block_start_byte + byte_idx] = byte;
-                }
+                let packed_block = pack_qk256_codes_for_cols(
+                    &codes[block_start_code..block_start_code + codes_in_block],
+                    codes_in_block,
+                );
+                packed_data[block_start_byte..block_start_byte + QK256_PACKED_BYTES]
+                    .copy_from_slice(&packed_block[..QK256_PACKED_BYTES]);
             }
         }
 

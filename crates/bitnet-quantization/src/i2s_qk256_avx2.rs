@@ -6,9 +6,8 @@
 //!
 //! The hot path uses several techniques for throughput:
 //!
-//! - **SIMD variable shift** (`vpsrlvd`): Extracts 8 two-bit codes from 2 packed
-//!   bytes in 3 SIMD ops (broadcast → variable shift → mask), replacing 8 scalar
-//!   bit-extractions + `_mm256_setr_epi32`.
+//! - **SIMD lane extraction**: Extracts 8 two-bit codes from 8 packed lane bytes
+//!   using the Microsoft BitNet act-parallel byte layout.
 //!
 //! - **4-wide accumulator bank**: Hides FMA latency (4–5 cycles on Haswell+) by
 //!   keeping 4 independent dependency chains in flight.
@@ -31,27 +30,21 @@ use std::arch::x86_64::*;
 use crate::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES};
 use anyhow::Result;
 
-/// Decode 8 two-bit codes from 2 packed bytes into 8 f32 weights using SIMD.
+/// Decode 8 two-bit codes from 8 packed lane bytes into 8 f32 weights using SIMD.
 ///
-/// Uses `vpsrlvd` (per-lane variable shift) to extract all 8 codes in parallel:
-///   packed = b0 | (b1 << 16)  →  broadcast to all lanes  →  shift by [0,2,4,6,16,18,20,22]  →  mask 0x03
-///
-/// Then maps codes [0,1,2,3] → weights [-1,0,+1,+2] via `weight = code - 1`.
+/// Microsoft BitNet stores one 128-value group as 32 bytes. Byte `p` stores
+/// values `p`, `p+32`, `p+64`, and `p+96` in bits 7:6, 5:4, 3:2, and 1:0.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
-unsafe fn decode_8_weights_avx2(
-    byte0: u8,
-    byte1: u8,
-    shifts: __m256i,
+unsafe fn decode_8_lane_weights_avx2(
+    bytes: *const u8,
+    lane_shift: __m256i,
     mask_03: __m256i,
     one: __m256i,
 ) -> __m256 {
-    // Pack both bytes so per-lane shifts extract each 2-bit code:
-    //   lanes 0–3 shift byte0 by 0,2,4,6; lanes 4–7 shift byte1 by 0,2,4,6
-    //   (byte1 sits at bit 16, so shifts 16,18,20,22 reach its 2-bit fields).
-    let packed = (byte0 as i32) | ((byte1 as i32) << 16);
-    let broadcast = _mm256_set1_epi32(packed);
-    let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
+    let raw8 = unsafe { _mm_loadl_epi64(bytes as *const __m128i) };
+    let byte_lanes = _mm256_cvtepu8_epi32(raw8);
+    let codes = _mm256_and_si256(_mm256_srlv_epi32(byte_lanes, lane_shift), mask_03);
 
     // codes ∈ {0,1,2,3} → weights ∈ {-1,0,+1,+2}. Code 3 is unused by the
     // Microsoft BitNet quantizer but remains deterministic if encountered.
@@ -62,8 +55,8 @@ unsafe fn decode_8_weights_avx2(
 ///
 /// # Optimizations over the MVP scalar-unpack path
 ///
-/// 1. **SIMD code extraction**: `vpsrlvd` + broadcast replaces 8 scalar shifts per
-///    8-element group, cutting unpack cost from ~16 scalar ops to 3 SIMD ops per group.
+/// 1. **SIMD code extraction**: 8 lane bytes are unpacked to 8 logical weights
+///    for each Microsoft BitNet 32-value lane.
 /// 2. **4-wide accumulator bank**: 4 independent FMA dependency chains hide the
 ///    4-cycle FMA latency on Haswell/Skylake.
 /// 3. **32-element main loop**: 8 packed bytes → 32 codes → 4×FMA per iteration
@@ -91,8 +84,11 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     debug_assert!(x.len() >= cols, "AVX2: x too short: {} < {}", x.len(), cols);
 
     unsafe {
-        // Hoisted constants shared by every decode_8_weights_avx2 call.
-        let shifts = _mm256_setr_epi32(0, 2, 4, 6, 16, 18, 20, 22);
+        // Hoisted constants shared by every decode_8_lane_weights_avx2 call.
+        let shift_0 = _mm256_set1_epi32(6);
+        let shift_1 = _mm256_set1_epi32(4);
+        let shift_2 = _mm256_set1_epi32(2);
+        let shift_3 = _mm256_set1_epi32(0);
         let mask_03 = _mm256_set1_epi32(0x03);
         let one = _mm256_set1_epi32(1);
 
@@ -120,57 +116,50 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
                 _mm_prefetch(x_ptr.add(col + QK256_BLOCK + 16) as *const i8, _MM_HINT_T0);
             }
 
-            let mut j = 0usize;
+            for group in 0..2usize {
+                let group_col = col + group * 128;
+                if group_col >= cols {
+                    break;
+                }
+                let group_take = 128usize.min(cols - group_col);
+                let group_bytes = blk.add(group * 32);
 
-            // --- 32-element main loop (8 packed bytes → 4 × 8-wide FMA) ---
-            while j + 32 <= take {
-                let pi = j / 4;
+                for lane in 0..4usize {
+                    let lane_col = group_col + lane * 32;
+                    let lane_take = group_take.saturating_sub(lane * 32).min(32);
+                    if lane_take == 0 {
+                        break;
+                    }
 
-                let w0 =
-                    decode_8_weights_avx2(*blk.add(pi), *blk.add(pi + 1), shifts, mask_03, one);
-                let w1 =
-                    decode_8_weights_avx2(*blk.add(pi + 2), *blk.add(pi + 3), shifts, mask_03, one);
-                let w2 =
-                    decode_8_weights_avx2(*blk.add(pi + 4), *blk.add(pi + 5), shifts, mask_03, one);
-                let w3 =
-                    decode_8_weights_avx2(*blk.add(pi + 6), *blk.add(pi + 7), shifts, mask_03, one);
+                    let (shift, acc) = match lane {
+                        0 => (shift_0, &mut acc0),
+                        1 => (shift_1, &mut acc1),
+                        2 => (shift_2, &mut acc2),
+                        _ => (shift_3, &mut acc3),
+                    };
 
-                let xj = col + j;
-                let x0 = _mm256_loadu_ps(x_ptr.add(xj));
-                let x1 = _mm256_loadu_ps(x_ptr.add(xj + 8));
-                let x2 = _mm256_loadu_ps(x_ptr.add(xj + 16));
-                let x3 = _mm256_loadu_ps(x_ptr.add(xj + 24));
+                    let mut pos = 0usize;
+                    while pos + 8 <= lane_take {
+                        let w =
+                            decode_8_lane_weights_avx2(group_bytes.add(pos), shift, mask_03, one);
+                        let xv = _mm256_loadu_ps(x_ptr.add(lane_col + pos));
+                        *acc = _mm256_fmadd_ps(w, xv, *acc);
+                        pos += 8;
+                    }
 
-                acc0 = _mm256_fmadd_ps(w0, x0, acc0);
-                acc1 = _mm256_fmadd_ps(w1, x1, acc1);
-                acc2 = _mm256_fmadd_ps(w2, x2, acc2);
-                acc3 = _mm256_fmadd_ps(w3, x3, acc3);
-
-                j += 32;
-            }
-
-            // --- 8-element cleanup loop ---
-            while j + 8 <= take {
-                let pi = j / 4;
-                let w = decode_8_weights_avx2(*blk.add(pi), *blk.add(pi + 1), shifts, mask_03, one);
-                let xv = _mm256_loadu_ps(x_ptr.add(col + j));
-                acc0 = _mm256_fmadd_ps(w, xv, acc0);
-                j += 8;
-            }
-
-            // --- Scalar tail (< 8 elements) ---
-            while j < take {
-                let packed_byte = *blk.add(j / 4);
-                let shift = (j % 4) * 2;
-                let code = (packed_byte >> shift) & 0x03;
-                let w = match code {
-                    0 => -1.0,
-                    1 => 0.0,
-                    2 => 1.0,
-                    _ => 2.0,
-                };
-                scalar_acc += w * *x_ptr.add(col + j);
-                j += 1;
+                    while pos < lane_take {
+                        let packed_byte = *group_bytes.add(pos);
+                        let code = (packed_byte >> (6 - lane * 2)) & 0x03;
+                        let w = match code {
+                            0 => -1.0,
+                            1 => 0.0,
+                            2 => 1.0,
+                            _ => 2.0,
+                        };
+                        scalar_acc += w * *x_ptr.add(lane_col + pos);
+                        pos += 1;
+                    }
+                }
             }
 
             col += take;

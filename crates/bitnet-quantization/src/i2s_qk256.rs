@@ -10,14 +10,15 @@
 //!
 //! ## Memory Layout
 //!
-//! Each block contains 256 elements packed into 64 bytes:
+//! Each block contains two Microsoft BitNet 128-element packing groups. Each
+//! 128-element group uses 32 bytes:
 //! ```text
-//! [byte 0: elem 0..3] [byte 1: elem 4..7] ... [byte 63: elem 252..255]
+//! byte p stores elements p, p+32, p+64, p+96 for p in 0..32
 //! ```
 //!
-//! Each byte packs 4 elements (2 bits each):
+//! Each byte packs four lane-separated elements (2 bits each), MSB first:
 //! ```text
-//! byte = elem0 | (elem1 << 2) | (elem2 << 4) | (elem3 << 6)
+//! byte = (elem_p << 6) | (elem_p+32 << 4) | (elem_p+64 << 2) | elem_p+96
 //! ```
 //!
 //! ## Code Mapping (VERIFIED)
@@ -159,6 +160,40 @@ pub fn code_to_f32(code: u8) -> f32 {
     LUT[code as usize]
 }
 
+/// Extract one logical QK256 code from a Microsoft BitNet-packed row.
+///
+/// Microsoft's `quantize_i2_s` groups each 128 logical values into 32 bytes.
+/// Within that group, byte `p` stores logical positions `p`, `p+32`,
+/// `p+64`, and `p+96` in bits `[7:6]`, `[5:4]`, `[3:2]`, and `[1:0]`.
+#[inline]
+pub fn packed_code_at(qs_row: &[u8], col: usize) -> u8 {
+    let group128 = col / 128;
+    let within = col % 128;
+    let lane = within / 32;
+    let pos = within % 32;
+    let byte = qs_row[group128 * 32 + pos];
+    (byte >> (6 - lane * 2)) & 0x03
+}
+
+/// Pack logical QK256 codes using the Microsoft BitNet act-parallel layout.
+///
+/// This helper is public for tests and diagnostics. Production loading preserves
+/// the GGUF bytes directly.
+pub fn pack_qk256_codes_for_cols(codes: &[u8], cols: usize) -> Vec<u8> {
+    let row_stride = qk256_row_stride_bytes(cols)
+        .expect("QK256: row stride overflow should be impossible for test packing");
+    let mut packed = vec![0u8; row_stride];
+    for (col, &code) in codes.iter().enumerate().take(cols) {
+        debug_assert!(code < 4, "QK256 code must be 0..=3, got {code}");
+        let group128 = col / 128;
+        let within = col % 128;
+        let lane = within / 32;
+        let pos = within % 32;
+        packed[group128 * 32 + pos] |= (code & 0x03) << (6 - lane * 2);
+    }
+    packed
+}
+
 /// Unpack one 64-byte block of 2-bit codes (QK=256) into 256 u8 codes (0..=3)
 ///
 /// # Arguments
@@ -171,13 +206,8 @@ pub fn code_to_f32(code: u8) -> f32 {
 /// Panics if slice lengths don't match expected sizes (debug builds only).
 #[inline]
 pub fn unpack_qk256_block(qs64: &[u8; QK256_PACKED_BYTES], out_codes256: &mut [u8; QK256_BLOCK]) {
-    // Each byte contains 4 codes: bits [1:0], [3:2], [5:4], [7:6]
-    for (i, &b) in qs64.iter().enumerate() {
-        let base = i * 4;
-        out_codes256[base] = b & 0x03;
-        out_codes256[base + 1] = (b >> 2) & 0x03;
-        out_codes256[base + 2] = (b >> 4) & 0x03;
-        out_codes256[base + 3] = (b >> 6) & 0x03;
+    for col in 0..QK256_BLOCK {
+        out_codes256[col] = packed_code_at(qs64, col);
     }
 }
 
@@ -272,9 +302,8 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
             }
         }
 
-        // Decode codes and accumulate dot product
         for j in 0..take {
-            let w = code_to_f32(codes[j]);
+            let w = code_to_f32(packed_code_at(blk, j));
             acc += w * x[col + j];
         }
 
@@ -481,13 +510,7 @@ mod tests {
     use super::*;
 
     fn pack_codes_for_cols(codes: &[u8], cols: usize) -> Vec<u8> {
-        let layout = Qk256Layout::from_rows_cols(1, cols).expect("layout");
-        let mut packed = vec![0u8; layout.row_stride_bytes];
-        for (i, &code) in codes.iter().enumerate().take(cols) {
-            assert!(code < 4, "test code must be 0..=3");
-            packed[i / 4] |= code << ((i % 4) * 2);
-        }
-        packed
+        pack_qk256_codes_for_cols(codes, cols)
     }
 
     fn reference_dot(codes: &[u8], x: &[f32], cols: usize) -> f32 {
@@ -502,18 +525,18 @@ mod tests {
 
     #[test]
     fn unpack_block_smoke() {
-        // Pattern: 0b_11_10_01_00 repeated
+        // Logical pattern: 0,1,2,3 repeating in Microsoft BitNet packed layout.
         let mut qs = [0u8; QK256_PACKED_BYTES];
-        for (i, b) in qs.iter_mut().enumerate() {
-            *b = 0b_11_10_01_00u8.wrapping_add(i as u8 & 0x03);
-        }
+        let pattern: Vec<u8> = (0..QK256_BLOCK).map(|i| (i % 4) as u8).collect();
+        let packed = pack_qk256_codes_for_cols(&pattern, QK256_BLOCK);
+        qs.copy_from_slice(&packed);
         let mut codes = [0u8; QK256_BLOCK];
         unpack_qk256_block(&qs, &mut codes);
 
         // Verify codes are in 0..=3
         assert!(codes.iter().all(|&c| c < 4), "All codes must be 0..=3");
 
-        // Verify first few codes match pattern
+        // Verify first few logical codes match pattern.
         assert_eq!(codes[0], 0);
         assert_eq!(codes[1], 1);
         assert_eq!(codes[2], 2);
@@ -795,23 +818,16 @@ mod tests {
     /// Test (B): Block Decode Golden (64B → 256 f32)
     ///
     /// Tests feature spec: i2s-dual-flavor.md#memory-layout
-    /// Pack 256 two-bit codes (LSB-first) cycling 0..3 into 64 bytes.
+    /// Pack 256 two-bit codes cycling 0..3 into Microsoft BitNet act-parallel bytes.
     /// Decode using the unpack path and verify:
     /// - RMS in range [0.1, 5.0]
     /// - First 16 values contain the set {-1, 0, 1, 2}
     #[test]
     fn qk256_block_decode_golden() {
-        // Pack pattern: 0,1,2,3,0,1,2,3,... (cycling through all codes)
-        let mut qs64 = [0u8; QK256_PACKED_BYTES];
-        for (i, byte) in qs64.iter_mut().enumerate() {
-            // Each byte packs 4 codes: elem0 | (elem1 << 2) | (elem2 << 4) | (elem3 << 6)
-            let base = i * 4;
-            let code0 = (base % 4) as u8;
-            let code1 = ((base + 1) % 4) as u8;
-            let code2 = ((base + 2) % 4) as u8;
-            let code3 = ((base + 3) % 4) as u8;
-            *byte = code0 | (code1 << 2) | (code2 << 4) | (code3 << 6);
-        }
+        let logical_codes: Vec<u8> = (0..QK256_BLOCK).map(|i| (i % 4) as u8).collect();
+        let packed = pack_qk256_codes_for_cols(&logical_codes, QK256_BLOCK);
+        let qs64: [u8; QK256_PACKED_BYTES] =
+            packed.try_into().expect("QK256 block packs into 64 bytes");
 
         // Unpack block
         let mut codes = [0u8; QK256_BLOCK];

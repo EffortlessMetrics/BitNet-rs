@@ -13,6 +13,7 @@
 #![cfg(feature = "cpu")]
 
 use bitnet_common::config::{ActivationType, BitNetConfig, ModelConfig, NormType};
+use bitnet_quantization::i2s_qk256::pack_qk256_codes_for_cols;
 use bitnet_transformer::{KVCache, Qk256DispatchBackend, TransformerModel};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
@@ -82,11 +83,7 @@ fn qk256_row_with_codes(codes: &[(usize, u8)]) -> Vec<u8> {
         unpacked[idx] = code;
     }
 
-    let mut packed = vec![0u8; 64];
-    for (byte_idx, chunk) in unpacked.chunks_exact(4).enumerate() {
-        packed[byte_idx] = chunk[0] | (chunk[1] << 2) | (chunk[2] << 4) | (chunk[3] << 6);
-    }
-    packed
+    pack_qk256_codes_for_cols(&unpacked, unpacked.len())
 }
 
 fn repeated_qk256_tensor(

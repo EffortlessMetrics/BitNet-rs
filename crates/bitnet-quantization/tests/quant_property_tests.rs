@@ -15,7 +15,7 @@
 
 use bitnet_common::QuantizationType;
 use bitnet_quantization::i2s_qk256::{
-    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, unpack_qk256_block,
+    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, pack_qk256_codes_for_cols, unpack_qk256_block,
 };
 use bitnet_quantization::validation::{
     estimate_quantization_memory, validate_data_shape_consistency, validate_numerical_input,
@@ -28,7 +28,7 @@ use proptest::prelude::*;
 proptest! {
     /// Packing 256 2-bit codes into 64 bytes and unpacking recovers the originals.
     ///
-    /// Each byte stores 4 codes at bit offsets [1:0], [3:2], [5:4], [7:6].
+    /// Microsoft BitNet stores each 128-value group as 32 act-parallel bytes.
     /// This property ensures the bit-shift arithmetic is self-consistent.
     #[test]
     fn prop_qk256_unpack_recovers_packed_codes(
@@ -43,19 +43,8 @@ proptest! {
             prop_assert!(c <= 3, "code[{}] = {} is out of range 0..=3", i, c);
         }
 
-        // Re-pack and compare: byte = c0 | (c1<<2) | (c2<<4) | (c3<<6).
-        for (byte_idx, &original_byte) in qs64.iter().enumerate() {
-            let base = byte_idx * 4;
-            let repacked = codes[base]
-                | (codes[base + 1] << 2)
-                | (codes[base + 2] << 4)
-                | (codes[base + 3] << 6);
-            prop_assert_eq!(
-                repacked, original_byte,
-                "re-packed byte[{}] = {:#04x} != original {:#04x}",
-                byte_idx, repacked, original_byte
-            );
-        }
+        let repacked = pack_qk256_codes_for_cols(&codes, QK256_BLOCK);
+        prop_assert_eq!(&repacked[..], &qs64[..], "re-packed Microsoft BitNet act-parallel bytes differ");
     }
 }
 

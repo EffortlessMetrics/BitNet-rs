@@ -134,6 +134,13 @@ fn qk256_opencl_source_matches_microsoft_bitnet_mapping() {
 
     assert_eq!(QK256_OPENCL_KERNEL_NAME, "qk256_gemm_no_scale");
     assert!(QK256_OPENCL_KERNEL_SRC.contains("__kernel void qk256_gemm_no_scale"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("const uint group128 = col / 128u"));
+    assert!(
+        QK256_OPENCL_KERNEL_SRC.contains("const uchar packed = row_bytes[(group128 * 32u) + pos]")
+    );
+    assert!(
+        QK256_OPENCL_KERNEL_SRC.contains("const uchar code = (packed >> (6u - (lane * 2u))) & 3u")
+    );
     assert!(QK256_OPENCL_KERNEL_SRC.contains("const float w = ((float)code) - 1.0f"));
     assert!(QK256_OPENCL_KERNEL_SRC.contains("acc * scale"));
     assert!(QK256_OPENCL_KERNEL_SRC.contains("const float scale"));

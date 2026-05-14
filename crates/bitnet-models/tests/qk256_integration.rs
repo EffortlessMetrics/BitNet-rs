@@ -22,7 +22,8 @@
 /// - **Tensor shape**: `[rows, row_stride_bytes]` where `row_stride_bytes = ceil(cols/256) * 64`
 /// - **Storage key**: `{original_name}.qk256_qs` (e.g., `layers.0.attention.q_proj.weight.qk256_qs`)
 use bitnet_models::quant::i2s_qk256::{
-    I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, gemv_qk256, unpack_qk256_block,
+    I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, gemv_qk256, pack_qk256_codes_for_cols,
+    unpack_qk256_block,
 };
 use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
 
@@ -338,23 +339,20 @@ fn test_qk256_vs_fp32_quantization_error() {
         })
         .collect();
 
-    // Create QK256 quantized version: pack FP32 weights back to codes
+    // Create QK256 quantized version: pack FP32 weights back to Microsoft BitNet codes.
     let mut qs_bytes = Vec::new();
     for row_weights in &fp32_weights {
-        for chunk in row_weights.chunks(4) {
-            let mut byte = 0u8;
-            for (i, &w) in chunk.iter().enumerate() {
-                let code = match w {
-                    x if (x + 1.0).abs() < 1e-6 => 0u8,
-                    x if x.abs() < 1e-6 => 1u8,
-                    x if (x - 1.0).abs() < 1e-6 => 2u8,
-                    x if (x - 2.0).abs() < 1e-6 => 3u8,
-                    _ => panic!("Invalid FP32 value in QK256 space: {}", w),
-                };
-                byte |= code << (i * 2);
-            }
-            qs_bytes.push(byte);
-        }
+        let row_codes: Vec<u8> = row_weights
+            .iter()
+            .map(|&w| match w {
+                x if (x + 1.0).abs() < 1e-6 => 0u8,
+                x if x.abs() < 1e-6 => 1u8,
+                x if (x - 1.0).abs() < 1e-6 => 2u8,
+                x if (x - 2.0).abs() < 1e-6 => 3u8,
+                _ => panic!("Invalid FP32 value in QK256 space: {}", w),
+            })
+            .collect();
+        qs_bytes.extend_from_slice(&pack_qk256_codes_for_cols(&row_codes, cols));
     }
 
     // Create input
@@ -605,10 +603,12 @@ fn test_qk256_unpack_block() {
         assert!(c <= 3, "Codes[{}] = {} exceeds valid range", i, c);
     }
 
-    // 0x00 → [0, 0, 0, 0]
-    // 0xFF → [3, 3, 3, 3]
+    // 0x00 → [0, 0, 0, 0], 0xFF → [3, 3, 3, 3] at the byte's act-parallel positions.
     for (i, &code) in codes.iter().enumerate().take(64) {
-        let byte_idx = i / 4;
+        let group128 = i / 128;
+        let within = i % 128;
+        let pos = within % 32;
+        let byte_idx = group128 * 32 + pos;
         let expected = if byte_idx % 2 == 0 { 0 } else { 3 };
         assert_eq!(code, expected, "Codes[{}] should be {} (alternating pattern)", i, expected);
     }

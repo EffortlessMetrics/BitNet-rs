@@ -6,17 +6,16 @@
 #![cfg(all(test, feature = "cpu"))]
 
 use bitnet_quantization::i2s_qk256::{
-    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256, gemv_qk256_row, unpack_qk256_block,
+    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256, gemv_qk256_row,
+    pack_qk256_codes_for_cols, unpack_qk256_block,
 };
 use bitnet_quantization::i2s_qk256_avx2::gemv_qk256_avx2;
 
-/// Pack 256 2-bit codes into 64 bytes (4 codes per byte, LSB first).
+/// Pack 256 logical 2-bit codes into Microsoft BitNet act-parallel bytes.
 fn pack_codes(codes: &[u8; 256]) -> [u8; 64] {
-    let mut packed = [0u8; 64];
-    for (i, &code) in codes.iter().enumerate() {
-        packed[i / 4] |= (code & 0x03) << ((i % 4) * 2);
-    }
-    packed
+    pack_qk256_codes_for_cols(codes, QK256_BLOCK)
+        .try_into()
+        .expect("QK256 block packs into 64 bytes")
 }
 
 /// Build contiguous row-major quantized data for multi-row tests.

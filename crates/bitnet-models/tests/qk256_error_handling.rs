@@ -406,19 +406,22 @@ fn test_unpack_qk256_block_all_ones() {
 #[test]
 fn test_unpack_qk256_block_alternating_pattern() {
     // Pattern: 0x96 = 0b10010110
-    // Bit extraction order: [1:0], [3:2], [5:4], [7:6]
-    // 0b10010110 unpacks to: [0b10, 0b01, 0b01, 0b10] = [2, 1, 1, 2]
+    // Microsoft BitNet act-parallel order: [7:6], [5:4], [3:2], [1:0]
+    // 0b10010110 unpacks by 32-value lanes to [2, 1, 1, 2].
     let packed = [0x96u8; QK256_PACKED_BYTES];
     let mut codes = [0u8; QK256_BLOCK];
 
     unpack_qk256_block(&packed, &mut codes);
 
-    // Each byte unpacks to [2, 1, 1, 2] based on bit order
-    for chunk_idx in 0..(QK256_BLOCK / 4) {
-        assert_eq!(codes[chunk_idx * 4], 2, "Code {} should be 2", chunk_idx * 4);
-        assert_eq!(codes[chunk_idx * 4 + 1], 1, "Code {} should be 1", chunk_idx * 4 + 1);
-        assert_eq!(codes[chunk_idx * 4 + 2], 1, "Code {} should be 1", chunk_idx * 4 + 2);
-        assert_eq!(codes[chunk_idx * 4 + 3], 2, "Code {} should be 2", chunk_idx * 4 + 3);
+    for (idx, &code) in codes.iter().enumerate() {
+        let lane = (idx % 128) / 32;
+        let expected = match lane {
+            0 => 2,
+            1 => 1,
+            2 => 1,
+            _ => 2,
+        };
+        assert_eq!(code, expected, "Code {idx} should be {expected}");
     }
 }
 

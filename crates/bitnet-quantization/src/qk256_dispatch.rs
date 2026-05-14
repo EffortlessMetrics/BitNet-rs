@@ -49,8 +49,8 @@ pub fn qk256_gemv(
 
 /// Scalar legacy QK256 GEMV (kept for benchmark compatibility).
 ///
-/// This preserves the Microsoft BitNet QK256 code mapping used by the canonical
-/// packed-byte path: `00→-1, 01→0, 10→1, 11→2`, followed by per-block scaling.
+/// This preserves the Microsoft BitNet QK256 act-parallel byte layout and code
+/// mapping used by the canonical packed-byte path, followed by per-block scaling.
 pub fn qk256_gemv_scalar(
     output: &mut [f32],
     rows: usize,
@@ -83,8 +83,12 @@ pub fn qk256_gemv_scalar(
 
             let mut block_sum = 0.0f32;
             for elem in 0..QK256 {
-                let byte_idx = byte_offset + elem / 4;
-                let bit_shift = (elem % 4) * 2;
+                let group128 = elem / 128;
+                let within = elem % 128;
+                let lane = within / 32;
+                let pos = within % 32;
+                let byte_idx = byte_offset + group128 * 32 + pos;
+                let bit_shift = 6 - lane * 2;
                 let two_bit = (packed[byte_idx] >> bit_shift) & 0b11;
 
                 let signed_val = match two_bit {

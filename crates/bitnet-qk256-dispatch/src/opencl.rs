@@ -34,8 +34,12 @@ __kernel void qk256_gemm_no_scale(
 
     float acc = 0.0f;
     for (uint col = 0; col < cols; ++col) {
-        const uchar packed = row_bytes[col >> 2];
-        const uchar code = (packed >> ((col & 3u) * 2u)) & 3u;
+        const uint group128 = col / 128u;
+        const uint within = col - (group128 * 128u);
+        const uint lane = within / 32u;
+        const uint pos = within - (lane * 32u);
+        const uchar packed = row_bytes[(group128 * 32u) + pos];
+        const uchar code = (packed >> (6u - (lane * 2u))) & 3u;
         const float w = ((float)code) - 1.0f;
         acc += w * x[col];
     }
