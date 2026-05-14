@@ -7,7 +7,7 @@
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Args, Subcommand};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fs;
@@ -15,6 +15,8 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 const DEFAULT_RECEIPTS_DIR: &str = "target/bitnet/receipts";
+const MODEL_COVERAGE_MATRIX_RELATIVE: &[&str] =
+    &["ci", "model-artifacts", "model-coverage-matrix.toml"];
 
 /// Inspect and explain BitNet-rs receipt JSON.
 #[derive(Args, Debug, Clone)]
@@ -47,6 +49,7 @@ pub struct ReceiptExplanation {
     pub artifact_kind: Option<String>,
     pub claim: Option<String>,
     pub model: Option<String>,
+    pub model_coverage: ModelCoverageExplanation,
     pub backend: BackendExplanation,
     pub execution_plan: ExecutionPlanExplanation,
     pub kernels: Vec<String>,
@@ -55,6 +58,22 @@ pub struct ReceiptExplanation {
     pub residency: ResidencyExplanation,
     pub benchmark_qualification: BenchmarkQualificationExplanation,
     pub claim_limits: ClaimLimitsExplanation,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+pub struct ModelCoverageExplanation {
+    pub source: Option<String>,
+    pub row: Option<String>,
+    pub current_tier: Option<String>,
+    pub status: Option<String>,
+    pub route: Option<String>,
+    pub speedup_claim: Option<bool>,
+    pub benchmark_qualified: Option<bool>,
+    pub server_ready: Option<bool>,
+    pub bitnet_packed_i2s_qk256_proof: Option<bool>,
+    pub dense_regular_llm_cuda_proof: Option<bool>,
+    pub claim_boundary: Option<String>,
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
@@ -150,6 +169,34 @@ pub struct BenchmarkProfileExplanation {
     pub blockers: Vec<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+struct ModelCoverageMatrix {
+    schema: u32,
+    artifact_kind: String,
+    #[serde(default)]
+    entry: Vec<ModelCoverageEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ModelCoverageEntry {
+    id: String,
+    status: String,
+    current_tier: String,
+    #[serde(default)]
+    accelerator_routes: Vec<String>,
+    claim_boundary: String,
+    claims: ModelCoverageClaims,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ModelCoverageClaims {
+    benchmark_qualified: bool,
+    server_ready: bool,
+    speedup_claim: bool,
+    bitnet_packed_i2s_qk256_proof: bool,
+    dense_regular_llm_cuda_proof: bool,
+}
+
 impl ReceiptsCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
@@ -232,11 +279,12 @@ fn consider_latest_file(path: &Path, latest: &mut Option<(SystemTime, PathBuf)>)
 }
 
 pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
-    ReceiptExplanation {
+    let mut explanation = ReceiptExplanation {
         path: path.display().to_string(),
         artifact_kind: string_at(receipt, &["artifact_kind"]),
         claim: string_at(receipt, &["claim"]),
         model: model_summary(receipt),
+        model_coverage: ModelCoverageExplanation::default(),
         backend: backend_explanation(receipt),
         execution_plan: execution_plan_explanation(receipt),
         kernels: kernel_ids(receipt),
@@ -245,7 +293,9 @@ pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
         residency: residency_explanation(receipt),
         benchmark_qualification: benchmark_qualification_explanation(receipt),
         claim_limits: claim_limits_explanation(receipt),
-    }
+    };
+    explanation.model_coverage = model_coverage_explanation(&explanation, receipt);
+    explanation
 }
 
 fn backend_explanation(receipt: &Value) -> BackendExplanation {
@@ -507,6 +557,215 @@ fn benchmark_profile_reviews(receipt: &Value) -> Vec<BenchmarkProfileExplanation
         .collect()
 }
 
+fn model_coverage_explanation(
+    explanation: &ReceiptExplanation,
+    receipt: &Value,
+) -> ModelCoverageExplanation {
+    let mut coverage = ModelCoverageExplanation::default();
+    let Some(matrix_path) = find_model_coverage_matrix() else {
+        coverage.warnings.push(format!(
+            "model coverage matrix not found; run from the BitNet-rs repo or set BITNET_MODEL_COVERAGE_MATRIX to {}",
+            MODEL_COVERAGE_MATRIX_RELATIVE.join("/")
+        ));
+        return coverage;
+    };
+    coverage.source = Some(matrix_path.display().to_string());
+
+    let matrix = match read_model_coverage_matrix(&matrix_path) {
+        Ok(matrix) => matrix,
+        Err(err) => {
+            coverage.warnings.push(format!("model coverage matrix unavailable: {err}"));
+            return coverage;
+        }
+    };
+
+    if let Some(entry) = match_model_coverage_entry(&matrix, explanation, receipt) {
+        coverage.row = Some(entry.id.clone());
+        coverage.current_tier = Some(entry.current_tier.clone());
+        coverage.status = Some(entry.status.clone());
+        coverage.route = explanation
+            .execution_plan
+            .selected_route
+            .clone()
+            .or_else(|| entry.accelerator_routes.first().cloned());
+        coverage.speedup_claim = Some(entry.claims.speedup_claim);
+        coverage.benchmark_qualified = Some(entry.claims.benchmark_qualified);
+        coverage.server_ready = Some(entry.claims.server_ready);
+        coverage.bitnet_packed_i2s_qk256_proof = Some(entry.claims.bitnet_packed_i2s_qk256_proof);
+        coverage.dense_regular_llm_cuda_proof = Some(entry.claims.dense_regular_llm_cuda_proof);
+        coverage.claim_boundary = Some(entry.claim_boundary.clone());
+        add_model_coverage_warnings(&mut coverage, entry, explanation);
+    } else {
+        coverage.warnings.push("no model coverage row matched this receipt".to_string());
+    }
+
+    coverage
+}
+
+fn find_model_coverage_matrix() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("BITNET_MODEL_COVERAGE_MATRIX").map(PathBuf::from)
+        && path.exists()
+    {
+        return Some(path);
+    }
+    if let Ok(current_dir) = std::env::current_dir()
+        && let Some(path) = find_model_coverage_matrix_from(&current_dir)
+    {
+        return Some(path);
+    }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(parent) = exe.parent()
+        && let Some(path) = find_model_coverage_matrix_from(parent)
+    {
+        return Some(path);
+    }
+    None
+}
+
+fn find_model_coverage_matrix_from(start: &Path) -> Option<PathBuf> {
+    for ancestor in start.ancestors() {
+        let mut candidate = ancestor.to_path_buf();
+        for segment in MODEL_COVERAGE_MATRIX_RELATIVE {
+            candidate.push(segment);
+        }
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn read_model_coverage_matrix(path: &Path) -> Result<ModelCoverageMatrix> {
+    let text =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let matrix: ModelCoverageMatrix = toml::from_str(&text)
+        .with_context(|| format!("failed to parse model coverage matrix {}", path.display()))?;
+    if matrix.schema != 1 {
+        bail!("unsupported model coverage schema {}", matrix.schema);
+    }
+    if matrix.artifact_kind != "model_coverage_matrix" {
+        bail!("expected artifact_kind=model_coverage_matrix, got {}", matrix.artifact_kind);
+    }
+    Ok(matrix)
+}
+
+fn match_model_coverage_entry<'a>(
+    matrix: &'a ModelCoverageMatrix,
+    explanation: &ReceiptExplanation,
+    receipt: &Value,
+) -> Option<&'a ModelCoverageEntry> {
+    if let Some(explicit_row) = explicit_model_coverage_row(receipt)
+        && let Some(entry) =
+            matrix.entry.iter().find(|entry| entry.id.eq_ignore_ascii_case(&explicit_row))
+    {
+        return Some(entry);
+    }
+
+    let search_text = receipt_search_text(receipt, explanation);
+    let route = explanation.execution_plan.selected_route.as_deref();
+    if route == Some("dense_regular_llm_cuda")
+        && (search_text.contains("qwen")
+            || search_text.contains("qwen25")
+            || search_text.contains("qwen2.5"))
+    {
+        return matrix.entry.iter().find(|entry| entry.id == "dense_qwen25_05b_q8_cuda");
+    }
+
+    if route == Some("bitnet_qk256_cuda")
+        || explanation.claim_limits.bitnet_packed_i2s_qk256_proof == Some(true)
+        || (search_text.contains("bitnet")
+            && (search_text.contains("ggml-model-i2_s.gguf")
+                || search_text.contains("i2_s")
+                || search_text.contains("qk256")))
+    {
+        return matrix.entry.iter().find(|entry| {
+            entry.id == "bitnet_official_2b_i2s_qk256"
+                || (entry.claims.bitnet_packed_i2s_qk256_proof
+                    && entry
+                        .accelerator_routes
+                        .iter()
+                        .any(|candidate| candidate == "bitnet_qk256_cuda"))
+        });
+    }
+
+    None
+}
+
+fn explicit_model_coverage_row(receipt: &Value) -> Option<String> {
+    string_at(receipt, &["model_coverage_row"])
+        .or_else(|| string_at(receipt, &["model_coverage", "row"]))
+        .or_else(|| string_at(receipt, &["model_coverage", "id"]))
+}
+
+fn receipt_search_text(receipt: &Value, explanation: &ReceiptExplanation) -> String {
+    let mut parts = Vec::new();
+    collect_json_strings(receipt, &mut parts);
+    if let Some(model) = &explanation.model {
+        parts.push(model.clone());
+    }
+    if let Some(route) = &explanation.execution_plan.selected_route {
+        parts.push(route.clone());
+    }
+    if let Some(kind) = &explanation.artifact_kind {
+        parts.push(kind.clone());
+    }
+    if let Some(claim) = &explanation.claim {
+        parts.push(claim.clone());
+    }
+    parts.join(" ").to_ascii_lowercase()
+}
+
+fn collect_json_strings(value: &Value, parts: &mut Vec<String>) {
+    match value {
+        Value::String(value) => parts.push(value.clone()),
+        Value::Array(values) => {
+            for value in values {
+                collect_json_strings(value, parts);
+            }
+        }
+        Value::Object(values) => {
+            for value in values.values() {
+                collect_json_strings(value, parts);
+            }
+        }
+        Value::Null | Value::Bool(_) | Value::Number(_) => {}
+    }
+}
+
+fn add_model_coverage_warnings(
+    coverage: &mut ModelCoverageExplanation,
+    entry: &ModelCoverageEntry,
+    explanation: &ReceiptExplanation,
+) {
+    if !entry.claims.speedup_claim {
+        coverage.warnings.push("speedup is not qualified by the model coverage row".to_string());
+    }
+    if !entry.claims.server_ready {
+        coverage
+            .warnings
+            .push("server readiness is not claimed by the model coverage row".to_string());
+    }
+    if entry.claims.dense_regular_llm_cuda_proof && !entry.claims.bitnet_packed_i2s_qk256_proof {
+        coverage
+            .warnings
+            .push("dense regular-LLM CUDA proof is not BitNet packed I2_S/QK256 proof".to_string());
+    }
+    if entry.claims.bitnet_packed_i2s_qk256_proof && !entry.claims.dense_regular_llm_cuda_proof {
+        coverage
+            .warnings
+            .push("BitNet packed I2_S/QK256 proof is not dense SLM CUDA proof".to_string());
+    }
+    if let Some(route) = &explanation.execution_plan.selected_route
+        && !entry.accelerator_routes.is_empty()
+        && !entry.accelerator_routes.iter().any(|candidate| candidate == route)
+    {
+        coverage.warnings.push(format!(
+            "receipt route `{route}` does not match model coverage routes: {}",
+            entry.accelerator_routes.join(", ")
+        ));
+    }
+}
+
 fn model_summary(receipt: &Value) -> Option<String> {
     let model = receipt.get("model")?;
     if let Some(repo) = model.get("repo").and_then(Value::as_str) {
@@ -563,6 +822,9 @@ pub fn compact_proof_lines(explanation: &ReceiptExplanation) -> Vec<String> {
 
     if let Some(model) = &explanation.model {
         lines.push(format!("  model: {model}"));
+    }
+    if let Some(row) = &explanation.model_coverage.row {
+        lines.push(format!("  model coverage row: {row}"));
     }
     if let Some(route) = &explanation.execution_plan.selected_route {
         lines.push(format!("  route: {route}"));
@@ -634,6 +896,32 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
     print_option("Artifact", explanation.artifact_kind.as_deref());
     print_option("Claim", explanation.claim.as_deref());
     print_option("Model", explanation.model.as_deref());
+
+    if has_model_coverage(&explanation.model_coverage) {
+        println!();
+        println!("Model Coverage:");
+        print_option_indented("source", explanation.model_coverage.source.as_deref());
+        print_option_indented("row", explanation.model_coverage.row.as_deref());
+        print_option_indented("current_tier", explanation.model_coverage.current_tier.as_deref());
+        print_option_indented("status", explanation.model_coverage.status.as_deref());
+        print_option_indented("route", explanation.model_coverage.route.as_deref());
+        print_bool_indented("speedup_claim", explanation.model_coverage.speedup_claim);
+        print_bool_indented("benchmark_qualified", explanation.model_coverage.benchmark_qualified);
+        print_bool_indented("server_ready", explanation.model_coverage.server_ready);
+        print_bool_indented(
+            "bitnet_packed_i2s_qk256_proof",
+            explanation.model_coverage.bitnet_packed_i2s_qk256_proof,
+        );
+        print_bool_indented(
+            "dense_regular_llm_cuda_proof",
+            explanation.model_coverage.dense_regular_llm_cuda_proof,
+        );
+        print_option_indented(
+            "claim_boundary",
+            explanation.model_coverage.claim_boundary.as_deref(),
+        );
+        print_string_list_indented("warnings", &explanation.model_coverage.warnings);
+    }
 
     println!();
     println!("Backend:");
@@ -915,6 +1203,21 @@ fn has_benchmark_qualification(qualification: &BenchmarkQualificationExplanation
         || !qualification.profile_reviews.is_empty()
 }
 
+fn has_model_coverage(coverage: &ModelCoverageExplanation) -> bool {
+    coverage.source.is_some()
+        || coverage.row.is_some()
+        || coverage.current_tier.is_some()
+        || coverage.status.is_some()
+        || coverage.route.is_some()
+        || coverage.speedup_claim.is_some()
+        || coverage.benchmark_qualified.is_some()
+        || coverage.server_ready.is_some()
+        || coverage.bitnet_packed_i2s_qk256_proof.is_some()
+        || coverage.dense_regular_llm_cuda_proof.is_some()
+        || coverage.claim_boundary.is_some()
+        || !coverage.warnings.is_empty()
+}
+
 fn string_at(value: &Value, path: &[&str]) -> Option<String> {
     value_at(value, path).and_then(Value::as_str).map(str::to_string)
 }
@@ -1101,6 +1404,91 @@ mod tests {
         assert!(lines.contains(&"  quality: true".to_string()));
         assert!(lines.contains(&"  weights: uploaded once".to_string()));
         assert!(lines.contains(&"  speed claim: false".to_string()));
+    }
+
+    #[test]
+    fn receipts_explain_links_bitnet_receipt_to_model_coverage() {
+        let receipt = json!({
+            "artifact_kind": "bitnet_cuda_answer",
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf"
+            },
+            "backend": {
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "fallback_used": false
+            },
+            "execution_plan": {
+                "selected_route": "bitnet_qk256_cuda",
+                "model_family": "bitnet_b1_58",
+                "speedup_claim": false
+            },
+            "claim_boundary": {
+                "bitnet_packed_i2s_qk256_proof": true,
+                "dense_gguf_inference_claimed": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("strict-bitnet.json"), &receipt);
+
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("bitnet_official_2b_i2s_qk256"));
+        assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.model_coverage.route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(true));
+        assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(false));
+        assert!(
+            explanation
+                .model_coverage
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("not dense SLM CUDA proof"))
+        );
+    }
+
+    #[test]
+    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() {
+        let receipt = json!({
+            "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
+            "claim": "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
+            "model": {
+                "id": "qwen2.5-0.5b-instruct-q8_0"
+            },
+            "execution_plan": {
+                "selected_route": "dense_regular_llm_cuda",
+                "model_family": "qwen",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "fallback_used": false,
+                "speedup_claim": false
+            },
+            "claim_boundary": {
+                "bitnet_packed_i2s_qk256_proof": false,
+                "dense_regular_llm_cuda_claimed": true,
+                "server_ready_claimed": false,
+                "speedup_claim": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("dense-qwen.json"), &receipt);
+
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
+        assert!(
+            explanation
+                .model_coverage
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("not BitNet packed I2_S/QK256 proof"))
+        );
     }
 
     #[test]
