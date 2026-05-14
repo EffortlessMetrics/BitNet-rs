@@ -92,6 +92,11 @@ impl BitNetModel {
         };
 
         // Create a VarBuilder that uses our loaded tensors
+        let qk256_backend = if device.is_opencl() {
+            crate::transformer::Qk256DispatchBackend::OpenCl
+        } else {
+            crate::transformer::Qk256DispatchBackend::Cpu
+        };
         let device = device.to_candle().map_err(|e| BitNetError::Validation(e.to_string()))?;
 
         if tensors.is_empty() {
@@ -129,7 +134,12 @@ impl BitNetModel {
         let raw_mapped = remap_gguf_weights(raw_tensors)?;
 
         let vb = create_var_builder(mapped.clone(), DType::F32, &device)?;
-        let model = TransformerModel::new_with_tensors(updated_config, vb, raw_mapped)?;
+        let model = TransformerModel::new_with_tensors_and_qk256_backend(
+            updated_config,
+            vb,
+            raw_mapped,
+            qk256_backend,
+        )?;
         Ok(Arc::new(model))
     }
 
