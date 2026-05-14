@@ -10,6 +10,12 @@ Roadmap:
 docs/specs/intel-arc-a770-gpu-roadmap.md
 ```
 
+BitNet claim boundary:
+
+```text
+docs/specs/a770-bitnet-claim-boundary.md
+```
+
 ## Required Machine Facts
 
 Record these before moving A770 beyond `scaffold`:
@@ -37,6 +43,9 @@ Record these before moving A770 beyond `scaffold`:
 - CPU/OpenCL parity is parity only.
 - CPU fallback cannot count as A770 execution.
 - Performance claims require benchmark artifacts and receipts.
+- BitNet trusted partial acceleration does not imply selected-attention
+  residency, resident KV decode, attention scores, softmax, attention value
+  mix, full support-op residency, full device residency, or completion.
 
 ## Linux Bundle
 

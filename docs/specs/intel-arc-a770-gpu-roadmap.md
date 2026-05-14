@@ -18,6 +18,19 @@ intel-arc-a770-openvino-gpu
 
 The first useful milestone is native OpenCL kernel smoke with CPU parity and a receipt proving the selected A770 backend with `fallback_used=false`.
 
+BitNet product claims for real question-answer usage are governed by the
+stricter claim boundary in:
+
+```text
+docs/specs/a770-bitnet-claim-boundary.md
+```
+
+The PR-by-PR implementation plan is:
+
+```text
+plans/a770-bitnet-claim-boundary-implementation.md
+```
+
 ## Hardware Profile
 
 The expected target is Intel Arc A770 16GB:
@@ -57,6 +70,11 @@ Do not claim A770 execution from detection alone.
 OpenVINO GPU graph smoke is reference-runtime evidence. It is not native BitNet OpenCL kernel proof.
 
 CPU fallback cannot count as A770 execution.
+
+For BitNet b1.58, the first product claim is trusted partial A770
+acceleration, not full A770 residency. Selected attention, resident KV,
+attention scores, softmax, attention value mix, full support-op residency, and
+full device residency require separate promotion receipts.
 
 ## Backend Labels
 
