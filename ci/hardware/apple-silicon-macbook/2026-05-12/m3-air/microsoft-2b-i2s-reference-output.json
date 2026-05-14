@@ -1,0 +1,163 @@
+{
+  "artifact_kind": "apple_m3_air_bitnet_reference_output",
+  "schema": 1,
+  "campaign": "apple-m3-macbook-air",
+  "work_item": "M3MBA-005C",
+  "recorded_at": "2026-05-14T23:45:03Z",
+  "decision": "accepted_for_m3_air_reference_context",
+  "decision_scope": "Microsoft BitNet.cpp reference-runner output on the recorded Apple M3 MacBook Air context only.",
+  "artifact": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "file": "ggml-model-i2_s.gguf",
+    "local_path": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "architecture": "bitnet-b1.58",
+    "quantization": "i2_s"
+  },
+  "tokenizer_authority": {
+    "source": "external_microsoft_tokenizer_json",
+    "repo": "microsoft/bitnet-b1.58-2B-4T",
+    "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+    "file": "tokenizer.json",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "required_override": "tokenizer.ggml.pre=str:llama-bpe",
+    "override_logged": true
+  },
+  "runner": {
+    "name": "Microsoft BitNet.cpp llama-cli",
+    "build": "3962 (1f86f058)",
+    "bitnet_cpp_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "llama_cpp_commit": "1f86f058de0c3f4098dedae2ae8653c335c868a1",
+    "compiler": "Apple clang version 17.0.0 (clang-1700.6.4.2)",
+    "target": "arm64-apple-darwin25.3.0",
+    "command_shape": "$HOME/.cache/bitnet_cpp/build/bin/llama-cli -m $HOME/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -n <case.max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p 'User: <case.question><|eot_id|>Assistant:'",
+    "corpus": "ci/quality/bitnet-answer-corpus.yaml",
+    "prompt_template": "bitnetcpp-answer",
+    "sampler": {
+      "temperature": 0,
+      "top_k": 1,
+      "top_p": 1,
+      "min_p": 0,
+      "seed_argument": 42,
+      "logged_sampler_seed": 4294967295,
+      "chain": "logits -> logit-bias -> penalties -> greedy"
+    },
+    "mmap_disabled": true,
+    "default_device_context": {
+      "log_lines": [
+        "ggml_metal_init: found device: Apple M3",
+        "llm_load_tensors: offloaded 31/31 layers to GPU"
+      ],
+      "claim_boundary": "Recorded as the BitNet.cpp default reference-runner context only; this is not an Apple Metal BitNet inference claim for the repository runtime."
+    }
+  },
+  "host": {
+    "machine": "Apple M3 MacBook Air",
+    "kernel": "Darwin 25.3.0",
+    "arch": "arm64",
+    "cpu_brand": "Apple M3",
+    "physical_cpus": 8,
+    "logical_cpus": 8,
+    "memory_bytes": 17179869184,
+    "power": "AC Power; internal battery 100%; charged",
+    "thermal": {
+      "thermal_warning": "none recorded",
+      "performance_warning": "none recorded",
+      "cpu_power_warning": "none recorded"
+    }
+  },
+  "answer_gate": {
+    "status": "passed",
+    "passed": 5,
+    "failed": 0,
+    "not_run": 0,
+    "failing_prompt_ids": []
+  },
+  "prompt_results": [
+    {
+      "id": "math_2_plus_2",
+      "question": "What is 2+2? Answer with only the number.",
+      "max_new_tokens": 4,
+      "output": "4",
+      "gate": {
+        "kind": "exact_trimmed",
+        "expected": "4"
+      },
+      "passed": true
+    },
+    {
+      "id": "capital_france",
+      "question": "What is the capital of France? Answer with one word.",
+      "max_new_tokens": 8,
+      "output": "Paris",
+      "gate": {
+        "kind": "contains_any",
+        "contains_any": ["Paris", "paris"]
+      },
+      "passed": true
+    },
+    {
+      "id": "repeat_colors",
+      "question": "Repeat exactly: red blue green",
+      "max_new_tokens": 8,
+      "output": "red blue green",
+      "gate": {
+        "kind": "contains_any",
+        "contains_any": ["red blue green", "Red blue green"]
+      },
+      "passed": true
+    },
+    {
+      "id": "say_ok",
+      "question": "Say exactly: OK",
+      "max_new_tokens": 4,
+      "output": "OK",
+      "gate": {
+        "kind": "exact_trimmed",
+        "expected": "OK"
+      },
+      "passed": true
+    },
+    {
+      "id": "yes_no_water",
+      "question": "Answer yes or no: is water wet?",
+      "max_new_tokens": 4,
+      "output": "Yes.",
+      "gate": {
+        "kind": "starts_with_any",
+        "starts_with_any": ["yes", "no"]
+      },
+      "passed": true
+    }
+  ],
+  "additional_diagnostics": [
+    {
+      "id": "forced_cpu_ngl0_math",
+      "command_delta": "-ngl 0",
+      "output": "/controlphicewoman",
+      "gate": "math_2_plus_2",
+      "passed": false,
+      "used_for_decision": false,
+      "note": "The M3MBA-005C tracker reference command does not require -ngl 0. This failed diagnostic is recorded only to avoid treating the accepted BitNet.cpp default reference context as a CPU-only result."
+    }
+  ],
+  "cleanup_retention": {
+    "model_binary_committed": false,
+    "receipt_committed": true,
+    "local_model_retained": true,
+    "retention_reason": "Retained under the user cache for follow-on M3 Air artifact qualification work; no model bytes are committed."
+  },
+  "claim_boundary": {
+    "may_claim": [
+      "The official Microsoft 2B I2_S artifact is accepted for the recorded M3 Air BitNet.cpp reference-runner context."
+    ],
+    "must_not_claim": [
+      "Rust M4 BitNet local answers work.",
+      "Apple Metal BitNet inference works.",
+      "QK256 works on Apple Silicon.",
+      "The repository's Rust Apple backend has accepted this artifact.",
+      "Broad Apple Silicon performance or speedup is proven."
+    ]
+  }
+}

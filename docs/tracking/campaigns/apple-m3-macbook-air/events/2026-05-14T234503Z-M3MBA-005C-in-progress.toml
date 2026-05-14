@@ -1,0 +1,19 @@
+timestamp = "2026-05-14T23:45:03Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005C"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005C-microsoft-2b-reference-output"
+summary = "Started the M3 Air Microsoft 2B I2_S reference-output decision item."
+
+artifacts = [
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-reference-output.json",
+  "docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md",
+]
+
+notes = [
+  "The item records prompt-suite outputs and an accept/reject/block decision for the M3 Air BitNet.cpp reference context only.",
+  "The decision remains bounded away from Rust M4 local answers, Apple Metal BitNet inference, QK256 on Apple Silicon, and broad Apple Silicon performance claims.",
+]
