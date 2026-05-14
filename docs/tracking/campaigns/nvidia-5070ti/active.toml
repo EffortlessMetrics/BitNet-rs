@@ -2485,7 +2485,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-009"
-status = "pr_open"
+status = "merged"
 branch = "docs/rtx5070ti-bitnet-cuda-guide"
 stackable = true
 review_mode = "codex_premerge"
