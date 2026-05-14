@@ -2104,7 +2104,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-052"
-status = "pr_open"
+status = "merged"
 branch = "cuda/dense-qwen25-short-decode-unblock"
 stackable = false
 review_mode = "codex_premerge"
@@ -2150,16 +2150,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-053"
-status = "proposed"
+status = "in_progress"
 branch = "cuda/dense-qwen25-warm-session-proof"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["CUDA-DENSE-052"]
-acceptance = "Add a Qwen2.5 0.5B Q8_0 warm-session strict CUDA proof showing model_loaded_once=true, tokenizer_loaded_once=true, CUDA context initialized once, intended buffers reused, per-turn receipts plus session summary, fallback_used=false, and full_cuda_residency_claimed=false unless every phase is proven device-resident."
+blocked_by = []
+acceptance = "Add a Qwen2.5 0.5B Q8_0 warm-session strict CUDA proof showing model_loaded_once=true, tokenizer_loaded_once=true, CUDA context initialized once, intended buffers reused, per-turn receipts plus session summary, fallback_used=false, and full_cuda_residency_claimed=false unless every phase is proven device-resident. The current-source receipt records three turns, 24 total generated tokens, generated-token equality, runtime buffer reuse, upload-once weights, and speedup/full-residency/BitNet proof claims false."
 commands = [
-  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\dense-qwen25-q8-warm-session.json",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-14\\dense-qwen25-q8-warm-session-current-source.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
@@ -2183,7 +2183,8 @@ forbidden_paths = [
   "README.md",
 ]
 may_claim = [
-  "The exact Qwen2.5 0.5B Q8_0 artifact has warm-session strict RTX 5070 Ti CUDA proof after the receipt exists.",
+  "A current-source Qwen2.5 0.5B Q8_0 warm-session run proves fallback-free RTX 5070 Ti CUDA token parity for the recorded bounded three-turn session.",
+  "The exact Qwen2.5 0.5B Q8_0 artifact has warm-session strict RTX 5070 Ti CUDA proof for the recorded receipt scope.",
 ]
 must_not_claim = [
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
