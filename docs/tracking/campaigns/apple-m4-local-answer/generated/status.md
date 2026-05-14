@@ -2,7 +2,7 @@
 # Apple M4 local answer usability Campaign Status
 
 - Campaign: `apple-m4-local-answer`
-- State: `active`
+- State: `complete`
 - Objective: Make Apple Silicon useful for a local Mac user by turning the completed proof and operational lanes into prompt-in, intelligible-answer-out behavior with truthful hardware routing and receipts.
 
 ## Work Items
