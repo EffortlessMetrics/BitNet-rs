@@ -48,6 +48,7 @@ mod grid_check;
 mod hardware;
 #[allow(dead_code)]
 mod health_check;
+mod llm_experience;
 mod model_contract;
 mod model_coverage;
 #[allow(dead_code)]
@@ -312,6 +313,13 @@ enum Cmd {
     Claims {
         #[command(subcommand)]
         cmd: ClaimsCmd,
+    },
+
+    /// Generate and verify LLM experience proof artifacts.
+    #[command(name = "llm-experience")]
+    LlmExperience {
+        #[command(subcommand)]
+        cmd: LlmExperienceCmd,
     },
 
     /// Verify hardware claim rails and resolve device-specific kernel routes.
@@ -1452,6 +1460,38 @@ enum ClaimsCmd {
 }
 
 #[derive(Subcommand)]
+enum LlmExperienceCmd {
+    /// Generate an exact-token CLI-stage plan for an experience benchmark profile.
+    #[command(name = "profile-cli-plan")]
+    ProfileCliPlan {
+        /// Model contract YAML file.
+        #[arg(long, default_value = "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml")]
+        model_contract: PathBuf,
+        /// Benchmark profiles TOML file.
+        #[arg(long, default_value = "ci/benchmarks/profiles.toml")]
+        profiles: PathBuf,
+        /// Benchmark profile ID to synthesize.
+        #[arg(long, default_value = "prefill_512_decode_64")]
+        profile: String,
+        /// Planned backend for the generated CLI command.
+        #[arg(long, default_value = "intel-arc-a770-opencl")]
+        backend: String,
+        /// Concrete device slug for the generated proof plan.
+        #[arg(long, default_value = "amd-5700x-intel-a770")]
+        device_slug: String,
+        /// Declared kernel route ID for diagnostic proof binding.
+        #[arg(long, default_value = "a770.bitnet.i2s.qk256")]
+        kernel_route: String,
+        /// Output plan JSON file.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage-plan.json")]
+        output: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum HardwareCmd {
     /// Intel Arc A770 hardware claim checks.
     A770 {
@@ -1704,6 +1744,27 @@ fn real_main() -> Result<()> {
             ClaimsCmd::Docs { ledger, output, check, format } => {
                 claims::docs(&ledger, &output, check, &format)
             }
+        },
+        Cmd::LlmExperience { cmd } => match cmd {
+            LlmExperienceCmd::ProfileCliPlan {
+                model_contract,
+                profiles,
+                profile,
+                backend,
+                device_slug,
+                kernel_route,
+                output,
+                format,
+            } => llm_experience::profile_cli_plan(
+                &model_contract,
+                &profiles,
+                &profile,
+                &backend,
+                &device_slug,
+                &kernel_route,
+                Some(&output),
+                &format,
+            ),
         },
         Cmd::Hardware { cmd } => match cmd {
             HardwareCmd::A770 { cmd } => match cmd {
