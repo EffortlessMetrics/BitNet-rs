@@ -101,7 +101,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | LNL258V-OP-003 | merged | Refresh operator readiness, regression, and comparison receipts so OpenVINO GPU/NPU dense SLM candidate routes index the bounded operator-ask receipts as answer evidence while preserving smoke receipts as supporting evidence; merged in #4721. |
 | LNL258V-ROUTE-001 | merged | Added a policy-only Lunar Lake route promotion ledger that promotes dense Qwen CPU for bounded ask profiles while keeping OpenVINO GPU/NPU as candidates until profile-specific advantage evidence exists; merged in #4771. |
 | LNL258V-ROUTE-002 | merged | Added a policy/evidence-only Lunar Lake route profile comparison that indexes promoted and candidate routes across fixed workload profiles, adds the low-power profile gap, and preserves CPU default routing until benchmark-qualified profile evidence exists; merged in #4798. |
-| LNL258V-QUAL-001 | pr_open | Add a bounded Lunar Lake dense Qwen answer corpus v2 covering math, copy, yes/no, factual, instruction, stop/EOS, transcript context, structured output, long-prompt summary, and decode-heavy route checks without running inference or claiming broad quality; PR #4806. |
+| LNL258V-QUAL-001 | merged | Added a bounded Lunar Lake dense Qwen answer corpus v2 covering math, copy, yes/no, factual, instruction, stop/EOS, transcript context, structured output, long-prompt summary, and decode-heavy route checks without running inference or claiming broad quality; merged in #4806. |
 
 ## Review Policy
 

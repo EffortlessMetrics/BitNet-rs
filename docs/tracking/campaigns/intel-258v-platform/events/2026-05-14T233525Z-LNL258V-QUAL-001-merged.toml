@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T23:35:25Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4806
+merge_sha = "a2af08e2c54a4693795a773dae35989f98d17938"
+branch = "codex/lunar-lake/LNL258V-QUAL-001-answer-corpus-v2"
+head_sha = "d6a94d56c06f9dec1999bf9fa3fdeeb2d8d7533e"
+summary = "Merged LNL258V-QUAL-001 after CI passed to add the bounded Lunar Lake dense Qwen answer corpus v2 fixture."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4806",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+]
+
+notes = [
+  "The merged fixture expands the promoted dense Qwen CPU control-route regression surface.",
+  "The PR validated the fixture with answer-corpus --dry-run only and did not run model inference.",
+  "No broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
