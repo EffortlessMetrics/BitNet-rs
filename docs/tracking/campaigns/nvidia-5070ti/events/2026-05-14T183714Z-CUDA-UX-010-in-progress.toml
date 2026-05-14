@@ -1,0 +1,17 @@
+timestamp = "2026-05-14T18:37:14Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-010"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "docs/9950x3d-5070ti-cuda-quickstart"
+summary = "Started the 9950X3D + RTX 5070 Ti CUDA quickstart after CUDA-UX-008 and CUDA-UX-009 landed."
+artifacts = [
+  "docs/tutorials/9950x3d-5070ti-cuda-quickstart.md",
+]
+notes = [
+  "Docs-only quickstart work.",
+  "No runtime, CUDA kernel, receipt, model manifest, workflow, badge, server readiness, or speedup claim changes.",
+  "Quickstart keeps official BitNet I2_S/QK256 CUDA proof separate from dense SLM CUDA proof.",
+]
