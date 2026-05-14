@@ -1,6 +1,6 @@
 id = "apple-m4-slm-eval-and-proof"
 title = "Apple M4 dense SLM eval and proof"
-status = "active"
+status = "complete"
 
 objective = "Turn the usable Apple M4 dense SLM path into a structured, receipt-backed local model runner proof with seeded quality eval, first-class speed/stability metrics, per-model reports, and lightweight regression economics without broad benchmark claims."
 
@@ -256,8 +256,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-006"
-status = "pr_open"
+status = "merged"
 pr = 4677
+merge_sha = "305afdfb0d8e74ffbec924483f145b5f715f0fe3"
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-006-regression"
 stackable = false
 review_mode = "codex_premerge"
