@@ -41,6 +41,10 @@ function Write-Debug {
     Write-Host "[DEBUG] $Message" -ForegroundColor Blue
 }
 
+function Test-IsWindows {
+    return [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
+}
+
 function Show-Usage {
     @"
 Usage: .\fetch_bitnet_cpp.ps1 [OPTIONS]
@@ -82,10 +86,21 @@ function Test-Dependencies {
         $MissingDeps += "cmake"
     }
 
-    # Check for Visual Studio or Build Tools
-    $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-    if (-not (Test-Path $VsWhere)) {
-        $MissingDeps += "Visual Studio Build Tools"
+    if (Test-IsWindows) {
+        # Upstream BitNet.cpp uses the Windows ClangCL toolset.
+        if (-not (Get-Command clang -ErrorAction SilentlyContinue)) {
+            $MissingDeps += "clang"
+        }
+
+        if (-not (Get-Command clang++ -ErrorAction SilentlyContinue)) {
+            $MissingDeps += "clang++"
+        }
+
+        # Check for Visual Studio or Build Tools.
+        $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        if (-not (Test-Path $VsWhere)) {
+            $MissingDeps += "Visual Studio Build Tools"
+        }
     }
 
     if ($MissingDeps.Count -gt 0) {
@@ -94,6 +109,9 @@ function Test-Dependencies {
         Write-Error "  Git: https://git-scm.com/download/win"
         Write-Error "  CMake: https://cmake.org/download/"
         Write-Error "  Visual Studio: https://visualstudio.microsoft.com/downloads/"
+        if (Test-IsWindows) {
+            Write-Error "  Visual Studio components: C++ Clang Compiler for Windows and MS-Build Support for LLVM-Toolset"
+        }
         exit 1
     }
 }
@@ -179,13 +197,26 @@ function Invoke-Build {
                 throw "Visual Studio with C++ tools not found"
             }
 
+            $CMakeArgs = @(
+                "..",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                "-DBUILD_SHARED_LIBS=ON",
+                "-DCMAKE_INSTALL_PREFIX=$BuildDir\install"
+            )
+
+            if (Test-IsWindows) {
+                $CMakeArgs += @(
+                    "-T",
+                    "ClangCL",
+                    "-DCMAKE_C_COMPILER=clang",
+                    "-DCMAKE_CXX_COMPILER=clang++"
+                )
+            }
+
             # Configure with CMake
             Write-Info "Configuring build with CMake..."
-            cmake .. `
-                -DCMAKE_BUILD_TYPE=Release `
-                -DCMAKE_POSITION_INDEPENDENT_CODE=ON `
-                -DBUILD_SHARED_LIBS=ON `
-                "-DCMAKE_INSTALL_PREFIX=$BuildDir\install"
+            cmake @CMakeArgs
 
             if ($LASTEXITCODE -ne 0) {
                 throw "CMake configuration failed"
