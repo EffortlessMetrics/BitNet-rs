@@ -1,0 +1,25 @@
+timestamp = "2026-05-14T23:28:17Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005B"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority"
+pr = 4802
+head_sha = "af307d470044435fb10913660eeba5b8471762cc"
+merge_sha = "686ea7e8301f71e4127744b37d46e8decf37ca9d"
+summary = "Merged the M3 Air official Microsoft 2B I2_S tokenizer and external pre-tokenizer authority evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4802",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-tokenizer-authority.json",
+  "docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md",
+]
+
+notes = [
+  "The merged evidence records GGUF tokenizer metadata, the missing tokenizer.ggml.pre condition, external Microsoft tokenizer authority, the required tokenizer.ggml.pre=str:llama-bpe override, and no-override bad/no-authority warning evidence.",
+  "The local BitNet.cpp diagnostic selected Apple M3 Metal by default; that is preserved only as tokenizer-authority diagnostic context.",
+  "This item does not accept the artifact and makes no Apple answer-readiness, Rust M4 BitNet local-answer, Apple Metal BitNet inference, QK256-on-Apple, speedup, or broad Apple Silicon performance claim.",
+  "M3MBA-005C remains the first item allowed to accept, reject, or block the candidate for the M3 Air reference context.",
+]
