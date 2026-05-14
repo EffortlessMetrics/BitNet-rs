@@ -2442,16 +2442,18 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-008"
-status = "proposed"
+status = "in_progress"
 branch = "cli/cuda-model-support-dashboard"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["CUDA-DENSE-054"]
+blocked_by = []
 acceptance = "Add `bitnet model status --device nvidia-rtx-5070-ti-cuda` backed by the model coverage matrix so users can see CPU answer, CUDA answer, benchmark, and server proof states without promoting unsupported claims."
 commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli model_status",
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model status --device nvidia-rtx-5070-ti-cuda",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model status --device nvidia-rtx-5070-ti-cuda --format json",
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
   "git diff --check",
 ]

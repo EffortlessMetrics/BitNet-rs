@@ -249,7 +249,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-MODEL-003 | proposed | Add the Qwen3 0.6B CUDA all-layer plan after CPU sanity lands. |
 | CUDA-MODEL-004 | proposed | Add Qwen3 0.6B one-token strict CUDA proof after the all-layer plan lands. |
 | CUDA-MODEL-005 | proposed | Add Qwen3 0.6B short-decode and warm-session strict CUDA proof after one-token CUDA lands. |
-| CUDA-UX-008 | proposed | Add a CUDA model support dashboard sourced from the model coverage matrix. |
+| CUDA-UX-008 | in_progress | Add a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | proposed | Add the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
 | CUDA-UX-010 | proposed | Add the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces are current. |
 | CUDA-SERVER-001 | proposed | Add strict CUDA server smoke only after CLI proof and status surfaces are stable. |
