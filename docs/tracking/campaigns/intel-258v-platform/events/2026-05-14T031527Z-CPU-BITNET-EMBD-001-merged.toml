@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T03:15:27Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-EMBD-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4684
+merge_sha = "9e0ebea596caa91a1aba21c4aee671525c502229"
+branch = "codex/lunar-lake/CPU-BITNET-EMBD-001"
+summary = "Marked CPU-BITNET-EMBD-001 merged after PR #4684 recorded Lunar Lake BitNet embedding quantization evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4684",
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-embd-001-q6k-embedding-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+]
+
+notes = [
+  "The merged receipt records token_embd.weight as F16 in the current canonical BitNet b1.58 I2_S GGUF tensor boundary.",
+  "Q6_K embedding quantization remains not active for the current canonical BitNet artifact until a Q6_K embedding variant is acquired or generated and proven.",
+  "No answer-quality, speedup, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]

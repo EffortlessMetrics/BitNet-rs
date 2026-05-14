@@ -3048,8 +3048,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-EMBD-001"
-status = "pr_open"
+status = "merged"
 pr = 4684
+merge_sha = "9e0ebea596caa91a1aba21c4aee671525c502229"
 branch = "codex/lunar-lake/CPU-BITNET-EMBD-001"
 head_sha = "22211e3f5a557023c5a87f425af644a8f1e45656"
 stackable = false
