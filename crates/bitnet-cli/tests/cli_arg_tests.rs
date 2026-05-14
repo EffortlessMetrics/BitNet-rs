@@ -3948,6 +3948,7 @@ fn answer_corpus_subcommand_help() {
         .success()
         .stdout(predicate::str::contains("--corpus"))
         .stdout(predicate::str::contains("--case-id"))
+        .stdout(predicate::str::contains("--model-id"))
         .stdout(predicate::str::contains("--dry-run"))
         .stdout(predicate::str::contains("--dump-logit-steps"));
 }
@@ -4449,6 +4450,82 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract()
     assert_eq!(receipt["cases"][9]["quality"]["scoring"]["forbidden_tokens"][0], "maybe");
     assert_eq!(receipt["claim_boundary"]["bounded_slm_answer_smoke_passed"], false);
     assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    Ok(())
+}
+
+/// `answer-corpus --model-id` pins aggregate SLM receipt identity to a supported M4 model.
+#[cfg(feature = "full-cli")]
+#[test]
+fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let out = dir.path().join("apple-m4-slm-eval-v2.json");
+    let corpus = workspace_path("ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--model-id",
+            "qwen2.5-1.5b-instruct-q4_k_m",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-slm-eval-seeded-corpus-v2");
+    assert_eq!(receipt["corpus"]["case_count"], 120);
+    assert_eq!(receipt["model"]["id"], "qwen2.5-1.5b-instruct-q4_k_m");
+    assert_eq!(receipt["model"]["repo"], "Qwen/Qwen2.5-1.5B-Instruct-GGUF");
+    assert_eq!(receipt["model"]["revision"], "91cad51170dc346986eccefdc2dd33a9da36ead9");
+    assert_eq!(receipt["model"]["file"], "qwen2.5-1.5b-instruct-q4_k_m.gguf");
+    assert_eq!(
+        receipt["model"]["sha256"],
+        "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+    );
+    assert_eq!(receipt["model"]["family"], "qwen");
+    assert_eq!(receipt["model"]["architecture"], "qwen2");
+    assert_eq!(receipt["model"]["quant_format"], "Q4_K_M");
+    assert_eq!(receipt["model"]["tokenizer_authority"], "qwen2");
+    assert_eq!(receipt["model_family"], "qwen");
+    assert_eq!(receipt["model_architecture"], "qwen2");
+    assert_eq!(receipt["quantization"], "Q4_K_M");
+    assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    Ok(())
+}
+
+/// `answer-corpus --model-id` rejects BitNet and policy-only IDs for dense SLM reports.
+#[cfg(feature = "full-cli")]
+#[test]
+fn slm_eval_v2_model_id_rejects_non_dense_slm_model() -> Result<(), Box<dyn std::error::Error>> {
+    let corpus = workspace_path("ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--corpus",
+            corpus.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not selectable for dense Apple M4 SLM"));
     Ok(())
 }
 

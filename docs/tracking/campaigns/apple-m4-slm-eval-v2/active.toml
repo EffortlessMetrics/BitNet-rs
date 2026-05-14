@@ -116,17 +116,22 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SLM-EVAL2-002"]
-acceptance = "Run the v2 corpus for every supported dense M4 model ID and publish per-model reports with task-family pass rates, strict scoring totals, generated text/token IDs, backend/fallback identity, and dense-SLM-only claim boundaries."
+acceptance = "Run the v2 corpus for every supported dense M4 model ID and publish per-model reports with task-family pass rates, strict scoring totals, generated text/token IDs, backend/fallback identity, catalog-pinned aggregate model identity, and dense-SLM-only claim boundaries."
 commands = [
   "cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
-  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json --per-prompt-timeout-seconds 240",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model <verified-cache-path>/<model-file>.gguf --model-id <model-id> --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json --per-prompt-timeout-seconds 240",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --json",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests answer_corpus",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests slm_eval_v2",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-v2",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
   "ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**",
   "docs/slm/apple-m4-slm-eval-v2.md",
   "docs/tracking/campaigns/apple-m4-slm-eval-v2/**",
