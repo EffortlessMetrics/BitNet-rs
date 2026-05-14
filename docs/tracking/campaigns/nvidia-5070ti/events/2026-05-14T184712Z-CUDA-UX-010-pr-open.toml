@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T18:47:12Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-010"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "docs/9950x3d-5070ti-cuda-quickstart"
+pr = 4768
+head_sha = "e492a6f3b"
+summary = "Opened draft PR #4768 for the 9950X3D + RTX 5070 Ti CUDA quickstart."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4768",
+  "docs/tutorials/9950x3d-5070ti-cuda-quickstart.md",
+]
+notes = [
+  "PR is docs/tracker only.",
+  "No runtime, CUDA kernel, receipt, model manifest, workflow, badge, server readiness, or speedup claim changes.",
+  "Quickstart keeps official BitNet I2_S/QK256 CUDA proof separate from dense SLM CUDA proof.",
+]

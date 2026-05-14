@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T19:22:20Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008Y1"
+event = "merged"
+pr = 4769
+merge_sha = "7770c8b764425909b72962c4194d096e397e6e28"
+actor = "codex"
+summary = "Merged the non-interactive Qwen3 reference checkpoint capture method and unblocked SLM-CPU-008Y for real checkpoint artifact work."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4769",
+  "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
+  "docs/tracking/campaigns/slm-cpu/active.toml",
+]
+
+notes = [
+  "PR #4769 documents that SLM-CPU-008Y requires a real known-good internal checkpoint pack, not interactive llama.cpp output or top-k-only evidence.",
+  "SLM-CPU-008Y is ready to capture or ingest the checkpoint pack for the verified Qwen3-0.6B Q8_0 model, exact rendered prompt, prompt IDs, and greedy first-token settings.",
+  "No real checkpoint artifact, first-token parity, answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]

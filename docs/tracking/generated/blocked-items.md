@@ -282,7 +282,7 @@
 | nvidia-5070ti | CUDA-MODEL-004 | CUDA-MODEL-003 | proposed |
 | nvidia-5070ti | CUDA-MODEL-005 | CUDA-MODEL-004 | proposed |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
-| nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | proposed |
+| nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | pr_open |
 | nvidia-5070ti | CUDA-SERVER-001 | CUDA-UX-008, CUDA-DENSE-054 | proposed |
 | nvidia-5070ti | CUDA-DENSE-050 | CUDA-PROD-008 | merged |
 | nvidia-5070ti | CUDA-PROD-009 | CUDA-PROD-008 | merged |
@@ -358,6 +358,7 @@
 | slm-cpu | SLM-CPU-008X | SLM-CPU-008W | merged |
 | slm-cpu | SLM-CPU-008YA | SLM-CPU-008X | merged |
 | slm-cpu | SLM-CPU-008YB | SLM-CPU-008YA | merged |
+| slm-cpu | SLM-CPU-008Y1 | SLM-CPU-008YB | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |

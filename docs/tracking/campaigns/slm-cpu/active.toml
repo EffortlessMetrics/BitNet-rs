@@ -1061,3 +1061,50 @@ must_not_claim = [
   "Q4/Q5 quant expansion is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
+
+[[work_item]]
+id = "SLM-CPU-008Y1"
+status = "merged"
+pr = 4769
+merge_sha = "7770c8b764425909b72962c4194d096e397e6e28"
+branch = "codex/slm-cpu-008y1-reference-checkpoint-method"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-008YB"]
+acceptance = "Document the non-interactive reference checkpoint capture method required before SLM-CPU-008Y can land: the method must produce a `slm_reference_checkpoint_compare` artifact for the verified Qwen3-0.6B Q8_0 model SHA, exact rendered prompt, prompt IDs, greedy first-token settings, and required internal checkpoint stages. It must explicitly reject interactive llama.cpp output, top-k-only evidence, and any artifact that lacks internal reference checkpoint summaries. This support item must not claim first-token parity, answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/slm-cpu/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The SLM-CPU-008Y reference checkpoint capture method is documented.",
+  "SLM-CPU-008Y remains blocked until a real known-good internal checkpoint pack is captured or ingested.",
+]
+must_not_claim = [
+  "A real known-good Qwen3 internal checkpoint artifact is available.",
+  "Qwen first-token parity is restored.",
+  "Qwen answer quality is proven.",
+  "Qwen3 tiny answer corpus is green.",
+  "Multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
