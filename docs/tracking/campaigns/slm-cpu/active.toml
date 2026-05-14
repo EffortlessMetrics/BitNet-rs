@@ -921,7 +921,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008YA"
-status = "in_progress"
+status = "merged"
+pr = 4669
+merge_sha = "04ac4b17713fdb9e9aa5950d8b3f582b2225aceb"
 branch = "codex/slm-cpu-008ya-qwen3-no-think-prompt"
 stackable = false
 review_mode = "codex_premerge"

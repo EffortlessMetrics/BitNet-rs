@@ -191,7 +191,7 @@
 | intel-258v-platform | CPU-BITNET-REF-001 | CPU258V-031 | merged |
 | intel-258v-platform | CPU-BITNET-PERF-001 | CPU-BITNET-REF-001 | merged |
 | intel-258v-platform | CPU-BITNET-PERF-002 | CPU-BITNET-PERF-001 | merged |
-| intel-258v-platform | CPU-BITNET-PERF-003 | CPU-BITNET-PERF-002 | pr_open |
+| intel-258v-platform | CPU-BITNET-PERF-003 | CPU-BITNET-PERF-002 | merged |
 | intel-258v-platform | LNL258V-OP-001 | SLM-OV258V-006, CPU-BITNET-PERF-002 | merged |
 | intel-258v-platform | LNL258V-REG-001 | LNL258V-OP-001 | merged |
 | intel-258v-platform | LNL258V-COMPARE-005 | LNL258V-REG-001 | merged |
@@ -351,7 +351,7 @@
 | slm-cpu | SLM-CPU-008V | SLM-CPU-008U | merged |
 | slm-cpu | SLM-CPU-008W | SLM-CPU-008V | merged |
 | slm-cpu | SLM-CPU-008X | SLM-CPU-008W | merged |
-| slm-cpu | SLM-CPU-008YA | SLM-CPU-008X | in_progress |
+| slm-cpu | SLM-CPU-008YA | SLM-CPU-008X | merged |
 | slm-cpu | SLM-CPU-008Y | SLM-CPU-008YA | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
