@@ -750,6 +750,8 @@ fn mac_smoke_help_documents_golden_smoke() {
         .assert()
         .success()
         .stdout(predicate::str::contains("golden smoke"))
+        .stdout(predicate::str::contains("--model-family"))
+        .stdout(predicate::str::contains("bitnet"))
         .stdout(predicate::str::contains("--json-out <PATH>"))
         .stdout(predicate::str::contains("--max-new-tokens"));
 }
@@ -766,6 +768,62 @@ fn mac_smoke_missing_cache_points_to_model_fetch() {
         .failure()
         .stderr(predicate::str::contains("golden smoke cannot run"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_smoke_bitnet_missing_cache_writes_failure_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let json_out = dir.path().join("mac-smoke.json");
+    let answer_receipt = dir.path().join("mac-smoke-answer.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let json_out_str = json_out.to_string_lossy().into_owned();
+    let tokenizer = workspace_path("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json");
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "smoke",
+            "--model-family",
+            "bitnet",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            json_out_str.as_str(),
+            "--tokenizer",
+            tokenizer_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failure receipt written"))
+        .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(answer_receipt).expect("BitNet smoke failure receipt"),
+    )
+    .expect("receipt json");
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
+    assert_eq!(receipt_json["failure"]["stage"], "model_verify_failed");
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+}
+
+#[test]
+fn mac_smoke_dense_rejects_bitnet_explicit_artifact_args() {
+    bitnet()
+        .args([
+            "mac",
+            "smoke",
+            "--model-path",
+            "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+            "--tokenizer",
+            "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--model-family bitnet"))
+        .stderr(predicate::str::contains("dense SLM smoke uses --model-id"));
 }
 
 #[test]

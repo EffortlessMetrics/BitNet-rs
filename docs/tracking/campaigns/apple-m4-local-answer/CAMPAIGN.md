@@ -71,6 +71,7 @@ and `mac serve` remain disabled.
 | M4-BITNET-ASK-003 | merged | #4680 added durable partial-failure receipts for BitNet `bitnet mac ask` setup and generation failures, with repair guidance and unchanged chat/server/Metal claim boundaries. |
 | M4-BITNET-ASK-004 | merged | #4686 prints compact operator repair guidance for BitNet `bitnet mac ask` setup/generation failures, matching the receipt guidance for accepted tokenizer, model cache, explicit GGUF verification, and unchanged chat/server/Metal boundaries. |
 | M4-BITNET-ASK-005 | merged | #4688 added advisory BitNet one-shot ask readiness to `bitnet mac doctor` receipts without making dense doctor fail when optional BitNet artifacts are absent or enabling BitNet chat/server/Metal claims. |
+| M4-BITNET-ASK-006 | in_progress | Add `bitnet mac smoke --model-family bitnet` as a one-shot BitNet ask smoke with accepted model/tokenizer identity, failure receipts, and unchanged chat/server/Metal boundaries. |
 
 ## Review Policy
 

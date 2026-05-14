@@ -231,6 +231,16 @@ Use `smoke` for a compact answer/cache receipt:
 bitnet mac smoke
 ```
 
+For the BitNet one-shot family, use the explicit family selector. This still
+uses the one-shot `mac ask` route under the hood, defaults to the accepted
+Microsoft I2_S model id and external tokenizer path, and keeps BitNet chat,
+serve, full Metal, QK256, Neural Engine, MPSGraph, broad quality, and
+performance claims disabled:
+
+```bash
+bitnet mac smoke --model-family bitnet
+```
+
 Use `regression` for receipt-only drift checks against matching M4 dense SLM
 envelopes:
 
