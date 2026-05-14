@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T19:23:42Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-004A"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
+summary = "Started the live M3 Air dense Qwen smoke evidence item after the validate bridge merged."
+
+notes = [
+  "The run will use the explicit apple-m3-air-cpu-neon backend label and record receipt-check output before the receipt is accepted.",
+  "The item may claim only dense Qwen SLM smoke evidence for the recorded M3 Air context; it must not claim BitNet behavior, Metal inference, MPSGraph inference, Neural Engine execution, or replacement of M4 Mac mini timing.",
+]

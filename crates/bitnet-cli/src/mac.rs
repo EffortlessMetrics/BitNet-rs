@@ -4853,7 +4853,7 @@ fn annotate_and_validate_mac_receipt_silent(
         "mac_claim_boundary".to_string(),
         serde_json::json!({
             "slm_local_answer": true,
-            "requested_backend": APPLE_M4_CPU_NEON,
+            "requested_backend": summary.requested_backend.as_str(),
             "bitnet_quality_claimed": false,
             "full_metal_inference_claimed": false,
             "mpsgraph_inference_claimed": false,
@@ -6001,7 +6001,7 @@ fn validate_mac_receipt_value(
         || artifact_kind == "slm_apple_m3_air_warm_session"
         || artifact_kind == "bitnet_apple_m4_warm_session"
     {
-        validate_warm_session_receipt(path, receipt)?
+        validate_warm_session_receipt(path, receipt, requested_backend.as_str())?
     } else if artifact_kind == "apple_m4_slm_operator_profiles"
         || artifact_kind == "apple_m4_slm_performance_profiles"
         || artifact_kind == "apple_m3_air_slm_operator_profiles"
@@ -6726,6 +6726,7 @@ fn validate_one_shot_receipt(
 fn validate_warm_session_receipt(
     path: &Path,
     receipt: &serde_json::Value,
+    expected_backend: &str,
 ) -> Result<(Option<usize>, Option<usize>)> {
     if receipt["session"]["model_loaded_once"] != true {
         anyhow::bail!(
@@ -6768,11 +6769,17 @@ fn validate_warm_session_receipt(
     }
     let mut generated_total = 0usize;
     for prompt in prompts {
-        if prompt["backend"]["requested_backend"].as_str() != Some(APPLE_M4_CPU_NEON) {
-            anyhow::bail!("{} warm-session prompt requested a non-Mac CPU backend", path.display());
+        if prompt["backend"]["requested_backend"].as_str() != Some(expected_backend) {
+            anyhow::bail!(
+                "{} warm-session prompt requested backend must match aggregate backend {expected_backend}",
+                path.display()
+            );
         }
-        if prompt["backend"]["selected_backend"] != APPLE_M4_CPU_NEON {
-            anyhow::bail!("{} warm-session prompt selected a non-Mac CPU backend", path.display());
+        if prompt["backend"]["selected_backend"].as_str() != Some(expected_backend) {
+            anyhow::bail!(
+                "{} warm-session prompt selected backend must match aggregate backend {expected_backend}",
+                path.display()
+            );
         }
         if prompt["backend"]["runtime_api"].as_str() != Some("cpu") {
             anyhow::bail!("{} warm-session prompt runtime_api must be cpu", path.display());
@@ -7276,6 +7283,82 @@ mod tests {
             None,
         );
         Ok((temp, state))
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_m3_warm_session_prompt_backend()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_m3_warm_session_receipt();
+
+        let summary = validate_mac_receipt_value(Path::new("m3-warm-session.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "slm_apple_m3_air_warm_session");
+        assert_eq!(summary.requested_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(1));
+        assert_eq!(summary.generated_tokens, Some(2));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipt_annotation_preserves_m3_claim_boundary_backend()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("m3-warm-session.json");
+        std::fs::write(&receipt_path, serde_json::to_vec_pretty(&test_m3_warm_session_receipt())?)?;
+
+        annotate_and_validate_mac_receipt_silent(
+            &receipt_path,
+            &test_verified_model(temp.path()),
+            "mac validate",
+        )?;
+
+        let annotated: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt_path)?)?;
+        assert_eq!(annotated["mac_claim_boundary"]["requested_backend"], APPLE_M3_AIR_CPU_NEON);
+        Ok(())
+    }
+
+    fn test_m3_warm_session_receipt() -> serde_json::Value {
+        serde_json::json!({
+            "artifact_kind": "slm_apple_m3_air_warm_session",
+            "backend": {
+                "requested_backend": APPLE_M3_AIR_CPU_NEON,
+                "selected_backend": APPLE_M3_AIR_CPU_NEON,
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "session": {
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true
+            },
+            "corpus": {
+                "artifact_kind": "test_warm_session"
+            },
+            "quality_summary": {
+                "passed": true
+            },
+            "prompts": [
+                {
+                    "backend": {
+                        "requested_backend": APPLE_M3_AIR_CPU_NEON,
+                        "selected_backend": APPLE_M3_AIR_CPU_NEON,
+                        "runtime_api": "cpu",
+                        "fallback_used": false
+                    },
+                    "text": "ready",
+                    "generated_tokens": 2,
+                    "generated_token_ids": [1, 2],
+                    "quality": {
+                        "passed": true,
+                        "valid_utf8": true,
+                        "non_empty": true,
+                        "non_degenerate": true,
+                        "failed_rules": [],
+                        "distinct_generated_tokens": 2
+                    }
+                }
+            ]
+        })
     }
 
     #[test]
