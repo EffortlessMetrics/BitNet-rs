@@ -1,0 +1,349 @@
+{
+  "artifact_kind": "dense_gguf_qwen_benchmark_qualification_review",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-benchmark-qualification-current-source.json",
+  "benchmark_qualified_speedup": false,
+  "bitnet_packed_i2s_qk256_proof": false,
+  "claim": "dense_gguf_qwen_benchmark_qualification_review",
+  "claim_boundaries": [
+    "speedup_claim=false; no dense Qwen profile is upgraded by this review.",
+    "benchmark_qualified_speedup=false; current CUDA means are slower than same-artifact CPU means.",
+    "H2D model-load envelope timing is recorded, but pure CUDA event H2D copy timing remains unmeasured.",
+    "dense_regular_llm_cuda receipts cannot satisfy BitNet packed I2S/QK256 proof."
+  ],
+  "claim_boundary": {
+    "benchmark_qualified_speedup": false,
+    "bitnet_packed_i2s_qk256_proof": false,
+    "dense_gguf_qwen_benchmark_qualification_review_claimed": true,
+    "full_cuda_residency_claimed": false,
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": true,
+    "qwen_short_decode_cuda_claimed": true,
+    "qwen_warm_session_cuda_claimed": true,
+    "server_ready_claimed": false,
+    "speedup_claim": false
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvml_available": true,
+    "nvrtc_version": "12.9",
+    "power_draw_watts": 32.59,
+    "power_limit_watts": 300.0,
+    "temperature_c": 44.0,
+    "vram_bytes": 17094475776
+  },
+  "dense_gguf_inference_claimed": false,
+  "evidence_summary": {
+    "one_token": {
+      "benchmark_qualified_speedup": false,
+      "cpu_total_ms_mean": 2872.842766666666,
+      "cuda_mean_slower_than_cpu": true,
+      "cuda_total_ms_mean": 3978.571,
+      "device_to_host_ms": 0.9181,
+      "fallback_free": true,
+      "generated_token_ids_match": true,
+      "host_to_device_ms": 8071.3571,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "observed_cpu_total_ms_div_cuda_total_ms": 0.7220790496554331,
+      "profile": "one_token",
+      "pure_host_to_device_ms": null,
+      "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+      "quality_passed": true,
+      "runs_per_backend": 3,
+      "speedup_claim": false
+    },
+    "short_decode_8": {
+      "benchmark_qualified_speedup": false,
+      "cpu_total_ms_mean": 3528.0687,
+      "cuda_mean_slower_than_cpu": true,
+      "cuda_total_ms_mean": 4199.9896,
+      "device_to_host_ms": 6.924,
+      "fallback_free": true,
+      "generated_token_ids_match": true,
+      "host_to_device_ms": 4319.3893,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "observed_cpu_total_ms_div_cuda_total_ms": 0.8400184371885111,
+      "profile": "short_decode_8",
+      "pure_host_to_device_ms": null,
+      "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+      "quality_passed": true,
+      "runs_per_backend": 3,
+      "speedup_claim": false
+    },
+    "warm_session_3_turns": {
+      "benchmark_qualified_speedup": false,
+      "cpu_total_ms_mean": 4596.1352,
+      "cuda_mean_slower_than_cpu": true,
+      "cuda_total_ms_mean": 5034.928800000001,
+      "device_to_host_ms": 24.5661,
+      "fallback_free": true,
+      "generated_token_ids_match": true,
+      "host_to_device_ms": 3936.047,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "observed_cpu_total_ms_div_cuda_total_ms": 0.9128500883666913,
+      "profile": "warm_session_3_turns",
+      "pure_host_to_device_ms": null,
+      "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+      "quality_passed": true,
+      "runs_per_backend": 3,
+      "speedup_claim": false
+    }
+  },
+  "execution_plan": {
+    "bitnet_packed_qk256_cuda": false,
+    "cpu_fallback_ops": 0,
+    "cuda_bitnet_qk256_ops": 0,
+    "cuda_dense_regular_llm_ops": 8112,
+    "cuda_ops": 8112,
+    "dense_regular_llm_cuda": true,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "mixed_cuda_routes": false,
+    "model_family": "qwen",
+    "planner_version": "cuda-planner-004",
+    "quantization": "dense_gguf_q8_0_f16_qwen_warm_session_contract",
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "runtime_api": "cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_route": "dense_regular_llm_cuda",
+    "speedup_claim": false,
+    "strict_cuda_ready": true,
+    "strict_fallback_policy": "reject",
+    "total_ops": 8112,
+    "unsupported_ops": 0
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "full_cuda_residency_claimed": false,
+  "hardware_context": {
+    "power_draw_watts_max": 37.82,
+    "power_draw_watts_min": 14.25,
+    "source": "NVML fields recorded in source strict CUDA proof receipts",
+    "temperature_c_max": 37.0,
+    "temperature_c_min": 34.0,
+    "vram_bytes": 17094475776
+  },
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "artifact_kind": "dense_gguf",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "model_family": "qwen",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+  },
+  "profile_reviews": [
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "CUDA mean total time is slower than CPU mean total time",
+        "pure host-to-device transfer timing is unmeasured",
+        "no profile-specific speedup threshold has been accepted"
+      ],
+      "cpu_total_ms_mean": 2872.842766666666,
+      "cuda_mean_slower_than_cpu": true,
+      "cuda_total_ms_mean": 3978.571,
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": true,
+      "device_to_host_ms": 0.9181,
+      "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+      "fallback_free": true,
+      "generated_token_ids_match": true,
+      "host_to_device_ms": 8071.3571,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "observed_cpu_total_ms_div_cuda_total_ms": 0.7220790496554331,
+      "profile": "one_token",
+      "pure_host_to_device_ms": null,
+      "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+      "quality_passed": true,
+      "reason": "This profile remains baseline/comparator evidence because CUDA mean total time is not faster than the same-artifact CPU reference and pure H2D copy timing is incomplete.",
+      "runs_per_backend": 3,
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "CUDA mean total time is slower than CPU mean total time",
+        "pure host-to-device transfer timing is unmeasured",
+        "no profile-specific speedup threshold has been accepted"
+      ],
+      "cpu_total_ms_mean": 3528.0687,
+      "cuda_mean_slower_than_cpu": true,
+      "cuda_total_ms_mean": 4199.9896,
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": true,
+      "device_to_host_ms": 6.924,
+      "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+      "fallback_free": true,
+      "generated_token_ids_match": true,
+      "host_to_device_ms": 4319.3893,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "observed_cpu_total_ms_div_cuda_total_ms": 0.8400184371885111,
+      "profile": "short_decode_8",
+      "pure_host_to_device_ms": null,
+      "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+      "quality_passed": true,
+      "reason": "This profile remains baseline/comparator evidence because CUDA mean total time is not faster than the same-artifact CPU reference and pure H2D copy timing is incomplete.",
+      "runs_per_backend": 3,
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "CUDA mean total time is slower than CPU mean total time",
+        "pure host-to-device transfer timing is unmeasured",
+        "no profile-specific speedup threshold has been accepted"
+      ],
+      "cpu_total_ms_mean": 4596.1352,
+      "cuda_mean_slower_than_cpu": true,
+      "cuda_total_ms_mean": 5034.928800000001,
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": true,
+      "device_to_host_ms": 24.5661,
+      "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+      "fallback_free": true,
+      "generated_token_ids_match": true,
+      "host_to_device_ms": 3936.047,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "observed_cpu_total_ms_div_cuda_total_ms": 0.9128500883666913,
+      "profile": "warm_session_3_turns",
+      "pure_host_to_device_ms": null,
+      "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+      "quality_passed": true,
+      "reason": "This profile remains baseline/comparator evidence because CUDA mean total time is not faster than the same-artifact CPU reference and pure H2D copy timing is incomplete.",
+      "runs_per_backend": 3,
+      "speedup_claim_allowed": false
+    }
+  ],
+  "proof_inputs": {
+    "benchmark_baseline": {
+      "artifact_kind": "dense_gguf_qwen_cuda_benchmark_baseline",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-cuda-benchmark-baseline.json",
+      "sha256": "d84b094b29763d96820f69479394a3e7770ef9745ff4e14e7fad4cc36a6805c1"
+    },
+    "one_token_transfer_timing": {
+      "artifact_kind": "dense_gguf_qwen_one_token_strict_cuda_proof",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json",
+      "sha256": "c326e49a3241615c47075a6e5ff4ffc9a3fa7a339809bf564165b9cf6ee1bd30"
+    },
+    "repeated_comparator": {
+      "artifact_kind": "dense_gguf_qwen_repeated_comparator",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-repeated-comparator.json",
+      "sha256": "5f0af05648f5fcfcb3e12fb3e4bf2767f3b763ad3b8512c8c0d919fb607b420b"
+    },
+    "short_decode_transfer_timing": {
+      "artifact_kind": "dense_gguf_qwen_short_decode_strict_cuda_proof",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-short-decode-current-source.json",
+      "sha256": "60e9bb30f2ee9ae3f232912c5719b759ba9e668b56d038d2f81d9e10e6afd532"
+    },
+    "warm_session_transfer_timing": {
+      "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-warm-session-current-source.json",
+      "sha256": "37a46e9cd718c723b4e95df9e69a5ffc496144b0cd2cb1eba83832027f6c5d75"
+    }
+  },
+  "qualification_decision": {
+    "accepted_profiles": [],
+    "benchmark_qualified_speedup": false,
+    "blocked_profiles": [
+      "one_token",
+      "short_decode_8",
+      "warm_session_3_turns"
+    ],
+    "reason": "Dense Qwen CUDA evidence is fallback-free and repeated, with D2H logits timing measured and an H2D model-load envelope recorded, but every reviewed CUDA profile is slower than the same-artifact CPU reference mean and pure H2D copy timing remains unmeasured.",
+    "speedup_claim_allowed": false,
+    "status": "not_accepted"
+  },
+  "qualification_requirements": [
+    {
+      "description": "Same artifact SHA, tokenizer authority, prompt template, deterministic policy, and fallback-free CPU/CUDA route.",
+      "id": "same_artifact_tokenizer_prompt_policy",
+      "status": "passed"
+    },
+    {
+      "description": "At least three CPU and CUDA runs exist for every reviewed dense Qwen profile.",
+      "id": "repeated_cpu_cuda_comparator",
+      "status": "passed"
+    },
+    {
+      "description": "Device-to-host logits transfer timing is measured for one-token, short-decode, and warm-session runtime receipts.",
+      "id": "device_to_host_transfer_timing",
+      "status": "passed"
+    },
+    {
+      "description": "Host-to-device model-load wall-clock envelope timing is recorded with explicit non-transfer-overhead labeling.",
+      "id": "host_to_device_model_load_envelope",
+      "status": "passed"
+    },
+    {
+      "blocker": "CUDA-DENSE-PERF-005 records a model-load wall-clock envelope, not pure CUDA event copy timing.",
+      "description": "Pure host-to-device copy timing is measured separately from model-load and upload overhead.",
+      "id": "pure_host_to_device_transfer_timing",
+      "status": "blocked"
+    },
+    {
+      "blocker": "The reviewed one-token, short-decode, and warm-session CUDA means are all slower than their CPU reference means.",
+      "description": "Each profile's CUDA mean total time is faster than the same-artifact CPU reference mean total time.",
+      "id": "profile_outperforms_cpu_reference",
+      "status": "blocked"
+    },
+    {
+      "blocker": "No dense Qwen profile-specific speedup threshold has been accepted.",
+      "description": "Profile-specific speedup thresholds are accepted before benchmark_qualified_speedup may become true.",
+      "id": "profile_specific_thresholds",
+      "status": "blocked"
+    }
+  ],
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_route": "dense_regular_llm_cuda",
+  "server_ready_claimed": false,
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-14T11:07:36Z",
+  "tokenizer_prompt_authority": {
+    "bos_policy": "contract_default_add_bos",
+    "deterministic_prompt": true,
+    "prompt_authority": "contract_authoritative",
+    "prompt_template": "qwen-chat-raw-deterministic",
+    "prompt_token_count": 8,
+    "prompt_token_ids_sha256": "c94c330c606eb24adef37d7fd276fc45a01c9fb21b6a8cea482102513f767144",
+    "rendered_prompt_bytes": 12,
+    "rendered_prompt_sha256": "52cb6b5e4a038af1756708f98afb718a08c75b87b2f03dbee4dd9c8139c15c5e",
+    "schema": 1,
+    "tokenizer_authority": "contract_authoritative"
+  },
+  "transfer_timing_review": {
+    "device_to_host_source": "wall_clock_extract_logits_2d_local",
+    "device_to_host_timing_recorded": true,
+    "host_to_device_blocker": "The dense Qwen runtime records an H2D model-load wall-clock envelope, but not pure CUDA event copy timing.",
+    "host_to_device_model_load_envelope_recorded": true,
+    "host_to_device_ms_includes_non_transfer_overhead": true,
+    "host_to_device_pure_transfer_timing_recorded": false,
+    "host_to_device_scope": "model_load_wall_clock_envelope",
+    "host_to_device_source": "wall_clock_model_load_with_cuda_weight_upload",
+    "host_to_device_timing_recorded": true,
+    "status": "host_to_device_model_load_envelope_device_to_host_measured"
+  }
+}

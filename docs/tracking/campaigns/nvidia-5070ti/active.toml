@@ -2201,7 +2201,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-054"
-status = "proposed"
+status = "in_progress"
 branch = "cuda/dense-qwen25-benchmark-qualification"
 stackable = false
 review_mode = "codex_premerge"
