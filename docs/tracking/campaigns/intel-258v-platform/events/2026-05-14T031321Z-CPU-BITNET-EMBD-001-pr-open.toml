@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T03:13:21Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-EMBD-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4684
+branch = "codex/lunar-lake/CPU-BITNET-EMBD-001"
+head_sha = "22211e3f5a557023c5a87f425af644a8f1e45656"
+summary = "Opened CPU-BITNET-EMBD-001 to record 258V BitNet embedding quantization evidence from the committed tensor-boundary audit."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4684",
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-embd-001-q6k-embedding-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+]
+
+notes = [
+  "The PR adds an optional embedding_quantization_evidence block to the CPU benchmark receipt generator.",
+  "The committed 258V receipt records token_embd.weight as F16 and marks Q6_K embedding quantization not active for the current canonical BitNet artifact.",
+  "The receipt preserves fallback_used=false and speedup_claim=false while making no answer-quality, Arc/NPU, acceleration, QK256 semantic-change, or full-model claim.",
+]
