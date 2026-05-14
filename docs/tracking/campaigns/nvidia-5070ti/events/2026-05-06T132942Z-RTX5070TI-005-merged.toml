@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T13:29:42Z"
+campaign = "nvidia-5070ti"
+item = "RTX5070TI-005"
+event = "merged"
+pr = 3723
+merge_sha = "8b588762976d17bc2774f0a4a554ecec1d39342f"
+actor = "maintainer"
+
+notes = [
+  "RTX 5070 Ti tiny CUDA kernel smoke item merged.",
+  "This closeout does not claim BitNet CUDA inference or speedup.",
+]

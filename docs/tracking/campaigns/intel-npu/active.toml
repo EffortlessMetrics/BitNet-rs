@@ -20,7 +20,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "NPU-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-npu/NPU-002-lite-backend-identity"
 stackable = false
 requires_human_merge = true

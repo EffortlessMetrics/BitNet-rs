@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:07:49Z"
+campaign = "tracker-infra"
+item = "TRACKER-003"
+event = "merged"
+pr = 3724
+merge_sha = "6f44b77538492182e1a33484ff6683fa2debd8ee"
+actor = "maintainer"
+
+notes = [
+  "Current-PR-scoped GitHub reconciliation item merged.",
+  "This closeout changes tracker infrastructure only, not runtime behavior.",
+]
