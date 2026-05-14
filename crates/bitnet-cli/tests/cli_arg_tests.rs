@@ -2030,6 +2030,7 @@ fn mac_receipts_check_accepts_performance_profile_summary() {
             "allocation_audit": {
                 "enabled": true,
                 "method": "process_global_allocator_counter_delta",
+                "scope": "selected Apple M4 CPU/NEON SLM warm-session profile set",
                 "optimization_deferred": true,
                 "ranked_hotspots": [
                     {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
@@ -2835,6 +2836,7 @@ fn performance_profile_json(
         },
         "allocation_audit": {
             "enabled": true,
+            "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
             "ranked_hotspots": [
                 {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
             ]
@@ -2870,6 +2872,15 @@ fn performance_summary_receipt(model_sha: &str) -> serde_json::Value {
             "warm_128_included": true,
             "broad_performance_claim": false,
             "speedup_claim": false
+        },
+        "allocation_audit": {
+            "enabled": true,
+            "method": "process_global_allocator_counter_delta",
+            "scope": "selected Apple M4 CPU/NEON SLM warm-session profile set",
+            "optimization_deferred": true,
+            "ranked_hotspots": [
+                {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
+            ]
         },
         "model_cache": {
             "id": "qwen2.5-0.5b-instruct-q8_0",

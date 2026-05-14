@@ -321,7 +321,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-004B"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator"
 stackable = false
 review_mode = "codex_premerge"
@@ -330,9 +330,9 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-004A"]
 acceptance = "Run the dense Qwen2.5 0.5B bounded operator profile only after smoke passes, recording allocation-audit context, power and thermal context, repeat count, token budget, storage before/after, receipts-check output, exact requested/selected backend label identity, fallback status, and whether the result is comparison-grade or diagnostic-only."
 commands = [
-  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --device apple-m3-air-cpu-neon --allocation-audit --quiet",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
-  "jq -e '.strict_provenance.requested_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.selected_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.fallback_used == false' <receipt>",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --device apple-m3-air-cpu-neon --model-id qwen2.5-0.5b-instruct-q8_0 --cache-dir ~/Library/Caches/bitnet-rs/models --allocation-audit --json-out ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json --quiet",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json --json",
+  "jq -e '.artifact_kind == \"apple_m3_air_slm_operator_profiles\" and .requested_backend == \"apple-m3-air-cpu-neon\" and .selected_backend == \"apple-m3-air-cpu-neon\" and .fallback_used == false and .profile_set == \"operator\" and .allocation_audit.enabled == true and .allocation_audit.scope == \"selected Apple M3 Air CPU/NEON SLM warm-session profile set\" and (.profiles | length) == 3 and ([.profiles[].profile_id] | sort) == [\"warm_16\",\"warm_32\",\"warm_64\"] and all(.profiles[]; .allocation_audit.scope == \"selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path\")' ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -340,6 +340,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/**",
   "ci/hardware/apple-silicon-macbook/**",
   "docs/apple-silicon/**",
   "docs/reports/**",
