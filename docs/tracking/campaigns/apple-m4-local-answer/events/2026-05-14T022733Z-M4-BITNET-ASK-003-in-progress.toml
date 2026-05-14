@@ -1,0 +1,13 @@
+timestamp = "2026-05-14T02:27:33Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started partial-failure receipt hardening for one-shot BitNet `bitnet mac ask`.",
+  "The item is scoped to setup/generation failure receipts with failure stage, repair guidance, timeout-boundary status, fallback_used=false, and empty partial generation.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad performance, and speedup claims remain disabled.",
+]
