@@ -3105,6 +3105,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-ASK-004"
+status = "pr_open"
+pr = 4712
+branch = "codex/lunar-lake/LNL258V-ASK-004-openvino-operator-ask"
+head_sha = "98bdf305c34e719ff00be86314f2cc81b9c41cb1"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-ASK-003", "SLM-OV258V-006"]
+acceptance = "Add an explicit Lunar Lake OpenVINO GenAI operator-ask helper for dense Qwen GPU/NPU candidate routes that validates the operator-readiness route, runs bounded greedy generation on the requested OpenVINO device, emits top-level backend/runtime/device/fallback/model/template/route/answer-gate/timing identity, and preserves the default CPU ask route plus no speedup, acceleration, broad quality, native OpenCL/NPU, generated-token-ID, or BitNet QK256/I2_S claims."
+commands = [
+  "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe -m py_compile scripts\\openvino_genai_operator_ask.py",
+  "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe scripts\\openvino_genai_operator_ask.py --help",
+  "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe scripts\\openvino_genai_operator_ask.py --model-dir C:\\Code\\Rust\\BitNet-rs\\models\\openvino\\qwen2.5-0.5b-instruct-int4-sym --device GPU.0 --question \"What is 2+2? Answer briefly.\" --max-new-tokens 16 --expect-contains 4 --created-utc 2026-05-14T08:00:00Z --json-out ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+  "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe scripts\\openvino_genai_operator_ask.py --model-dir C:\\Code\\Rust\\BitNet-rs\\models\\openvino\\qwen2.5-0.5b-instruct-int4-sym --device NPU --question \"What is 2+2? Answer briefly.\" --max-new-tokens 16 --expect-contains 4 --created-utc 2026-05-14T08:01:00Z --json-out ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-openvino-operator-ask-npu-math-brief.json",
+  "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe -m json.tool ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+  "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe -m json.tool ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-openvino-operator-ask-npu-math-brief.json",
+  "target\\debug\\xtask.exe campaign check intel-258v-platform",
+  "target\\debug\\xtask.exe campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-npu-math-brief.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+  "scripts/openvino_genai_operator_ask.py",
+]
+forbidden_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "An explicit Lunar Lake dense Qwen OpenVINO GenAI candidate route can answer a bounded prompt on GPU.0/Arc 140V with fallback_used=false.",
+  "An explicit Lunar Lake dense Qwen OpenVINO GenAI candidate route can answer a bounded prompt on Intel NPU with fallback_used=false.",
+  "The receipts record route, backend, runtime device, answer gate, first streamed text chunk, OpenVINO PerfMetrics, and strict no-fallback identity.",
+]
+must_not_claim = [
+  "The default Lunar Lake ask route changed away from CPU.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Native OpenCL execution is proven by the OpenVINO GPU ask helper.",
+  "Native NPU inference outside OpenVINO GenAI is proven.",
+  "OpenVINO GenAI generated token IDs are captured directly.",
+  "Broad dense SLM quality is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Full BitNet inference works on Arc or NPU.",
+]
+
+[[work_item]]
 id = "CPU-BITNET-REF-002"
 status = "merged"
 pr = 4710
