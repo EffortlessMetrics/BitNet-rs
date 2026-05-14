@@ -1,0 +1,21 @@
+timestamp = "2026-05-14T17:58:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-009"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "docs/rtx5070ti-bitnet-cuda-guide"
+pr = 4754
+head_sha = "1affad234fca5d4f86f1bb42d6fd63157bd3fa46"
+merge_sha = "c12687b42477818ec2276b6deb7cb3463ae9bef7"
+summary = "Merged the strict RTX 5070 Ti BitNet CUDA user guide."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4754",
+  "docs/tutorials/rtx5070ti-bitnet-cuda.md",
+]
+notes = [
+  "Docs-only tutorial closeout.",
+  "No runtime, CUDA kernel, receipt, model manifest, badge, server readiness, or speedup claim changes.",
+  "Guide keeps official BitNet I2_S/QK256 CUDA proof separate from dense SLM CUDA proof.",
+]
