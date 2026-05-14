@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T05:56:32Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008YB"
+event = "merged"
+pr = 4699
+merge_sha = "0f06153ae25d3777cfdbb1c3a01109f0d53218cf"
+actor = "codex"
+summary = "Merged Qwen thinking control token preservation for exact no-thinking prompt tokenization."
+
+artifacts = [
+  "crates/bitnet-tokenizers/src/gguf_loader.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/tracking/campaigns/slm-cpu/active.toml",
+]
+
+notes = [
+  "GGUF BPE tokenization now preserves <think> and </think> as GGUF-authoritative special tokens when parse_special=true.",
+  "The local post-fix no-thinking Qwen3 run emitted token 17 / 2, so this merge does not claim first-token parity or answer quality.",
+  "SLM-CPU-008Y is unblocked for capturing or ingesting a real known-good Qwen3 internal checkpoint pack.",
+  "No throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5, or BitNet QK256 claim is made.",
+]
+
