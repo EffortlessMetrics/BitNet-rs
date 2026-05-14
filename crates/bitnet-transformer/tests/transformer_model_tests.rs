@@ -12,10 +12,11 @@
 //!   - Validation errors for incompatible config values
 #![cfg(feature = "cpu")]
 
-use bitnet_common::config::{BitNetConfig, ModelConfig};
+use bitnet_common::config::{ActivationType, BitNetConfig, ModelConfig, NormType};
 use bitnet_transformer::{KVCache, TransformerModel};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
+use std::collections::HashMap;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,82 @@ fn make_model(hidden: usize, vocab: usize, heads: usize) -> anyhow::Result<Trans
     let cfg = tiny_config(hidden, vocab, heads);
     let vb = VarBuilder::zeros(DType::F32, &device);
     Ok(TransformerModel::new(cfg, vb)?)
+}
+
+fn identity_2x2(device: &Device) -> candle_core::Result<Tensor> {
+    Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 1.0], (2usize, 2usize), device)
+}
+
+fn zero_2x2(device: &Device) -> candle_core::Result<Tensor> {
+    Tensor::zeros((2usize, 2usize), DType::F32, device)
+}
+
+fn ones_2(device: &Device) -> candle_core::Result<Tensor> {
+    Tensor::from_vec(vec![1.0f32, 1.0], 2usize, device)
+}
+
+fn prompt_sensitive_model() -> anyhow::Result<TransformerModel> {
+    let device = Device::Cpu;
+    let cfg = BitNetConfig {
+        model: ModelConfig {
+            hidden_size: 2,
+            vocab_size: 4,
+            num_heads: 1,
+            num_key_value_heads: 1,
+            num_layers: 1,
+            intermediate_size: 2,
+            max_position_embeddings: 8,
+            rms_norm_eps: Some(1e-6),
+            norm_type: NormType::RmsNorm,
+            activation_type: ActivationType::Relu2,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let mut tensors = HashMap::new();
+    tensors.insert(
+        "embed_tokens.weight".to_string(),
+        Tensor::from_vec(
+            vec![
+                0.0f32, 0.0, // token 0: unused padding
+                1.0, 0.0, // token 1: history A
+                0.0, 1.0, // token 2: history B
+                1.0, 0.0, // token 3: shared current token
+            ],
+            (4usize, 2usize),
+            &device,
+        )?,
+    );
+
+    for proj in ["q_proj", "k_proj", "v_proj", "o_proj"] {
+        tensors.insert(format!("layers.0.attention.{proj}.weight"), identity_2x2(&device)?);
+    }
+
+    for norm in [
+        "layers.0.attention_norm.weight",
+        "layers.0.post_attention_layernorm.weight",
+        "final_norm.weight",
+    ] {
+        tensors.insert(norm.to_string(), ones_2(&device)?);
+    }
+
+    for proj in ["gate_proj", "up_proj", "down_proj"] {
+        tensors.insert(format!("layers.0.feed_forward.{proj}.weight"), zero_2x2(&device)?);
+    }
+
+    let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+    Ok(TransformerModel::new(cfg, vb)?)
+}
+
+fn prefill_last_logits(model: &TransformerModel, tokens: &[u32]) -> anyhow::Result<Vec<f32>> {
+    let device = Device::Cpu;
+    let hidden = model.embed(tokens)?;
+    let mut kv = KVCache::new(&model.config, 1, &device)?;
+    let hidden = model.forward(hidden, Some(&mut kv))?;
+    let logits = model.logits(&hidden)?;
+    let seq_len = logits.dims()[1];
+    Ok(logits.narrow(1, seq_len - 1, 1)?.flatten_all()?.to_vec1()?)
 }
 
 // ── embed tests ───────────────────────────────────────────────────────────────
@@ -163,6 +240,37 @@ fn test_forward_full_determinism() -> anyhow::Result<()> {
     let a: Vec<f32> = model.forward_full(&token_ids)?.flatten_all()?.to_vec1()?;
     let b: Vec<f32> = model.forward_full(&token_ids)?.flatten_all()?.to_vec1()?;
     assert_eq!(a, b, "forward_full must be deterministic");
+    Ok(())
+}
+
+/// Prefill must let earlier prompt tokens affect the next-token logits.
+///
+/// The live BitNet diagnostic currently emits the same first tokens for very
+/// different prompts. This fixture pins the expected transformer invariant with
+/// deterministic weights: two prompts share the current token but differ in the
+/// previous token, and attention history must change the final-position logits.
+#[test]
+fn test_prefill_last_logits_are_prompt_history_sensitive() -> anyhow::Result<()> {
+    let model = prompt_sensitive_model()?;
+
+    let logits_history_a = prefill_last_logits(&model, &[1, 3])?;
+    let logits_history_b = prefill_last_logits(&model, &[2, 3])?;
+
+    assert_ne!(
+        logits_history_a, logits_history_b,
+        "last-position logits must depend on earlier prompt history"
+    );
+
+    let max_delta = logits_history_a
+        .iter()
+        .zip(logits_history_b.iter())
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0f32, f32::max);
+    assert!(
+        max_delta > 1e-3,
+        "history-sensitive fixture should produce a material logit delta, got {max_delta}"
+    );
+
     Ok(())
 }
 
