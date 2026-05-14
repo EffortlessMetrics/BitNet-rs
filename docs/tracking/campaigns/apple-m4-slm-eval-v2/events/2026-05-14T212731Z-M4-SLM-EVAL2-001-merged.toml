@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T21:27:31Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-001"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-001-campaign-corpus"
+pr = 4777
+head_sha = "ff5d6622a77ef361affab7d24794b2becbf951a5"
+merge_sha = "ce1864849a78726886b48223565cef4b3c11081b"
+summary = "Marked M4-SLM-EVAL2-001 merged after the dense SLM eval v2 campaign and 120-case corpus landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4777",
+  "ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "The merged PR defines the apple-m4-slm-eval-v2 campaign and adds the 120-case deterministic dense SLM corpus v2.",
+  "The evidence is parser/scoring dry-run only and does not claim runtime dense SLM accuracy, broad model quality, broad M4 performance, BitNet quality, full Metal inference, QK256, Neural Engine, or MPSGraph support.",
+]
