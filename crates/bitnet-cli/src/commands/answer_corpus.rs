@@ -894,7 +894,7 @@ fn validate_answer_scoring(case: &AnswerCase) -> Result<()> {
         }
         "numeric_tolerance" => {
             let has_expected_number = scoring.expected_number.is_some()
-                || scoring.expected_answer().and_then(|value| first_number(value)).is_some();
+                || scoring.expected_answer().and_then(first_number).is_some();
             if !has_expected_number {
                 anyhow::bail!(
                     "answer corpus case `{}` scoring numeric_tolerance requires expected_number or numeric expected text",
@@ -1212,7 +1212,7 @@ fn scoring_summary(rows: &[Value]) -> Value {
 }
 
 fn normalize_scoring_text(value: &str) -> String {
-    strip_special_markers(value).trim().split_whitespace().collect::<Vec<_>>().join(" ")
+    strip_special_markers(value).split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn normalize_match_text(value: &str) -> String {
