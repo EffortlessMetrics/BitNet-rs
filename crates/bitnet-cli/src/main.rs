@@ -86,6 +86,68 @@ fn critical_not_claims() -> Vec<&'static str> {
     ]
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BackendFallbackProof {
+    used: bool,
+    reason: Option<String>,
+}
+
+fn backend_fallback_proof(
+    requested_backend: &str,
+    execution_backend: &str,
+) -> BackendFallbackProof {
+    let requested = canonical_proof_backend_label(requested_backend);
+    let execution = canonical_proof_backend_label(execution_backend);
+    if requested == "auto" || requested == execution {
+        return BackendFallbackProof { used: false, reason: None };
+    }
+
+    BackendFallbackProof {
+        used: true,
+        reason: Some(format!(
+            "requested backend {requested_backend} executed on {execution_backend}"
+        )),
+    }
+}
+
+fn canonical_proof_backend_label(label: &str) -> String {
+    match label.trim().to_ascii_lowercase().as_str() {
+        "" | "auto" => "auto".to_string(),
+        "cpu" | "cpu-rust" => "cpu".to_string(),
+        "intel-arc-a770-opencl" | "a770-opencl" => "intel-arc-a770-opencl".to_string(),
+        other => other.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod proof_summary_tests {
+    use super::*;
+
+    #[test]
+    fn cpu_request_on_cpu_is_not_backend_fallback() {
+        let proof = backend_fallback_proof("cpu", "cpu");
+        assert!(!proof.used);
+        assert_eq!(proof.reason, None);
+    }
+
+    #[test]
+    fn auto_request_on_cpu_is_not_backend_fallback() {
+        let proof = backend_fallback_proof("auto", "cpu");
+        assert!(!proof.used);
+        assert_eq!(proof.reason, None);
+    }
+
+    #[test]
+    fn a770_request_on_cpu_is_backend_fallback() {
+        let proof = backend_fallback_proof("intel-arc-a770-opencl", "cpu");
+        assert!(proof.used);
+        assert_eq!(
+            proof.reason.as_deref(),
+            Some("requested backend intel-arc-a770-opencl executed on cpu")
+        );
+    }
+}
+
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
@@ -1973,9 +2035,11 @@ async fn run_simple_generation(
         });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
-        let fallback_used = loader_fallback_used || tokenizer_fallback_used;
         let execution_backend = "cpu";
         let requested_backend = requested_backend_label.as_str();
+        let backend_fallback = backend_fallback_proof(requested_backend, execution_backend);
+        let fallback_used =
+            loader_fallback_used || tokenizer_fallback_used || backend_fallback.used;
         let execution_backend_matched = requested_backend.eq_ignore_ascii_case(execution_backend);
         let proof_model_contract_path =
             proof_model_contract.as_ref().map(|path| path.display().to_string());
@@ -2017,6 +2081,8 @@ async fn run_simple_generation(
                 "execution_backend": execution_backend,
                 "execution_backend_matched": execution_backend_matched,
                 "fallback_used": fallback_used,
+                "backend_fallback_used": backend_fallback.used,
+                "backend_fallback_reason": backend_fallback.reason,
                 "loader_fallback_used": loader_fallback_used,
                 "tokenizer_fallback_used": tokenizer_fallback_used,
                 "strict_backend": !allow_mock,
