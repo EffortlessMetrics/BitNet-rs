@@ -39,6 +39,7 @@ use walkdir::WalkDir;
 mod campaign;
 mod bench_receipt;
 mod cpp_setup_auto;
+mod claims;
 mod crossval;
 pub mod ffi;
 mod gates;
@@ -301,6 +302,12 @@ enum Cmd {
     Bench {
         #[command(subcommand)]
         cmd: BenchCmd,
+    },
+
+    /// Verify public claim ledgers and generated claim docs.
+    Claims {
+        #[command(subcommand)]
+        cmd: ClaimsCmd,
     },
 
     /// Verify hardware claim rails and resolve device-specific kernel routes.
@@ -1094,6 +1101,40 @@ enum BenchCmd {
 }
 
 #[derive(Subcommand)]
+enum ClaimsCmd {
+    /// Verify the claim ledger against capability matrices and claim policy.
+    Verify {
+        /// Claim ledger JSON file.
+        #[arg(long, default_value = "ci/claims/claim-ledger.json")]
+        ledger: PathBuf,
+        /// A770 kernel capability matrix JSON file.
+        #[arg(
+            long,
+            default_value = "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json"
+        )]
+        a770_capability_matrix: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+    /// Render or check generated claim documentation.
+    Docs {
+        /// Claim ledger JSON file.
+        #[arg(long, default_value = "ci/claims/claim-ledger.json")]
+        ledger: PathBuf,
+        /// Output Markdown path.
+        #[arg(long, default_value = "docs/claims.md")]
+        output: PathBuf,
+        /// Check mode: fail if docs are stale.
+        #[arg(long, default_value_t = false)]
+        check: bool,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum HardwareCmd {
     /// Intel Arc A770 hardware claim checks.
     A770 {
@@ -1289,6 +1330,14 @@ fn real_main() -> Result<()> {
         Cmd::Bench { cmd } => match cmd {
             BenchCmd::VerifyReceipt { receipt, require_claimable, format } => {
                 bench_receipt::verify_receipt(&receipt, &format, require_claimable)
+            }
+        },
+        Cmd::Claims { cmd } => match cmd {
+            ClaimsCmd::Verify { ledger, a770_capability_matrix, format } => {
+                claims::verify(&ledger, &a770_capability_matrix, &format)
+            }
+            ClaimsCmd::Docs { ledger, output, check, format } => {
+                claims::docs(&ledger, &output, check, &format)
             }
         },
         Cmd::Hardware { cmd } => match cmd {
