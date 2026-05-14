@@ -218,6 +218,13 @@ Use `doctor` for one local health verdict:
 bitnet mac doctor
 ```
 
+The doctor receipt includes an advisory `checks.bitnet_ask` section for the
+BitNet one-shot route. It reports the `supported-ask` catalog row, cached-model
+fetch/verify commands, accepted tokenizer path and SHA, an example cached-model
+ask command, and explicit chat/serve/Metal-disabled claim boundaries. This
+readiness check does not make dense SLM doctor fail when optional BitNet
+artifacts are absent.
+
 Use `smoke` for a compact answer/cache receipt:
 
 ```bash

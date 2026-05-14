@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T03:30:59Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started advisory BitNet one-shot ask readiness in `bitnet mac doctor` receipts.",
+  "The item is scoped to supported-ask catalog visibility, cached model readiness, accepted external tokenizer path/SHA status, model fetch/verify commands, an example cached ask command, and unchanged BitNet chat/serve/Metal claim boundaries.",
+  "Dense SLM doctor remains allowed to pass or fail on dense health independently; absent optional BitNet artifacts do not block the doctor verdict.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad performance, and speedup claims remain disabled.",
+]

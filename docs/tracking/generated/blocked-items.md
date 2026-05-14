@@ -58,6 +58,7 @@
 | apple-m4-local-answer | M4-BITNET-ASK-002 | M4-BITNET-ASK-001 | merged |
 | apple-m4-local-answer | M4-BITNET-ASK-003 | M4-BITNET-ASK-002 | merged |
 | apple-m4-local-answer | M4-BITNET-ASK-004 | M4-BITNET-ASK-003 | merged |
+| apple-m4-local-answer | M4-BITNET-ASK-005 | M4-BITNET-ASK-004 | in_progress |
 | apple-m4-operational | M4-OP-002 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |

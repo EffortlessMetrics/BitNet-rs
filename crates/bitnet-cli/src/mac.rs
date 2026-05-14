@@ -40,6 +40,8 @@ const BITNET_M4_EXPECTED_MODEL_SHA256: &str =
 const BITNET_M4_EXPECTED_TOKENIZER_SHA256: &str =
     "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7";
 const BITNET_M4_PROMPT_TEMPLATE: &str = "bitnetcpp-answer";
+const BITNET_M4_MODEL_ID: &str = "microsoft-bitnet-b1.58-2B-4T-i2s";
+const BITNET_M4_DEFAULT_TOKENIZER_PATH: &str = "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json";
 const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
 const OPERATOR_PROFILE_TOKENS: &[usize] = &[16, 32, 64];
 const PERFORMANCE_PROFILE_TOKENS: &[usize] = &[16, 32, 64, 128];
@@ -2038,6 +2040,7 @@ async fn run_doctor(
     threads: usize,
     json_out: PathBuf,
 ) -> Result<()> {
+    let bitnet_ask_readiness = bitnet_mac_ask_readiness_json(cache_dir.clone());
     let cache_status =
         model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
     let unsupported_backend_rejected =
@@ -2051,6 +2054,7 @@ async fn run_doctor(
             &json_out,
             "fail",
             cache_status.clone(),
+            bitnet_ask_readiness,
             unsupported_backend_rejected,
             max_new_tokens,
         );
@@ -2086,6 +2090,7 @@ async fn run_doctor(
         &json_out,
         "pass",
         cache_status,
+        bitnet_ask_readiness,
         unsupported_backend_rejected,
         max_new_tokens,
     );
@@ -3517,6 +3522,7 @@ fn mac_doctor_base_receipt(
     json_out: &Path,
     result: &str,
     cache_status: serde_json::Value,
+    bitnet_ask_readiness: serde_json::Value,
     unsupported_backend_rejected: bool,
     max_new_tokens: usize,
 ) -> serde_json::Value {
@@ -3574,10 +3580,12 @@ fn mac_doctor_base_receipt(
                 "rejected": unsupported_backend_rejected,
                 "note": "mac doctor verifies that full apple-m4-metal inference remains blocked for the dense SLM wrapper",
             },
+            "bitnet_ask": bitnet_ask_readiness,
         },
         "mac_claim_boundary": {
             "slm_local_answer": true,
             "doctor": true,
+            "bitnet_one_shot_ask_readiness_checked": true,
             "requested_backend": APPLE_M4_CPU_NEON,
             "bitnet_quality_claimed": false,
             "full_metal_inference_claimed": false,
@@ -3589,6 +3597,120 @@ fn mac_doctor_base_receipt(
         },
         "broad_performance_claim": false,
         "speedup_claim": false,
+    })
+}
+
+fn bitnet_mac_ask_readiness_json(cache_dir: Option<PathBuf>) -> serde_json::Value {
+    let catalog = match model_cache::apple_m4_models_catalog_json(cache_dir) {
+        Ok(catalog) => catalog,
+        Err(error) => {
+            return serde_json::json!({
+                "checked": true,
+                "ready": false,
+                "advisory": true,
+                "blocks_doctor": false,
+                "error": error.to_string(),
+                "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
+            });
+        }
+    };
+    let Some(row) = catalog["rows"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(BITNET_M4_MODEL_ID)))
+    else {
+        return serde_json::json!({
+            "checked": true,
+            "ready": false,
+            "advisory": true,
+            "blocks_doctor": false,
+            "model": {
+                "id": BITNET_M4_MODEL_ID,
+                "catalog_state": "missing",
+            },
+            "commands": {
+                "models": bitnet_mac_models_command(catalog["cache_root"].as_str()),
+            },
+            "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
+        });
+    };
+
+    let cached_model_ready = row["cache_state"].as_str() == Some("ready");
+    let tokenizer_path = PathBuf::from(BITNET_M4_DEFAULT_TOKENIZER_PATH);
+    let (tokenizer_present, tokenizer_verified, tokenizer_sha256, tokenizer_error) =
+        if tokenizer_path.is_file() {
+            match verify_bitnet_m4_tokenizer(&tokenizer_path) {
+                Ok(sha256) => (true, true, Some(sha256), None),
+                Err(error) => (true, false, None, Some(error.to_string())),
+            }
+        } else {
+            (false, false, None, None)
+        };
+    let cached_ask_ready = cached_model_ready && tokenizer_verified;
+
+    serde_json::json!({
+        "checked": true,
+        "ready": cached_ask_ready,
+        "advisory": true,
+        "blocks_doctor": false,
+        "model": {
+            "id": BITNET_M4_MODEL_ID,
+            "catalog_state": row["state"].clone(),
+            "cache_state": row["cache_state"].clone(),
+            "cache_path": row["cache_path"].clone(),
+            "expected_sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "cached_model_ready": cached_model_ready,
+            "fetch_command": row["fetch_command"].clone(),
+            "verify_command": row["verify_command"].clone(),
+            "proof_status": row["proof_status"].clone(),
+            "proof_command": row["proof_command"].clone(),
+        },
+        "tokenizer": {
+            "path": tokenizer_path,
+            "expected_sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "present": tokenizer_present,
+            "verified": tokenizer_verified,
+            "sha256": tokenizer_sha256,
+            "error": tokenizer_error,
+            "required_explicit_argument": "--tokenizer",
+        },
+        "commands": {
+            "models": bitnet_mac_models_command(catalog["cache_root"].as_str()),
+            "ask_cached_model": bitnet_cached_ask_command(catalog["cache_root"].as_str()),
+            "fetch": row["fetch_command"].clone(),
+            "verify": row["verify_command"].clone(),
+        },
+        "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
+    })
+}
+
+fn bitnet_mac_models_command(cache_root: Option<&str>) -> String {
+    match cache_root {
+        Some(cache_root) => format!("bitnet mac models --cache-dir {cache_root}"),
+        None => "bitnet mac models".to_string(),
+    }
+}
+
+fn bitnet_cached_ask_command(cache_root: Option<&str>) -> String {
+    let cache_arg =
+        cache_root.map(|cache_root| format!(" --cache-dir {cache_root}")).unwrap_or_default();
+    format!(
+        "bitnet mac ask --model-id {BITNET_M4_MODEL_ID}{cache_arg} --tokenizer {BITNET_M4_DEFAULT_TOKENIZER_PATH} \"What is 2+2? Answer briefly.\""
+    )
+}
+
+fn bitnet_mac_ask_readiness_claim_boundary() -> serde_json::Value {
+    serde_json::json!({
+        "bitnet_one_shot_mac_ask": true,
+        "readiness_only": true,
+        "chat_enabled": false,
+        "serve_enabled": false,
+        "full_metal_inference_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "qk256_apple_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+        "bitnet_quality_claimed": false,
     })
 }
 
@@ -6659,6 +6781,35 @@ mod tests {
         assert!(joined.contains("replace --model-path with the accepted Microsoft I2_S GGUF"));
         assert!(joined.contains("bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --path"));
         assert!(joined.contains(&model_path.display().to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_mac_ask_readiness_is_advisory_and_preserves_claim_boundary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let readiness = bitnet_mac_ask_readiness_json(Some(temp.path().join("models")));
+
+        assert_eq!(readiness["checked"], true);
+        assert_eq!(readiness["advisory"], true);
+        assert_eq!(readiness["blocks_doctor"], false);
+        assert_eq!(readiness["model"]["id"], BITNET_M4_MODEL_ID);
+        assert_eq!(readiness["model"]["catalog_state"], "supported-ask");
+        assert_eq!(readiness["claim_boundary"]["chat_enabled"], false);
+        assert_eq!(readiness["claim_boundary"]["serve_enabled"], false);
+        assert_eq!(readiness["claim_boundary"]["full_metal_inference_claimed"], false);
+        assert!(
+            readiness["commands"]["models"]
+                .as_str()
+                .ok_or_else(|| std::io::Error::other("models command"))?
+                .contains("bitnet mac models")
+        );
+        assert!(
+            readiness["commands"]["ask_cached_model"]
+                .as_str()
+                .ok_or_else(|| std::io::Error::other("ask command"))?
+                .contains("--tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json")
+        );
         Ok(())
     }
 
