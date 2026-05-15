@@ -76,6 +76,15 @@ fn sha256_token_ids(tokens: &[u32]) -> Result<String> {
     Ok(sha256_hex_bytes(&serde_json::to_vec(tokens)?))
 }
 
+fn sha256_f32_le(values: &[f32]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for value in values {
+        hasher.update(value.to_le_bytes());
+    }
+    format!("{:x}", hasher.finalize())
+}
+
 fn critical_not_claims() -> Vec<&'static str> {
     vec![
         "selected_attention_residency",
@@ -419,6 +428,21 @@ mod proof_summary_tests {
         assert_eq!(softmax_rank(&logits, 2), Some(3));
         assert_eq!(softmax_rank(&logits, 4), None);
         assert_eq!(softmax_rank(&logits, 99), None);
+    }
+
+    #[test]
+    fn f32_vector_stats_receipt_reports_hidden_state_shape_and_hash() {
+        let values = [1.0f32, -2.0, 3.0, 4.0];
+        let receipt = f32_vector_stats_receipt(&values);
+
+        assert_eq!(receipt["present"], serde_json::json!(true));
+        assert_eq!(receipt["value_count"], serde_json::json!(4));
+        assert_eq!(receipt["mean"], serde_json::json!(1.5f32));
+        assert_eq!(receipt["rms"], serde_json::json!(compute_rms(&values)));
+        assert_eq!(receipt["min"], serde_json::json!(-2.0f32));
+        assert_eq!(receipt["max"], serde_json::json!(4.0f32));
+        assert_eq!(receipt["vector_sha256_f32_le"], serde_json::json!(sha256_f32_le(&values)));
+        assert_eq!(receipt["first_values"], serde_json::json!([1.0f32, -2.0, 3.0, 4.0]));
     }
 
     #[test]
@@ -1897,6 +1921,7 @@ async fn run_simple_generation(
     #[derive(Debug, serde::Serialize)]
     struct LogitStep {
         step: usize,
+        hidden_state: serde_json::Value,
         top_logits: Vec<serde_json::Value>,
         selected_logits: Vec<serde_json::Value>,
         chosen_id: Option<u32>,
@@ -2302,10 +2327,12 @@ async fn run_simple_generation(
 
             let top_logits: Vec<(u32, f32)> =
                 topk_indices.iter().map(|&i| (i as u32, logits_vec[i])).collect();
+            let hidden_vec = tensor_to_vec(&last_hidden)?;
 
             // Will capture chosen_id after sampling
             let step = LogitStep {
                 step: step_idx,
+                hidden_state: f32_vector_stats_receipt(&hidden_vec),
                 top_logits: top_logits
                     .iter()
                     .map(|&(token_id, logit)| {
@@ -2579,6 +2606,7 @@ async fn run_simple_generation(
                 Some(logits_dump.iter().map(|step| {
                     serde_json::json!({
                         "step": step.step,
+                        "hidden_state": step.hidden_state,
                         "top_logits": step.top_logits,
                         "selected_logits": step.selected_logits,
                         "chosen_id": step.chosen_id
@@ -2712,6 +2740,41 @@ fn compute_rms(xs: &[f32]) -> f32 {
     }
     let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
     (sum_sq / (xs.len() as f32)).sqrt()
+}
+
+fn f32_vector_stats_receipt(values: &[f32]) -> serde_json::Value {
+    if values.is_empty() {
+        return serde_json::json!({
+            "present": false,
+            "value_count": 0,
+            "mean": serde_json::Value::Null,
+            "rms": serde_json::Value::Null,
+            "min": serde_json::Value::Null,
+            "max": serde_json::Value::Null,
+            "vector_sha256_f32_le": serde_json::Value::Null,
+            "first_values": Vec::<f32>::new(),
+        });
+    }
+
+    let mut min = f32::INFINITY;
+    let mut max = f32::NEG_INFINITY;
+    let mut sum = 0.0f64;
+    for value in values {
+        min = min.min(*value);
+        max = max.max(*value);
+        sum += *value as f64;
+    }
+
+    serde_json::json!({
+        "present": true,
+        "value_count": values.len(),
+        "mean": (sum / values.len() as f64) as f32,
+        "rms": compute_rms(values),
+        "min": min,
+        "max": max,
+        "vector_sha256_f32_le": sha256_f32_le(values),
+        "first_values": values.iter().copied().take(8).collect::<Vec<_>>(),
+    })
 }
 
 /// Show system information
