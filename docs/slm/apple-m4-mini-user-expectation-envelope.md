@@ -13,6 +13,7 @@ Primary commands:
 bitnet mac models
 bitnet mac status
 bitnet mac report-refresh
+bitnet mac regression-dashboard
 bitnet mac ask "What is 2+2?"
 bitnet mac chat
 bitnet mac smoke
@@ -41,6 +42,12 @@ chat and serve disabled.
 and BitNet report families for advisory/nightly/release refreshes. It reads
 committed receipts only; it does not download models, run live inference, or use
 dense SLM evidence as BitNet evidence.
+
+`bitnet mac regression-dashboard` is the model-free dashboard layer above that
+manifest. It writes JSON and Markdown artifacts that group committed reports by
+evidence family, model identity, tokenizer authority, backend, and fallback
+state before offering regression commands. Groups with only one report are
+marked `insufficient_history`.
 
 ```bash
 bitnet mac ask \

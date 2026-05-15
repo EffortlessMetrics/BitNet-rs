@@ -83,12 +83,37 @@ bitnet mac receipts-check \
   --json
 ```
 
+## Regression Dashboard
+
+`M4-INF-OPS-003` adds a model-free dashboard command:
+
+```bash
+bitnet mac regression-dashboard
+```
+
+The command writes:
+
+```text
+target/apple-m4-inference-ops/regression-dashboard.json
+target/apple-m4-inference-ops/regression-dashboard.md
+```
+
+The JSON receipt uses artifact kind `apple_m4_regression_dashboard`. It groups
+committed reports by evidence family, artifact kind, model ID, model SHA,
+tokenizer authority, backend, and fallback state. A group is comparable only
+when at least two matching reports exist; otherwise the dashboard records
+`comparison_status=insufficient_history` instead of inventing a regression
+claim.
+
+The dashboard keeps dense SLM and BitNet families separate and records
+`bitnet_chat_enabled=false`, `bitnet_serve_enabled=false`,
+`full_metal_inference_claimed=false`, `qk256_apple_claimed=false`, and no broad
+quality, performance, or speedup claim.
+
 ## Remaining Ops Work
 
 The remaining inference-ops lane should stay model-free in generic PR CI:
 
-- build compact regression dashboard artifacts across dense SLM and BitNet
-  reports while preserving separate evidence families;
 - publish an operator envelope v2 that maps supported commands to receipt
   requirements and claim boundaries.
 

@@ -110,7 +110,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-INF-OPS-003"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-003-regression-dashboard"
 stackable = false
 review_mode = "codex_premerge"
@@ -119,11 +119,22 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-INF-OPS-002"]
 acceptance = "Add compact regression dashboard artifacts across dense SLM and BitNet reports while keeping evidence families, model identity, tokenizer authority, backend, fallback, and claim boundaries separate."
 commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression_dashboard",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_help_documents_operator_wrappers",
+  "cargo test --locked -p bitnet-cli --test cli_snapshot_tests mac_help",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- mac regression-dashboard --json-out target/apple-m4-inference-ops/regression-dashboard.json --markdown-out target/apple-m4-inference-ops/regression-dashboard.md --json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- mac receipts-check target/apple-m4-inference-ops/regression-dashboard.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
 ]
 allowed_paths = [
+  ".github/workflows/**",
   "crates/bitnet-cli/**",
   "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
   "docs/tracking/campaigns/apple-m4-inference-ops/**",
   "docs/tracking/generated/**",
 ]

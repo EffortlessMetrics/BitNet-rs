@@ -1,0 +1,33 @@
+timestamp = "2026-05-15T18:11:09Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-003-regression-dashboard"
+summary = "Started model-free Apple M4 regression dashboard artifacts."
+
+artifacts = [
+  ".github/workflows/apple-m4-inference-ops-tier0.yml",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "The dashboard must group committed dense SLM and BitNet reports by evidence family, model identity, tokenizer authority, backend, and fallback state before offering regression commands.",
+  "Groups with only one matching report record insufficient_history instead of claiming a measured regression trend.",
+  "Generic PR CI may generate and validate the dashboard, but must not download models, run live M4 inference, run long resident soaks, or publish fresh timing claims.",
+]
+
+[evidence]
+route = "bitnet mac regression-dashboard"
+artifact_kind = "apple_m4_regression_dashboard"
+backend = "apple-m4-cpu-neon"
+fallback_used = false
+claim_boundary = "dashboard only; no live model run, model download, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"

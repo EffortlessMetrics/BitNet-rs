@@ -27,6 +27,10 @@ const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doc
 const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-status.json";
 const MAC_REPORT_REFRESH_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-ops/report-refresh-manifest.json";
+const MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-ops/regression-dashboard.json";
+const MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN: &str =
+    "target/apple-m4-inference-ops/regression-dashboard.md";
 const APPLE_M4_REPORT_ROOT: &str = "ci/hardware/apple-m4-mac-mini";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
@@ -192,6 +196,29 @@ enum MacAction {
         json_out: PathBuf,
 
         /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
+    /// Build a model-free dense SLM and BitNet regression dashboard from committed reports.
+    RegressionDashboard {
+        /// Committed Apple M4 report root to inventory.
+        #[arg(long, value_name = "PATH", default_value = APPLE_M4_REPORT_ROOT)]
+        root: PathBuf,
+
+        /// Output strict regression dashboard receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Output compact Markdown dashboard.
+        #[arg(
+            long,
+            value_name = "PATH",
+            default_value = MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN
+        )]
+        markdown_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out and --markdown-out.
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -831,6 +858,10 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac report-refresh")?;
                 run_report_refresh_manifest(root, json_out, json)
             }
+            MacAction::RegressionDashboard { root, json_out, markdown_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac regression-dashboard")?;
+                run_regression_dashboard(root, json_out, markdown_out, json)
+            }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
                 run_check(&model_id, cache_dir, json)
@@ -1226,6 +1257,7 @@ fn apple_m4_inference_status_receipt(
         "models": "bitnet mac models",
         "status": "bitnet mac status",
         "report_refresh": "bitnet mac report-refresh",
+        "regression_dashboard": "bitnet mac regression-dashboard",
         "fetch_default": format!("bitnet model fetch {default_model_id}"),
         "verify_default": format!("bitnet model verify {default_model_id}"),
         "ask_default": "bitnet mac ask \"What is 2+2?\"",
@@ -1707,6 +1739,341 @@ fn print_report_refresh_manifest_summary(receipt: &serde_json::Value, json_out: 
     println!("Receipt: {}", json_out.display());
     println!(
         "Claim boundary: manifest only; no live model run, no model downloads, dense SLM and BitNet evidence stay separate."
+    );
+}
+
+fn run_regression_dashboard(
+    root: PathBuf,
+    json_out: PathBuf,
+    markdown_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    let receipt = apple_m4_regression_dashboard_receipt(&root, &json_out, &markdown_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    let markdown = apple_m4_regression_dashboard_markdown(&receipt);
+    write_json_receipt(&json_out, &receipt)?;
+    if let Some(parent) = markdown_out.parent() {
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!("failed to create dashboard directory {}", parent.display())
+        })?;
+    }
+    std::fs::write(&markdown_out, markdown).with_context(|| {
+        format!("failed to write regression dashboard {}", markdown_out.display())
+    })?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_regression_dashboard_summary(&receipt, &json_out, &markdown_out);
+    }
+    Ok(())
+}
+
+fn apple_m4_regression_dashboard_receipt(
+    root: &Path,
+    json_out: &Path,
+    markdown_out: &Path,
+) -> serde_json::Value {
+    let manifest_families = apple_m4_report_refresh_families(root);
+    let families =
+        manifest_families.iter().map(apple_m4_regression_dashboard_family_json).collect::<Vec<_>>();
+    let group_count =
+        families.iter().filter_map(|family| family["group_count"].as_u64()).sum::<u64>();
+    let comparable_group_count =
+        families.iter().filter_map(|family| family["comparable_group_count"].as_u64()).sum::<u64>();
+    let report_count =
+        families.iter().filter_map(|family| family["report_count"].as_u64()).sum::<u64>();
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_regression_dashboard",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac regression-dashboard",
+        "status": "ok",
+        "receipt_path": json_out,
+        "markdown_path": markdown_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "committed report regression dashboard",
+        },
+        "report_root": root,
+        "report_count": report_count,
+        "family_count": families.len(),
+        "group_count": group_count,
+        "comparable_group_count": comparable_group_count,
+        "dashboard_contract": {
+            "model_free": true,
+            "committed_reports_only": true,
+            "matching_requires_same_evidence_family": true,
+            "matching_requires_same_model_id": true,
+            "matching_requires_same_model_sha256": true,
+            "matching_requires_same_tokenizer_authority": true,
+            "matching_requires_same_artifact_kind": true,
+            "matching_requires_same_backend": true,
+            "matching_requires_fallback_false": true,
+        },
+        "families": families,
+        "claim_boundary": {
+            "dashboard_only": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serde_json::Value {
+    let family_id = family["id"].as_str().unwrap_or("<unknown>");
+    let evidence_family = family["evidence_family"].as_str().unwrap_or("<unknown>");
+    let expected_artifact_kind = family["expected_artifact_kind"].as_str().unwrap_or("<unknown>");
+    let mut groups: std::collections::BTreeMap<String, Vec<serde_json::Value>> =
+        std::collections::BTreeMap::new();
+    if let Some(reports) = family["reports"].as_array() {
+        for report in reports {
+            let Some(path_text) = report["path"].as_str() else {
+                continue;
+            };
+            let path = Path::new(path_text);
+            let Ok(bytes) = std::fs::read(path) else {
+                continue;
+            };
+            let Ok(receipt) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+                continue;
+            };
+            let identity = apple_m4_dashboard_report_identity_json(&receipt, evidence_family);
+            let group_key = apple_m4_dashboard_group_key(family_id, &identity);
+            groups.entry(group_key).or_default().push(serde_json::json!({
+                "path": path,
+                "date": report["date"].clone(),
+                "artifact_kind": receipt["artifact_kind"].as_str(),
+                "identity": identity,
+                "metrics": apple_m4_dashboard_metrics_json(&receipt),
+            }));
+        }
+    }
+    let mut dashboard_groups = Vec::new();
+    let mut comparable_group_count = 0_u64;
+    for (group_key, mut reports) in groups {
+        reports.sort_by_key(|report| report["path"].as_str().unwrap_or_default().to_string());
+        let report_count = reports.len();
+        let latest = reports.last().cloned().unwrap_or(serde_json::Value::Null);
+        let baseline = if report_count > 1 {
+            comparable_group_count = comparable_group_count.saturating_add(1);
+            reports.get(report_count - 2).cloned().unwrap_or(serde_json::Value::Null)
+        } else {
+            serde_json::Value::Null
+        };
+        let comparison_status = if report_count > 1 { "ready" } else { "insufficient_history" };
+        let latest_path = latest["path"].as_str().unwrap_or("<missing>");
+        let baseline_path = baseline["path"].as_str().unwrap_or(latest_path);
+        dashboard_groups.push(serde_json::json!({
+            "group_key": group_key,
+            "evidence_family": evidence_family,
+            "expected_artifact_kind": expected_artifact_kind,
+            "model_id": latest["identity"]["model_id"].clone(),
+            "model_sha256": latest["identity"]["model_sha256"].clone(),
+            "tokenizer_authority": latest["identity"]["tokenizer_authority"].clone(),
+            "selected_backend": latest["identity"]["selected_backend"].clone(),
+            "runtime_api": latest["identity"]["runtime_api"].clone(),
+            "fallback_used": latest["identity"]["fallback_used"].clone(),
+            "report_count": report_count,
+            "comparison_status": comparison_status,
+            "latest_report": latest_path,
+            "baseline_report": if report_count > 1 { serde_json::Value::String(baseline_path.to_string()) } else { serde_json::Value::Null },
+            "regression_command": format!("bitnet mac regression {latest_path} --baseline {baseline_path}"),
+            "latest_metrics": latest["metrics"].clone(),
+            "reports": reports,
+            "claim_boundary": {
+                "dense_slm_evidence": evidence_family == "dense_slm",
+                "bitnet_evidence": evidence_family == "bitnet",
+                "evidence_families_mixed": false,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+        }));
+    }
+    let report_count = family["report_count"].as_u64().unwrap_or_default();
+    serde_json::json!({
+        "id": family_id,
+        "evidence_family": evidence_family,
+        "expected_artifact_kind": expected_artifact_kind,
+        "report_count": report_count,
+        "group_count": dashboard_groups.len(),
+        "comparable_group_count": comparable_group_count,
+        "groups": dashboard_groups,
+        "claim_boundary": {
+            "dense_slm_evidence": evidence_family == "dense_slm",
+            "bitnet_evidence": evidence_family == "bitnet",
+            "evidence_families_mixed": false,
+            "generic_pr_ci_live_model_run": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_dashboard_group_key(family_id: &str, identity: &serde_json::Value) -> String {
+    format!(
+        "{}::{}::{}::{}::{}",
+        family_id,
+        identity["model_id"].as_str().unwrap_or("<unknown>"),
+        identity["model_sha256"].as_str().unwrap_or("<unknown>"),
+        identity["tokenizer_authority"].as_str().unwrap_or("<unknown>"),
+        identity["selected_backend"].as_str().unwrap_or("<unknown>")
+    )
+}
+
+fn apple_m4_dashboard_report_identity_json(
+    receipt: &serde_json::Value,
+    evidence_family: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "evidence_family": evidence_family,
+        "artifact_kind": receipt["artifact_kind"].as_str(),
+        "model_id": apple_m4_report_model_id(receipt).unwrap_or_else(|| "<unknown>".to_string()),
+        "model_sha256": apple_m4_report_model_sha256(receipt).unwrap_or_else(|| "<unknown>".to_string()),
+        "tokenizer_authority": apple_m4_report_tokenizer_authority(receipt).unwrap_or_else(|| "<unknown>".to_string()),
+        "prompt_template": receipt["prompt_template"].as_str().unwrap_or("<not-recorded>"),
+        "selected_backend": receipt_string(receipt, "selected_backend").unwrap_or_else(|| "<unknown>".to_string()),
+        "runtime_api": receipt_string(receipt, "runtime_api").unwrap_or_else(|| "<unknown>".to_string()),
+        "fallback_used": receipt_bool(receipt, "fallback_used").unwrap_or(true),
+    })
+}
+
+fn apple_m4_report_model_sha256(receipt: &serde_json::Value) -> Option<String> {
+    for segments in [
+        &["model", "sha256"][..],
+        &["model_cache", "sha256"][..],
+        &["model", "answer_ready", "sha256"][..],
+    ] {
+        if let Some(sha256) = json_value_at(receipt, segments).as_str() {
+            return Some(sha256.to_string());
+        }
+    }
+    None
+}
+
+fn apple_m4_report_tokenizer_authority(receipt: &serde_json::Value) -> Option<String> {
+    if let Some(authority) = receipt["tokenizer"]["authority"].as_str() {
+        return Some(authority.to_string());
+    }
+    if let Some(pre) = receipt["tokenizer"]["pretokenizer_authority"].as_str() {
+        return Some(pre.to_string());
+    }
+    if let Some(pre) = receipt["model_cache"]["tokenizer_pre"].as_str() {
+        return Some(pre.to_string());
+    }
+    if let Some(sha256) = receipt["tokenizer"]["sha256"].as_str() {
+        let source = receipt["tokenizer"]["source"].as_str().unwrap_or("tokenizer");
+        return Some(format!("{source}:{sha256}"));
+    }
+    if let Some(sha256) = receipt["tokenizer"]["authority"]["sha256"].as_str() {
+        let source = receipt["tokenizer"]["authority"]["source"].as_str().unwrap_or("tokenizer");
+        let pre = receipt["tokenizer"]["authority"]["ggml_pre"].as_str().unwrap_or("unknown-pre");
+        return Some(format!("{source}:{pre}:{sha256}"));
+    }
+    None
+}
+
+fn apple_m4_dashboard_metrics_json(receipt: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "prompt_count": apple_m4_report_prompt_count(receipt),
+        "generated_tokens": apple_m4_report_generated_tokens(receipt),
+        "quality": {
+            "cases_total": receipt["accuracy"]["cases_total"].as_u64()
+                .or_else(|| receipt["quality_summary"]["total"].as_u64())
+                .or_else(|| receipt["speed"]["counts"]["prompt_count"].as_u64()),
+            "cases_passed": receipt["accuracy"]["cases_passed"].as_u64()
+                .or_else(|| receipt["quality_summary"]["passed"].as_u64()),
+            "quality_passed": receipt["quality_summary"]["passed"].as_bool()
+                .or_else(|| receipt["stability"]["quality_passed"].as_bool()),
+            "failed": receipt["quality_summary"]["failed"].as_u64(),
+        },
+        "speed": {
+            "ttft_ms_p50": receipt["speed"]["ttft_ms_p50"].as_f64()
+                .or_else(|| receipt["speed"]["ttft_ms"]["p50"].as_f64())
+                .or_else(|| receipt["speed"]["timing"]["time_to_first_token_ms"]["p50_ms"].as_f64()),
+            "input_tok_s_p50": receipt["speed"]["input_tok_s_p50"].as_f64()
+                .or_else(|| receipt["speed"]["input_tok_s"]["p50"].as_f64()),
+            "output_tok_s_p50": receipt["speed"]["output_tok_s_p50"].as_f64()
+                .or_else(|| receipt["speed"]["output_tok_s"]["p50"].as_f64()),
+            "decode_tok_s_p50": receipt["speed"]["decode_tok_s_p50"].as_f64()
+                .or_else(|| receipt["speed"]["decode_tok_s"]["p50"].as_f64())
+                .or_else(|| receipt["speed"]["timing"]["steady_decode_tok_s"]["p50"].as_f64()),
+            "total_wall_ms_p50": receipt["speed"]["total_wall_ms_p50"].as_f64()
+                .or_else(|| receipt["speed"]["total_wall_ms"]["p50"].as_f64())
+                .or_else(|| receipt["speed"]["timing"]["total_session_ms"].as_f64()),
+        },
+        "memory": {
+            "peak_memory_mb_p50": receipt["memory"]["peak_memory_mb"]["p50"].as_f64()
+                .or_else(|| receipt["memory"]["peak_memory_mb"].as_f64()),
+            "resident_memory_bytes": receipt["memory"]["resident_memory_bytes"].as_u64(),
+            "memory_drift_mb_p50": receipt["memory"]["memory_drift_mb"]["p50"].as_f64()
+                .or_else(|| receipt["stability"]["memory_drift_mb"].as_f64()),
+        },
+    })
+}
+
+fn apple_m4_regression_dashboard_markdown(receipt: &serde_json::Value) -> String {
+    let mut out = String::new();
+    out.push_str("# Apple M4 Inference Regression Dashboard\n\n");
+    out.push_str("Model-free dashboard generated from committed Apple M4 receipts only.\n\n");
+    out.push_str("| Family | Evidence | Model | Reports | Status | Latest | Baseline |\n");
+    out.push_str("|---|---|---|---:|---|---|---|\n");
+    if let Some(families) = receipt["families"].as_array() {
+        for family in families {
+            if let Some(groups) = family["groups"].as_array() {
+                for group in groups {
+                    out.push_str(&format!(
+                        "| `{}` | `{}` | `{}` | {} | `{}` | `{}` | `{}` |\n",
+                        family["id"].as_str().unwrap_or("<unknown>"),
+                        group["evidence_family"].as_str().unwrap_or("<unknown>"),
+                        group["model_id"].as_str().unwrap_or("<unknown>"),
+                        group["report_count"].as_u64().unwrap_or(0),
+                        group["comparison_status"].as_str().unwrap_or("<unknown>"),
+                        group["latest_report"].as_str().unwrap_or("<missing>"),
+                        group["baseline_report"].as_str().unwrap_or("<none>")
+                    ));
+                }
+            }
+        }
+    }
+    out.push_str("\nClaim boundary: dashboard only; no live model run, no model download, no BitNet chat/serve, no full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim.\n");
+    out
+}
+
+fn print_regression_dashboard_summary(
+    receipt: &serde_json::Value,
+    json_out: &Path,
+    markdown_out: &Path,
+) {
+    println!("Apple M4 regression dashboard: {}", receipt["status"].as_str().unwrap_or("unknown"));
+    println!(
+        "Families: {}, groups: {}, comparable: {}, reports: {}",
+        receipt["family_count"].as_u64().unwrap_or(0),
+        receipt["group_count"].as_u64().unwrap_or(0),
+        receipt["comparable_group_count"].as_u64().unwrap_or(0),
+        receipt["report_count"].as_u64().unwrap_or(0)
+    );
+    println!("Receipt: {}", json_out.display());
+    println!("Markdown: {}", markdown_out.display());
+    println!(
+        "Claim boundary: dashboard only; no live model run, no model downloads, dense SLM and BitNet evidence stay separate."
     );
 }
 
@@ -10345,6 +10712,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_inference_status_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_report_refresh_manifest" {
         validate_apple_m4_report_refresh_manifest_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_regression_dashboard" {
+        validate_apple_m4_regression_dashboard_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -10764,6 +11133,7 @@ fn validate_apple_m4_inference_status_receipt(
         "models",
         "status",
         "report_refresh",
+        "regression_dashboard",
         "ask_default",
         "chat_dense",
         "serve_dense",
@@ -10936,6 +11306,211 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
     if receipt_report_count != total_reports {
         anyhow::bail!(
             "{} report refresh manifest report_count must equal family report totals",
+            path.display()
+        );
+    }
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_regression_dashboard_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_regression_dashboard")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac regression-dashboard")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_non_empty_string_at(path, receipt, &["report_root"])?;
+    require_non_empty_string_at(path, receipt, &["markdown_path"])?;
+    require_bool_at(path, receipt, &["dashboard_contract", "model_free"], true)?;
+    require_bool_at(path, receipt, &["dashboard_contract", "committed_reports_only"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_same_evidence_family"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_same_model_id"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_same_model_sha256"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_same_tokenizer_authority"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_same_artifact_kind"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_same_backend"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dashboard_contract", "matching_requires_fallback_false"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dashboard_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    let families = receipt["families"].as_array().ok_or_else(|| {
+        anyhow!("{} regression dashboard is missing families array", path.display())
+    })?;
+    if families.len() < 5 {
+        anyhow::bail!(
+            "{} regression dashboard must cover dense SLM and BitNet report families",
+            path.display()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut total_reports = 0_u64;
+    let mut total_groups = 0_u64;
+    for family in families {
+        let id = require_non_empty_string_at(path, family, &["id"])?;
+        seen.insert(id.to_string());
+        let evidence_family = require_non_empty_string_at(path, family, &["evidence_family"])?;
+        if evidence_family != "dense_slm" && evidence_family != "bitnet" {
+            anyhow::bail!(
+                "{} regression dashboard family {id} has unsupported evidence_family {evidence_family:?}",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, family, &["expected_artifact_kind"])?;
+        require_bool_at(path, family, &["claim_boundary", "evidence_families_mixed"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "generic_pr_ci_live_model_run"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "broad_model_quality_claim"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "broad_performance_claim"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "speedup_claim"], false)?;
+        require_bool_at(
+            path,
+            family,
+            &["claim_boundary", "dense_slm_evidence"],
+            evidence_family == "dense_slm",
+        )?;
+        require_bool_at(
+            path,
+            family,
+            &["claim_boundary", "bitnet_evidence"],
+            evidence_family == "bitnet",
+        )?;
+        let report_count = require_u64_at(path, family, &["report_count"], true)?;
+        let group_count = require_u64_at(path, family, &["group_count"], true)?;
+        total_reports = total_reports.saturating_add(report_count);
+        total_groups = total_groups.saturating_add(group_count);
+        let groups = family["groups"].as_array().ok_or_else(|| {
+            anyhow!("{} regression dashboard family {id} is missing groups array", path.display())
+        })?;
+        if groups.len() as u64 != group_count {
+            anyhow::bail!(
+                "{} regression dashboard family {id} group_count does not match groups length",
+                path.display()
+            );
+        }
+        let mut family_group_reports = 0_u64;
+        for group in groups {
+            require_non_empty_string_at(path, group, &["group_key"])?;
+            require_exact_string_at(path, group, &["evidence_family"], evidence_family)?;
+            require_non_empty_string_at(path, group, &["expected_artifact_kind"])?;
+            require_non_empty_string_at(path, group, &["model_id"])?;
+            require_non_empty_string_at(path, group, &["model_sha256"])?;
+            require_non_empty_string_at(path, group, &["tokenizer_authority"])?;
+            require_exact_string_at(path, group, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+            require_exact_string_at(path, group, &["runtime_api"], "cpu")?;
+            require_bool_at(path, group, &["fallback_used"], false)?;
+            let group_report_count = require_u64_at(path, group, &["report_count"], true)?;
+            family_group_reports = family_group_reports.saturating_add(group_report_count);
+            let status = require_non_empty_string_at(path, group, &["comparison_status"])?;
+            if status != "ready" && status != "insufficient_history" {
+                anyhow::bail!(
+                    "{} regression dashboard group comparison_status must be ready or insufficient_history",
+                    path.display()
+                );
+            }
+            require_non_empty_string_at(path, group, &["latest_report"])?;
+            require_non_empty_string_at(path, group, &["regression_command"])?;
+            require_bool_at(path, group, &["claim_boundary", "evidence_families_mixed"], false)?;
+            require_bool_at(path, group, &["claim_boundary", "broad_model_quality_claim"], false)?;
+            require_bool_at(path, group, &["claim_boundary", "broad_performance_claim"], false)?;
+            require_bool_at(path, group, &["claim_boundary", "speedup_claim"], false)?;
+            require_bool_at(
+                path,
+                group,
+                &["claim_boundary", "dense_slm_evidence"],
+                evidence_family == "dense_slm",
+            )?;
+            require_bool_at(
+                path,
+                group,
+                &["claim_boundary", "bitnet_evidence"],
+                evidence_family == "bitnet",
+            )?;
+        }
+        if family_group_reports != report_count {
+            anyhow::bail!(
+                "{} regression dashboard family {id} group report totals must match report_count",
+                path.display()
+            );
+        }
+    }
+    for required in [
+        "dense_slm_eval_v2",
+        "dense_slm_benchmark_v2",
+        "bitnet_eval",
+        "bitnet_benchmark",
+        "bitnet_variable_warm",
+    ] {
+        if !seen.contains(required) {
+            anyhow::bail!(
+                "{} regression dashboard is missing required family {required}",
+                path.display()
+            );
+        }
+    }
+    let receipt_report_count = require_u64_at(path, receipt, &["report_count"], true)?;
+    if receipt_report_count != total_reports {
+        anyhow::bail!(
+            "{} regression dashboard report_count must equal family report totals",
+            path.display()
+        );
+    }
+    let receipt_group_count = require_u64_at(path, receipt, &["group_count"], true)?;
+    if receipt_group_count != total_groups {
+        anyhow::bail!(
+            "{} regression dashboard group_count must equal family group totals",
             path.display()
         );
     }
