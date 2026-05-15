@@ -2556,8 +2556,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-008"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-qwen3-status-sync"
+pr = 5007
+head_sha = "86f8b856a147930cfedc6e2d1957eab1dd9894df"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

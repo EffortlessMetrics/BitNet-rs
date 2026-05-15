@@ -1,0 +1,13 @@
+timestamp = "2026-05-15T23:45:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-008"
+event = "pr_open"
+pr = 5007
+branch = "codex/cuda-qwen3-status-sync"
+head_sha = "86f8b856a147930cfedc6e2d1957eab1dd9894df"
+actor = "codex"
+
+notes = [
+  "Opened PR #5007 to sync Qwen3 0.6B model coverage and CUDA model-status output to the exact accelerator-ready candidate tier earned by CUDA-MODEL-001 through CUDA-MODEL-007.",
+  "The PR keeps product CLI readiness, speedup, server readiness, full CUDA residency, broad dense GGUF readiness, and BitNet packed I2_S/QK256 proof false.",
+]
