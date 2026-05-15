@@ -108,6 +108,10 @@ fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
     Ok(())
 }
 
+fn attention_score_dot_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
+}
+
 fn qk256_scale_for(
     raw_tensors: &std::collections::HashMap<String, Tensor>,
     qk256_key: &str,
@@ -697,7 +701,19 @@ impl MultiHeadAttention {
             });
         }
 
-        let scores = q.matmul(&k_expanded.transpose(2, 3)?)?;
+        let q_for_scores = attention_score_dot_input(&q)?;
+        let k_for_scores = attention_score_dot_input(&k_expanded)?;
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            trace_layer0_tensor(
+                self.layer_idx,
+                _trace_base_seq,
+                2,
+                "attention_q_rope_f16_roundtrip",
+                &q_for_scores,
+            )?;
+        }
+        let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
 
         // Convert to fp32 for numerically stable computation
         let scores_f32 = scores.to_dtype(DType::F32)?;
@@ -2040,6 +2056,19 @@ mod tests {
         assert!(!has_nan, "Output should not contain NaN");
         assert!(!has_inf, "Output should not contain Inf");
 
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_dot_input_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_score_dot_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
         Ok(())
     }
 
