@@ -1,0 +1,41 @@
+timestamp = "2026-05-15T16:09:39Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-001"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4946
+head_sha = "64c31d7039a8b1861d131e6cdc11da30c3a98d3b"
+merge_sha = "d6311959e21819aff301e96e3dfb68beae375a84"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-001-variable-warm-prompts"
+summary = "Closed M4-BITNET-PROD-001 after PR #4946 allowed operator-supplied repeated prompts for the Apple M4 BitNet warm route."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "The fixed proof prompt set remains the default when no --prompt values are supplied.",
+  "Operator prompt mode requires at least two prompts, rejects empty prompts, and requires at least one exact repeated prompt before cache lookup so determinism remains gateable.",
+  "Warm-session receipts now annotate prompt source as fixed_proof_prompts or operator_prompts with prompt-count metadata.",
+  "This item did not commit a fresh live M4 variable warm-session runtime receipt and did not enable BitNet chat or serve.",
+  "No full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim was added.",
+]
+
+[evidence]
+route = "bitnet mac bitnet-warm"
+operator_prompt_flag = "--prompt"
+default_prompt_source = "fixed_proof_prompts"
+variable_prompt_source = "operator_prompts"
+backend = "apple-m4-cpu-neon"
+chat_enabled = false
+serve_enabled = false
+generic_pr_ci_model_free = true
+next_item = "M4-BITNET-PROD-002"
+claim_boundary = "CLI and receipt contract only; no new runtime receipt, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"

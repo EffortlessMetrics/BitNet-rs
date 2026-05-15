@@ -25,7 +25,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-BITNET-PROD-001"
-status = "in_progress"
+status = "merged"
+pr = 4946
+merge_sha = "d6311959e21819aff301e96e3dfb68beae375a84"
 branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-001-variable-warm-prompts"
 stackable = false
 review_mode = "codex_premerge"
