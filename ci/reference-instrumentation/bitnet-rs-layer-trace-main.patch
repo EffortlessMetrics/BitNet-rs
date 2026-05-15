@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,815 @@ struct llama_context {
+@@ -3441,6 +3444,820 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -46,6 +46,7 @@ index 666fcc4d..23ee29ff 100644
 +        "Vcur-0",
 +        "kq-0",
 +        "kq_soft_max_ext-0",
++        "k-0",
 +        "v-0",
 +        "kqv-0",
 +        "kqv_merged-0",
@@ -92,6 +93,9 @@ index 666fcc4d..23ee29ff 100644
 +    }
 +    if (strcmp(name, "kq_soft_max_ext-0") == 0) {
 +        return "kq_soft_max_ext";
++    }
++    if (strcmp(name, "k-0") == 0) {
++        return "k";
 +    }
 +    if (strcmp(name, "v-0") == 0) {
 +        return "v";
@@ -563,7 +567,8 @@ index 666fcc4d..23ee29ff 100644
 +            out << "]}";
 +        }
 +    }
-+    if (strcmp(name, "v-0") == 0 && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens && tensor->ne[2] > 0) {
++    if ((strcmp(name, "k-0") == 0 || strcmp(name, "v-0") == 0) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens && tensor->ne[2] > 0) {
++        const bool is_key_cache = strcmp(name, "k-0") == 0;
 +        for (int64_t head = 0; head < tensor->ne[2]; ++head) {
 +            const int64_t head_offset = tensor->ne[0] * tensor->ne[1] * head;
 +            const int64_t head_nelements = tensor->ne[0] * (int64_t) n_tokens;
@@ -591,9 +596,9 @@ index 666fcc4d..23ee29ff 100644
 +            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
 +            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
 +            std::ostringstream head_name;
-+            head_name << "v_kv_head" << head << "_live-0";
++            head_name << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live-0";
 +            std::ostringstream head_stage;
-+            head_stage << "v_kv_head" << head << "_live";
++            head_stage << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live";
 +            out << ",{";
 +            out << "\"graph_index\":" << graph_index;
 +            out << ",\"name\":";
@@ -636,7 +641,7 @@ index 666fcc4d..23ee29ff 100644
 +                bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
 +            }
 +            out << "]}";
-+            if (tensor->ne[0] >= (int64_t) n_tokens && tensor->ne[1] > 0) {
++            if (!is_key_cache && tensor->ne[0] >= (int64_t) n_tokens && tensor->ne[1] > 0) {
 +                const int64_t rust_layout_nelements = tensor->ne[1] * (int64_t) n_tokens;
 +                double rust_layout_sum = 0.0;
 +                double rust_layout_sq_sum = 0.0;
