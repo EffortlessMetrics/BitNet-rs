@@ -176,8 +176,16 @@ fn build_receipt(
             "diagnostic": str_at(plan, "/diagnostic").unwrap_or(""),
             "prompt_identity": plan.pointer("/prompt_identity").cloned().unwrap_or(Value::Null),
             "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
+            "reference_text_tokenization": plan
+                .pointer("/rust_commands/reference_text_tokenization")
+                .cloned()
+                .unwrap_or(Value::Null),
             "command_policy": str_at(plan, "/reference/command_policy").unwrap_or(""),
         },
+        "reference_text_tokenization": plan
+            .pointer("/rust_commands/reference_text_tokenization")
+            .cloned()
+            .unwrap_or(Value::Null),
         "reference": {
             "backend": str_at(plan, "/reference/backend").unwrap_or("bitnet.cpp_or_llama.cpp_cli"),
             "selected_executable": str_at(plan, "/reference/selected_executable").unwrap_or(""),
@@ -297,6 +305,12 @@ mod tests {
             "diagnostic": "bitnet_reference_plan",
             "prompt_identity": {"prompt_token_count": 17},
             "model": {"model_id": "test"},
+            "rust_commands": {
+                "reference_text_tokenization": {
+                    "diagnostic_only": true,
+                    "selected_logit_probe_ids": [17, 10]
+                }
+            },
             "reference": {
                 "backend": "bitnet.cpp_or_llama.cpp_cli",
                 "selected_executable": "llama-cli",
@@ -316,6 +330,14 @@ mod tests {
         assert_eq!(receipt["decision"]["reference_execution_ready"], true);
         assert_eq!(receipt["signals"]["actual_generated_token_ids_present"], false);
         assert_eq!(receipt["signals"]["top_logits_present"], false);
+        assert_eq!(
+            receipt["reference_text_tokenization"]["selected_logit_probe_ids"],
+            json!([17, 10])
+        );
+        assert_eq!(
+            receipt["plan"]["reference_text_tokenization"]["selected_logit_probe_ids"],
+            json!([17, 10])
+        );
         let not_claims = receipt["not_claims"].as_array().unwrap();
         assert!(not_claims.contains(&json!("reference_generated_token_ids")));
         assert!(not_claims.contains(&json!("reference_top_logits")));
