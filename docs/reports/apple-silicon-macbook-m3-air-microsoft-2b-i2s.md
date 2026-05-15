@@ -1,7 +1,7 @@
 # Apple M3 MacBook Air Microsoft 2B I2_S
 
 Date: 2026-05-14
-Work items: `M3MBA-005A`, `M3MBA-005B`
+Work items: `M3MBA-005A`, `M3MBA-005B`, `M3MBA-005C`
 
 ## Result
 
@@ -11,8 +11,12 @@ Evidence receipts:
 
 - `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-identity.json`
 - `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-tokenizer-authority.json`
+- `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-reference-output.json`
 
-This is identity, hash, cache, storage, tokenizer-authority, and diagnostic runner evidence only. It does not accept the artifact for Apple answer behavior.
+This is identity, hash, cache, storage, tokenizer-authority, diagnostic runner,
+and M3 Air BitNet.cpp reference-output evidence only. `M3MBA-005C` accepts the
+artifact only for the recorded M3 Air BitNet.cpp reference-runner context. It
+does not accept the artifact for the repository's Rust Apple backend.
 
 ## Artifact
 
@@ -103,12 +107,55 @@ the runner logged `llm_load_vocab: missing pre-tokenizer type, using: 'default'`
 
 On this M3 build, BitNet.cpp selected Metal by default and logged `Apple M3`, `MTLGPUFamilyApple9`, unified memory, and `31/31` offloaded layers for both diagnostics. This report records that device behavior only as context for tokenizer-authority diagnostics; it does not promote Apple Metal BitNet inference or Apple local-answer readiness.
 
+## M3 Reference Output Decision
+
+`M3MBA-005C` ran the committed `ci/quality/bitnet-answer-corpus.yaml` prompt
+suite through the local Microsoft BitNet.cpp `llama-cli` using the required
+external pre-tokenizer override:
+
+```text
+llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf \
+  --override-kv tokenizer.ggml.pre=str:llama-bpe \
+  --no-mmap \
+  -n <case.max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 \
+  --seed 42 --no-display-prompt --no-warmup \
+  -p "User: <case.question><|eot_id|>Assistant:"
+```
+
+The answer-gate result is accepted for the recorded M3 Air reference context:
+5 passed, 0 failed, 0 not run, and no failing prompt IDs.
+
+| Prompt id | Gate | Output | Result |
+|---|---|---|---|
+| `math_2_plus_2` | exact trimmed `4` | `4` | pass |
+| `capital_france` | contains `Paris` | `Paris` | pass |
+| `repeat_colors` | contains `red blue green` | `red blue green` | pass |
+| `say_ok` | exact trimmed `OK` | `OK` | pass |
+| `yes_no_water` | starts with `yes` or `no` | `Yes.` | pass |
+
+The BitNet.cpp runner again selected the Apple M3 default device context and
+logged `31/31` offloaded layers. That is the recorded reference-runner context
+only. A separate forced `-ngl 0` diagnostic for the math prompt produced
+`/controlphicewoman` and failed the gate; it is not used for this acceptance
+decision because the M3MBA-005C command does not require `-ngl 0`. The failed
+diagnostic is retained in the receipt so this item cannot be misread as a
+CPU-only result.
+
+The local GGUF remains retained in `/Users/sarahisaacs/Library/Caches/bitnet-rs/models`
+for follow-on M3 Air qualification work. No model binary is committed.
+
 ## Claim Boundary
 
-This report records official Microsoft 2B I2_S artifact identity and tokenizer/pre-tokenizer authority for the M3 Air context only. It does not claim the artifact is accepted for Apple local answers, Rust M4 BitNet local answers, M4 Mac mini proof, Apple Metal BitNet inference, MPSGraph model inference, Neural Engine execution, QK256 on Apple Silicon, speedup, or broad Apple Silicon performance.
+This report records official Microsoft 2B I2_S artifact identity,
+tokenizer/pre-tokenizer authority, and accepted prompt-suite output for the M3
+Air BitNet.cpp reference-runner context only. It does not claim Rust M4 BitNet
+local answers, repository Rust Apple backend acceptance, M4 Mac mini proof,
+Apple Metal BitNet inference, MPSGraph model inference, Neural Engine execution,
+QK256 on Apple Silicon, speedup, or broad Apple Silicon performance.
 
 Dense Qwen M3 evidence does not prove BitNet behavior.
 
 ## Next
 
-`M3MBA-005C` records the reference output decision and is the first item in this sequence allowed to accept, reject, or block the candidate for the M3 Air reference context.
+Follow-on M3 Air work can now use this as reference-output evidence while still
+proving each backend, device path, and performance claim separately.
