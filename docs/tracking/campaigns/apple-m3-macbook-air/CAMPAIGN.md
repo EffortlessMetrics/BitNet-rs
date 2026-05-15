@@ -68,15 +68,17 @@ artifacts to separate strict proof items.
 | M3MBA-005A | merged | Record official Microsoft 2B I2_S artifact identity, source revision, size, hash, and storage context. |
 | M3MBA-005B | merged | Record Microsoft 2B tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence. |
 | M3MBA-005C | merged | Decide Microsoft 2B reference output acceptance, rejection, or blocker state. |
-| M3MBA-006 | proposed | Evaluate the smaller 0.7B 1bitLLM control candidate after Microsoft 2B is accepted, rejected, or blocked. |
+| M3MBA-006 | blocked | Evaluate the smaller 0.7B 1bitLLM control candidate after Microsoft 2B is accepted, rejected, or blocked; blocked because the official repo has no GGUF artifact at the recorded revision. |
 | M3MBA-007 | proposed | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim. |
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
 | M3MBA-009 | merged | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists; merged in #4902. |
 | M3MBA-010 | merged | Audit MacBook model-cache retention and cleanup after the first large BitNet download; merged in #4839. |
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 
-Current focus: `M3MBA-006` and `M3MBA-007` are now the next bounded M3 Air
-work surfaces, with `M3MBA-008` reserved for any accepted-artifact handoff.
+Current focus: `M3MBA-007` is now the next bounded M3 Air work surface, with
+`M3MBA-008` reserved for any accepted-artifact handoff. `M3MBA-006` is blocked
+until an official GGUF, reproducible conversion path, or explicitly approved
+third-party artifact path exists for the 0.7B candidate.
 `M3MBA-010` permits another large candidate only as serialized work with fresh
 disk preflight, before/after free-space evidence, hash evidence, and no
 committed model binaries.

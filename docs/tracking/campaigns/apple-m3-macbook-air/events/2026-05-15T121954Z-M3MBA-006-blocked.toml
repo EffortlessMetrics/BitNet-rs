@@ -1,0 +1,19 @@
+timestamp = "2026-05-15T12:19:54Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-006"
+event = "blocked"
+from = "proposed"
+to = "blocked"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-006-1bitllm-07b-preflight"
+summary = "Blocked the 0.7B 1bitLLM M3 Air control candidate because the official source repository has no GGUF artifact at the recorded revision."
+artifacts = [
+  "ci/hardware/apple-silicon-macbook/2026-05-15/m3-air/1bitllm-07b-preflight.json",
+  "docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md",
+  "https://huggingface.co/1bitLLM/bitnet_b1_58-large/tree/main",
+]
+notes = [
+  "No model binary was committed.",
+  "No inference was run.",
+  "The official repository contains model.safetensors and tokenizer/config files, but no .gguf file that can be passed to the M3MBA-006 BitNet.cpp GGUF command shape.",
+]

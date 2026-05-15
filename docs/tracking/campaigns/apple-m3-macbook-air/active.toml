@@ -550,8 +550,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-006"
-status = "proposed"
-branch = "codex/apple-m3-macbook-air/M3MBA-006-1bitllm-07b"
+status = "blocked"
+branch = "codex/apple-m3-macbook-air/M3MBA-006-1bitllm-07b-preflight"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -585,9 +585,11 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "The 0.7B candidate is accepted, rejected, or blocked as a smaller M3 Air control artifact.",
+  "The 0.7B candidate is blocked as a smaller M3 Air control artifact until an official GGUF, reproducible conversion path, or explicitly approved third-party artifact path exists.",
 ]
 must_not_claim = [
+  "The official 1bitLLM 0.7B repository contains a GGUF artifact.",
+  "A third-party 1bitLLM 0.7B GGUF is accepted for M3 Air evidence.",
   "The 0.7B candidate proves official Microsoft 2B behavior.",
   "Rust M4 BitNet local answers work.",
 ]
