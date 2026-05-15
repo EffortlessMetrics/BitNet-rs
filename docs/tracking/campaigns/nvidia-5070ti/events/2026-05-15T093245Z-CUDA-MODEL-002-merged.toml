@@ -1,0 +1,25 @@
+timestamp = "2026-05-15T09:32:45Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-002"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "model/cuda-qwen3-0_6b-cpu-sanity"
+pr = 4866
+head_sha = "6aef1aea515437f818541f1b3db8d64c99cbf038"
+merge_sha = "36fb8037dac5669fa06c213e2e7e69649ed6b5cd"
+summary = "Marked CUDA-MODEL-002 merged after PR #4866 added the Qwen3 0.6B same-box CPU answer sanity receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4866",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-cpu-answer-corpus.json",
+  "docs/reports/CUDA_MODEL_002_QWEN3_06B_CPU_SANITY.md",
+]
+
+notes = [
+  "The merged PR records the Qwen3 0.6B Q8_0 same-box AMD 9950X3D AVX-512 CPU answer sanity corpus for math, capital, summary, code, and yes/no prompts.",
+  "The model coverage row promotes only cpu_answer_ready for the exact Qwen3 artifact.",
+  "Qwen3 CUDA proof, speedup, server readiness, product CLI readiness, full residency, and BitNet QK256 proof remain false.",
+  "CUDA-MODEL-003 remains the next Qwen3 CUDA step and must add an all-layer route plan before any one-token CUDA proof starts.",
+]
