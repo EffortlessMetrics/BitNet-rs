@@ -304,6 +304,7 @@ fn mac_help_documents_operator_wrappers() {
         .assert()
         .success()
         .stdout(predicate::str::contains("models"))
+        .stdout(predicate::str::contains("status"))
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
@@ -414,6 +415,60 @@ fn mac_models_json_exposes_claim_boundaries_without_fetching()
     }));
     assert!(rows.iter().any(|row| row["state"] == "candidate"));
     assert!(rows.iter().any(|row| row["state"] == "rejected"));
+    Ok(())
+}
+
+#[test]
+fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("mac-status.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "status",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 inference status"))
+        .stdout(predicate::str::contains("Dense SLM:"))
+        .stdout(predicate::str::contains("BitNet:"))
+        .stdout(predicate::str::contains("no live model run"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_inference_status");
+    assert_eq!(receipt_json["operator_command"], "mac status");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["dense_slm"]["supported_model_count"], 3);
+    assert_eq!(receipt_json["dense_slm"]["ask_enabled"], true);
+    assert_eq!(receipt_json["dense_slm"]["chat_enabled"], true);
+    assert_eq!(receipt_json["dense_slm"]["serve_enabled"], true);
+    assert_eq!(receipt_json["bitnet"]["ask_enabled"], true);
+    assert_eq!(receipt_json["bitnet"]["warm_enabled"], true);
+    assert_eq!(receipt_json["bitnet"]["chat_enabled"], false);
+    assert_eq!(receipt_json["bitnet"]["serve_enabled"], false);
+    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
+    assert_eq!(receipt_json["claim_boundary"]["full_metal_inference_claimed"], false);
+    assert!(
+        receipt_json["commands"]["bitnet_chat_gate"]
+            .as_str()
+            .is_some_and(|command| command.contains("bitnet mac bitnet-chat-gate"))
+    );
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_inference_status"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
     Ok(())
 }
 

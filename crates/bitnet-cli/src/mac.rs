@@ -24,6 +24,7 @@ const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.js
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
+const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-status.json";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
     "target/apple-m4-bitnet-eval-and-benchmark/bitnet-benchmark/summary.json";
@@ -160,6 +161,21 @@ enum MacAction {
         /// Emit JSON instead of text.
         #[arg(long, default_value_t = false)]
         json: bool,
+    },
+
+    /// Summarize Apple M4 dense SLM, BitNet, disk/cache, receipt, and command readiness.
+    Status {
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+
+        /// Output strict Mac status receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_STATUS_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
     },
 
     /// Check the cached Apple M4 SLM model artifact and routing boundary.
@@ -789,6 +805,10 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac models")?;
                 model_cache::list_apple_m4_models(cache_dir, json)
             }
+            MacAction::Status { cache_dir, json, json_out } => {
+                ensure_supported_mac_device(explicit_device_label, "mac status")?;
+                run_status(cache_dir, json_out, json)
+            }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
                 run_check(&model_id, cache_dir, json)
@@ -1132,6 +1152,203 @@ fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Res
         _ => anyhow::bail!(
             "missing Mac question; pass it positionally, e.g. `bitnet mac ask \"What is 2+2?\"`, or with --question"
         ),
+    }
+}
+
+fn run_status(cache_dir: Option<PathBuf>, json_out: PathBuf, json: bool) -> Result<()> {
+    let catalog = model_cache::apple_m4_models_catalog_json(cache_dir.clone())
+        .context("failed to build Apple M4 model catalog for mac status")?;
+    let bitnet = bitnet_mac_ask_readiness_json(cache_dir);
+    let receipt = apple_m4_inference_status_receipt(&json_out, catalog, bitnet);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_mac_status_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn apple_m4_inference_status_receipt(
+    json_out: &Path,
+    catalog: serde_json::Value,
+    bitnet: serde_json::Value,
+) -> serde_json::Value {
+    let rows = catalog["rows"].as_array().cloned().unwrap_or_default();
+    let dense_rows = rows
+        .iter()
+        .filter(|row| matches!(row["state"].as_str(), Some("default" | "supported")))
+        .cloned()
+        .collect::<Vec<_>>();
+    let dense_ready =
+        dense_rows.iter().filter(|row| row["cache_state"].as_str() == Some("ready")).count();
+    let supported_dense_model_ids = dense_rows
+        .iter()
+        .filter_map(|row| row["id"].as_str().map(ToOwned::to_owned))
+        .collect::<Vec<_>>();
+    let default_model_id = catalog["default_model_id"]
+        .as_str()
+        .unwrap_or(model_cache::M4_SLM_RUNTIME_MODEL_ID)
+        .to_string();
+    let default_row = rows
+        .iter()
+        .find(|row| row["id"].as_str() == Some(default_model_id.as_str()))
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let default_cache_ready = default_row["cache_state"].as_str() == Some("ready");
+    let disk_available = catalog["disk"]["available"].clone();
+    let disk_low = catalog["disk"]["low_disk"].clone();
+    let recommended_first_model_id = catalog["disk"]["recommended_first_model_id"].clone();
+    let commands = serde_json::json!({
+        "models": "bitnet mac models",
+        "status": "bitnet mac status",
+        "fetch_default": format!("bitnet model fetch {default_model_id}"),
+        "verify_default": format!("bitnet model verify {default_model_id}"),
+        "ask_default": "bitnet mac ask \"What is 2+2?\"",
+        "chat_dense": "bitnet mac chat --prompt \"What is 2+2?\" --prompt \"Name the capital of France.\"",
+        "serve_dense": "bitnet mac serve --host 127.0.0.1 --port 8080",
+        "doctor": "bitnet mac doctor",
+        "smoke_dense": "bitnet mac smoke",
+        "smoke_bitnet": "bitnet mac smoke --model-family bitnet",
+        "regression": "bitnet mac regression <receipt.json> --baseline <baseline.json>",
+        "bitnet_ask": bitnet["commands"]["ask_cached_model"].clone(),
+        "bitnet_warm": bitnet["commands"]["warm_cached_model"].clone(),
+        "bitnet_chat_gate": "bitnet mac bitnet-chat-gate --warm-receipt <warm.json> --failure-receipt <failure.json> --streaming-receipt <streaming.json>",
+    });
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_inference_status",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac status",
+        "status": "ok",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "local operator readiness summary",
+        },
+        "disk": {
+            "available": disk_available,
+            "low_disk": disk_low,
+            "recommendation": catalog["disk"]["recommendation"].clone(),
+            "guidance": catalog["disk"]["guidance"].clone(),
+            "recommended_first_model_id": recommended_first_model_id,
+        },
+        "dense_slm": {
+            "default_model_id": default_model_id,
+            "supported_model_ids": supported_dense_model_ids,
+            "supported_model_count": dense_rows.len(),
+            "ready_model_count": dense_ready,
+            "default_cache_ready": default_cache_ready,
+            "default_row": default_row,
+            "ask_enabled": true,
+            "chat_enabled": true,
+            "serve_enabled": true,
+            "claim_boundary": {
+                "dense_slm_only": true,
+                "supported_qwen_models_only": true,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+            },
+        },
+        "bitnet": {
+            "readiness": bitnet,
+            "ask_enabled": true,
+            "warm_enabled": true,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
+        },
+        "report_inventory": apple_m4_report_inventory_json(),
+        "commands": commands,
+        "claim_boundary": {
+            "status_only": true,
+            "no_live_model_run": true,
+            "fallback_used": false,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn print_mac_status_summary(receipt: &serde_json::Value, json_out: &Path) {
+    let dense = &receipt["dense_slm"];
+    let disk = &receipt["disk"];
+    let bitnet = &receipt["bitnet"];
+    println!("Apple M4 inference status: {}", receipt["status"].as_str().unwrap_or("unknown"));
+    println!(
+        "Disk: available={}, low_disk={}, recommendation={}",
+        disk["available"].as_str().unwrap_or("unknown"),
+        disk["low_disk"]
+            .as_bool()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "unknown".to_string()),
+        disk["recommendation"].as_str().unwrap_or("unknown")
+    );
+    println!(
+        "Dense SLM: default={}, ready={}/{}, ask=true, chat=true, serve=true",
+        dense["default_model_id"].as_str().unwrap_or("<unknown>"),
+        dense["ready_model_count"].as_u64().unwrap_or(0),
+        dense["supported_model_count"].as_u64().unwrap_or(0)
+    );
+    println!(
+        "BitNet: ask={}, warm={}, chat=false, serve=false, ready={}",
+        bitnet["ask_enabled"].as_bool().unwrap_or(false),
+        bitnet["warm_enabled"].as_bool().unwrap_or(false),
+        bitnet["readiness"]["ready"].as_bool().unwrap_or(false)
+    );
+    println!("Next: {}", receipt["commands"]["models"].as_str().unwrap_or("bitnet mac models"));
+    println!("Receipt: {}", json_out.display());
+    println!(
+        "Claim boundary: status only; no live model run, no BitNet chat/serve, no full Metal/QK256/Neural Engine/MPSGraph/MacBook/broad performance claim."
+    );
+}
+
+fn apple_m4_report_inventory_json() -> serde_json::Value {
+    let root = Path::new("ci/hardware/apple-m4-mac-mini");
+    serde_json::json!({
+        "root": root,
+        "dense_slm_eval_v2": latest_matching_report(root, "slm-eval-v2", "summary.json"),
+        "dense_slm_benchmark_v2": latest_matching_report(root, "slm-benchmark-v2", "summary.json"),
+        "bitnet_eval": latest_matching_report(root, "bitnet-eval", "answer-corpus.json"),
+        "bitnet_benchmark": latest_matching_report(root, "bitnet-benchmark", "summary.json"),
+        "bitnet_variable_warm": latest_matching_report(root, "bitnet-productization", "variable-warm-session.json"),
+    })
+}
+
+fn latest_matching_report(root: &Path, segment: &str, filename: &str) -> Option<String> {
+    let mut matches = Vec::new();
+    collect_matching_reports(root, segment, filename, &mut matches);
+    matches.sort();
+    matches.pop().map(|path| path.to_string_lossy().to_string())
+}
+
+fn collect_matching_reports(root: &Path, segment: &str, filename: &str, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_matching_reports(&path, segment, filename, out);
+        } else if path.file_name().and_then(|name| name.to_str()) == Some(filename)
+            && path.components().any(|component| component.as_os_str() == segment)
+        {
+            out.push(path);
+        }
     }
 }
 
@@ -9766,6 +9983,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_warm_session_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_chat_gate" {
         validate_bitnet_chat_gate_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_inference_status" {
+        validate_apple_m4_inference_status_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -10117,6 +10336,84 @@ fn validate_bitnet_chat_gate_receipt(
     )?;
     require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "speedup_claim"], false)?;
     require_bool_at(path, receipt, &["bitnet_quality_claimed"], false)?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_inference_status_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_inference_status")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac status")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["claim_boundary", "status_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    require_non_empty_string_at(path, receipt, &["dense_slm", "default_model_id"])?;
+    let supported_count =
+        require_u64_at(path, receipt, &["dense_slm", "supported_model_count"], true)?;
+    let ready_count = require_u64_at(path, receipt, &["dense_slm", "ready_model_count"], false)?;
+    if ready_count > supported_count {
+        anyhow::bail!(
+            "{} M4 inference status ready_model_count must not exceed supported_model_count",
+            path.display()
+        );
+    }
+    require_bool_at(path, receipt, &["dense_slm", "ask_enabled"], true)?;
+    require_bool_at(path, receipt, &["dense_slm", "chat_enabled"], true)?;
+    require_bool_at(path, receipt, &["dense_slm", "serve_enabled"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dense_slm", "claim_boundary", "broad_model_quality_claim"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["dense_slm", "claim_boundary", "broad_performance_claim"],
+        false,
+    )?;
+
+    require_bool_at(path, receipt, &["bitnet", "ask_enabled"], true)?;
+    require_bool_at(path, receipt, &["bitnet", "warm_enabled"], true)?;
+    require_bool_at(path, receipt, &["bitnet", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["bitnet", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["bitnet", "claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["bitnet", "claim_boundary", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["bitnet", "claim_boundary", "bitnet_quality_claimed"], false)?;
+
+    for field in [
+        "models",
+        "status",
+        "ask_default",
+        "chat_dense",
+        "serve_dense",
+        "doctor",
+        "smoke_dense",
+        "regression",
+        "bitnet_chat_gate",
+    ] {
+        require_non_empty_string_at(path, receipt, &["commands", field])?;
+    }
+    require_non_empty_string_at(path, receipt, &["report_inventory", "root"])?;
     Ok((Some(0), Some(0)))
 }
 
