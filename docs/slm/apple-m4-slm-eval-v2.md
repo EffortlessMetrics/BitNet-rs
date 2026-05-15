@@ -181,6 +181,40 @@ resident warm-session run with model/tokenizer reuse visible inside that
 profile. The memory drift field is based on `getrusage.ru_maxrss`, so it is a
 process peak delta and not a live RSS measurement.
 
+## Published M4 Benchmark Reports
+
+`M4-SLM-EVAL2-004` publishes 2026-05-15 benchmark reports for every supported
+dense M4 model ID:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/<model-id>/summary.json
+```
+
+The runs use `apple-m4-cpu-neon`, `fallback_used=false`, the catalog-pinned
+model identity for each dense model, and the full benchmark profile set listed
+above. Each summary validated with `bitnet mac receipts-check` as
+`apple_m4_slm_benchmark_v2` and records 101 prompts. These receipts are a
+recorded M4 Mac mini benchmark envelope for the supported dense model IDs, not a
+broad Apple Silicon benchmark.
+
+| Model | Prompts | Generated | TTFT p50 | TTFT p90 | TTFT p99 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 | Peak MB p99 | Memory drift MB p99 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 101 | 1522 | 3770.0 ms | 5564.0 ms | 465267.0 ms | 12.329 | 1.009 | 8.884 | 4150.891 | 3997.438 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 101 | 1615 | 3777.0 ms | 6300.0 ms | 470645.0 ms | 12.311 | 1.942 | 8.860 | 4158.281 | 3998.719 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 101 | 1458 | 14203.0 ms | 18334.0 ms | 1433677.0 ms | 3.384 | 0.260 | 2.805 | 8673.922 | 7559.922 |
+
+The overall p99 TTFT is dominated by the `context_4k` profile. The profile
+receipts make that tail explicit:
+
+| Model | Profile | Prompts | Generated | Prompt tokens p50 | TTFT p50 | TTFT p99 | Input tok/s p50 | Decode tok/s p50 | Peak MB p99 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | `context_4k` | 3 | 45 | 4075.0 | 465267.0 ms | 470174.0 ms | 8.762 | 5.537 | 4047.078 |
+| `qwen2.5-0.5b-instruct-q8_0` | `resident_50` | 50 | 430 | 45.0 | 3764.0 ms | 4926.0 ms | 12.314 | 8.867 | 4150.891 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | `context_4k` | 3 | 36 | 4075.0 | 470645.0 ms | 471484.0 ms | 8.664 | 5.517 | 4045.281 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | `resident_50` | 50 | 473 | 45.0 | 3772.0 ms | 3986.0 ms | 12.313 | 8.863 | 4158.281 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | `context_4k` | 3 | 33 | 4075.0 | 1433677.0 ms | 1458291.0 ms | 2.844 | 2.002 | 8673.922 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | `resident_50` | 50 | 403 | 45.0 | 13812.0 ms | 15500.0 ms | 3.388 | 2.766 | 8673.922 |
+
 ## Claim Boundary
 
 This lane may claim only bounded, recorded dense SLM evidence for the M4 Mac

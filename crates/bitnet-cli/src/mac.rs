@@ -4896,7 +4896,9 @@ fn context_benchmark_prompts(target_context_tokens: usize, count: usize) -> Vec<
 }
 
 fn synthetic_context_prompt(target_context_tokens: usize, variant: usize) -> String {
-    let target_words = target_context_tokens.saturating_mul(4) / 3;
+    // The synthetic log has numeric IDs and repeated labels that tokenize denser
+    // than prose; this keeps the benchmark near the named 1k/4k context scale.
+    let target_words = target_context_tokens.saturating_mul(7) / 12;
     let mut prompt = String::from(
         "Use the synthetic operations log below. Answer the final question briefly.\n\n",
     );

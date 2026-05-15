@@ -1,0 +1,715 @@
+{
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "slm_apple_m4_warm_session",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k.json",
+  "backend": {
+    "fallback_reason": null,
+    "fallback_used": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "metal_phase_contribution_only": false,
+    "model_loaded_once": true,
+    "speedup_claim": false,
+    "tokenizer_loaded_once": true,
+    "warm_session_flow": true
+  },
+  "corpus": null,
+  "counts": {
+    "n_kv": 26,
+    "n_tensors": 291
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "determinism": {
+    "checked": false,
+    "groups": [],
+    "passed": false,
+    "repeated_prompt_groups": 0
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generation": {
+    "deterministic": true,
+    "max_new_tokens": 16,
+    "mode": "greedy",
+    "prompt_template": "qwen2.5",
+    "repetition_penalty": 1.100000023841858,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "mac_claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "slm_local_answer": true
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "memory": {
+    "peak_memory_mb": 4047.078,
+    "peak_memory_source": "getrusage.ru_maxrss"
+  },
+  "metal_phase_contributions": {
+    "cpu_pipeline_for_remaining_phases": true,
+    "enabled": false,
+    "execution_phase": null,
+    "fallback_used": false,
+    "full_metal_inference_claimed": false,
+    "resident_generation_backend": "apple-m4-cpu-neon",
+    "resident_greedy_token_ids_match_cpu_reference": true,
+    "runtime_api": null,
+    "selected_backend": null,
+    "speedup_claim": false
+  },
+  "model": {
+    "architecture": "qwen2",
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "sha256_rehash_skipped": true,
+    "sha256_source": "verified_mac_model_cache",
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "operator_command": "mac benchmark",
+  "operator_ux": {
+    "aggregate_receipt_at_exit": true,
+    "clear_failure_messages": true,
+    "interactive_prompt_collection": false,
+    "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+    "per_turn_receipts_enabled": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true,
+    "token_stream": "disabled"
+  },
+  "prompts": [
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "prompt_01",
+      "generated_token_ids": [
+        198,
+        785,
+        5675,
+        1265,
+        21129,
+        279,
+        2205,
+        13940,
+        22567,
+        18732,
+        369,
+        14403,
+        386,
+        19,
+        12,
+        16
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Use the synthetic operations log below. Answer the final question briefly.\n\nRecord 0000: team alpha handled queue 0, team beta verified checksum 0, and ticket M4-0 stayed inside the local CPU receipt boundary.\nRecord 0001: team alpha handled queue 1, team beta verified checksum 13, and ticket M4-1 stayed inside the local CPU receipt boundary.\nRecord 0002: team alpha handled queue 2, team beta verified checksum 26, and ticket M4-2 stayed inside the local CPU receipt boundary.\nRecord 0003: team alpha handled queue 3, team beta verified checksum 39, and ticket M4-3 stayed inside the local CPU receipt boundary.\nRecord 0004: team alpha handled queue 4, team beta verified checksum 52, and ticket M4-4 stayed inside the local CPU receipt boundary.\nRecord 0005: team alpha handled queue 5, team beta verified checksum 65, and ticket M4-5 stayed inside the local CPU receipt boundary.\nRecord 0006: team alpha handled queue 6, team beta verified checksum 78, and ticket M4-6 stayed inside the local CPU receipt boundary.\nRecord 0007: team alpha handled queue 7, team beta verified checksum 91, and ticket M4-7 stayed inside the local CPU receipt boundary.\nRecord 0008: team alpha handled queue 8, team beta verified checksum 7, and ticket M4-8 stayed inside the local CPU receipt boundary.\nRecord 0009: team alpha handled queue 9, team beta verified checksum 20, and ticket M4-9 stayed inside the local CPU receipt boundary.\nRecord 0010: team alpha handled queue 10, team beta verified checksum 33, and ticket M4-10 stayed inside the local CPU receipt boundary.\nRecord 0011: team alpha handled queue 11, team beta verified checksum 46, and ticket M4-11 stayed inside the local CPU receipt boundary.\nRecord 0012: team alpha handled queue 12, team beta verified checksum 59, and ticket M4-12 stayed inside the local CPU receipt boundary.\nRecord 0013: team alpha handled queue 13, team beta verified checksum 72, and ticket M4-13 stayed inside the local CPU receipt boundary.\nRecord 0014: team alpha handled queue 14, team beta verified checksum 85, and ticket M4-14 stayed inside the local CPU receipt boundary.\nRecord 0015: team alpha handled queue 15, team beta verified checksum 1, and ticket M4-15 stayed inside the local CPU receipt boundary.\nRecord 0016: team alpha handled queue 16, team beta verified checksum 14, and ticket M4-16 stayed inside the local CPU receipt boundary.\nRecord 0017: team alpha handled queue 0, team beta verified checksum 27, and ticket M4-17 stayed inside the local CPU receipt boundary.\nRecord 0018: team alpha handled queue 1, team beta verified checksum 40, and ticket M4-18 stayed inside the local CPU receipt boundary.\nRecord 0019: team alpha handled queue 2, team beta verified checksum 53, and ticket M4-19 stayed inside the local CPU receipt boundary.\nRecord 0020: team alpha handled queue 3, team beta verified checksum 66, and ticket M4-20 stayed inside the local CPU receipt boundary.\nRecord 0021: team alpha handled queue 4, team beta verified checksum 79, and ticket M4-21 stayed inside the local CPU receipt boundary.\nRecord 0022: team alpha handled queue 5, team beta verified checksum 92, and ticket M4-22 stayed inside the local CPU receipt boundary.\nRecord 0023: team alpha handled queue 6, team beta verified checksum 8, and ticket M4-23 stayed inside the local CPU receipt boundary.\nRecord 0024: team alpha handled queue 7, team beta verified checksum 21, and ticket M4-24 stayed inside the local CPU receipt boundary.\nRecord 0025: team alpha handled queue 8, team beta verified checksum 34, and ticket M4-25 stayed inside the local CPU receipt boundary.\n\nQuestion: which boundary should the operator preserve? Answer briefly.",
+      "prompt_index": 0,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": null,
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The operator should preserve the local CPU receipt boundary for tickets M4-1",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts/01-use-the-synthetic-operations-log-below-answer-th.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe operator should preserve the local CPU receipt boundary for tickets M4-1",
+      "timing": {
+        "decode_steady_state_tok_s": 8.293,
+        "decode_total_ms": 1927.741,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.005,
+          "mean_ms": 0.002,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.005,
+          "total_ms": 0.037
+        },
+        "first_token_decode_ms": 118.945,
+        "first_token_ms": 86474,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 96.253,
+          "mean_ms": 91.927,
+          "min_ms": 88.271,
+          "p50_ms": 90.604,
+          "p95_ms": 96.253,
+          "total_ms": 1470.832
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 29.863,
+          "mean_ms": 28.446,
+          "min_ms": 26.726,
+          "p50_ms": 28.094,
+          "p95_ms": 29.863,
+          "total_ms": 455.14
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 86306.11,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 0.111,
+          "mean_ms": 0.105,
+          "min_ms": 0.098,
+          "p50_ms": 0.109,
+          "p95_ms": 0.111,
+          "total_ms": 1.679
+        },
+        "sampling_ms_per_token": 0.105,
+        "session_model_load_ms": 3459.156,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 53.563,
+        "time_to_first_token_ms": 86474,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.004,
+          "mean_ms": 0.002,
+          "min_ms": 0.001,
+          "p50_ms": 0.002,
+          "p95_ms": 0.004,
+          "total_ms": 0.038
+        },
+        "tokenize_ms": 42.203,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 88283.498
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "prompt_02",
+      "generated_token_ids": [
+        198,
+        785,
+        5675,
+        1265,
+        21129,
+        279,
+        2205,
+        13940,
+        22567,
+        18732,
+        369,
+        14403,
+        386,
+        19,
+        12,
+        16
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Use the synthetic operations log below. Answer the final question briefly.\n\nRecord 0000: team alpha handled queue 1, team beta verified checksum 1, and ticket M4-1 stayed inside the local CPU receipt boundary.\nRecord 0001: team alpha handled queue 2, team beta verified checksum 14, and ticket M4-2 stayed inside the local CPU receipt boundary.\nRecord 0002: team alpha handled queue 3, team beta verified checksum 27, and ticket M4-3 stayed inside the local CPU receipt boundary.\nRecord 0003: team alpha handled queue 4, team beta verified checksum 40, and ticket M4-4 stayed inside the local CPU receipt boundary.\nRecord 0004: team alpha handled queue 5, team beta verified checksum 53, and ticket M4-5 stayed inside the local CPU receipt boundary.\nRecord 0005: team alpha handled queue 6, team beta verified checksum 66, and ticket M4-6 stayed inside the local CPU receipt boundary.\nRecord 0006: team alpha handled queue 7, team beta verified checksum 79, and ticket M4-7 stayed inside the local CPU receipt boundary.\nRecord 0007: team alpha handled queue 8, team beta verified checksum 92, and ticket M4-8 stayed inside the local CPU receipt boundary.\nRecord 0008: team alpha handled queue 9, team beta verified checksum 8, and ticket M4-9 stayed inside the local CPU receipt boundary.\nRecord 0009: team alpha handled queue 10, team beta verified checksum 21, and ticket M4-10 stayed inside the local CPU receipt boundary.\nRecord 0010: team alpha handled queue 11, team beta verified checksum 34, and ticket M4-11 stayed inside the local CPU receipt boundary.\nRecord 0011: team alpha handled queue 12, team beta verified checksum 47, and ticket M4-12 stayed inside the local CPU receipt boundary.\nRecord 0012: team alpha handled queue 13, team beta verified checksum 60, and ticket M4-13 stayed inside the local CPU receipt boundary.\nRecord 0013: team alpha handled queue 14, team beta verified checksum 73, and ticket M4-14 stayed inside the local CPU receipt boundary.\nRecord 0014: team alpha handled queue 15, team beta verified checksum 86, and ticket M4-15 stayed inside the local CPU receipt boundary.\nRecord 0015: team alpha handled queue 16, team beta verified checksum 2, and ticket M4-16 stayed inside the local CPU receipt boundary.\nRecord 0016: team alpha handled queue 0, team beta verified checksum 15, and ticket M4-17 stayed inside the local CPU receipt boundary.\nRecord 0017: team alpha handled queue 1, team beta verified checksum 28, and ticket M4-18 stayed inside the local CPU receipt boundary.\nRecord 0018: team alpha handled queue 2, team beta verified checksum 41, and ticket M4-19 stayed inside the local CPU receipt boundary.\nRecord 0019: team alpha handled queue 3, team beta verified checksum 54, and ticket M4-20 stayed inside the local CPU receipt boundary.\nRecord 0020: team alpha handled queue 4, team beta verified checksum 67, and ticket M4-21 stayed inside the local CPU receipt boundary.\nRecord 0021: team alpha handled queue 5, team beta verified checksum 80, and ticket M4-22 stayed inside the local CPU receipt boundary.\nRecord 0022: team alpha handled queue 6, team beta verified checksum 93, and ticket M4-23 stayed inside the local CPU receipt boundary.\nRecord 0023: team alpha handled queue 7, team beta verified checksum 9, and ticket M4-24 stayed inside the local CPU receipt boundary.\nRecord 0024: team alpha handled queue 8, team beta verified checksum 22, and ticket M4-25 stayed inside the local CPU receipt boundary.\nRecord 0025: team alpha handled queue 9, team beta verified checksum 35, and ticket M4-26 stayed inside the local CPU receipt boundary.\n\nQuestion: which boundary should the operator preserve? Answer briefly.",
+      "prompt_index": 1,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": null,
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The operator should preserve the local CPU receipt boundary for tickets M4-1",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts/02-use-the-synthetic-operations-log-below-answer-th.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe operator should preserve the local CPU receipt boundary for tickets M4-1",
+      "timing": {
+        "decode_steady_state_tok_s": 8.789,
+        "decode_total_ms": 1818.901,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.005,
+          "mean_ms": 0.002,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.005,
+          "total_ms": 0.036
+        },
+        "first_token_decode_ms": 112.139,
+        "first_token_ms": 87762,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 89.563,
+          "mean_ms": 86.532,
+          "min_ms": 85.381,
+          "p50_ms": 85.75,
+          "p95_ms": 89.563,
+          "total_ms": 1384.507
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 29.402,
+          "mean_ms": 27.045,
+          "min_ms": 26.612,
+          "p50_ms": 26.649,
+          "p95_ms": 29.402,
+          "total_ms": 432.719
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 87582.249,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 0.11,
+          "mean_ms": 0.099,
+          "min_ms": 0.098,
+          "p50_ms": 0.098,
+          "p95_ms": 0.11,
+          "total_ms": 1.59
+        },
+        "sampling_ms_per_token": 0.099,
+        "session_model_load_ms": 3459.156,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 53.563,
+        "time_to_first_token_ms": 87762,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.003,
+          "mean_ms": 0.002,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.003,
+          "total_ms": 0.034
+        },
+        "tokenize_ms": 58.114,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 89469.139
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "prompt_03",
+      "generated_token_ids": [
+        198,
+        785,
+        5675,
+        1265,
+        21129,
+        279,
+        2205,
+        13940,
+        22567,
+        18732,
+        369,
+        14403,
+        386,
+        19,
+        12,
+        17
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Use the synthetic operations log below. Answer the final question briefly.\n\nRecord 0000: team alpha handled queue 2, team beta verified checksum 2, and ticket M4-2 stayed inside the local CPU receipt boundary.\nRecord 0001: team alpha handled queue 3, team beta verified checksum 15, and ticket M4-3 stayed inside the local CPU receipt boundary.\nRecord 0002: team alpha handled queue 4, team beta verified checksum 28, and ticket M4-4 stayed inside the local CPU receipt boundary.\nRecord 0003: team alpha handled queue 5, team beta verified checksum 41, and ticket M4-5 stayed inside the local CPU receipt boundary.\nRecord 0004: team alpha handled queue 6, team beta verified checksum 54, and ticket M4-6 stayed inside the local CPU receipt boundary.\nRecord 0005: team alpha handled queue 7, team beta verified checksum 67, and ticket M4-7 stayed inside the local CPU receipt boundary.\nRecord 0006: team alpha handled queue 8, team beta verified checksum 80, and ticket M4-8 stayed inside the local CPU receipt boundary.\nRecord 0007: team alpha handled queue 9, team beta verified checksum 93, and ticket M4-9 stayed inside the local CPU receipt boundary.\nRecord 0008: team alpha handled queue 10, team beta verified checksum 9, and ticket M4-10 stayed inside the local CPU receipt boundary.\nRecord 0009: team alpha handled queue 11, team beta verified checksum 22, and ticket M4-11 stayed inside the local CPU receipt boundary.\nRecord 0010: team alpha handled queue 12, team beta verified checksum 35, and ticket M4-12 stayed inside the local CPU receipt boundary.\nRecord 0011: team alpha handled queue 13, team beta verified checksum 48, and ticket M4-13 stayed inside the local CPU receipt boundary.\nRecord 0012: team alpha handled queue 14, team beta verified checksum 61, and ticket M4-14 stayed inside the local CPU receipt boundary.\nRecord 0013: team alpha handled queue 15, team beta verified checksum 74, and ticket M4-15 stayed inside the local CPU receipt boundary.\nRecord 0014: team alpha handled queue 16, team beta verified checksum 87, and ticket M4-16 stayed inside the local CPU receipt boundary.\nRecord 0015: team alpha handled queue 0, team beta verified checksum 3, and ticket M4-17 stayed inside the local CPU receipt boundary.\nRecord 0016: team alpha handled queue 1, team beta verified checksum 16, and ticket M4-18 stayed inside the local CPU receipt boundary.\nRecord 0017: team alpha handled queue 2, team beta verified checksum 29, and ticket M4-19 stayed inside the local CPU receipt boundary.\nRecord 0018: team alpha handled queue 3, team beta verified checksum 42, and ticket M4-20 stayed inside the local CPU receipt boundary.\nRecord 0019: team alpha handled queue 4, team beta verified checksum 55, and ticket M4-21 stayed inside the local CPU receipt boundary.\nRecord 0020: team alpha handled queue 5, team beta verified checksum 68, and ticket M4-22 stayed inside the local CPU receipt boundary.\nRecord 0021: team alpha handled queue 6, team beta verified checksum 81, and ticket M4-23 stayed inside the local CPU receipt boundary.\nRecord 0022: team alpha handled queue 7, team beta verified checksum 94, and ticket M4-24 stayed inside the local CPU receipt boundary.\nRecord 0023: team alpha handled queue 8, team beta verified checksum 10, and ticket M4-25 stayed inside the local CPU receipt boundary.\nRecord 0024: team alpha handled queue 9, team beta verified checksum 23, and ticket M4-26 stayed inside the local CPU receipt boundary.\nRecord 0025: team alpha handled queue 10, team beta verified checksum 36, and ticket M4-27 stayed inside the local CPU receipt boundary.\n\nQuestion: which boundary should the operator preserve? Answer briefly.",
+      "prompt_index": 2,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": null,
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The operator should preserve the local CPU receipt boundary for tickets M4-2",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts/03-use-the-synthetic-operations-log-below-answer-th.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe operator should preserve the local CPU receipt boundary for tickets M4-2",
+      "timing": {
+        "decode_steady_state_tok_s": 8.526,
+        "decode_total_ms": 1875.813,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.005,
+          "mean_ms": 0.002,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.005,
+          "total_ms": 0.037
+        },
+        "first_token_decode_ms": 116.539,
+        "first_token_ms": 87071,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 89.999,
+          "mean_ms": 89.132,
+          "min_ms": 88.231,
+          "p50_ms": 89.205,
+          "p95_ms": 89.999,
+          "total_ms": 1426.106
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 29.636,
+          "mean_ms": 27.998,
+          "min_ms": 26.881,
+          "p50_ms": 27.818,
+          "p95_ms": 29.636,
+          "total_ms": 447.961
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 86870.429,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 0.113,
+          "mean_ms": 0.104,
+          "min_ms": 0.098,
+          "p50_ms": 0.099,
+          "p95_ms": 0.113,
+          "total_ms": 1.658
+        },
+        "sampling_ms_per_token": 0.104,
+        "session_model_load_ms": 3459.156,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 53.563,
+        "time_to_first_token_ms": 87071,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.005,
+          "mean_ms": 0.002,
+          "min_ms": 0.001,
+          "p50_ms": 0.002,
+          "p95_ms": 0.005,
+          "total_ms": 0.036
+        },
+        "tokenize_ms": 56.01,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 88831.089
+      }
+    }
+  ],
+  "quality_summary": {
+    "fail_on_quality": true,
+    "failed_prompt_indices": [],
+    "min_distinct_generated_tokens": 1,
+    "min_generated_tokens": 1,
+    "passed": true
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "session": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+    "metal_phase_contributions_enabled": false,
+    "metal_phase_receipts": [],
+    "model_loaded_once": true,
+    "per_prompt_receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts",
+    "per_prompt_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts/01-use-the-synthetic-operations-log-below-answer-th.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts/02-use-the-synthetic-operations-log-below-answer-th.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary-profiles/context_1k-prompts/03-use-the-synthetic-operations-log-below-answer-th.json"
+    ],
+    "per_prompt_receipts_enabled": true,
+    "prompt_count": 3,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
+  "speed": {
+    "broad_performance_claim": false,
+    "claim": "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+    "counts": {
+      "generated_tokens": 48,
+      "prompt_count": 3,
+      "prompt_tokens": 3116
+    },
+    "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
+    "reuse": {
+      "allocation_audit_buffers_reused": true,
+      "generated_token_buffer_reused": true,
+      "kv_cache_recreated_per_prompt": true,
+      "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+      "logits_buffer_reuse_claimed": false,
+      "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+      "model_loaded_once": true,
+      "per_prompt_model_load_ms": 0.0,
+      "per_prompt_tokenizer_load_ms": 0.0,
+      "prompt_token_buffer_reused": true,
+      "reuse_scope": "resident_session",
+      "sampler_recreated_per_prompt": true,
+      "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+      "session_owned_buffers": true,
+      "stop_tail_buffer_reused": true,
+      "timing_buffers_reused": true,
+      "tokenizer_loaded_once": true
+    },
+    "speedup_claim": false,
+    "throughput": {
+      "cold_session_generated_tok_s": 0.177,
+      "decode_generated_tok_s": 8.537,
+      "warm_prompt_generated_tok_s": 0.18
+    },
+    "timing": {
+      "decode_total_ms": 5622.456,
+      "first_token_ms": {
+        "count": 3,
+        "max_ms": 87762.0,
+        "mean_ms": 87102.333,
+        "min_ms": 86474.0,
+        "p50_ms": 87071.0,
+        "p95_ms": 87762.0,
+        "total_ms": 261307.0
+      },
+      "model_load_ms": 3459.156,
+      "prefill_ms": 260758.788,
+      "sampling_ms": 4.927,
+      "steady_decode_tok_s": {
+        "count": 3,
+        "max": 8.789,
+        "mean": 8.536,
+        "min": 8.293,
+        "p50": 8.526,
+        "p95": 8.789
+      },
+      "time_to_first_token_ms": {
+        "count": 3,
+        "max_ms": 87762.0,
+        "mean_ms": 87102.333,
+        "min_ms": 86474.0,
+        "p50_ms": 87071.0,
+        "p95_ms": 87762.0,
+        "total_ms": 261307.0
+      },
+      "tokenize_ms": 156.327,
+      "tokenizer_load_ms": 53.563,
+      "total_session_ms": 270490.67,
+      "warm_prompt_wall_ms": 266583.727
+    }
+  },
+  "speedup_claim": false,
+  "timestamp": "2026-05-15T05:27:15.507908+00:00",
+  "timing": {
+    "model_load_ms": 3459.156,
+    "model_sha256_ms": 0.0,
+    "tokenizer_load_ms": 53.563,
+    "total_session_ms": 270490.67
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  }
+}
