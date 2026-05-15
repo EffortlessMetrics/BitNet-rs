@@ -53,13 +53,22 @@ struct ReferenceServerSignal {
     selected_content: Option<String>,
     top_probability_strings: Option<Vec<String>>,
     probability_probe_ids: Option<Vec<i64>>,
+    probability_probes: Option<Vec<ReferenceProbabilityProbe>>,
     prompt: PromptIdentity,
+}
+
+#[derive(Clone, Debug)]
+struct ReferenceProbabilityProbe {
+    token_id: i64,
+    token_piece: Option<String>,
+    reference_probability: Option<f64>,
 }
 
 #[derive(Clone, Debug)]
 struct TopLogit {
     token_id: i64,
     token_piece: Option<String>,
+    softmax_probability: Option<f64>,
     logit: f64,
 }
 
@@ -67,6 +76,7 @@ struct TopLogit {
 struct SelectedLogit {
     token_id: i64,
     token_piece: Option<String>,
+    softmax_probability: Option<f64>,
     present: bool,
     logit: Option<f64>,
 }
@@ -338,6 +348,7 @@ fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
             selected_content: None,
             top_probability_strings: None,
             probability_probe_ids: None,
+            probability_probes: None,
             prompt: PromptIdentity::default(),
         };
     };
@@ -359,6 +370,7 @@ fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
         ),
         top_probability_strings,
         probability_probe_ids: reference_server_probability_probe_ids(value),
+        probability_probes: reference_server_probability_probes(value),
         prompt: prompt_identity(value),
     }
 }
@@ -423,7 +435,12 @@ fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
             .pointer("/logit")
             .and_then(Value::as_f64)
             .or_else(|| item.pointer("/value").and_then(Value::as_f64))?;
-        logits.push(TopLogit { token_id, token_piece: token_piece(item), logit });
+        logits.push(TopLogit {
+            token_id,
+            token_piece: token_piece(item),
+            softmax_probability: probability(item),
+            logit,
+        });
     }
     Some(logits)
 }
@@ -452,7 +469,13 @@ fn selected_logits_array(value: Option<&Value>) -> Option<Vec<SelectedLogit>> {
             .pointer("/logit")
             .and_then(Value::as_f64)
             .or_else(|| item.pointer("/value").and_then(Value::as_f64));
-        logits.push(SelectedLogit { token_id, token_piece: token_piece(item), present, logit });
+        logits.push(SelectedLogit {
+            token_id,
+            token_piece: token_piece(item),
+            softmax_probability: probability(item),
+            present,
+            logit,
+        });
     }
     Some(logits)
 }
@@ -463,6 +486,12 @@ fn token_piece(item: &Value) -> Option<String> {
         .or_else(|| item.pointer("/piece").and_then(Value::as_str))
         .or_else(|| item.pointer("/tok_str").and_then(Value::as_str))
         .map(ToOwned::to_owned)
+}
+
+fn probability(item: &Value) -> Option<f64> {
+    item.pointer("/softmax_probability")
+        .and_then(Value::as_f64)
+        .or_else(|| item.pointer("/probability").and_then(Value::as_f64))
 }
 
 fn reference_text_candidate_ids(value: &Value) -> Option<Vec<i64>> {
@@ -489,6 +518,28 @@ fn reference_server_probability_probe_ids(value: &Value) -> Option<Vec<i64>> {
         }
     }
     None
+}
+
+fn reference_server_probability_probes(value: &Value) -> Option<Vec<ReferenceProbabilityProbe>> {
+    let array = value
+        .pointer("/reference_probability_tokenization/top_probability_tokenizations")
+        .and_then(Value::as_array)?;
+    let mut probes = Vec::new();
+    for item in array {
+        let token_piece = item.pointer("/tok_str").and_then(Value::as_str).map(ToOwned::to_owned);
+        let reference_probability = item.pointer("/prob").and_then(Value::as_f64);
+        let ids = array_i64(item.pointer("/tokenization/candidate_token_ids"));
+        if let Some(ids) = ids {
+            for token_id in ids {
+                probes.push(ReferenceProbabilityProbe {
+                    token_id,
+                    token_piece: token_piece.clone(),
+                    reference_probability,
+                });
+            }
+        }
+    }
+    (!probes.is_empty()).then_some(probes)
 }
 
 fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
@@ -563,6 +614,7 @@ fn compare_reference_server_to_output(left: &ReferenceServerSignal, right: &Outp
 fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) -> Value {
     candidate_logits(
         left.reference_text_candidate_ids.as_deref(),
+        None,
         right,
         "text-tokenized reference candidates are not reference generated token IDs",
     )
@@ -571,12 +623,18 @@ fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) ->
 fn probability_probe_candidate_logits(left: &ReferenceServerSignal, right: &OutputSignal) -> Value {
     candidate_logits(
         left.probability_probe_ids.as_deref(),
+        left.probability_probes.as_deref(),
         right,
         "reference-server probability-string probes are not reference generated token IDs or raw logits",
     )
 }
 
-fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_claim: &str) -> Value {
+fn candidate_logits(
+    candidate_ids: Option<&[i64]>,
+    reference_probability_probes: Option<&[ReferenceProbabilityProbe]>,
+    right: &OutputSignal,
+    not_claim: &str,
+) -> Value {
     let selected_logits = right.selected_logits.as_deref();
     let top_logit = right.top_logits.as_ref().and_then(|logits| logits.first());
     let Some(candidate_ids) = candidate_ids else {
@@ -603,8 +661,14 @@ fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_cla
     let mut rows = Vec::new();
     for token_id in candidate_ids {
         let selected = selected_logits.iter().find(|item| item.token_id == *token_id);
+        let reference_probe = reference_probability_probes
+            .and_then(|items| items.iter().find(|item| item.token_id == *token_id));
         let present = selected.is_some_and(|item| item.present && item.logit.is_some());
         let logit = selected.and_then(|item| item.logit);
+        let rust_probability = selected.and_then(|item| item.softmax_probability);
+        let reference_probability = reference_probe.and_then(|item| item.reference_probability);
+        let probability_delta =
+            rust_probability.zip(reference_probability).map(|(rust, reference)| rust - reference);
         if let Some(logit) = logit
             && best_candidate.is_none_or(|(_, best)| logit > best)
             && let Some(selected) = selected
@@ -614,17 +678,24 @@ fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_cla
         rows.push(json!({
             "token_id": token_id,
             "token_piece": selected.and_then(|item| item.token_piece.clone()),
+            "reference_token_piece": reference_probe.and_then(|item| item.token_piece.clone()),
             "present": present,
             "logit": logit,
+            "softmax_probability": rust_probability,
+            "reference_probability": reference_probability,
+            "probability_delta": probability_delta,
         }));
     }
 
     let best_candidate_token_id = best_candidate.map(|(selected, _)| selected.token_id);
     let best_candidate_token_piece =
         best_candidate.and_then(|(selected, _)| selected.token_piece.clone());
+    let best_candidate_softmax_probability =
+        best_candidate.and_then(|(selected, _)| selected.softmax_probability);
     let best_candidate_logit = best_candidate.map(|(_, logit)| logit);
     let top_token_id = top_logit.map(|item| item.token_id);
     let top_token_piece = top_logit.and_then(|item| item.token_piece.clone());
+    let top_softmax_probability = top_logit.and_then(|item| item.softmax_probability);
     let top_logit_value = top_logit.map(|item| item.logit);
     let best_candidate_to_top_delta =
         best_candidate_logit.zip(top_logit_value).map(|(candidate, top)| top - candidate);
@@ -638,9 +709,11 @@ fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_cla
         "candidate_logits": rows,
         "best_candidate_token_id": best_candidate_token_id,
         "best_candidate_token_piece": best_candidate_token_piece,
+        "best_candidate_softmax_probability": best_candidate_softmax_probability,
         "best_candidate_logit": best_candidate_logit,
         "right_top_token_id": top_token_id,
         "right_top_token_piece": top_token_piece,
+        "right_top_softmax_probability": top_softmax_probability,
         "right_top_logit": top_logit_value,
         "best_candidate_to_top_delta": best_candidate_to_top_delta,
         "not_claim": not_claim,
@@ -854,8 +927,8 @@ mod tests {
             token_ids: Some(vec![1, 2]),
             text: Some("a".to_string()),
             top_logits: Some(vec![
-                TopLogit { token_id: 1, token_piece: None, logit: 2.0 },
-                TopLogit { token_id: 2, token_piece: None, logit: 1.0 },
+                TopLogit { token_id: 1, token_piece: None, softmax_probability: None, logit: 2.0 },
+                TopLogit { token_id: 2, token_piece: None, softmax_probability: None, logit: 1.0 },
             ]),
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -865,8 +938,8 @@ mod tests {
             token_ids: Some(vec![1, 3]),
             text: Some("b".to_string()),
             top_logits: Some(vec![
-                TopLogit { token_id: 1, token_piece: None, logit: 2.25 },
-                TopLogit { token_id: 3, token_piece: None, logit: 0.75 },
+                TopLogit { token_id: 1, token_piece: None, softmax_probability: None, logit: 2.25 },
+                TopLogit { token_id: 3, token_piece: None, softmax_probability: None, logit: 0.75 },
             ]),
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -890,7 +963,7 @@ mod tests {
         let value = json!({
             "logits_dump": [{
                 "top_logits": [
-                    {"token_id": 10, "token_piece": "+", "logit": 1.5},
+                    {"token_id": 10, "token_piece": "+", "softmax_probability": 0.25, "logit": 1.5},
                     {"token_id": 11, "logit": 1.25}
                 ]
             }]
@@ -899,6 +972,7 @@ mod tests {
         assert_eq!(logits.len(), 2);
         assert_eq!(logits[0].token_id, 10);
         assert_eq!(logits[0].token_piece.as_deref(), Some("+"));
+        assert_eq!(logits[0].softmax_probability, Some(0.25));
         assert_eq!(logits[0].logit, 1.5);
     }
 
@@ -912,7 +986,7 @@ mod tests {
             },
             "logits_dump": [{
                 "selected_logits": [
-                    {"token_id": 17, "token_piece": "2", "present": true, "logit": 3.5},
+                    {"token_id": 17, "token_piece": "2", "softmax_probability": 0.125, "present": true, "logit": 3.5},
                     {"token_id": 10, "present": true, "logit": -0.5}
                 ]
             }]
@@ -923,6 +997,7 @@ mod tests {
         assert_eq!(logits.len(), 2);
         assert_eq!(logits[0].token_id, 17);
         assert_eq!(logits[0].token_piece.as_deref(), Some("2"));
+        assert_eq!(logits[0].softmax_probability, Some(0.125));
         assert_eq!(logits[0].logit, Some(3.5));
     }
 
@@ -942,18 +1017,21 @@ mod tests {
             top_logits: Some(vec![TopLogit {
                 token_id: 54864,
                 token_piece: Some(".ps".to_string()),
+                softmax_probability: Some(0.9),
                 logit: 10.75,
             }]),
             selected_logits: Some(vec![
                 SelectedLogit {
                     token_id: 17,
                     token_piece: Some("2".to_string()),
+                    softmax_probability: Some(0.1),
                     present: true,
                     logit: Some(3.5),
                 },
                 SelectedLogit {
                     token_id: 10,
                     token_piece: Some("+".to_string()),
+                    softmax_probability: Some(0.01),
                     present: true,
                     logit: Some(-0.5),
                 },
@@ -969,11 +1047,14 @@ mod tests {
         assert_eq!(candidate_logits["selected_logits_available"], true);
         assert_eq!(candidate_logits["best_candidate_token_id"], 17);
         assert_eq!(candidate_logits["best_candidate_token_piece"], "2");
+        assert_eq!(candidate_logits["best_candidate_softmax_probability"], 0.1);
         assert_eq!(candidate_logits["best_candidate_logit"], 3.5);
         assert_eq!(candidate_logits["right_top_token_id"], 54864);
         assert_eq!(candidate_logits["right_top_token_piece"], ".ps");
+        assert_eq!(candidate_logits["right_top_softmax_probability"], 0.9);
         assert_eq!(candidate_logits["best_candidate_to_top_delta"], 7.25);
         assert_eq!(candidate_logits["candidate_logits"][0]["token_piece"], "2");
+        assert_eq!(candidate_logits["candidate_logits"][0]["softmax_probability"], 0.1);
     }
 
     #[test]
@@ -1070,7 +1151,12 @@ mod tests {
         let left = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
-            top_logits: Some(vec![TopLogit { token_id: 1, token_piece: None, logit: 1.0 }]),
+            top_logits: Some(vec![TopLogit {
+                token_id: 1,
+                token_piece: None,
+                softmax_probability: None,
+                logit: 1.0,
+            }]),
             selected_logits: None,
             reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
@@ -1078,7 +1164,12 @@ mod tests {
         let right = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
-            top_logits: Some(vec![TopLogit { token_id: 1, token_piece: None, logit: 1.0 }]),
+            top_logits: Some(vec![TopLogit {
+                token_id: 1,
+                token_piece: None,
+                softmax_probability: None,
+                logit: 1.0,
+            }]),
             selected_logits: None,
             reference_text_candidate_ids: None,
             prompt: prompt("raw", "rendered-b", "ids-b", 8, true, false),
@@ -1135,7 +1226,19 @@ mod tests {
                 ]
             },
             "reference_probability_tokenization": {
-                "selected_logit_probe_ids": [17, 791]
+                "selected_logit_probe_ids": [17, 791],
+                "top_probability_tokenizations": [
+                    {
+                        "tok_str": "2",
+                        "prob": 0.75,
+                        "tokenization": {"candidate_token_ids": [17]}
+                    },
+                    {
+                        "tok_str": "The",
+                        "prob": 0.12,
+                        "tokenization": {"candidate_token_ids": [791]}
+                    }
+                ]
             }
         })));
         let rust = OutputSignal {
@@ -1144,18 +1247,21 @@ mod tests {
             top_logits: Some(vec![TopLogit {
                 token_id: 58428,
                 token_piece: Some(".ps".to_string()),
+                softmax_probability: Some(0.35),
                 logit: 13.7,
             }]),
             selected_logits: Some(vec![
                 SelectedLogit {
                     token_id: 17,
                     token_piece: Some("2".to_string()),
+                    softmax_probability: Some(0.00006),
                     present: true,
                     logit: Some(5.1),
                 },
                 SelectedLogit {
                     token_id: 791,
                     token_piece: Some("The".to_string()),
+                    softmax_probability: Some(0.00002),
                     present: true,
                     logit: Some(4.2),
                 },
@@ -1184,6 +1290,22 @@ mod tests {
         assert_eq!(
             report["probability_probe_candidate_logits"]["right_top_token_piece"],
             json!(".ps")
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["right_top_softmax_probability"],
+            json!(0.35)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["candidate_logits"][0]["reference_probability"],
+            json!(0.75)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["candidate_logits"][0]["softmax_probability"],
+            json!(0.00006)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["candidate_logits"][0]["reference_token_piece"],
+            json!("2")
         );
         assert_eq!(
             report["probability_probe_candidate_logits"]["matched_candidate_count"],
