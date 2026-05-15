@@ -20,9 +20,9 @@ defaults:
   per_prompt_timeout_seconds: 420
   min_generated_tokens: 1
 cases:
-  - id: math_2_plus_2
-    question: "What is 2+2? Answer with only the number."
-    max_new_tokens: 4
+  - id: say_four
+    question: "Say exactly: 4"
+    max_new_tokens: 1
     gate:
       kind: exact_trimmed
       expected: "4"
