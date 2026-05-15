@@ -2176,6 +2176,7 @@ fn compare_reference_to_rust(
         "attention_value_cache_rust_layout_best_matches": attention_value_cache_rust_layout_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
         "attention_value_mix_reference_scalar_recompute": attention_value_mix_reference_scalar_recompute(reference_records),
+        "attention_value_mix_rust_scalar_recompute": attention_value_mix_rust_scalar_recompute(rust_records),
         "attention_value_mix_f16_cache_head_lane_best_matches": attention_value_mix_f16_cache_head_lane_best_matches(reference_records, rust_records),
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
@@ -2326,6 +2327,129 @@ fn attention_value_mix_reference_scalar_recompute(
         "diagnostic_only": true,
         "claim_allowed": false,
         "policy": "reference scalar value-mix recompute is diagnostic arithmetic evidence only; it does not promote reference parity, A770 semantic quality, value mix residency, selected attention, resident KV, or any support claim",
+        "probability_head_count": probability_heads.len(),
+        "value_cache_head_count": value_cache_heads.len(),
+        "value_mix_head_count": value_mix_heads.len(),
+        "group_size": group_size,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !value_mix_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+fn attention_value_mix_rust_scalar_recompute(
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let probability_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attn_scores_softmax_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let value_cache_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_v_cache_f16_roundtrip_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let value_mix_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_value_mix_f16_cache_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let group_size = if value_cache_heads.is_empty()
+        || value_mix_heads.is_empty()
+        || !value_mix_heads.len().is_multiple_of(value_cache_heads.len())
+    {
+        None
+    } else {
+        Some(value_mix_heads.len() / value_cache_heads.len())
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut max_rms_delta = 0.0f64;
+    let mut max_abs_delta = 0.0f64;
+
+    for (&head, value_mix) in &value_mix_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let probability = probability_heads.get(&head).copied();
+        let value_cache = kv_head.and_then(|kv_head| value_cache_heads.get(&kv_head).copied());
+        let mut status = "missing_input";
+        let mut delta = Value::Null;
+        let mut recomputed_first_values = Vec::<f32>::new();
+        let mut token_count = None::<usize>;
+        let value_dim = Some(value_mix.num_elements);
+
+        if let (Some(probability), Some(value_cache), Some(value_dim)) =
+            (probability, value_cache, value_dim)
+        {
+            token_count = value_cache.shape.get(1).copied().or_else(|| {
+                if value_dim == 0 { None } else { Some(value_cache.num_elements / value_dim) }
+            });
+            if let Some(token_count) = token_count {
+                let value_sample_count = value_dim.saturating_mul(token_count);
+                if probability.first_values.len() >= token_count
+                    && value_cache.first_values.len() >= value_sample_count
+                    && value_mix.first_values.len() >= value_dim
+                {
+                    for dim in 0..value_dim {
+                        let mut sum = 0.0f64;
+                        for token in 0..token_count {
+                            let probability = probability.first_values[token] as f64;
+                            let value = value_cache.first_values[dim * token_count + token] as f64;
+                            sum += probability * value;
+                        }
+                        recomputed_first_values.push(sum as f32);
+                    }
+                    delta = compare_prefix(
+                        &recomputed_first_values,
+                        &value_mix.first_values,
+                        value_dim,
+                    );
+                    max_rms_delta = max_rms_delta.max(
+                        delta.pointer("/rms_abs_delta").and_then(Value::as_f64).unwrap_or(0.0),
+                    );
+                    max_abs_delta = max_abs_delta.max(
+                        delta.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0),
+                    );
+                    compared_count += 1;
+                    status = "compared";
+                }
+            }
+        }
+
+        if status == "missing_input" {
+            missing_input_count += 1;
+        }
+        rows.push(json!({
+            "head": head,
+            "kv_head": kv_head,
+            "status": status,
+            "probability_stage_present": probability.is_some(),
+            "value_cache_stage_present": value_cache.is_some(),
+            "value_mix_stage_present": true,
+            "token_count": token_count,
+            "value_dim": value_dim,
+            "delta": delta,
+            "recomputed_first_values": recomputed_first_values,
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Rust scalar value-mix recompute is diagnostic arithmetic evidence only; it compares Rust traced probability/cache inputs against the Rust trace-only F16-cache value-mix output and does not promote reference parity, A770 semantic quality, value mix residency, selected attention, resident KV, or any support claim",
         "probability_head_count": probability_heads.len(),
         "value_cache_head_count": value_cache_heads.len(),
         "value_mix_head_count": value_mix_heads.len(),
@@ -4563,6 +4687,93 @@ mod tests {
         assert_eq!(
             report.pointer("/rows/1/recomputed_first_values"),
             Some(&json!([3.0, 12.0, 0.0]))
+        );
+    }
+
+    #[test]
+    fn compare_reports_rust_scalar_value_mix_recompute() {
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attn_scores_softmax_head0".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                first_values: vec![0.25, 0.75],
+                ..test_rust_trace_record("attn_scores_softmax_head0", vec![0.25, 0.75])
+            },
+        );
+        rust_records.insert(
+            "attn_scores_softmax_head1".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                first_values: vec![0.5, 0.5],
+                ..test_rust_trace_record("attn_scores_softmax_head1", vec![0.5, 0.5])
+            },
+        );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![3, 2],
+                num_elements: 6,
+                first_values: vec![2.0, 4.0, 10.0, 14.0, -2.0, 2.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout",
+                    vec![2.0, 4.0, 10.0, 14.0, -2.0, 2.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_value_mix_f16_cache_head0".to_string(),
+            RustTraceRecord {
+                shape: vec![3],
+                num_elements: 3,
+                first_values: vec![3.5, 13.0, 1.0],
+                ..test_rust_trace_record(
+                    "attention_value_mix_f16_cache_head0",
+                    vec![3.5, 13.0, 1.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_value_mix_f16_cache_head1".to_string(),
+            RustTraceRecord {
+                shape: vec![3],
+                num_elements: 3,
+                first_values: vec![3.0, 12.0, 0.0],
+                ..test_rust_trace_record(
+                    "attention_value_mix_f16_cache_head1",
+                    vec![3.0, 12.0, 0.0],
+                )
+            },
+        );
+
+        let report = attention_value_mix_rust_scalar_recompute(&rust_records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/group_size"), Some(&json!(2)));
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/missing_input_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(report.pointer("/max_rms_delta"), Some(&json!(0.0)));
+        assert_eq!(
+            report.pointer("/rows/0/recomputed_first_values"),
+            Some(&json!([3.5, 13.0, 1.0]))
+        );
+        assert_eq!(
+            report.pointer("/rows/1/recomputed_first_values"),
+            Some(&json!([3.0, 12.0, 0.0]))
+        );
+
+        let compare_report = compare_reference_to_rust(&[], &rust_records, &[]);
+        assert_eq!(
+            compare_report.pointer("/attention_value_mix_rust_scalar_recompute/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            compare_report.pointer("/attention_value_mix_rust_scalar_recompute/compared_count"),
+            Some(&json!(2))
         );
     }
 
