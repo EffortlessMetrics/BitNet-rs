@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "slm_multitoken_stability_validation",
+  "claim": "bounded_qwen3_multitoken_determinism",
+  "speedup_claim": false,
+  "model": {
+    "answer_ready": null,
+    "answer_ready_artifact_available": false,
+    "architecture": "qwen3",
+    "bytes": null,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "id": null,
+    "loader_mode": "real_gguf",
+    "path": "models/slm/Qwen3-0.6B-Q8_0.gguf",
+    "quant_format": "Q8_0",
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "revision": null,
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "tokenizer": "gguf_metadata",
+    "tokenizer_authority": null,
+    "tokenizer_path": null
+  },
+  "prompt_template": "qwen",
+  "prompt_template_policy": {
+    "family": "qwen"
+  },
+  "requested_backend": "cpu",
+  "selected_backend": "cpu-rust",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+  "run_artifacts": [
+    "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-run1.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-run2.json"
+  ],
+  "validation": {
+    "passed": true,
+    "repeated_run_count": 2,
+    "case_count": 3,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "strict_receipts": true,
+    "fallback_false": true,
+    "kv_cache_append_read_proven": false,
+    "kv_cache_position_metadata_scope": "prompt_prefill_and_decode_start_only"
+  },
+  "cases": [
+    {
+      "id": "bounded_4_yes_no_water",
+      "max_new_tokens": 4,
+      "prompt_ids_match": true,
+      "generated_ids_match": true,
+      "run1_passed": true,
+      "run2_passed": true,
+      "run1_generated_ids": [
+        9454,
+        11,
+        3015,
+        374
+      ],
+      "run2_generated_ids": [
+        9454,
+        11,
+        3015,
+        374
+      ],
+      "run1_decoded_text": "Yes, water is",
+      "run2_decoded_text": "Yes, water is",
+      "stop_reason": "max_new_tokens_reached",
+      "eos_token_id": 151645,
+      "prompt_tokens": 32,
+      "generated_tokens": 4,
+      "prompt_prefill": {
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "decode_start_position": 32,
+        "prompt_token_count": 32,
+        "source": "run_receipt_profile"
+      },
+      "kv_position_metadata": {
+        "next_decode_position": 32,
+        "limitation": "receipt records prompt prefill/decode-start position metadata; per-token KV append/read positions are not yet exposed"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "loader": {
+        "mode": "real_gguf"
+      }
+    },
+    {
+      "id": "bounded_8_repeat_colors",
+      "max_new_tokens": 8,
+      "prompt_ids_match": true,
+      "generated_ids_match": true,
+      "run1_passed": true,
+      "run2_passed": true,
+      "run1_generated_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "run2_generated_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "run1_decoded_text": "Red, blue, green.<|im_end|>",
+      "run2_decoded_text": "Red, blue, green.<|im_end|>",
+      "stop_reason": "eos_token",
+      "eos_token_id": 151645,
+      "prompt_tokens": 29,
+      "generated_tokens": 7,
+      "prompt_prefill": {
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "decode_start_position": 29,
+        "prompt_token_count": 29,
+        "source": "run_receipt_profile"
+      },
+      "kv_position_metadata": {
+        "next_decode_position": 29,
+        "limitation": "receipt records prompt prefill/decode-start position metadata; per-token KV append/read positions are not yet exposed"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "loader": {
+        "mode": "real_gguf"
+      }
+    },
+    {
+      "id": "bounded_16_capital_france",
+      "max_new_tokens": 16,
+      "prompt_ids_match": true,
+      "generated_ids_match": true,
+      "run1_passed": true,
+      "run2_passed": true,
+      "run1_generated_ids": [
+        59604,
+        151645
+      ],
+      "run2_generated_ids": [
+        59604,
+        151645
+      ],
+      "run1_decoded_text": "Paris<|im_end|>",
+      "run2_decoded_text": "Paris<|im_end|>",
+      "stop_reason": "eos_token",
+      "eos_token_id": 151645,
+      "prompt_tokens": 35,
+      "generated_tokens": 2,
+      "prompt_prefill": {
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "decode_start_position": 35,
+        "prompt_token_count": 35,
+        "source": "run_receipt_profile"
+      },
+      "kv_position_metadata": {
+        "next_decode_position": 35,
+        "limitation": "receipt records prompt prefill/decode-start position metadata; per-token KV append/read positions are not yet exposed"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "loader": {
+        "mode": "real_gguf"
+      }
+    }
+  ],
+  "claim_boundary": {
+    "broad_chat_quality_claim": false,
+    "warm_session_claim": false,
+    "sustained_throughput_claim": false,
+    "q4_q5_quant_claim": false,
+    "server_gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_claim": false
+  }
+}
+
