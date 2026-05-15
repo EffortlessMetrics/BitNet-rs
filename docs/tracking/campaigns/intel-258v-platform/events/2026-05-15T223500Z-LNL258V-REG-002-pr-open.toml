@@ -1,0 +1,22 @@
+timestamp = "2026-05-15T22:35:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5000
+branch = "codex/lunar-lake/LNL258V-REG-002-corpus-v2-regression"
+head_sha = "9271ca40a666591a2445067f311c0a90a4f8bc1d"
+summary = "Opened LNL258V-REG-002 to index the dense Qwen answer corpus v2 fixture and route profile comparison in the Lunar Lake regression bundle."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5000",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The PR adds regression-bundle wiring only and does not run model inference.",
+  "The regression v2 artifact records the 12-case corpus v2 fixture, 8 route profiles, candidate GPU/NPU promotion blockers, fallback_observed=false, and benchmark_qualified_advantage_claimed=false.",
+  "No broad dense SLM quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
