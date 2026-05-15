@@ -1,0 +1,1136 @@
+{
+  "artifact_kind": "slm_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust"
+  },
+  "backend_lane": "dense_slm_cpu",
+  "cases": [
+    {
+      "answer": "4",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "execution_plan": null,
+      "id": "say_four",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 4044,
+        "decode_first_ms": 4044,
+        "total_ms": 4045
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": true,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 28
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": true,
+        "rendered_sha256": "d1a21118038fa775ced3300b9ef8ebaae4f6d741fa34f024fc3fa549ddd63ca3",
+        "rendered_text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nSay exactly: 4<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 28,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 28,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 1,
+        "failed_rules": [],
+        "failure_taxonomy": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 1,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": null
+      },
+      "question": "Say exactly: 4",
+      "run_receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15\\qwen3-0_6b-cpu-answer-corpus-runs\\say_four.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 1,
+        "tokens_per_second": 0.24721878862793573
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": null,
+        "decode_total_ms": 243.237,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 243.237,
+        "first_token_ms": 4044,
+        "host_to_device_bytes": null,
+        "model_load_ms": 18811.135,
+        "prefill_ms": 3791.484,
+        "sampling_ms_per_token": 2.634,
+        "tokenize_ms": 440.02,
+        "tokenizer_load_ms": 421.737
+      },
+      "token_ids": {
+        "generated": [
+          19
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          45764,
+          6896,
+          25,
+          220,
+          19,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 1,
+        "generated_ids": [
+          19
+        ],
+        "ids": [
+          19
+        ],
+        "prompt": 28,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          45764,
+          6896,
+          25,
+          220,
+          19,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "total": 29
+      }
+    },
+    {
+      "answer": "Paris<|im_end|>",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "execution_plan": null,
+      "id": "capital_france",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 5158,
+        "decode_first_ms": 5158,
+        "total_ms": 5313
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": true,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 35
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": true,
+        "rendered_sha256": "16bc76ecf8712a419e443ffa93da426f79bc4f73ba2deb5e6c59a60444ac6d47",
+        "rendered_text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is the capital of France? Answer with one word.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 35,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 35,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "failure_taxonomy": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": null
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "run_receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15\\qwen3-0_6b-cpu-answer-corpus-runs\\capital_france.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 2,
+        "tokens_per_second": 0.3764351590438547
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 6.529,
+        "decode_total_ms": 302.852,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 149.697,
+        "first_token_ms": 5158,
+        "host_to_device_bytes": null,
+        "model_load_ms": 11839.224,
+        "prefill_ms": 5008.979,
+        "sampling_ms_per_token": 1.896,
+        "tokenize_ms": 497.848,
+        "tokenizer_load_ms": 452.148
+      },
+      "token_ids": {
+        "generated": [
+          59604,
+          151645
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          279,
+          6722,
+          315,
+          9625,
+          30,
+          21806,
+          448,
+          825,
+          3409,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 2,
+        "generated_ids": [
+          59604,
+          151645
+        ],
+        "ids": [
+          59604,
+          151645
+        ],
+        "prompt": 35,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          279,
+          6722,
+          315,
+          9625,
+          30,
+          21806,
+          448,
+          825,
+          3409,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "total": 37
+      }
+    },
+    {
+      "answer": "Red, blue, green.<|im_end|>",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "execution_plan": null,
+      "id": "repeat_colors",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 3483,
+        "decode_first_ms": 3483,
+        "total_ms": 4619
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": true,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 29
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": true,
+        "rendered_sha256": "25f070614e9cbae4889ac2c92711b9f132b3e20c5b680a743ec0fa0526bbb9c1",
+        "rendered_text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nRepeat exactly: red blue green<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 29,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 29,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 6,
+        "failed_rules": [],
+        "failure_taxonomy": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 7,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": null
+      },
+      "question": "Repeat exactly: red blue green",
+      "run_receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15\\qwen3-0_6b-cpu-answer-corpus-runs\\repeat_colors.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 7,
+        "tokens_per_second": 1.5154795410261963
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 5.286,
+        "decode_total_ms": 1313.683,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 178.647,
+        "first_token_ms": 3483,
+        "host_to_device_bytes": null,
+        "model_load_ms": 11377.353,
+        "prefill_ms": 3304.516,
+        "sampling_ms_per_token": 2.308,
+        "tokenize_ms": 437.212,
+        "tokenizer_load_ms": 488.627
+      },
+      "token_ids": {
+        "generated": [
+          6033,
+          11,
+          6303,
+          11,
+          6176,
+          13,
+          151645
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          38718,
+          6896,
+          25,
+          2518,
+          6303,
+          6176,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 7,
+        "generated_ids": [
+          6033,
+          11,
+          6303,
+          11,
+          6176,
+          13,
+          151645
+        ],
+        "ids": [
+          6033,
+          11,
+          6303,
+          11,
+          6176,
+          13,
+          151645
+        ],
+        "prompt": 29,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          38718,
+          6896,
+          25,
+          2518,
+          6303,
+          6176,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "total": 36
+      }
+    },
+    {
+      "answer": "OK",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "execution_plan": null,
+      "id": "say_ok",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 3314,
+        "decode_first_ms": 3314,
+        "total_ms": 3314
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": true,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 27
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": true,
+        "rendered_sha256": "3fca40d20860c2d088882adb69a4487b324eb24b6231eca8d527e3ae4335935c",
+        "rendered_text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nSay exactly: OK<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 27,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 27,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 1,
+        "failed_rules": [],
+        "failure_taxonomy": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 1,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": null
+      },
+      "question": "Say exactly: OK",
+      "run_receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15\\qwen3-0_6b-cpu-answer-corpus-runs\\say_ok.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 1,
+        "tokens_per_second": 0.30175015087507545
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": null,
+        "decode_total_ms": 167.002,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 167.002,
+        "first_token_ms": 3314,
+        "host_to_device_bytes": null,
+        "model_load_ms": 10349.325,
+        "prefill_ms": 3146.748,
+        "sampling_ms_per_token": 2.146,
+        "tokenize_ms": 435.457,
+        "tokenizer_load_ms": 334.404
+      },
+      "token_ids": {
+        "generated": [
+          3925
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          45764,
+          6896,
+          25,
+          10402,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 1,
+        "generated_ids": [
+          3925
+        ],
+        "ids": [
+          3925
+        ],
+        "prompt": 27,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          45764,
+          6896,
+          25,
+          10402,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "total": 28
+      }
+    },
+    {
+      "answer": "Yes, water is",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "execution_plan": null,
+      "id": "yes_no_water",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 3722,
+        "decode_first_ms": 3722,
+        "total_ms": 4196
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": true,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 32
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": true,
+        "rendered_sha256": "542f6f4d235dfb6ebcc5b535cf71fa8a356cc94511c4449509f8845845c0f840",
+        "rendered_text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer yes or no: is water wet?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 32,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 32,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "failure_taxonomy": [],
+        "gate_kind": "starts_with_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": null
+      },
+      "question": "Answer yes or no: is water wet?",
+      "run_receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15\\qwen3-0_6b-cpu-answer-corpus-runs\\yes_no_water.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 4,
+        "tokens_per_second": 0.9532888465204956
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 6.329,
+        "decode_total_ms": 630.521,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 156.51,
+        "first_token_ms": 3722,
+        "host_to_device_bytes": null,
+        "model_load_ms": 10419.151,
+        "prefill_ms": 3565.266,
+        "sampling_ms_per_token": 2.142,
+        "tokenize_ms": 326.39,
+        "tokenizer_load_ms": 337.104
+      },
+      "token_ids": {
+        "generated": [
+          9454,
+          11,
+          3015,
+          374
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          16141,
+          9834,
+          476,
+          902,
+          25,
+          374,
+          3015,
+          14401,
+          30,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          9454,
+          11,
+          3015,
+          374
+        ],
+        "ids": [
+          9454,
+          11,
+          3015,
+          374
+        ],
+        "prompt": 32,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          16141,
+          9834,
+          476,
+          902,
+          25,
+          374,
+          3015,
+          14401,
+          30,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "total": 36
+      }
+    }
+  ],
+  "claim_boundary": {
+    "answer_ready_artifact_available": false,
+    "backend_quality_gate_passed": true,
+    "bounded_slm_answer_smoke_passed": true,
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "coherent_output_observed": false,
+    "cuda_answer_corpus": false,
+    "dense_slm_clean_provenance": true,
+    "diagnostic_only_until_answer_ready_artifact": false,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": true,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Tiny deterministic Qwen3 dense SLM answer-readiness corpus for strict CPU receipts.",
+    "name": "qwen3-0-6b-strict-slm-answer-corpus-v1",
+    "path": "ci/quality/slm-answer-corpus.yaml",
+    "selected_case_count": 5,
+    "selected_case_ids": [
+      "say_four",
+      "capital_france",
+      "repeat_colors",
+      "say_ok",
+      "yes_no_water"
+    ]
+  },
+  "execution_plan": null,
+  "fallback_used": false,
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": null,
+    "logits_topk": null,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 420,
+    "requested_cpu_kernel": "avx512",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "answer_ready": null,
+    "answer_ready_artifact_available": false,
+    "architecture": "qwen3",
+    "bytes": null,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "id": null,
+    "loader_mode": "real_gguf",
+    "path": "models/slm/Qwen3-0.6B-Q8_0.gguf",
+    "quant_format": "Q8_0",
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "revision": null,
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "tokenizer": "gguf_metadata",
+    "tokenizer_authority": null,
+    "tokenizer_path": null
+  },
+  "model_architecture": "qwen3",
+  "model_family": "qwen",
+  "prompt_template": "qwen",
+  "prompt_template_policy": {
+    "family": "qwen"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 5,
+    "timeout": 0,
+    "total": 5
+  },
+  "quantization": "Q8_0",
+  "receipt_quality": {
+    "case_receipt_checker": "answer_receipt_failed_rules",
+    "checked": true,
+    "checked_rules": [
+      "generated_text_recorded",
+      "prompt_token_count_recorded",
+      "generated_token_count_recorded",
+      "total_token_count_recorded",
+      "prompt_token_ids_recorded",
+      "generated_token_ids_recorded",
+      "prompt_token_count_matches_ids",
+      "generated_token_count_matches_ids",
+      "total_token_count_matches",
+      "model_repo_recorded",
+      "model_file_recorded",
+      "model_sha256_recorded",
+      "model_family_recorded",
+      "model_architecture_recorded",
+      "tokenizer_source_recorded",
+      "tokenizer_strict",
+      "tokenizer_pretokenizer_authority_recorded",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_false",
+      "speedup_claim_false",
+      "loader_real_gguf",
+      "selected_kernel_recorded",
+      "selected_kernel_production",
+      "timing_model_load_ms_recorded",
+      "timing_tokenizer_load_ms_recorded",
+      "timing_tokenize_ms_recorded",
+      "timing_prefill_ms_recorded",
+      "timing_first_token_ms_recorded",
+      "timing_decode_total_ms_recorded",
+      "latency_total_ms_recorded"
+    ],
+    "required_case_fields": [
+      "text",
+      "tokens.prompt",
+      "tokens.generated",
+      "tokens.total",
+      "tokens.prompt_ids",
+      "tokens.generated_ids",
+      "model.repo",
+      "model.file",
+      "model.sha256",
+      "model.family",
+      "model.architecture",
+      "tokenizer.source",
+      "tokenizer.strict",
+      "tokenizer.pretokenizer_authority",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_used",
+      "loader.mode",
+      "kernel.kernel_id",
+      "timing.model_load_ms",
+      "timing.tokenizer_load_ms",
+      "timing.tokenize_ms",
+      "timing.prefill_ms",
+      "timing.first_token_ms",
+      "timing.decode_total_ms",
+      "latency.total_ms"
+    ]
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "scoring_summary": {
+    "enabled": false,
+    "failed": 0,
+    "failure_taxonomy": {},
+    "kinds": [],
+    "not_run": 0,
+    "passed": 0,
+    "total": 0
+  },
+  "selected_backend": "cpu-rust",
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+  "speedup_claim": false,
+  "timestamp": "2026-05-15T07:43:23.318599900+00:00",
+  "tokenizer": {
+    "authority": null,
+    "path": null,
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "tokenizer_source": "gguf_metadata"
+}

@@ -3082,7 +3082,7 @@ mod tests {
         assert_eq!(qwen3.display_name, "qwen3-0.6b-instruct-q8_0");
         assert_eq!(qwen3.category, "candidate");
         assert_eq!(qwen3.route, None);
-        assert!(!qwen3.cpu_answer_ready);
+        assert!(qwen3.cpu_answer_ready);
         assert!(!qwen3.accelerator_answer_ready);
         assert!(!qwen3.dense_regular_llm_cuda_proof);
         assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
@@ -3091,8 +3091,10 @@ mod tests {
         assert_eq!(qwen3.ask, "not ready");
         assert_eq!(qwen3.warm_session, "not ready");
         assert_eq!(qwen3.benchmark, "not ready");
-        assert!(qwen3.next_proof.contains("artifact contract"));
-        assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA answer receipts"));
+        assert_eq!(qwen3.tier, "cpu_answer_ready");
+        assert!(qwen3.next_proof.contains("CUDA all-layer plan"));
+        assert!(qwen3.claim_boundary.contains("bounded 9950X3D AVX-512 CPU answer sanity"));
+        assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
         Ok(())
     }
 

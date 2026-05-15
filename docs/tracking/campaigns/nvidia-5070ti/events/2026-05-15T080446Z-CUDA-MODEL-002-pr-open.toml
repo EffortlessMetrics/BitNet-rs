@@ -1,0 +1,12 @@
+timestamp = "2026-05-15T08:04:46Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-002"
+event = "pr_open"
+pr = 4866
+head_sha = "157a53997144ab8b6c791e656142d7c39ae47011"
+actor = "codex"
+
+notes = [
+  "Opened draft PR #4866 for the Qwen3 0.6B 9950X3D CPU answer sanity receipt.",
+  "The PR keeps Qwen3 CUDA, speedup, server, product CLI, full residency, and BitNet QK256 claims false.",
+]

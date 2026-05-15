@@ -308,36 +308,35 @@ family = "qwen3"
 artifact_kind = "gguf_q8_0_contract"
 contract_id = "qwen3_0_6b_q8_0"
 capability_id = "qwen3-0.6b-instruct-q8_0"
-status = "artifact_contract_recorded"
-current_tier = "structurally_valid"
+status = "registered_candidate_cpu_answer_sanity"
+current_tier = "cpu_answer_ready"
 verifier_surface = "bitnet model verify qwen3-0.6b-instruct-q8_0"
-tokenizer_authority = "gguf_metadata_present_contract_only"
-prompt_authority = "qwen3_chatml_required_not_answer_ready"
-cpu_reference = "candidate_reference_required"
+tokenizer_authority = "gguf_metadata_strict"
+prompt_authority = "qwen_no_think_chatml_cpu_sanity"
+cpu_reference = "windows_9950x3d_avx512_cpu_answer_corpus"
 accelerator_routes = []
 required_receipts = [
   "artifact_verify",
   "tokenizer_prompt_authority",
-  "cpu_reference_sanity",
+  "cpu_answer_corpus_9950x3d_avx512",
   "all_layer_plan",
   "model_boundary_fixtures",
 ]
 forbidden_claims = [
-  "cpu_answer_ready",
   "cuda_answer_ready",
   "dense_regular_llm_cuda_proof",
   "bitnet_packed_i2s_qk256_proof",
   "speedup",
   "server_ready",
 ]
-next_proof = "Qwen3 CPU answer sanity or a precise blocker receipt using the exact artifact contract, then dense all-layer plan and model-boundary fixtures."
-claim_boundary = "Qwen3 0.6B Q8_0 has an exact artifact contract and structural metadata only. It does not inherit Qwen2.5 CUDA answer receipts and has no CPU answer, CUDA, speed, server, or BitNet QK256 claim."
+next_proof = "Qwen3 CUDA all-layer plan and model-boundary fixtures before any one-token CUDA proof."
+claim_boundary = "Qwen3 0.6B Q8_0 has an exact artifact contract plus bounded 9950X3D AVX-512 CPU answer sanity. It does not inherit Qwen2.5 CUDA receipts and has no CUDA, speed, server, product CLI, or BitNet QK256 claim."
 
   [entry.claims]
   registered = true
   structurally_valid = true
-  reference_good = false
-  cpu_answer_ready = false
+  reference_good = true
+  cpu_answer_ready = true
   accelerator_answer_ready = false
   benchmark_qualified = false
   product_cli_ready = false
