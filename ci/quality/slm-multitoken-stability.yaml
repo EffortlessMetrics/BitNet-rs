@@ -1,0 +1,50 @@
+schema: 1
+artifact_kind: slm_answer_corpus
+name: qwen3-0-6b-strict-slm-multitoken-stability-v1
+description: Bounded deterministic Qwen3 dense SLM multi-token stability corpus for strict CPU receipts.
+model:
+  repo: Qwen/Qwen3-0.6B-GGUF
+  file: Qwen3-0.6B-Q8_0.gguf
+  sha256: 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031
+  family: qwen
+  architecture: qwen3
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen
+  qwen_no_think: true
+  max_new_tokens: 8
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 420
+  min_generated_tokens: 1
+cases:
+  - id: bounded_4_yes_no_water
+    question: "Answer yes or no: is water wet?"
+    max_new_tokens: 4
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "yes"
+        - "no"
+
+  - id: bounded_8_repeat_colors
+    question: "Repeat exactly: red blue green"
+    max_new_tokens: 8
+    gate:
+      kind: contains_any
+      contains_any:
+        - "red blue green"
+        - "Red blue green"
+        - "Red, blue, green"
+        - "Red, blue, green."
+
+  - id: bounded_16_capital_france
+    question: "What is the capital of France? Answer with one word."
+    max_new_tokens: 16
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
