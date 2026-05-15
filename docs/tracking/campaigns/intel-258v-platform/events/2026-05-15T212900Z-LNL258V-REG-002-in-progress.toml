@@ -1,0 +1,19 @@
+timestamp = "2026-05-15T21:29:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-REG-002-corpus-v2-regression"
+summary = "Started LNL258V-REG-002 to wire the bounded answer corpus v2 fixture and route profile comparison into the Lunar Lake regression bundle."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The regression v2 bundle indexes the already-merged dense Qwen answer corpus v2 fixture and route profile comparison receipt.",
+  "The command does not run model inference and does not promote OpenVINO GPU/NPU routes.",
+  "No broad dense SLM quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
