@@ -219,12 +219,14 @@ fn logit_receipt_value(
     tokenizer: &dyn bitnet_tokenizers::Tokenizer,
     token_id: u32,
     logit: Option<f32>,
+    softmax_context: Option<(f64, f64)>,
 ) -> serde_json::Value {
     serde_json::json!({
         "token_id": token_id,
         "token_piece": tokenizer.token_to_piece(token_id),
         "present": logit.is_some(),
         "logit": logit,
+        "softmax_probability": softmax_probability(logit, softmax_context),
     })
 }
 
@@ -232,15 +234,41 @@ fn selected_logit_values(
     logits: &[f32],
     token_ids: &[u32],
     tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+    softmax_context: Option<(f64, f64)>,
 ) -> Vec<serde_json::Value> {
     token_ids
         .iter()
         .copied()
         .map(|token_id| {
             let logit = usize::try_from(token_id).ok().and_then(|idx| logits.get(idx).copied());
-            logit_receipt_value(tokenizer, token_id, logit)
+            logit_receipt_value(tokenizer, token_id, logit, softmax_context)
         })
         .collect()
+}
+
+fn softmax_context(logits: &[f32]) -> Option<(f64, f64)> {
+    let max = logits
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite())
+        .fold(None, |best: Option<f32>, value| Some(best.map_or(value, |best| best.max(value))))?
+        as f64;
+    let denominator = logits
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite())
+        .map(|value| ((value as f64) - max).exp())
+        .sum::<f64>();
+    (denominator.is_finite() && denominator > 0.0).then_some((max, denominator))
+}
+
+fn softmax_probability(logit: Option<f32>, softmax_context: Option<(f64, f64)>) -> Option<f64> {
+    let logit = logit?;
+    if !logit.is_finite() {
+        return None;
+    }
+    let (max, denominator) = softmax_context?;
+    Some((((logit as f64) - max).exp()) / denominator)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -343,18 +371,22 @@ mod proof_summary_tests {
 
     #[test]
     fn selected_logit_values_include_outside_topk_probe_ids() {
-        let logits = [0.25, -1.5, 3.0];
+        let logits = [0.0, std::f32::consts::LN_2];
         let tokenizer = bitnet_tokenizers::MockTokenizer::new();
-        let selected = selected_logit_values(&logits, &[2, 42], &tokenizer);
+        let selected =
+            selected_logit_values(&logits, &[1, 42], &tokenizer, softmax_context(&logits));
 
-        assert_eq!(selected[0]["token_id"], serde_json::json!(2));
-        assert_eq!(selected[0]["token_piece"], serde_json::json!("\u{2}"));
+        assert_eq!(selected[0]["token_id"], serde_json::json!(1));
+        assert_eq!(selected[0]["token_piece"], serde_json::json!("\u{1}"));
         assert_eq!(selected[0]["present"], serde_json::json!(true));
-        assert_eq!(selected[0]["logit"], serde_json::json!(3.0));
+        assert_eq!(selected[0]["logit"], serde_json::json!(std::f32::consts::LN_2));
+        let probability = selected[0]["softmax_probability"].as_f64().expect("probability");
+        assert!((probability - (2.0 / 3.0)).abs() < 1.0e-6);
         assert_eq!(selected[1]["token_id"], serde_json::json!(42));
         assert_eq!(selected[1]["token_piece"], serde_json::json!("*"));
         assert_eq!(selected[1]["present"], serde_json::json!(false));
         assert_eq!(selected[1]["logit"], serde_json::Value::Null);
+        assert_eq!(selected[1]["softmax_probability"], serde_json::Value::Null);
     }
 
     #[test]
@@ -2219,6 +2251,7 @@ async fn run_simple_generation(
 
         // Capture logits if requested
         if dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) {
+            let probability_context = softmax_context(&logits_vec);
             // Helper for deterministic, robust top-k
             let topk_indices = {
                 let mut indexed: Vec<(usize, f32)> =
@@ -2244,10 +2277,20 @@ async fn run_simple_generation(
                 top_logits: top_logits
                     .iter()
                     .map(|&(token_id, logit)| {
-                        logit_receipt_value(tokenizer.as_ref(), token_id, Some(logit))
+                        logit_receipt_value(
+                            tokenizer.as_ref(),
+                            token_id,
+                            Some(logit),
+                            probability_context,
+                        )
                     })
                     .collect(),
-                selected_logits: selected_logit_values(&logits_vec, &logit_id, tokenizer.as_ref()),
+                selected_logits: selected_logit_values(
+                    &logits_vec,
+                    &logit_id,
+                    tokenizer.as_ref(),
+                    probability_context,
+                ),
                 chosen_id: None, // Will set after sampling
             };
             logits_dump.push(step);
