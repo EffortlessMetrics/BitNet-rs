@@ -1113,7 +1113,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008Z"
-status = "ready"
+status = "merged"
+pr = 4789
+merge_sha = "a478272489b59b7c608f9986f2515052409a3e1d"
 branch = "codex/slm-cpu-008z-qwen3-qproj-drift"
 stackable = false
 review_mode = "codex_premerge"
