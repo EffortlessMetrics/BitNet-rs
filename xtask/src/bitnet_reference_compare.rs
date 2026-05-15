@@ -13,7 +13,8 @@ const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "full_device_residency",
     "completion",
     "reference_generated_token_ids",
-    "reference_top_logits",
+    "reference_logits_match_rust_cpu",
+    "reference_logits_match_strict_a770",
     "reference_parity_promotion",
     "a770_semantic_quality_proven",
 ];
@@ -452,9 +453,13 @@ fn string_at(value: &Value, pointers: &[&str]) -> Option<String> {
 }
 
 fn top_logits(value: &Value) -> Option<Vec<TopLogit>> {
-    for pointer in
-        ["/logits_dump/0/top_logits", "/top_logits", "/logits/top_logits", "/logits/top_k"]
-    {
+    for pointer in [
+        "/logits_dump/0/top_logits",
+        "/top_logits",
+        "/logits/top_logits",
+        "/logits/top_k",
+        "/sidecar/receipt/top_logits",
+    ] {
         if let Some(logits) = top_logits_array(value.pointer(pointer)) {
             return Some(logits);
         }
@@ -514,8 +519,12 @@ fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
 }
 
 fn selected_logits(value: &Value) -> Option<Vec<SelectedLogit>> {
-    for pointer in ["/logits_dump/0/selected_logits", "/selected_logits", "/logits/selected_logits"]
-    {
+    for pointer in [
+        "/logits_dump/0/selected_logits",
+        "/selected_logits",
+        "/logits/selected_logits",
+        "/sidecar/receipt/probe_logits",
+    ] {
         if let Some(logits) = selected_logits_array(value.pointer(pointer)) {
             return Some(logits);
         }
@@ -745,7 +754,122 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
         "top_logit_argmax_delta": top_logit_argmax_delta,
         "top_logit_max_abs_delta": top_logit_max_abs_delta,
         "hidden_state": hidden_state,
+        "selected_logit_probes": compare_selected_logit_probes(
+            left.selected_logits.as_deref(),
+            left.top_logits.as_deref(),
+            right.selected_logits.as_deref(),
+            right.top_logits.as_deref(),
+        ),
         "reference_text_candidate_logits": reference_text_candidate_logits(left, right),
+    })
+}
+
+#[derive(Clone, Debug)]
+struct LogitProbeMatch {
+    token_piece: Option<String>,
+    softmax_probability: Option<f64>,
+    softmax_rank: Option<u64>,
+    present: bool,
+    logit: Option<f64>,
+    source: &'static str,
+}
+
+fn compare_selected_logit_probes(
+    left: Option<&[SelectedLogit]>,
+    left_top: Option<&[TopLogit]>,
+    right: Option<&[SelectedLogit]>,
+    right_top: Option<&[TopLogit]>,
+) -> Value {
+    let Some(left) = left else {
+        return json!({
+            "diagnostic_only": true,
+            "available": false,
+            "left_available": false,
+            "left_top_available": left_top.is_some(),
+            "right_available": right.is_some(),
+            "right_top_available": right_top.is_some(),
+            "matched_count": Value::Null,
+        });
+    };
+    if right.is_none() && right_top.is_none() {
+        return json!({
+            "diagnostic_only": true,
+            "available": false,
+            "left_available": true,
+            "left_top_available": left_top.is_some(),
+            "right_available": false,
+            "right_top_available": false,
+            "matched_count": Value::Null,
+        });
+    }
+
+    let mut rows = Vec::new();
+    for left_probe in left {
+        let right_probe = match_logit_probe(left_probe.token_id, right, right_top);
+        rows.push(json!({
+            "token_id": left_probe.token_id,
+            "left_token_piece": left_probe.token_piece.clone(),
+            "left_source": "selected_logits",
+            "right_token_piece": right_probe.as_ref().and_then(|probe| probe.token_piece.clone()),
+            "right_present": right_probe.as_ref().is_some_and(|probe| probe.present),
+            "right_source": right_probe.as_ref().map(|probe| probe.source),
+            "left_logit": left_probe.logit,
+            "right_logit": right_probe.as_ref().and_then(|probe| probe.logit),
+            "logit_delta_right_minus_left": left_probe.logit.zip(right_probe.as_ref().and_then(|probe| probe.logit)).map(|(left, right)| right - left),
+            "logit_abs_delta": left_probe.logit.zip(right_probe.as_ref().and_then(|probe| probe.logit)).map(|(left, right)| (right - left).abs()),
+            "left_softmax_probability": left_probe.softmax_probability,
+            "right_softmax_probability": right_probe.as_ref().and_then(|probe| probe.softmax_probability),
+            "probability_delta_right_minus_left": left_probe.softmax_probability.zip(right_probe.as_ref().and_then(|probe| probe.softmax_probability)).map(|(left, right)| right - left),
+            "left_softmax_rank": left_probe.softmax_rank,
+            "right_softmax_rank": right_probe.as_ref().and_then(|probe| probe.softmax_rank),
+            "rank_delta_right_minus_left": left_probe.softmax_rank.zip(right_probe.as_ref().and_then(|probe| probe.softmax_rank)).map(|(left, right)| right as i64 - left as i64),
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "available": true,
+        "left_available": true,
+        "left_top_available": left_top.is_some(),
+        "right_available": true,
+        "right_top_available": right_top.is_some(),
+        "left_count": left.len(),
+        "right_count": right.map_or(0, <[SelectedLogit]>::len),
+        "matched_count": rows
+            .iter()
+            .filter(|row| row.pointer("/right_present").and_then(Value::as_bool).unwrap_or(false))
+            .count(),
+        "rows": rows,
+        "not_claim": "selected logit probes localize first-token disagreement but do not prove runtime parity",
+    })
+}
+
+fn match_logit_probe(
+    token_id: i64,
+    selected: Option<&[SelectedLogit]>,
+    top: Option<&[TopLogit]>,
+) -> Option<LogitProbeMatch> {
+    if let Some(probe) =
+        selected.and_then(|items| items.iter().find(|probe| probe.token_id == token_id))
+    {
+        return Some(LogitProbeMatch {
+            token_piece: probe.token_piece.clone(),
+            softmax_probability: probe.softmax_probability,
+            softmax_rank: probe.softmax_rank,
+            present: probe.present,
+            logit: probe.logit,
+            source: "selected_logits",
+        });
+    }
+    top.and_then(|items| items.iter().find(|probe| probe.token_id == token_id)).map(|probe| {
+        LogitProbeMatch {
+            token_piece: probe.token_piece.clone(),
+            softmax_probability: probe.softmax_probability,
+            softmax_rank: probe.softmax_rank,
+            present: true,
+            logit: Some(probe.logit),
+            source: "top_logits",
+        }
     })
 }
 
@@ -1318,6 +1442,93 @@ mod tests {
         assert_eq!(logits[0].softmax_probability, Some(0.25));
         assert_eq!(logits[0].softmax_rank, Some(3));
         assert_eq!(logits[0].logit, 1.5);
+    }
+
+    #[test]
+    fn extracts_reference_instrumentation_sidecar_logits() {
+        let value = json!({
+            "sidecar": {
+                "receipt": {
+                    "top_logits": [
+                        {"token_id": 17, "token_piece": "2", "softmax_probability": 0.66, "softmax_rank": 1, "logit": 12.6}
+                    ],
+                    "probe_logits": [
+                        {"token_id": 58428, "token_piece": ".ps", "softmax_probability": 0.00000003, "softmax_rank": 31945, "logit": -4.2}
+                    ]
+                }
+            }
+        });
+
+        let top = top_logits(&value).expect("top logits");
+        let selected = selected_logits(&value).expect("selected logits");
+
+        assert_eq!(top[0].token_id, 17);
+        assert_eq!(top[0].token_piece.as_deref(), Some("2"));
+        assert_eq!(top[0].softmax_rank, Some(1));
+        assert_eq!(selected[0].token_id, 58428);
+        assert_eq!(selected[0].token_piece.as_deref(), Some(".ps"));
+        assert_eq!(selected[0].softmax_rank, Some(31945));
+        assert_eq!(selected[0].present, true);
+    }
+
+    #[test]
+    fn selected_logit_probe_compare_reports_token_aligned_delta() {
+        let reference = vec![SelectedLogit {
+            token_id: 17,
+            token_piece: Some("2".to_string()),
+            softmax_probability: Some(0.66),
+            softmax_rank: Some(1),
+            present: true,
+            logit: Some(12.6),
+        }];
+        let rust = vec![SelectedLogit {
+            token_id: 17,
+            token_piece: Some("2".to_string()),
+            softmax_probability: Some(0.00006),
+            softmax_rank: Some(1173),
+            present: true,
+            logit: Some(5.1),
+        }];
+
+        let report = compare_selected_logit_probes(Some(&reference), None, Some(&rust), None);
+
+        assert_eq!(report["available"], true);
+        assert_eq!(report["matched_count"], 1);
+        assert_eq!(report["rows"][0]["token_id"], 17);
+        assert_eq!(report["rows"][0]["right_source"], "selected_logits");
+        assert_eq!(report["rows"][0]["left_softmax_rank"], 1);
+        assert_eq!(report["rows"][0]["right_softmax_rank"], 1173);
+        assert_eq!(report["rows"][0]["rank_delta_right_minus_left"], 1172);
+        assert_eq!(report["rows"][0]["logit_abs_delta"], 7.5);
+    }
+
+    #[test]
+    fn selected_logit_probe_compare_falls_back_to_top_logits() {
+        let reference = vec![SelectedLogit {
+            token_id: 58428,
+            token_piece: Some(".ps".to_string()),
+            softmax_probability: Some(0.00000003),
+            softmax_rank: Some(31945),
+            present: true,
+            logit: Some(-4.2),
+        }];
+        let rust_top = vec![TopLogit {
+            token_id: 58428,
+            token_piece: Some(".ps".to_string()),
+            softmax_probability: Some(0.35),
+            softmax_rank: Some(1),
+            logit: 13.7,
+        }];
+
+        let report = compare_selected_logit_probes(Some(&reference), None, None, Some(&rust_top));
+
+        assert_eq!(report["available"], true);
+        assert_eq!(report["matched_count"], 1);
+        assert_eq!(report["rows"][0]["token_id"], 58428);
+        assert_eq!(report["rows"][0]["right_source"], "top_logits");
+        assert_eq!(report["rows"][0]["right_softmax_rank"], 1);
+        assert_eq!(report["rows"][0]["right_present"], true);
+        assert_eq!(report["rows"][0]["logit_abs_delta"], 17.9);
     }
 
     #[test]

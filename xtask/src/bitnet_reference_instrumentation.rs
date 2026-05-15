@@ -367,6 +367,8 @@ fn run_instrumented_reference(args: &ReferenceInstrumentationRunArgs) -> Result<
             "selected_executable": path_to_string(&selected_exe),
             "sidecar": path_to_string(&sidecar),
         },
+        "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
+        "prompt_identity": plan.pointer("/prompt_identity").cloned().unwrap_or(Value::Null),
         "preflight": {
             "reference_root_exists": reference_root.is_dir(),
             "cpp_root_exists": cpp_root.is_dir(),
