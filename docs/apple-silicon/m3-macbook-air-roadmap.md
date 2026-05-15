@@ -112,17 +112,17 @@ thin: proof still belongs to a fresh M4 item with fresh M4 receipts.
 
 `M3MBA-001`, `M3MBA-002`, `M3MBA-003`, `M3MBA-011`, `M3MBA-012`,
 `M3MBA-013`, `M3MBA-014`, `M3MBA-004A`, `M3MBA-004B`, `M3MBA-005A`,
-`M3MBA-005B`, `M3MBA-005C`, and `M3MBA-010` are merged. The lane now has a
-tracker, real machine profile, explicit M3 Air CPU/NEON receipt label, roadmap
-depth, dense harness contract, selected-long-job CI completion posture, M3
-validate bridge, dense Qwen smoke/operator evidence, Microsoft 2B I2_S identity,
-tokenizer authority, reference-output decision, and cache-retention audit.
+`M3MBA-005B`, `M3MBA-005C`, `M3MBA-010`, and `M3MBA-009` are merged. The lane
+now has a tracker, real machine profile, explicit M3 Air CPU/NEON receipt label,
+roadmap depth, dense harness contract, selected-long-job CI completion posture,
+M3 validate bridge, dense Qwen smoke/operator evidence, Microsoft 2B I2_S
+identity, tokenizer authority, reference-output decision, cache-retention audit,
+and dense SLM cross-lane synthesis.
 
-The active stack now starts with the secondary candidate and synthesis surfaces:
-`M3MBA-006` for the smaller 0.7B control candidate, `M3MBA-009` for dense SLM
-cross-lane synthesis, `M3MBA-007` for 3B TL diagnostics, and `M3MBA-008` for
-handoff or no-accepted-artifact closure. Any new large candidate remains
-serialized behind fresh disk preflight and cleanup/retention evidence.
+The active stack now starts with the secondary candidate surfaces: `M3MBA-006`
+for the smaller 0.7B control candidate, `M3MBA-007` for 3B TL diagnostics, and
+`M3MBA-008` for handoff or no-accepted-artifact closure. Any new large candidate
+remains serialized behind fresh disk preflight and cleanup/retention evidence.
 
 The next sequence should stay as small PRs, with each PR either merging evidence
 or naming a blocker:
@@ -130,9 +130,8 @@ or naming a blocker:
 | Stack position | Item | PR shape | Blocks |
 |---:|---|---|---|
 | 1 | `M3MBA-006` | Evaluate the smaller 0.7B control candidate with serialized download, hash, tokenizer, reference-output, and cleanup evidence. | Handoff completeness when Microsoft 2B is blocked, rejected, or needs a smaller control comparison. |
-| 2 | `M3MBA-009` | Compare M3 dense SLM evidence against M4 and CPU receipts. | SLM lane closeout only; no BitNet proof claim. |
-| 3 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence with no I2_S support claim. |
-| 4 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
+| 2 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence with no I2_S support claim. |
+| 3 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
 
 ## 2026-05-13 Tactical Plan
 
