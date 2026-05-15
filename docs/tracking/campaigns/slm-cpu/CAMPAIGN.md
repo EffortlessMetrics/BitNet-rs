@@ -53,6 +53,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-008Y1 | merged | Reference checkpoint capture method merged in #4769; interactive llama.cpp output and top-k-only evidence do not satisfy checkpoint-pack acceptance. |
 | SLM-CPU-008Y | merged | Reference checkpoint artifact merged in #4778; validation localizes the first required-stage drift at `attention.q_proj` without claiming first-token parity or answer quality. |
 | SLM-CPU-008Z | merged | Qwen3 q_proj drift localization merged in #4789; the default-prompt first token matches the reference while checkpoint drift remains bounded to projection arithmetic evidence, without claiming no-thinking token-19 parity or answer quality. |
+| SLM-CPU-008AA | ready | Capture or ingest the exact no-thinking Qwen3 first-token reference/checkpoint artifact before corpus work; default-prompt `<think>` parity is not constrained-answer parity. |
 
 ## Review Policy
 

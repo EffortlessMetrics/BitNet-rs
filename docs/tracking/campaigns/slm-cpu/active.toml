@@ -1065,6 +1065,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-008AA"
+status = "ready"
+branch = "codex/slm-cpu-008aa-no-think-reference"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-008Z"]
+acceptance = "Capture or ingest a known-good Qwen3 no-thinking first-token checkpoint/reference artifact for the verified Qwen3-0.6B Q8_0 model SHA, exact rendered `--prompt-template qwen --no-think` prompt, prompt IDs, greedy settings, strict tokenizer policy, selected CPU backend identity, and fallback=false bitnet-rs comparison. The artifact must distinguish prompt-policy mismatch from logits/shared-transformer-math drift before SLM-CPU-009 corpus work begins. It must not claim Qwen first-token parity unless bitnet-rs and the known-good reference choose the same token for the exact no-thinking prompt, and must not claim answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- run --device cpu --model models/slm/Qwen3-0.6B-Q8_0.gguf --prompt-template qwen --no-think --prompt \"What is 2+2? Answer with only the number.\" --max-new-tokens 1 --temperature 0.0 --greedy --deterministic --strict-loader --strict-tokenizer --logits-dump-steps 1 --logits-topk 10 --assert-greedy --qwen-trace-layer 0 --json-out target/slm-cpu/qwen3-no-think-first-token.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- reference-compare --artifact ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-checkpoint-compare.json --json-out target/slm-cpu/qwen3-no-think-reference-checkpoint-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The default-prompt Qwen3 reference evidence from SLM-CPU-008Z is not sufficient for no-thinking constrained-answer parity.",
+  "The no-thinking Qwen3 first-token lane has an explicit ready item with artifact and validation requirements.",
+]
+must_not_claim = [
+  "Qwen first-token parity is restored.",
+  "Qwen answer quality is proven.",
+  "Qwen3 tiny answer corpus is green.",
+  "Multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-008Y1"
 status = "merged"
 pr = 4769
