@@ -872,6 +872,41 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
 }
 
 #[test]
+fn mac_bitnet_benchmark_help_documents_one_shot_and_fixed_warm_paths() {
+    bitnet()
+        .args(["mac", "bitnet-benchmark", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("one-shot ask"))
+        .stdout(predicate::str::contains("fixed warm"))
+        .stdout(predicate::str::contains("--one-shot-prompt"))
+        .stdout(predicate::str::contains("--model-path"))
+        .stdout(predicate::str::contains("--tokenizer"))
+        .stdout(predicate::str::contains("--json-out"));
+}
+
+#[test]
+fn mac_bitnet_benchmark_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "bitnet-benchmark"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "mac bitnet-benchmark routes the supported Mac local-answer path",
+        ))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_bitnet_benchmark_requires_release_build() {
+    bitnet()
+        .args(["mac", "bitnet-benchmark"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac bitnet-benchmark must be run from a release build"));
+}
+
+#[test]
 fn mac_bitnet_warm_rejects_full_metal_request_before_cache_lookup() {
     bitnet()
         .args(["--device", "apple-m4-metal", "mac", "bitnet-warm"])

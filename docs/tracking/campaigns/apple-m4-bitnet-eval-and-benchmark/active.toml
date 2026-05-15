@@ -164,7 +164,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-004"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-004-benchmark-reports"
 stackable = false
 review_mode = "codex_premerge"
@@ -173,17 +173,23 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EVAL-003"]
 acceptance = "Benchmark Apple M4 BitNet one-shot and fixed-warm paths with accepted artifact/tokenizer authority, recording model load, tokenizer load, prompt tokenize, prefill, TTFT, input tok/s, output tok/s, decode tok/s, total wall, peak memory, timeout boundaries, and p50/p90/p99 summaries without enabling chat or serve."
 commands = [
-  "target/release/bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \"What is 2+2? Answer with only the number.\"",
-  "target/release/bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --max-new-tokens 8",
-  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/<summary>.json --json",
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli mac_receipts_check_accepts_bitnet_benchmark_v1",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_benchmark",
+  "cargo test --locked -p bitnet-cli --test cli_snapshot_tests mac_help",
+  "cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --max-new-tokens 8 --progress --json-out ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-eval-and-benchmark",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-no-panic-family --report-dir target/bitnet/reports",
   "git diff --check",
 ]
 allowed_paths = [
   "crates/bitnet-cli/src/mac.rs",
   "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
   "ci/hardware/apple-m4-mac-mini/**/bitnet-benchmark/**",
   "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
   "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/**",

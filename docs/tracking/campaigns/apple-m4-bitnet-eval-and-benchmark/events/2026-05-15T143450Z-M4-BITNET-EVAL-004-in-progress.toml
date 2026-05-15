@@ -1,0 +1,43 @@
+timestamp = "2026-05-15T14:34:50Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-004"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-004-benchmark-reports"
+summary = "Published the 2026-05-15 Apple M4 BitNet one-shot plus fixed-warm benchmark receipt for the accepted I2_S artifact."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "The benchmark receipt records model load, tokenizer load, prompt tokenize, prefill, TTFT, input/output/decode throughput, total wall time, peak memory, timeout boundary, and p50/p90/p99 summaries.",
+  "The run measured 4 prompts total: 1 one-shot mac ask prompt and 3 fixed warm prompts, 8 generated tokens total, fallback_used=false.",
+  "This does not claim broad BitNet quality, broad Apple Silicon performance, speedup, dense SLM evidence, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon behavior.",
+]
+
+[evidence]
+aggregate_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json"
+one_shot_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-ask-benchmark.json"
+warm_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-bitnet-warm-benchmark.json"
+prompt_count = 4
+generated_tokens = 8
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+ttft_ms_p50 = 10777.0
+ttft_ms_p90 = 12042.0
+output_tok_s_p50 = 0.158
+decode_tok_s_p50 = 1.411
+peak_memory_mb_p50 = 4246.359
+timeout_boundary = "not_reached"
+claim_boundary = "bounded BitNet benchmark receipt only; no broad quality/performance, dense SLM, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claim"
