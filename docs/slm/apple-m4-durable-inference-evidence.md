@@ -15,8 +15,21 @@ dashboard can compare real drift.
 
 Dense SLM stability also needs a longer resident benchmark profile. The v2
 benchmark contract covered `resident_25` and `resident_50`; the durable refresh
-adds `resident_100` as a bounded local/advisory profile. Adding the profile does
-not by itself claim a new 100-prompt result.
+adds `resident_100` as a bounded local/advisory profile.
+
+`M4-DURABLE-002` records the first live dense SLM refresh with `resident_100`.
+The new summaries live under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/<model-id>/summary.json
+```
+
+The refresh validates as `apple_m4_slm_benchmark_v2`, uses
+`apple-m4-cpu-neon`, records `fallback_used=false`, and keeps dense SLM evidence
+separate from BitNet evidence. Strict `bitnet mac regression` comparisons
+against the 2026-05-15 baseline intentionally stop with `profiles_required
+mismatch` because the earlier baseline did not include `resident_100`; the
+timestamped refresh therefore starts a new profile-set baseline.
 
 ## Dense SLM Refresh Contract
 
@@ -60,6 +73,33 @@ bitnet mac regression <new-summary.json> --baseline <previous-summary.json>
 
 Do not put live model downloads, long resident sessions, or hardware timing runs
 in generic required PR CI. Keep them local, advisory, scheduled, or release-only.
+
+## Dense Refresh Results
+
+The 2026-05-15T1845Z dense refresh ran all supported dense M4 model IDs across
+the full nine-profile set. Each summary records 201 prompts.
+
+| Model | Generated | Overall TTFT p50 | Overall TTFT p99 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 |
+|---|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 2382 | 2150.0 ms | 262573.0 ms | 21.701 | 1.708 | 15.652 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2543 | 2150.0 ms | 262456.0 ms | 21.698 | 3.079 | 15.653 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 2262 | 8184.0 ms | 822688.0 ms | 5.773 | 0.357 | 4.808 |
+
+The long-context tail remains the main operator concern:
+
+| Model | `context_1k` TTFT p50 | `context_4k` TTFT p50 | `context_4k` input tok/s p50 | `context_4k` decode tok/s p50 |
+|---|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 52798.0 ms | 262608.0 ms | 15.526 | 9.958 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 52772.0 ms | 262519.0 ms | 15.529 | 9.951 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 182985.0 ms | 822691.0 ms | 4.954 | 3.572 |
+
+The new `resident_100` profile gives a longer warm-session stability sample:
+
+| Model | Generated | TTFT p50 | TTFT p99 | Decode tok/s p50 | Output tok/s p50 | Peak MB | Memory drift MB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 860 | 2150.0 ms | 2246.0 ms | 15.650 | 1.707 | 4156.750 | 1.875 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 928 | 2151.0 ms | 2246.0 ms | 15.650 | 3.078 | 4159.609 | 0.968 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 804 | 8078.0 ms | 8966.0 ms | 4.780 | 0.352 | 8395.047 | 0.000 |
 
 ## Claim Boundary
 
