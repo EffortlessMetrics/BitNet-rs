@@ -354,6 +354,40 @@ fn resolve_simple_generation_device(
     }
 }
 
+fn qk256_raw_tensors_from_simple_loader(
+    i2s_qk256: impl IntoIterator<Item = (String, bitnet_models::quant::i2s_qk256::I2SQk256NoScale)>,
+) -> Result<std::collections::HashMap<String, candle_core::Tensor>> {
+    let mut raw_tensors = std::collections::HashMap::new();
+    for (name, qk256) in i2s_qk256 {
+        let expected_bytes = qk256.rows * qk256.row_stride_bytes;
+        let mut packed = qk256.qs;
+        if packed.len() != expected_bytes {
+            tracing::warn!(
+                "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
+                name,
+                packed.len(),
+                expected_bytes
+            );
+            packed.resize(expected_bytes, 0);
+        }
+
+        let raw_tensor = candle_core::Tensor::from_raw_buffer(
+            &packed,
+            DType::U8,
+            &[qk256.rows, qk256.row_stride_bytes],
+            &candle_core::Device::Cpu,
+        )
+        .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
+        let scale_tensor =
+            candle_core::Tensor::from_slice(&[qk256.scale], &[1], &candle_core::Device::Cpu)
+                .with_context(|| format!("Failed to build QK256 scale tensor for {name}"))?;
+
+        raw_tensors.insert(format!("{}.qk256_qs", name), raw_tensor);
+        raw_tensors.insert(format!("{}.qk256_scale", name), scale_tensor);
+    }
+    Ok(raw_tensors)
+}
+
 #[cfg(test)]
 mod proof_summary_tests {
     use super::*;
@@ -483,6 +517,27 @@ mod proof_summary_tests {
             Some(Commands::Run { strict_backend, .. }) => assert!(strict_backend),
             _ => panic!("expected run command"),
         }
+    }
+
+    #[test]
+    fn simple_loader_qk256_raw_tensors_preserve_trailer_scale() -> Result<()> {
+        let qk256 = bitnet_models::quant::i2s_qk256::I2SQk256NoScale::new_with_scale(
+            1,
+            256,
+            vec![0x55; 68],
+            1.25,
+        )?;
+
+        let raw_tensors =
+            qk256_raw_tensors_from_simple_loader([("blk.0.ffn_gate.weight".to_string(), qk256)])?;
+        let qs = raw_tensors.get("blk.0.ffn_gate.weight.qk256_qs").expect("qk256 raw tensor");
+        let scale =
+            raw_tensors.get("blk.0.ffn_gate.weight.qk256_scale").expect("qk256 scale tensor");
+
+        assert_eq!(qs.dims(), &[1, 64]);
+        assert_eq!(qs.to_vec2::<u8>()?, vec![vec![0x55; 64]]);
+        assert_eq!(scale.to_vec1::<f32>()?, vec![1.25]);
+        Ok(())
     }
 
     #[test]
@@ -2030,30 +2085,7 @@ async fn run_simple_generation(
             .context("Mock loader also failed")?;
             loader_mode = load_result.loader_mode.as_str();
             warn!("GGUF loader mode: {}", loader_mode);
-            let mut raw_tensors = std::collections::HashMap::new();
-            for (name, qk256) in load_result.i2s_qk256 {
-                let expected_bytes = qk256.rows * qk256.row_stride_bytes;
-                let mut packed = qk256.qs;
-                if packed.len() != expected_bytes {
-                    tracing::warn!(
-                        "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
-                        name,
-                        packed.len(),
-                        expected_bytes
-                    );
-                    packed.resize(expected_bytes, 0);
-                }
-
-                let raw_tensor = candle_core::Tensor::from_raw_buffer(
-                    &packed,
-                    DType::U8,
-                    &[qk256.rows, qk256.row_stride_bytes],
-                    &candle_core::Device::Cpu,
-                )
-                .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
-
-                raw_tensors.insert(format!("{}.qk256_qs", name), raw_tensor);
-            }
+            let raw_tensors = qk256_raw_tensors_from_simple_loader(load_result.i2s_qk256)?;
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),
                 load_result.tensors,
