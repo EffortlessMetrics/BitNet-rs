@@ -1,0 +1,26 @@
+timestamp = "2026-05-15T13:53:36Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-003"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4924
+head_sha = "02611887f1105c41e3012b1f6731eddec7e66ff7"
+merge_sha = "54e8f68d1b29ae90c1699961072901d6c727f3d9"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-003-m4-eval-reports"
+summary = "Closed M4-BITNET-EVAL-003 after PR #4924 published the bounded Apple M4 BitNet eval receipts."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus-runs/",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "The merged receipt records 100 cases, 75 passed, 25 failed, 0 timeout, 0 not_run, 765 generated tokens, and fallback_used=false.",
+  "This closeout keeps the claim boundary scoped to the accepted BitNet I2_S artifact and bounded corpus only.",
+  "The next campaign item is M4-BITNET-EVAL-004 for one-shot and fixed-warm benchmark reports; chat, serve, and full Metal remain disabled.",
+]
