@@ -1,6 +1,6 @@
 id = "apple-m4-bitnet-eval-and-benchmark"
 title = "Apple M4 BitNet eval and benchmark"
-status = "active"
+status = "complete"
 
 objective = "Move Apple M4 BitNet from bounded one-shot and fixed-warm proof into repeatable eval and benchmark reporting with accepted artifact/tokenizer authority, reference-vs-Rust comparison fields, one-shot and warm timing envelopes, and regression dashboards without enabling chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims."
 
@@ -214,7 +214,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-005"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-005-regression-dashboard"
 stackable = false
 review_mode = "codex_premerge"

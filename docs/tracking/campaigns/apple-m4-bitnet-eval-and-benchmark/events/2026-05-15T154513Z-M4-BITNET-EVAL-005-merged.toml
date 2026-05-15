@@ -1,0 +1,37 @@
+timestamp = "2026-05-15T15:45:13Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-005"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4942
+head_sha = "fb27740cccb41d4777cfec52d3435c87a4d30967"
+merge_sha = "c0aef415ea54f2fa7dc380cf6f61797db7597d98"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-005-regression-dashboard"
+summary = "Closed M4-BITNET-EVAL-005 after PR #4942 wired BitNet eval and benchmark report comparison into Apple M4 advisory regression dashboards."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "The merged regression path compares BitNet eval quality summaries, task-family pass/fail counts, strict scoring totals, and reference-vs-Rust summary counts.",
+  "The merged benchmark path compares p50/p90/p99 load, tokenization, prefill, TTFT, input/output/decode throughput, decode time, total wall time, peak memory, memory drift, process peak drift, and timeout boundaries.",
+  "Context matching requires exact accepted model/tokenizer/backend/prompt/corpus identity and preserves no-chat, no-serve, no-Metal, no-QK256, no-Neural-Engine, no-MPSGraph, no-MacBook, no-speedup, and no-broad-Apple-Silicon boundaries.",
+  "Generic PR CI remains model-free; the dashboard wiring is for receipt comparison in advisory, nightly, scheduled, or release-refresh lanes.",
+]
+
+[evidence]
+eval_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json"
+benchmark_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json"
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+generic_pr_ci_model_free = true
+next_item = "none"
+claim_boundary = "receipt comparison only; no new runtime, model support, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claim"

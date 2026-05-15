@@ -42,7 +42,7 @@
 | apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-002 | M4-BITNET-EVAL-001 | merged |
 | apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-003 | M4-BITNET-EVAL-002 | merged |
 | apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-004 | M4-BITNET-EVAL-003 | merged |
-| apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-005 | M4-BITNET-EVAL-003, M4-BITNET-EVAL-004 | in_progress |
+| apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-005 | M4-BITNET-EVAL-003, M4-BITNET-EVAL-004 | merged |
 | apple-m4-continuity | M4-CONT-002 | M4-CONT-001 | merged |
 | apple-m4-continuity | M4-CONT-003 | M4-CONT-002 | merged |
 | apple-m4-continuity | M4-CONT-004 | M4-CONT-003 | merged |
