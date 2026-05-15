@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T00:40:12Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008Z"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4789
+merge_sha = "a478272489b59b7c608f9986f2515052409a3e1d"
+branch = "codex/slm-cpu-008z-qwen3-qproj-drift"
+summary = "Merged #4789 with Qwen3 q_proj drift localization artifacts for the i5-8250U SLM lane."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4789",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-qproj-drift-diagnosis.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-qproj-drift-refresh-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-qproj-drift-refresh-validation.json",
+]
+
+notes = [
+  "The diagnostic artifact reports that the default-prompt first token matches the Candle Qwen3 reference, while checkpoint comparison still identifies attention.q_proj as the first required-stage drift.",
+  "The likely fault domain is standard quantized projection arithmetic: bitnet-rs uses eager f32-dequantized dense-qwen CPU reference arithmetic while the known-good reference uses Candle quantized_qwen3 QMatMul.",
+  "This merge does not claim no-thinking token 19 / 4 parity, Qwen answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
