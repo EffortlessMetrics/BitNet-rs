@@ -44,6 +44,8 @@ cases:
       contains_any:
         - "red blue green"
         - "Red blue green"
+        - "Red, blue, green"
+        - "Red, blue, green."
 
   - id: say_ok
     question: "Say exactly: OK"

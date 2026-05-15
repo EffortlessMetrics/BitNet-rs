@@ -57,3 +57,24 @@ ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-scoring-diagnosis.jso
 
 `SLM-CPU-009` should start from this scoring rule and then expand to the full
 tiny corpus one case at a time.
+
+## SLM-CPU-009 corpus evidence
+
+The first full strict i5-8250U corpus run under the selected no-thinking policy
+is recorded at:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus.json
+```
+
+That artifact currently passes four of five cases:
+
+- `capital_france`
+- `repeat_colors`
+- `say_ok`
+- `yes_no_water`
+
+`math_2_plus_2` remains a real content miss: the model generates token `17`
+(`2`) followed by EOS, so the case keeps `gate_exact_trimmed` in
+`failed_rules`. This artifact is useful evidence for SLM-CPU-009, but it does
+not prove the full tiny corpus is green.
