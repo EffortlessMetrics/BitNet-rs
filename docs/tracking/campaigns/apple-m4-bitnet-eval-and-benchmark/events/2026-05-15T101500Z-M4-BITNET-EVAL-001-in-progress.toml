@@ -1,0 +1,22 @@
+timestamp = "2026-05-15T10:15:00Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-001-campaign-corpus"
+summary = "Started the M4 BitNet eval and benchmark campaign with a parser/scoring-only seeded corpus slice."
+
+artifacts = [
+  "ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "This slice is dry-run only: it validates corpus shape and deterministic scoring metadata without live model execution.",
+  "It records the accepted Microsoft I2_S GGUF and external tokenizer authority for later M4 BitNet eval gates.",
+  "It does not claim runtime BitNet accuracy, BitNet performance, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon support.",
+]
