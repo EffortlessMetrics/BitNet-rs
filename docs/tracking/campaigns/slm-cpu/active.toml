@@ -1066,8 +1066,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008AA"
-status = "ready"
-branch = "codex/slm-cpu-008aa-no-think-reference"
+status = "merged"
+pr = 4817
+merge_sha = "083b536bae306f6c886ceafdb1f3094e7e8ba517"
+branch = "codex/slm-cpu-008aa-no-think-artifact"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -1098,10 +1100,58 @@ forbidden_paths = [
 ]
 may_claim = [
   "The default-prompt Qwen3 reference evidence from SLM-CPU-008Z is not sufficient for no-thinking constrained-answer parity.",
-  "The no-thinking Qwen3 first-token lane has an explicit ready item with artifact and validation requirements.",
+  "The exact no-thinking rendered prompt has a known-good Candle reference artifact.",
+  "For that exact no-thinking prompt, bitnet-rs and the Candle reference both choose token 17 / '2'.",
+  "Numeric top-k logits still differ, so strict logits parity is not proven.",
+  "The older token 19 / '4' target is not the known-good first token for the exact no-thinking rendered prompt captured in this item.",
 ]
 must_not_claim = [
-  "Qwen first-token parity is restored.",
+  "Strict Qwen first-step logits parity is restored.",
+  "Qwen answer quality is proven.",
+  "Qwen3 tiny answer corpus is green.",
+  "Multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-008AB"
+status = "ready"
+branch = "codex/slm-cpu-008ab-constrained-answer-target"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-008AA"]
+acceptance = "Use the SLM-CPU-008AA no-thinking reference artifact to calibrate the constrained-answer target before SLM-CPU-009 corpus work begins. The slice must either produce a known-good reference prompt policy where the verified Qwen3-0.6B Q8_0 model emits the expected constrained answer for the 2+2 seed, or explicitly record that the current first-token no-thinking prompt is unsuitable because both Candle and bitnet-rs choose token 17 / '2'. It must preserve prompt IDs, rendered prompt, generated IDs, decoded text, selected backend/kernel identity, strict tokenizer policy, and fallback=false evidence. It must not claim tiny corpus success, broad answer quality, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- reference-compare --artifact ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-checkpoint-compare.json --json-out target/slm-cpu/qwen3-no-think-reference-checkpoint-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The exact no-thinking 2+2 first-token seed currently chooses token 17 / '2' in both Candle and bitnet-rs.",
+  "SLM-CPU-009 remains blocked until the constrained-answer target is calibrated against a known-good reference.",
+]
+must_not_claim = [
   "Qwen answer quality is proven.",
   "Qwen3 tiny answer corpus is green.",
   "Multi-token stability is proven.",
