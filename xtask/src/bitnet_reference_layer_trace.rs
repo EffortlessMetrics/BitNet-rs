@@ -83,6 +83,7 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_scores_softmax_head_lanes", "attn_scores_softmax_head"),
     ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
     ("attention_value_cache_kv_head_live", "attention_v_cache_kv_head"),
+    ("attention_value_cache_f16_roundtrip", "attention_v_cache_f16_roundtrip_kv_head"),
     ("attention_value_mix_head_lanes", "attention_value_mix_head"),
     ("attention_value_mix_merged", "attention_value_mix_merged"),
     ("attention_value_mix", "attention_value_mix"),
@@ -2010,11 +2011,26 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("v_kv_head2_live", "attention_v_cache_kv_head2_live_ref_layout"),
         ("v_kv_head3_live", "attention_v_cache_kv_head3_live_ref_layout"),
         ("v_kv_head4_live", "attention_v_cache_kv_head4_live_ref_layout"),
-        ("v_cache_rust_layout_head0_live", "attention_v_cache_kv_head0_live_ref_layout"),
-        ("v_cache_rust_layout_head1_live", "attention_v_cache_kv_head1_live_ref_layout"),
-        ("v_cache_rust_layout_head2_live", "attention_v_cache_kv_head2_live_ref_layout"),
-        ("v_cache_rust_layout_head3_live", "attention_v_cache_kv_head3_live_ref_layout"),
-        ("v_cache_rust_layout_head4_live", "attention_v_cache_kv_head4_live_ref_layout"),
+        (
+            "v_cache_rust_layout_head0_live",
+            "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout",
+        ),
+        (
+            "v_cache_rust_layout_head1_live",
+            "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout",
+        ),
+        (
+            "v_cache_rust_layout_head2_live",
+            "attention_v_cache_f16_roundtrip_kv_head2_live_ref_layout",
+        ),
+        (
+            "v_cache_rust_layout_head3_live",
+            "attention_v_cache_f16_roundtrip_kv_head3_live_ref_layout",
+        ),
+        (
+            "v_cache_rust_layout_head4_live",
+            "attention_v_cache_f16_roundtrip_kv_head4_live_ref_layout",
+        ),
         ("kqv", "attention_value_mix_head0"),
         ("kqv_head0", "attention_value_mix_head0"),
         ("kqv_head1", "attention_value_mix_head1"),
@@ -2096,7 +2112,7 @@ fn compare_reference_to_rust(
         if let (Some(reference), Some(rust)) = (reference, rust) {
             compared_count += 1;
             let element_count_match = reference.nelements == rust.num_elements as u64;
-            let dtype_match = reference.dtype.eq_ignore_ascii_case(&rust.dtype);
+            let dtype_match = trace_dtype_compatible(&reference.dtype, &rust.dtype);
             rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
             let rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
             if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
@@ -2156,6 +2172,7 @@ fn compare_reference_to_rust(
         "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
         "attention_value_cache_kv_head_best_matches": attention_value_cache_kv_head_best_matches(reference_records, rust_records),
         "attention_value_cache_rust_layout_best_matches": attention_value_cache_rust_layout_best_matches(reference_records, rust_records),
+        "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
     })
@@ -2181,6 +2198,17 @@ fn attention_value_mix_head_lane_best_matches(
         "attention_value_mix_head",
         "head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, selected attention, value mix residency, or any support claim",
     )
+}
+
+fn trace_dtype_compatible(reference_dtype: &str, rust_dtype: &str) -> bool {
+    normalized_trace_dtype(reference_dtype) == normalized_trace_dtype(rust_dtype)
+}
+
+fn normalized_trace_dtype(dtype: &str) -> String {
+    if dtype.eq_ignore_ascii_case("f32_from_f16") {
+        return "f32".to_string();
+    }
+    dtype.to_ascii_lowercase()
 }
 
 fn attention_score_raw_head_lane_best_matches(
@@ -2232,6 +2260,19 @@ fn attention_value_cache_rust_layout_best_matches(
         "v_cache_rust_layout_head",
         "attention_v_cache_kv_head",
         "value-cache Rust-layout best matches are diagnostic layout-transform evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
+    )
+}
+
+fn attention_value_cache_f16_roundtrip_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    head_lane_best_matches(
+        reference_records,
+        rust_records,
+        "v_cache_rust_layout_head",
+        "attention_v_cache_f16_roundtrip_kv_head",
+        "value-cache F16-roundtrip best matches are diagnostic dtype-transform evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
     )
 }
 
@@ -2678,8 +2719,8 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
     for kv_head in 0..5 {
         stage_mapping.push(json!({
             "reference": format!("v_cache_rust_layout_head{kv_head}_live"),
-            "rust": format!("attention_v_cache_kv_head{kv_head}_live_ref_layout"),
-            "scope": format!("layer0 live value-cache matrix KV head{kv_head} transposed into Rust diagnostic layout"),
+            "rust": format!("attention_v_cache_f16_roundtrip_kv_head{kv_head}_live_ref_layout"),
+            "scope": format!("layer0 live value-cache matrix KV head{kv_head} transposed into Rust diagnostic layout after Rust F16 roundtrip"),
         }));
     }
     for head in 0..20 {
@@ -3589,7 +3630,7 @@ mod tests {
         assert!(stage_mapping.iter().any(|entry| {
             entry.pointer("/reference") == Some(&json!("v_cache_rust_layout_head4_live"))
                 && entry.pointer("/rust")
-                    == Some(&json!("attention_v_cache_kv_head4_live_ref_layout"))
+                    == Some(&json!("attention_v_cache_f16_roundtrip_kv_head4_live_ref_layout"))
         }));
     }
 
@@ -4374,6 +4415,27 @@ mod tests {
             "attention_v_cache_kv_head2_live_ref_layout".to_string(),
             test_rust_trace_record("attention_v_cache_kv_head2_live_ref_layout", vec![9.0, 9.0]),
         );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout".to_string(),
+            test_rust_trace_record(
+                "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout",
+                vec![1.0, 2.0],
+            ),
+        );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout".to_string(),
+            test_rust_trace_record(
+                "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout",
+                vec![0.0, 0.0],
+            ),
+        );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head2_live_ref_layout".to_string(),
+            test_rust_trace_record(
+                "attention_v_cache_f16_roundtrip_kv_head2_live_ref_layout",
+                vec![9.0, 9.0],
+            ),
+        );
 
         let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
         let value_cache = report.pointer("/attention_value_cache_kv_head_best_matches").unwrap();
@@ -4404,6 +4466,22 @@ mod tests {
         assert_eq!(rust_layout.pointer("/identity_best_count"), Some(&json!(1)));
         assert_eq!(rust_layout.pointer("/non_identity_best_count"), Some(&json!(1)));
         assert_eq!(rust_layout.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
+
+        let f16_roundtrip =
+            report.pointer("/attention_value_cache_f16_roundtrip_best_matches").unwrap();
+        assert_eq!(f16_roundtrip.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(f16_roundtrip.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            f16_roundtrip.pointer("/reference_stage_prefix"),
+            Some(&json!("v_cache_rust_layout_head"))
+        );
+        assert_eq!(
+            f16_roundtrip.pointer("/rust_stage_prefix"),
+            Some(&json!("attention_v_cache_f16_roundtrip_kv_head"))
+        );
+        assert_eq!(f16_roundtrip.pointer("/identity_best_count"), Some(&json!(1)));
+        assert_eq!(f16_roundtrip.pointer("/non_identity_best_count"), Some(&json!(1)));
+        assert_eq!(f16_roundtrip.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
     }
 
     #[test]
@@ -4447,8 +4525,9 @@ mod tests {
     }
 
     #[test]
-    fn compare_maps_value_cache_rust_layout_as_material_evidence() {
+    fn compare_maps_value_cache_rust_layout_to_f16_roundtrip_as_material_evidence() {
         let reference = ReferenceTraceRecord {
+            dtype: "f32_from_f16".to_string(),
             shape: vec![128, 18, 1, 1],
             full_shape: vec![128, 18, 1, 1],
             nelements: 128 * 18,
@@ -4458,9 +4537,10 @@ mod tests {
         };
         let mut rust_records = BTreeMap::new();
         rust_records.insert(
-            "attention_v_cache_kv_head3_live_ref_layout".to_string(),
+            "attention_v_cache_f16_roundtrip_kv_head3_live_ref_layout".to_string(),
             RustTraceRecord {
-                name: "t17/blk0/attention_v_cache_kv_head3_live_ref_layout".to_string(),
+                name: "t17/blk0/attention_v_cache_f16_roundtrip_kv_head3_live_ref_layout"
+                    .to_string(),
                 shape: vec![128, 18],
                 dtype: "F32".to_string(),
                 blake3: "abc".to_string(),
@@ -4469,14 +4549,17 @@ mod tests {
                 first_values: vec![0.25; 32],
                 seq: Some(17),
                 layer: Some(0),
-                stage: Some("attention_v_cache_kv_head3_live_ref_layout".to_string()),
+                stage: Some("attention_v_cache_f16_roundtrip_kv_head3_live_ref_layout".to_string()),
             },
         );
 
         let report = compare_reference_to_rust(
             &[reference],
             &rust_records,
-            &[("v_cache_rust_layout_head3_live", "attention_v_cache_kv_head3_live_ref_layout")],
+            &[(
+                "v_cache_rust_layout_head3_live",
+                "attention_v_cache_f16_roundtrip_kv_head3_live_ref_layout",
+            )],
         );
 
         assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(0)));
@@ -4485,6 +4568,13 @@ mod tests {
         assert!(report.pointer("/first_scope_mismatch").unwrap().is_null());
         assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
         assert_eq!(report.pointer("/stages/0/first_values_delta/max_abs_delta"), Some(&json!(0.0)));
+    }
+
+    #[test]
+    fn compare_treats_reference_f32_from_f16_as_rust_f32() {
+        assert!(trace_dtype_compatible("f32_from_f16", "F32"));
+        assert!(trace_dtype_compatible("f32", "F32"));
+        assert!(!trace_dtype_compatible("f16", "F32"));
     }
 
     #[test]

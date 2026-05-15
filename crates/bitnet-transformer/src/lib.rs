@@ -586,6 +586,20 @@ impl MultiHeadAttention {
                 );
                 let stage = format!("attention_v_cache_kv_head{kv_head_idx}_live_ref_layout");
                 trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
+
+                let kv_live_f16_roundtrip = kv_live.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_v_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout"
+                );
+                let stage =
+                    format!("attention_v_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &kv_live_f16_roundtrip,
+                    trace_seq,
+                    Some(0),
+                    &stage,
+                )?;
             }
             let head0_ref_layout =
                 v_expanded.narrow(1, 0, 1)?.reshape(&[t_k, self.head_dim])?.transpose(0, 1)?;
