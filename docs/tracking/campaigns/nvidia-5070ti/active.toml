@@ -2323,7 +2323,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-003"
-status = "proposed"
+status = "in_progress"
 branch = "model/cuda-qwen3-0_6b-all-layer-plan"
 stackable = false
 review_mode = "codex_premerge"

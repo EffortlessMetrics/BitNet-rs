@@ -285,7 +285,7 @@
 | nvidia-5070ti | CUDA-DENSE-051 | CUDA-DENSE-050 | merged |
 | nvidia-5070ti | CUDA-MODEL-001 | CUDA-UX-010 | merged |
 | nvidia-5070ti | CUDA-MODEL-002 | CUDA-MODEL-001 | merged |
-| nvidia-5070ti | CUDA-MODEL-003 | CUDA-MODEL-002 | proposed |
+| nvidia-5070ti | CUDA-MODEL-003 | CUDA-MODEL-002 | in_progress |
 | nvidia-5070ti | CUDA-MODEL-004 | CUDA-MODEL-003 | proposed |
 | nvidia-5070ti | CUDA-MODEL-005 | CUDA-MODEL-004 | proposed |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
