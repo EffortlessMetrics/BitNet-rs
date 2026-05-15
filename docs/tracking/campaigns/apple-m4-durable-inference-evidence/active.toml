@@ -24,13 +24,15 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-DURABLE-001"
-status = "ready"
+status = "merged"
 branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-001-resident-100-profile"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 4973
+merge_sha = "2751415ed4366f28fa2a399cefbaddcb0d6d5eeb"
 acceptance = "Add `resident_100` to the dense Apple M4 SLM benchmark v2 profile contract, CLI parser, receipt validator allowlist, tests, and operator docs without claiming that a fresh 100-prompt live M4 run has been recorded."
 commands = [
   "cargo fmt --all -- --check",
