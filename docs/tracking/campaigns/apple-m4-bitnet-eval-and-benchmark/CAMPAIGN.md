@@ -56,7 +56,7 @@ or broad BitNet quality.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-BITNET-EVAL-001 | merged | PR #4895 defined the campaign and added a 100-case deterministic BitNet corpus that dry-runs through parser/scoring only. |
-| M4-BITNET-EVAL-002 | in_progress | Add BitNet eval/report schema and reference-vs-Rust comparison fields. |
+| M4-BITNET-EVAL-002 | merged | PR #4899 added BitNet eval/report schema and reference-vs-Rust comparison fields; PR #4904 fixed the no-panic policy follow-up. |
 | M4-BITNET-EVAL-003 | proposed | Run and publish M4 BitNet seeded eval reports for the accepted artifact. |
 | M4-BITNET-EVAL-004 | proposed | Publish one-shot and fixed-warm M4 BitNet benchmark reports. |
 | M4-BITNET-EVAL-005 | proposed | Wire BitNet eval and benchmark reports into advisory/nightly regression dashboards. |

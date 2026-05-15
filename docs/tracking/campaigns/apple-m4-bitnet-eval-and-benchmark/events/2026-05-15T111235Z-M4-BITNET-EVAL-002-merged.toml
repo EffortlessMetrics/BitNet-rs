@@ -1,0 +1,26 @@
+timestamp = "2026-05-15T11:12:35Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-002"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-002-report-schema"
+pr = 4899
+head_sha = "3c05ad62531830a3d043766f9e8091c8cabaafb0"
+merge_sha = "3af64682eea0039164e0fe48c2df7ef5b6b5f575"
+summary = "Marked M4-BITNET-EVAL-002 merged after BitNet eval/report schema support landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4899",
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4904",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+]
+
+notes = [
+  "The merged schema records task-family summaries, timeout/failure taxonomy, accepted model/tokenizer/prompt authority, generated text/token IDs when present, backend/runtime/fallback identity, and bitnet_reference_vs_rust_v1 comparison fields.",
+  "PR #4904 fixed the no-panic policy follow-up for the new CLI test after PR #4899 merged.",
+  "This is schema and dry-run support only: it does not claim a full M4 BitNet eval run, runtime BitNet accuracy, BitNet performance, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon support.",
+]
