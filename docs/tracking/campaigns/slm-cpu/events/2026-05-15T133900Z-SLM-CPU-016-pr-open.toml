@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T13:39:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-016"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 4922
+branch = "codex/slm-cpu-016-kaby-operator-profile"
+head_sha = "f450f5f56b97a8f0c75e92d647512210e6b9adbd"
+
+summary = "Opened #4922 with SLM-CPU-016 warm-session host-context sampling for the Kaby Lake operator profile."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4922",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/slm/SLM_CPU_QWEN3_WARM_SESSION.md",
+]
+
+notes = [
+  "CPU SLM warm-session receipts now sample process resident/virtual memory with sysinfo and storage/free-space context for model and receipt paths where available.",
+  "Thermal and power fields remain explicit unavailable fields until a host-specific sampler exists.",
+  "No sustained throughput, Q4/Q5, second model, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
