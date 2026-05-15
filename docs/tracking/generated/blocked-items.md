@@ -56,7 +56,7 @@
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | M4-SLM-REG-004 | merged |
 | apple-m4-inference-ops | M4-INF-OPS-002 | M4-INF-OPS-001 | merged |
 | apple-m4-inference-ops | M4-INF-OPS-003 | M4-INF-OPS-002 | merged |
-| apple-m4-inference-ops | M4-INF-OPS-004 | M4-INF-OPS-003 | in_progress |
+| apple-m4-inference-ops | M4-INF-OPS-004 | M4-INF-OPS-003 | merged |
 | apple-m4-local-answer | M4-QA-MODEL-001 | M4-QA-ROOT-001 | merged |
 | apple-m4-local-answer | M4-QA-MODEL-002 | M4-QA-MODEL-001 | merged |
 | apple-m4-local-answer | M4-QA-002 | M4-QA-001 | merged |

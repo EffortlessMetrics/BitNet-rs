@@ -1,6 +1,6 @@
 id = "apple-m4-inference-ops"
 title = "Apple M4 inference ops"
-status = "active"
+status = "complete"
 
 objective = "Turn the completed Apple M4 dense SLM and BitNet proof surfaces into a durable operator layer: status, report inventory, advisory refresh, regression dashboarding, disk/cache posture, and an operator envelope v2 with explicit claim boundaries."
 
@@ -152,13 +152,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-INF-OPS-004"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-004-operator-envelope-v2"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-INF-OPS-003"]
+pr = 4969
+merge_sha = "217e1439fabfa1126badc0850e474aba84bc11e5"
 acceptance = "Publish operator envelope v2 mapping supported M4 commands to receipt requirements, gates, report families, and unsupported claim boundaries."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign generate",

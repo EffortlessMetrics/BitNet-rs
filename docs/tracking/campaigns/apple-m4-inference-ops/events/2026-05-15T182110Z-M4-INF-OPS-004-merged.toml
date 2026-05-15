@@ -1,0 +1,30 @@
+timestamp = "2026-05-15T18:21:10Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-004"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-004-operator-envelope-v2"
+pr = 4969
+merge_sha = "217e1439fabfa1126badc0850e474aba84bc11e5"
+summary = "Merged Apple M4 operator envelope v2."
+
+artifacts = [
+  "docs/slm/apple-m4-operator-envelope-v2.md",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "PR #4969 published the command-to-receipt operator envelope v2.",
+  "All apple-m4-inference-ops work items are now merged.",
+  "This is docs/tracking only and did not enable BitNet chat, BitNet serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claims.",
+]
+
+[evidence]
+artifact = "docs/slm/apple-m4-operator-envelope-v2.md"
+next_item = "none"
+claim_boundary = "operator envelope only; no runtime, model, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"
