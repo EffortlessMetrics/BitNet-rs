@@ -1,0 +1,514 @@
+{
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "inference_result",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_007.json",
+  "counts": {
+    "n_kv": 26,
+    "n_tensors": 291,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "dense_slm": {
+    "architecture": "qwen2",
+    "claim_scope": "strict dense SLM CPU answer smoke only",
+    "execution_phase": "decode",
+    "kernel_family": "dense_qwen",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q4_k_m",
+    "layout_source": "gguf_dense_q4_k_m_reference",
+    "model_family": "qwen",
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q4_K_M"
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 7,
+    "phase": "decode",
+    "prompt_tokens": 45,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "dense_slm_layers_on_cpu": null,
+    "dense_slm_layers_total": null,
+    "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": true,
+    "family": "dense_qwen",
+    "implementation": "cpu-reference",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q4_k_m"
+  },
+  "latency": {
+    "cmd_to_first_ms": 3692,
+    "decode_first_ms": 3692,
+    "total_ms": 4368
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata"
+  },
+  "logits_dump": null,
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 151936,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": null,
+    "observed_logits_vector_length": null,
+    "observed_logits_vector_length_source": "not_available"
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "model": {
+    "architecture": "qwen2",
+    "context_length": 32768,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "output.weight",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q4_k_m/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "quant_format": "Q4_K_M",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "tie_word_embeddings": false,
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 7,
+        "max_ms": 0.019,
+        "mean_ms": 0.006,
+        "min_ms": 0.002,
+        "p50_ms": 0.003,
+        "p95_ms": 0.019,
+        "total_ms": 0.039
+      },
+      "first_token_decode_ms": 139.785,
+      "forward_ms": {
+        "count": 7,
+        "max_ms": 91.376,
+        "mean_ms": 83.602,
+        "min_ms": 80.185,
+        "p50_ms": 80.341,
+        "p95_ms": 91.376,
+        "total_ms": 585.213
+      },
+      "generated_tokens": 7,
+      "logits_ms": {
+        "count": 7,
+        "max_ms": 47.663,
+        "mean_ms": 32.475,
+        "min_ms": 29.573,
+        "p50_ms": 29.606,
+        "p95_ms": 47.663,
+        "total_ms": 227.327
+      },
+      "per_token_ms": {
+        "count": 7,
+        "max_ms": 139.785,
+        "mean_ms": 116.427,
+        "min_ms": 110.047,
+        "p50_ms": 110.222,
+        "p95_ms": 139.785,
+        "total_ms": 814.987
+      },
+      "sample_ms": {
+        "count": 7,
+        "max_ms": 0.157,
+        "mean_ms": 0.118,
+        "min_ms": 0.11,
+        "p50_ms": 0.111,
+        "p95_ms": 0.157,
+        "total_ms": 0.826
+      },
+      "steady_per_token_ms": {
+        "count": 6,
+        "max_ms": 118.372,
+        "mean_ms": 112.534,
+        "min_ms": 110.047,
+        "p50_ms": 110.175,
+        "p95_ms": 118.372,
+        "total_ms": 675.202
+      },
+      "steady_state_tok_s": 8.886,
+      "steady_state_tokens": 6,
+      "token_decode_ms": {
+        "count": 7,
+        "max_ms": 0.041,
+        "mean_ms": 0.011,
+        "min_ms": 0.004,
+        "p50_ms": 0.006,
+        "p95_ms": 0.041,
+        "total_ms": 0.08
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 2499.4,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 3552.774,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 44
+    },
+    "prompt_tokenize_ms": 41.017,
+    "requested": false,
+    "tokenizer_load_ms": 52.612
+  },
+  "prompt": "Sort these words alphabetically and separate them with commas: gamma, beta, alpha.",
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "2c0fc3880625f63a7076efc9151917bc618bd164c2d53b616f2fa2aa8a8709f3",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nSort these words alphabetically and separate them with commas: gamma, beta, alpha.<|im_end|>\n<|im_start|>assistant",
+    "stop_sequences": [
+      "<|im_end|>",
+      "<|im_start|>"
+    ],
+    "stop_token_ids": [
+      151645,
+      151644
+    ],
+    "template_family": "qwen25-chat"
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "strict_provenance": {
+    "cpu_features": [
+      "neon"
+    ],
+    "cpu_model": "unknown-cpu",
+    "decode_tokens": 7,
+    "decode_tps": 1.6025641025641024,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "qwen",
+    "phase": "decode",
+    "prompt_tokens": 45,
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q4_K_M",
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_kernel": "dense-qwen-cpu-reference",
+    "selected_backend": "apple-m4-cpu-neon",
+    "selected_kernel": "dense-qwen-cpu-reference",
+    "thread_count": 1,
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true
+  },
+  "text": ": gamma, beta, alpha<|im_end|>",
+  "throughput": {
+    "decoded_tokens": 7,
+    "tokens_per_second": 1.6025641025641024
+  },
+  "timestamp": "2026-05-15T02:14:10.858732+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 8.886,
+    "decode_total_ms": 814.987,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 139.785,
+    "first_token_ms": 3692,
+    "host_to_device_bytes": null,
+    "model_load_ms": 2499.4,
+    "prefill_ms": 3552.774,
+    "sampling_ms_per_token": 0.118,
+    "tokenize_ms": 41.017,
+    "tokenizer_load_ms": 52.612
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "origin": "embedded",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  },
+  "tokens": {
+    "generated": 7,
+    "generated_ids": [
+      25,
+      21619,
+      11,
+      13440,
+      11,
+      8287,
+      151645
+    ],
+    "ids": [
+      25,
+      21619,
+      11,
+      13440,
+      11,
+      8287,
+      151645
+    ],
+    "prompt": 45,
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      10231,
+      1493,
+      4244,
+      27790,
+      2673,
+      323,
+      8651,
+      1105,
+      448,
+      76602,
+      25,
+      21619,
+      11,
+      13440,
+      11,
+      8287,
+      13,
+      151645,
+      198,
+      151644,
+      77091
+    ],
+    "total": 52
+  }
+}

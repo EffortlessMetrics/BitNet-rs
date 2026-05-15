@@ -1,0 +1,22 @@
+timestamp = "2026-05-15T03:33:30Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-003-v2-reports"
+summary = "Started dense SLM v2 per-model report publication after M4-SLM-EVAL2-002 landed."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "The M4 v2 corpus was run for all supported dense model IDs on apple-m4-cpu-neon with fallback_used=false.",
+  "The answer-corpus quality path now strips Qwen <|im_end|> as a known stop marker, matching existing warm-session normalization while keeping generated text and token IDs recorded.",
+  "The reports remain bounded seeded dense-SLM evidence only and do not claim broad model quality, BitNet quality, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon performance.",
+]

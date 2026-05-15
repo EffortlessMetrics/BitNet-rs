@@ -1910,7 +1910,12 @@ fn gate_passed(answer: &str, gate: &AnswerGate) -> bool {
 }
 
 fn strip_special_markers(answer: &str) -> String {
-    answer.replace("<|begin_of_text|>", "").replace("<|end_of_text|>", "").replace("<|eot_id|>", "")
+    answer
+        .replace("<|begin_of_text|>", "")
+        .replace("<|end_of_text|>", "")
+        .replace("<|endoftext|>", "")
+        .replace("<|eot_id|>", "")
+        .replace("<|im_end|>", "")
 }
 
 fn contains_raw_special_token(answer: &str) -> bool {
@@ -2258,6 +2263,16 @@ mod tests {
         assert!(quality.failed_rules.contains(&"raw_special_tokens".to_string()));
         assert!(quality.failure_taxonomy.contains(&"raw_special_token_tail".to_string()));
         assert!(quality.failure_taxonomy.contains(&"template_or_stop".to_string()));
+    }
+
+    #[test]
+    fn quality_treats_qwen_im_end_as_stop_marker() {
+        let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
+        let quality =
+            evaluate_quality("\n4<|im_end|>", &gate, None, Some(&[198, 19, 151645]), None, None);
+
+        assert!(quality.passed);
+        assert!(!quality.failed_rules.contains(&"raw_special_tokens".to_string()));
     }
 
     #[test]
