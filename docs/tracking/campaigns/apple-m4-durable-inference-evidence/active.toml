@@ -68,8 +68,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DURABLE-002"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-002-dense-refresh"
+pr = 4988
+head_sha = "2ab5c60c3ffa6d4900efd48b27593c6e8c0e6080"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
