@@ -46,6 +46,10 @@ pub struct InspectCommand {
     #[arg(long)]
     pub runtime_contract_report: bool,
 
+    /// Emit embedding/final-norm/logits tensor contract metadata for the GGUF model
+    #[arg(long)]
+    pub logits_contract_report: bool,
+
     /// Explicit tokenizer path to compare against GGUF tokenizer metadata
     #[arg(long)]
     pub tokenizer: Option<PathBuf>,
@@ -81,11 +85,13 @@ impl InspectCommand {
             self.write_rope_contract_report().await
         } else if self.runtime_contract_report {
             self.write_runtime_contract_report().await
+        } else if self.logits_contract_report {
+            self.write_logits_contract_report().await
         } else if self.ln_stats {
             self.check_ln_gamma_stats().await
         } else {
             anyhow::bail!(
-                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --i2s-matmul-contract-report, --rope-contract-report, or --runtime-contract-report."
+                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --i2s-matmul-contract-report, --rope-contract-report, --runtime-contract-report, or --logits-contract-report."
             );
         }
     }
@@ -512,6 +518,109 @@ impl InspectCommand {
                     "runtime_reference_parity",
                     "semantic_quality",
                     "tokenizer_template_authority",
+                ])
+                .map(str::to_string)
+                .collect(),
+        })
+    }
+
+    async fn write_logits_contract_report(&self) -> Result<()> {
+        let report = self.logits_contract_report()?;
+        self.write_json(serde_json::to_string_pretty(&report)?)?;
+        Ok(())
+    }
+
+    fn logits_contract_report(&self) -> Result<LogitsContractReport> {
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
+        let mmap = unsafe { Mmap::map(&file)? };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let model_sha256 = format!("{:x}", hasher.finalize());
+
+        let reader = GgufReader::new(&mmap)?;
+        let architecture = reader.get_string_metadata("general.architecture");
+        let file_type = reader.get_u32_metadata("general.file_type");
+
+        let mut config = BitNetConfig::default();
+        if let Some(architecture) = &architecture {
+            config.model.apply_architecture_defaults(architecture);
+        }
+        fill_runtime_contract_config(&reader, &mut config);
+
+        let embedding_candidates = logits_tensor_candidates_report(
+            &reader,
+            &["token_embd.weight", "tok_embeddings.weight", "model.embed_tokens.weight"],
+        )?;
+        let lm_head_candidates = logits_tensor_candidates_report(
+            &reader,
+            &["output.weight", "lm_head.weight", "model.lm_head.weight"],
+        )?;
+        let final_norm_candidates = logits_tensor_candidates_report(
+            &reader,
+            &["output_norm.weight", "norm.weight", "model.norm.weight"],
+        )?;
+
+        let summary = logits_contract_summary(
+            embedding_candidates.first().map(|tensor| tensor.shape.as_slice()),
+            lm_head_candidates.first().map(|tensor| tensor.shape.as_slice()),
+            !final_norm_candidates.is_empty(),
+            config.model.vocab_size,
+            config.model.hidden_size,
+        );
+
+        Ok(LogitsContractReport {
+            schema_version: 1,
+            diagnostic: "bitnet_logits_contract_report".to_string(),
+            diagnostic_only: true,
+            promotion_allowed: false,
+            proof_receipts_written: false,
+            manifest_updated: false,
+            model: model_path.display().to_string(),
+            model_sha256,
+            gguf_metadata: LogitsContractGgufMetadata { architecture, file_type },
+            effective_config: LogitsContractEffectiveConfig {
+                vocab_size: config.model.vocab_size,
+                hidden_size: config.model.hidden_size,
+                norm_type: format!("{:?}", config.model.norm_type),
+                activation_type: format!("{:?}", config.model.activation_type),
+                rms_norm_eps: config.model.rms_norm_eps,
+            },
+            tensor_candidates: LogitsTensorCandidates {
+                embedding: embedding_candidates,
+                lm_head: lm_head_candidates,
+                final_norm: final_norm_candidates,
+            },
+            runtime_mapping_policy: LogitsRuntimeMappingPolicy {
+                embedding_candidates: vec![
+                    "token_embd.weight".to_string(),
+                    "tok_embeddings.weight".to_string(),
+                    "model.embed_tokens.weight".to_string(),
+                ],
+                lm_head_candidates: vec![
+                    "output.weight".to_string(),
+                    "lm_head.weight".to_string(),
+                    "model.lm_head.weight".to_string(),
+                ],
+                final_norm_candidates: vec![
+                    "output_norm.weight".to_string(),
+                    "norm.weight".to_string(),
+                    "model.norm.weight".to_string(),
+                ],
+                dedicated_lm_head_runtime_name: "lm_head.weight".to_string(),
+                tied_embedding_runtime_name: "embed_tokens.weight".to_string(),
+                transposed_lm_head_flag_name: "lm_head.transposed".to_string(),
+            },
+            summary,
+            not_claims: critical_qk256_report_not_claims()
+                .into_iter()
+                .chain([
+                    "runtime_reference_parity",
+                    "semantic_quality",
+                    "a770_semantic_quality",
+                    "logits_reference_parity",
                 ])
                 .map(str::to_string)
                 .collect(),
@@ -1151,6 +1260,168 @@ struct RuntimeTokenizerAgreement {
     mismatch_count: usize,
 }
 
+#[derive(Debug, Serialize)]
+struct LogitsContractReport {
+    schema_version: u32,
+    diagnostic: String,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    model: String,
+    model_sha256: String,
+    gguf_metadata: LogitsContractGgufMetadata,
+    effective_config: LogitsContractEffectiveConfig,
+    tensor_candidates: LogitsTensorCandidates,
+    runtime_mapping_policy: LogitsRuntimeMappingPolicy,
+    summary: LogitsContractSummary,
+    not_claims: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsContractGgufMetadata {
+    architecture: Option<String>,
+    file_type: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsContractEffectiveConfig {
+    vocab_size: usize,
+    hidden_size: usize,
+    norm_type: String,
+    activation_type: String,
+    rms_norm_eps: Option<f32>,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsTensorCandidates {
+    embedding: Vec<LogitsTensorReport>,
+    lm_head: Vec<LogitsTensorReport>,
+    final_norm: Vec<LogitsTensorReport>,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsTensorReport {
+    name: String,
+    shape: Vec<usize>,
+    tensor_type: String,
+    actual_bytes: usize,
+    sample_sha256_first_4096: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsRuntimeMappingPolicy {
+    embedding_candidates: Vec<String>,
+    lm_head_candidates: Vec<String>,
+    final_norm_candidates: Vec<String>,
+    dedicated_lm_head_runtime_name: String,
+    tied_embedding_runtime_name: String,
+    transposed_lm_head_flag_name: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsContractSummary {
+    embedding_present: bool,
+    final_norm_present: bool,
+    dedicated_lm_head_present: bool,
+    tied_logits_expected: bool,
+    embedding_orientation: Option<String>,
+    lm_head_orientation: Option<String>,
+    lm_head_transposed_expected: Option<bool>,
+    runtime_logits_source: String,
+    blocker: Option<String>,
+    next_action: String,
+}
+
+fn logits_tensor_candidates_report(
+    reader: &GgufReader,
+    candidates: &[&str],
+) -> Result<Vec<LogitsTensorReport>> {
+    let mut reports = Vec::new();
+    for name in candidates {
+        if let Some(info) = reader.get_tensor_info_by_name(name) {
+            let data = reader.get_tensor_data_by_info(info)?;
+            let sample_len = data.len().min(4096);
+            reports.push(LogitsTensorReport {
+                name: info.name.clone(),
+                shape: info.shape.clone(),
+                tensor_type: format!("{:?}", info.tensor_type),
+                actual_bytes: data.len(),
+                sample_sha256_first_4096: sha256_hex_bytes(&data[..sample_len]),
+            });
+        }
+    }
+    Ok(reports)
+}
+
+fn logits_matrix_orientation(shape: &[usize], vocab_size: usize, hidden_size: usize) -> String {
+    match shape {
+        [v, h] if *v == vocab_size && *h == hidden_size => "vocab_hidden".to_string(),
+        [h, v] if *h == hidden_size && *v == vocab_size => "hidden_vocab".to_string(),
+        [_, _] => "unexpected_2d".to_string(),
+        _ => "not_2d".to_string(),
+    }
+}
+
+fn logits_contract_summary(
+    embedding_shape: Option<&[usize]>,
+    lm_head_shape: Option<&[usize]>,
+    final_norm_present: bool,
+    vocab_size: usize,
+    hidden_size: usize,
+) -> LogitsContractSummary {
+    let embedding_orientation =
+        embedding_shape.map(|shape| logits_matrix_orientation(shape, vocab_size, hidden_size));
+    let lm_head_orientation =
+        lm_head_shape.map(|shape| logits_matrix_orientation(shape, vocab_size, hidden_size));
+
+    let embedding_present = embedding_shape.is_some();
+    let dedicated_lm_head_present = lm_head_shape.is_some();
+    let tied_logits_expected = !dedicated_lm_head_present && embedding_present;
+    let lm_head_transposed_expected =
+        lm_head_orientation.as_deref().map(|orientation| matches!(orientation, "hidden_vocab"));
+
+    let runtime_logits_source =
+        match (lm_head_orientation.as_deref(), embedding_present, final_norm_present) {
+            (Some("vocab_hidden"), _, true) => "dedicated_lm_head_standard".to_string(),
+            (Some("hidden_vocab"), _, true) => "dedicated_lm_head_transposed".to_string(),
+            (Some("unexpected_2d" | "not_2d"), _, _) => "blocked_lm_head_shape".to_string(),
+            (Some(_), _, true) => "blocked_lm_head_shape".to_string(),
+            (None, true, true) => "tied_embeddings".to_string(),
+            (None, false, _) => "blocked_missing_logits_source".to_string(),
+            (_, _, false) => "blocked_missing_final_norm".to_string(),
+        };
+
+    let blocker = if !final_norm_present {
+        Some("missing_final_norm_tensor".to_string())
+    } else if matches!(lm_head_orientation.as_deref(), Some("unexpected_2d" | "not_2d")) {
+        Some("lm_head_shape_unexpected_for_runtime_logits".to_string())
+    } else if !dedicated_lm_head_present && !embedding_present {
+        Some("missing_lm_head_and_embedding_logits_source".to_string())
+    } else {
+        None
+    };
+
+    let next_action = if blocker.is_none() {
+        "compare_reference_rust_logits_or_first_token_after_logits_contract".to_string()
+    } else {
+        "fix_logits_tensor_contract_before_reference_parity".to_string()
+    };
+
+    LogitsContractSummary {
+        embedding_present,
+        final_norm_present,
+        dedicated_lm_head_present,
+        tied_logits_expected,
+        embedding_orientation,
+        lm_head_orientation,
+        lm_head_transposed_expected,
+        runtime_logits_source,
+        blocker,
+        next_action,
+    }
+}
+
 fn fill_runtime_contract_config(reader: &GgufReader, config: &mut BitNetConfig) {
     if let Some(vocab_size) = reader
         .get_string_array_metadata("tokenizer.ggml.tokens")
@@ -1731,5 +2002,45 @@ mod tests {
         assert!(summary.activation_quantization_policy_matched);
         assert!(!summary.code3_runtime_blocker);
         assert_eq!(summary.blocker, None);
+    }
+
+    #[test]
+    fn logits_matrix_orientation_classifies_runtime_shapes() {
+        assert_eq!(logits_matrix_orientation(&[128, 16], 128, 16), "vocab_hidden");
+        assert_eq!(logits_matrix_orientation(&[16, 128], 128, 16), "hidden_vocab");
+        assert_eq!(logits_matrix_orientation(&[7, 9], 128, 16), "unexpected_2d");
+        assert_eq!(logits_matrix_orientation(&[128, 16, 1], 128, 16), "not_2d");
+    }
+
+    #[test]
+    fn logits_contract_summary_detects_transposed_dedicated_head() {
+        let summary = logits_contract_summary(Some(&[128, 16]), Some(&[16, 128]), true, 128, 16);
+
+        assert!(summary.embedding_present);
+        assert!(summary.dedicated_lm_head_present);
+        assert!(!summary.tied_logits_expected);
+        assert_eq!(summary.lm_head_orientation.as_deref(), Some("hidden_vocab"));
+        assert_eq!(summary.lm_head_transposed_expected, Some(true));
+        assert_eq!(summary.runtime_logits_source, "dedicated_lm_head_transposed");
+        assert_eq!(summary.blocker, None);
+    }
+
+    #[test]
+    fn logits_contract_summary_uses_tied_embeddings_without_lm_head() {
+        let summary = logits_contract_summary(Some(&[128, 16]), None, true, 128, 16);
+
+        assert!(summary.embedding_present);
+        assert!(!summary.dedicated_lm_head_present);
+        assert!(summary.tied_logits_expected);
+        assert_eq!(summary.runtime_logits_source, "tied_embeddings");
+        assert_eq!(summary.blocker, None);
+    }
+
+    #[test]
+    fn logits_contract_summary_blocks_missing_final_norm() {
+        let summary = logits_contract_summary(Some(&[128, 16]), Some(&[128, 16]), false, 128, 16);
+
+        assert_eq!(summary.runtime_logits_source, "blocked_missing_final_norm");
+        assert_eq!(summary.blocker.as_deref(), Some("missing_final_norm_tensor"));
     }
 }
