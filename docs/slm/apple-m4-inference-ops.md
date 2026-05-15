@@ -120,7 +120,8 @@ boundary.
 ## Remaining Ops Work
 
 The inference-ops lane is complete when the campaign tracker marks
-`M4-INF-OPS-004` merged. Follow-on runtime work should start a separate campaign
-and keep generic PR CI model-free.
+`M4-INF-OPS-004` merged. Follow-on refresh work is tracked in
+`apple-m4-durable-inference-evidence`; it keeps generic PR CI model-free and
+uses matching report history before describing trends.
 
 Live M4 model runs belong in local, advisory, scheduled, or release lanes.

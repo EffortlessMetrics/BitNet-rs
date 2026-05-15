@@ -79,6 +79,7 @@ const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
     "context_4k",
     "resident_25",
     "resident_50",
+    "resident_100",
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -133,6 +134,9 @@ enum MacBenchmarkProfile {
     /// Resident 50-prompt warm-session profile.
     #[value(name = "resident_50")]
     Resident50,
+    /// Resident 100-prompt warm-session profile.
+    #[value(name = "resident_100")]
+    Resident100,
 }
 
 impl MacBenchmarkProfile {
@@ -146,6 +150,7 @@ impl MacBenchmarkProfile {
             Self::Context4k => "context_4k",
             Self::Resident25 => "resident_25",
             Self::Resident50 => "resident_50",
+            Self::Resident100 => "resident_100",
         }
     }
 }
@@ -7131,6 +7136,13 @@ fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec 
             profile,
             max_new_tokens: 16,
             prompts: resident_benchmark_prompts(50),
+            target_context_tokens: None,
+            scenario: "resident_session",
+        },
+        MacBenchmarkProfile::Resident100 => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: resident_benchmark_prompts(100),
             target_context_tokens: None,
             scenario: "resident_session",
         },
