@@ -385,6 +385,9 @@ impl InspectCommand {
             effective_rust_policy: RopeRustPolicy {
                 policy: "base_theta_sincos_tables_without_gguf_rope_freqs".to_string(),
                 uses_gguf_rope_freqs: rust_uses_gguf_rope_freqs,
+                rope_layout: "neox_offset_by_half".to_string(),
+                rope_layout_source: "RotaryEmbedding::apply split-half pairing".to_string(),
+                ggml_rope_type_id: 2,
                 rope_theta: config.model.rope_theta,
                 num_heads: config.model.num_heads,
                 num_key_value_heads: config.model.num_key_value_heads,
@@ -395,6 +398,10 @@ impl InspectCommand {
                 source: "llama.cpp build_bitnet_158/build_rope_factors/ggml_rope_ext".to_string(),
                 expects_optional_rope_freqs_tensor: true,
                 expected_tensor_suffix: "rope_freqs.weight".to_string(),
+                rope_type: "GGML_ROPE_TYPE_NEOX".to_string(),
+                rope_type_id: 2,
+                rope_layout: "neox_offset_by_half".to_string(),
+                rope_layout_source: "llama_rope_type(LLM_ARCH_BITNET_B158)".to_string(),
             },
             summary,
             rope_freqs,
@@ -1203,6 +1210,9 @@ struct RopeGgufMetadata {
 struct RopeRustPolicy {
     policy: String,
     uses_gguf_rope_freqs: bool,
+    rope_layout: String,
+    rope_layout_source: String,
+    ggml_rope_type_id: u32,
     rope_theta: Option<f32>,
     num_heads: usize,
     num_key_value_heads: usize,
@@ -1215,6 +1225,10 @@ struct RopeReferencePolicy {
     source: String,
     expects_optional_rope_freqs_tensor: bool,
     expected_tensor_suffix: String,
+    rope_type: String,
+    rope_type_id: u32,
+    rope_layout: String,
+    rope_layout_source: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1222,6 +1236,9 @@ struct RopeContractSummary {
     rope_freqs_tensor_count: usize,
     any_rope_freqs_tensor_present: bool,
     rust_uses_gguf_rope_freqs: bool,
+    reference_rope_layout: String,
+    rust_rope_layout: String,
+    rust_rope_layout_matches_reference: bool,
     blocker: Option<String>,
     next_action: String,
 }
@@ -2046,8 +2063,13 @@ fn rope_contract_summary(
     rust_uses_gguf_rope_freqs: bool,
 ) -> RopeContractSummary {
     let any_rope_freqs_tensor_present = rope_freqs_tensor_count > 0;
+    let reference_rope_layout = "neox_offset_by_half".to_string();
+    let rust_rope_layout = "neox_offset_by_half".to_string();
+    let rust_rope_layout_matches_reference = rust_rope_layout == reference_rope_layout;
     let blocker = if any_rope_freqs_tensor_present && !rust_uses_gguf_rope_freqs {
         Some("bitnet_b158_rope_factors_present_but_rust_policy_ignores_them".to_string())
+    } else if !rust_rope_layout_matches_reference {
+        Some("bitnet_b158_rope_layout_mismatch".to_string())
     } else {
         None
     };
@@ -2063,6 +2085,9 @@ fn rope_contract_summary(
         rope_freqs_tensor_count,
         any_rope_freqs_tensor_present,
         rust_uses_gguf_rope_freqs,
+        reference_rope_layout,
+        rust_rope_layout,
+        rust_rope_layout_matches_reference,
         blocker,
         next_action: next_action.to_string(),
     }
@@ -2255,6 +2280,7 @@ mod tests {
 
         assert!(summary.any_rope_freqs_tensor_present);
         assert!(!summary.rust_uses_gguf_rope_freqs);
+        assert!(summary.rust_rope_layout_matches_reference);
         assert_eq!(
             summary.blocker.as_deref(),
             Some("bitnet_b158_rope_factors_present_but_rust_policy_ignores_them")
@@ -2266,6 +2292,9 @@ mod tests {
         let summary = rope_contract_summary(0, false);
 
         assert!(!summary.any_rope_freqs_tensor_present);
+        assert_eq!(summary.reference_rope_layout, "neox_offset_by_half");
+        assert_eq!(summary.rust_rope_layout, "neox_offset_by_half");
+        assert!(summary.rust_rope_layout_matches_reference);
         assert_eq!(summary.blocker, None);
     }
 
