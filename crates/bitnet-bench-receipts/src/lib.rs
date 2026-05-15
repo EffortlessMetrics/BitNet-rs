@@ -3940,19 +3940,20 @@ mod tests {
     }
 
     #[test]
-    fn committed_dense_gguf_qwen_benchmark_qualification_receipt_validates() {
+    fn committed_dense_gguf_qwen_benchmark_qualification_receipt_validates()
+    -> Result<(), ReceiptError> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-benchmark-qualification.json",
         );
-        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path).unwrap();
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path)
     }
 
     #[test]
-    fn committed_qwen3_benchmark_qualification_receipt_validates() {
+    fn committed_qwen3_benchmark_qualification_receipt_validates() -> Result<(), ReceiptError> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json",
         );
-        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path).unwrap();
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path)
     }
 
     fn sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt() -> serde_json::Value {
