@@ -1,0 +1,26 @@
+timestamp = "2026-05-15T23:34:33Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-003"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+pr = 5001
+merge_sha = "adbd626dd9be2801a2e253680093bb83373fc937"
+branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-003-bitnet-refresh"
+summary = "Closed M4-DURABLE-003 after PR #5001 published the 2026-05-15T2214Z durable BitNet eval, benchmark, and variable warm-session refresh."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-warm/variable-warm-session.json",
+  "docs/slm/apple-m4-durable-inference-evidence.md",
+]
+
+notes = [
+  "The merged eval refresh records 100 cases, 75 passed, 25 failed, 0 timeout, 0 not_run, 765 generated tokens, and fallback_used=false.",
+  "The eval regression matched the previous 2026-05-15 BitNet eval baseline with zero warnings.",
+  "The merged benchmark refresh records 4 prompts, 8 generated tokens, fallback_used=false, and five advisory prompt-tokenize timing warnings against the previous benchmark baseline.",
+  "The merged variable warm-session refresh records 5 operator prompts, 10 generated tokens, repeated-prompt determinism passed, and validated identity/fallback receipts; strict warm-session regression remains outside current `bitnet mac regression` accepted artifact kinds.",
+  "No BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim is made.",
+]
