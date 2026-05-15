@@ -50,6 +50,10 @@ pub struct InspectCommand {
     #[arg(long)]
     pub logits_contract_report: bool,
 
+    /// Emit BitNet-b1.58 graph-order/subnorm contract metadata for the GGUF model
+    #[arg(long)]
+    pub bitnet_graph_contract_report: bool,
+
     /// Explicit tokenizer path to compare against GGUF tokenizer metadata
     #[arg(long)]
     pub tokenizer: Option<PathBuf>,
@@ -87,11 +91,13 @@ impl InspectCommand {
             self.write_runtime_contract_report().await
         } else if self.logits_contract_report {
             self.write_logits_contract_report().await
+        } else if self.bitnet_graph_contract_report {
+            self.write_bitnet_graph_contract_report().await
         } else if self.ln_stats {
             self.check_ln_gamma_stats().await
         } else {
             anyhow::bail!(
-                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --i2s-matmul-contract-report, --rope-contract-report, --runtime-contract-report, or --logits-contract-report."
+                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --i2s-matmul-contract-report, --rope-contract-report, --runtime-contract-report, --logits-contract-report, or --bitnet-graph-contract-report."
             );
         }
     }
@@ -621,6 +627,73 @@ impl InspectCommand {
                     "semantic_quality",
                     "a770_semantic_quality",
                     "logits_reference_parity",
+                ])
+                .map(str::to_string)
+                .collect(),
+        })
+    }
+
+    async fn write_bitnet_graph_contract_report(&self) -> Result<()> {
+        let report = self.bitnet_graph_contract_report()?;
+        self.write_json(serde_json::to_string_pretty(&report)?)?;
+        Ok(())
+    }
+
+    fn bitnet_graph_contract_report(&self) -> Result<BitNetGraphContractReport> {
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
+        let mmap = unsafe { Mmap::map(&file)? };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let model_sha256 = format!("{:x}", hasher.finalize());
+
+        let reader = GgufReader::new(&mmap)?;
+        let architecture = reader.get_string_metadata("general.architecture");
+        let file_type = reader.get_u32_metadata("general.file_type");
+
+        let mut config = BitNetConfig::default();
+        if let Some(architecture) = &architecture {
+            config.model.apply_architecture_defaults(architecture);
+        }
+        fill_runtime_contract_config(&reader, &mut config);
+
+        let layer0_required_tensors = bitnet_graph_required_tensor_reports(&reader, 0)?;
+        let summary = bitnet_graph_contract_summary(&layer0_required_tensors);
+
+        Ok(BitNetGraphContractReport {
+            schema_version: 1,
+            diagnostic: "bitnet_graph_contract_report".to_string(),
+            diagnostic_only: true,
+            promotion_allowed: false,
+            proof_receipts_written: false,
+            manifest_updated: false,
+            model: model_path.display().to_string(),
+            model_sha256,
+            gguf_metadata: BitNetGraphGgufMetadata { architecture, file_type },
+            effective_config: BitNetGraphEffectiveConfig {
+                num_layers: config.model.num_layers,
+                hidden_size: config.model.hidden_size,
+                intermediate_size: config.model.intermediate_size,
+                num_heads: config.model.num_heads,
+                num_key_value_heads: config.model.num_key_value_heads,
+                head_dim: config.model.hidden_size / config.model.num_heads.max(1),
+                norm_type: format!("{:?}", config.model.norm_type),
+                activation_type: format!("{:?}", config.model.activation_type),
+                rms_norm_eps: config.model.rms_norm_eps,
+            },
+            reference_graph: bitnet_reference_graph_contract(),
+            rust_graph: bitnet_rust_graph_contract(),
+            layer0_required_tensors,
+            summary,
+            not_claims: critical_qk256_report_not_claims()
+                .into_iter()
+                .chain([
+                    "runtime_reference_parity",
+                    "semantic_quality",
+                    "a770_semantic_quality",
+                    "graph_numeric_parity",
                 ])
                 .map(str::to_string)
                 .collect(),
@@ -1333,6 +1406,83 @@ struct LogitsContractSummary {
     next_action: String,
 }
 
+#[derive(Debug, Serialize)]
+struct BitNetGraphContractReport {
+    schema_version: u32,
+    diagnostic: String,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    model: String,
+    model_sha256: String,
+    gguf_metadata: BitNetGraphGgufMetadata,
+    effective_config: BitNetGraphEffectiveConfig,
+    reference_graph: BitNetGraphContract,
+    rust_graph: BitNetGraphContract,
+    layer0_required_tensors: Vec<BitNetGraphTensorReport>,
+    summary: BitNetGraphContractSummary,
+    not_claims: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct BitNetGraphGgufMetadata {
+    architecture: Option<String>,
+    file_type: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+struct BitNetGraphEffectiveConfig {
+    num_layers: usize,
+    hidden_size: usize,
+    intermediate_size: usize,
+    num_heads: usize,
+    num_key_value_heads: usize,
+    head_dim: usize,
+    norm_type: String,
+    activation_type: String,
+    rms_norm_eps: Option<f32>,
+}
+
+#[derive(Debug, Serialize)]
+struct BitNetGraphContract {
+    source: String,
+    per_layer_order: Vec<String>,
+    attention_subnorm_position: String,
+    ffn_activation: String,
+    ffn_mode: String,
+    ffn_subnorm_position: String,
+    final_norm_position: String,
+    logits_source: String,
+}
+
+#[derive(Debug, Serialize)]
+struct BitNetGraphTensorReport {
+    role: String,
+    gguf_name: String,
+    rust_runtime_name: String,
+    present: bool,
+    shape: Option<Vec<usize>>,
+    tensor_type: Option<String>,
+    actual_bytes: Option<usize>,
+    sample_sha256_first_4096: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct BitNetGraphContractSummary {
+    layer0_required_tensor_count: usize,
+    layer0_required_tensor_present_count: usize,
+    layer0_required_tensors_present: bool,
+    reference_and_rust_stage_order_match: bool,
+    attention_subnorm_before_o_proj: bool,
+    ffn_subnorm_before_down_proj: bool,
+    residual_after_o_proj: bool,
+    residual_after_down_proj: bool,
+    final_norm_before_tied_logits: bool,
+    blocker: Option<String>,
+    next_action: String,
+}
+
 fn logits_tensor_candidates_report(
     reader: &GgufReader,
     candidates: &[&str],
@@ -1417,6 +1567,174 @@ fn logits_contract_summary(
         lm_head_orientation,
         lm_head_transposed_expected,
         runtime_logits_source,
+        blocker,
+        next_action,
+    }
+}
+
+fn bitnet_reference_graph_contract() -> BitNetGraphContract {
+    BitNetGraphContract {
+        source: "llama.cpp build_bitnet_158".to_string(),
+        per_layer_order: vec![
+            "attn_norm_rms".to_string(),
+            "qkv_projection".to_string(),
+            "rope_qk".to_string(),
+            "kv_attention_value_mix".to_string(),
+            "attn_sub_norm_rms".to_string(),
+            "o_proj".to_string(),
+            "attention_residual".to_string(),
+            "ffn_norm_rms".to_string(),
+            "ffn_up_gate_parallel_relu_squared".to_string(),
+            "ffn_sub_norm_rms".to_string(),
+            "ffn_down".to_string(),
+            "ffn_residual".to_string(),
+        ],
+        attention_subnorm_position: "after_attention_value_mix_before_o_proj".to_string(),
+        ffn_activation: "relu_squared".to_string(),
+        ffn_mode: "parallel_up_gate".to_string(),
+        ffn_subnorm_position: "after_parallel_ffn_before_down_proj".to_string(),
+        final_norm_position: "after_last_layer_before_logits".to_string(),
+        logits_source: "tied_token_embedding".to_string(),
+    }
+}
+
+fn bitnet_rust_graph_contract() -> BitNetGraphContract {
+    BitNetGraphContract {
+        source: "crates/bitnet-transformer/src/lib.rs".to_string(),
+        per_layer_order: vec![
+            "attention_norm.forward".to_string(),
+            "q_proj_k_proj_v_proj".to_string(),
+            "rotary_embedding_apply_qk".to_string(),
+            "attention_softmax_value_mix".to_string(),
+            "attention.sub_layernorm.forward".to_string(),
+            "o_proj".to_string(),
+            "attention_residual".to_string(),
+            "post_attention_layernorm.forward".to_string(),
+            "gate_proj_relu_squared_times_up_proj".to_string(),
+            "feed_forward.sub_layernorm.forward".to_string(),
+            "down_proj".to_string(),
+            "ffn_residual".to_string(),
+        ],
+        attention_subnorm_position: "after_attention_value_mix_before_o_proj".to_string(),
+        ffn_activation: "relu_squared".to_string(),
+        ffn_mode: "parallel_up_gate".to_string(),
+        ffn_subnorm_position: "after_parallel_ffn_before_down_proj".to_string(),
+        final_norm_position: "after_last_layer_before_logits".to_string(),
+        logits_source: "tied_token_embedding".to_string(),
+    }
+}
+
+fn bitnet_graph_required_tensor_reports(
+    reader: &GgufReader,
+    layer_idx: usize,
+) -> Result<Vec<BitNetGraphTensorReport>> {
+    let tensor_specs = [
+        (
+            "attention_norm",
+            format!("blk.{layer_idx}.attn_norm.weight"),
+            format!("layers.{layer_idx}.attention_norm.weight"),
+        ),
+        (
+            "attention_subnorm",
+            format!("blk.{layer_idx}.attn_sub_norm.weight"),
+            format!("layers.{layer_idx}.attention.sub_layernorm.weight"),
+        ),
+        (
+            "ffn_norm",
+            format!("blk.{layer_idx}.ffn_norm.weight"),
+            format!("layers.{layer_idx}.post_attention_layernorm.weight"),
+        ),
+        (
+            "ffn_subnorm",
+            format!("blk.{layer_idx}.ffn_sub_norm.weight"),
+            format!("layers.{layer_idx}.feed_forward.sub_layernorm.weight"),
+        ),
+    ];
+
+    tensor_specs
+        .into_iter()
+        .map(|(role, gguf_name, rust_runtime_name)| {
+            bitnet_graph_tensor_report(reader, role, gguf_name, rust_runtime_name)
+        })
+        .collect()
+}
+
+fn bitnet_graph_tensor_report(
+    reader: &GgufReader,
+    role: &str,
+    gguf_name: String,
+    rust_runtime_name: String,
+) -> Result<BitNetGraphTensorReport> {
+    let Some(info) = reader.get_tensor_info_by_name(&gguf_name) else {
+        return Ok(BitNetGraphTensorReport {
+            role: role.to_string(),
+            gguf_name,
+            rust_runtime_name,
+            present: false,
+            shape: None,
+            tensor_type: None,
+            actual_bytes: None,
+            sample_sha256_first_4096: None,
+        });
+    };
+
+    let data = reader.get_tensor_data_by_info(info)?;
+    let sample_len = data.len().min(4096);
+    Ok(BitNetGraphTensorReport {
+        role: role.to_string(),
+        gguf_name: info.name.clone(),
+        rust_runtime_name,
+        present: true,
+        shape: Some(info.shape.clone()),
+        tensor_type: Some(format!("{:?}", info.tensor_type)),
+        actual_bytes: Some(data.len()),
+        sample_sha256_first_4096: Some(sha256_hex_bytes(&data[..sample_len])),
+    })
+}
+
+fn bitnet_graph_contract_summary(
+    layer0_required_tensors: &[BitNetGraphTensorReport],
+) -> BitNetGraphContractSummary {
+    let layer0_required_tensor_count = layer0_required_tensors.len();
+    let layer0_required_tensor_present_count =
+        layer0_required_tensors.iter().filter(|tensor| tensor.present).count();
+    let layer0_required_tensors_present =
+        layer0_required_tensor_present_count == layer0_required_tensor_count;
+
+    let reference = bitnet_reference_graph_contract();
+    let rust = bitnet_rust_graph_contract();
+    let reference_and_rust_stage_order_match = reference.attention_subnorm_position
+        == rust.attention_subnorm_position
+        && reference.ffn_activation == rust.ffn_activation
+        && reference.ffn_mode == rust.ffn_mode
+        && reference.ffn_subnorm_position == rust.ffn_subnorm_position
+        && reference.final_norm_position == rust.final_norm_position
+        && reference.logits_source == rust.logits_source;
+
+    let blocker = if !layer0_required_tensors_present {
+        Some("missing_bitnet_layer0_graph_required_tensor".to_string())
+    } else if !reference_and_rust_stage_order_match {
+        Some("bitnet_reference_rust_static_graph_contract_mismatch".to_string())
+    } else {
+        None
+    };
+
+    let next_action = if blocker.is_none() {
+        "run_reference_rust_layer_trace_or_compare_first_divergence".to_string()
+    } else {
+        "fix_bitnet_graph_contract_before_reference_parity".to_string()
+    };
+
+    BitNetGraphContractSummary {
+        layer0_required_tensor_count,
+        layer0_required_tensor_present_count,
+        layer0_required_tensors_present,
+        reference_and_rust_stage_order_match,
+        attention_subnorm_before_o_proj: true,
+        ffn_subnorm_before_down_proj: true,
+        residual_after_o_proj: true,
+        residual_after_down_proj: true,
+        final_norm_before_tied_logits: true,
         blocker,
         next_action,
     }
@@ -2042,5 +2360,75 @@ mod tests {
 
         assert_eq!(summary.runtime_logits_source, "blocked_missing_final_norm");
         assert_eq!(summary.blocker.as_deref(), Some("missing_final_norm_tensor"));
+    }
+
+    #[test]
+    fn bitnet_graph_contract_pins_reference_subnorm_order() {
+        let reference = bitnet_reference_graph_contract();
+        let rust = bitnet_rust_graph_contract();
+
+        assert_eq!(reference.attention_subnorm_position, "after_attention_value_mix_before_o_proj");
+        assert_eq!(reference.ffn_subnorm_position, "after_parallel_ffn_before_down_proj");
+        assert_eq!(reference.ffn_activation, "relu_squared");
+        assert_eq!(reference.ffn_mode, "parallel_up_gate");
+        assert_eq!(reference.final_norm_position, "after_last_layer_before_logits");
+
+        assert_eq!(rust.attention_subnorm_position, reference.attention_subnorm_position);
+        assert_eq!(rust.ffn_subnorm_position, reference.ffn_subnorm_position);
+        assert_eq!(rust.ffn_activation, reference.ffn_activation);
+        assert_eq!(rust.ffn_mode, reference.ffn_mode);
+    }
+
+    #[test]
+    fn bitnet_graph_summary_allows_complete_static_contract() {
+        let tensors = ["attention_norm", "attention_subnorm", "ffn_norm", "ffn_subnorm"]
+            .into_iter()
+            .map(|role| BitNetGraphTensorReport {
+                role: role.to_string(),
+                gguf_name: format!("blk.0.{role}.weight"),
+                rust_runtime_name: format!("layers.0.{role}.weight"),
+                present: true,
+                shape: Some(vec![16]),
+                tensor_type: Some("F32".to_string()),
+                actual_bytes: Some(64),
+                sample_sha256_first_4096: Some("hash".to_string()),
+            })
+            .collect::<Vec<_>>();
+
+        let summary = bitnet_graph_contract_summary(&tensors);
+
+        assert!(summary.layer0_required_tensors_present);
+        assert!(summary.reference_and_rust_stage_order_match);
+        assert!(summary.attention_subnorm_before_o_proj);
+        assert!(summary.ffn_subnorm_before_down_proj);
+        assert_eq!(summary.blocker, None);
+        assert_eq!(
+            summary.next_action,
+            "run_reference_rust_layer_trace_or_compare_first_divergence"
+        );
+    }
+
+    #[test]
+    fn bitnet_graph_summary_blocks_missing_required_tensor() {
+        let tensors = ["attention_norm", "attention_subnorm", "ffn_norm", "ffn_subnorm"]
+            .into_iter()
+            .enumerate()
+            .map(|(idx, role)| BitNetGraphTensorReport {
+                role: role.to_string(),
+                gguf_name: format!("blk.0.{role}.weight"),
+                rust_runtime_name: format!("layers.0.{role}.weight"),
+                present: idx != 1,
+                shape: Some(vec![16]),
+                tensor_type: Some("F32".to_string()),
+                actual_bytes: Some(64),
+                sample_sha256_first_4096: Some("hash".to_string()),
+            })
+            .collect::<Vec<_>>();
+
+        let summary = bitnet_graph_contract_summary(&tensors);
+
+        assert!(!summary.layer0_required_tensors_present);
+        assert_eq!(summary.layer0_required_tensor_present_count, 3);
+        assert_eq!(summary.blocker.as_deref(), Some("missing_bitnet_layer0_graph_required_tensor"));
     }
 }
