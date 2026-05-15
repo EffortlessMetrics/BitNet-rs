@@ -98,3 +98,14 @@ bias tensor, preserving numerical output while avoiding unnecessary allocation
 and per-forward bias addition. This is implementation cleanup only; it does not
 claim sustained throughput, Q4/Q5 support, GPU/NPU/OpenVINO/UHD 620 execution,
 server inference, Qwen3.5 support, or BitNet QK256 kernel changes.
+
+## SLM-CPU-014 Dense Output-Head Cleanup Boundary
+
+The next bounded cleanup extends the no-bias rule to recovered dense
+`lm_head.weight` / `output.weight` heads. When the loader recovers a canonical
+or reshaped dense output head after the primary `lm_head` construction path
+fails, it now constructs a no-bias `Linear` instead of allocating a zero bias.
+Existing output-head regression tests remain the behavior oracle for generated
+logits. This is allocation cleanup only; it does not introduce dense AVX2
+kernels, Q4/Q5 support, server inference, GPU/NPU/OpenVINO/UHD 620 execution,
+Qwen3.5 support, sustained throughput claims, or BitNet QK256 kernel changes.
