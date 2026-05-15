@@ -26,7 +26,7 @@ index 66f4791e..2f0c21d4 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3434,6 +3436,281 @@ struct llama_context {
+@@ -3434,6 +3436,319 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -159,6 +159,8 @@ index 66f4791e..2f0c21d4 100644
 +    llama_context & lctx,
 +    struct ggml_tensor * tensor,
 +    int graph_index,
++    uint32_t n_tokens,
++    int32_t n_outputs,
 +    bool first
 +) {
 +    const char * name = ggml_get_name(tensor);
@@ -168,6 +170,10 @@ index 66f4791e..2f0c21d4 100644
 +    const bool copy_size_ok = nbytes <= 64ULL * 1024ULL * 1024ULL;
 +    bool values_available = false;
 +    std::vector<float> values;
++    int token_axis = -1;
++    int64_t sample_offset = 0;
++    int64_t sample_nelements = nelements;
++    int64_t sample_shape[4] = { tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3] };
 +    double sum = 0.0;
 +    double sq_sum = 0.0;
 +    double min_value = std::numeric_limits<double>::infinity();
@@ -179,15 +185,43 @@ index 66f4791e..2f0c21d4 100644
 +        if (backend != nullptr) {
 +            values.resize((size_t) nelements);
 +            ggml_backend_tensor_get(tensor, values.data(), 0, nbytes);
++            if (n_outputs == 1 && n_tokens > 1) {
++                if (tensor->ne[1] == (int64_t) n_tokens) {
++                    token_axis = 1;
++                    sample_offset = tensor->ne[0] * (tensor->ne[1] - 1);
++                    sample_nelements = tensor->ne[0];
++                    sample_shape[1] = 1;
++                } else if (tensor->ne[2] == (int64_t) n_tokens) {
++                    token_axis = 2;
++                    sample_offset = tensor->ne[0] * tensor->ne[1] * (tensor->ne[2] - 1);
++                    sample_nelements = tensor->ne[0] * tensor->ne[1];
++                    sample_shape[2] = 1;
++                }
++                if (sample_offset < 0 || sample_nelements <= 0 || sample_offset + sample_nelements > nelements) {
++                    token_axis = -1;
++                    sample_offset = 0;
++                    sample_nelements = nelements;
++                    sample_shape[0] = tensor->ne[0];
++                    sample_shape[1] = tensor->ne[1];
++                    sample_shape[2] = tensor->ne[2];
++                    sample_shape[3] = tensor->ne[3];
++                }
++            }
 +            values_available = true;
-+            for (float value_f32 : values) {
++            for (int64_t i = 0; i < sample_nelements; ++i) {
++                const float value_f32 = values[(size_t) (sample_offset + i)];
 +                const double value = value_f32;
 +                sum += value;
 +                sq_sum += value * value;
 +                min_value = value < min_value ? value : min_value;
 +                max_value = value > max_value ? value : max_value;
 +            }
-+            value_hash = bitnet_rs_reference_layer_trace_hash(values);
++            std::vector<float> sample_values;
++            sample_values.reserve((size_t) sample_nelements);
++            for (int64_t i = 0; i < sample_nelements; ++i) {
++                sample_values.push_back(values[(size_t) (sample_offset + i)]);
++            }
++            value_hash = bitnet_rs_reference_layer_trace_hash(sample_values);
 +        }
 +    }
 +
@@ -206,8 +240,12 @@ index 66f4791e..2f0c21d4 100644
 +    out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
 +    out << ",\"dtype\":";
 +    bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
-+    out << ",\"shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
-+    out << ",\"nelements\":" << nelements;
++    out << ",\"shape\":[" << sample_shape[0] << "," << sample_shape[1] << "," << sample_shape[2] << "," << sample_shape[3] << "]";
++    out << ",\"nelements\":" << sample_nelements;
++    out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++    out << ",\"full_nelements\":" << nelements;
++    out << ",\"token_axis\":" << token_axis;
++    out << ",\"sample_offset\":" << sample_offset;
 +    out << ",\"nbytes\":" << nbytes;
 +    out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
 +    out << ",\"values_available\":" << (values_available ? "true" : "false");
@@ -226,8 +264,8 @@ index 66f4791e..2f0c21d4 100644
 +
 +    out << ",\"stats\":";
 +    if (values_available) {
-+        const double mean = values.empty() ? std::numeric_limits<double>::quiet_NaN() : sum / (double) values.size();
-+        const double rms = values.empty() ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(sq_sum / (double) values.size());
++        const double mean = sample_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : sum / (double) sample_nelements;
++        const double rms = sample_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(sq_sum / (double) sample_nelements);
 +        out << "{\"mean\":";
 +        bitnet_rs_reference_layer_trace_json_number(out, mean);
 +        out << ",\"rms\":";
@@ -242,12 +280,12 @@ index 66f4791e..2f0c21d4 100644
 +    }
 +
 +    out << ",\"first_values\":[";
-+    const size_t sample_count = values.size() < 16 ? values.size() : 16;
++    const size_t sample_count = sample_nelements < 16 ? (size_t) sample_nelements : 16;
 +    for (size_t i = 0; i < sample_count; ++i) {
 +        if (i > 0) {
 +            out << ",";
 +        }
-+        bitnet_rs_reference_layer_trace_json_number(out, values[i]);
++        bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) sample_offset + i]);
 +    }
 +    out << "]}";
 +}
@@ -273,7 +311,7 @@ index 66f4791e..2f0c21d4 100644
 +        << "\"diagnostic_only\":true,"
 +        << "\"claim_allowed\":false,"
 +        << "\"source\":\"BITNET_RS_REFERENCE_LAYER_TRACE\","
-+        << "\"capture_scope\":\"first_decode_with_outputs\","
++        << "\"capture_scope\":\"first_decode_last_output_token_slice\","
 +        << "\"n_tokens\":" << n_tokens << ","
 +        << "\"n_outputs\":" << n_outputs << ","
 +        << "\"records\":[";
@@ -285,7 +323,7 @@ index 66f4791e..2f0c21d4 100644
 +        if (!bitnet_rs_reference_layer_trace_target(name)) {
 +            continue;
 +        }
-+        bitnet_rs_reference_layer_trace_write_record(out, lctx, tensor, i, first);
++        bitnet_rs_reference_layer_trace_write_record(out, lctx, tensor, i, n_tokens, n_outputs, first);
 +        first = false;
 +    }
 +
@@ -308,7 +346,7 @@ index 66f4791e..2f0c21d4 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -17658,6 +17934,13 @@ static int llama_decode_internal(
+@@ -17658,6 +17972,13 @@ static int llama_decode_internal(
  
          llama_graph_compute(lctx, gf, n_threads, threadpool);
  
