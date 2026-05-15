@@ -234,7 +234,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 })
             }).collect::<Vec<_>>(),
             "command_argv": reference_argv,
-            "command_policy": "uses_rendered_prompt_text_for_template_parity; disables reference auto-BOS because the rendered Llama3 prompt already contains BOS; suppresses prompt echo so stdout is generated text; token parity still must be verified against reference output",
+            "command_policy": "uses_rendered_prompt_text_for_template_parity; disables reference auto-BOS because the rendered Llama3 prompt already contains BOS; suppresses prompt echo so stdout is generated text; enables verbose prompt output so the reference run receipt can compare actual reference prompt tokenization",
             "setup_command_pwsh": format!(
                 "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -ModelDir \"{}\" -QuantType i2_s -Force -SkipPatches",
                 model_dir.replace('"', "\\\"")
@@ -336,6 +336,7 @@ fn reference_argv(
         "--seed".to_string(),
         "0".to_string(),
         "--no-display-prompt".to_string(),
+        "--verbose-prompt".to_string(),
     ]
 }
 
@@ -989,6 +990,7 @@ mod tests {
             })
         );
         assert!(argv.iter().any(|arg| arg == "--no-display-prompt"));
+        assert!(argv.iter().any(|arg| arg == "--verbose-prompt"));
     }
 
     #[test]

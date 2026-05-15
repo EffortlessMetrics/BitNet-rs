@@ -145,6 +145,7 @@ fn build_receipt(
     capture: &CommandCapture,
 ) -> Value {
     let generated_text = generated_text_from_stdout(&capture.stdout);
+    let reference_prompt_tokens = reference_prompt_token_report(plan, &capture.stderr);
     let stderr_contains_double_bos_warning =
         capture.stderr.contains("final prompt starts with 2 BOS tokens");
     let stderr_contains_auto_bos_override =
@@ -159,7 +160,30 @@ fn build_receipt(
     if stderr_contains_double_bos_warning {
         blocked_reasons.push("reference_double_bos_warning_present".to_string());
     }
+    let reference_prompt_tokens_available =
+        bool_at(&reference_prompt_tokens, "/available").unwrap_or(false);
+    let reference_prompt_token_count_mismatch =
+        bool_at(&reference_prompt_tokens, "/token_count_matches_plan") == Some(false);
+    let reference_prompt_token_hash_mismatch =
+        bool_at(&reference_prompt_tokens, "/token_ids_sha256_matches_plan") == Some(false);
+    if !reference_prompt_tokens_available {
+        blocked_reasons.push("reference_prompt_token_ids_missing".to_string());
+    }
+    if reference_prompt_token_count_mismatch {
+        blocked_reasons.push("reference_prompt_token_count_mismatch".to_string());
+    }
+    if reference_prompt_token_hash_mismatch {
+        blocked_reasons.push("reference_prompt_token_ids_sha256_mismatch".to_string());
+    }
     let generated_text_present = !generated_text.is_empty();
+    let next_when_ready = if !reference_prompt_tokens_available
+        || reference_prompt_token_count_mismatch
+        || reference_prompt_token_hash_mismatch
+    {
+        "resolve reference prompt tokenization mismatch before token/logit parity comparison"
+    } else {
+        "compare reference text against Rust CPU and strict A770 receipts; use a deeper reference hook before token/logit parity claims"
+    };
 
     json!({
         "schema_version": 1,
@@ -186,6 +210,7 @@ fn build_receipt(
             .pointer("/rust_commands/reference_text_tokenization")
             .cloned()
             .unwrap_or(Value::Null),
+        "reference_prompt_tokenization": reference_prompt_tokens,
         "reference": {
             "backend": str_at(plan, "/reference/backend").unwrap_or("bitnet.cpp_or_llama.cpp_cli"),
             "selected_executable": str_at(plan, "/reference/selected_executable").unwrap_or(""),
@@ -215,7 +240,7 @@ fn build_receipt(
         "decision": {
             "reference_execution_ready": blocked_reasons.is_empty(),
             "current_blocked_reasons": blocked_reasons,
-            "next_when_ready": "compare reference text against Rust CPU and strict A770 receipts; use a deeper reference hook before token/logit parity claims",
+            "next_when_ready": next_when_ready,
         },
         "not_claims": CRITICAL_NOT_CLAIMS,
     })
@@ -231,6 +256,80 @@ fn stderr_tail(stderr: &str, max_lines: usize) -> Vec<String> {
     lines[start..].to_vec()
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct ReferencePromptTokens {
+    token_count: Option<usize>,
+    token_ids: Vec<u32>,
+}
+
+fn reference_prompt_token_report(plan: &Value, stderr: &str) -> Value {
+    let parsed = reference_prompt_tokens_from_stderr(stderr);
+    let available = !parsed.token_ids.is_empty();
+    let token_ids_sha256 = if available { sha256_token_ids(&parsed.token_ids).ok() } else { None };
+    let plan_count = u64_at(plan, "/prompt_identity/prompt_token_count");
+    let plan_hash = str_at(plan, "/prompt_identity/prompt_token_ids_sha256");
+    let token_count_matches_plan = parsed
+        .token_count
+        .zip(plan_count.map(|count| count as usize))
+        .map(|(actual, planned)| actual == planned);
+    let token_ids_sha256_matches_plan =
+        token_ids_sha256.as_deref().zip(plan_hash).map(|(actual, planned)| actual == planned);
+
+    json!({
+        "diagnostic_only": true,
+        "claimable": false,
+        "available": available,
+        "source": "reference_cli_verbose_prompt_stderr",
+        "token_count": parsed.token_count,
+        "token_ids": parsed.token_ids,
+        "token_ids_sha256": token_ids_sha256,
+        "plan_prompt_token_count": plan_count,
+        "plan_prompt_token_ids_sha256": plan_hash,
+        "token_count_matches_plan": token_count_matches_plan,
+        "token_ids_sha256_matches_plan": token_ids_sha256_matches_plan,
+        "policy": "actual reference prompt tokenization is parsed only from llama-cli --verbose-prompt stderr; it does not prove generated token ids or top logits",
+        "not_claims": [
+            "reference_prompt_tokenization_proves_reference_generated_token_ids",
+            "reference_prompt_tokenization_proves_reference_top_logits",
+            "reference_prompt_tokenization_promotes_reference_parity",
+            "reference_prompt_tokenization_promotes_a770_semantic_quality"
+        ],
+    })
+}
+
+fn reference_prompt_tokens_from_stderr(stderr: &str) -> ReferencePromptTokens {
+    let mut token_count = None;
+    let mut token_ids = Vec::new();
+    let mut in_prompt_tokens = false;
+
+    for line in stderr.lines() {
+        let trimmed = line.trim_start();
+        if let Some(raw) = trimmed.strip_prefix("main: number of tokens in prompt = ") {
+            token_count = raw.trim().parse::<usize>().ok();
+            in_prompt_tokens = true;
+            continue;
+        }
+        if !in_prompt_tokens {
+            continue;
+        }
+        if trimmed.starts_with("sampler seed:")
+            || trimmed.starts_with("sampler params:")
+            || trimmed.starts_with("sampler chain:")
+            || trimmed.starts_with("generate:")
+            || trimmed.starts_with("llama_perf_")
+        {
+            break;
+        }
+        if let Some((raw_id, _piece)) = trimmed.split_once("->") {
+            if let Ok(id) = raw_id.trim().parse::<u32>() {
+                token_ids.push(id);
+            }
+        }
+    }
+
+    ReferencePromptTokens { token_count, token_ids }
+}
+
 fn read_json(path: &Path) -> Result<Value> {
     let raw = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     serde_json::from_str(&raw).with_context(|| format!("parsing {}", path.display()))
@@ -240,9 +339,21 @@ fn str_at<'a>(value: &'a Value, pointer: &str) -> Option<&'a str> {
     value.pointer(pointer).and_then(Value::as_str)
 }
 
+fn bool_at(value: &Value, pointer: &str) -> Option<bool> {
+    value.pointer(pointer).and_then(Value::as_bool)
+}
+
+fn u64_at(value: &Value, pointer: &str) -> Option<u64> {
+    value.pointer(pointer).and_then(Value::as_u64)
+}
+
 fn sha256_json<T: serde::Serialize + ?Sized>(value: &T) -> String {
     let bytes = serde_json::to_vec(value).unwrap_or_default();
     sha256_bytes(&bytes)
+}
+
+fn sha256_token_ids(tokens: &[u32]) -> Result<String> {
+    Ok(sha256_bytes(&serde_json::to_vec(tokens)?))
 }
 
 fn sha256_text(value: &str) -> String {
@@ -301,9 +412,14 @@ mod tests {
 
     #[test]
     fn reference_receipt_is_text_only_and_non_promoting() {
+        let prompt_ids = vec![128000, 128006, 882, 128007];
+        let prompt_hash = sha256_token_ids(&prompt_ids).unwrap();
         let plan = json!({
             "diagnostic": "bitnet_reference_plan",
-            "prompt_identity": {"prompt_token_count": 17},
+            "prompt_identity": {
+                "prompt_token_count": prompt_ids.len(),
+                "prompt_token_ids_sha256": prompt_hash,
+            },
             "model": {"model_id": "test"},
             "rust_commands": {
                 "reference_text_tokenization": {
@@ -321,13 +437,24 @@ mod tests {
             status_code: Some(0),
             success: true,
             stdout: "2+2 equals 4. [end of text]\n".to_string(),
-            stderr: "validate_override: Using metadata override ( bool) 'tokenizer.ggml.add_bos_token' = false\n".to_string(),
+            stderr: "validate_override: Using metadata override ( bool) 'tokenizer.ggml.add_bos_token' = false\n\
+main: number of tokens in prompt = 4\n\
+128000 -> '<|begin_of_text|>'\n\
+128006 -> '<|start_header_id|>'\n\
+   882 -> 'user'\n\
+128007 -> '<|end_header_id|>'\n\
+sampler seed: 0\n"
+                .to_string(),
             elapsed_ms: 10.0,
         };
         let receipt =
             build_receipt(Path::new("plan.json"), &plan, &["llama-cli".to_string()], &capture);
         assert_eq!(receipt["claim_allowed"], false);
         assert_eq!(receipt["decision"]["reference_execution_ready"], true);
+        assert_eq!(receipt["reference_prompt_tokenization"]["available"], true);
+        assert_eq!(receipt["reference_prompt_tokenization"]["token_ids"], json!(prompt_ids));
+        assert_eq!(receipt["reference_prompt_tokenization"]["token_count_matches_plan"], true);
+        assert_eq!(receipt["reference_prompt_tokenization"]["token_ids_sha256_matches_plan"], true);
         assert_eq!(receipt["signals"]["actual_generated_token_ids_present"], false);
         assert_eq!(receipt["signals"]["top_logits_present"], false);
         assert_eq!(
@@ -342,6 +469,63 @@ mod tests {
         assert!(not_claims.contains(&json!("reference_generated_token_ids")));
         assert!(not_claims.contains(&json!("reference_top_logits")));
         assert!(not_claims.contains(&json!("rust_reference_parity_proven")));
+    }
+
+    #[test]
+    fn reference_prompt_tokenization_mismatch_blocks_ready_state() {
+        let planned_ids = vec![1, 2];
+        let plan = json!({
+            "prompt_identity": {
+                "prompt_token_count": planned_ids.len(),
+                "prompt_token_ids_sha256": sha256_token_ids(&planned_ids).unwrap(),
+            },
+            "reference": {
+                "backend": "bitnet.cpp_or_llama.cpp_cli",
+                "selected_executable": "llama-cli",
+                "command_policy": "test"
+            }
+        });
+        let capture = CommandCapture {
+            status_code: Some(0),
+            success: true,
+            stdout: "2\n".to_string(),
+            stderr: "main: number of tokens in prompt = 3\n\
+1 -> 'a'\n\
+2 -> 'b'\n\
+3 -> 'c'\n\
+sampler seed: 0\n"
+                .to_string(),
+            elapsed_ms: 10.0,
+        };
+
+        let receipt =
+            build_receipt(Path::new("plan.json"), &plan, &["llama-cli".to_string()], &capture);
+
+        assert_eq!(receipt["decision"]["reference_execution_ready"], false);
+        assert_eq!(receipt["reference_prompt_tokenization"]["token_count_matches_plan"], false);
+        assert_eq!(
+            receipt["reference_prompt_tokenization"]["token_ids_sha256_matches_plan"],
+            false
+        );
+        let reasons = receipt["decision"]["current_blocked_reasons"].as_array().unwrap();
+        assert!(reasons.contains(&json!("reference_prompt_token_count_mismatch")));
+        assert!(reasons.contains(&json!("reference_prompt_token_ids_sha256_mismatch")));
+    }
+
+    #[test]
+    fn parses_reference_verbose_prompt_tokens_from_stderr() {
+        let parsed = reference_prompt_tokens_from_stderr(
+            "noise\n\
+main: number of tokens in prompt = 4\n\
+128000 -> '<|begin_of_text|>'\n\
+   882 -> 'user'\n\
+   198 -> '<newline>'\n\
+128009 -> '<|eot_id|>'\n\
+sampler seed: 0\n",
+        );
+
+        assert_eq!(parsed.token_count, Some(4));
+        assert_eq!(parsed.token_ids, vec![128000, 882, 198, 128009]);
     }
 
     #[test]
