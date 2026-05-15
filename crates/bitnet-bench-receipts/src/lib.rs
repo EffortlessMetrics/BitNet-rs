@@ -6,6 +6,34 @@ use serde::{Deserialize, Serialize};
 use std::io::{BufRead, Write};
 use std::path::Path;
 
+const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
+const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
+const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
+    "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+const QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen3-0.6b-instruct-q8_0";
+const QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE: &str = "Qwen3-0.6B-Q8_0.gguf";
+const QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
+    "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DenseQwenBenchmarkModel {
+    Qwen25,
+    Qwen3,
+}
+
+impl DenseQwenBenchmarkModel {
+    fn min_runs_per_backend(self) -> u64 {
+        match self {
+            Self::Qwen25 => 3,
+            Self::Qwen3 => 1,
+        }
+    }
+
+    fn repeated_comparator_required(self) -> bool {
+        matches!(self, Self::Qwen25)
+    }
+}
+
 /// Errors from receipt I/O and serialization.
 #[derive(Debug, thiserror::Error)]
 pub enum ReceiptError {
@@ -1231,15 +1259,11 @@ pub fn validate_dense_gguf_qwen_repeated_comparator_receipt_json(
     require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
 
     let model = require_object(receipt, "model")?;
-    require_string_eq(model, "id", "qwen2.5-0.5b-instruct-q8_0")?;
+    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
     require_string_eq(model, "model_family", "qwen")?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_string_eq(model, "file", "qwen2.5-0.5b-instruct-q8_0.gguf")?;
-    require_string_eq(
-        model,
-        "sha256",
-        "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
-    )?;
+    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
+    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let tokenizer_prompt_authority = require_object(receipt, "tokenizer_prompt_authority")?;
     require_string_eq(tokenizer_prompt_authority, "tokenizer_authority", "contract_authoritative")?;
@@ -1404,15 +1428,7 @@ pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_json(
     require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
 
     let model = require_object(receipt, "model")?;
-    require_string_eq(model, "id", "qwen2.5-0.5b-instruct-q8_0")?;
-    require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_string_eq(model, "file", "qwen2.5-0.5b-instruct-q8_0.gguf")?;
-    require_string_eq(
-        model,
-        "sha256",
-        "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
-    )?;
+    let benchmark_model = validate_dense_qwen_benchmark_model(model)?;
 
     let tokenizer_prompt_authority = require_object(receipt, "tokenizer_prompt_authority")?;
     require_string_eq(tokenizer_prompt_authority, "tokenizer_authority", "contract_authoritative")?;
@@ -1444,16 +1460,21 @@ pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_json(
     require_u64_eq(execution_plan, "unsupported_ops", 0)?;
 
     let proof_inputs = require_object(receipt, "proof_inputs")?;
-    validate_dense_qwen_proof_input(
-        proof_inputs,
-        "benchmark_baseline",
-        "dense_gguf_qwen_cuda_benchmark_baseline",
-    )?;
-    validate_dense_qwen_proof_input(
-        proof_inputs,
-        "repeated_comparator",
-        "dense_gguf_qwen_repeated_comparator",
-    )?;
+    if benchmark_model.repeated_comparator_required() {
+        validate_dense_qwen_proof_input(
+            proof_inputs,
+            "benchmark_baseline",
+            "dense_gguf_qwen_cuda_benchmark_baseline",
+        )?;
+        validate_dense_qwen_proof_input(
+            proof_inputs,
+            "repeated_comparator",
+            "dense_gguf_qwen_repeated_comparator",
+        )?;
+    } else {
+        validate_missing_dense_qwen_proof_input(proof_inputs, "benchmark_baseline")?;
+        validate_missing_dense_qwen_proof_input(proof_inputs, "repeated_comparator")?;
+    }
     validate_dense_qwen_proof_input(
         proof_inputs,
         "one_token_transfer_timing",
@@ -1513,13 +1534,19 @@ pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_json(
                 entry.get("profile").and_then(serde_json::Value::as_str) == Some(expected)
             })
             .ok_or_else(|| validation_error(format!("profile_reviews missing {expected}")))?;
-        validate_dense_qwen_qualification_profile_review(profile)?;
+        validate_dense_qwen_qualification_profile_review(
+            profile,
+            benchmark_model.min_runs_per_backend(),
+        )?;
     }
 
     let evidence = require_object(receipt, "evidence_summary")?;
     for expected in ["one_token", "short_decode_8", "warm_session_3_turns"] {
         let profile = require_object(evidence, expected)?;
-        require_u64_at_least(profile, "runs_per_backend", 3)?;
+        require_u64_at_least(profile, "runs_per_backend", benchmark_model.min_runs_per_backend())?;
+        if benchmark_model.min_runs_per_backend() < 3 {
+            require_bool_eq(profile, "repeated_evidence", false)?;
+        }
         require_bool_eq(profile, "fallback_free", true)?;
         require_bool_eq(profile, "quality_passed", true)?;
         require_bool_eq(profile, "generated_token_ids_match", true)?;
@@ -1611,6 +1638,29 @@ pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_file(
 ) -> Result<(), ReceiptError> {
     let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
     validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+}
+
+fn validate_dense_qwen_benchmark_model(
+    model: &serde_json::Value,
+) -> Result<DenseQwenBenchmarkModel, ReceiptError> {
+    require_string_eq(model, "model_family", "qwen")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    match require_string(model, "id")? {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => {
+            require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
+            require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+            Ok(DenseQwenBenchmarkModel::Qwen25)
+        }
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => {
+            require_string_eq(model, "file", QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE)?;
+            require_string_eq(model, "architecture", "qwen3")?;
+            require_string_eq(model, "sha256", QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+            Ok(DenseQwenBenchmarkModel::Qwen3)
+        }
+        other => Err(validation_error(format!(
+            "model.id must be a verified dense Qwen benchmark model, got {other}"
+        ))),
+    }
 }
 
 fn validate_dense_qwen_repeated_comparator_profile(
@@ -1738,6 +1788,16 @@ fn validate_dense_qwen_proof_input(
     require_non_empty_string(input, "path")?;
     require_non_empty_string(input, "sha256")?;
     require_string_eq(input, "artifact_kind", expected_artifact_kind)?;
+    Ok(())
+}
+
+fn validate_missing_dense_qwen_proof_input(
+    proof_inputs: &serde_json::Value,
+    field: &str,
+) -> Result<(), ReceiptError> {
+    let input = require_object(proof_inputs, field)?;
+    require_string_eq(input, "status", "missing")?;
+    require_non_empty_string(input, "reason")?;
     Ok(())
 }
 
@@ -1965,6 +2025,7 @@ fn validate_strict_cuda_product_qualification_profiles(
 
 fn validate_dense_qwen_qualification_profile_review(
     profile: &serde_json::Value,
+    min_runs_per_backend: u64,
 ) -> Result<(), ReceiptError> {
     require_non_empty_string(profile, "profile")?;
     let decision = require_string(profile, "decision")?;
@@ -1979,7 +2040,10 @@ fn validate_dense_qwen_qualification_profile_review(
     require_bool_eq(profile, "quality_passed", true)?;
     require_bool_eq(profile, "generated_token_ids_match", true)?;
     require_bool_eq(profile, "dense_cuda_evidence_used", true)?;
-    require_u64_at_least(profile, "runs_per_backend", 3)?;
+    require_u64_at_least(profile, "runs_per_backend", min_runs_per_backend)?;
+    if min_runs_per_backend < 3 {
+        require_bool_eq(profile, "repeated_evidence", false)?;
+    }
     require_non_negative_number(profile, "observed_cpu_total_ms_div_cuda_total_ms")?;
     require_bool_eq(profile, "cuda_mean_slower_than_cpu", true)?;
     require_nullable_number_with_source(profile, "host_to_device_ms")?;
@@ -3876,11 +3940,20 @@ mod tests {
     }
 
     #[test]
-    fn committed_dense_gguf_qwen_benchmark_qualification_receipt_validates() {
+    fn committed_dense_gguf_qwen_benchmark_qualification_receipt_validates()
+    -> Result<(), ReceiptError> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-benchmark-qualification.json",
         );
-        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path).unwrap();
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path)
+    }
+
+    #[test]
+    fn committed_qwen3_benchmark_qualification_receipt_validates() -> Result<(), ReceiptError> {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json",
+        );
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path)
     }
 
     fn sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt() -> serde_json::Value {
