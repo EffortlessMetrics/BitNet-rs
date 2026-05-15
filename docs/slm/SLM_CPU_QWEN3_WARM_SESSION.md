@@ -109,3 +109,29 @@ Existing output-head regression tests remain the behavior oracle for generated
 logits. This is allocation cleanup only; it does not introduce dense AVX2
 kernels, Q4/Q5 support, server inference, GPU/NPU/OpenVINO/UHD 620 execution,
 Qwen3.5 support, sustained throughput claims, or BitNet QK256 kernel changes.
+
+## SLM-CPU-015 Thread Envelope Boundary
+
+SLM-CPU-015 records a bounded i5-8250U thread/timing envelope for the same
+strict Qwen3-0.6B Q8_0 warm-session corpus after the SLM-CPU-014 output-head
+cleanup. It runs the corpus at 1, 2, 4, and 8 requested CPU threads and records
+the generated-token stability, strict GGUF tokenizer authority, selected CPU
+backend, no-fallback status, and timing fields for each run.
+
+Outputs:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-1.json
+ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-2.json
+ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-4.json
+ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-8.json
+ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope.json
+ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope-validation.json
+```
+
+The envelope preserves identical generated IDs across all four thread counts,
+keeps `fallback_used=false`, and records `speedup_claim=false` and
+`sustained_throughput_claim=false`. Thermal, power, and resident-memory fields
+remain present but explicitly unavailable (`not_sampled_in_slm_cpu_warm_session`),
+so the artifact is not a sustained Kaby Lake throughput claim and does not
+change the operator default thread count.

@@ -1,0 +1,28 @@
+timestamp = "2026-05-15T12:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-015"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 4911
+branch = "codex/slm-cpu-015-thread-thermal-envelope"
+head_sha = "b9af125c1f19ed111d7a8f972262892415355a71"
+
+summary = "Opened #4911 with bounded i5-8250U Qwen3 Q8_0 warm-session thread/timing envelope evidence after SLM-CPU-014."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4911",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-1.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-2.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-4.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-8.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope-validation.json",
+]
+
+notes = [
+  "The envelope records 1, 2, 4, and 8 requested CPU thread warm-session receipts with strict GGUF tokenizer authority, selected_backend=cpu-rust, fallback_used=false, and stable generated IDs.",
+  "Thermal, power, and resident-memory fields are present but explicitly unavailable because the warm-session command did not sample them.",
+  "No sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
