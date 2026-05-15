@@ -1,0 +1,23 @@
+timestamp = "2026-05-15T10:48:40Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-002-report-schema"
+summary = "Started BitNet eval/report schema support for task-family summaries and reference-vs-Rust comparison fields."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "This slice is still schema and dry-run validation; it does not run the full BitNet eval corpus on M4.",
+  "It keeps reference-vs-Rust comparison, task-family pass rates, timeout/failure taxonomy, generated text/token ID fields, backend identity, and claim boundaries explicit for later M4 receipts.",
+  "It does not enable BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.",
+]

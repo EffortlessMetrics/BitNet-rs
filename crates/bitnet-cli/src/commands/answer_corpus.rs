@@ -398,6 +398,16 @@ impl AnswerCorpusCommand {
                 "not_run": not_run,
             },
             "scoring_summary": scoring_summary(&rows),
+            "task_family_summary": task_family_summary(&rows),
+            "reference_comparison": reference_comparison_summary(
+                &rows,
+                bitnet_answer_path,
+                &top_level_selected_backend,
+                &top_level_runtime_api,
+                top_level_fallback_used,
+                corpus.defaults.prompt_template.as_str(),
+                &corpus.model.tokenizer_authority,
+            ),
             "receipt_quality": {
                 "case_receipt_checker": "answer_receipt_failed_rules",
                 "checked": !self.dry_run,
@@ -574,6 +584,9 @@ impl AnswerCorpusCommand {
 
         Ok(json!({
             "id": case.id,
+            "task_family": case.task_family(),
+            "category": case.category.as_deref().unwrap_or_else(|| case.task_family()),
+            "seed_material": case.seed_material,
             "question": case.question,
             "status": status,
             "run_receipt_path": case_receipt.display().to_string(),
@@ -654,6 +667,14 @@ impl AnswerCorpusCommand {
                     .map(Value::from)
                     .unwrap_or_else(|| Value::from("unknown")),
             },
+            "reference_comparison": reference_comparison_json(
+                case,
+                Some(&answer),
+                Some(&token_ids),
+                &run_receipt["selected_backend"],
+                &run_receipt["runtime_api"],
+                &run_receipt["fallback_used"],
+            ),
             "model": {
                 "repo": run_receipt["model"]["repo"].clone(),
                 "file": run_receipt["model"]["file"].clone(),
@@ -675,6 +696,9 @@ impl AnswerCorpusCommand {
     fn not_run_row(&self, case: &AnswerCase, reason: &str) -> Value {
         json!({
             "id": case.id,
+            "task_family": case.task_family(),
+            "category": case.category.as_deref().unwrap_or_else(|| case.task_family()),
+            "seed_material": case.seed_material,
             "question": case.question,
             "status": "not_run",
             "reason": reason,
@@ -683,7 +707,26 @@ impl AnswerCorpusCommand {
                 "failed_rules": ["not_run"],
                 "failure_taxonomy": [],
                 "scoring": scoring_not_run_json(case.scoring.as_ref()),
-            }
+            },
+            "backend": {
+                "requested_backend": Value::Null,
+                "selected_backend": Value::Null,
+                "runtime_api": Value::Null,
+                "fallback_used": Value::Null,
+            },
+            "tokens": Value::Null,
+            "token_ids": {
+                "prompt": Value::Null,
+                "generated": Value::Null,
+            },
+            "reference_comparison": reference_comparison_json(
+                case,
+                None,
+                None,
+                &Value::Null,
+                &Value::Null,
+                &Value::Null,
+            ),
         })
     }
 }
@@ -724,9 +767,13 @@ impl AnswerCorpus {
 #[derive(Debug, Deserialize)]
 struct CorpusModel {
     repo: String,
+    #[serde(default, alias = "revision")]
+    repo_revision: Option<String>,
     file: String,
     #[serde(default)]
     sha256: Option<String>,
+    #[serde(default)]
+    bytes: Option<u64>,
     #[serde(default)]
     family: Option<String>,
     #[serde(default)]
@@ -773,10 +820,10 @@ impl AnswerCorpusModelIdentity {
         Self {
             id: None,
             repo: model.repo.clone(),
-            revision: None,
+            revision: model.repo_revision.clone(),
             file: model.file.clone(),
             sha256: model.sha256.clone(),
-            bytes: None,
+            bytes: model.bytes,
             family: model.family.clone(),
             architecture: model.architecture.clone(),
             quant_format: model.quant_format.clone(),
@@ -838,14 +885,40 @@ struct CorpusDefaults {
 #[derive(Debug, Deserialize)]
 struct AnswerCase {
     id: String,
+    #[serde(default)]
+    category: Option<String>,
+    #[serde(default)]
+    seed_material: Option<String>,
     question: String,
     max_new_tokens: Option<usize>,
     timeout_seconds: Option<u64>,
     min_generated_tokens: Option<usize>,
     min_distinct_generated_tokens: Option<usize>,
     #[serde(default)]
+    reference: Option<AnswerReference>,
+    #[serde(default)]
     scoring: Option<AnswerScoring>,
     gate: AnswerGate,
+}
+
+impl AnswerCase {
+    fn task_family(&self) -> &str {
+        self.category.as_deref().unwrap_or("uncategorized")
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct AnswerReference {
+    #[serde(default)]
+    runner: Option<String>,
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    receipt: Option<String>,
+    #[serde(default)]
+    text: Option<String>,
+    #[serde(default)]
+    generated_token_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1392,6 +1465,284 @@ fn scoring_summary(rows: &[Value]) -> Value {
         "not_run": not_run,
         "kinds": kinds.into_iter().collect::<Vec<_>>(),
         "failure_taxonomy": failure_taxonomy,
+    })
+}
+
+fn task_family_summary(rows: &[Value]) -> Value {
+    let mut families = BTreeMap::<String, TaskFamilyStats>::new();
+    for row in rows {
+        let family = row["task_family"]
+            .as_str()
+            .or_else(|| row["category"].as_str())
+            .unwrap_or("uncategorized");
+        let stats = families.entry(family.to_string()).or_default();
+        stats.total += 1;
+        match row["status"].as_str().unwrap_or("unknown") {
+            "passed" => stats.passed += 1,
+            "quality_failed" | "command_failed" => stats.failed += 1,
+            "timeout" => stats.timeout += 1,
+            "not_run" => stats.not_run += 1,
+            status => *stats.status_counts.entry(status.to_string()).or_default() += 1,
+        }
+
+        let scoring = &row["quality"]["scoring"];
+        if let Some(kind) = scoring["kind"].as_str() {
+            stats.scoring_total += 1;
+            stats.scoring_kinds.insert(kind.to_string());
+            match scoring["passed"].as_bool() {
+                Some(true) => stats.scoring_passed += 1,
+                Some(false) => stats.scoring_failed += 1,
+                None => stats.scoring_not_run += 1,
+            }
+            for taxonomy in scoring["failure_taxonomy"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+            {
+                *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
+            }
+        }
+
+        for taxonomy in row["quality"]["failure_taxonomy"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
+        }
+    }
+
+    Value::Object(
+        families
+            .into_iter()
+            .map(|(family, stats)| (family, stats.into_json()))
+            .collect::<Map<_, _>>(),
+    )
+}
+
+#[derive(Default)]
+struct TaskFamilyStats {
+    total: usize,
+    passed: usize,
+    failed: usize,
+    timeout: usize,
+    not_run: usize,
+    status_counts: BTreeMap<String, usize>,
+    scoring_total: usize,
+    scoring_passed: usize,
+    scoring_failed: usize,
+    scoring_not_run: usize,
+    scoring_kinds: BTreeSet<String>,
+    failure_taxonomy: BTreeMap<String, usize>,
+}
+
+impl TaskFamilyStats {
+    fn into_json(self) -> Value {
+        json!({
+            "total": self.total,
+            "passed": self.passed,
+            "failed": self.failed,
+            "timeout": self.timeout,
+            "not_run": self.not_run,
+            "other_statuses": self.status_counts,
+            "scoring": {
+                "enabled": self.scoring_total > 0,
+                "total": self.scoring_total,
+                "passed": self.scoring_passed,
+                "failed": self.scoring_failed,
+                "not_run": self.scoring_not_run,
+                "kinds": self.scoring_kinds.into_iter().collect::<Vec<_>>(),
+            },
+            "failure_taxonomy": self.failure_taxonomy,
+        })
+    }
+}
+
+fn reference_comparison_json(
+    case: &AnswerCase,
+    answer: Option<&str>,
+    generated_token_ids: Option<&[u32]>,
+    selected_backend: &Value,
+    runtime_api: &Value,
+    fallback_used: &Value,
+) -> Value {
+    let reference = case.reference.as_ref();
+    let reference_text = reference.and_then(|reference| reference.text.as_deref());
+    let reference_token_ids =
+        reference.and_then(|reference| reference.generated_token_ids.as_ref());
+    let rust_answer_available = answer.is_some();
+    let mut comparable_fields = Vec::new();
+    let mut missing_fields = Vec::new();
+    let mut mismatched_fields = Vec::new();
+
+    let text_match = match (reference_text, answer) {
+        (Some(reference), Some(answer)) => {
+            comparable_fields.push("text");
+            let matched = reference.trim() == answer.trim();
+            if !matched {
+                mismatched_fields.push("text");
+            }
+            Some(matched)
+        }
+        (Some(_), None) => {
+            missing_fields.push("rust.text");
+            None
+        }
+        (None, Some(_)) => {
+            missing_fields.push("reference.text");
+            None
+        }
+        (None, None) => None,
+    };
+    let generated_token_ids_match = match (reference_token_ids, generated_token_ids) {
+        (Some(reference), Some(generated)) => {
+            comparable_fields.push("generated_token_ids");
+            let matched = reference.as_slice() == generated;
+            if !matched {
+                mismatched_fields.push("generated_token_ids");
+            }
+            Some(matched)
+        }
+        (Some(_), None) => {
+            missing_fields.push("rust.generated_token_ids");
+            None
+        }
+        (None, Some(_)) => {
+            missing_fields.push("reference.generated_token_ids");
+            None
+        }
+        (None, None) => None,
+    };
+
+    let status =
+        if reference.is_none() || (reference_text.is_none() && reference_token_ids.is_none()) {
+            "reference_not_supplied"
+        } else if !rust_answer_available {
+            "not_run"
+        } else if !mismatched_fields.is_empty() {
+            "mismatched"
+        } else if comparable_fields.len() < 2 || !missing_fields.is_empty() {
+            "partially_compared"
+        } else {
+            "matched"
+        };
+
+    json!({
+        "schema": "bitnet_reference_vs_rust_v1",
+        "enabled": reference.is_some(),
+        "reference": {
+            "runner": reference.and_then(|reference| reference.runner.as_deref()),
+            "source": reference.and_then(|reference| reference.source.as_deref()),
+            "receipt": reference.and_then(|reference| reference.receipt.as_deref()),
+            "text": reference_text,
+            "generated_token_ids": reference_token_ids,
+        },
+        "rust": {
+            "status": if rust_answer_available { "available" } else { "not_run" },
+            "selected_backend": selected_backend,
+            "runtime_api": runtime_api,
+            "fallback_used": fallback_used,
+            "text": answer,
+            "generated_token_ids": generated_token_ids,
+        },
+        "comparison": {
+            "status": status,
+            "text_match": text_match,
+            "generated_token_ids_match": generated_token_ids_match,
+            "comparable_fields": comparable_fields,
+            "missing_fields": missing_fields,
+            "mismatched_fields": mismatched_fields,
+        }
+    })
+}
+
+fn reference_comparison_summary(
+    rows: &[Value],
+    bitnet_answer_path: bool,
+    selected_backend: &str,
+    runtime_api: &str,
+    fallback_used: bool,
+    prompt_template: &str,
+    tokenizer_authority: &Option<CorpusTokenizerAuthority>,
+) -> Value {
+    let mut status_counts = BTreeMap::<String, usize>::new();
+    let mut reference_supplied = 0usize;
+    let mut reference_not_supplied = 0usize;
+    let mut comparable_cases = 0usize;
+    let mut text_matches = 0usize;
+    let mut generated_token_id_matches = 0usize;
+    let mut mismatched_fields = BTreeMap::<String, usize>::new();
+
+    for row in rows {
+        let comparison = &row["reference_comparison"]["comparison"];
+        let status = comparison["status"].as_str().unwrap_or("missing");
+        *status_counts.entry(status.to_string()).or_default() += 1;
+        if row["reference_comparison"]["enabled"].as_bool() == Some(true) {
+            reference_supplied += 1;
+        } else {
+            reference_not_supplied += 1;
+        }
+        if comparison["comparable_fields"].as_array().is_some_and(|fields| !fields.is_empty()) {
+            comparable_cases += 1;
+        }
+        if comparison["text_match"].as_bool() == Some(true) {
+            text_matches += 1;
+        }
+        if comparison["generated_token_ids_match"].as_bool() == Some(true) {
+            generated_token_id_matches += 1;
+        }
+        for field in comparison["mismatched_fields"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            *mismatched_fields.entry(field.to_string()).or_default() += 1;
+        }
+    }
+
+    json!({
+        "schema": "bitnet_reference_vs_rust_v1",
+        "enabled": bitnet_answer_path,
+        "reference_runner_required": bitnet_answer_path,
+        "rust_runner": {
+            "selected_backend": selected_backend,
+            "runtime_api": runtime_api,
+            "fallback_used": fallback_used,
+            "prompt_template": prompt_template,
+            "tokenizer_authority": tokenizer_authority,
+        },
+        "summary": {
+            "total": rows.len(),
+            "reference_supplied": reference_supplied,
+            "reference_not_supplied": reference_not_supplied,
+            "comparable_cases": comparable_cases,
+            "matched": status_counts.get("matched").copied().unwrap_or_default(),
+            "mismatched": status_counts.get("mismatched").copied().unwrap_or_default(),
+            "partially_compared": status_counts
+                .get("partially_compared")
+                .copied()
+                .unwrap_or_default(),
+            "not_run": status_counts.get("not_run").copied().unwrap_or_default(),
+            "status_counts": status_counts,
+            "text_matches": text_matches,
+            "generated_token_id_matches": generated_token_id_matches,
+            "mismatched_fields": mismatched_fields,
+        },
+        "claim_boundary": {
+            "dense_slm_evidence_used": false,
+            "runtime_accuracy_claimed": false,
+            "performance_claimed": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_claimed": false,
+            "mpsgraph_claimed": false,
+            "broad_apple_silicon_claimed": false,
+        },
     })
 }
 
@@ -1975,6 +2326,9 @@ struct ChildFailureRowInput<'a> {
 fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
     json!({
         "id": input.case.id,
+        "task_family": input.case.task_family(),
+        "category": input.case.category.as_deref().unwrap_or_else(|| input.case.task_family()),
+        "seed_material": input.case.seed_material,
         "question": input.case.question,
         "status": input.status,
         "exit_code": input.run.exit_code,
@@ -1983,6 +2337,8 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
         "quality": {
             "passed": false,
             "failed_rules": [input.failed_rule],
+            "failure_taxonomy": [input.failed_rule],
+            "scoring": scoring_not_run_json(input.case.scoring.as_ref()),
         },
         "backend": {
             "requested_backend": input.device,
@@ -2018,6 +2374,19 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
             "stderr_path": input.run.stderr_path.display().to_string(),
             "phase_path": input.run.phase_path.display().to_string(),
         },
+        "tokens": Value::Null,
+        "token_ids": {
+            "prompt": Value::Null,
+            "generated": Value::Null,
+        },
+        "reference_comparison": reference_comparison_json(
+            input.case,
+            None,
+            None,
+            &Value::from(input.device),
+            &Value::from(answer_corpus_runtime_api(input.device)),
+            &Value::from(false),
+        ),
         "stdout_tail": tail_string(&input.run.stdout, 4096),
         "stderr_tail": tail_string(&input.run.stderr, 4096),
     })
@@ -2413,6 +2782,101 @@ mod tests {
     }
 
     #[test]
+    fn bitnet_reference_comparison_records_matched_text_and_tokens() {
+        let case = AnswerCase {
+            id: "math_2_plus_2".to_string(),
+            category: Some("arithmetic_exact".to_string()),
+            seed_material: Some("seed=912587 family=arithmetic".to_string()),
+            question: "What is 2+2?".to_string(),
+            max_new_tokens: Some(4),
+            timeout_seconds: None,
+            min_generated_tokens: None,
+            min_distinct_generated_tokens: None,
+            reference: Some(AnswerReference {
+                runner: Some("microsoft_bitnet_cpp".to_string()),
+                source: Some("fixture".to_string()),
+                receipt: Some("reference.json".to_string()),
+                text: Some("4".to_string()),
+                generated_token_ids: Some(vec![19]),
+            }),
+            scoring: Some(scoring("exact_match")),
+            gate: gate("exact_trimmed"),
+        };
+        let selected_backend = Value::from("apple-m4-cpu-neon");
+        let runtime_api = Value::from("cpu");
+        let fallback_used = Value::from(false);
+        let comparison = reference_comparison_json(
+            &case,
+            Some("4"),
+            Some(&[19]),
+            &selected_backend,
+            &runtime_api,
+            &fallback_used,
+        );
+
+        assert_eq!(comparison["schema"], "bitnet_reference_vs_rust_v1");
+        assert_eq!(comparison["enabled"], true);
+        assert_eq!(comparison["reference"]["runner"], "microsoft_bitnet_cpp");
+        assert_eq!(comparison["rust"]["selected_backend"], "apple-m4-cpu-neon");
+        assert_eq!(comparison["rust"]["fallback_used"], false);
+        assert_eq!(comparison["comparison"]["status"], "matched");
+        assert_eq!(comparison["comparison"]["text_match"], true);
+        assert_eq!(comparison["comparison"]["generated_token_ids_match"], true);
+    }
+
+    #[test]
+    fn bitnet_task_family_summary_counts_statuses_and_failure_taxonomy() {
+        let rows = vec![
+            json!({
+                "task_family": "arithmetic_exact",
+                "status": "passed",
+                "quality": {
+                    "failure_taxonomy": [],
+                    "scoring": {
+                        "kind": "exact_match",
+                        "passed": true,
+                        "failure_taxonomy": []
+                    }
+                }
+            }),
+            json!({
+                "task_family": "arithmetic_exact",
+                "status": "timeout",
+                "quality": {
+                    "failure_taxonomy": ["timeout"],
+                    "scoring": {
+                        "kind": "exact_match",
+                        "passed": null,
+                        "failure_taxonomy": []
+                    }
+                }
+            }),
+            json!({
+                "task_family": "format_constrained_json",
+                "status": "quality_failed",
+                "quality": {
+                    "failure_taxonomy": ["format_only"],
+                    "scoring": {
+                        "kind": "json_schema",
+                        "passed": false,
+                        "failure_taxonomy": ["fenced_json"]
+                    }
+                }
+            }),
+        ];
+
+        let summary = task_family_summary(&rows);
+        assert_eq!(summary["arithmetic_exact"]["total"], 2);
+        assert_eq!(summary["arithmetic_exact"]["passed"], 1);
+        assert_eq!(summary["arithmetic_exact"]["timeout"], 1);
+        assert_eq!(summary["arithmetic_exact"]["scoring"]["not_run"], 1);
+        assert_eq!(summary["arithmetic_exact"]["failure_taxonomy"]["timeout"], 1);
+        assert_eq!(summary["format_constrained_json"]["failed"], 1);
+        assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["fenced_json"], 1);
+        assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["format_only"], 1);
+    }
+
+    #[test]
     fn cli_timeout_overrides_corpus_default() {
         assert_eq!(effective_default_timeout_seconds(Some(1), Some(300)), 1);
         assert_eq!(effective_default_timeout_seconds(None, Some(120)), 120);
@@ -2746,11 +3210,14 @@ cases:
     fn child_failure_row_records_cuda_crash_diagnostics() {
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
+            category: None,
+            seed_material: None,
             question: "What is 2+2? Answer with only the number.".to_string(),
             max_new_tokens: Some(4),
             timeout_seconds: None,
             min_generated_tokens: None,
             min_distinct_generated_tokens: None,
+            reference: None,
             scoring: None,
             gate: gate("exact_trimmed"),
         };
@@ -2821,11 +3288,14 @@ cases:
     fn child_failure_row_records_requested_cpu_kernel_env() {
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
+            category: None,
+            seed_material: None,
             question: "What is 2+2? Answer with only the number.".to_string(),
             max_new_tokens: Some(4),
             timeout_seconds: None,
             min_generated_tokens: None,
             min_distinct_generated_tokens: None,
+            reference: None,
             scoring: None,
             gate: gate("exact_trimmed"),
         };

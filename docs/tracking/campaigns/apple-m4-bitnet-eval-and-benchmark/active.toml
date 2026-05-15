@@ -74,7 +74,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-002"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-002-report-schema"
 stackable = false
 review_mode = "codex_premerge"
@@ -86,6 +86,8 @@ commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli slm_eval_scoring",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- answer-corpus --dry-run --device cpu --model missing.gguf --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml --json-out target/apple-m4-bitnet-eval-and-benchmark/bitnet-eval-corpus-schema-dry-run.json",
+  "jq -e '.artifact_kind == \"bitnet_cpu_answer_corpus\" and .corpus.name == \"apple-m4-bitnet-eval-seeded-corpus\" and .corpus.case_count == 100 and .model.revision == \"a1f2f1c765812aa8af3f6eda4a313707064bba15\" and .model.bytes == 1187801280 and .task_family_summary.arithmetic_exact.total == 10 and .task_family_summary.arithmetic_exact.not_run == 10 and .reference_comparison.schema == \"bitnet_reference_vs_rust_v1\" and .reference_comparison.rust_runner.fallback_used == false and .reference_comparison.summary.reference_not_supplied == 100 and .reference_comparison.claim_boundary.dense_slm_evidence_used == false and .reference_comparison.claim_boundary.chat_enabled == false and .reference_comparison.claim_boundary.serve_enabled == false and .reference_comparison.claim_boundary.performance_claimed == false' target/apple-m4-bitnet-eval-and-benchmark/bitnet-eval-corpus-schema-dry-run.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-eval-and-benchmark",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

@@ -4812,6 +4812,80 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract()
     Ok(())
 }
 
+/// `answer-corpus --dry-run` validates the Apple M4 BitNet eval report schema contract.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let out = dir.path().join("apple-m4-bitnet-eval.json");
+    let corpus = workspace_path("ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "cpu",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus");
+    assert_eq!(receipt["corpus"]["case_count"], 100);
+    assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
+    assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
+    assert_eq!(receipt["model"]["bytes"], 1_187_801_280u64);
+    assert_eq!(
+        receipt["model"]["sha256"],
+        "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+    );
+    assert_eq!(receipt["model"]["architecture"], "bitnet_b1_58");
+    assert_eq!(receipt["model"]["quant_format"], "I2_S");
+    assert_eq!(receipt["tokenizer"]["authority"]["source"], "external_tokenizer_json");
+    assert_eq!(receipt["tokenizer"]["authority"]["ggml_pre"], "llama-bpe");
+    assert_eq!(receipt["prompt_template_policy"]["family"], "bitnetcpp-answer");
+    assert_eq!(receipt["scoring_summary"]["enabled"], true);
+    assert_eq!(receipt["scoring_summary"]["total"], 100);
+    assert_eq!(receipt["scoring_summary"]["not_run"], 100);
+    assert_eq!(receipt["task_family_summary"]["arithmetic_exact"]["total"], 10);
+    assert_eq!(receipt["task_family_summary"]["arithmetic_exact"]["not_run"], 10);
+    assert_eq!(receipt["task_family_summary"]["required_forbidden_tokens"]["scoring"]["total"], 10);
+    assert_eq!(receipt["cases"][0]["task_family"], "arithmetic_exact");
+    assert!(
+        receipt["cases"][0]["seed_material"]
+            .as_str()
+            .ok_or("missing seed material")?
+            .contains("seed=912587")
+    );
+    assert_eq!(
+        receipt["cases"][0]["reference_comparison"]["schema"],
+        "bitnet_reference_vs_rust_v1"
+    );
+    assert_eq!(
+        receipt["cases"][0]["reference_comparison"]["comparison"]["status"],
+        "reference_not_supplied"
+    );
+    assert_eq!(receipt["reference_comparison"]["enabled"], true);
+    assert_eq!(receipt["reference_comparison"]["rust_runner"]["fallback_used"], false);
+    assert_eq!(receipt["reference_comparison"]["summary"]["reference_not_supplied"], 100);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["dense_slm_evidence_used"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["serve_enabled"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["performance_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    Ok(())
+}
+
 /// `answer-corpus --model-id` pins aggregate SLM receipt identity to a supported M4 model.
 #[cfg(feature = "full-cli")]
 #[test]
