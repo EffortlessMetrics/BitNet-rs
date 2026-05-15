@@ -1,0 +1,15 @@
+timestamp = "2026-05-15T22:59:30Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-003"
+event = "pr_open"
+pr = 5001
+head_sha = "ce7c7cedd8d35ed889e4c26d9b653e04e277062e"
+actor = "codex"
+
+notes = [
+  "Opened the durable BitNet evidence refresh PR after recording 2026-05-15T2214Z eval, benchmark, and variable warm-session receipts.",
+  "Eval regression matched the 2026-05-15 BitNet eval baseline with zero warnings.",
+  "Benchmark regression matched context and reported five advisory prompt-tokenize timing warnings only.",
+  "Variable warm-session receipt validated with repeated-prompt determinism; strict BitNet warm-session regression remains outside the current `bitnet mac regression` accepted artifact kinds.",
+  "Scope remains receipt refresh only: no BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim.",
+]

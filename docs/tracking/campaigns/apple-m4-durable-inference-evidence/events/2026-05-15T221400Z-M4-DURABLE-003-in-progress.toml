@@ -1,0 +1,11 @@
+timestamp = "2026-05-15T22:14:00Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the BitNet durable refresh for the accepted Microsoft I2_S GGUF and external tokenizer identity.",
+  "Planned evidence path is ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z with BitNet eval, benchmark, and variable warm-session receipts.",
+  "Scope remains receipt refresh only: no BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim.",
+]
