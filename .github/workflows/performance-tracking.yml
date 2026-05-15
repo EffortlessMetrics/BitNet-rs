@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    paths-ignore:
+      - 'docs/tracking/**'
+      - '.codex/campaigns/**'
   schedule:
     # Run performance tracking daily at 4 AM UTC
     - cron: '0 4 * * *'
@@ -26,7 +29,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Performance smoke builds are selected proof. Avoid cancelling started
+  # builds; control cost with event/path routing instead.
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
