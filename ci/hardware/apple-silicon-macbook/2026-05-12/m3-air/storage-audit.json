@@ -1,0 +1,65 @@
+{
+  "artifact_kind": "apple_m3_air_storage_audit",
+  "schema": 1,
+  "campaign": "apple-m3-macbook-air",
+  "work_item": "M3MBA-010",
+  "recorded_at": "2026-05-15T04:01:00Z",
+  "machine_id": "apple-m3-macbook-air",
+  "volume": {
+    "mount": "/System/Volumes/Data",
+    "available_kib": 49507532,
+    "total_kib": 482797652,
+    "used_kib": 384533348,
+    "capacity_percent": 89
+  },
+  "policy": {
+    "hard_free_space_floor_kib": 8388608,
+    "preferred_free_space_floor_kib": 26214400,
+    "large_artifact_sweep_allowed": true,
+    "reason": "Available space remains above the preferred floor after retaining the dense Qwen control artifact and Microsoft 2B I2_S reference artifact."
+  },
+  "cache": {
+    "root": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models",
+    "total_kib": 1819848,
+    "model_binaries_committed": false
+  },
+  "retained_artifacts": [
+    {
+      "id": "qwen2.5-0.5b-instruct-q8_0",
+      "kind": "dense_slm_control",
+      "path": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "size_kib": 659884,
+      "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+      "retention_reason": "Retained as the M3 Air dense Qwen control artifact for SLM comparison and operator-profile context."
+    },
+    {
+      "id": "microsoft_bitnet_b158_2b_4t_i2s",
+      "kind": "bitnet_reference_candidate",
+      "path": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
+      "size_kib": 1159964,
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "retention_reason": "Retained because M3MBA-005C accepted the artifact for the M3 Air BitNet.cpp reference-runner context and follow-on candidate comparison."
+    }
+  ],
+  "deleted_artifacts": [],
+  "next_download_policy": {
+    "m3mba_006_allowed": true,
+    "m3mba_007_allowed": true,
+    "serialize_large_downloads": true,
+    "preflight_required": [
+      "df -k . \"$HOME/Library/Caches\"",
+      "record cache root and before/after free space",
+      "hash every retained downloaded artifact",
+      "do not commit model binaries"
+    ]
+  },
+  "claim_boundary": {
+    "storage_state_recorded": true,
+    "artifact_quality_claimed": false,
+    "rust_apple_backend_claimed": false,
+    "m4_mac_mini_claimed": false,
+    "apple_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "model_binary_committed": false
+  }
+}

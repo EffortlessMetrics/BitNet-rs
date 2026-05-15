@@ -1,0 +1,19 @@
+timestamp = "2026-05-15T04:01:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-010"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-010-storage-audit"
+summary = "Started the M3 Air storage and cache retention audit."
+
+artifacts = [
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/storage-audit.json",
+  "docs/reports/apple-silicon-macbook-m3-air-storage-audit.md",
+]
+
+notes = [
+  "Recorded the retained dense Qwen control artifact and Microsoft 2B I2_S reference artifact with SHA-256 evidence.",
+  "The audit is storage and cache state only; it does not claim Rust Apple backend support, Apple Metal BitNet inference, QK256 support, artifact quality, or M4 Mac mini proof.",
+]
