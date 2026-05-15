@@ -2023,6 +2023,75 @@ mod tests {
     }
 
     #[test]
+    fn tied_embedding_logits_use_cached_embedding_transpose() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let vocab_size = 4;
+        let hidden_size = 3;
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config.model.num_layers = 0;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_slice(
+                &[
+                    1.0f32, 0.0, 0.0, // token 0
+                    0.0, 1.0, 0.0, // token 1
+                    0.0, 0.0, 1.0, // token 2
+                    1.0, 1.0, 1.0, // token 3
+                ],
+                (vocab_size, hidden_size),
+                &device,
+            )?,
+        );
+        tensors.insert(
+            "final_norm.weight".to_string(),
+            Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors_and_qk256_backend(
+            config,
+            vb,
+            HashMap::new(),
+            Qk256DispatchBackend::Cpu,
+        )?;
+
+        assert!(
+            model.lm_head.is_none() && model.lm_head_weight.is_none(),
+            "missing lm_head must use tied embeddings"
+        );
+        assert!(
+            model.embed_tied_weight.is_some(),
+            "tied embedding logits should cache [hidden, vocab] weight"
+        );
+
+        let hidden_2d = Tensor::from_slice(&[2.0f32, 3.0, 5.0], (1, hidden_size), &device)?;
+        let logits_2d = model.logits(&hidden_2d)?;
+        assert_eq!(logits_2d.to_vec2::<f32>()?, vec![vec![2.0, 3.0, 5.0, 10.0]]);
+
+        let hidden_3d = Tensor::from_slice(
+            &[
+                2.0f32, 3.0, 5.0, // step 0
+                7.0, 11.0, 13.0, // step 1
+            ],
+            (1, 2, hidden_size),
+            &device,
+        )?;
+        let logits_3d = model.logits(&hidden_3d)?;
+        assert_eq!(
+            logits_3d.to_vec3::<f32>()?,
+            vec![vec![vec![2.0, 3.0, 5.0, 10.0], vec![7.0, 11.0, 13.0, 31.0]]]
+        );
+
+        Ok(())
+    }
+
+    #[test]
     #[serial_test::serial(bitnet_env)]
     fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {
         let device = Device::Cpu;
