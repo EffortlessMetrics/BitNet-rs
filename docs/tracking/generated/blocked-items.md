@@ -366,7 +366,8 @@
 | slm-cpu | SLM-CPU-008YA | SLM-CPU-008X | merged |
 | slm-cpu | SLM-CPU-008YB | SLM-CPU-008YA | merged |
 | slm-cpu | SLM-CPU-008AA | SLM-CPU-008Z | merged |
-| slm-cpu | SLM-CPU-008AB | SLM-CPU-008AA | ready |
+| slm-cpu | SLM-CPU-008AB | SLM-CPU-008AA | merged |
+| slm-cpu | SLM-CPU-008AC | SLM-CPU-008AB | ready |
 | slm-cpu | SLM-CPU-008Y1 | SLM-CPU-008YB | merged |
 | slm-cpu | SLM-CPU-008Z | SLM-CPU-008Y | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
