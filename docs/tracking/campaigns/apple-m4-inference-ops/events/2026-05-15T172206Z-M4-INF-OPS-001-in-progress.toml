@@ -1,0 +1,30 @@
+timestamp = "2026-05-15T17:22:06Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-001-mac-status"
+summary = "Started model-free Apple M4 inference status receipt work."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "The status command must summarize dense SLM, BitNet, disk/cache, report inventory, and operator commands without running live inference.",
+  "The status receipt must keep dense SLM and BitNet evidence separated.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim is allowed.",
+]
+
+[evidence]
+route = "bitnet mac status"
+artifact_kind = "apple_m4_inference_status"
+backend = "apple-m4-cpu-neon"
+fallback_used = false
+claim_boundary = "status only; no live model run, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"

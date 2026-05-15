@@ -11,6 +11,7 @@ Primary commands:
 
 ```bash
 bitnet mac models
+bitnet mac status
 bitnet mac ask "What is 2+2?"
 bitnet mac chat
 bitnet mac smoke
@@ -27,6 +28,12 @@ supported model when disk headroom is adequate. The BitNet row includes receipt
 bridge commands for validating the strict `answer-corpus` proof and the
 fixed-prompt warm-session proof. It is limited to explicit one-shot ask or
 fixed-prompt warm reuse with a verified GGUF plus external tokenizer:
+
+`bitnet mac status` is the model-free operator summary. It writes an
+`apple_m4_inference_status` receipt with disk/cache posture, dense SLM readiness,
+BitNet ask/warm readiness, local report inventory, supported command examples,
+and explicit claim boundaries. It does not run live inference and keeps BitNet
+chat and serve disabled.
 
 ```bash
 bitnet mac ask \

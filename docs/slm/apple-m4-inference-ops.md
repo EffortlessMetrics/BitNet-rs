@@ -1,0 +1,63 @@
+# Apple M4 Inference Ops
+
+This page tracks the operator layer above the completed Apple M4 dense SLM,
+server, Metal phase, BitNet local-answer, BitNet eval/benchmark, and BitNet
+productization campaigns. The goal is to make the Mac mini easy to operate and
+easy to audit without turning generic PR CI into live hardware evaluation.
+
+## Status Receipt
+
+`M4-INF-OPS-001` adds a model-free status command:
+
+```bash
+bitnet mac status
+```
+
+The command writes an `apple_m4_inference_status` receipt to
+`target/apple-m4-inference-ops/mac-status.json` by default. It summarizes:
+
+- disk/cache recommendation from `bitnet mac models`;
+- dense SLM default/support/cache readiness and ask/chat/serve availability;
+- BitNet ask/warm readiness and explicit disabled chat/serve state;
+- current local report inventory for dense eval v2, dense benchmark v2, BitNet
+  eval, BitNet benchmark, and variable warm-session evidence;
+- known operator commands for model fetch/verify, ask, chat, serve, doctor,
+  smoke, regression, BitNet warm, and the BitNet chat gate.
+
+The status receipt is not a live model run. It records
+`requested_backend=apple-m4-cpu-neon`, `runtime_api=cpu`, `fallback_used=false`,
+and an explicit claim boundary:
+
+```text
+status_only=true
+no_live_model_run=true
+dense_slm_and_bitnet_evidence_separated=true
+bitnet_chat_enabled=false
+bitnet_serve_enabled=false
+full_metal_inference_claimed=false
+qk256_apple_claimed=false
+neural_engine_execution_claimed=false
+mpsgraph_inference_claimed=false
+macbook_evidence=false
+broad_apple_silicon_claim=false
+broad_performance_claim=false
+speedup_claim=false
+```
+
+Validate the receipt with:
+
+```bash
+bitnet mac receipts-check target/apple-m4-inference-ops/mac-status.json --json
+```
+
+## Remaining Ops Work
+
+The remaining inference-ops lane should stay model-free in generic PR CI:
+
+- refresh advisory/nightly report manifests from committed M4 receipt bundles;
+- build compact regression dashboard artifacts across dense SLM and BitNet
+  reports while preserving separate evidence families;
+- publish an operator envelope v2 that maps supported commands to receipt
+  requirements and claim boundaries.
+
+Live M4 model runs belong in local, advisory, scheduled, or release lanes.

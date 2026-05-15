@@ -1,0 +1,153 @@
+id = "apple-m4-inference-ops"
+title = "Apple M4 inference ops"
+status = "active"
+
+objective = "Turn the completed Apple M4 dense SLM and BitNet proof surfaces into a durable operator layer: status, report inventory, advisory refresh, regression dashboarding, disk/cache posture, and an operator envelope v2 with explicit claim boundaries."
+
+end_state = [
+  "`bitnet mac status` gives operators one receipt-backed readiness summary.",
+  "Advisory/nightly report refresh manifests cover dense SLM and BitNet report families without mixing claim scopes.",
+  "Regression dashboard artifacts compare matching reports over time for quality, TTFT, input/output/decode throughput, memory, and reliability drift.",
+  "Operator envelope v2 maps supported M4 commands to model/tokenizer/backend/fallback/timing/memory/token-ID receipt requirements and claim boundaries.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini operations campaign.",
+  "Do not reopen completed Apple M4 dense SLM, local server, Metal phase, BitNet local-answer, BitNet eval/benchmark, or BitNet productization campaigns unless a regression proves they are wrong.",
+  "Do not use dense Qwen evidence as BitNet evidence.",
+  "Do not enable BitNet chat or BitNet serve in this campaign.",
+  "Do not claim full apple-m4-metal inference, QK256 support, Neural Engine execution, MPSGraph model inference, MacBook evidence, broad Apple Silicon performance, or speedup.",
+  "Do not add live model downloads, hardware timing runs, or long resident soaks to generic required PR CI.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-INF-OPS-001"
+status = "in_progress"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-001-mac-status"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add `bitnet mac status` with an `apple_m4_inference_status` receipt covering dense SLM, BitNet, disk/cache, report inventory, commands, and explicit claim boundaries without running live inference."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_status",
+  "cargo test --locked -p bitnet-cli --test cli_snapshot_tests mac_help",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "`bitnet mac status` emits a model-free M4 inference readiness receipt.",
+]
+must_not_claim = [
+  "A live M4 model run was executed.",
+  "BitNet chat or serve is enabled.",
+  "Broad model quality or performance is proven.",
+]
+
+[[work_item]]
+id = "M4-INF-OPS-002"
+status = "proposed"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-002-report-refresh"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-INF-OPS-001"]
+acceptance = "Add advisory/nightly report refresh manifest generation for committed M4 dense SLM and BitNet report families without running live models in generic PR CI."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+]
+allowed_paths = [
+  ".github/workflows/**",
+  "crates/bitnet-cli/**",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "M4 report refresh manifests can be generated without live model runs in generic PR CI.",
+]
+must_not_claim = [
+  "Fresh live M4 performance was measured.",
+]
+
+[[work_item]]
+id = "M4-INF-OPS-003"
+status = "proposed"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-003-regression-dashboard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-INF-OPS-002"]
+acceptance = "Add compact regression dashboard artifacts across dense SLM and BitNet reports while keeping evidence families, model identity, tokenizer authority, backend, fallback, and claim boundaries separate."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "M4 ops dashboards can compare matching dense SLM and BitNet report families separately.",
+]
+must_not_claim = [
+  "Dense SLM evidence proves BitNet behavior.",
+]
+
+[[work_item]]
+id = "M4-INF-OPS-004"
+status = "proposed"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-004-operator-envelope-v2"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-INF-OPS-003"]
+acceptance = "Publish operator envelope v2 mapping supported M4 commands to receipt requirements, gates, report families, and unsupported claim boundaries."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-ops/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The M4 operator envelope v2 maps commands to receipt requirements and claim boundaries.",
+]
+must_not_claim = [
+  "Any unsupported runtime capability is enabled.",
+]
