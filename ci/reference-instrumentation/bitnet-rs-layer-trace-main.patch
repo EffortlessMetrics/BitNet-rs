@@ -26,7 +26,7 @@ index 66f4791e..2f0c21d4 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3434,6 +3436,319 @@ struct llama_context {
+@@ -3434,6 +3436,359 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -154,6 +154,27 @@ index 66f4791e..2f0c21d4 100644
 +    return hash;
 +}
 +
++static void bitnet_rs_reference_layer_trace_write_tensor_provenance(
++    std::ostream & out,
++    struct ggml_tensor * tensor
++) {
++    if (tensor == nullptr) {
++        out << "null";
++        return;
++    }
++    const char * name = ggml_get_name(tensor);
++    out << "{";
++    out << "\"name\":";
++    bitnet_rs_reference_layer_trace_json_string(out, name);
++    out << ",\"op\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++    out << ",\"dtype\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++    out << ",\"shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++    out << ",\"nelements\":" << ggml_nelements(tensor);
++    out << "}";
++}
++
 +static void bitnet_rs_reference_layer_trace_write_record(
 +    std::ostream & out,
 +    llama_context & lctx,
@@ -238,6 +259,25 @@ index 66f4791e..2f0c21d4 100644
 +        bitnet_rs_reference_layer_trace_stage(name)
 +    );
 +    out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++    out << ",\"graph_op\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++    out << ",\"graph_sources\":[";
++    bool first_source = true;
++    for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++        struct ggml_tensor * source = tensor->src[src_i];
++        if (source == nullptr) {
++            continue;
++        }
++        if (!first_source) {
++            out << ",";
++        }
++        bitnet_rs_reference_layer_trace_write_tensor_provenance(out, source);
++        first_source = false;
++    }
++    out << "]";
++    out << ",\"view_source\":";
++    bitnet_rs_reference_layer_trace_write_tensor_provenance(out, tensor->view_src);
++    out << ",\"view_offset\":" << tensor->view_offs;
 +    out << ",\"dtype\":";
 +    bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
 +    out << ",\"shape\":[" << sample_shape[0] << "," << sample_shape[1] << "," << sample_shape[2] << "," << sample_shape[3] << "]";
@@ -346,7 +386,7 @@ index 66f4791e..2f0c21d4 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -17658,6 +17972,13 @@ static int llama_decode_internal(
+@@ -17658,6 +18012,13 @@ static int llama_decode_internal(
  
          llama_graph_compute(lctx, gf, n_threads, threadpool);
  

@@ -144,6 +144,10 @@ struct ReferenceTraceRecord {
     stage: String,
     graph_index: Option<i64>,
     layer: Option<i64>,
+    graph_op: Option<String>,
+    graph_sources: Value,
+    view_source: Value,
+    view_offset: Option<u64>,
     dtype: String,
     shape: Vec<i64>,
     nelements: u64,
@@ -678,6 +682,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                     "name": record.name,
                     "stage": record.stage,
                     "graph_index": record.graph_index,
+                    "graph_op": record.graph_op,
+                    "graph_sources": record.graph_sources,
+                    "view_source": record.view_source,
+                    "view_offset": record.view_offset,
                     "shape": record.shape,
                     "dtype": record.dtype,
                     "nelements": record.nelements,
@@ -855,6 +863,16 @@ fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
                     .to_string(),
                 graph_index: record.pointer("/graph_index").and_then(Value::as_i64),
                 layer: record.pointer("/layer").and_then(Value::as_i64),
+                graph_op: record
+                    .pointer("/graph_op")
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned),
+                graph_sources: record
+                    .pointer("/graph_sources")
+                    .cloned()
+                    .unwrap_or_else(|| json!([])),
+                view_source: record.pointer("/view_source").cloned().unwrap_or(Value::Null),
+                view_offset: record.pointer("/view_offset").and_then(Value::as_u64),
                 dtype: record
                     .pointer("/dtype")
                     .and_then(Value::as_str)
@@ -1020,6 +1038,10 @@ fn reference_record_summary(record: &ReferenceTraceRecord) -> Value {
         "stage": record.stage,
         "graph_index": record.graph_index,
         "layer": record.layer,
+        "graph_op": record.graph_op,
+        "graph_sources": record.graph_sources,
+        "view_source": record.view_source,
+        "view_offset": record.view_offset,
         "shape": record.shape,
         "dtype": record.dtype,
         "nelements": record.nelements,
@@ -1983,6 +2005,16 @@ mod tests {
                         "stage": "attn_norm",
                         "graph_index": 2,
                         "layer": 0,
+                        "graph_op": "RMS_NORM",
+                        "graph_sources": [
+                            {
+                                "name": "inp_embd",
+                                "op": "GET_ROWS",
+                                "dtype": "f32",
+                                "shape": [2, 2, 1, 1],
+                                "nelements": 4
+                            }
+                        ],
                         "dtype": "f32",
                         "shape": [2, 2, 1, 1],
                         "nelements": 4,
@@ -2014,6 +2046,14 @@ mod tests {
         assert_eq!(
             report.pointer("/cpu/first_material_mismatch/status"),
             Some(&json!("material_mismatch"))
+        );
+        assert_eq!(
+            report.pointer("/cpu/first_material_mismatch/reference/graph_op"),
+            Some(&json!("RMS_NORM"))
+        );
+        assert_eq!(
+            report.pointer("/cpu/first_material_mismatch/reference/graph_sources/0/name"),
+            Some(&json!("inp_embd"))
         );
         assert!(report.pointer("/decision/current_blocked_reasons").unwrap().is_array());
     }
