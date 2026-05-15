@@ -2556,8 +2556,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-001"
-status = "proposed"
+status = "pr_open"
 branch = "server/strict-cuda-smoke"
+pr = 4820
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

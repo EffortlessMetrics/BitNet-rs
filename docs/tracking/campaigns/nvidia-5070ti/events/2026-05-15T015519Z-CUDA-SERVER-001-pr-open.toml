@@ -1,0 +1,21 @@
+timestamp = "2026-05-15T01:55:19Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-001"
+event = "pr_open"
+actor = "codex"
+from = "proposed"
+to = "pr_open"
+branch = "server/strict-cuda-smoke"
+pr = 4820
+head_sha = "6ef345368"
+summary = "Opened draft PR #4820 for strict RTX 5070 Ti dense Qwen server receipt classification."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4820",
+  "crates/bitnet-server/src/lib.rs",
+  "crates/bitnet-cli/src/commands/receipts.rs",
+]
+notes = [
+  "The PR makes server shared-engine receipts carry exact dense Qwen model coverage and route identity for strict RTX 5070 Ti responses.",
+  "The PR does not commit a hardware server-smoke receipt or promote model coverage server_ready.",
+  "Speedup, full residency, and BitNet packed I2_S/QK256 proof remain false for the dense server receipt path.",
+]
