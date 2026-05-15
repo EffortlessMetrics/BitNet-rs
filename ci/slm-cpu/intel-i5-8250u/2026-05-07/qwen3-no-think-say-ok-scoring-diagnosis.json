@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_qwen3_constrained_answer_scoring_calibration",
+  "claim": "qwen3_no_think_constrained_answer_seed_selected",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "prompt_template": "qwen",
+  "qwen_no_think": true,
+  "prompt_text": "Say exactly: OK",
+  "inputs": {
+    "bitnet_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-bitnet-rs-first-token.json",
+    "reference_compare": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-reference-compare.json",
+    "reference_validation": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-reference-validation.json",
+    "reference_capture_method": "temporary non-interactive public Candle quantized_qwen3 harness"
+  },
+  "outcome": {
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_matches": true,
+    "reference_backend": "candle-transformers-0.10.2",
+    "reference_kernel": "quantized_qwen3",
+    "bitnet_backend": "cpu-rust",
+    "bitnet_kernel": "dense-qwen-cpu-reference",
+    "loader_mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "fallback_used": false,
+    "reference_chosen_id": 3925,
+    "bitnet_chosen_id": 3925,
+    "reference_text": "OK",
+    "bitnet_text": "OK",
+    "validation_passed": true,
+    "comparison_passed": false,
+    "comparison_failure_reason": "top-k logits differ numerically after the matching chosen token; this remains diagnostic shared-math evidence and is not a constrained-answer scoring failure for this seed"
+  },
+  "scoring_policy": {
+    "seed_id": "say_ok",
+    "mode": "first_token_exact",
+    "required_prompt_policy": "qwen_no_think",
+    "required_reference_evidence": [
+      "same model SHA",
+      "same rendered prompt and prompt IDs",
+      "same generated token IDs",
+      "same decoded text",
+      "strict GGUF tokenizer authority",
+      "selected_backend=cpu-rust",
+      "fallback_used=false"
+    ],
+    "pass_condition": "reference and bitnet-rs both generate token 3925 / 'OK' as the first constrained-answer token"
+  },
+  "conclusion": "The Qwen3 no-thinking `Say exactly: OK` seed is suitable as the first constrained-answer scoring gate for SLM-CPU-009 because the known-good Candle reference and bitnet-rs agree on prompt IDs, generated ID 3925, decoded text 'OK', strict tokenizer policy, selected CPU backend identity, and fallback=false. The older 2+2 first-token seeds remain unsuitable because the reference answer was token 17 / '2'.",
+  "must_not_claim": [
+    "Qwen3 tiny answer corpus is green.",
+    "Broad Qwen answer quality is proven.",
+    "Strict top-k logits parity is proven.",
+    "Unbounded multi-token stability is proven.",
+    "Warm-session usability is proven.",
+    "Sustained 8250U throughput is proven.",
+    "Q4/Q5 quant expansion is in scope.",
+    "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+    "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+    "BitNet QK256/I2_S kernels are modified."
+  ]
+}
