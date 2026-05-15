@@ -2459,8 +2459,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-006"
-status = "proposed"
+status = "pr_open"
 branch = "model/cuda-qwen3-0_6b-warm-session"
+pr = 4985
+head_sha = "2c776bfd3285077348e1df5d3ca5505425cefb17"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
