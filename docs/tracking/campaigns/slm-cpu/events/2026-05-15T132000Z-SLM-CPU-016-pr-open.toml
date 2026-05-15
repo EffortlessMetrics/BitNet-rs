@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T13:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-016"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 4918
+branch = "codex/slm-cpu-016-operator-profile-tracker"
+head_sha = "13b8360bb2ad72a63b8c0a2617304d20f6cc5db1"
+
+summary = "Opened #4918 to add SLM-CPU-016 as the next Kaby Lake SLM operator appliance profile item."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4918",
+  "docs/tracking/campaigns/slm-cpu/active.toml",
+  "docs/tracking/campaigns/slm-cpu/CAMPAIGN.md",
+]
+
+notes = [
+  "This is a tracker-only setup PR; it does not add runtime operator-profile artifacts.",
+  "SLM-CPU-016 stays bounded to Qwen3-0.6B Q8_0 strict CPU receipts, selected thread envelope, and measured or explicit unavailable host context.",
+  "No sustained throughput, Q4/Q5, second model, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

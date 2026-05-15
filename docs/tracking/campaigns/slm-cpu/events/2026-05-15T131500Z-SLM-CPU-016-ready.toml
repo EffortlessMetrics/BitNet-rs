@@ -1,0 +1,21 @@
+timestamp = "2026-05-15T13:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-016"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-016-kaby-operator-profile"
+
+summary = "Added SLM-CPU-016 as the next Kaby Lake SLM operator appliance profile item after SLM-CPU-015."
+
+artifacts = [
+  "docs/tracking/campaigns/slm-cpu/active.toml",
+  "docs/tracking/campaigns/slm-cpu/CAMPAIGN.md",
+]
+
+notes = [
+  "SLM-CPU-016 keeps Qwen3-0.6B Q8_0 as the strict CPU proof model and preserves generated IDs, strict GGUF tokenizer authority, selected CPU backend, and fallback_used=false.",
+  "The item records resident memory, power, thermal, storage, and free-space fields as measured or explicitly unavailable instead of inferring host context.",
+  "No sustained throughput, Q4/Q5, second model, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is in scope.",
+]

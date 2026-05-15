@@ -1635,6 +1635,50 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-016"
+status = "pr_open"
+pr = 4918
+branch = "codex/slm-cpu-016-kaby-operator-profile"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-015"]
+acceptance = "Add the Kaby Lake SLM operator appliance profile after SLM-CPU-015 by documenting and, where the command surface supports it, emitting a single strict Qwen3-0.6B Q8_0 operator receipt bundle that uses the selected thread envelope, records model SHA, GGUF tokenizer authority, prompt IDs, generated IDs, selected CPU backend/kernel identity, fallback_used=false, warm-session timing, resident memory, power, thermal, storage/free-space, and unsupported-path fields as measured or explicitly unavailable. The slice must preserve the SLM-CPU-009/010/011/015 generated-ID behavior oracle, keep any timing claim bounded to the recorded i5-8250U host/model/corpus/backend/thread context, and must not claim sustained throughput, Q4/Q5 quant expansion, a second model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The 8250U Qwen3 Q8_0 operator profile is bounded to the recorded strict CPU warm-session artifact bundle.",
+  "A default operator thread count may be recommended only if the SLM-CPU-015 envelope and SLM-CPU-016 host-context fields support it.",
+  "Resident memory, power, thermal, storage, or free-space fields may be recorded as explicitly unavailable when the local host cannot sample them.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven without warm/cold and thermal boundaries.",
+  "Q4/Q5 quant expansion is in scope.",
+  "A second dense SLM model is supported by this item.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-008Y1"
 status = "merged"
 pr = 4769
