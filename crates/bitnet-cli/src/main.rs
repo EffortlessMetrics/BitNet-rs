@@ -220,6 +220,7 @@ fn logit_receipt_value(
     token_id: u32,
     logit: Option<f32>,
     softmax_context: Option<(f64, f64)>,
+    softmax_rank: Option<usize>,
 ) -> serde_json::Value {
     serde_json::json!({
         "token_id": token_id,
@@ -227,6 +228,7 @@ fn logit_receipt_value(
         "present": logit.is_some(),
         "logit": logit,
         "softmax_probability": softmax_probability(logit, softmax_context),
+        "softmax_rank": softmax_rank,
     })
 }
 
@@ -241,7 +243,8 @@ fn selected_logit_values(
         .copied()
         .map(|token_id| {
             let logit = usize::try_from(token_id).ok().and_then(|idx| logits.get(idx).copied());
-            logit_receipt_value(tokenizer, token_id, logit, softmax_context)
+            let rank = softmax_rank(logits, token_id);
+            logit_receipt_value(tokenizer, token_id, logit, softmax_context, rank)
         })
         .collect()
 }
@@ -269,6 +272,22 @@ fn softmax_probability(logit: Option<f32>, softmax_context: Option<(f64, f64)>) 
     }
     let (max, denominator) = softmax_context?;
     Some((((logit as f64) - max).exp()) / denominator)
+}
+
+fn softmax_rank(logits: &[f32], token_id: u32) -> Option<usize> {
+    let idx = usize::try_from(token_id).ok()?;
+    let target = *logits.get(idx)?;
+    if !target.is_finite() {
+        return None;
+    }
+    let better = logits
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, value)| value.is_finite())
+        .filter(|(other_idx, value)| *value > target || (*value == target && *other_idx < idx))
+        .count();
+    Some(better + 1)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -382,11 +401,24 @@ mod proof_summary_tests {
         assert_eq!(selected[0]["logit"], serde_json::json!(std::f32::consts::LN_2));
         let probability = selected[0]["softmax_probability"].as_f64().expect("probability");
         assert!((probability - (2.0 / 3.0)).abs() < 1.0e-6);
+        assert_eq!(selected[0]["softmax_rank"], serde_json::json!(1));
         assert_eq!(selected[1]["token_id"], serde_json::json!(42));
         assert_eq!(selected[1]["token_piece"], serde_json::json!("*"));
         assert_eq!(selected[1]["present"], serde_json::json!(false));
         assert_eq!(selected[1]["logit"], serde_json::Value::Null);
         assert_eq!(selected[1]["softmax_probability"], serde_json::Value::Null);
+        assert_eq!(selected[1]["softmax_rank"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn softmax_rank_breaks_ties_by_lowest_token_id() {
+        let logits = [1.0, 3.0, 2.0, 3.0, f32::NAN];
+
+        assert_eq!(softmax_rank(&logits, 1), Some(1));
+        assert_eq!(softmax_rank(&logits, 3), Some(2));
+        assert_eq!(softmax_rank(&logits, 2), Some(3));
+        assert_eq!(softmax_rank(&logits, 4), None);
+        assert_eq!(softmax_rank(&logits, 99), None);
     }
 
     #[test]
@@ -2277,11 +2309,13 @@ async fn run_simple_generation(
                 top_logits: top_logits
                     .iter()
                     .map(|&(token_id, logit)| {
+                        let rank = softmax_rank(&logits_vec, token_id);
                         logit_receipt_value(
                             tokenizer.as_ref(),
                             token_id,
                             Some(logit),
                             probability_context,
+                            rank,
                         )
                     })
                     .collect(),
