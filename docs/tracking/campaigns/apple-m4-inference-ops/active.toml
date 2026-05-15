@@ -69,13 +69,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-INF-OPS-002"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-002-report-refresh"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-INF-OPS-001"]
+pr = 4963
+merge_sha = "e003e8b98fbe94daa6dc33bc333b77d48b92fa6d"
 acceptance = "Add advisory/nightly report refresh manifest generation for committed M4 dense SLM and BitNet report families without running live models in generic PR CI."
 commands = [
   "cargo fmt --all -- --check",
