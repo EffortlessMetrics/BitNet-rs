@@ -1,0 +1,19 @@
+timestamp = "2026-05-15T11:04:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-009"
+event = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-009-slm-synthesis"
+pr = 4902
+head_sha = "35402905d22b0997bfaf86962950c1358cf7409a"
+summary = "Opened PR #4902 for the M3 Air dense SLM cross-lane synthesis."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4902",
+  "docs/reports/apple-silicon-macbook-m3-air-slm-synthesis.md",
+]
+
+notes = [
+  "The report compares named M3 Air dense Qwen, M4 dense Qwen, and SLM CPU Qwen3 receipts only where fields are comparable.",
+  "The PR preserves the claim boundary: no BitNet quality, M4 performance, broad Apple Silicon, Metal, MPSGraph, Neural Engine, QK256, or speedup claim.",
+]
