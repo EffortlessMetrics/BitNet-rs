@@ -39,7 +39,7 @@ model-free.
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-DURABLE-001 | ready | Add `resident_100` to the dense M4 SLM benchmark v2 profile contract, parser, validator, tests, and docs without claiming a fresh live run. |
+| M4-DURABLE-001 | merged | PR #4973 added `resident_100` to the dense M4 SLM benchmark v2 profile contract, parser, validator, tests, and docs without claiming a fresh live run. |
 | M4-DURABLE-002 | proposed | Refresh dense SLM eval/benchmark reports for every supported M4 model, including `resident_100`, and compare against previous matching reports. |
 | M4-DURABLE-003 | proposed | Refresh BitNet eval, benchmark, and variable warm-session reports for the accepted artifact/tokenizer identity. |
 | M4-DURABLE-004 | proposed | Regenerate report-refresh and regression-dashboard artifacts with real comparable history groups. |

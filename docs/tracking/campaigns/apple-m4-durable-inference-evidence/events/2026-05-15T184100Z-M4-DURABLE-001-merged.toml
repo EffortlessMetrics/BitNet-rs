@@ -1,0 +1,35 @@
+timestamp = "2026-05-15T18:41:00Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-001"
+event = "merged"
+actor = "codex"
+from = "ready"
+to = "merged"
+branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-001-resident-100-profile"
+pr = 4973
+merge_sha = "2751415ed4366f28fa2a399cefbaddcb0d6d5eeb"
+summary = "Merged dense M4 SLM resident_100 benchmark profile contract and durable evidence campaign scaffold."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-durable-inference-evidence.md",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+  "docs/tracking/campaigns/apple-m4-durable-inference-evidence/active.toml",
+  "docs/tracking/campaigns/apple-m4-durable-inference-evidence/CAMPAIGN.md",
+]
+
+notes = [
+  "PR #4973 added `resident_100` to the dense Apple M4 SLM benchmark v2 profile contract, parser, receipt allowlist, tests, and docs.",
+  "No live 100-prompt M4 run was executed or claimed.",
+  "Dense SLM and BitNet evidence remain separate; no BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim was added.",
+]
+
+[evidence]
+route = "bitnet mac benchmark"
+artifact_kind = "apple_m4_slm_benchmark_v2"
+backend = "apple-m4-cpu-neon"
+fallback_used = false
+next_item = "M4-DURABLE-002"
+claim_boundary = "profile contract only; no fresh live M4 model run, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"
