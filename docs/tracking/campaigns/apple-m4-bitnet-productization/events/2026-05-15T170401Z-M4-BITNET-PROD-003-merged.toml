@@ -1,0 +1,43 @@
+timestamp = "2026-05-15T17:04:01Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-003"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4954
+head_sha = "af5de04a135ea06fd38cd2d07ff04fbe2fe8c58f"
+merge_sha = "b86e9d1601cf769c4a6ad91dfddae65f2429fea1"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-003-timeout-failure-ux"
+summary = "Closed M4-BITNET-PROD-003 after PR #4954 added BitNet warm-session progress, timeout, partial-failure receipts, and repair guidance."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "`bitnet mac bitnet-warm` now accepts an explicit timeout boundary and emits progress for warm-session stages.",
+  "Failed or timed-out warm runs can write a `bitnet_apple_m4_warm_session_failure` receipt with stage taxonomy, timeout boundary, repair guidance, and fallback_used=false claim boundary.",
+  "`bitnet mac receipts-check` validates the warm-session failure receipt shape.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim was added.",
+]
+
+[evidence]
+route = "bitnet mac bitnet-warm"
+failure_artifact_kind = "bitnet_apple_m4_warm_session_failure"
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+progress_enabled = true
+timeout_boundary_recorded = true
+repair_guidance_recorded = true
+receipt_validation = "mac receipts-check"
+chat_enabled = false
+serve_enabled = false
+next_item = "M4-BITNET-PROD-004"
+claim_boundary = "progress, timeout, and partial-failure UX only; no chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"

@@ -111,7 +111,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-PROD-003"
-status = "in_progress"
+status = "merged"
+pr = 4954
+merge_sha = "b86e9d1601cf769c4a6ad91dfddae65f2429fea1"
 branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-003-timeout-failure-ux"
 stackable = false
 review_mode = "codex_premerge"
