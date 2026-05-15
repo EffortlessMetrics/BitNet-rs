@@ -4,9 +4,9 @@
 command now has two bounded modes: artifact preflight and strict receipt
 validation. Receipt validation can verify a completed Apple M4 BitNet
 `answer-corpus` proof. BitNet is now limited to explicit one-shot
-`bitnet mac ask` and fixed-prompt `bitnet mac bitnet-warm` with the accepted
-GGUF plus external tokenizer; `bitnet mac chat` and `bitnet mac serve` remain
-disabled for BitNet.
+`bitnet mac ask` and receipt-gated `bitnet mac bitnet-warm` runs with the
+accepted GGUF plus external tokenizer; `bitnet mac chat` and `bitnet mac serve`
+remain disabled for BitNet.
 
 ## Command Contract
 
@@ -84,6 +84,66 @@ decode_steady_state_tok_s = 2.083
 total_wall_ms = 10896
 ```
 
+## Variable Warm Runtime Receipt
+
+`M4-BITNET-PROD-002` adds the first operator-prompt warm-session runtime receipt
+for the explicit BitNet `mac bitnet-warm` route:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac bitnet-warm \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --prompt "Answer with a single digit: 2+2=" \
+  --prompt "Name the capital of France. Answer with one word." \
+  --prompt "Return exactly: ready" \
+  --prompt "Answer with a single digit: 3+1=" \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-new-tokens 8 \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json
+```
+
+Receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json
+```
+
+The receipt records `artifact_kind=bitnet_apple_m4_warm_session`,
+`bitnet_warm_prompt_source.source=operator_prompts`, `prompt_count=5`,
+`generated_tokens=10`, accepted model SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`,
+strict external tokenizer SHA
+`e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`requested_backend` and `selected_backend` equal to `apple-m4-cpu-neon`,
+`runtime_api=cpu`, and `fallback_used=false`.
+
+The aggregate receipt records generated text in `prompts[].text` and generated
+token IDs in `prompts[].generated_token_ids`. The bounded run produced:
+
+| Prompt | Text | Generated token IDs |
+|---|---|---|
+| `Answer with a single digit: 2+2=` | `4` | `[19, 128009]` |
+| `Name the capital of France. Answer with one word.` | `Paris` | `[60704, 128009]` |
+| `Return exactly: ready` | `ready` | `[2359, 128009]` |
+| `Answer with a single digit: 3+1=` | `4` | `[19, 128009]` |
+| `Answer with a single digit: 2+2=` | `4` | `[19, 128009]` |
+
+Repeated-prompt determinism passed for the two `2+2` prompts with stable text
+and stable generated token IDs. The session loaded the model and tokenizer once,
+wrote per-prompt receipts, kept `chat_enabled=false` and `serve_enabled=false`,
+and made no Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad
+BitNet quality, or broad Apple Silicon claim.
+
+Timing from that receipt:
+
+```text
+model_load_ms = 21003.804
+tokenizer_load_ms = 727.672
+total_session_ms = 206419.425
+resident_memory_bytes = 2140225536
+```
+
 ## Accepted Artifact Input
 
 The `--accepted-artifact` receipt must come from the Apple BitNet artifact
@@ -153,6 +213,8 @@ Allowed now:
 - The `bitnet mac bitnet-warm --prompt ... --prompt ...` route accepts
   operator-provided warm prompt sets only when at least one exact prompt is
   repeated, so deterministic warm reuse remains receipt-gated before chat.
+- The operator-prompt warm route has one committed Apple M4 CPU/NEON runtime
+  receipt for the five-prompt bounded set above.
 
 Not allowed now:
 

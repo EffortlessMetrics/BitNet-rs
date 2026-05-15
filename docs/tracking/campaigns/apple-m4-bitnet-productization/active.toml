@@ -72,7 +72,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-PROD-002"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-002-variable-warm-runtime"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,35 @@
+timestamp = "2026-05-15T16:12:37Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-002-variable-warm-runtime"
+summary = "Started the M4 BitNet variable warm-session runtime receipt item."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "This item runs the operator-prompt BitNet warm route with accepted Microsoft I2_S GGUF and accepted external tokenizer identity.",
+  "The prompt set must include at least five variable prompts and one exact repeat so repeated-prompt determinism remains receipt-backed before chat.",
+  "The receipt must preserve apple-m4-cpu-neon, fallback_used=false, generated text, generated token IDs, per-turn timing, aggregate timing, memory, timeout boundary, and disabled chat/serve/Metal/broad-claim boundaries.",
+]
+
+[evidence]
+route = "bitnet mac bitnet-warm"
+model_id = "microsoft-bitnet-b1.58-2B-4T-i2s"
+model_sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+tokenizer_sha256 = "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+backend = "apple-m4-cpu-neon"
+prompt_count = 5
+repeated_prompt_required = true
+chat_enabled = false
+serve_enabled = false
+claim_boundary = "runtime receipt only if the local run completes; no chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"
