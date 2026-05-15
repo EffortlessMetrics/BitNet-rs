@@ -59,7 +59,7 @@ or broad BitNet quality.
 | M4-BITNET-EVAL-002 | merged | PR #4899 added BitNet eval/report schema and reference-vs-Rust comparison fields; PR #4904 fixed the no-panic policy follow-up. |
 | M4-BITNET-EVAL-003 | merged | PR #4924 published the 2026-05-15 M4 BitNet seeded eval receipt for the accepted artifact: 75/100 passed, 25/100 failed, 0 timeouts, fallback=false. |
 | M4-BITNET-EVAL-004 | merged | PR #4933 published the 2026-05-15 one-shot plus fixed-warm M4 BitNet benchmark summary for the accepted artifact. |
-| M4-BITNET-EVAL-005 | proposed | Wire BitNet eval and benchmark reports into advisory/nightly regression dashboards. |
+| M4-BITNET-EVAL-005 | in_progress | Wire BitNet eval and benchmark reports into advisory/nightly regression dashboards. |
 
 ## Review Policy
 

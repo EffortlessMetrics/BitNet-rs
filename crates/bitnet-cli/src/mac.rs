@@ -669,7 +669,7 @@ enum MacAction {
         /// Receipt file or directory containing JSON receipts.
         path: PathBuf,
 
-        /// Compare Apple M4 dense SLM receipts against a published baseline receipt.
+        /// Compare Apple M4 dense-SLM or BitNet receipts against a published baseline receipt.
         #[arg(long = "regression-baseline", value_name = "PATH")]
         regression_baseline: Option<PathBuf>,
 
@@ -678,12 +678,12 @@ enum MacAction {
         json: bool,
     },
 
-    /// Compare Apple M4 dense-SLM receipts against a stored local envelope.
+    /// Compare Apple M4 dense-SLM or BitNet receipts against a stored local envelope.
     Regression {
         /// Current receipt file or directory containing JSON receipts.
         path: PathBuf,
 
-        /// Stored M4 dense-SLM envelope receipt to compare against.
+        /// Stored M4 dense-SLM or BitNet envelope receipt to compare against.
         #[arg(long = "baseline", value_name = "PATH")]
         baseline: PathBuf,
 
@@ -6482,15 +6482,14 @@ fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: boo
         if let Some(baseline) = &baseline
             && receipt["artifact_kind"].as_str() == baseline.receipt["artifact_kind"].as_str()
         {
-            summary.regression =
-                Some(compare_dense_slm_regression(&receipt_path, &receipt, baseline)?);
+            summary.regression = Some(compare_mac_regression(&receipt_path, &receipt, baseline)?);
             regression_compared += 1;
         }
         summaries.push(summary);
     }
     if baseline.is_some() && regression_compared == 0 {
         anyhow::bail!(
-            "regression baseline was provided, but no matching Apple M4 dense SLM receipts were found under {}",
+            "regression baseline was provided, but no matching Apple M4 dense-SLM or BitNet receipts were found under {}",
             path.display()
         );
     }
@@ -6550,7 +6549,7 @@ fn run_regression_check(
         .with_context(|| format!("invalid JSON receipt {}", receipt_path.display()))?;
         let mut summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
         if receipt["artifact_kind"].as_str() == baseline.receipt["artifact_kind"].as_str() {
-            match compare_dense_slm_regression(&receipt_path, &receipt, &baseline) {
+            match compare_mac_regression(&receipt_path, &receipt, &baseline) {
                 Ok(regression) => {
                     warning_count += regression.warning_count;
                     summary.regression = Some(regression);
@@ -6564,7 +6563,7 @@ fn run_regression_check(
     }
     if regression_compared == 0 {
         anyhow::bail!(
-            "no matching Apple M4 dense SLM receipts under {} could be compared to baseline {}",
+            "no matching Apple M4 dense-SLM or BitNet receipts under {} could be compared to baseline {}",
             path.display(),
             baseline_path.display()
         );
@@ -6655,16 +6654,18 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
             | Some("slm_apple_m4_warm_session")
             | Some("apple_m4_slm_eval_summary")
             | Some("apple_m4_slm_benchmark_v2")
+            | Some("bitnet_apple_m4_local_answer_corpus")
+            | Some("bitnet_apple_m4_benchmark_v1")
     ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, or apple_m4_slm_benchmark_v2 receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, bitnet_apple_m4_local_answer_corpus, or bitnet_apple_m4_benchmark_v1 receipt",
             path.display()
         );
     }
     Ok(RegressionBaseline { path: path.to_path_buf(), receipt })
 }
 
-fn compare_dense_slm_regression(
+fn compare_mac_regression(
     path: &Path,
     receipt: &serde_json::Value,
     baseline: &RegressionBaseline,
@@ -6682,7 +6683,13 @@ fn compare_dense_slm_regression(
         Some("apple_m4_slm_benchmark_v2") => {
             compare_dense_slm_benchmark_v2_regression(path, receipt, baseline)
         }
-        _ => anyhow::bail!("{} is not an Apple M4 dense SLM envelope receipt", path.display()),
+        Some("bitnet_apple_m4_local_answer_corpus") => {
+            compare_bitnet_eval_answer_corpus_regression(path, receipt, baseline)
+        }
+        Some("bitnet_apple_m4_benchmark_v1") => {
+            compare_bitnet_benchmark_v1_regression(path, receipt, baseline)
+        }
+        _ => anyhow::bail!("{} is not an Apple M4 regression envelope receipt", path.display()),
     }
 }
 
@@ -7085,6 +7092,1085 @@ fn compare_dense_slm_benchmark_v2_regression(
         warning_count: warnings.len(),
         warnings,
     })
+}
+
+fn compare_bitnet_eval_answer_corpus_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const STRICT_QUALITY_PCT: f64 = 0.0;
+
+    ensure_bitnet_eval_answer_corpus_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    for field in ["passed"] {
+        compare_lower_is_worse(
+            &mut warnings,
+            "bitnet_eval:quality_summary",
+            &format!("quality_summary.{field}"),
+            regression_metric(&baseline.receipt, &["quality_summary", field])?,
+            regression_metric(receipt, &["quality_summary", field])?,
+            STRICT_QUALITY_PCT,
+        );
+        compare_lower_is_worse(
+            &mut warnings,
+            "bitnet_eval:scoring_summary",
+            &format!("scoring_summary.{field}"),
+            regression_metric(&baseline.receipt, &["scoring_summary", field])?,
+            regression_metric(receipt, &["scoring_summary", field])?,
+            STRICT_QUALITY_PCT,
+        );
+    }
+    for field in ["failed", "timeout", "not_run"] {
+        compare_higher_is_worse(
+            &mut warnings,
+            "bitnet_eval:quality_summary",
+            &format!("quality_summary.{field}"),
+            regression_metric(&baseline.receipt, &["quality_summary", field])?,
+            regression_metric(receipt, &["quality_summary", field])?,
+            STRICT_QUALITY_PCT,
+        );
+    }
+    for field in ["failed", "not_run"] {
+        compare_higher_is_worse(
+            &mut warnings,
+            "bitnet_eval:scoring_summary",
+            &format!("scoring_summary.{field}"),
+            regression_metric(&baseline.receipt, &["scoring_summary", field])?,
+            regression_metric(receipt, &["scoring_summary", field])?,
+            STRICT_QUALITY_PCT,
+        );
+    }
+    compare_bitnet_eval_task_family_regression(
+        &mut warnings,
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+        STRICT_QUALITY_PCT,
+    )?;
+    compare_bitnet_eval_reference_regression(
+        &mut warnings,
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+        STRICT_QUALITY_PCT,
+    )?;
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn compare_bitnet_benchmark_v1_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const THROUGHPUT_LOWER_PCT: f64 = 15.0;
+    const LATENCY_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+    const MEMORY_DRIFT_MB_HIGHER_PCT: f64 = 15.0;
+
+    ensure_bitnet_benchmark_v1_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    for percentile in ["p50", "p90", "p99"] {
+        for (metric, threshold) in [
+            ("cold_load_ms", LOAD_HIGHER_PCT),
+            ("model_load_ms", LOAD_HIGHER_PCT),
+            ("tokenizer_load_ms", LOAD_HIGHER_PCT),
+            ("prompt_tokenize_ms", LATENCY_HIGHER_PCT),
+            ("prefill_ms", LATENCY_HIGHER_PCT),
+            ("ttft_ms", LATENCY_HIGHER_PCT),
+            ("decode_total_ms", LATENCY_HIGHER_PCT),
+            ("sampling_ms_per_token", SAMPLING_HIGHER_PCT),
+            ("total_wall_ms", LATENCY_HIGHER_PCT),
+        ] {
+            let field = format!("{metric}_{percentile}");
+            compare_higher_is_worse(
+                &mut warnings,
+                "bitnet_benchmark:summary",
+                &format!("speed.{field}"),
+                regression_metric(&baseline.receipt, &["speed", field.as_str()])?,
+                regression_metric(receipt, &["speed", field.as_str()])?,
+                threshold,
+            );
+        }
+        for (metric, threshold) in [
+            ("input_tok_s", THROUGHPUT_LOWER_PCT),
+            ("output_tok_s", THROUGHPUT_LOWER_PCT),
+            ("decode_tok_s", DECODE_TOK_S_LOWER_PCT),
+        ] {
+            let field = format!("{metric}_{percentile}");
+            compare_lower_is_worse(
+                &mut warnings,
+                "bitnet_benchmark:summary",
+                &format!("speed.{field}"),
+                regression_metric(&baseline.receipt, &["speed", field.as_str()])?,
+                regression_metric(receipt, &["speed", field.as_str()])?,
+                threshold,
+            );
+        }
+        for (metric, threshold) in [
+            ("peak_memory_mb", PEAK_MEMORY_MB_HIGHER_PCT),
+            ("memory_drift_mb", MEMORY_DRIFT_MB_HIGHER_PCT),
+        ] {
+            let field = format!("{metric}_{percentile}");
+            compare_higher_is_worse(
+                &mut warnings,
+                "bitnet_benchmark:summary",
+                &format!("memory.{field}"),
+                regression_metric(&baseline.receipt, &["memory", field.as_str()])?,
+                regression_metric(receipt, &["memory", field.as_str()])?,
+                threshold,
+            );
+        }
+    }
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_benchmark:summary",
+        "memory.process_peak_drift_mb",
+        regression_metric(&baseline.receipt, &["memory", "process_peak_drift_mb"])?,
+        regression_metric(receipt, &["memory", "process_peak_drift_mb"])?,
+        MEMORY_DRIFT_MB_HIGHER_PCT,
+    );
+    for (path_key, profile_id) in
+        [("one_shot", "bitnet_path:one_shot"), ("fixed_warm", "bitnet_path:fixed_warm")]
+    {
+        compare_bitnet_benchmark_path_regression(
+            &mut warnings,
+            profile_id,
+            &receipt["paths"][path_key],
+            &baseline.receipt["paths"][path_key],
+        )?;
+    }
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn compare_bitnet_benchmark_path_regression(
+    warnings: &mut Vec<RegressionWarning>,
+    profile_id: &str,
+    path_summary: &serde_json::Value,
+    baseline_summary: &serde_json::Value,
+) -> Result<()> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const THROUGHPUT_LOWER_PCT: f64 = 15.0;
+    const LATENCY_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+    const MEMORY_DRIFT_MB_HIGHER_PCT: f64 = 15.0;
+
+    for percentile in ["p50", "p90", "p99"] {
+        for (metric, threshold) in [
+            ("model_load_ms", LOAD_HIGHER_PCT),
+            ("tokenizer_load_ms", LOAD_HIGHER_PCT),
+            ("prompt_tokenize_ms", LATENCY_HIGHER_PCT),
+            ("prefill_ms", LATENCY_HIGHER_PCT),
+            ("time_to_first_token_ms", LATENCY_HIGHER_PCT),
+            ("decode_total_ms", LATENCY_HIGHER_PCT),
+            ("sampling_ms_per_token", SAMPLING_HIGHER_PCT),
+            ("total_wall_ms", LATENCY_HIGHER_PCT),
+        ] {
+            compare_higher_is_worse(
+                warnings,
+                profile_id,
+                &format!("timing.{metric}.{percentile}"),
+                regression_metric(baseline_summary, &["timing", metric, percentile])?,
+                regression_metric(path_summary, &["timing", metric, percentile])?,
+                threshold,
+            );
+        }
+        for (metric, threshold) in [
+            ("input_tokens_per_second", THROUGHPUT_LOWER_PCT),
+            ("output_tokens_per_second", THROUGHPUT_LOWER_PCT),
+            ("decode_tokens_per_second", DECODE_TOK_S_LOWER_PCT),
+        ] {
+            compare_lower_is_worse(
+                warnings,
+                profile_id,
+                &format!("throughput.{metric}.{percentile}"),
+                regression_metric(baseline_summary, &["throughput", metric, percentile])?,
+                regression_metric(path_summary, &["throughput", metric, percentile])?,
+                threshold,
+            );
+        }
+        for (metric, threshold) in [
+            ("peak_memory_mb", PEAK_MEMORY_MB_HIGHER_PCT),
+            ("memory_drift_mb", MEMORY_DRIFT_MB_HIGHER_PCT),
+        ] {
+            compare_higher_is_worse(
+                warnings,
+                profile_id,
+                &format!("memory.{metric}.{percentile}"),
+                regression_metric(baseline_summary, &["memory", metric, percentile])?,
+                regression_metric(path_summary, &["memory", metric, percentile])?,
+                threshold,
+            );
+        }
+    }
+    Ok(())
+}
+
+fn ensure_bitnet_eval_answer_corpus_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("model_family", receipt["model_family"].as_str(), baseline["model_family"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "prompt_template",
+            receipt["prompt_template"].as_str(),
+            baseline["prompt_template"].as_str(),
+        ),
+        ("model.family", receipt["model"]["family"].as_str(), baseline["model"]["family"].as_str()),
+        ("model.repo", receipt["model"]["repo"].as_str(), baseline["model"]["repo"].as_str()),
+        ("model.file", receipt["model"]["file"].as_str(), baseline["model"]["file"].as_str()),
+        ("model.path", receipt["model"]["path"].as_str(), baseline["model"]["path"].as_str()),
+        (
+            "model.revision",
+            receipt["model"]["revision"].as_str(),
+            baseline["model"]["revision"].as_str(),
+        ),
+        ("model.sha256", receipt["model"]["sha256"].as_str(), baseline["model"]["sha256"].as_str()),
+        (
+            "model.architecture",
+            receipt["model"]["architecture"].as_str(),
+            baseline["model"]["architecture"].as_str(),
+        ),
+        (
+            "model.quant_format",
+            receipt["model"]["quant_format"].as_str(),
+            baseline["model"]["quant_format"].as_str(),
+        ),
+        (
+            "model.loader_mode",
+            receipt["model"]["loader_mode"].as_str(),
+            baseline["model"]["loader_mode"].as_str(),
+        ),
+        (
+            "model.answer_ready.state",
+            receipt["model"]["answer_ready"]["state"].as_str(),
+            baseline["model"]["answer_ready"]["state"].as_str(),
+        ),
+        (
+            "tokenizer.source",
+            receipt["tokenizer"]["source"].as_str(),
+            baseline["tokenizer"]["source"].as_str(),
+        ),
+        (
+            "tokenizer.path",
+            receipt["tokenizer"]["path"].as_str(),
+            baseline["tokenizer"]["path"].as_str(),
+        ),
+        (
+            "tokenizer.authority.source",
+            receipt["tokenizer"]["authority"]["source"].as_str(),
+            baseline["tokenizer"]["authority"]["source"].as_str(),
+        ),
+        (
+            "tokenizer.authority.repo",
+            receipt["tokenizer"]["authority"]["repo"].as_str(),
+            baseline["tokenizer"]["authority"]["repo"].as_str(),
+        ),
+        (
+            "tokenizer.authority.revision",
+            receipt["tokenizer"]["authority"]["revision"].as_str(),
+            baseline["tokenizer"]["authority"]["revision"].as_str(),
+        ),
+        (
+            "tokenizer.authority.sha256",
+            receipt["tokenizer"]["authority"]["sha256"].as_str(),
+            baseline["tokenizer"]["authority"]["sha256"].as_str(),
+        ),
+        (
+            "tokenizer.authority.ggml_pre",
+            receipt["tokenizer"]["authority"]["ggml_pre"].as_str(),
+            baseline["tokenizer"]["authority"]["ggml_pre"].as_str(),
+        ),
+        ("corpus.name", receipt["corpus"]["name"].as_str(), baseline["corpus"]["name"].as_str()),
+        ("corpus.path", receipt["corpus"]["path"].as_str(), baseline["corpus"]["path"].as_str()),
+        (
+            "reference_comparison.schema",
+            receipt["reference_comparison"]["schema"].as_str(),
+            baseline["reference_comparison"]["schema"].as_str(),
+        ),
+        (
+            "reference_comparison.rust_runner.selected_backend",
+            receipt["reference_comparison"]["rust_runner"]["selected_backend"].as_str(),
+            baseline["reference_comparison"]["rust_runner"]["selected_backend"].as_str(),
+        ),
+        (
+            "reference_comparison.rust_runner.runtime_api",
+            receipt["reference_comparison"]["rust_runner"]["runtime_api"].as_str(),
+            baseline["reference_comparison"]["rust_runner"]["runtime_api"].as_str(),
+        ),
+        (
+            "reference_comparison.rust_runner.prompt_template",
+            receipt["reference_comparison"]["rust_runner"]["prompt_template"].as_str(),
+            baseline["reference_comparison"]["rust_runner"]["prompt_template"].as_str(),
+        ),
+        (
+            "reference_comparison.rust_runner.tokenizer_authority.source",
+            receipt["reference_comparison"]["rust_runner"]["tokenizer_authority"]["source"]
+                .as_str(),
+            baseline["reference_comparison"]["rust_runner"]["tokenizer_authority"]["source"]
+                .as_str(),
+        ),
+        (
+            "reference_comparison.rust_runner.tokenizer_authority.sha256",
+            receipt["reference_comparison"]["rust_runner"]["tokenizer_authority"]["sha256"]
+                .as_str(),
+            baseline["reference_comparison"]["rust_runner"]["tokenizer_authority"]["sha256"]
+                .as_str(),
+        ),
+        (
+            "reference_comparison.rust_runner.tokenizer_authority.ggml_pre",
+            receipt["reference_comparison"]["rust_runner"]["tokenizer_authority"]["ggml_pre"]
+                .as_str(),
+            baseline["reference_comparison"]["rust_runner"]["tokenizer_authority"]["ggml_pre"]
+                .as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        (
+            "corpus.case_count",
+            receipt["corpus"]["case_count"].as_u64(),
+            baseline["corpus"]["case_count"].as_u64(),
+        ),
+        (
+            "corpus.selected_case_count",
+            receipt["corpus"]["selected_case_count"].as_u64(),
+            baseline["corpus"]["selected_case_count"].as_u64(),
+        ),
+        (
+            "quality_summary.total",
+            receipt["quality_summary"]["total"].as_u64(),
+            baseline["quality_summary"]["total"].as_u64(),
+        ),
+        (
+            "scoring_summary.total",
+            receipt["scoring_summary"]["total"].as_u64(),
+            baseline["scoring_summary"]["total"].as_u64(),
+        ),
+        (
+            "reference_comparison.summary.total",
+            receipt["reference_comparison"]["summary"]["total"].as_u64(),
+            baseline["reference_comparison"]["summary"]["total"].as_u64(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "model.answer_ready_artifact_available",
+            receipt["model"]["answer_ready_artifact_available"].as_bool(),
+            baseline["model"]["answer_ready_artifact_available"].as_bool(),
+        ),
+        (
+            "tokenizer.strict",
+            receipt["tokenizer"]["strict"].as_bool(),
+            baseline["tokenizer"]["strict"].as_bool(),
+        ),
+        (
+            "reference_comparison.enabled",
+            receipt["reference_comparison"]["enabled"].as_bool(),
+            baseline["reference_comparison"]["enabled"].as_bool(),
+        ),
+        (
+            "reference_comparison.reference_runner_required",
+            receipt["reference_comparison"]["reference_runner_required"].as_bool(),
+            baseline["reference_comparison"]["reference_runner_required"].as_bool(),
+        ),
+        (
+            "reference_comparison.rust_runner.fallback_used",
+            receipt["reference_comparison"]["rust_runner"]["fallback_used"].as_bool(),
+            baseline["reference_comparison"]["rust_runner"]["fallback_used"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        (
+            "corpus.selected_case_ids",
+            &receipt["corpus"]["selected_case_ids"],
+            &baseline["corpus"]["selected_case_ids"],
+        ),
+        (
+            "scoring_summary.kinds",
+            &receipt["scoring_summary"]["kinds"],
+            &baseline["scoring_summary"]["kinds"],
+        ),
+    ] {
+        if observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "dense_slm_evidence_used",
+        "chat_enabled",
+        "serve_enabled",
+        "performance_claimed",
+        "full_metal_inference_claimed",
+        "qk256_apple_claimed",
+        "neural_engine_claimed",
+        "mpsgraph_claimed",
+        "broad_apple_silicon_claimed",
+        "runtime_accuracy_claimed",
+    ] {
+        if receipt["reference_comparison"]["claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["reference_comparison"]["claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: reference_comparison.claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "full_metal_inference_claimed",
+        "neural_engine_claimed",
+        "qk256_apple_claimed",
+        "broad_performance_claimed",
+    ] {
+        if receipt["claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in ["local_answer_path", "answer_ready_artifact_available"] {
+        if receipt["claim_boundary"][flag].as_bool() != Some(true)
+            || baseline["claim_boundary"][flag].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: claim_boundary.{flag} must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    ensure_bitnet_eval_task_family_context_matches(path, receipt, baseline_path, baseline)?;
+    Ok(())
+}
+
+fn ensure_bitnet_eval_task_family_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    let observed_families = receipt["task_family_summary"].as_object().ok_or_else(|| {
+        anyhow!("{} BitNet eval task_family_summary must be an object", path.display())
+    })?;
+    let baseline_families = baseline["task_family_summary"].as_object().ok_or_else(|| {
+        anyhow!(
+            "regression baseline {} BitNet eval task_family_summary must be an object",
+            baseline_path.display()
+        )
+    })?;
+    for (family, baseline_family) in baseline_families {
+        let observed_family = observed_families.get(family).ok_or_else(|| {
+            anyhow!(
+                "{} cannot be compared to baseline {}: task_family_summary.{family} is missing",
+                path.display(),
+                baseline_path.display()
+            )
+        })?;
+        for field in ["total", "scoring.total"] {
+            let (observed, expected) = if field == "total" {
+                (observed_family["total"].as_u64(), baseline_family["total"].as_u64())
+            } else {
+                (
+                    observed_family["scoring"]["total"].as_u64(),
+                    baseline_family["scoring"]["total"].as_u64(),
+                )
+            };
+            if observed.is_none() || expected.is_none() || observed != expected {
+                anyhow::bail!(
+                    "{} cannot be compared to baseline {}: task_family_summary.{family}.{field} mismatch",
+                    path.display(),
+                    baseline_path.display()
+                );
+            }
+        }
+        if observed_family["scoring"]["enabled"].as_bool()
+            != baseline_family["scoring"]["enabled"].as_bool()
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: task_family_summary.{family}.scoring.enabled mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+        if observed_family["scoring"]["kinds"] != baseline_family["scoring"]["kinds"] {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: task_family_summary.{family}.scoring.kinds mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for family in observed_families.keys() {
+        if !baseline_families.contains_key(family) {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: task_family_summary.{family} is not present in baseline",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn compare_bitnet_eval_task_family_regression(
+    warnings: &mut Vec<RegressionWarning>,
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+    threshold_percent: f64,
+) -> Result<()> {
+    let observed_families = receipt["task_family_summary"].as_object().ok_or_else(|| {
+        anyhow!("{} BitNet eval task_family_summary must be an object", path.display())
+    })?;
+    let baseline_families = baseline["task_family_summary"].as_object().ok_or_else(|| {
+        anyhow!(
+            "regression baseline {} BitNet eval task_family_summary must be an object",
+            baseline_path.display()
+        )
+    })?;
+    for (family, baseline_family) in baseline_families {
+        let observed_family = observed_families.get(family).ok_or_else(|| {
+            anyhow!(
+                "{} cannot be compared to baseline {}: task_family_summary.{family} is missing",
+                path.display(),
+                baseline_path.display()
+            )
+        })?;
+        for field in ["passed"] {
+            compare_lower_is_worse(
+                warnings,
+                &format!("bitnet_task_family:{family}"),
+                &format!("task_family_summary.{family}.{field}"),
+                metric_value(&baseline_family[field]).ok_or_else(|| {
+                    anyhow!(
+                        "regression baseline {} is missing numeric regression metric task_family_summary.{family}.{field}",
+                        baseline_path.display()
+                    )
+                })?,
+                metric_value(&observed_family[field]).ok_or_else(|| {
+                    anyhow!(
+                        "{} is missing numeric regression metric task_family_summary.{family}.{field}",
+                        path.display()
+                    )
+                })?,
+                threshold_percent,
+            );
+            compare_lower_is_worse(
+                warnings,
+                &format!("bitnet_task_family:{family}"),
+                &format!("task_family_summary.{family}.scoring.{field}"),
+                metric_value(&baseline_family["scoring"][field]).ok_or_else(|| {
+                    anyhow!(
+                        "regression baseline {} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
+                        baseline_path.display()
+                    )
+                })?,
+                metric_value(&observed_family["scoring"][field]).ok_or_else(|| {
+                    anyhow!(
+                        "{} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
+                        path.display()
+                    )
+                })?,
+                threshold_percent,
+            );
+        }
+        for field in ["failed", "timeout", "not_run"] {
+            compare_higher_is_worse(
+                warnings,
+                &format!("bitnet_task_family:{family}"),
+                &format!("task_family_summary.{family}.{field}"),
+                metric_value(&baseline_family[field]).ok_or_else(|| {
+                    anyhow!(
+                        "regression baseline {} is missing numeric regression metric task_family_summary.{family}.{field}",
+                        baseline_path.display()
+                    )
+                })?,
+                metric_value(&observed_family[field]).ok_or_else(|| {
+                    anyhow!(
+                        "{} is missing numeric regression metric task_family_summary.{family}.{field}",
+                        path.display()
+                    )
+                })?,
+                threshold_percent,
+            );
+        }
+        for field in ["failed", "not_run"] {
+            compare_higher_is_worse(
+                warnings,
+                &format!("bitnet_task_family:{family}"),
+                &format!("task_family_summary.{family}.scoring.{field}"),
+                metric_value(&baseline_family["scoring"][field]).ok_or_else(|| {
+                    anyhow!(
+                        "regression baseline {} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
+                        baseline_path.display()
+                    )
+                })?,
+                metric_value(&observed_family["scoring"][field]).ok_or_else(|| {
+                    anyhow!(
+                        "{} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
+                        path.display()
+                    )
+                })?,
+                threshold_percent,
+            );
+        }
+    }
+    Ok(())
+}
+
+fn compare_bitnet_eval_reference_regression(
+    warnings: &mut Vec<RegressionWarning>,
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+    threshold_percent: f64,
+) -> Result<()> {
+    for field in ["comparable_cases", "matched", "text_matches", "generated_token_id_matches"] {
+        compare_lower_is_worse(
+            warnings,
+            "bitnet_eval:reference_comparison",
+            &format!("reference_comparison.summary.{field}"),
+            regression_metric(baseline, &["reference_comparison", "summary", field])?,
+            regression_metric(receipt, &["reference_comparison", "summary", field])?,
+            threshold_percent,
+        );
+    }
+    for field in ["mismatched", "not_run", "partially_compared", "reference_not_supplied"] {
+        compare_higher_is_worse(
+            warnings,
+            "bitnet_eval:reference_comparison",
+            &format!("reference_comparison.summary.{field}"),
+            regression_metric(baseline, &["reference_comparison", "summary", field]).with_context(
+                || {
+                    format!(
+                        "regression baseline {} is missing reference_comparison.summary.{field}",
+                        baseline_path.display()
+                    )
+                },
+            )?,
+            regression_metric(receipt, &["reference_comparison", "summary", field]).with_context(
+                || format!("{} is missing reference_comparison.summary.{field}", path.display()),
+            )?,
+            threshold_percent,
+        );
+    }
+    Ok(())
+}
+
+fn ensure_bitnet_benchmark_v1_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("benchmark_set", receipt["benchmark_set"].as_str(), baseline["benchmark_set"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "prompt_template",
+            receipt["prompt_template"].as_str(),
+            baseline["prompt_template"].as_str(),
+        ),
+        ("model.id", receipt["model"]["id"].as_str(), baseline["model"]["id"].as_str()),
+        ("model.family", receipt["model"]["family"].as_str(), baseline["model"]["family"].as_str()),
+        ("model.repo", receipt["model"]["repo"].as_str(), baseline["model"]["repo"].as_str()),
+        ("model.file", receipt["model"]["file"].as_str(), baseline["model"]["file"].as_str()),
+        ("model.path", receipt["model"]["path"].as_str(), baseline["model"]["path"].as_str()),
+        ("model.sha256", receipt["model"]["sha256"].as_str(), baseline["model"]["sha256"].as_str()),
+        (
+            "model.architecture",
+            receipt["model"]["architecture"].as_str(),
+            baseline["model"]["architecture"].as_str(),
+        ),
+        (
+            "model.quantization",
+            receipt["model"]["quantization"].as_str(),
+            baseline["model"]["quantization"].as_str(),
+        ),
+        (
+            "model.answer_ready.state",
+            receipt["model"]["answer_ready"]["state"].as_str(),
+            baseline["model"]["answer_ready"]["state"].as_str(),
+        ),
+        (
+            "tokenizer.source",
+            receipt["tokenizer"]["source"].as_str(),
+            baseline["tokenizer"]["source"].as_str(),
+        ),
+        (
+            "tokenizer.path",
+            receipt["tokenizer"]["path"].as_str(),
+            baseline["tokenizer"]["path"].as_str(),
+        ),
+        (
+            "tokenizer.sha256",
+            receipt["tokenizer"]["sha256"].as_str(),
+            baseline["tokenizer"]["sha256"].as_str(),
+        ),
+        (
+            "tokenizer.authority",
+            receipt["tokenizer"]["authority"].as_str(),
+            baseline["tokenizer"]["authority"].as_str(),
+        ),
+        (
+            "tokenizer.pretokenizer_authority",
+            receipt["tokenizer"]["pretokenizer_authority"].as_str(),
+            baseline["tokenizer"]["pretokenizer_authority"].as_str(),
+        ),
+        (
+            "build.profile",
+            receipt["build"]["profile"].as_str(),
+            baseline["build"]["profile"].as_str(),
+        ),
+        (
+            "timeout_boundary.status",
+            receipt["timeout_boundary"]["status"].as_str(),
+            baseline["timeout_boundary"]["status"].as_str(),
+        ),
+        (
+            "memory.source",
+            receipt["memory"]["source"].as_str(),
+            baseline["memory"]["source"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        ("prompt_count", receipt["prompt_count"].as_u64(), baseline["prompt_count"].as_u64()),
+        (
+            "generated_tokens",
+            receipt["generated_tokens"].as_u64(),
+            baseline["generated_tokens"].as_u64(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "build.release_mode",
+            receipt["build"]["release_mode"].as_bool(),
+            baseline["build"]["release_mode"].as_bool(),
+        ),
+        (
+            "model.answer_ready_artifact_available",
+            receipt["model"]["answer_ready_artifact_available"].as_bool(),
+            baseline["model"]["answer_ready_artifact_available"].as_bool(),
+        ),
+        (
+            "tokenizer.strict",
+            receipt["tokenizer"]["strict"].as_bool(),
+            baseline["tokenizer"]["strict"].as_bool(),
+        ),
+        (
+            "timeout_boundary.enforced",
+            receipt["timeout_boundary"]["enforced"].as_bool(),
+            baseline["timeout_boundary"]["enforced"].as_bool(),
+        ),
+        (
+            "timeout_boundary.reached",
+            receipt["timeout_boundary"]["reached"].as_bool(),
+            baseline["timeout_boundary"]["reached"].as_bool(),
+        ),
+        (
+            "evidence.generated_text_recorded",
+            receipt["evidence"]["generated_text_recorded"].as_bool(),
+            baseline["evidence"]["generated_text_recorded"].as_bool(),
+        ),
+        (
+            "evidence.generated_token_ids_recorded",
+            receipt["evidence"]["generated_token_ids_recorded"].as_bool(),
+            baseline["evidence"]["generated_token_ids_recorded"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if receipt["evidence"]["operator_commands"] != baseline["evidence"]["operator_commands"] {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: evidence.operator_commands mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    for flag in
+        ["bitnet_benchmark", "one_shot_mac_ask", "fixed_warm_session", "accepted_i2s_artifact_only"]
+    {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(true)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "dense_slm_evidence_used",
+        "chat_enabled",
+        "serve_enabled",
+        "bitnet_quality_claimed",
+        "broad_model_quality_claim",
+        "broad_performance_claim",
+        "speedup_claim",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+        "macbook_evidence",
+        "broad_apple_silicon_claimed",
+    ] {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    ensure_bitnet_benchmark_path_context_matches(
+        path,
+        "one_shot",
+        &receipt["paths"]["one_shot"],
+        baseline_path,
+        &baseline["paths"]["one_shot"],
+    )?;
+    ensure_bitnet_benchmark_path_context_matches(
+        path,
+        "fixed_warm",
+        &receipt["paths"]["fixed_warm"],
+        baseline_path,
+        &baseline["paths"]["fixed_warm"],
+    )?;
+    Ok(())
+}
+
+fn ensure_bitnet_benchmark_path_context_matches(
+    path: &Path,
+    path_key: &str,
+    summary: &serde_json::Value,
+    baseline_path: &Path,
+    baseline_summary: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("path_id", summary["path_id"].as_str(), baseline_summary["path_id"].as_str()),
+        (
+            "operator_command",
+            summary["operator_command"].as_str(),
+            baseline_summary["operator_command"].as_str(),
+        ),
+        (
+            "timeout_boundary.status",
+            summary["timeout_boundary"]["status"].as_str(),
+            baseline_summary["timeout_boundary"]["status"].as_str(),
+        ),
+        (
+            "memory.source",
+            summary["memory"]["source"].as_str(),
+            baseline_summary["memory"]["source"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: paths.{path_key}.{label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if summary["reuse_scope"].is_string() || baseline_summary["reuse_scope"].is_string() {
+        let observed = summary["reuse_scope"].as_str();
+        let expected = baseline_summary["reuse_scope"].as_str();
+        if observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: paths.{path_key}.reuse_scope mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        (
+            "prompt_count",
+            summary["prompt_count"].as_u64(),
+            baseline_summary["prompt_count"].as_u64(),
+        ),
+        (
+            "generated_tokens",
+            summary["generated_tokens"].as_u64(),
+            baseline_summary["generated_tokens"].as_u64(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: paths.{path_key}.{label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        (
+            "model_loaded_once",
+            summary["model_loaded_once"].as_bool(),
+            baseline_summary["model_loaded_once"].as_bool(),
+        ),
+        (
+            "tokenizer_loaded_once",
+            summary["tokenizer_loaded_once"].as_bool(),
+            baseline_summary["tokenizer_loaded_once"].as_bool(),
+        ),
+        (
+            "quality_passed",
+            summary["quality_passed"].as_bool(),
+            baseline_summary["quality_passed"].as_bool(),
+        ),
+        (
+            "timeout_boundary.enforced",
+            summary["timeout_boundary"]["enforced"].as_bool(),
+            baseline_summary["timeout_boundary"]["enforced"].as_bool(),
+        ),
+        (
+            "timeout_boundary.reached",
+            summary["timeout_boundary"]["reached"].as_bool(),
+            baseline_summary["timeout_boundary"]["reached"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: paths.{path_key}.{label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in ["chat_enabled", "serve_enabled", "broad_performance_claim", "speedup_claim"] {
+        if summary["claim_boundary"][flag].as_bool() != Some(false)
+            || baseline_summary["claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: paths.{path_key}.claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
 }
 
 fn ensure_regression_context_matches(

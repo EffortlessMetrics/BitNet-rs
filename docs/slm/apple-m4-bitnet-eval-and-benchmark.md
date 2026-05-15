@@ -179,6 +179,70 @@ Apple Silicon performance claim, not a speedup claim, not a BitNet quality
 benchmark, and not evidence that BitNet chat, BitNet serve, full Metal, QK256,
 Neural Engine, MPSGraph, MacBook, or broader Apple Silicon routes work.
 
+## Regression Dashboard Slice
+
+`M4-BITNET-EVAL-005` wires the existing `bitnet mac regression` and
+`bitnet mac receipts-check --regression-baseline` paths to compare the BitNet
+eval and benchmark reports. Generic PR CI remains model-free; these comparisons
+are for advisory, nightly, scheduled, or release-refresh lanes that already have
+the receipt artifacts.
+
+Supported BitNet regression artifacts:
+
+- `bitnet_apple_m4_local_answer_corpus`
+- `bitnet_apple_m4_benchmark_v1`
+
+Example commands:
+
+```bash
+bitnet mac regression \
+  ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json \
+  --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json \
+  --json
+
+bitnet mac regression \
+  ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json \
+  --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json \
+  --fail-on-drift
+```
+
+The eval comparison is strict about context before it reports drift:
+
+- exact model repo, revision, file, path, SHA256, architecture, and I2_S
+  quantization.
+- exact external tokenizer repo, revision, path, SHA256, and `llama-bpe`
+  authority.
+- exact backend/runtime identity, prompt template, corpus name/path/case count,
+  selected case IDs, scoring kinds, and reference-comparison schema.
+- claim boundaries that keep dense SLM evidence, chat, serve, Metal, QK256,
+  Neural Engine, MPSGraph, MacBook, runtime-accuracy, and broad Apple Silicon
+  claims out of scope.
+
+Eval warnings are advisory by default and become failures with
+`--fail-on-drift`. Warning thresholds cover:
+
+- aggregate quality pass drops and failed/timeout/not-run increases.
+- strict scoring pass drops and failed/not-run increases.
+- task-family pass drops and failed/timeout/not-run increases.
+- reference-vs-Rust comparable/matched/text/token-ID drops and mismatch/not-run
+  increases.
+
+The benchmark comparison is also context-gated before drift checks:
+
+- exact accepted model and tokenizer identity.
+- exact one-shot `mac ask` and fixed-warm `mac bitnet-warm` path definitions.
+- exact prompt/generation counts, timeout status, release-mode evidence, backend
+  identity, and no fallback.
+- claim boundaries that keep BitNet chat, BitNet serve, broad quality,
+  broad performance, speedup, Metal, QK256, Neural Engine, MPSGraph, MacBook,
+  and broad Apple Silicon claims disabled.
+
+Benchmark warnings cover p50/p90/p99 and path-level summaries for TTFT,
+prefill, prompt tokenization, load time, input/output/decode throughput, decode
+time, total wall time, sampling time, peak memory, memory drift, and process
+peak drift. The dashboard can therefore catch both quality regressions and
+operator-cost regressions without running live models in generic PR checks.
+
 ## Claim Policy
 
 Allowed after the first slice:

@@ -214,7 +214,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-005"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-005-regression-dashboard"
 stackable = false
 review_mode = "codex_premerge"
