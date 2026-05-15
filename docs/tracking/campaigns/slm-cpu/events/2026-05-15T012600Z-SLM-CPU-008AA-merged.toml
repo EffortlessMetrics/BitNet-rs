@@ -1,0 +1,26 @@
+timestamp = "2026-05-15T01:26:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008AA"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4817
+merge_sha = "083b536bae306f6c886ceafdb1f3094e7e8ba517"
+branch = "codex/slm-cpu-008aa-no-think-artifact"
+summary = "Merged #4817 with exact Qwen3 no-thinking first-token reference artifacts for the i5-8250U SLM lane."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4817",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-bitnet-rs-first-token.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-checkpoint-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-diagnosis.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-validation.json",
+]
+
+notes = [
+  "For the exact rendered Qwen no-thinking prompt, bitnet-rs and the Candle Qwen3 reference both choose token 17 / '2'.",
+  "The validation still classifies numeric top-k evidence as logits_or_shared_transformer_math, so strict logits parity is not claimed.",
+  "The older token 19 / '4' target is not the known-good first token for this exact no-thinking rendered prompt.",
+  "This merge does not claim answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
