@@ -168,6 +168,15 @@ fn build_report(args: &CompareArgs) -> Value {
     if !bool_at(&comparisons, "/reference_vs_a770/top_logit_token_ids_exact").unwrap_or(false) {
         blocked_reasons.push("reference_a770_top_logit_ids_not_proven_exact".to_string());
     }
+    if !bool_at(&comparisons, "/reference_vs_cpu/text_exact").unwrap_or(false) {
+        blocked_reasons.push("reference_cpu_text_not_exact".to_string());
+    }
+    if !bool_at(&comparisons, "/reference_vs_a770/text_exact").unwrap_or(false) {
+        blocked_reasons.push("reference_a770_text_not_exact".to_string());
+    }
+    if !bool_at(&comparisons, "/cpu_vs_a770/text_exact").unwrap_or(false) {
+        blocked_reasons.push("rust_cpu_a770_text_not_exact".to_string());
+    }
     if !bool_at(&comparisons, "/reference_vs_cpu/prompt_identity_matched").unwrap_or(false) {
         blocked_reasons.push("reference_cpu_prompt_identity_not_matched".to_string());
     }
@@ -750,6 +759,78 @@ mod tests {
         assert_eq!(report["claim_allowed"], false);
         let reasons = report["decision"]["current_blocked_reasons"].as_array().unwrap();
         assert!(reasons.iter().any(|reason| reason == "reference_receipt_missing"));
+    }
+
+    #[test]
+    fn reference_text_mismatch_is_explicit_blocker() {
+        let dir = tempfile::tempdir().unwrap();
+        let reference_path = dir.path().join("reference.json");
+        let cpu_path = dir.path().join("cpu.json");
+        let a770_path = dir.path().join("a770.json");
+        let prompt = json!({
+            "prompt_template": "llama3-chat",
+            "rendered_prompt_sha256": "rendered",
+            "prompt_token_ids_sha256": "ids",
+            "prompt_token_count": 17,
+            "add_bos": false,
+            "parse_special": true
+        });
+        let top_logits = json!([{"token_id": 123, "logit": 4.0}]);
+        std::fs::write(
+            &reference_path,
+            serde_json::to_vec(&json!({
+                "generated_tokens": [123],
+                "generated_text": "2+2 equals 4.",
+                "top_logits": top_logits,
+                "prompt_identity": prompt,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &cpu_path,
+            serde_json::to_vec(&json!({
+                "generated_tokens": [123],
+                "text": ".ps",
+                "top_logits": top_logits,
+                "prompt_identity": prompt,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &a770_path,
+            serde_json::to_vec(&json!({
+                "generated_tokens": [123],
+                "text": ".ps",
+                "top_logits": top_logits,
+                "prompt_identity": prompt,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let report = build_report(&CompareArgs {
+            reference: reference_path,
+            cpu: cpu_path,
+            a770: a770_path,
+            output: None,
+            format: "json".to_string(),
+        });
+
+        assert_eq!(report["comparisons"]["reference_vs_cpu"]["token_ids_exact"], true);
+        assert_eq!(report["comparisons"]["reference_vs_cpu"]["top_logit_token_ids_exact"], true);
+        assert_eq!(report["comparisons"]["reference_vs_cpu"]["text_exact"], false);
+        assert_eq!(report["comparisons"]["reference_vs_a770"]["text_exact"], false);
+        assert_eq!(report["comparisons"]["cpu_vs_a770"]["text_exact"], true);
+        let reasons = report["decision"]["current_blocked_reasons"].as_array().unwrap();
+        assert!(reasons.iter().any(|reason| reason == "reference_cpu_text_not_exact"));
+        assert!(reasons.iter().any(|reason| reason == "reference_a770_text_not_exact"));
+        assert!(!reasons.iter().any(|reason| reason == "rust_cpu_a770_text_not_exact"));
+        assert!(!reasons.iter().any(|reason| reason == "reference_cpu_token_ids_not_proven_exact"));
+        assert!(
+            !reasons.iter().any(|reason| reason == "reference_cpu_top_logit_ids_not_proven_exact")
+        );
     }
 
     #[test]
