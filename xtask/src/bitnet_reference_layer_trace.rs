@@ -2101,7 +2101,150 @@ fn compare_reference_to_rust(
         "missing_rust_count": missing_rust_count,
         "first_scope_mismatch": first_scope_mismatch,
         "first_material_mismatch": first_material_mismatch,
+        "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct HeadLaneDelta {
+    reference_head: usize,
+    rust_head: usize,
+    compared_count: usize,
+    max_abs_delta: f64,
+    rms_abs_delta: f64,
+}
+
+fn attention_value_mix_head_lane_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kqv_head").map(|head| (head, record)))
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_value_mix_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::new();
+    let mut identity_best_count = 0usize;
+    let mut non_identity_best_count = 0usize;
+    let mut missing_identity_count = 0usize;
+
+    for (&reference_head, reference) in &reference_heads {
+        let mut candidates = rust_heads
+            .iter()
+            .map(|(rust_head, rust)| {
+                head_lane_delta(
+                    reference_head,
+                    *rust_head,
+                    &reference.first_values,
+                    &rust.first_values,
+                )
+            })
+            .collect::<Vec<_>>();
+        candidates.sort_by(head_lane_delta_order);
+
+        let best = candidates.first().copied();
+        let identity =
+            candidates.iter().copied().find(|candidate| candidate.rust_head == reference_head);
+        let identity_rank = identity.and_then(|identity| {
+            candidates.iter().position(|candidate| {
+                candidate.rust_head == identity.rust_head
+                    && candidate.reference_head == identity.reference_head
+            })
+        });
+
+        if let Some(best) = best {
+            if best.rust_head == reference_head {
+                identity_best_count += 1;
+            } else {
+                non_identity_best_count += 1;
+            }
+        }
+        if identity.is_none() {
+            missing_identity_count += 1;
+        }
+
+        rows.push(json!({
+            "reference_head": reference_head,
+            "best_rust_head": best.map(|best| best.rust_head),
+            "identity_rust_head": reference_head,
+            "identity_is_best": best.is_some_and(|best| best.rust_head == reference_head),
+            "identity_rank": identity_rank.map(|rank| rank + 1),
+            "best_delta": best.map(head_lane_delta_summary),
+            "identity_delta": identity.map(head_lane_delta_summary),
+            "candidate_count": candidates.len(),
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, selected attention, value mix residency, or any support claim",
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "identity_best_count": identity_best_count,
+        "non_identity_best_count": non_identity_best_count,
+        "missing_identity_count": missing_identity_count,
+        "all_identity_best": !reference_heads.is_empty()
+            && reference_heads.len() == identity_best_count
+            && missing_identity_count == 0,
+        "rows": rows,
+    })
+}
+
+fn parse_stage_head(stage: &str, prefix: &str) -> Option<usize> {
+    stage.strip_prefix(prefix)?.parse::<usize>().ok()
+}
+
+fn head_lane_delta(
+    reference_head: usize,
+    rust_head: usize,
+    reference: &[f32],
+    rust: &[f32],
+) -> HeadLaneDelta {
+    let compared_count = reference.len().min(rust.len());
+    let mut max_abs_delta = 0.0f64;
+    let mut sum_sq_delta = 0.0f64;
+    for i in 0..compared_count {
+        let delta = (reference[i] as f64 - rust[i] as f64).abs();
+        max_abs_delta = max_abs_delta.max(delta);
+        sum_sq_delta += delta * delta;
+    }
+    HeadLaneDelta {
+        reference_head,
+        rust_head,
+        compared_count,
+        max_abs_delta,
+        rms_abs_delta: if compared_count == 0 {
+            f64::INFINITY
+        } else {
+            (sum_sq_delta / compared_count as f64).sqrt()
+        },
+    }
+}
+
+fn head_lane_delta_order(left: &HeadLaneDelta, right: &HeadLaneDelta) -> std::cmp::Ordering {
+    left.rms_abs_delta
+        .total_cmp(&right.rms_abs_delta)
+        .then_with(|| left.max_abs_delta.total_cmp(&right.max_abs_delta))
+        .then_with(|| left.rust_head.cmp(&right.rust_head))
+}
+
+fn head_lane_delta_summary(delta: HeadLaneDelta) -> Value {
+    json!({
+        "reference_head": delta.reference_head,
+        "rust_head": delta.rust_head,
+        "compared_count": delta.compared_count,
+        "max_abs_delta": delta.max_abs_delta,
+        "rms_abs_delta": delta.rms_abs_delta,
     })
 }
 
@@ -3129,6 +3272,51 @@ mod tests {
         fs::write(path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
     }
 
+    fn test_reference_trace_record(stage: &str, first_values: Vec<f32>) -> ReferenceTraceRecord {
+        ReferenceTraceRecord {
+            name: format!("{stage}-0"),
+            stage: stage.to_string(),
+            graph_index: Some(0),
+            layer: Some(0),
+            graph_op: Some("MUL_MAT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![first_values.len() as i64, 1, 1, 1],
+            sample_offset: Some(0),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![first_values.len() as i64, 1, 1, 1],
+            nelements: first_values.len() as u64,
+            rms: Some(sample_rms(&first_values)),
+            values_available: true,
+            first_values,
+        }
+    }
+
+    fn test_rust_trace_record(stage: &str, first_values: Vec<f32>) -> RustTraceRecord {
+        RustTraceRecord {
+            name: format!("t0/blk0/{stage}"),
+            shape: vec![first_values.len()],
+            dtype: "F32".to_string(),
+            blake3: "abc".to_string(),
+            rms: sample_rms(&first_values),
+            num_elements: first_values.len(),
+            first_values,
+            seq: Some(0),
+            layer: Some(0),
+            stage: Some(stage.to_string()),
+        }
+    }
+
+    fn sample_rms(values: &[f32]) -> f64 {
+        if values.is_empty() {
+            return 0.0;
+        }
+        let sum_sq = values.iter().map(|value| (*value as f64) * (*value as f64)).sum::<f64>();
+        (sum_sq / values.len() as f64).sqrt()
+    }
+
     fn write_rust_capture_plan(path: &Path) {
         write_file(
             path,
@@ -3790,6 +3978,70 @@ mod tests {
             Some(&json!(0.5))
         );
         assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(0)));
+    }
+
+    #[test]
+    fn compare_reports_attention_value_mix_head_lane_best_matches() {
+        let reference_records = vec![
+            test_reference_trace_record("kqv_head0", vec![1.0, 2.0, 3.0]),
+            test_reference_trace_record("kqv_head1", vec![8.0, 8.0, 8.0]),
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_value_mix_head0".to_string(),
+            test_rust_trace_record("attention_value_mix_head0", vec![1.0, 2.0, 3.0]),
+        );
+        rust_records.insert(
+            "attention_value_mix_head1".to_string(),
+            test_rust_trace_record("attention_value_mix_head1", vec![0.0, 0.0, 0.0]),
+        );
+        rust_records.insert(
+            "attention_value_mix_head2".to_string(),
+            test_rust_trace_record("attention_value_mix_head2", vec![8.0, 8.0, 8.0]),
+        );
+
+        let report = compare_reference_to_rust(
+            &reference_records,
+            &rust_records,
+            &[("kqv_head0", "attention_value_mix_head0")],
+        );
+        let matches = report.pointer("/attention_value_mix_head_lane_best_matches").unwrap();
+
+        assert_eq!(matches.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(matches.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(matches.pointer("/reference_head_count"), Some(&json!(2)));
+        assert_eq!(matches.pointer("/rust_head_count"), Some(&json!(3)));
+        assert_eq!(matches.pointer("/identity_best_count"), Some(&json!(1)));
+        assert_eq!(matches.pointer("/non_identity_best_count"), Some(&json!(1)));
+        assert_eq!(matches.pointer("/all_identity_best"), Some(&json!(false)));
+        assert_eq!(matches.pointer("/rows/0/reference_head"), Some(&json!(0)));
+        assert_eq!(matches.pointer("/rows/0/best_rust_head"), Some(&json!(0)));
+        assert_eq!(matches.pointer("/rows/0/identity_is_best"), Some(&json!(true)));
+        assert_eq!(matches.pointer("/rows/1/reference_head"), Some(&json!(1)));
+        assert_eq!(matches.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
+        assert_eq!(matches.pointer("/rows/1/identity_is_best"), Some(&json!(false)));
+        assert_eq!(matches.pointer("/rows/1/identity_rank"), Some(&json!(3)));
+    }
+
+    #[test]
+    fn compare_head_lane_best_matches_require_samples() {
+        let reference_records = vec![ReferenceTraceRecord {
+            first_values: Vec::new(),
+            ..test_reference_trace_record("kqv_head0", vec![1.0])
+        }];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_value_mix_head0".to_string(),
+            test_rust_trace_record("attention_value_mix_head0", vec![1.0]),
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let matches = report.pointer("/attention_value_mix_head_lane_best_matches").unwrap();
+
+        assert_eq!(matches.pointer("/reference_head_count"), Some(&json!(0)));
+        assert_eq!(matches.pointer("/rust_head_count"), Some(&json!(1)));
+        assert_eq!(matches.pointer("/rows"), Some(&json!([])));
+        assert_eq!(matches.pointer("/all_identity_best"), Some(&json!(false)));
     }
 
     #[test]
