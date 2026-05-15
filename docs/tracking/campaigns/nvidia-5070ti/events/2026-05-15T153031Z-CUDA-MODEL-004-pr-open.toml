@@ -1,0 +1,13 @@
+timestamp = "2026-05-15T15:30:31Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-004"
+event = "pr_open"
+pr = 4940
+head_sha = "f41abde9d3dfd1798119c2165d09879b27cc2c04"
+actor = "codex"
+
+notes = [
+  "Opened draft PR #4940 for the Qwen3 0.6B one-token strict RTX 5070 Ti CUDA proof.",
+  "The PR records model-boundary, KV-cache, sampling-policy, and one-token CUDA receipts for the pinned Qwen3 0.6B Q8_0 artifact.",
+  "The PR keeps Qwen3 short-decode, warm-session, speedup, server readiness, full-residency, and BitNet QK256 claims false.",
+]

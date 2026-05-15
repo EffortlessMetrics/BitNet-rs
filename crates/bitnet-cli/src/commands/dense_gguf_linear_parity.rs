@@ -7,7 +7,7 @@
 //! packed-kernel proof claims.
 
 use anyhow::{Context, Result, anyhow, bail};
-use bitnet_common::{ConcreteTensor, Device as BitNetDevice, Tensor};
+use bitnet_common::{BitNetConfig, ConcreteTensor, Device as BitNetDevice, Tensor};
 use bitnet_kernels::cuda::{
     AttentionScoresConfig, AttentionSoftmaxConfig, AttentionVMixConfig,
     DenseGgufAttentionScoreCudaFixture, DenseGgufAttentionScoreCudaParity,
@@ -124,6 +124,10 @@ const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
 const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
     "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+const QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen3-0.6b-instruct-q8_0";
+const QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE: &str = "Qwen3-0.6B-Q8_0.gguf";
+const QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
+    "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031";
 const DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-all-layer-plan-qwen25-q8.json";
 const DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-model-boundary-fixtures-qwen25-q8.json";
@@ -140,6 +144,31 @@ const DEFAULT_QWEN_WARM_SESSION_PROMPTS: &[&str] = &[
     "Write one short greeting.",
     "Complete this phrase: rust is",
 ];
+
+#[derive(Debug, Clone, Copy)]
+struct DenseQwenProofModel {
+    id: &'static str,
+    file: &'static str,
+    architecture: &'static str,
+    sha256: &'static str,
+    work_item: &'static str,
+}
+
+const QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL: DenseQwenProofModel = DenseQwenProofModel {
+    id: QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
+    file: QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE,
+    architecture: "qwen2",
+    sha256: QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256,
+    work_item: "CUDA-DENSE-051",
+};
+
+const QWEN3_06B_INSTRUCT_Q8_0_PROOF_MODEL: DenseQwenProofModel = DenseQwenProofModel {
+    id: QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID,
+    file: QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE,
+    architecture: "qwen3",
+    sha256: QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256,
+    work_item: "CUDA-MODEL-004",
+};
 
 /// Run dense GGUF single-linear CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
@@ -747,16 +776,18 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
 
         let data = map_model(&self.model)?;
         let model_sha256 = sha256_bytes(&data);
-        if model_sha256 != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
-            bail!(
-                "CUDA-DENSE-044 is scoped to verified {QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE}; got sha256={model_sha256}"
-            );
-        }
+        let proof_model = dense_qwen_proof_model_for_sha256(&model_sha256).ok_or_else(|| {
+            anyhow!(
+                "dense Qwen one-token strict CUDA proof is scoped to verified Qwen2.5 0.5B Q8_0 or Qwen3 0.6B Q8_0 artifacts; got sha256={model_sha256}"
+            )
+        })?;
         let model_file =
             self.model.file_name().and_then(|value| value.to_str()).unwrap_or_default();
-        if model_file != QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE {
+        if model_file != proof_model.file {
             bail!(
-                "CUDA-DENSE-044 is scoped to {QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE}; got {model_file}"
+                "{} is scoped to verified {}; got {model_file}",
+                proof_model.work_item,
+                proof_model.file
             );
         }
 
@@ -764,11 +795,14 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             format!("failed to parse dense GGUF model {}", self.model.display())
         })?;
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
-        if inspection.model_family != "qwen" || inspection.architecture != "qwen2" {
+        if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture
+        {
             bail!(
-                "CUDA-DENSE-044 requires qwen/qwen2 descriptor identity; got {}/{}",
+                "{} requires qwen/{} descriptor identity; got {}/{}",
+                proof_model.work_item,
+                proof_model.architecture,
                 inspection.model_family,
-                inspection.architecture
+                inspection.architecture,
             );
         }
 
@@ -791,6 +825,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &self.model_boundary_fixtures,
             &self.kv_cache_policy,
             &self.sampling_policy,
+            proof_model,
         )?;
 
         let tokenizer_resolution = bitnet_tokenizers::auto::resolve_tokenizer(
@@ -849,9 +884,9 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         let decoded_token_text = tokenizer
             .decode(&[cuda.selected_token_id])
             .ok()
-            .filter(|value| !value.is_empty())
+            .filter(|value| !value.trim().is_empty())
             .or_else(|| tokenizer.token_to_piece(cuda.selected_token_id))
-            .filter(|value| !value.is_empty())
+            .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| format!("<token:{}>", cuda.selected_token_id));
 
         let artifact_path = self
@@ -863,6 +898,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         let receipt = dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             &inspection,
             &prerequisites,
+            proof_model,
             &probe,
             &self.model,
             &model_sha256,
@@ -3389,23 +3425,29 @@ impl DenseQwenOneTokenPrerequisites {
         model_boundary_fixtures: &Path,
         kv_cache_policy: &Path,
         sampling_policy: &Path,
+        proof_model: &DenseQwenProofModel,
     ) -> Result<Self> {
         let (all_layer_plan_value, all_layer_plan_sha256) =
-            read_and_validate_receipt(all_layer_plan, |receipt| {
-                validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt)
-            })?;
-        let (_, model_boundary_fixtures_sha256) =
-            read_and_validate_receipt(model_boundary_fixtures, |receipt| {
-                validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt)
-            })?;
-        let (_, kv_cache_policy_sha256) = read_and_validate_receipt(kv_cache_policy, |receipt| {
-            validate_dense_gguf_kv_cache_policy_receipt_json(receipt)
-        })?;
-        let (_, sampling_policy_sha256) = read_and_validate_receipt(sampling_policy, |receipt| {
-            validate_dense_gguf_sampling_policy_receipt_json(receipt)
-        })?;
-
-        ensure_prerequisite_qwen_identity(&all_layer_plan_value, all_layer_plan)?;
+            read_and_validate_receipt_for_qwen_model(
+                all_layer_plan,
+                |receipt| validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt),
+                proof_model,
+            )?;
+        let (_, model_boundary_fixtures_sha256) = read_and_validate_receipt_for_qwen_model(
+            model_boundary_fixtures,
+            |receipt| validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt),
+            proof_model,
+        )?;
+        let (_, kv_cache_policy_sha256) = read_and_validate_receipt_for_qwen_model(
+            kv_cache_policy,
+            |receipt| validate_dense_gguf_kv_cache_policy_receipt_json(receipt),
+            proof_model,
+        )?;
+        let (_, sampling_policy_sha256) = read_and_validate_receipt_for_qwen_model(
+            sampling_policy,
+            |receipt| validate_dense_gguf_sampling_policy_receipt_json(receipt),
+            proof_model,
+        )?;
 
         Ok(Self {
             all_layer_plan_sha256,
@@ -3430,6 +3472,7 @@ impl DenseQwenShortDecodePrerequisites {
             model_boundary_fixtures,
             kv_cache_policy,
             sampling_policy,
+            &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL,
         )?;
         let (_, one_token_proof_sha256) = read_and_validate_receipt(one_token_proof, |receipt| {
             validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(receipt)
@@ -3508,36 +3551,87 @@ fn read_and_validate_receipt(
     path: &Path,
     validate: impl FnOnce(&Value) -> Result<()>,
 ) -> Result<(Value, String)> {
+    read_and_validate_receipt_for_qwen_model(path, validate, &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL)
+}
+
+fn read_and_validate_receipt_for_qwen_model(
+    path: &Path,
+    validate: impl FnOnce(&Value) -> Result<()>,
+    proof_model: &DenseQwenProofModel,
+) -> Result<(Value, String)> {
     let bytes = std::fs::read(path)
         .with_context(|| format!("failed to read prerequisite receipt {}", path.display()))?;
     let receipt: Value = serde_json::from_slice(&bytes)
         .with_context(|| format!("failed to parse prerequisite receipt {}", path.display()))?;
     validate(&receipt)
         .with_context(|| format!("invalid prerequisite receipt {}", path.display()))?;
-    ensure_prerequisite_qwen_identity(&receipt, path)?;
+    ensure_prerequisite_qwen_identity(&receipt, path, proof_model)?;
     Ok((receipt, sha256_bytes(&bytes)))
 }
 
-fn ensure_prerequisite_qwen_identity(receipt: &Value, path: &Path) -> Result<()> {
+fn ensure_prerequisite_qwen_identity(
+    receipt: &Value,
+    path: &Path,
+    proof_model: &DenseQwenProofModel,
+) -> Result<()> {
     let Some(model) = receipt.get("model").and_then(Value::as_object) else {
         bail!("prerequisite receipt {} has no model section", path.display());
     };
     let sha = model.get("sha256").and_then(Value::as_str).unwrap_or_default();
-    if sha != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
+    if sha != proof_model.sha256 {
         bail!(
-            "prerequisite receipt {} is not for verified Qwen2.5 0.5B Q8_0 artifact: sha256={sha}",
-            path.display()
+            "prerequisite receipt {} is not for verified {} artifact: sha256={sha}",
+            path.display(),
+            proof_model.id
         );
     }
     let family = model.get("model_family").and_then(Value::as_str).unwrap_or_default();
     let architecture = model.get("architecture").and_then(Value::as_str).unwrap_or_default();
-    if family != "qwen" || architecture != "qwen2" {
+    if family != "qwen" || architecture != proof_model.architecture {
         bail!(
-            "prerequisite receipt {} has unexpected model identity {family}/{architecture}",
-            path.display()
+            "prerequisite receipt {} has unexpected model identity {family}/{architecture}; expected qwen/{}",
+            path.display(),
+            proof_model.architecture
         );
     }
     Ok(())
+}
+
+fn dense_qwen_proof_model_for_sha256(sha256: &str) -> Option<&'static DenseQwenProofModel> {
+    match sha256 {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 => Some(&QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL),
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256 => Some(&QWEN3_06B_INSTRUCT_Q8_0_PROOF_MODEL),
+        _ => None,
+    }
+}
+
+fn dense_qwen_proof_kv_cache(
+    model: &dyn Model,
+    device: &CandleDevice,
+    required_seq_len: usize,
+) -> Result<bitnet_models::transformer::KVCache> {
+    let config = dense_qwen_proof_kv_cache_config(model.config(), required_seq_len)?;
+    Ok(bitnet_models::transformer::KVCache::new(&config, 1, device)?)
+}
+
+fn dense_qwen_proof_kv_cache_config(
+    config: &BitNetConfig,
+    required_seq_len: usize,
+) -> Result<BitNetConfig> {
+    let requested = required_seq_len.max(1);
+    let configured = config.model.max_position_embeddings;
+    if configured == 0 {
+        bail!("dense Qwen proof KV cache requires non-zero model context length");
+    }
+    if requested > configured {
+        bail!(
+            "dense Qwen proof requires {requested} tokens, but model context length is {configured}"
+        );
+    }
+
+    let mut scoped = config.clone();
+    scoped.model.max_position_embeddings = requested;
+    Ok(scoped)
 }
 
 fn run_qwen_one_token_once(
@@ -3561,7 +3655,8 @@ fn run_qwen_one_token_once(
         .load_with_config(model_path, &load_config)
         .with_context(|| format!("failed to load model {}", model_path.display()))?;
     let model_load_ms = elapsed_ms_f64(load_start);
-    let mut cache = bitnet_models::transformer::KVCache::new(model.config(), 1, &candle_device)?;
+    let mut cache =
+        dense_qwen_proof_kv_cache(model.as_ref(), &candle_device, prompt_token_ids.len())?;
 
     let mut prefill_ms = 0.0;
     if prompt_token_ids.len() > 1 {
@@ -3732,7 +3827,8 @@ fn run_qwen_short_decode_with_loaded_model(
     total_start: std::time::Instant,
     model_load_ms: f64,
 ) -> Result<DenseQwenShortDecodeRun> {
-    let mut cache = bitnet_models::transformer::KVCache::new(model.config(), 1, candle_device)?;
+    let cache_seq_len = prompt_token_ids.len().saturating_add(max_new_tokens);
+    let mut cache = dense_qwen_proof_kv_cache(model, candle_device, cache_seq_len)?;
 
     let mut prefill_ms = 0.0;
     if prompt_token_ids.len() > 1 {
@@ -4881,14 +4977,11 @@ fn dense_gguf_model_boundary_fixtures_from_reader(
     if requested_top_k == 0 {
         bail!("dense GGUF model-boundary fixtures require a non-zero top-k");
     }
-    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
-        bail!("dense GGUF model-boundary fixtures require complete dense descriptor coverage");
-    }
+    ensure_dense_model_boundary_fixture_coverage(inspection)?;
 
     let token_descriptor = descriptor_for_role(inspection, DenseGgufTensorRole::TokenEmbedding)?;
     let final_norm_descriptor = dense_final_norm_descriptor(inspection)?;
-    let lm_head = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::Output)
-        .context("failed to extract dense GGUF LM head/output fixture")?;
+    let lm_head = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::Output).ok();
 
     if token_descriptor.shape.len() != 2 {
         bail!(
@@ -4906,7 +4999,9 @@ fn dense_gguf_model_boundary_fixtures_from_reader(
             "dense GGUF token embedding fixture seq_len {seq_len} exceeds vocab fixture rows {vocab_size}"
         );
     }
-    if lm_head.summary.matrix_cols != hidden_size || lm_head.summary.matrix_rows != vocab_size {
+    if let Some(lm_head) = lm_head.as_ref()
+        && (lm_head.summary.matrix_cols != hidden_size || lm_head.summary.matrix_rows != vocab_size)
+    {
         bail!(
             "dense GGUF LM head fixture shape mismatch: rows={} cols={} expected vocab={} hidden={}",
             lm_head.summary.matrix_rows,
@@ -4949,7 +5044,44 @@ fn dense_gguf_model_boundary_fixtures_from_reader(
         dense_boundary_rmsnorm_epsilon(reader, &inspection.architecture);
     let final_norm_output =
         rmsnorm_sequence_cpu(&final_norm_input, 1, hidden_size, &final_norm_values, rmsnorm_eps)?;
-    let logits = dense_linear_sequence_cpu(&lm_head, &final_norm_output, 1)?;
+    let (logits, lm_head_logits) = if let Some(lm_head) = lm_head.as_ref() {
+        let logits = dense_linear_sequence_cpu(lm_head, &final_norm_output, 1)?;
+        let fixture = DenseGgufBoundaryTensorFixture {
+            name: "lm_head_logits",
+            role: "lm_head_logits",
+            tensor_name: lm_head.summary.tensor_name.clone(),
+            tensor_type: lm_head.summary.tensor_type.clone(),
+            source_shape: lm_head.summary.source_shape.clone(),
+            source_offset: lm_head.summary.source_offset,
+            source_size_bytes: lm_head.summary.source_size_bytes,
+            value_count: lm_head.summary.value_count,
+            output_len: logits.len(),
+            output_sha256: sha256_f32(&logits),
+            max_abs: max_abs_f32(&logits),
+        };
+        (logits, fixture)
+    } else {
+        let logits = dense_tied_lm_head_logits_cpu(
+            &token_embedding_values,
+            hidden_size,
+            vocab_size,
+            &final_norm_output,
+        )?;
+        let fixture = DenseGgufBoundaryTensorFixture {
+            name: "tied_lm_head_logits",
+            role: "lm_head_logits",
+            tensor_name: token_descriptor.name.clone(),
+            tensor_type: token_descriptor.tensor_type.clone(),
+            source_shape: token_descriptor.shape.clone(),
+            source_offset: token_descriptor.offset,
+            source_size_bytes: token_descriptor.size_bytes,
+            value_count: token_embedding_values.len(),
+            output_len: logits.len(),
+            output_sha256: sha256_f32(&logits),
+            max_abs: max_abs_f32(&logits),
+        };
+        (logits, fixture)
+    };
     let logits_top_k = dense_logits_top_k(&logits, requested_top_k.min(logits.len()))?;
 
     Ok(DenseGgufModelBoundaryFixtures {
@@ -4992,19 +5124,7 @@ fn dense_gguf_model_boundary_fixtures_from_reader(
             output_sha256: sha256_f32(&final_norm_output),
             max_abs: max_abs_f32(&final_norm_output),
         },
-        lm_head_logits: DenseGgufBoundaryTensorFixture {
-            name: "lm_head_logits",
-            role: "lm_head_logits",
-            tensor_name: lm_head.summary.tensor_name,
-            tensor_type: lm_head.summary.tensor_type,
-            source_shape: lm_head.summary.source_shape,
-            source_offset: lm_head.summary.source_offset,
-            source_size_bytes: lm_head.summary.source_size_bytes,
-            value_count: lm_head.summary.value_count,
-            output_len: logits.len(),
-            output_sha256: sha256_f32(&logits),
-            max_abs: max_abs_f32(&logits),
-        },
+        lm_head_logits,
         final_norm_input_sha256: sha256_f32(&final_norm_input),
         final_norm_output_sha256: sha256_f32(&final_norm_output),
         logits_len: logits.len(),
@@ -5028,9 +5148,7 @@ fn dense_gguf_kv_cache_policy_from_reader(
     if decode_steps == 0 {
         bail!("dense GGUF KV-cache policy requires at least one decode step");
     }
-    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
-        bail!("dense GGUF KV-cache policy requires complete dense descriptor coverage");
-    }
+    ensure_dense_all_layer_block_descriptor_coverage(inspection)?;
 
     let architecture = &inspection.architecture;
     let layer_indices = dense_transformer_layer_indices(inspection)?;
@@ -5197,9 +5315,7 @@ fn dense_gguf_sampling_policy_from_reader(
     if requested_top_k == 0 {
         bail!("dense GGUF sampling policy requires a non-zero top-k");
     }
-    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
-        bail!("dense GGUF sampling policy requires complete dense descriptor coverage");
-    }
+    ensure_dense_model_boundary_fixture_coverage(inspection)?;
 
     let fixtures = dense_gguf_model_boundary_fixtures_from_reader(
         reader,
@@ -6188,6 +6304,36 @@ fn dense_linear_sequence_cpu(
     Ok(output)
 }
 
+fn dense_tied_lm_head_logits_cpu(
+    token_embedding_values: &[f32],
+    hidden_size: usize,
+    vocab_size: usize,
+    input: &[f32],
+) -> Result<Vec<f32>> {
+    if input.len() != hidden_size {
+        bail!("dense tied LM-head logits input has length {}, expected {hidden_size}", input.len());
+    }
+    if token_embedding_values.len() != hidden_size * vocab_size {
+        bail!(
+            "dense tied LM-head token embedding values length {} != hidden_size*vocab_size {}",
+            token_embedding_values.len(),
+            hidden_size * vocab_size
+        );
+    }
+
+    let mut logits = Vec::with_capacity(vocab_size);
+    for token_id in 0..vocab_size {
+        let start = token_id * hidden_size;
+        let weights = &token_embedding_values[start..start + hidden_size];
+        let mut sum = 0.0f32;
+        for (weight, hidden) in weights.iter().zip(input.iter()) {
+            sum += *weight * *hidden;
+        }
+        logits.push(sum);
+    }
+    Ok(logits)
+}
+
 fn dense_token_embedding_lookup(
     token_embedding_values: &[f32],
     hidden_size: usize,
@@ -6265,6 +6411,60 @@ fn dense_final_norm_tensor_name(name: &str) -> bool {
             | "final_rmsnorm.weight"
             | "transformer.ln_f.weight"
     )
+}
+
+fn ensure_dense_model_boundary_fixture_coverage(
+    inspection: &DenseGgufDescriptorInspection,
+) -> Result<()> {
+    ensure_dense_all_layer_block_descriptor_coverage(inspection)?;
+    let token_descriptor = descriptor_for_role(inspection, DenseGgufTensorRole::TokenEmbedding)?;
+    if token_descriptor.shape.len() != 2 {
+        bail!(
+            "dense GGUF model-boundary fixtures require 2D token embeddings, got {:?}",
+            token_descriptor.shape
+        );
+    }
+    dense_final_norm_descriptor(inspection)?;
+    if descriptor_for_role(inspection, DenseGgufTensorRole::Output).is_err()
+        && inspection.architecture != "qwen3"
+    {
+        bail!(
+            "dense GGUF model-boundary fixtures require an output tensor unless the architecture has a governed tied LM head"
+        );
+    }
+    Ok(())
+}
+
+fn dense_model_boundary_fixture_coverage_complete(
+    inspection: &DenseGgufDescriptorInspection,
+) -> bool {
+    ensure_dense_model_boundary_fixture_coverage(inspection).is_ok()
+}
+
+fn dense_transformer_block_descriptor_coverage_complete(
+    inspection: &DenseGgufDescriptorInspection,
+) -> bool {
+    ensure_dense_all_layer_block_descriptor_coverage(inspection).is_ok()
+}
+
+fn dense_model_boundary_lm_head_source(inspection: &DenseGgufDescriptorInspection) -> &'static str {
+    if descriptor_for_role(inspection, DenseGgufTensorRole::Output).is_ok() {
+        "output_tensor"
+    } else if inspection.architecture == "qwen3" {
+        "tied_token_embedding"
+    } else {
+        "missing_output_tensor"
+    }
+}
+
+fn dense_model_boundary_route_status(inspection: &DenseGgufDescriptorInspection) -> String {
+    if inspection.strict_descriptor_complete {
+        inspection.dense_cuda_route_status.clone()
+    } else if dense_model_boundary_fixture_coverage_complete(inspection) {
+        "descriptor_complete_with_tied_lm_head".to_string()
+    } else {
+        inspection.dense_cuda_route_status.clone()
+    }
 }
 
 fn dense_boundary_tensor_values_as_f32(
@@ -6819,9 +7019,10 @@ fn dense_gguf_norm_fixture_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
+            "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -7035,9 +7236,10 @@ fn dense_gguf_norm_cuda_parity_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
+            "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -7180,9 +7382,10 @@ fn dense_gguf_rope_cuda_parity_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
+            "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -9952,9 +10155,10 @@ fn dense_gguf_model_boundary_fixtures_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
+            "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -10157,9 +10361,13 @@ fn dense_gguf_kv_cache_policy_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_transformer_block_descriptor_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_transformer_block_descriptor_coverage_complete(inspection),
+            "dense_cuda_route_status": if dense_transformer_block_descriptor_coverage_complete(inspection) {
+                "transformer_block_descriptor_complete".to_string()
+            } else {
+                inspection.dense_cuda_route_status.clone()
+            },
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -10384,9 +10592,10 @@ fn dense_gguf_sampling_policy_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
+            "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -10483,6 +10692,7 @@ fn dense_gguf_sampling_policy_receipt_json(
 fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     prerequisites: &DenseQwenOneTokenPrerequisites,
+    proof_model: &DenseQwenProofModel,
     probe: &bitnet_device_probe::NvidiaCudaProbe,
     model_path: &Path,
     model_sha256: &str,
@@ -10496,15 +10706,16 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     cuda: &DenseQwenOneTokenRun,
     decoded_token_text: &str,
 ) -> Result<Value> {
-    if inspection.model_family != "qwen" || inspection.architecture != "qwen2" {
+    if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture {
         bail!(
-            "dense Qwen one-token receipt requires qwen/qwen2 inspection, got {}/{}",
+            "dense Qwen one-token receipt requires qwen/{} inspection, got {}/{}",
+            proof_model.architecture,
             inspection.model_family,
             inspection.architecture
         );
     }
-    if model_sha256 != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
-        bail!("dense Qwen one-token receipt requires verified Qwen model SHA");
+    if model_sha256 != proof_model.sha256 {
+        bail!("dense Qwen one-token receipt requires verified {} model SHA", proof_model.id);
     }
     if cpu.selected_token_id != cuda.selected_token_id {
         bail!("dense Qwen one-token receipt requires matching selected tokens");
@@ -10624,10 +10835,10 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
         "cuda": cuda_identity_json(Some(probe)),
         "model": {
             "model_family": "qwen",
-            "id": QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
-            "architecture": "qwen2",
+            "id": proof_model.id,
+            "architecture": proof_model.architecture,
             "artifact_kind": "dense_gguf",
-            "file": QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE,
+            "file": proof_model.file,
             "path": model_path.display().to_string(),
             "sha256": model_sha256,
         },
@@ -10644,9 +10855,10 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": inspection.required_roles_present,
-            "strict_descriptor_complete": inspection.strict_descriptor_complete,
-            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
+            "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
             "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
             "dense_gguf_inference_claimed": false,
@@ -10802,7 +11014,7 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             "reference_backend": "amd-9950x3d-cpu-avx512",
             "target_backend": HARDWARE_LANE,
             "kernel_id": "dense_qwen_one_token_cuda_runtime",
-            "fixture_id": "qwen2.5-0.5b-instruct-q8_0-one-token-greedy",
+            "fixture_id": format!("{}-one-token-greedy", proof_model.id),
             "passed": true,
             "max_abs_error": top_k_max_abs_error,
             "mean_abs_error": top_k_mean_abs_error,
@@ -10841,7 +11053,7 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             "full_cuda_residency_claimed": false
         },
         "notes": [
-            "CUDA-DENSE-044 proves exactly one deterministic greedy Qwen token through the dense regular-LLM CUDA route.",
+            format!("{} proves exactly one deterministic greedy Qwen token through the dense regular-LLM CUDA route.", proof_model.work_item),
             "This receipt does not claim short decode, chat, server readiness, speedup, persistent residency, full CUDA residency, or BitNet packed I2_S/QK256 proof."
         ],
         "error": null

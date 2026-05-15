@@ -247,7 +247,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-MODEL-001 | merged | PR #4836 added the Qwen3 0.6B artifact contract as the first generalized dense model onboarding item without promoting CPU, CUDA, speed, server, or BitNet claims. |
 | CUDA-MODEL-002 | merged | PR #4866 added the Qwen3 0.6B same-box CPU answer sanity receipt with the exact artifact contract, keeping CUDA, speed, server, product, full-residency, and BitNet QK256 claims false. |
 | CUDA-MODEL-003 | merged | PR #4903 added the Qwen3 0.6B CUDA all-layer route plan after CPU sanity landed, keeping one-token CUDA, speed, server, full-residency, and BitNet QK256 claims false. |
-| CUDA-MODEL-004 | proposed | Add Qwen3 0.6B one-token strict CUDA proof after the all-layer plan lands. |
+| CUDA-MODEL-004 | pr_open | Draft PR #4940 adds the Qwen3 0.6B one-token strict CUDA proof after the all-layer plan landed. |
 | CUDA-MODEL-005 | proposed | Add Qwen3 0.6B short-decode and warm-session strict CUDA proof after one-token CUDA lands. |
 | CUDA-UX-008 | merged | PR #4724 added a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | merged | PR #4754 added the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
