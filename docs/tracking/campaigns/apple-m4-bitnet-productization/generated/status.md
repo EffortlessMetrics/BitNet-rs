@@ -2,7 +2,7 @@
 # Apple M4 BitNet productization Campaign Status
 
 - Campaign: `apple-m4-bitnet-productization`
-- State: `active`
+- State: `complete`
 - Objective: Move Apple M4 BitNet from fixed one-shot and fixed-warm proof into operator-ready warm sessions, then chat and serve only after receipt-backed correctness, determinism, timeout, streaming, and failure-mode gates pass.
 
 ## Work Items
@@ -12,7 +12,7 @@
 | M4-BITNET-PROD-001 | merged | #4946 | `codex/apple-m4-bitnet-productization/M4-BITNET-PROD-001-variable-warm-prompts` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Allow `bitnet mac bitnet-warm` to run operator-supplied repeated prompts in one resident Apple M4 CPU/NEON BitNet process while preserving the fixed proof prompt default, accepted model/tokenizer checks, repeated-prompt determinism, per-turn receipts, aggregate prompt-source metadata, and disabled chat/serve/Metal/QK256/Neural Engine/MPSGraph/broad-claim boundaries. |
 | M4-BITNET-PROD-002 | merged | #4950 | `codex/apple-m4-bitnet-productization/M4-BITNET-PROD-002-variable-warm-runtime` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Run the operator-prompt BitNet warm route on the M4 Mac mini with accepted model/tokenizer identity, at least five variable prompts including one exact repeat, fallback_used=false, generated text/token IDs, repeated-prompt determinism, per-turn and aggregate timing/memory receipts, timeout boundary, and no chat/serve/Metal/broad claims. |
 | M4-BITNET-PROD-003 | merged | #4954 | `codex/apple-m4-bitnet-productization/M4-BITNET-PROD-003-timeout-failure-ux` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add BitNet warm-session progress, timeout, and partial-failure receipts that identify model load, tokenizer load, prefill, first-token, decode, and receipt-write stages with repair guidance, while preserving disabled chat/serve/Metal/broad-claim boundaries. |
-| M4-BITNET-PROD-004 | in_progress | TBD | `codex/apple-m4-bitnet-productization/M4-BITNET-PROD-004-chat-gate` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Define and enforce the BitNet chat enablement gate from variable warm-session receipts, repeated-prompt determinism, timeout/failure evidence, streaming semantics, and claim boundaries before any `bitnet mac chat --model-family bitnet` route is enabled. |
+| M4-BITNET-PROD-004 | merged | #4957 | `codex/apple-m4-bitnet-productization/M4-BITNET-PROD-004-chat-gate` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Define and enforce the BitNet chat enablement gate from variable warm-session receipts, repeated-prompt determinism, timeout/failure evidence, streaming semantics, and claim boundaries before any `bitnet mac chat --model-family bitnet` route is enabled. |
 
 ## Hard Constraints
 

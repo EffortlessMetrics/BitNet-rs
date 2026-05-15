@@ -1,6 +1,6 @@
 id = "apple-m4-bitnet-productization"
 title = "Apple M4 BitNet productization"
-status = "active"
+status = "complete"
 
 objective = "Move Apple M4 BitNet from fixed one-shot and fixed-warm proof into operator-ready warm sessions, then chat and serve only after receipt-backed correctness, determinism, timeout, streaming, and failure-mode gates pass."
 
@@ -150,7 +150,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-PROD-004"
-status = "in_progress"
+status = "merged"
+pr = 4957
+merge_sha = "695da886c7ae216dbc54edf03943e3f82ae5a225"
 branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-004-chat-gate"
 stackable = false
 review_mode = "codex_premerge"
