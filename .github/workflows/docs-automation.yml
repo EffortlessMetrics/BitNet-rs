@@ -24,34 +24,97 @@ on:
       - '.github/workflows/docs-automation.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # This workflow may build Rustdoc. Do not cancel selected work after setup;
+  # route tracker-only PRs to the fast path below instead.
+  cancel-in-progress: false
 
 jobs:
+  classify-docs:
+    name: Classify Docs Change
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      tracker_only: ${{ steps.classify.outputs.tracker_only }}
+    steps:
+      - name: Detect tracker-only docs PR
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          tracker_only=false
+
+          if [ "${EVENT_NAME}" = "pull_request" ] && [ -n "${PR_NUMBER:-}" ]; then
+            changed_files=$(gh api --paginate \
+              "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/files" \
+              --jq '.[].filename')
+            echo "Changed files considered by docs automation:"
+            printf '%s\n' "$changed_files"
+
+            tracker_only=true
+            while IFS= read -r path; do
+              [ -n "$path" ] || continue
+              case "$path" in
+                docs/tracking/*|.codex/campaigns/*)
+                  ;;
+                *)
+                  tracker_only=false
+                  ;;
+              esac
+            done <<< "$changed_files"
+
+            if [ -z "$changed_files" ]; then
+              tracker_only=false
+            fi
+          fi
+
+          echo "tracker_only=${tracker_only}" >> "$GITHUB_OUTPUT"
+          echo "tracker_only=${tracker_only}"
+
   docs-automation:
     name: Lint + Link Check + Rustdoc
     runs-on: ubuntu-22.04
     timeout-minutes: 25
+    needs: [classify-docs]
     steps:
+      - name: Tracker-only fast path
+        if: needs.classify-docs.outputs.tracker_only == 'true'
+        run: |
+          echo "Tracker-only PR: markdownlint, link-check, and campaign tracker workflows cover this diff."
+
       - name: Checkout code
+        if: needs.classify-docs.outputs.tracker_only != 'true'
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
       - name: Install Rust toolchain
+        if: needs.classify-docs.outputs.tracker_only != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
 
       - name: Cache Rust dependencies
+        if: needs.classify-docs.outputs.tracker_only != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: docs-automation
 
       - name: Install docs tooling
+        if: needs.classify-docs.outputs.tracker_only != 'true'
         run: |
           cargo install --locked lychee --version 0.15.1
           npm --global install markdownlint-cli2@0.18.1
 
       - name: Run docs automation checks
+        if: needs.classify-docs.outputs.tracker_only != 'true'
         run: scripts/docs_automation.sh
-

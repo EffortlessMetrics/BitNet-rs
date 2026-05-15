@@ -60,7 +60,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Core PR jobs compile and may feed cache state. Do not cancel an already
+  # started run near completion; reject irrelevant work before it starts.
+  cancel-in-progress: false
 
 permissions:
   contents: read

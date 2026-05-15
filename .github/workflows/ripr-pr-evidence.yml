@@ -2,6 +2,9 @@ name: RIPR PR Evidence
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/tracking/**'
+      - '.codex/campaigns/**'
   workflow_dispatch:
 
 permissions:

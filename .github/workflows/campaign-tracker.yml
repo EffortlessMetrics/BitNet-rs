@@ -24,7 +24,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Tracker runs compile xtask and produce campaign freshness evidence. Let
+  # started runs finish so failed metadata has a durable log.
+  cancel-in-progress: false
 
 permissions:
   contents: read

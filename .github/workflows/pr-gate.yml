@@ -46,7 +46,9 @@ on:
 
 concurrency:
   group: pr-gate-${{ github.ref }}
-  cancel-in-progress: true
+  # The gate polls upstream jobs and should outlive selected long lanes.
+  # Let started gates finish rather than discarding near-complete CI evidence.
+  cancel-in-progress: false
 
 permissions:
   contents: read
