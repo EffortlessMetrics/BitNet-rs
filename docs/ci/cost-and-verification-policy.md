@@ -151,6 +151,12 @@ uploads the receipt directory with `if: always()`. Future M3 Air model, artifact
 or timing lanes should either reuse that pattern or explain why the selected
 lane can safely discard partial work.
 
+The shared macOS Apple Silicon PR workflow follows the same cancellation rule
+for started jobs. It is still bounded by per-job `timeout-minutes` and path
+filters, but it uses `cancel-in-progress: false` so platform-specific compile
+and test evidence is not thrown away by a later push after runner time has
+already been spent.
+
 ## Why the budget target is aggressive
 
 Our CI budget target is intentionally aggressive — but **not because we want

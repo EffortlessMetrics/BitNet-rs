@@ -30,7 +30,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Apple Silicon minutes are scarce, but cancelling a started macOS build near
+  # completion discards the platform evidence after most of the cost is paid.
+  # Keep timeout-minutes as the cap and let active jobs emit their result.
+  cancel-in-progress: false
 
 permissions:
   contents: read
