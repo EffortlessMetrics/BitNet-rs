@@ -59,7 +59,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-009A | merged | Qwen no-thinking corpus runner support merged in #4832. |
 | SLM-CPU-009B | merged | First full strict no-thinking tiny-corpus evidence merged in #4843; records 4/5 passing cases and preserves the math miss. |
 | SLM-CPU-009 | merged | Calibrated strict Qwen3 tiny corpus green artifact merged in #4846; records 5/5 passing constrained cases without claiming broad answer quality. |
-| SLM-CPU-010 | ready | Next bounded item: prove deterministic multi-token decode stability before warm-session or performance work. |
+| SLM-CPU-010 | merged | Bounded deterministic multi-token decode stability evidence merged in #4851. |
+| SLM-CPU-011 | ready | Next bounded item: add strict i5-8250U Qwen3 warm-session receipts before performance work. |
 
 ## Review Policy
 
