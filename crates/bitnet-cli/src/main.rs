@@ -119,6 +119,33 @@ fn canonical_proof_backend_label(label: &str) -> String {
     }
 }
 
+fn proof_backend_labels_match(requested_backend: &str, execution_backend: &str) -> bool {
+    canonical_proof_backend_label(requested_backend)
+        == canonical_proof_backend_label(execution_backend)
+}
+
+fn resolve_simple_generation_device(
+    requested_backend_label: &str,
+    strict_backend: bool,
+) -> Result<(bitnet_common::Device, String)> {
+    use bitnet_common::{BackendRequest, Device, select_backend};
+    use bitnet_kernels::device_features::current_kernel_capabilities;
+
+    let request =
+        BackendRequest::from_label(requested_backend_label).unwrap_or(BackendRequest::Auto);
+    match select_backend(request, &current_kernel_capabilities()) {
+        Ok(selection) if selection.selected_backend() == "intel-arc-a770-opencl" => {
+            Ok((Device::OpenCL(0), selection.selected_backend()))
+        }
+        Ok(_) => Ok((Device::Cpu, "cpu".to_string())),
+        Err(err) if strict_backend => Err(err.into()),
+        Err(err) => {
+            warn!(error = %err, "simple generation backend selection fell back to CPU");
+            Ok((Device::Cpu, "cpu".to_string()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod proof_summary_tests {
     use super::*;
@@ -145,6 +172,16 @@ mod proof_summary_tests {
             proof.reason.as_deref(),
             Some("requested backend intel-arc-a770-opencl executed on cpu")
         );
+    }
+
+    #[test]
+    fn a770_alias_matches_canonical_execution_backend() {
+        assert!(proof_backend_labels_match("a770-opencl", "intel-arc-a770-opencl"));
+    }
+
+    #[test]
+    fn a770_alias_does_not_match_cpu_execution_backend() {
+        assert!(!proof_backend_labels_match("a770-opencl", "cpu"));
     }
 
     #[test]
@@ -1466,7 +1503,6 @@ async fn run_simple_generation(
     assert_greedy: bool,
     no_warnings: bool,
 ) -> Result<()> {
-    use bitnet_common::Device;
     use bitnet_models::{Model, transformer::KVCache};
     use bitnet_sampling::{SamplingConfig, SamplingStrategy};
     use bitnet_tokenizers::Tokenizer;
@@ -1518,9 +1554,10 @@ async fn run_simple_generation(
         debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
     }
 
-    let simple_execution_backend = "cpu";
+    let (model_device, simple_execution_backend) =
+        resolve_simple_generation_device(&requested_backend_label, strict_backend)?;
     let initial_backend_fallback =
-        backend_fallback_proof(&requested_backend_label, simple_execution_backend);
+        backend_fallback_proof(&requested_backend_label, simple_execution_backend.as_str());
     if strict_backend && initial_backend_fallback.used {
         let reason = initial_backend_fallback
             .reason
@@ -1559,7 +1596,7 @@ async fn run_simple_generation(
     // Try real loader first
     use bitnet_models::loader::{LoadConfig, ModelLoader};
 
-    let loader = ModelLoader::new(Device::Cpu);
+    let loader = ModelLoader::new(model_device);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
     let loader_mode;
@@ -1594,7 +1631,7 @@ async fn run_simple_generation(
             // Mock fallback
             let load_result = bitnet_models::gguf_simple::load_gguf_full(
                 &model_path,
-                Device::Cpu,
+                model_device,
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
@@ -1628,7 +1665,7 @@ async fn run_simple_generation(
                 load_result.config.clone(),
                 load_result.tensors,
                 raw_tensors,
-                Device::Cpu,
+                model_device,
             )
             .context("Failed to build mock model")?;
             (Arc::new(m) as Arc<dyn Model>, load_result.config)
@@ -2071,12 +2108,13 @@ async fn run_simple_generation(
         });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
-        let execution_backend = simple_execution_backend;
+        let execution_backend = simple_execution_backend.as_str();
         let requested_backend = requested_backend_label.as_str();
         let backend_fallback = backend_fallback_proof(requested_backend, execution_backend);
         let fallback_used =
             loader_fallback_used || tokenizer_fallback_used || backend_fallback.used;
-        let execution_backend_matched = requested_backend.eq_ignore_ascii_case(execution_backend);
+        let execution_backend_matched =
+            proof_backend_labels_match(requested_backend, execution_backend);
         let proof_model_contract_path =
             proof_model_contract.as_ref().map(|path| path.display().to_string());
         let proof_kernel_route_id = proof_kernel_route.as_deref();

@@ -42,16 +42,8 @@ fn a770_claim_boundary_docs_link_to_the_spec() {
     let validation = read_repo_file("docs/hardware/intel-arc-a770-validation.md");
     let index = read_repo_file("docs/specs/INDEX.md");
 
-    assert_contains(
-        &roadmap,
-        "docs/specs/a770-bitnet-claim-boundary.md",
-        "A770 roadmap",
-    );
-    assert_contains(
-        &roadmap,
-        "plans/a770-bitnet-claim-boundary-implementation.md",
-        "A770 roadmap",
-    );
+    assert_contains(&roadmap, "docs/specs/a770-bitnet-claim-boundary.md", "A770 roadmap");
+    assert_contains(&roadmap, "plans/a770-bitnet-claim-boundary-implementation.md", "A770 roadmap");
     assert_contains(
         &validation,
         "docs/specs/a770-bitnet-claim-boundary.md",
@@ -120,16 +112,8 @@ fn a770_claim_boundary_keeps_selected_attention_separate() {
         "Selected attention is a separate research lane",
         "A770 claim-boundary spec",
     );
-    assert_contains(
-        &spec,
-        "It is not promoted by trusted",
-        "A770 claim-boundary spec",
-    );
-    assert_contains(
-        &roadmap,
-        "Selected attention, resident KV",
-        "A770 roadmap",
-    );
+    assert_contains(&spec, "It is not promoted by trusted", "A770 claim-boundary spec");
+    assert_contains(&roadmap, "Selected attention, resident KV", "A770 roadmap");
 }
 
 #[test]

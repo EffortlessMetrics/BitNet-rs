@@ -1,5 +1,6 @@
 use bitnet_common::{BitNetConfig, BitNetError, Result};
-use bitnet_qk256_dispatch::forward_qk256;
+pub use bitnet_qk256_dispatch::Qk256DispatchBackend;
+use bitnet_qk256_dispatch::forward_qk256_with_backend;
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
@@ -197,10 +198,16 @@ pub struct MultiHeadAttention {
     o_proj: Linear,
     rope: Option<RotaryEmbedding>,
     layer_idx: usize, // Layer index for QK256 weight name generation
+    qk256_backend: Qk256DispatchBackend,
 }
 
 impl MultiHeadAttention {
-    pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+    pub fn new(
+        config: &BitNetConfig,
+        vb: VarBuilder,
+        layer_idx: usize,
+        qk256_backend: Qk256DispatchBackend,
+    ) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
         let head_dim = hidden_size / n_heads;
@@ -270,6 +277,7 @@ impl MultiHeadAttention {
             o_proj,
             rope,
             layer_idx,
+            qk256_backend,
         })
     }
 
@@ -559,7 +567,7 @@ impl MultiHeadAttention {
         // Check for QK256 data
         if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
             tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return forward_qk256(input, qk256_tensor, &qk256_key);
+            return forward_qk256_with_backend(input, qk256_tensor, &qk256_key, self.qk256_backend);
         }
 
         // Probe: Why is QK256 not found? (layer 0 only, once)
@@ -610,10 +618,16 @@ pub struct FeedForward {
     up_proj: Linear,
     down_proj: Linear,
     layer_idx: usize, // Layer index for QK256 weight name generation
+    qk256_backend: Qk256DispatchBackend,
 }
 
 impl FeedForward {
-    pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+    pub fn new(
+        config: &BitNetConfig,
+        vb: VarBuilder,
+        layer_idx: usize,
+        qk256_backend: Qk256DispatchBackend,
+    ) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let intermediate_size = config.model.intermediate_size;
 
@@ -630,6 +644,7 @@ impl FeedForward {
                 vb.pp("down_proj"),
             )?,
             layer_idx,
+            qk256_backend,
         })
     }
 
@@ -698,7 +713,7 @@ impl FeedForward {
         // Check for QK256 data
         if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
             tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return forward_qk256(input, qk256_tensor, &qk256_key);
+            return forward_qk256_with_backend(input, qk256_tensor, &qk256_key, self.qk256_backend);
         }
 
         // Fall back to standard linear
@@ -720,7 +735,12 @@ pub struct TransformerBlock {
 }
 
 impl TransformerBlock {
-    pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+    pub fn new(
+        config: &BitNetConfig,
+        vb: VarBuilder,
+        layer_idx: usize,
+        qk256_backend: Qk256DispatchBackend,
+    ) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
@@ -728,8 +748,18 @@ impl TransformerBlock {
         tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
 
         Ok(Self {
-            attention: MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?,
-            feed_forward: FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?,
+            attention: MultiHeadAttention::new(
+                config,
+                vb.pp("attention"),
+                layer_idx,
+                qk256_backend,
+            )?,
+            feed_forward: FeedForward::new(
+                config,
+                vb.pp("feed_forward"),
+                layer_idx,
+                qk256_backend,
+            )?,
             attention_norm: layer_norm_with_optional_bias(
                 hidden_size,
                 eps,
@@ -1049,6 +1079,15 @@ impl TransformerModel {
         vb: VarBuilder,
         raw_tensors: std::collections::HashMap<String, Tensor>,
     ) -> Result<Self> {
+        Self::new_with_tensors_and_qk256_backend(config, vb, raw_tensors, Qk256DispatchBackend::Cpu)
+    }
+
+    pub fn new_with_tensors_and_qk256_backend(
+        config: BitNetConfig,
+        vb: VarBuilder,
+        raw_tensors: std::collections::HashMap<String, Tensor>,
+        qk256_backend: Qk256DispatchBackend,
+    ) -> Result<Self> {
         let device = vb.device().clone();
         let vocab_size = config.model.vocab_size;
         let hidden_size = config.model.hidden_size;
@@ -1073,7 +1112,12 @@ impl TransformerModel {
 
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
-            layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)), i)?);
+            layers.push(TransformerBlock::new(
+                &config,
+                vb.pp(format!("layers.{}", i)),
+                i,
+                qk256_backend,
+            )?);
         }
 
         // Use RMSNorm epsilon from config header (CRITICAL: must match per-layer norms)
