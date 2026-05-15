@@ -154,7 +154,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL2-004"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-004-benchmark-profiles"
 stackable = false
 review_mode = "codex_premerge"
@@ -171,6 +171,8 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
   "ci/hardware/apple-m4-mac-mini/**/slm-benchmark-v2/**",
   "docs/slm/apple-m4-slm-eval-v2.md",
   "docs/tracking/campaigns/apple-m4-slm-eval-v2/**",
