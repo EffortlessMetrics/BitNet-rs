@@ -42,6 +42,38 @@ Later work items add:
 - One-shot and fixed-warm benchmark receipts.
 - Advisory/nightly regression dashboards for BitNet quality and performance.
 
+## Report Schema Slice
+
+`M4-BITNET-EVAL-002` extends `answer-corpus` receipts so later M4 BitNet eval
+runs can be scored, compared, and regressed without inventing a second report
+format.
+
+Aggregate receipts now include:
+
+- model authority for the accepted BitNet artifact, including repo, revision,
+  file, SHA256, byte size, architecture, and quantization.
+- `task_family_summary`: per-family totals, pass/fail/timeout/not-run counts,
+  scoring totals, scoring kinds, and failure taxonomy counts.
+- `reference_comparison`: a `bitnet_reference_vs_rust_v1` summary with the
+  Rust runner backend/runtime API, fallback status, prompt template, tokenizer
+  authority, status counts, text/token-ID match counts, mismatched fields, and
+  claim boundaries.
+
+Each case row now includes:
+
+- `task_family`, `category`, and `seed_material`.
+- generated text and token IDs when a live run exists.
+- `reference_comparison.schema = bitnet_reference_vs_rust_v1`.
+- reference metadata when supplied by a later reference-runner receipt.
+- Rust output metadata and comparison status:
+  `reference_not_supplied`, `not_run`, `matched`, `mismatched`, or
+  `partially_compared`.
+
+Dry-run validation for this slice still records all 100 corpus cases as
+`not_run`; the comparison summary records that reference answers are not yet
+supplied. This is schema readiness only, not runtime BitNet accuracy or
+performance evidence.
+
 ## Claim Policy
 
 Allowed after the first slice:
@@ -64,3 +96,23 @@ QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.
 
 Dense SLM eval reports stay separate. They can prove dense Qwen behavior only;
 they are not BitNet quality or performance evidence.
+
+Allowed after the report-schema slice:
+
+```text
+BitNet eval receipts can represent task-family scoring, timeout/failure
+taxonomy, generated text/token IDs, backend identity, fallback status, and
+reference-vs-Rust comparison fields.
+```
+
+Still not allowed after the report-schema slice:
+
+```text
+The full BitNet eval corpus has run on M4.
+Runtime BitNet accuracy has been measured for this corpus.
+BitNet performance has been benchmarked.
+BitNet chat works.
+BitNet serve works.
+Full apple-m4-metal inference works.
+QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.
+```
