@@ -2411,7 +2411,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-005"
-status = "proposed"
+status = "pr_open"
+pr = 4971
+head_sha = "ed79582211661ce154fd4dab9007657153f9dde6"
 branch = "model/cuda-qwen3-0_6b-short-decode"
 stackable = false
 review_mode = "codex_premerge"

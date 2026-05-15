@@ -1,0 +1,13 @@
+timestamp = "2026-05-15T18:23:40Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-005"
+event = "pr_open"
+pr = 4971
+head_sha = "ed79582211661ce154fd4dab9007657153f9dde6"
+actor = "codex"
+
+notes = [
+  "Opened draft PR #4971 for the Qwen3 0.6B short-decode strict RTX 5070 Ti CUDA proof.",
+  "The PR records a bounded 8-token greedy short-decode receipt for the pinned Qwen3 0.6B Q8_0 artifact.",
+  "The PR keeps Qwen3 warm-session, speedup, server readiness, full-residency, broad dense GGUF readiness, and BitNet QK256 claims false.",
+]
