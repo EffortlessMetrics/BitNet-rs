@@ -396,6 +396,14 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
             left.iter().map(|item| item.token_id).collect::<Vec<_>>()
                 == right.iter().map(|item| item.token_id).collect::<Vec<_>>()
         });
+    let top_logit_argmax_token_exact =
+        left.top_logits.as_ref().zip(right.top_logits.as_ref()).and_then(|(left, right)| {
+            left.first().zip(right.first()).map(|(left, right)| left.token_id == right.token_id)
+        });
+    let top_logit_argmax_delta =
+        left.top_logits.as_ref().zip(right.top_logits.as_ref()).and_then(|(left, right)| {
+            left.first().zip(right.first()).map(|(left, right)| (left.logit - right.logit).abs())
+        });
     let top_logit_max_abs_delta =
         left.top_logits.as_ref().zip(right.top_logits.as_ref()).map(|(left, right)| {
             left.iter()
@@ -417,6 +425,8 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
         "top_logits_available": left.top_logits.is_some() && right.top_logits.is_some(),
         "top_logit_count": left.top_logits.as_ref().zip(right.top_logits.as_ref()).map(|(left, right)| left.len().min(right.len())),
         "top_logit_token_ids_exact": top_logit_token_ids_exact,
+        "top_logit_argmax_token_exact": top_logit_argmax_token_exact,
+        "top_logit_argmax_delta": top_logit_argmax_delta,
         "top_logit_max_abs_delta": top_logit_max_abs_delta,
         "reference_text_candidate_logits": reference_text_candidate_logits(left, right),
     })
@@ -671,6 +681,8 @@ mod tests {
         assert_eq!(report["text_exact"], false);
         assert_eq!(report["top_logits_available"], true);
         assert_eq!(report["top_logit_token_ids_exact"], false);
+        assert_eq!(report["top_logit_argmax_token_exact"], true);
+        assert_eq!(report["top_logit_argmax_delta"], 0.25);
         assert_eq!(report["top_logit_max_abs_delta"], 0.25);
     }
 
