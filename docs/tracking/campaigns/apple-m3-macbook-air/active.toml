@@ -674,10 +674,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-009"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-009-slm-synthesis"
 pr = 4902
-head_sha = "35402905d22b0997bfaf86962950c1358cf7409a"
+head_sha = "9483c0597711becb4c1fe93a02906648a379ff61"
+merge_sha = "238295105a28a014d3e2ecbe6980efea76c3f325"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
