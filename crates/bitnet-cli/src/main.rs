@@ -8125,8 +8125,12 @@ async fn run_slm_warm_session(
     let pretokenizer_authority =
         tokenizer_pretokenizer_authority(tokenizer_source, &tokenizer_label);
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
-    let all_stop_sequences = warm_session_stop_sequences(&stop, template_type);
-    let all_stop_ids = warm_session_stop_ids(&stop_id, template_type, tokenizer.as_ref());
+    let all_stop_sequences = simple_generation::prompt::merge_stop_sequences(&stop, template_type);
+    let all_stop_ids = simple_generation::prompt::merge_stop_token_ids(
+        &stop_id,
+        template_type,
+        tokenizer.as_ref(),
+    );
     let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
@@ -8202,19 +8206,6 @@ async fn run_slm_warm_session(
             no_think,
         )?;
 
-        let mut all_stop_sequences = stop.clone();
-        for template_stop in template_type.default_stop_sequences() {
-            if !all_stop_sequences.contains(&template_stop) {
-                all_stop_sequences.push(template_stop);
-            }
-        }
-        let mut all_stop_ids = stop_id.clone();
-        for template_id in template_type.resolve_stop_token_ids(tokenizer.as_ref()) {
-            if !all_stop_ids.contains(&template_id) {
-                all_stop_ids.push(template_id);
-            }
-        }
-
         let bos_policy = template_type.should_add_bos();
         let parse_special = template_type.parse_special();
         let prompt_tokenize_start = std::time::Instant::now();
@@ -8226,12 +8217,8 @@ async fn run_slm_warm_session(
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
-        session_buffers.reset(encoded_prompt_tokens.len(), max_new_tokens, max_stop_len);
-        let buffer_reuse_evidence = session_buffers.reuse_evidence_json(
-            encoded_prompt_tokens.len().saturating_add(max_new_tokens),
-            max_new_tokens,
-            max_stop_len,
-        );
+        let buffer_reuse_evidence =
+            session_buffers.reset(encoded_prompt_tokens.len(), max_new_tokens, max_stop_len);
         session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
         ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
         let tokens = &mut session_buffers.tokens;
@@ -8728,7 +8715,7 @@ async fn run_slm_warm_session(
             "generated_token_buffer_reused": true,
             "timing_buffers_reused": true,
             "allocation_audit_buffers_reused": true,
-            "stop_tail_buffer_reused": true,
+            "stop_tail_buffer_reused": max_stop_len > 0,
             "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
             "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
             "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
@@ -9154,8 +9141,19 @@ struct WarmSessionPromptBuffers {
 
 #[cfg(feature = "full-cli")]
 impl WarmSessionPromptBuffers {
-    fn reset(&mut self, prompt_token_capacity: usize, max_new_tokens: usize, max_stop_len: usize) {
+    fn reset(
+        &mut self,
+        prompt_token_capacity: usize,
+        max_new_tokens: usize,
+        max_stop_len: usize,
+    ) -> serde_json::Value {
         let token_capacity = prompt_token_capacity.saturating_add(max_new_tokens);
+        let evidence_before = WarmSessionPromptBufferReuseEvidence::capture_before(
+            self,
+            token_capacity,
+            max_new_tokens,
+            max_stop_len,
+        );
         reserve_total_capacity(&mut self.tokens, token_capacity);
         reserve_total_capacity(&mut self.generated_tokens, max_new_tokens);
         reserve_total_capacity(&mut self.decode_step_ms, max_new_tokens);
@@ -9196,28 +9194,91 @@ impl WarmSessionPromptBuffers {
         self.token_decode_step_allocs.clear();
         self.stop_tail_update_allocs.clear();
         self.stop_tail.clear();
-    }
 
-    fn reuse_evidence_json(
-        &self,
+        evidence_before.capture_after(self)
+    }
+}
+
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptBufferReuseEvidence {
+    token_capacity_needed: usize,
+    generated_token_capacity_needed: usize,
+    stop_tail_capacity_needed: usize,
+    previous_token_capacity: usize,
+    previous_generated_token_capacity: usize,
+    previous_stop_tail_capacity: usize,
+    token_capacity: usize,
+    generated_token_capacity: usize,
+    decode_timing_capacity: usize,
+    prefill_allocation_sample_capacity: usize,
+    decode_allocation_sample_capacity: usize,
+    stop_tail_capacity: usize,
+}
+
+#[cfg(feature = "full-cli")]
+impl WarmSessionPromptBufferReuseEvidence {
+    fn capture_before(
+        buffers: &WarmSessionPromptBuffers,
         token_capacity_needed: usize,
         generated_token_capacity_needed: usize,
         max_stop_len: usize,
-    ) -> serde_json::Value {
+    ) -> Self {
+        Self {
+            token_capacity_needed,
+            generated_token_capacity_needed,
+            stop_tail_capacity_needed: max_stop_len.saturating_add(16),
+            previous_token_capacity: buffers.tokens.capacity(),
+            previous_generated_token_capacity: buffers.generated_tokens.capacity(),
+            previous_stop_tail_capacity: buffers.stop_tail.capacity(),
+            token_capacity: buffers.tokens.capacity(),
+            generated_token_capacity: buffers.generated_tokens.capacity(),
+            decode_timing_capacity: buffers.decode_step_ms.capacity(),
+            prefill_allocation_sample_capacity: buffers.prefill_step_allocs.capacity(),
+            decode_allocation_sample_capacity: buffers.decode_step_allocs.capacity(),
+            stop_tail_capacity: buffers.stop_tail.capacity(),
+        }
+    }
+
+    fn capture_after(mut self, buffers: &WarmSessionPromptBuffers) -> serde_json::Value {
+        self.token_capacity = buffers.tokens.capacity();
+        self.generated_token_capacity = buffers.generated_tokens.capacity();
+        self.decode_timing_capacity = buffers.decode_step_ms.capacity();
+        self.prefill_allocation_sample_capacity = buffers.prefill_step_allocs.capacity();
+        self.decode_allocation_sample_capacity = buffers.decode_step_allocs.capacity();
+        self.stop_tail_capacity = buffers.stop_tail.capacity();
+        self.to_json()
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        let token_capacity_grew = self.token_capacity > self.previous_token_capacity;
+        let generated_token_capacity_grew =
+            self.generated_token_capacity > self.previous_generated_token_capacity;
+        let stop_tail_capacity_grew = self.stop_tail_capacity > self.previous_stop_tail_capacity;
+        let reset_reused_existing_capacity =
+            !(token_capacity_grew || generated_token_capacity_grew || stop_tail_capacity_grew);
+
         serde_json::json!({
-            "token_capacity_needed": token_capacity_needed,
-            "token_capacity": self.tokens.capacity(),
-            "generated_token_capacity_needed": generated_token_capacity_needed,
-            "generated_token_capacity": self.generated_tokens.capacity(),
-            "decode_timing_capacity": self.decode_step_ms.capacity(),
-            "prefill_allocation_sample_capacity": self.prefill_step_allocs.capacity(),
-            "decode_allocation_sample_capacity": self.decode_step_allocs.capacity(),
-            "stop_tail_capacity": self.stop_tail.capacity(),
-            "stop_tail_capacity_needed": max_stop_len.saturating_add(16),
-            "capacity_sufficient_for_prompt": self.tokens.capacity() >= token_capacity_needed
-                && self.generated_tokens.capacity() >= generated_token_capacity_needed
-                && self.stop_tail.capacity() >= max_stop_len.saturating_add(16),
-            "buffers_cleared_without_reallocation": true,
+            "token_capacity_needed": self.token_capacity_needed,
+            "token_capacity": self.token_capacity,
+            "previous_token_capacity": self.previous_token_capacity,
+            "token_capacity_grew": token_capacity_grew,
+            "generated_token_capacity_needed": self.generated_token_capacity_needed,
+            "generated_token_capacity": self.generated_token_capacity,
+            "previous_generated_token_capacity": self.previous_generated_token_capacity,
+            "generated_token_capacity_grew": generated_token_capacity_grew,
+            "decode_timing_capacity": self.decode_timing_capacity,
+            "prefill_allocation_sample_capacity": self.prefill_allocation_sample_capacity,
+            "decode_allocation_sample_capacity": self.decode_allocation_sample_capacity,
+            "stop_tail_capacity": self.stop_tail_capacity,
+            "previous_stop_tail_capacity": self.previous_stop_tail_capacity,
+            "stop_tail_capacity_needed": self.stop_tail_capacity_needed,
+            "stop_tail_capacity_grew": stop_tail_capacity_grew,
+            "capacity_sufficient_for_prompt": self.token_capacity >= self.token_capacity_needed
+                && self.generated_token_capacity >= self.generated_token_capacity_needed
+                && self.stop_tail_capacity >= self.stop_tail_capacity_needed,
+            "reset_reused_existing_capacity": reset_reused_existing_capacity,
+            "buffers_cleared_without_reallocation": reset_reused_existing_capacity,
         })
     }
 }
@@ -9234,35 +9295,6 @@ fn reserve_string_total_capacity(value: &mut String, needed: usize) {
     if value.capacity() < needed {
         value.reserve(needed - value.capacity());
     }
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_stop_sequences(
-    explicit_stop: &[String],
-    template_type: bitnet_inference::TemplateType,
-) -> Vec<String> {
-    let mut all_stop_sequences = explicit_stop.to_vec();
-    for template_stop in template_type.default_stop_sequences() {
-        if !all_stop_sequences.contains(&template_stop) {
-            all_stop_sequences.push(template_stop);
-        }
-    }
-    all_stop_sequences
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_stop_ids(
-    explicit_stop_ids: &[u32],
-    template_type: bitnet_inference::TemplateType,
-    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
-) -> Vec<u32> {
-    let mut all_stop_ids = explicit_stop_ids.to_vec();
-    for template_id in template_type.resolve_stop_token_ids(tokenizer) {
-        if !all_stop_ids.contains(&template_id) {
-            all_stop_ids.push(template_id);
-        }
-    }
-    all_stop_ids
 }
 
 #[derive(Clone, Debug, Default)]
@@ -13345,6 +13377,32 @@ mod tests {
             fallback_used: false,
             fallback_reason: None,
         }));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_prompt_buffers_report_capacity_reuse() {
+        let mut buffers = WarmSessionPromptBuffers::default();
+
+        let first = buffers.reset(8, 4, 3);
+        assert_eq!(first["capacity_sufficient_for_prompt"], true);
+        assert_eq!(first["reset_reused_existing_capacity"], false);
+        assert_eq!(first["token_capacity_grew"], true);
+        assert_eq!(first["generated_token_capacity_grew"], true);
+
+        buffers.tokens.extend_from_slice(&[1, 2, 3]);
+        buffers.generated_tokens.extend_from_slice(&[4, 5]);
+        buffers.stop_tail.push_str("tail");
+
+        let second = buffers.reset(4, 2, 2);
+        assert!(buffers.tokens.is_empty());
+        assert!(buffers.generated_tokens.is_empty());
+        assert!(buffers.stop_tail.is_empty());
+        assert_eq!(second["capacity_sufficient_for_prompt"], true);
+        assert_eq!(second["reset_reused_existing_capacity"], true);
+        assert_eq!(second["token_capacity_grew"], false);
+        assert_eq!(second["generated_token_capacity_grew"], false);
+        assert_eq!(second["stop_tail_capacity_grew"], false);
     }
 
     #[test]
