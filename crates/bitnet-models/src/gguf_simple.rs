@@ -2001,6 +2001,51 @@ mod tests {
         }
     }
 
+    fn tokenizer_tokens() -> GgufValue {
+        GgufValue::Array(vec![
+            GgufValue::String("<s>".to_string()),
+            GgufValue::String("</s>".to_string()),
+        ])
+    }
+
+    fn read_config(metadata: Vec<(&str, GgufValue)>) -> bitnet_common::BitNetConfig {
+        let data = build_metadata_only_gguf(metadata);
+        let reader = GgufReader::new(&data).expect("metadata-only gguf reader");
+        extract_config_from_gguf(&reader).expect("extract config")
+    }
+
+    fn bitnet_test_metadata(architecture: &str) -> Vec<(&str, GgufValue)> {
+        vec![
+            ("general.architecture", GgufValue::String(architecture.to_string())),
+            ("tokenizer.ggml.tokens", tokenizer_tokens()),
+            ("bitnet-b1.58.embedding_length", GgufValue::U32(8)),
+            ("bitnet-b1.58.block_count", GgufValue::U32(1)),
+            ("bitnet-b1.58.attention.head_count", GgufValue::U32(2)),
+            ("bitnet-b1.58.attention.head_count_kv", GgufValue::U32(1)),
+            ("bitnet-b1.58.feed_forward_length", GgufValue::U32(16)),
+            ("bitnet-b1.58.rope.freq_base", GgufValue::F32(500_000.0)),
+            ("bitnet-b1.58.attention.layer_norm_rms_epsilon", GgufValue::F32(1.0e-5)),
+        ]
+    }
+
+    fn llama_test_metadata(include_architecture: bool) -> Vec<(&'static str, GgufValue)> {
+        let mut metadata = Vec::new();
+        if include_architecture {
+            metadata.push(("general.architecture", GgufValue::String("llama".to_string())));
+        }
+        metadata.extend([
+            ("tokenizer.ggml.tokens", tokenizer_tokens()),
+            ("llama.embedding_length", GgufValue::U32(12)),
+            ("llama.block_count", GgufValue::U32(2)),
+            ("llama.attention.head_count", GgufValue::U32(3)),
+            ("llama.attention.head_count_kv", GgufValue::U32(1)),
+            ("llama.feed_forward_length", GgufValue::U32(24)),
+            ("llama.rope.freq_base", GgufValue::F32(10_000.0)),
+            ("llama.attention.layer_norm_rms_epsilon", GgufValue::F32(1.0e-6)),
+        ]);
+        metadata
+    }
+
     #[test]
     #[serial]
     fn mock_compatibility_loader_requires_explicit_opt_in() {
@@ -2058,35 +2103,53 @@ mod tests {
     }
 
     #[test]
-    fn simple_config_applies_bitnet_architecture_defaults() {
-        let data = build_metadata_only_gguf(vec![
-            ("general.architecture", GgufValue::String("bitnet".to_string())),
-            (
-                "tokenizer.ggml.tokens",
-                GgufValue::Array(vec![
-                    GgufValue::String("<s>".to_string()),
-                    GgufValue::String("</s>".to_string()),
-                ]),
-            ),
-            ("bitnet-b1.58.embedding_length", GgufValue::U32(8)),
-            ("bitnet-b1.58.block_count", GgufValue::U32(1)),
-            ("bitnet-b1.58.attention.head_count", GgufValue::U32(2)),
-            ("bitnet-b1.58.attention.head_count_kv", GgufValue::U32(1)),
-            ("bitnet-b1.58.feed_forward_length", GgufValue::U32(16)),
-            ("bitnet-b1.58.rope.freq_base", GgufValue::F32(500_000.0)),
-            ("bitnet-b1.58.attention.layer_norm_rms_epsilon", GgufValue::F32(1.0e-5)),
-        ]);
-        let reader = GgufReader::new(&data).expect("metadata-only gguf reader");
+    fn simple_config_applies_bitnet_architecture_defaults_for_aliases() {
+        for architecture in ["bitnet", "bitnet-b1.58"] {
+            let config = read_config(bitnet_test_metadata(architecture));
 
-        let config = extract_config_from_gguf(&reader).expect("extract config");
+            assert_eq!(config.model.norm_type, NormType::RmsNorm, "{architecture}");
+            assert_eq!(config.model.activation_type, ActivationType::Relu2, "{architecture}");
+        }
+    }
 
-        assert_eq!(config.model.norm_type, NormType::RmsNorm);
-        assert_eq!(config.model.activation_type, ActivationType::Relu2);
+    #[test]
+    fn simple_config_metadata_dimensions_override_architecture_defaults() {
+        let config = read_config(bitnet_test_metadata("bitnet"));
+
         assert_eq!(config.model.vocab_size, 2);
         assert_eq!(config.model.hidden_size, 8);
         assert_eq!(config.model.num_layers, 1);
         assert_eq!(config.model.num_heads, 2);
         assert_eq!(config.model.num_key_value_heads, 1);
         assert_eq!(config.model.intermediate_size, 16);
+        assert_eq!(config.model.rope_theta, Some(500_000.0));
+        assert_eq!(config.model.rms_norm_eps, Some(1.0e-5));
+    }
+
+    #[test]
+    fn simple_config_non_bitnet_architecture_does_not_inherit_bitnet_activation() {
+        let config = read_config(llama_test_metadata(true));
+
+        assert_eq!(config.model.norm_type, NormType::RmsNorm);
+        assert_eq!(config.model.activation_type, ActivationType::Silu);
+        assert_ne!(config.model.activation_type, ActivationType::Relu2);
+        assert_eq!(config.model.hidden_size, 12);
+        assert_eq!(config.model.num_layers, 2);
+        assert_eq!(config.model.num_heads, 3);
+        assert_eq!(config.model.num_key_value_heads, 1);
+        assert_eq!(config.model.intermediate_size, 24);
+    }
+
+    #[test]
+    fn simple_config_missing_architecture_keeps_generic_defaults() {
+        let config = read_config(llama_test_metadata(false));
+
+        assert_eq!(config.model.norm_type, NormType::LayerNorm);
+        assert_eq!(config.model.activation_type, ActivationType::Silu);
+        assert_eq!(config.model.hidden_size, 12);
+        assert_eq!(config.model.num_layers, 2);
+        assert_eq!(config.model.num_heads, 3);
+        assert_eq!(config.model.num_key_value_heads, 1);
+        assert_eq!(config.model.intermediate_size, 24);
     }
 }
