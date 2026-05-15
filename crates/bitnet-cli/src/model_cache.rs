@@ -1378,7 +1378,8 @@ fn print_model_status_group(dashboard: &ModelStatusDashboard, title: &str, categ
         println!("    tier: {}", row.tier);
         println!("    cpu answer: {}", ready_label(row.cpu_answer_ready));
         println!("    cuda answer: {}", ready_label(row.accelerator_answer_ready));
-        if row.model_class == "dense_slm" && row.category == "supported" {
+        if row.model_class == "dense_slm" && row.route.as_deref() == Some("dense_regular_llm_cuda")
+        {
             println!("    one-token: {}", row.one_token);
             println!("    short-decode: {}", row.short_decode);
         } else {
@@ -1462,7 +1463,7 @@ fn benchmark_status(entry: &ModelCoverageEntry) -> String {
     if entry.claims.benchmark_qualified && entry.claims.speedup_claim {
         return "qualified".to_string();
     }
-    if entry.claims.product_cli_ready
+    if (entry.claims.product_cli_ready || entry.claims.accelerator_answer_ready)
         && entry.required_receipts.iter().any(|receipt| receipt.contains("benchmark"))
     {
         return "reviewed, speedup not accepted".to_string();
@@ -3073,7 +3074,7 @@ mod tests {
     }
 
     #[test]
-    fn model_status_dashboard_lists_qwen3_as_candidate_not_cuda_ready() -> Result<()> {
+    fn model_status_dashboard_lists_qwen3_as_accelerator_ready_candidate() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
         let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
@@ -3081,19 +3082,22 @@ mod tests {
         let qwen3 = model_status_row_for(&dashboard, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3.display_name, "qwen3-0.6b-instruct-q8_0");
         assert_eq!(qwen3.category, "candidate");
-        assert_eq!(qwen3.route, None);
+        assert_eq!(qwen3.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert!(qwen3.cpu_answer_ready);
-        assert!(!qwen3.accelerator_answer_ready);
-        assert!(!qwen3.dense_regular_llm_cuda_proof);
+        assert!(qwen3.accelerator_answer_ready);
+        assert!(qwen3.dense_regular_llm_cuda_proof);
         assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
         assert!(!qwen3.speedup_claim);
         assert!(!qwen3.server_ready);
+        assert!(!qwen3.full_residency_claim);
         assert_eq!(qwen3.ask, "not ready");
-        assert_eq!(qwen3.warm_session, "not ready");
-        assert_eq!(qwen3.benchmark, "not ready");
-        assert_eq!(qwen3.tier, "cpu_answer_ready");
-        assert!(qwen3.next_proof.contains("CUDA all-layer plan"));
-        assert!(qwen3.claim_boundary.contains("bounded 9950X3D AVX-512 CPU answer sanity"));
+        assert_eq!(qwen3.one_token, "ready");
+        assert_eq!(qwen3.short_decode, "ready");
+        assert_eq!(qwen3.warm_session, "ready");
+        assert_eq!(qwen3.benchmark, "reviewed, speedup not accepted");
+        assert_eq!(qwen3.tier, "accelerator_answer_ready");
+        assert!(qwen3.next_proof.contains("user-facing ask/chat product UX"));
+        assert!(qwen3.claim_boundary.contains("dense_regular_llm_cuda RTX 5070 Ti route"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
         Ok(())
     }
@@ -3122,6 +3126,19 @@ mod tests {
             models.iter().any(|model| {
                 model["id"] == "dense_qwen25_05b_q8_cuda"
                     && model["route"] == "dense_regular_llm_cuda"
+                    && model["speedup_claim"] == false
+                    && model["server_ready"] == false
+                    && model["bitnet_packed_i2s_qk256_proof"] == false
+                    && model["dense_regular_llm_cuda_proof"] == true
+            })
+        }));
+        assert!(value["models"].as_array().is_some_and(|models| {
+            models.iter().any(|model| {
+                model["id"] == "dense_qwen3_06b_q8_candidate"
+                    && model["category"] == "candidate"
+                    && model["tier"] == "accelerator_answer_ready"
+                    && model["route"] == "dense_regular_llm_cuda"
+                    && model["accelerator_answer_ready"] == true
                     && model["speedup_claim"] == false
                     && model["server_ready"] == false
                     && model["bitnet_packed_i2s_qk256_proof"] == false

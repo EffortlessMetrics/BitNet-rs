@@ -2555,6 +2555,54 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-008"
+status = "in_progress"
+branch = "codex/cuda-qwen3-status-sync"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-007"]
+acceptance = "Sync the Qwen3 0.6B model coverage row and CUDA model-status dashboard to the exact earned accelerator-ready candidate tier after one-token, short-decode, warm-session, and benchmark review receipts landed, while keeping product CLI, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli model_status",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model status --device nvidia-rtx-5070-ti-cuda",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model status --device nvidia-rtx-5070-ti-cuda --format json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "ci/hardware/**",
+  ".github/workflows/**",
+  "README.md",
+]
+may_claim = [
+  "Qwen3 0.6B is visible in model status as an accelerator-ready dense SLM candidate for the exact RTX 5070 Ti dense_regular_llm_cuda receipt ladder after CUDA-MODEL-007.",
+  "The Qwen3 status row records one-token, short-decode, warm-session, and benchmark review evidence while preserving speedup_claim=false.",
+]
+must_not_claim = [
+  "Qwen3 product CLI readiness exists.",
+  "Qwen3 speedup exists.",
+  "Qwen3 server readiness exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
 id = "CUDA-UX-008"
 status = "merged"
 branch = "cli/cuda-model-support-dashboard"
