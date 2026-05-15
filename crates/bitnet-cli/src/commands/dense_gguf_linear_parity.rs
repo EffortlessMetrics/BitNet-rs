@@ -990,16 +990,17 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
 
         let data = map_model(&self.model)?;
         let model_sha256 = sha256_bytes(&data);
-        if model_sha256 != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
-            bail!(
-                "CUDA-DENSE-045 is scoped to verified {QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE}; got sha256={model_sha256}"
-            );
-        }
+        let proof_model = dense_qwen_proof_model_for_sha256(&model_sha256).ok_or_else(|| {
+            anyhow!(
+                "dense Qwen short-decode strict CUDA proof is scoped to verified Qwen2.5 0.5B Q8_0 or Qwen3 0.6B Q8_0 artifacts; got sha256={model_sha256}"
+            )
+        })?;
         let model_file =
             self.model.file_name().and_then(|value| value.to_str()).unwrap_or_default();
-        if model_file != QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE {
+        if model_file != proof_model.file {
             bail!(
-                "CUDA-DENSE-045 is scoped to {QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE}; got {model_file}"
+                "dense Qwen short-decode strict CUDA proof is scoped to verified {}; got {model_file}",
+                proof_model.file
             );
         }
 
@@ -1007,9 +1008,11 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
             format!("failed to parse dense GGUF model {}", self.model.display())
         })?;
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
-        if inspection.model_family != "qwen" || inspection.architecture != "qwen2" {
+        if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture
+        {
             bail!(
-                "CUDA-DENSE-045 requires qwen/qwen2 descriptor identity; got {}/{}",
+                "dense Qwen short-decode strict CUDA proof requires qwen/{} descriptor identity; got {}/{}",
+                proof_model.architecture,
                 inspection.model_family,
                 inspection.architecture
             );
@@ -1035,6 +1038,7 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
             &self.kv_cache_policy,
             &self.sampling_policy,
             &self.one_token_proof,
+            proof_model,
         )?;
 
         let tokenizer_resolution = bitnet_tokenizers::auto::resolve_tokenizer(
@@ -1111,6 +1115,7 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
         let receipt = dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
             &inspection,
             &prerequisites,
+            proof_model,
             &probe,
             &self.model,
             &model_sha256,
@@ -3466,17 +3471,20 @@ impl DenseQwenShortDecodePrerequisites {
         kv_cache_policy: &Path,
         sampling_policy: &Path,
         one_token_proof: &Path,
+        proof_model: &DenseQwenProofModel,
     ) -> Result<Self> {
         let one_token = DenseQwenOneTokenPrerequisites::load(
             all_layer_plan,
             model_boundary_fixtures,
             kv_cache_policy,
             sampling_policy,
-            &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL,
+            proof_model,
         )?;
-        let (_, one_token_proof_sha256) = read_and_validate_receipt(one_token_proof, |receipt| {
-            validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(receipt)
-        })?;
+        let (_, one_token_proof_sha256) = read_and_validate_receipt_for_qwen_model(
+            one_token_proof,
+            |receipt| validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(receipt),
+            proof_model,
+        )?;
 
         Ok(Self { one_token, one_token_proof_sha256 })
     }
@@ -3497,6 +3505,7 @@ impl DenseQwenWarmSessionPrerequisites {
             kv_cache_policy,
             sampling_policy,
             one_token_proof,
+            &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL,
         )?;
         let (_, short_decode_proof_sha256) =
             read_and_validate_receipt(short_decode_proof, |receipt| {
@@ -11064,6 +11073,7 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
 fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     prerequisites: &DenseQwenShortDecodePrerequisites,
+    proof_model: &DenseQwenProofModel,
     probe: &bitnet_device_probe::NvidiaCudaProbe,
     model_path: &Path,
     model_sha256: &str,
@@ -11077,15 +11087,16 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     cuda: &DenseQwenShortDecodeRun,
     decoded_text: &str,
 ) -> Result<Value> {
-    if inspection.model_family != "qwen" || inspection.architecture != "qwen2" {
+    if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture {
         bail!(
-            "dense Qwen short-decode receipt requires qwen/qwen2 inspection, got {}/{}",
+            "dense Qwen short-decode receipt requires qwen/{} inspection, got {}/{}",
+            proof_model.architecture,
             inspection.model_family,
             inspection.architecture
         );
     }
-    if model_sha256 != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
-        bail!("dense Qwen short-decode receipt requires verified Qwen model SHA");
+    if model_sha256 != proof_model.sha256 {
+        bail!("dense Qwen short-decode receipt requires verified {} model SHA", proof_model.id);
     }
     let generated_count = cuda.generated_token_ids.len();
     if !(5..=16).contains(&generated_count) {
@@ -11231,10 +11242,10 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         "cuda": cuda_identity_json(Some(probe)),
         "model": {
             "model_family": "qwen",
-            "id": QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
-            "architecture": "qwen2",
+            "id": proof_model.id,
+            "architecture": proof_model.architecture,
             "artifact_kind": "dense_gguf",
-            "file": QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE,
+            "file": proof_model.file,
             "path": model_path.display().to_string(),
             "sha256": model_sha256,
         },
@@ -11413,7 +11424,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
             "reference_backend": "amd-9950x3d-cpu-avx512",
             "target_backend": HARDWARE_LANE,
             "kernel_id": "dense_qwen_short_decode_cuda_runtime",
-            "fixture_id": "qwen2.5-0.5b-instruct-q8_0-short-decode-greedy",
+            "fixture_id": format!("{}-short-decode-greedy", proof_model.id),
             "passed": true,
             "max_abs_error": top_k_max_abs_error,
             "mean_abs_error": top_k_mean_abs_error,
