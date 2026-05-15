@@ -1,0 +1,27 @@
+timestamp = "2026-05-15T09:13:58Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-004"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-004-benchmark-reports"
+pr = 4879
+head_sha = "69863f1dc49e6d3acde998551480254cd81f2b45"
+merge_sha = "881a2d514c47dc7c72cd5b4d42e998ff635a54e2"
+summary = "Marked M4-SLM-EVAL2-004 merged after Apple M4 dense SLM benchmark v2 reports landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4879",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "The merged PR publishes apple_m4_slm_benchmark_v2 receipts for every supported dense Apple M4 model ID.",
+  "Each report records the full benchmark profile set with fallback_used=false, 101 prompts, p50/p90/p99 timing, input/output/decode throughput, peak memory, and process-peak memory drift.",
+  "The documented long-context tail is bounded to the recorded M4 Mac mini receipts and is not a broad Apple Silicon benchmark or broad model-quality claim.",
+  "No BitNet quality/proof claim, full Metal route, QK256, Neural Engine, MPSGraph, MacBook, or speedup claim is made.",
+]

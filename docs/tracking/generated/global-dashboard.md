@@ -15,7 +15,7 @@
 | apple-m4-productization | M4-PROD-005 | #4034 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | SLM-M4-007 | #3991 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-006 | #4677 | merged | none | This is an M4 Mac mini dense SLM campaign. |
-| apple-m4-slm-eval-v2 | M4-SLM-EVAL2-004 | TBD | in_progress | M4-SLM-EVAL2-005 | This is an M4 Mac mini dense SLM campaign. |
+| apple-m4-slm-eval-v2 | M4-SLM-EVAL2-005 | TBD | proposed | none | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-excellence | M4-SLM-EX-010 | #4307 | merged | none | This is an M4 Mac mini local campaign. |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-004 | #4161 | merged | none | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
 | apple-m4-slm-metal-phases | M4-METAL-007 | #4397 | merged | none | This is an M4 Mac mini dense SLM campaign. |
