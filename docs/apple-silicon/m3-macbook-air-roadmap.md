@@ -119,19 +119,20 @@ M3 validate bridge, dense Qwen smoke/operator evidence, Microsoft 2B I2_S
 identity, tokenizer authority, reference-output decision, cache-retention audit,
 and dense SLM cross-lane synthesis.
 
-The active stack now starts with the secondary candidate surfaces: `M3MBA-006`
-for the smaller 0.7B control candidate, `M3MBA-007` for 3B TL diagnostics, and
-`M3MBA-008` for handoff or no-accepted-artifact closure. Any new large candidate
-remains serialized behind fresh disk preflight and cleanup/retention evidence.
+The active stack now starts with the remaining secondary candidate surface:
+`M3MBA-007` for 3B TL diagnostics, then `M3MBA-008` for handoff or
+no-accepted-artifact closure. `M3MBA-006` is blocked until the 0.7B control
+candidate has an official GGUF, reproducible conversion path, or explicitly
+approved third-party artifact path. Any new large candidate remains serialized
+behind fresh disk preflight and cleanup/retention evidence.
 
 The next sequence should stay as small PRs, with each PR either merging evidence
 or naming a blocker:
 
 | Stack position | Item | PR shape | Blocks |
 |---:|---|---|---|
-| 1 | `M3MBA-006` | Evaluate the smaller 0.7B control candidate with serialized download, hash, tokenizer, reference-output, and cleanup evidence. | Handoff completeness when Microsoft 2B is blocked, rejected, or needs a smaller control comparison. |
-| 2 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence with no I2_S support claim. |
-| 3 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
+| 1 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence with no I2_S support claim. |
+| 2 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
 
 ## 2026-05-13 Tactical Plan
 

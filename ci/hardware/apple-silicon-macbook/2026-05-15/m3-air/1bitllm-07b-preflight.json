@@ -1,0 +1,72 @@
+{
+  "artifact_kind": "apple_m3_air_1bitllm_07b_preflight",
+  "schema": 1,
+  "campaign": "apple-m3-macbook-air",
+  "work_item": "M3MBA-006",
+  "recorded_at": "2026-05-15T12:19:54Z",
+  "machine_id": "apple-m3-macbook-air",
+  "source": {
+    "repo": "1bitLLM/bitnet_b1_58-large",
+    "repo_url": "https://huggingface.co/1bitLLM/bitnet_b1_58-large",
+    "tree_url": "https://huggingface.co/1bitLLM/bitnet_b1_58-large/tree/main",
+    "api_url": "https://huggingface.co/api/models/1bitLLM/bitnet_b1_58-large",
+    "revision": "85d047191dcb224f0e04f20d26110caaf8dc1a47",
+    "queried_with": "Hugging Face model API and tree API",
+    "files": [
+      { "path": ".gitattributes", "size_bytes": 1519 },
+      { "path": "README.md", "size_bytes": 2236 },
+      { "path": "added_tokens.json", "size_bytes": 41 },
+      { "path": "config.json", "size_bytes": 749 },
+      { "path": "configuration_bitnet.py", "size_bytes": 9568 },
+      { "path": "eval_ppl.py", "size_bytes": 2157 },
+      { "path": "eval_task.py", "size_bytes": 1905 },
+      { "path": "eval_utils.py", "size_bytes": 4274 },
+      { "path": "generation_config.json", "size_bytes": 132 },
+      { "path": "model.safetensors", "size_bytes": 2915408840 },
+      { "path": "modeling_bitnet.py", "size_bytes": 64047 },
+      { "path": "special_tokens_map.json", "size_bytes": 604 },
+      { "path": "tokenization_bitnet.py", "size_bytes": 22501 },
+      { "path": "tokenizer.json", "size_bytes": 1843131 },
+      { "path": "tokenizer.model", "size_bytes": 499723 },
+      { "path": "tokenizer_config.json", "size_bytes": 1388 },
+      { "path": "utils_quant.py", "size_bytes": 1328 }
+    ],
+    "gguf_files": []
+  },
+  "local_preflight": {
+    "volume_mount": "/System/Volumes/Data",
+    "available_kib": 43473536,
+    "total_kib": 482797652,
+    "capacity_percent": 90,
+    "cache_root": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models",
+    "bitnet_cpp_runner": "/Users/sarahisaacs/.cache/bitnet_cpp/build/bin/llama-cli",
+    "bitnet_cpp_runner_present": true,
+    "model_binaries_committed": false
+  },
+  "decision": {
+    "status": "blocked",
+    "reason": "The M3MBA-006 command shape requires a GGUF file, but the official 1bitLLM/bitnet_b1_58-large repository at the recorded revision contains no .gguf artifact.",
+    "download_performed": false,
+    "inference_run": false,
+    "sha256_recorded": false,
+    "answer_gate_run": false,
+    "cleanup_required": false
+  },
+  "related_artifact_policy": {
+    "third_party_gguf_substitution_allowed": false,
+    "reason": "Existing shared artifact ledgers already reject prior third-party 1bitLLM large-family GGUFs for answer readiness; substituting one here would need a separate artifact-authority decision.",
+    "shared_gate": "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md",
+    "rejected_artifacts_ledger": "ci/model-artifacts/rejected-artifacts.toml"
+  },
+  "claim_boundary": {
+    "official_source_checked": true,
+    "official_gguf_available": false,
+    "candidate_accepted": false,
+    "candidate_rejected_for_quality": false,
+    "candidate_blocked": true,
+    "rust_apple_backend_claimed": false,
+    "m4_mac_mini_claimed": false,
+    "bitnet_answer_ready_claimed": false,
+    "model_binary_committed": false
+  }
+}

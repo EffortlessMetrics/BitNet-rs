@@ -65,18 +65,19 @@ file = "pending"
 known_sha256 = "pending"
 known_size_bytes = 0
 storage_estimate = "sub_1b_model; exact GGUF bytes pending candidate probe"
-format = "pending"
-quantization = "i2_s_or_tl1_pending"
-tokenizer_authority = "pending"
-pretokenizer_authority = "pending"
-prompt_template = "pending_reference_runner_decision"
+format = "blocked_no_official_gguf"
+quantization = "blocked_no_official_gguf"
+tokenizer_authority = "official_tokenizer_files_present"
+pretokenizer_authority = "pending_runner_conversion_path"
+prompt_template = "blocked_until_gguf_or_converter_path"
 reference_runner = "microsoft_bitnet_cpp_candidate"
-reference_status = "not_run_on_macbook"
+reference_status = "blocked_no_official_gguf_at_revision_85d047191dcb224f0e04f20d26110caaf8dc1a47"
 cleanup_required = true
 next_item = "M3MBA-006"
 notes = [
-  "Upstream lists this 0.7B model with ARM I2_S and TL1 support.",
-  "Use as a smaller Apple BitNet control only if a GGUF/reference-runner path produces coherent output and records tokenizer authority.",
+  "The official 1bitLLM/bitnet_b1_58-large repository at revision 85d047191dcb224f0e04f20d26110caaf8dc1a47 contains model.safetensors and tokenizer/config files, but no .gguf artifact.",
+  "Do not substitute a third-party GGUF for M3MBA-006 without a separate artifact-authority decision; prior third-party large-family GGUF candidates are already rejected in the shared artifact ledger.",
+  "Use as a smaller Apple BitNet control only if an official GGUF, reproducible conversion path, or explicitly approved third-party artifact produces coherent output and records tokenizer authority.",
 ]
 
   [[candidate.route]]
