@@ -140,6 +140,8 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
         .context(
             "tokenizer path missing; pass --tokenizer or set /tokenizer/path in the model contract",
         )?;
+    let model_dir =
+        Path::new(&model_path).parent().map(path_to_string).unwrap_or_else(|| ".".to_string());
     let template = args
         .prompt_template
         .parse::<TemplateType>()
@@ -178,6 +180,8 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             candidate.path.clone(),
             "-m".to_string(),
             model_path.clone(),
+            "--override-kv".to_string(),
+            "tokenizer.ggml.add_bos_token=bool:false".to_string(),
             "-p".to_string(),
             rendered_prompt.clone(),
             "-n".to_string(),
@@ -231,8 +235,11 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 })
             }).collect::<Vec<_>>(),
             "command_argv": reference_argv,
-            "command_policy": "uses_rendered_prompt_text_for_template_parity; token parity still must be verified against reference output",
-            "setup_command_pwsh": "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -Force -SkipPatches",
+            "command_policy": "uses_rendered_prompt_text_for_template_parity; disables reference auto-BOS because the rendered Llama3 prompt already contains BOS; token parity still must be verified against reference output",
+            "setup_command_pwsh": format!(
+                "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -ModelDir \"{}\" -QuantType i2_s -Force -SkipPatches",
+                model_dir.replace('"', "\\\"")
+            ),
         },
         "rust_commands": {
             "proof_identity": {
@@ -298,11 +305,15 @@ fn reference_candidates(reference_exe: Option<&Path>, cpp_root: Option<&Path>) -
     if let Some(root) = cpp_root {
         roots.push((root.to_path_buf(), "explicit --cpp-root".to_string()));
     }
-    for env in ["BITNET_CPP_DIR", "LLAMA_CPP_DIR"] {
+    for env in ["BITNET_CPP_DIR", "BITNET_CPP_PATH", "LLAMA_CPP_DIR"] {
         if let Ok(value) = std::env::var(env) {
             roots.push((PathBuf::from(value), env.to_string()));
         }
     }
+    roots.push((
+        PathBuf::from("target/external/BitNet-reference"),
+        "target/external/BitNet-reference".to_string(),
+    ));
     roots.push((PathBuf::from("target/external/BitNet"), "target/external/BitNet".to_string()));
     if let Some(home) = dirs::home_dir() {
         roots.push((home.join(".cache/bitnet_cpp"), "$HOME/.cache/bitnet_cpp".to_string()));
@@ -337,6 +348,7 @@ fn executable_names() -> &'static [&'static str] {
 fn reference_setup_prerequisites() -> Value {
     let git = command_probe("git");
     let cmake = command_probe("cmake");
+    let python = command_probe("python");
     let vs_build_tools = visual_studio_build_tools_probe();
     let clang = reference_compiler_probe("clang", &vs_build_tools);
     let clangxx = reference_compiler_probe("clang++", &vs_build_tools);
@@ -348,6 +360,9 @@ fn reference_setup_prerequisites() -> Value {
     }
     if !bool_at(&cmake, "/present").unwrap_or(false) {
         missing.push("cmake_missing".to_string());
+    }
+    if !bool_at(&python, "/present").unwrap_or(false) {
+        missing.push("python_missing".to_string());
     }
     if windows {
         if !bool_at(&clang, "/present").unwrap_or(false) {
@@ -366,6 +381,7 @@ fn reference_setup_prerequisites() -> Value {
         "windows": windows,
         "git": git,
         "cmake": cmake,
+        "python": python,
         "clang": clang,
         "clangxx": clangxx,
         "visual_studio_build_tools": vs_build_tools,

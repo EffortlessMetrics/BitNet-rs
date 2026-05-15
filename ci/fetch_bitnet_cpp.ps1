@@ -4,6 +4,8 @@
 param(
     [string]$Tag = $(if ($env:BITNET_CPP_TAG) { $env:BITNET_CPP_TAG } else { "v1.0.0" }),
     [string]$CachePath = $(if ($env:BITNET_CPP_PATH) { $env:BITNET_CPP_PATH } else { "$env:USERPROFILE\.cache\bitnet_cpp" }),
+    [string]$ModelDir = $(if ($env:BITNET_CPP_MODEL_DIR) { $env:BITNET_CPP_MODEL_DIR } else { "models\BitNet-b1.58-2B-4T" }),
+    [string]$QuantType = $(if ($env:BITNET_CPP_QUANT_TYPE) { $env:BITNET_CPP_QUANT_TYPE } else { "i2_s" }),
     [switch]$Force,
     [switch]$Clean,
     [switch]$SkipPatches,
@@ -19,6 +21,10 @@ if (-not [System.IO.Path]::IsPathRooted($CachePath)) {
     $CachePath = Join-Path (Get-Location) $CachePath
 }
 $CachePath = [System.IO.Path]::GetFullPath($CachePath)
+if (-not [System.IO.Path]::IsPathRooted($ModelDir)) {
+    $ModelDir = Join-Path (Get-Location) $ModelDir
+}
+$ModelDir = [System.IO.Path]::GetFullPath($ModelDir)
 $BuildDir = Join-Path $CachePath "build"
 
 function Write-Info {
@@ -112,6 +118,152 @@ function Add-ToolDirectoryToPath {
     }
 }
 
+function Quote-CmdArgument {
+    param([Parameter(Mandatory = $true)][string]$Value)
+    return '"' + ($Value -replace '"', '\"') + '"'
+}
+
+function Join-CmdArguments {
+    param([Parameter(Mandatory = $true)][string[]]$Arguments)
+    return (($Arguments | ForEach-Object { Quote-CmdArgument $_ }) -join " ")
+}
+
+function Update-Submodules {
+    Write-Info "Updating BitNet C++ submodules..."
+    git submodule update --init --recursive --force
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Submodule update failed"
+    }
+
+    git submodule foreach --recursive git reset --hard
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Submodule reset failed"
+    }
+}
+
+function Invoke-GenerateReferenceKernels {
+    if (-not (Test-IsWindows)) {
+        return
+    }
+
+    if ($QuantType -ne "i2_s") {
+        throw "Reference helper only has a Windows codegen rule for i2_s right now; got QuantType=$QuantType"
+    }
+
+    $ModelName = Split-Path $ModelDir -Leaf
+    $CodegenArgs = switch ($ModelName) {
+        "BitNet-b1.58-2B-4T" {
+            @("utils\codegen_tl2.py", "--model", "bitnet_b1_58-3B", "--BM", "160,320,320", "--BK", "96,96,96", "--bm", "32,32,32")
+        }
+        "bitnet_b1_58-3B" {
+            @("utils\codegen_tl2.py", "--model", "bitnet_b1_58-3B", "--BM", "160,320,320", "--BK", "96,96,96", "--bm", "32,32,32")
+        }
+        "bitnet_b1_58-large" {
+            @("utils\codegen_tl2.py", "--model", "bitnet_b1_58-large", "--BM", "256,128,256", "--BK", "96,192,96", "--bm", "32,32,32")
+        }
+        default {
+            throw "No Windows reference kernel codegen rule for model directory '$ModelName'"
+        }
+    }
+
+    Push-Location $CachePath
+    try {
+        Write-Info "Generating BitNet reference kernels for $ModelName ($QuantType)..."
+        python @CodegenArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "BitNet reference kernel codegen failed"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Invoke-WindowsReferenceCompatibilityFixes {
+    if (-not (Test-IsWindows)) {
+        return
+    }
+
+    $MadPath = Join-Path $CachePath "src\ggml-bitnet-mad.cpp"
+    if (-not (Test-Path $MadPath)) {
+        throw "Reference source missing: $MadPath"
+    }
+
+    $Before = "        int8_t * y_col = y + col * by;"
+    $After = "        const int8_t * y_col = y + col * by;"
+    $Content = Get-Content -LiteralPath $MadPath -Raw
+    if ($Content.Contains($Before)) {
+        Write-Info "Applying Windows reference const-compatibility fix..."
+        $Content = $Content.Replace($Before, $After)
+        Set-Content -LiteralPath $MadPath -Value $Content -Encoding UTF8
+    } elseif (-not $Content.Contains($After)) {
+        throw "Expected Windows reference const-compatibility patch target was not found"
+    }
+
+    $CommonPath = Join-Path $CachePath "3rdparty\llama.cpp\common\common.cpp"
+    if (-not (Test-Path $CommonPath)) {
+        throw "Reference common source missing: $CommonPath"
+    }
+    $CommonContent = Get-Content -LiteralPath $CommonPath -Raw
+    if (-not $CommonContent.Contains("#include <chrono>")) {
+        Write-Info "Applying Windows reference chrono include fix..."
+        $CommonNeedle = "#include <ctime>"
+        if (-not $CommonContent.Contains($CommonNeedle)) {
+            throw "Expected Windows reference chrono include insertion point was not found"
+        }
+        $CommonContent = $CommonContent.Replace($CommonNeedle, "$CommonNeedle`r`n#include <chrono>")
+        Set-Content -LiteralPath $CommonPath -Value $CommonContent -Encoding UTF8
+    }
+
+    $LogPath = Join-Path $CachePath "3rdparty\llama.cpp\common\log.cpp"
+    if (-not (Test-Path $LogPath)) {
+        throw "Reference log source missing: $LogPath"
+    }
+    $LogContent = Get-Content -LiteralPath $LogPath -Raw
+    if (-not $LogContent.Contains("#include <chrono>")) {
+        Write-Info "Applying Windows reference log chrono include fix..."
+        $LogNeedle = "#include <condition_variable>"
+        if (-not $LogContent.Contains($LogNeedle)) {
+            throw "Expected Windows reference log chrono include insertion point was not found"
+        }
+        $LogContent = $LogContent.Replace($LogNeedle, "$LogNeedle`r`n#include <chrono>")
+        Set-Content -LiteralPath $LogPath -Value $LogContent -Encoding UTF8
+    }
+
+    $ChronoFixes = @(
+        @{
+            RelativePath = "3rdparty\llama.cpp\examples\imatrix\imatrix.cpp"
+            Needle = "#include <ctime>"
+        },
+        @{
+            RelativePath = "3rdparty\llama.cpp\examples\perplexity\perplexity.cpp"
+            Needle = "#include <ctime>"
+        },
+        @{
+            RelativePath = "3rdparty\llama.cpp\examples\server\httplib.h"
+            Needle = "#include <condition_variable>"
+        }
+    )
+
+    foreach ($Fix in $ChronoFixes) {
+        $SourcePath = Join-Path $CachePath $Fix.RelativePath
+        if (-not (Test-Path $SourcePath)) {
+            throw "Reference source missing: $SourcePath"
+        }
+        $SourceContent = Get-Content -LiteralPath $SourcePath -Raw
+        if (-not $SourceContent.Contains("#include <chrono>")) {
+            Write-Info "Applying Windows reference chrono include fix to $($Fix.RelativePath)..."
+            if (-not $SourceContent.Contains($Fix.Needle)) {
+                throw "Expected Windows reference chrono include insertion point was not found in $($Fix.RelativePath)"
+            }
+            $SourceContent = $SourceContent.Replace($Fix.Needle, "$($Fix.Needle)`r`n#include <chrono>")
+            Set-Content -LiteralPath $SourcePath -Value $SourceContent -Encoding UTF8
+        }
+    }
+}
+
 function Show-Usage {
     @"
 Usage: .\fetch_bitnet_cpp.ps1 [OPTIONS]
@@ -121,6 +273,8 @@ Fetch and build the external BitNet C++ implementation for cross-validation.
 OPTIONS:
     -Tag TAG            Specify BitNet.cpp tag/version (default: $Tag)
     -CachePath PATH     Specify cache directory (default: $CachePath)
+    -ModelDir PATH      Local model directory for reference kernel setup (default: $ModelDir)
+    -QuantType TYPE     Quantization type for reference kernel setup (default: $QuantType)
     -Force              Force rebuild even if already built
     -Clean              Clean build directory before building
     -SkipPatches        Use upstream C++ source as-is without applying local patches
@@ -129,6 +283,8 @@ OPTIONS:
 ENVIRONMENT VARIABLES:
     BITNET_CPP_TAG      Override default tag/version
     BITNET_CPP_PATH     Override default cache directory
+    BITNET_CPP_MODEL_DIR Override default model directory
+    BITNET_CPP_QUANT_TYPE Override default quantization type
 
 EXAMPLES:
     .\fetch_bitnet_cpp.ps1                      # Use defaults
@@ -171,6 +327,10 @@ function Test-Dependencies {
         # Check for Visual Studio or Build Tools.
         if (-not (Get-VisualStudioBuildToolsPath)) {
             $MissingDeps += "Visual Studio Build Tools"
+        }
+
+        if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+            $MissingDeps += "python"
         }
     }
 
@@ -215,17 +375,20 @@ function Get-SourceCode {
 
             if ($DescribeExitCode -eq 0 -and $CurrentTag -eq $Tag) {
                 Write-Info "Already on correct tag: $Tag"
+                Update-Submodules
                 return
             }
 
             if ($CurrentBranch -eq $Tag) {
                 Write-Info "Already on branch $Tag; fast-forwarding to origin/$Tag"
                 git reset --hard "origin/$Tag"
+                Update-Submodules
                 return
             }
 
             # Checkout the specified tag or branch.
             git checkout $Tag
+            Update-Submodules
         }
         finally {
             Pop-Location
@@ -241,6 +404,13 @@ function Get-SourceCode {
 
         # Clone the repository
         git clone --depth 1 --branch $Tag $BitNetCppRepo $CachePath
+        Push-Location $CachePath
+        try {
+            Update-Submodules
+        }
+        finally {
+            Pop-Location
+        }
     }
 
     Write-Info "Source code fetched successfully"
@@ -271,45 +441,81 @@ function Invoke-Build {
             Add-ToolDirectoryToPath $ClangPath
             Add-ToolDirectoryToPath $ClangxxPath
 
-            $CMakeArgs = @(
-                "..",
-                "-DCMAKE_BUILD_TYPE=Release",
-                "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
-                "-DBUILD_SHARED_LIBS=ON",
-                "-DCMAKE_INSTALL_PREFIX=$BuildDir\install"
-            )
-
             if (Test-IsWindows) {
-                $CMakeArgs += @(
-                    "-T",
-                    "ClangCL",
+                $VsDevCmd = Join-Path $VsPath "Common7\Tools\VsDevCmd.bat"
+                if (-not (Test-Path $VsDevCmd)) {
+                    throw "Visual Studio developer command prompt not found: $VsDevCmd"
+                }
+
+                $ConfigureArgs = @(
+                    "..",
+                    "-G",
+                    "NMake Makefiles",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_SYSTEM_PROCESSOR=AMD64",
+                    "-DCMAKE_C_FLAGS=-mavx2 -mfma -mf16c",
+                    "-DCMAKE_CXX_FLAGS=-mavx2 -mfma -mf16c",
+                    "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                    "-DBUILD_SHARED_LIBS=ON",
+                    "-DCMAKE_INSTALL_PREFIX=$BuildDir\install",
                     "-DCMAKE_C_COMPILER=$ClangPath",
                     "-DCMAKE_CXX_COMPILER=$ClangxxPath"
                 )
-            }
 
-            # Configure with CMake
-            Write-Info "Configuring build with CMake..."
-            cmake @CMakeArgs
+                $BuildCmd = Join-Path $BuildDir "build_bitnet_reference.cmd"
+                $ConfigureLine = "cmake " + (Join-CmdArguments $ConfigureArgs)
+                $Lines = @(
+                    "@echo off",
+                    "call $(Quote-CmdArgument $VsDevCmd) -arch=x64 -host_arch=x64 || exit /b 1",
+                    "$ConfigureLine || exit /b 1",
+                    "cmake --build . --config Release || exit /b 1"
+                )
+                Set-Content -LiteralPath $BuildCmd -Value $Lines -Encoding ASCII
 
-            if ($LASTEXITCODE -ne 0) {
-                throw "CMake configuration failed"
-            }
+                Write-Info "Configuring and building with Visual Studio developer environment..."
+                & cmd.exe /d /s /c (Quote-CmdArgument $BuildCmd)
 
-            # Build
-            Write-Info "Building (this may take a few minutes)..."
-            cmake --build . --config Release --parallel
+                if ($LASTEXITCODE -ne 0) {
+                    throw "CMake build failed"
+                }
 
-            if ($LASTEXITCODE -ne 0) {
-                throw "Build failed"
-            }
+                $ReferenceExe = Join-Path $BuildDir "bin\llama-cli.exe"
+                if (-not (Test-Path $ReferenceExe)) {
+                    throw "CMake build did not produce reference executable: $ReferenceExe"
+                }
+                Write-Info "Reference executable built: $ReferenceExe"
+            } else {
+                $CMakeArgs = @(
+                    "..",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                    "-DBUILD_SHARED_LIBS=ON",
+                    "-DCMAKE_INSTALL_PREFIX=$BuildDir\install"
+                )
 
-            # Install to local directory
-            Write-Info "Installing to local directory..."
-            cmake --install . --config Release
+                # Configure with CMake
+                Write-Info "Configuring build with CMake..."
+                cmake @CMakeArgs
 
-            if ($LASTEXITCODE -ne 0) {
-                throw "Installation failed"
+                if ($LASTEXITCODE -ne 0) {
+                    throw "CMake configuration failed"
+                }
+
+                # Build
+                Write-Info "Building (this may take a few minutes)..."
+                cmake --build . --config Release --parallel
+
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Build failed"
+                }
+
+                # Install to local directory
+                Write-Info "Installing to local directory..."
+                cmake --install . --config Release
+
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Installation failed"
+                }
             }
 
             Write-Info "Build completed successfully"
@@ -340,6 +546,30 @@ function Invoke-ApplyPatches {
 
 function Test-Build {
     Write-Info "Validating build..."
+
+    if (Test-IsWindows) {
+        $BinDir = Join-Path $BuildDir "bin"
+        $ReferenceExe = Join-Path $BinDir "llama-cli.exe"
+        $LlamaDll = Join-Path $BinDir "llama.dll"
+        $GgmlDll = Join-Path $BinDir "ggml.dll"
+
+        if (-not (Test-Path $ReferenceExe)) {
+            Write-Error "Reference executable not found: $ReferenceExe"
+            return $false
+        }
+        if (-not (Test-Path $LlamaDll)) {
+            Write-Error "Reference runtime DLL not found: $LlamaDll"
+            return $false
+        }
+        if (-not (Test-Path $GgmlDll)) {
+            Write-Error "Reference runtime DLL not found: $GgmlDll"
+            return $false
+        }
+
+        Write-Info "Found Windows reference executable and runtime DLLs"
+        Write-Info "Build validation passed"
+        return $true
+    }
 
     $LibDir = Join-Path $BuildDir "install\lib"
     $IncludeDir = Join-Path $BuildDir "install\include"
@@ -381,6 +611,30 @@ function New-EnvScript {
     $EnvScript = Join-Path $CachePath "setup_env.ps1"
 
     Write-Info "Creating environment setup script: $EnvScript"
+
+    if (Test-IsWindows) {
+        $BinDir = Join-Path $BuildDir "bin"
+        $ReferenceExe = Join-Path $BinDir "llama-cli.exe"
+        $EnvContent = @"
+# Environment setup for BitNet C++ cross-validation
+# Run this script to set up environment variables
+
+`$env:BITNET_CPP_PATH = "$CachePath"
+`$env:BITNET_CPP_BIN_PATH = "$BinDir"
+`$env:BITNET_CPP_REFERENCE_EXE = "$ReferenceExe"
+
+# Add to PATH for DLLs
+`$env:PATH = "`$env:BITNET_CPP_BIN_PATH;`$env:PATH"
+
+Write-Host "BitNet C++ environment configured:" -ForegroundColor Green
+Write-Host "  Path: `$env:BITNET_CPP_PATH" -ForegroundColor Green
+Write-Host "  Binary directory: `$env:BITNET_CPP_BIN_PATH" -ForegroundColor Green
+Write-Host "  Reference executable: `$env:BITNET_CPP_REFERENCE_EXE" -ForegroundColor Green
+"@
+
+        Set-Content -Path $EnvScript -Value $EnvContent -Encoding UTF8
+        return
+    }
 
     $EnvContent = @"
 # Environment setup for BitNet C++ cross-validation
@@ -432,12 +686,16 @@ function Main {
     # Fetch source code
     Get-SourceCode
 
-    # Apply patches, unless explicitly disabled for upstream reference checks.
+    # Apply optional local patches, unless explicitly disabled for upstream reference checks.
     if ($SkipPatches) {
-        Write-Info "Skipping local patches; using upstream C++ implementation as-is"
+        Write-Info "Skipping optional local patches; only setup/toolchain compatibility fixes may be applied"
     } else {
         Invoke-ApplyPatches
     }
+
+    # Upstream BitNet.cpp requires generated LUT headers before CMake configure.
+    Invoke-GenerateReferenceKernels
+    Invoke-WindowsReferenceCompatibilityFixes
 
     # Build
     Invoke-Build
