@@ -82,6 +82,7 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_scores_raw_head_lanes", "attention_scores_raw_head"),
     ("attention_scores_softmax_head_lanes", "attn_scores_softmax_head"),
     ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
+    ("attention_value_cache_kv_head_live", "attention_v_cache_kv_head"),
     ("attention_value_mix_head_lanes", "attention_value_mix_head"),
     ("attention_value_mix_merged", "attention_value_mix_merged"),
     ("attention_value_mix", "attention_value_mix"),
@@ -2004,6 +2005,11 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("kq_soft_max_ext_head18", "attn_scores_softmax_head18"),
         ("kq_soft_max_ext_head19", "attn_scores_softmax_head19"),
         ("v", "attention_v_cache_head0_ref_layout_padded"),
+        ("v_kv_head0_live", "attention_v_cache_kv_head0_live_ref_layout"),
+        ("v_kv_head1_live", "attention_v_cache_kv_head1_live_ref_layout"),
+        ("v_kv_head2_live", "attention_v_cache_kv_head2_live_ref_layout"),
+        ("v_kv_head3_live", "attention_v_cache_kv_head3_live_ref_layout"),
+        ("v_kv_head4_live", "attention_v_cache_kv_head4_live_ref_layout"),
         ("kqv", "attention_value_mix_head0"),
         ("kqv_head0", "attention_value_mix_head0"),
         ("kqv_head1", "attention_value_mix_head1"),
@@ -2143,6 +2149,7 @@ fn compare_reference_to_rust(
         "first_material_mismatch": first_material_mismatch,
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
         "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
+        "attention_value_cache_kv_head_best_matches": attention_value_cache_kv_head_best_matches(reference_records, rust_records),
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
     })
@@ -2193,6 +2200,19 @@ fn attention_probability_head_lane_best_matches(
         "kq_soft_max_ext_head",
         "attn_scores_softmax_head",
         "softmax probability head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, softmax residency, selected attention, or any support claim",
+    )
+}
+
+fn attention_value_cache_kv_head_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    head_lane_best_matches(
+        reference_records,
+        rust_records,
+        "v_kv_head",
+        "attention_v_cache_kv_head",
+        "value-cache KV-head best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
     )
 }
 
@@ -2289,7 +2309,16 @@ fn head_lane_best_matches(
 }
 
 fn parse_stage_head(stage: &str, prefix: &str) -> Option<usize> {
-    stage.strip_prefix(prefix)?.parse::<usize>().ok()
+    let suffix = stage.strip_prefix(prefix)?;
+    let digit_count = suffix.chars().take_while(|ch| ch.is_ascii_digit()).count();
+    if digit_count == 0 {
+        return None;
+    }
+    let rest = &suffix[digit_count..];
+    if !rest.is_empty() && !rest.starts_with('_') {
+        return None;
+    }
+    suffix[..digit_count].parse::<usize>().ok()
 }
 
 fn head_lane_delta(
@@ -2343,6 +2372,7 @@ fn trace_scope_mismatch(
     let reference = reference?;
     let rust = rust?;
     if let Some(scope) = reference_value_cache_head0_scope(reference, rust)
+        .or_else(|| reference_value_cache_kv_live_scope(reference, rust))
         .or_else(|| reference_value_mix_merged_scope(reference, rust))
     {
         return Some(scope);
@@ -2396,6 +2426,38 @@ fn reference_value_cache_head0_scope(
         "reference_token_axis": reference.token_axis,
         "rust_seq": rust.seq,
         "policy": "reference cached-value tensors include all KV heads; the Rust diagnostic samples head0 in reference key-padded layout, so prefix deltas are head0 evidence but not full-cache equality claims",
+    }))
+}
+
+fn reference_value_cache_kv_live_scope(
+    reference: &ReferenceTraceRecord,
+    rust: &RustTraceRecord,
+) -> Option<Value> {
+    parse_stage_head(&reference.stage, "v_kv_head")?;
+    let rust_stage = rust.stage.as_deref()?;
+    parse_stage_head(rust_stage, "attention_v_cache_kv_head")?;
+    let reference_shape0 = reference.shape.first().copied();
+    let rust_shape0 = rust.shape.first().copied().map(|dim| dim as i64);
+    let element_count_match = reference.nelements == rust.num_elements as u64;
+    let head_dim_match =
+        reference_shape0.is_some() && rust_shape0.is_some() && reference_shape0 == rust_shape0;
+    if element_count_match && head_dim_match {
+        return None;
+    }
+    Some(json!({
+        "reason": "reference_value_cache_live_head_layout_not_direct_rust_kv_head_layout",
+        "reference_stage": reference.stage,
+        "rust_stage": rust_stage,
+        "reference_shape": reference.shape,
+        "rust_shape": rust.shape,
+        "reference_nelements": reference.nelements,
+        "rust_num_elements": rust.num_elements,
+        "reference_dtype": reference.dtype,
+        "rust_dtype": rust.dtype,
+        "reference_values_available": reference.values_available,
+        "reference_first_values_count": reference.first_values.len(),
+        "rust_first_values_count": rust.first_values.len(),
+        "policy": "reference value-cache live KV heads use the llama.cpp cache representation and are diagnostic layout evidence, not direct Rust KV-head numeric parity evidence until the value-cache layout transform is named",
     }))
 }
 
@@ -2585,6 +2647,13 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
             "reference": format!("kq_soft_max_ext_head{head}"),
             "rust": format!("attn_scores_softmax_head{head}"),
             "scope": format!("layer0 sampled-query probability row head{head}"),
+        }));
+    }
+    for kv_head in 0..5 {
+        stage_mapping.push(json!({
+            "reference": format!("v_kv_head{kv_head}_live"),
+            "rust": format!("attention_v_cache_kv_head{kv_head}_live_ref_layout"),
+            "scope": format!("layer0 live value-cache matrix KV head{kv_head} in reference layout"),
         }));
     }
     for head in 0..20 {
@@ -3486,6 +3555,11 @@ mod tests {
             entry.pointer("/reference") == Some(&json!("kq_soft_max_ext_head19"))
                 && entry.pointer("/rust") == Some(&json!("attn_scores_softmax_head19"))
         }));
+        assert!(stage_mapping.iter().any(|entry| {
+            entry.pointer("/reference") == Some(&json!("v_kv_head4_live"))
+                && entry.pointer("/rust")
+                    == Some(&json!("attention_v_cache_kv_head4_live_ref_layout"))
+        }));
     }
 
     #[test]
@@ -4246,6 +4320,81 @@ mod tests {
         assert_eq!(prob.pointer("/rust_stage_prefix"), Some(&json!("attn_scores_softmax_head")));
         assert_eq!(prob.pointer("/identity_best_count"), Some(&json!(2)));
         assert_eq!(prob.pointer("/all_identity_best"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn compare_reports_value_cache_kv_head_best_matches_with_suffix_stages() {
+        let reference_records = vec![
+            test_reference_trace_record("v_kv_head0_live", vec![1.0, 2.0]),
+            test_reference_trace_record("v_kv_head1_live", vec![9.0, 9.0]),
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_cache_kv_head0_live_ref_layout".to_string(),
+            test_rust_trace_record("attention_v_cache_kv_head0_live_ref_layout", vec![1.0, 2.0]),
+        );
+        rust_records.insert(
+            "attention_v_cache_kv_head1_live_ref_layout".to_string(),
+            test_rust_trace_record("attention_v_cache_kv_head1_live_ref_layout", vec![0.0, 0.0]),
+        );
+        rust_records.insert(
+            "attention_v_cache_kv_head2_live_ref_layout".to_string(),
+            test_rust_trace_record("attention_v_cache_kv_head2_live_ref_layout", vec![9.0, 9.0]),
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let value_cache = report.pointer("/attention_value_cache_kv_head_best_matches").unwrap();
+
+        assert_eq!(value_cache.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(value_cache.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(value_cache.pointer("/reference_stage_prefix"), Some(&json!("v_kv_head")));
+        assert_eq!(
+            value_cache.pointer("/rust_stage_prefix"),
+            Some(&json!("attention_v_cache_kv_head"))
+        );
+        assert_eq!(value_cache.pointer("/identity_best_count"), Some(&json!(1)));
+        assert_eq!(value_cache.pointer("/non_identity_best_count"), Some(&json!(1)));
+        assert_eq!(value_cache.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
+    }
+
+    #[test]
+    fn compare_marks_value_cache_live_layout_as_scope_evidence() {
+        let reference = ReferenceTraceRecord {
+            shape: vec![32, 18, 1, 1],
+            nelements: 32 * 18,
+            first_values: vec![0.0; 32],
+            ..test_reference_trace_record("v_kv_head3_live", vec![0.0; 32])
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_cache_kv_head3_live_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t17/blk0/attention_v_cache_kv_head3_live_ref_layout".to_string(),
+                shape: vec![128, 18],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 1.0,
+                num_elements: 128 * 18,
+                first_values: vec![0.0; 32],
+                seq: Some(17),
+                layer: Some(0),
+                stage: Some("attention_v_cache_kv_head3_live_ref_layout".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("v_kv_head3_live", "attention_v_cache_kv_head3_live_ref_layout")],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reason"),
+            Some(&json!("reference_value_cache_live_head_layout_not_direct_rust_kv_head_layout"))
+        );
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
     }
 
     #[test]

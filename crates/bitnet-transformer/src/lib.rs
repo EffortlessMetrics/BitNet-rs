@@ -574,6 +574,19 @@ impl MultiHeadAttention {
             .reshape(&[batch_size, self.n_heads, t_k, self.head_dim])?; // [B, Hq, Tk, D]
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
+            for kv_head_idx in 0..self.n_kv_heads {
+                let kv_live = v_ctx
+                    .narrow(1, kv_head_idx, 1)?
+                    .reshape(&[t_k, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_v_cache_kv_head{kv_head_idx}_live_ref_layout"
+                );
+                let stage = format!("attention_v_cache_kv_head{kv_head_idx}_live_ref_layout");
+                trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
+            }
             let head0_ref_layout =
                 v_expanded.narrow(1, 0, 1)?.reshape(&[t_k, self.head_dim])?.transpose(0, 1)?;
             let reference_padded_tk = t_k.next_power_of_two().max(t_k);
