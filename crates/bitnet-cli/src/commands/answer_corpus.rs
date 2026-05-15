@@ -494,6 +494,9 @@ impl AnswerCorpusCommand {
         if corpus.defaults.deterministic {
             args.push("--deterministic".into());
         }
+        if corpus.defaults.qwen_no_think {
+            args.push("--no-think".into());
+        }
         if corpus.defaults.strict_loader {
             args.push("--strict-loader".into());
             args.push("--strict-tokenizer".into());
@@ -589,6 +592,7 @@ impl AnswerCorpusCommand {
                     .unwrap_or_else(|| run_receipt["prompt"].clone()),
                 "rendered_sha256": run_receipt["prompt_render"]["rendered_sha256"].clone(),
                 "template_family": corpus.defaults.prompt_template,
+                "qwen_no_think": corpus.defaults.qwen_no_think,
                 "add_bos": run_receipt["prompt_render"]["add_bos"]
                     .as_bool()
                     .map(Value::from)
@@ -819,6 +823,8 @@ struct CorpusTokenizerAuthority {
 #[derive(Debug, Deserialize)]
 struct CorpusDefaults {
     prompt_template: String,
+    #[serde(default)]
+    qwen_no_think: bool,
     max_new_tokens: usize,
     greedy: bool,
     deterministic: bool,
@@ -2397,6 +2403,70 @@ mod tests {
         assert_eq!(effective_default_timeout_seconds(None, Some(120)), 120);
         assert_eq!(effective_default_timeout_seconds(None, None), 300);
         assert_eq!(effective_default_timeout_seconds(Some(0), Some(300)), 1);
+    }
+
+    #[test]
+    fn qwen_no_think_defaults_to_false_and_can_be_set() {
+        let corpus = serde_yaml::from_str::<AnswerCorpus>(
+            r#"
+schema: 1
+artifact_kind: slm_answer_corpus
+name: qwen-no-think-fixture
+description: qwen no-thinking fixture
+model:
+  repo: Qwen/Qwen3-0.6B-GGUF
+  file: Qwen3-0.6B-Q8_0.gguf
+  sha256: 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031
+  family: qwen
+defaults:
+  prompt_template: qwen
+  qwen_no_think: true
+  max_new_tokens: 1
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: say_ok
+    question: "Say exactly: OK"
+    gate:
+      kind: exact_trimmed
+      expected: "OK"
+"#,
+        );
+        assert!(corpus.is_ok());
+        let Some(corpus) = corpus.ok() else { return };
+        assert!(corpus.defaults.qwen_no_think);
+
+        let corpus = serde_yaml::from_str::<AnswerCorpus>(
+            r#"
+schema: 1
+artifact_kind: slm_answer_corpus
+name: qwen-default-fixture
+description: qwen default fixture
+model:
+  repo: Qwen/Qwen3-0.6B-GGUF
+  file: Qwen3-0.6B-Q8_0.gguf
+  sha256: 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031
+  family: qwen
+defaults:
+  prompt_template: qwen
+  max_new_tokens: 1
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: say_ok
+    question: "Say exactly: OK"
+    gate:
+      kind: exact_trimmed
+      expected: "OK"
+"#,
+        );
+        assert!(corpus.is_ok());
+        let Some(corpus) = corpus.ok() else { return };
+        assert!(!corpus.defaults.qwen_no_think);
     }
 
     #[test]
