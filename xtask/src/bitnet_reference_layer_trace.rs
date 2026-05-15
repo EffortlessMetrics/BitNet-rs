@@ -82,7 +82,7 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_scores_raw_head0", "attention_scores_raw_head0"),
     ("attention_scores_softmax_head0", "attn_scores_softmax_head0"),
     ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
-    ("attention_value_mix_head0", "attention_value_mix_head0"),
+    ("attention_value_mix_head_lanes", "attention_value_mix_head"),
     ("attention_value_mix_merged", "attention_value_mix_merged"),
     ("attention_value_mix", "attention_value_mix"),
     ("attention_subnorm", "post_attention_subnorm"),
@@ -1965,6 +1965,26 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("kq_soft_max_ext", "attn_scores_softmax_head0"),
         ("v", "attention_v_cache_head0_ref_layout_padded"),
         ("kqv", "attention_value_mix_head0"),
+        ("kqv_head0", "attention_value_mix_head0"),
+        ("kqv_head1", "attention_value_mix_head1"),
+        ("kqv_head2", "attention_value_mix_head2"),
+        ("kqv_head3", "attention_value_mix_head3"),
+        ("kqv_head4", "attention_value_mix_head4"),
+        ("kqv_head5", "attention_value_mix_head5"),
+        ("kqv_head6", "attention_value_mix_head6"),
+        ("kqv_head7", "attention_value_mix_head7"),
+        ("kqv_head8", "attention_value_mix_head8"),
+        ("kqv_head9", "attention_value_mix_head9"),
+        ("kqv_head10", "attention_value_mix_head10"),
+        ("kqv_head11", "attention_value_mix_head11"),
+        ("kqv_head12", "attention_value_mix_head12"),
+        ("kqv_head13", "attention_value_mix_head13"),
+        ("kqv_head14", "attention_value_mix_head14"),
+        ("kqv_head15", "attention_value_mix_head15"),
+        ("kqv_head16", "attention_value_mix_head16"),
+        ("kqv_head17", "attention_value_mix_head17"),
+        ("kqv_head18", "attention_value_mix_head18"),
+        ("kqv_head19", "attention_value_mix_head19"),
         ("kqv_merged", "attention_value_mix_merged"),
         ("attn_value_mix", "attention_value_mix_merged"),
         ("attn_sub_norm", "post_attention_subnorm"),
@@ -2217,7 +2237,7 @@ fn reference_sampled_token_index(record: &ReferenceTraceRecord) -> Option<u64> {
     }
     let axis = usize::try_from(axis).ok()?;
     let shape = if record.full_shape.is_empty() { &record.shape } else { &record.full_shape };
-    if axis > shape.len() {
+    if axis >= shape.len() {
         return None;
     }
     let offset = record.sample_offset?;
@@ -2228,7 +2248,11 @@ fn reference_sampled_token_index(record: &ReferenceTraceRecord) -> Option<u64> {
     if stride == 0 || offset % stride != 0 {
         return None;
     }
-    Some(offset / stride)
+    let axis_dim = u64::try_from(shape[axis]).ok()?;
+    if axis_dim == 0 {
+        return None;
+    }
+    Some((offset / stride) % axis_dim)
 }
 
 fn reference_record_summary(record: &ReferenceTraceRecord) -> Value {
@@ -2300,6 +2324,39 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
     let source_anchors_ready =
         blocked_reasons.iter().all(|reason| reason == "reference_layer_trace_patch_not_applied");
 
+    let mut stage_mapping = vec![
+        json!({"reference": "inp_embd", "rust": "embeddings", "scope": "prompt embedding"}),
+        json!({"reference": "attn_norm", "rust": "attn_norm", "scope": "layer0"}),
+        json!({"reference": "Qcur", "rust": "attention_q", "scope": "layer0"}),
+        json!({"reference": "Kcur", "rust": "attention_k", "scope": "layer0"}),
+        json!({"reference": "Vcur", "rust": "attention_v", "scope": "layer0"}),
+        json!({"reference": "kq", "rust": "attention_scores_raw_head0", "scope": "layer0 head0 sampled-query scores before scale/mask"}),
+        json!({"reference": "kq_soft_max_ext", "rust": "attn_scores_softmax_head0", "scope": "layer0 head0 sampled-query probabilities"}),
+        json!({"reference": "v", "rust": "attention_v_cache_head0_ref_layout_padded", "scope": "layer0 head0 cached value matrix in reference padded layout"}),
+        json!({"reference": "kqv", "rust": "attention_value_mix_head0", "scope": "layer0 head0 value-mix output before head merge"}),
+    ];
+    for head in 0..20 {
+        stage_mapping.push(json!({
+            "reference": format!("kqv_head{head}"),
+            "rust": format!("attention_value_mix_head{head}"),
+            "scope": format!("layer0 value-mix sampled token head{head}"),
+        }));
+    }
+    stage_mapping.extend([
+        json!({"reference": "kqv_merged", "rust": "attention_value_mix_merged", "scope": "layer0 non-contiguous all-token value-mix merge view"}),
+        json!({"reference": "attn_value_mix", "rust": "attention_value_mix_merged", "scope": "layer0 contiguous merged value-mix before subnorm"}),
+        json!({"reference": "attn_sub_norm", "rust": "post_attention_subnorm", "scope": "layer0"}),
+        json!({"reference": "attn_o_out", "rust": "post_o_proj", "scope": "layer0"}),
+        json!({"reference": "ffn_inp", "rust": "post_attention_residual", "scope": "layer0"}),
+        json!({"reference": "ffn_norm", "rust": "post_ffn_norm", "scope": "layer0"}),
+        json!({"reference": "ffn_out", "rust": "post_swiglu", "scope": "layer0"}),
+        json!({"reference": "ffn_sub_norm", "rust": "post_ffn_subnorm", "scope": "layer0"}),
+        json!({"reference": "ffn_down", "rust": "post_down_proj", "scope": "layer0"}),
+        json!({"reference": "l_out", "rust": "post_layer", "scope": "layer0"}),
+        json!({"reference": "result_norm", "rust": "final_norm", "scope": "final token"}),
+        json!({"reference": "result_output", "rust": "logits", "scope": "final token"}),
+    ]);
+
     Ok(json!({
         "schema_version": 1,
         "diagnostic": "bitnet_reference_layer_trace_plan",
@@ -2320,29 +2377,7 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
             "source_anchors_ready_for_target_local_patch": source_anchors_ready,
             "reason": "reference llama.cpp names the BitNet b1.58 graph stages through llm_build_cb while Rust already exposes comparable layer-0 trace labels behind the trace feature",
         },
-        "stage_mapping": [
-            {"reference": "inp_embd", "rust": "embeddings", "scope": "prompt embedding"},
-            {"reference": "attn_norm", "rust": "attn_norm", "scope": "layer0"},
-            {"reference": "Qcur", "rust": "attention_q", "scope": "layer0"},
-            {"reference": "Kcur", "rust": "attention_k", "scope": "layer0"},
-            {"reference": "Vcur", "rust": "attention_v", "scope": "layer0"},
-            {"reference": "kq", "rust": "attention_scores_raw_head0", "scope": "layer0 head0 sampled-query scores before scale/mask"},
-            {"reference": "kq_soft_max_ext", "rust": "attn_scores_softmax_head0", "scope": "layer0 head0 sampled-query probabilities"},
-            {"reference": "v", "rust": "attention_v_cache_head0_ref_layout_padded", "scope": "layer0 head0 cached value matrix in reference padded layout"},
-            {"reference": "kqv", "rust": "attention_value_mix_head0", "scope": "layer0 head0 value-mix output before head merge"},
-            {"reference": "kqv_merged", "rust": "attention_value_mix_merged", "scope": "layer0 non-contiguous all-token value-mix merge view"},
-            {"reference": "attn_value_mix", "rust": "attention_value_mix_merged", "scope": "layer0 contiguous merged value-mix before subnorm"},
-            {"reference": "attn_sub_norm", "rust": "post_attention_subnorm", "scope": "layer0"},
-            {"reference": "attn_o_out", "rust": "post_o_proj", "scope": "layer0"},
-            {"reference": "ffn_inp", "rust": "post_attention_residual", "scope": "layer0"},
-            {"reference": "ffn_norm", "rust": "post_ffn_norm", "scope": "layer0"},
-            {"reference": "ffn_out", "rust": "post_swiglu", "scope": "layer0"},
-            {"reference": "ffn_sub_norm", "rust": "post_ffn_subnorm", "scope": "layer0"},
-            {"reference": "ffn_down", "rust": "post_down_proj", "scope": "layer0"},
-            {"reference": "l_out", "rust": "post_layer", "scope": "layer0"},
-            {"reference": "result_norm", "rust": "final_norm", "scope": "final token"},
-            {"reference": "result_output", "rust": "logits", "scope": "final token"}
-        ],
+        "stage_mapping": stage_mapping,
         "instrumentation_plan": {
             "target_local_only": true,
             "target_files": [
@@ -3671,6 +3706,31 @@ mod tests {
             ))
         );
         assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
+    fn reference_sampled_token_index_ignores_later_head_stride() {
+        let record = ReferenceTraceRecord {
+            name: "kqv_head19-0".to_string(),
+            stage: "kqv_head19".to_string(),
+            graph_index: Some(45),
+            layer: Some(0),
+            graph_op: Some("MUL_MAT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![128, 18, 20, 1],
+            sample_offset: Some(128 * 17 + 128 * 18 * 19),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![128, 1, 1, 1],
+            nelements: 128,
+            rms: Some(3.0),
+            values_available: true,
+            first_values: vec![1.0],
+        };
+
+        assert_eq!(reference_sampled_token_index(&record), Some(17));
     }
 
     #[test]

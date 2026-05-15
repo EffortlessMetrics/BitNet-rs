@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,542 @@ struct llama_context {
+@@ -3441,6 +3444,617 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -434,6 +434,81 @@ index 666fcc4d..23ee29ff 100644
 +        bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) sample_offset + i]);
 +    }
 +    out << "]}";
++    if (strcmp(name, "kqv-0") == 0 && values_available && token_axis == 1 && tensor->ne[0] > 0 && tensor->ne[1] > 0 && tensor->ne[2] > 1) {
++        const int64_t sampled_token = tensor->ne[1] - 1;
++        for (int64_t head = 0; head < tensor->ne[2]; ++head) {
++            const int64_t head_offset = tensor->ne[0] * sampled_token + tensor->ne[0] * tensor->ne[1] * head;
++            const int64_t head_nelements = tensor->ne[0];
++            if (head_offset < 0 || head_nelements <= 0 || head_offset + head_nelements > nelements) {
++                continue;
++            }
++            double head_sum = 0.0;
++            double head_sq_sum = 0.0;
++            double head_min = std::numeric_limits<double>::infinity();
++            double head_max = -std::numeric_limits<double>::infinity();
++            std::vector<float> head_values;
++            head_values.reserve((size_t) head_nelements);
++            for (int64_t i = 0; i < head_nelements; ++i) {
++                const float value_f32 = values[(size_t) (head_offset + i)];
++                const double value = value_f32;
++                head_sum += value;
++                head_sq_sum += value * value;
++                head_min = value < head_min ? value : head_min;
++                head_max = value > head_max ? value : head_max;
++                head_values.push_back(value_f32);
++            }
++            const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++            std::ostringstream head_name;
++            head_name << "kqv_head" << head << "-0";
++            std::ostringstream head_stage;
++            head_stage << "kqv_head" << head;
++            out << ",{";
++            out << "\"graph_index\":" << graph_index;
++            out << ",\"name\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++            out << ",\"stage\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++            out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++            out << ",\"graph_op\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++            out << ",\"graph_sources\":[]";
++            out << ",\"view_source\":null";
++            out << ",\"view_offset\":0";
++            out << ",\"dtype\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++            out << ",\"shape\":[" << tensor->ne[0] << ",1,1,1]";
++            out << ",\"nelements\":" << head_nelements;
++            out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++            out << ",\"full_nelements\":" << nelements;
++            out << ",\"token_axis\":1";
++            out << ",\"sample_offset\":" << head_offset;
++            out << ",\"head_index\":" << head;
++            out << ",\"nbytes\":" << nbytes;
++            out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++            out << ",\"values_available\":true";
++            out << ",\"values_unavailable_reason\":null";
++            out << ",\"stats\":{\"mean\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++            out << ",\"rms\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++            out << ",\"min\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_min);
++            out << ",\"max\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_max);
++            out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++            out << ",\"first_values\":[";
++            const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) head_offset + i]);
++            }
++            out << "]}";
++        }
++    }
 +}
 +
 +struct bitnet_rs_reference_layer_trace_callback_context {
@@ -572,7 +647,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +15999,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -15460,6 +16074,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
@@ -580,7 +655,7 @@ index 666fcc4d..23ee29ff 100644
              
                  cur = llm_build_norm(ctx0, cur, hparams,
                          model.layers[il].attn_sub_norm, NULL,
-@@ -17655,8 +18195,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18270,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  

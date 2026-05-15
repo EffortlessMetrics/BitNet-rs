@@ -732,15 +732,19 @@ impl MultiHeadAttention {
         let attn_value_mix = attn_weights.matmul(&v_expanded)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
-            let head0 = attn_value_mix.narrow(1, 0, 1)?;
-            trace_tensor_token_axis_record(
-                "blk0/attention_value_mix_head0",
-                &head0,
-                _trace_base_seq,
-                2,
-                Some(0),
-                "attention_value_mix_head0",
-            )?;
+            for head_idx in 0..self.n_heads {
+                let head = attn_value_mix.narrow(1, head_idx, 1)?;
+                let suffix = format!("blk0/attention_value_mix_head{head_idx}");
+                let stage = format!("attention_value_mix_head{head_idx}");
+                trace_tensor_token_axis_record(
+                    &suffix,
+                    &head,
+                    _trace_base_seq,
+                    2,
+                    Some(0),
+                    &stage,
+                )?;
+            }
         }
         #[cfg(feature = "trace")]
         trace_layer0_tensor(
