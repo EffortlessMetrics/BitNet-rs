@@ -1,0 +1,16 @@
+timestamp = "2026-05-15T10:34:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-013"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4891
+merge_sha = "17793ceb829ab6d7319bce2a66905df66ea5fea3"
+branch = "codex/slm-cpu-013-q8-gemv-hot-path"
+
+summary = "Record bounded Qwen3 Q8_0 dense linear no-bias hot-path cleanup on the strict i5-8250U CPU path."
+notes = [
+  "Merged #4891 and advanced SLM-CPU-014 as the next ready bounded dense CPU hot-path cleanup item.",
+  "Missing linear bias now uses Candle no-bias path instead of materialized zero bias while preserving numerical output by regression test.",
+]

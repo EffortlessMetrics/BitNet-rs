@@ -1496,7 +1496,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-013"
-status = "ready"
+status = "merged"
+pr = 4891
+merge_sha = "17793ceb829ab6d7319bce2a66905df66ea5fea3"
 branch = "codex/slm-cpu-013-q8-gemv-hot-path"
 stackable = false
 review_mode = "codex_premerge"
@@ -1529,6 +1531,53 @@ forbidden_paths = [
 ]
 may_claim = [
   "Q8_0 dense CPU hot-path cleanup is bounded to the recorded Qwen3 Q8_0 strict CPU warm-session evidence.",
+  "Generated IDs and strict provenance are preserved for the fixed SLM warm-session prompts.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-014"
+status = "ready"
+branch = "codex/slm-cpu-014-dense-avx2-hot-path"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-013"]
+acceptance = "Add the next bounded Qwen3-0.6B Q8_0 dense CPU hot-path improvement after SLM-CPU-013, focusing on AVX2/FMA-safe dense GEMV, RMSNorm, RoPE, or adjacent allocation-free decode cleanup only where generated IDs and strict receipt provenance remain unchanged. The slice must preserve the SLM-CPU-011/012/013 behavior oracle, record bounded timing or allocation evidence where available, and scope any speed statement to the fixed model, corpus, backend, thread count, and measured artifact. It must not claim sustained 8250U throughput, Q4/Q5 quant expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-common/**",
+  "crates/bitnet-cpu-detect/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Dense CPU hot-path cleanup is bounded to the recorded Qwen3 Q8_0 strict CPU warm-session evidence.",
   "Generated IDs and strict provenance are preserved for the fixed SLM warm-session prompts.",
 ]
 must_not_claim = [
