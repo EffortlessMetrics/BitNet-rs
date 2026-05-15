@@ -815,6 +815,7 @@ async fn chat_completions_handler(
         &request_id,
         &request,
         &active_model.metadata,
+        &state.config.server.default_device,
         &prompt_template,
         &usage,
         total_ms,
@@ -892,6 +893,7 @@ fn build_server_shared_engine_receipt(
     request_id: &str,
     request: &ChatCompletionRequest,
     active_model: &model_manager::ModelMetadata,
+    configured_device: &DeviceConfig,
     prompt_template: &str,
     usage: &ChatCompletionUsage,
     total_ms: u64,
@@ -903,7 +905,7 @@ fn build_server_shared_engine_receipt(
         requested_model: request.model.clone(),
         active_model_id: active_model.model_id.clone(),
         active_model_path: active_model.model_path.clone(),
-        selected_backend: active_model.device.clone(),
+        selected_backend: selected_backend_label(configured_device, active_model),
         selected_route: "shared_validated_local_inference_engine".to_string(),
         prompt_template: prompt_template.to_string(),
         tokenizer_authority: "active_model_tokenizer".to_string(),
@@ -919,6 +921,31 @@ fn build_server_shared_engine_receipt(
         dense_regular_llm_cuda_inference_claimed: false,
         bitnet_packed_i2s_qk256_proof: false,
     }
+}
+
+fn selected_backend_label(
+    configured_device: &DeviceConfig,
+    active_model: &model_manager::ModelMetadata,
+) -> String {
+    if preserves_configured_backend_label(configured_device) {
+        configured_device.backend_label()
+    } else {
+        active_model.device.clone()
+    }
+}
+
+fn preserves_configured_backend_label(configured_device: &DeviceConfig) -> bool {
+    matches!(
+        configured_device,
+        DeviceConfig::NvidiaRtx5070TiCuda
+            | DeviceConfig::NvidiaRtx5070TiWgpu
+            | DeviceConfig::IntelNpu(_)
+            | DeviceConfig::OpenVinoNpu
+            | DeviceConfig::AppleM4Metal
+            | DeviceConfig::AppleM4MpsGraph
+            | DeviceConfig::AppleM4CpuNeon
+            | DeviceConfig::AppleM3AirCpuNeon
+    )
 }
 
 fn current_unix_timestamp() -> u64 {
@@ -1065,14 +1092,18 @@ async fn collect_server_readiness_response(state: &ProductionAppState) -> Server
         None
     };
     let device_statuses = state.execution_router.get_device_statuses().await;
+    let selected_backend = active_model
+        .as_ref()
+        .map(|metadata| selected_backend_label(&state.config.server.default_device, metadata));
 
     build_server_readiness_response(
         model_memory,
         active_model,
         state.config.server.default_model_path.is_some(),
-        format!("{:?}", state.config.server.default_device),
+        state.config.server.default_device.backend_label(),
         state.config.execution_router.fallback_enabled,
         device_statuses,
+        selected_backend,
     )
 }
 
@@ -1083,6 +1114,7 @@ fn build_server_readiness_response(
     requested_default_device: String,
     configured_fallback_enabled: bool,
     device_statuses: Vec<execution_router::DeviceStatus>,
+    selected_backend_label: Option<String>,
 ) -> ServerReadinessResponse {
     let real_server_inference_ready = active_model_supports_shared_inference(active_model.as_ref());
     let active_model_summary = active_model.as_ref().map(|metadata| ServerReadinessActiveModel {
@@ -1094,7 +1126,7 @@ fn build_server_readiness_response(
         parameters: metadata.parameters,
         context_length: metadata.context_length,
     });
-    let selected_backend = active_model.as_ref().map(|metadata| metadata.device.clone());
+    let selected_backend = active_model.as_ref().and_then(|_| selected_backend_label);
 
     let batch_inference_ready = false;
     let simulated_inference_enabled = false;
@@ -1318,7 +1350,7 @@ fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ChatCompletionMessage, ChatCompletionRequest, ChatCompletionUsage,
+        ChatCompletionMessage, ChatCompletionRequest, ChatCompletionUsage, DeviceConfig,
         build_server_readiness_response, build_server_shared_engine_receipt,
         generation_config_from_chat_request, parse_device, render_chat_completion_prompt,
     };
@@ -1356,6 +1388,7 @@ mod tests {
             "Auto".to_string(),
             true,
             Vec::new(),
+            None,
         );
 
         assert!(!response.ready);
@@ -1396,9 +1429,10 @@ mod tests {
                 avg_tokens_per_second: 0.0,
             }),
             true,
-            "Gpu(0)".to_string(),
+            "gpu".to_string(),
             false,
             Vec::new(),
+            Some("Cuda(0)".to_string()),
         );
 
         assert!(response.ready);
@@ -1492,6 +1526,7 @@ mod tests {
             "request-1",
             &request,
             &metadata,
+            &DeviceConfig::Gpu(0),
             "chatml",
             &usage,
             25,
@@ -1509,6 +1544,52 @@ mod tests {
         assert_eq!(receipt.total_ms, 25);
         assert!(!receipt.speedup_claim);
         assert!(!receipt.full_cuda_residency_claimed);
+        assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+    }
+
+    #[test]
+    fn server_shared_engine_receipt_preserves_strict_configured_backend_label() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "What is working capital?".to_string(),
+            }],
+            max_tokens: Some(16),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            device: "Cuda(0)".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 512,
+            parameters: 500_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        let receipt = build_server_shared_engine_receipt(
+            "request-1",
+            &request,
+            &metadata,
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            "chatml",
+            &usage,
+            25,
+        );
+
+        assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.selected_route, "shared_validated_local_inference_engine");
+        assert!(!receipt.fallback_used);
+        assert!(!receipt.speedup_claim);
         assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
         assert!(!receipt.bitnet_packed_i2s_qk256_proof);
     }
