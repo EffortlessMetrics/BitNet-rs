@@ -1210,13 +1210,9 @@ fn mac_bitnet_warm_writes_failure_receipt_for_missing_tokenizer()
     assert_eq!(receipt_json["timeout_boundary"]["enforced"], true);
     assert_eq!(receipt_json["timeout_boundary"]["reached"], false);
     assert_eq!(receipt_json["progress"]["enabled"], true);
-    assert!(
-        receipt_json["progress"]["stage_taxonomy"]
-            .as_array()
-            .expect("stage taxonomy")
-            .iter()
-            .any(|stage| stage.as_str() == Some("receipt_write"))
-    );
+    let stage_taxonomy =
+        receipt_json["progress"]["stage_taxonomy"].as_array().ok_or("stage taxonomy missing")?;
+    assert!(stage_taxonomy.iter().any(|stage| stage.as_str() == Some("receipt_write")));
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
 
