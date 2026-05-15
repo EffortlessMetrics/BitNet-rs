@@ -1,0 +1,86 @@
+name: Apple M4 Inference Ops Tier 0
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/apple-m4-inference-ops-tier0.yml'
+      - 'ci/hardware/apple-m4-mac-mini/**'
+      - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-inference-ops.md'
+      - 'docs/slm/apple-m4-mini-user-expectation-envelope.md'
+      - 'docs/tracking/campaigns/apple-m4-inference-ops/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apple-m4-inference-ops-tier0.yml'
+      - 'ci/hardware/apple-m4-mac-mini/**'
+      - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-inference-ops.md'
+      - 'docs/slm/apple-m4-mini-user-expectation-envelope.md'
+      - 'docs/tracking/campaigns/apple-m4-inference-ops/**'
+  schedule:
+    - cron: '35 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+  BITNET_SKIP_SLOW_TESTS: "1"
+  OPS_TIER0_ARTIFACT_ROOT: target/apple-m4-inference-ops-tier0
+
+jobs:
+  tier0:
+    name: Report Refresh Manifest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.95.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: apple-m4-inference-ops-tier0
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Test report-refresh manifest command
+        run: cargo test --locked -p bitnet-cli --test cli_arg_tests mac_report_refresh
+
+      - name: Generate model-free report-refresh manifest
+        run: |
+          set -euo pipefail
+          mkdir -p "$OPS_TIER0_ARTIFACT_ROOT"
+          cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+            mac report-refresh \
+            --json-out "$OPS_TIER0_ARTIFACT_ROOT/report-refresh-manifest.json" \
+            --json \
+            > "$OPS_TIER0_ARTIFACT_ROOT/report-refresh-manifest.stdout.json"
+          cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+            mac receipts-check "$OPS_TIER0_ARTIFACT_ROOT/report-refresh-manifest.json" \
+            --json \
+            > "$OPS_TIER0_ARTIFACT_ROOT/report-refresh-manifest.receipts-check.json"
+
+      - name: Summarize Tier 0 boundary
+        run: |
+          {
+            echo "## Apple M4 Inference Ops Tier 0"
+            echo
+            echo "Generated and validated the model-free Apple M4 report-refresh manifest from committed receipts."
+            echo
+            echo "This workflow does not fetch models, run live M4 inference, run BitNet chat or serve, run long resident soaks, publish new timing, or claim broad Apple Silicon performance."
+          } >> "$GITHUB_STEP_SUMMARY"

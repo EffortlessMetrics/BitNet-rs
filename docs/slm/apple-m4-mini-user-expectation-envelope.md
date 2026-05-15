@@ -12,6 +12,7 @@ Primary commands:
 ```bash
 bitnet mac models
 bitnet mac status
+bitnet mac report-refresh
 bitnet mac ask "What is 2+2?"
 bitnet mac chat
 bitnet mac smoke
@@ -34,6 +35,12 @@ fixed-prompt warm reuse with a verified GGUF plus external tokenizer:
 BitNet ask/warm readiness, local report inventory, supported command examples,
 and explicit claim boundaries. It does not run live inference and keeps BitNet
 chat and serve disabled.
+
+`bitnet mac report-refresh` is the model-free report manifest. It writes an
+`apple_m4_report_refresh_manifest` receipt that inventories committed dense SLM
+and BitNet report families for advisory/nightly/release refreshes. It reads
+committed receipts only; it does not download models, run live inference, or use
+dense SLM evidence as BitNet evidence.
 
 ```bash
 bitnet mac ask \

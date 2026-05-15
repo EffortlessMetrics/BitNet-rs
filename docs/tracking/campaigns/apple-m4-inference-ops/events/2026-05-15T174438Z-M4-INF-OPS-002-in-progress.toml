@@ -1,0 +1,33 @@
+timestamp = "2026-05-15T17:44:38Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-002-report-refresh"
+summary = "Started model-free Apple M4 report-refresh manifest generation."
+
+artifacts = [
+  ".github/workflows/apple-m4-inference-ops-tier0.yml",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "The report-refresh manifest inventories committed M4 dense SLM and BitNet report families only.",
+  "Generic PR CI may generate and validate the manifest, but must not download models, run live M4 inference, run long resident soaks, or publish fresh timing claims.",
+  "Dense SLM and BitNet evidence stay separated; BitNet chat and serve remain disabled.",
+]
+
+[evidence]
+route = "bitnet mac report-refresh"
+artifact_kind = "apple_m4_report_refresh_manifest"
+backend = "apple-m4-cpu-neon"
+fallback_used = false
+claim_boundary = "manifest only; no live model run, model download, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"

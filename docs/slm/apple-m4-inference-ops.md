@@ -50,11 +50,43 @@ Validate the receipt with:
 bitnet mac receipts-check target/apple-m4-inference-ops/mac-status.json --json
 ```
 
+## Report Refresh Manifest
+
+`M4-INF-OPS-002` adds a model-free manifest command:
+
+```bash
+bitnet mac report-refresh
+```
+
+The command writes an `apple_m4_report_refresh_manifest` receipt to
+`target/apple-m4-inference-ops/report-refresh-manifest.json` by default. It
+inventories committed M4 report families:
+
+- dense SLM eval v2 summaries;
+- dense SLM benchmark v2 summaries;
+- BitNet seeded eval answer-corpus receipts;
+- BitNet one-shot/fixed-warm benchmark summaries;
+- BitNet variable-prompt warm-session receipts.
+
+The manifest records each family separately with expected artifact kind, report
+paths, latest report, model IDs when present, advisory/nightly/release refresh
+tiers, and model-free validation commands. Generic PR CI may generate and
+validate this manifest because it only reads committed receipts. It must not
+download models, run live M4 inference, run long resident soaks, or mix dense
+SLM evidence with BitNet evidence.
+
+Validate the manifest with:
+
+```bash
+bitnet mac receipts-check \
+  target/apple-m4-inference-ops/report-refresh-manifest.json \
+  --json
+```
+
 ## Remaining Ops Work
 
 The remaining inference-ops lane should stay model-free in generic PR CI:
 
-- refresh advisory/nightly report manifests from committed M4 receipt bundles;
 - build compact regression dashboard artifacts across dense SLM and BitNet
   reports while preserving separate evidence families;
 - publish an operator envelope v2 that maps supported commands to receipt

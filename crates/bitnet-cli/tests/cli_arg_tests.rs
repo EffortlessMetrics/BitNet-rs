@@ -305,6 +305,7 @@ fn mac_help_documents_operator_wrappers() {
         .success()
         .stdout(predicate::str::contains("models"))
         .stdout(predicate::str::contains("status"))
+        .stdout(predicate::str::contains("report-refresh"))
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
@@ -462,12 +463,78 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
             .as_str()
             .is_some_and(|command| command.contains("bitnet mac bitnet-chat-gate"))
     );
+    assert_eq!(receipt_json["commands"]["report_refresh"], "bitnet mac report-refresh");
 
     bitnet()
         .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
         .assert()
         .success()
         .stdout(predicate::str::contains("apple_m4_inference_status"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("report-refresh-manifest.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "report-refresh",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 report refresh manifest"))
+        .stdout(predicate::str::contains("dense_slm_eval_v2"))
+        .stdout(predicate::str::contains("bitnet_benchmark"))
+        .stdout(predicate::str::contains("no live model run"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_report_refresh_manifest");
+    assert_eq!(receipt_json["operator_command"], "mac report-refresh");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_model_free"], true);
+    assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_live_model_run"], false);
+    assert_eq!(receipt_json["claim_boundary"]["manifest_only"], true);
+    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
+    assert_eq!(receipt_json["claim_boundary"]["broad_performance_claim"], false);
+    let families =
+        receipt_json["families"].as_array().ok_or_else(|| std::io::Error::other("families"))?;
+    assert!(families.iter().any(|family| {
+        family["id"] == "dense_slm_eval_v2"
+            && family["evidence_family"] == "dense_slm"
+            && family["expected_artifact_kind"] == "apple_m4_slm_eval_summary"
+            && family["report_count"].as_u64().is_some_and(|count| count >= 3)
+            && family["generic_pr_ci"]["live_model_run"] == false
+            && family["claim_boundary"]["bitnet_evidence"] == false
+    }));
+    assert!(families.iter().any(|family| {
+        family["id"] == "bitnet_eval"
+            && family["evidence_family"] == "bitnet"
+            && family["expected_artifact_kind"] == "bitnet_apple_m4_local_answer_corpus"
+            && family["report_count"].as_u64().is_some_and(|count| count >= 1)
+            && family["claim_boundary"]["dense_slm_evidence"] == false
+    }));
+    assert!(families.iter().any(|family| {
+        family["id"] == "bitnet_variable_warm"
+            && family["expected_artifact_kind"] == "bitnet_apple_m4_warm_session"
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_report_refresh_manifest"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
     Ok(())
 }
