@@ -1,0 +1,41 @@
+timestamp = "2026-05-15T17:14:45Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-004"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4957
+head_sha = "6015f1b12ceaae8c336988c0050302d4eb8449a9"
+merge_sha = "695da886c7ae216dbc54edf03943e3f82ae5a225"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-004-chat-gate"
+summary = "Closed M4-BITNET-PROD-004 after PR #4957 added the explicit BitNet mac chat gate and kept BitNet chat disabled."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "`bitnet mac chat --model-family bitnet` fails before prompt collection and points to `bitnet mac bitnet-chat-gate`.",
+  "`bitnet mac bitnet-chat-gate` writes a `bitnet_apple_m4_chat_gate` receipt and validates the blocked gate shape through `mac receipts-check`.",
+  "The gate requires variable warm-session determinism, timeout/failure evidence, streaming-semantics evidence, and preserved chat/serve=false claim boundaries before any future BitNet chat route can be enabled.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim was added.",
+  "All listed apple-m4-bitnet-productization work items are merged; the campaign is complete for this bounded warm-session and chat-gate scope.",
+]
+
+[evidence]
+route = "bitnet mac chat --model-family bitnet"
+gate_command = "bitnet mac bitnet-chat-gate"
+gate_artifact_kind = "bitnet_apple_m4_chat_gate"
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+chat_enabled = false
+serve_enabled = false
+next_item = "none"
+claim_boundary = "chat gate only; no BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"
