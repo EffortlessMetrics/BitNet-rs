@@ -26,7 +26,7 @@ index 66f4791e..2f0c21d4 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3434,6 +3436,359 @@ struct llama_context {
+@@ -3434,6 +3436,439 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -173,6 +173,59 @@ index 66f4791e..2f0c21d4 100644
 +    out << ",\"shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
 +    out << ",\"nelements\":" << ggml_nelements(tensor);
 +    out << "}";
++}
++
++static void bitnet_rs_reference_layer_trace_write_token_array(
++    std::ostream & out,
++    const llama_token * values,
++    uint32_t len
++) {
++    if (values == nullptr) {
++        out << "null";
++        return;
++    }
++    out << "[";
++    for (uint32_t i = 0; i < len; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        out << values[i];
++    }
++    out << "]";
++}
++
++static void bitnet_rs_reference_layer_trace_write_output_array(
++    std::ostream & out,
++    const int8_t * values,
++    uint32_t len
++) {
++    if (values == nullptr) {
++        out << "null";
++        return;
++    }
++    out << "[";
++    for (uint32_t i = 0; i < len; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        out << (int) values[i];
++    }
++    out << "]";
++}
++
++static bool bitnet_rs_reference_layer_trace_is_warmup(
++    llama_context & lctx,
++    const llama_ubatch & ubatch,
++    uint32_t n_tokens,
++    int32_t n_outputs
++) {
++    if (n_tokens != 2 || n_outputs != 1 || ubatch.token == nullptr || ubatch.output == nullptr) {
++        return false;
++    }
++    return ubatch.output[0] == 0
++        && ubatch.output[1] != 0
++        && ubatch.token[0] == llama_token_bos(&lctx.model)
++        && ubatch.token[1] == llama_token_eos(&lctx.model);
 +}
 +
 +static void bitnet_rs_reference_layer_trace_write_record(
@@ -333,6 +386,7 @@ index 66f4791e..2f0c21d4 100644
 +static void bitnet_rs_reference_layer_trace_dump(
 +    llama_context & lctx,
 +    struct ggml_cgraph * gf,
++    const llama_ubatch & ubatch,
 +    uint32_t n_tokens,
 +    int32_t n_outputs,
 +    const char * path
@@ -351,9 +405,35 @@ index 66f4791e..2f0c21d4 100644
 +        << "\"diagnostic_only\":true,"
 +        << "\"claim_allowed\":false,"
 +        << "\"source\":\"BITNET_RS_REFERENCE_LAYER_TRACE\","
-+        << "\"capture_scope\":\"first_decode_last_output_token_slice\","
++        << "\"capture_scope\":\"first_non_warmup_decode_last_output_token_slice\","
++        << "\"warmup_skip_policy\":\"skip_bos_eos_warmup_decode\","
 +        << "\"n_tokens\":" << n_tokens << ","
-+        << "\"n_outputs\":" << n_outputs << ","
++        << "\"n_outputs\":" << n_outputs << ",";
++
++    int32_t sampled_output_token_index = -1;
++    if (ubatch.output != nullptr) {
++        for (uint32_t i = 0; i < n_tokens; ++i) {
++            if (ubatch.output[i] != 0) {
++                sampled_output_token_index = (int32_t) i;
++            }
++        }
++    }
++    if (sampled_output_token_index < 0 && n_tokens > 0) {
++        sampled_output_token_index = (int32_t) n_tokens - 1;
++    }
++
++    out << "\"ubatch_tokens\":";
++    bitnet_rs_reference_layer_trace_write_token_array(out, ubatch.token, n_tokens);
++    out << ",\"ubatch_outputs\":";
++    bitnet_rs_reference_layer_trace_write_output_array(out, ubatch.output, n_tokens);
++    out << ",\"sampled_output_token_index\":" << sampled_output_token_index;
++    out << ",\"sampled_output_token_id\":";
++    if (ubatch.token != nullptr && sampled_output_token_index >= 0) {
++        out << ubatch.token[(uint32_t) sampled_output_token_index];
++    } else {
++        out << "null";
++    }
++    out << ","
 +        << "\"records\":[";
 +
 +    bool first = true;
@@ -386,14 +466,14 @@ index 66f4791e..2f0c21d4 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -17658,6 +18012,13 @@ static int llama_decode_internal(
+@@ -17658,6 +18092,13 @@ static int llama_decode_internal(
  
          llama_graph_compute(lctx, gf, n_threads, threadpool);
  
 +        static bool bitnet_rs_reference_layer_trace_dumped = false;
 +        const char * bitnet_rs_reference_layer_trace_path = std::getenv("BITNET_RS_REFERENCE_LAYER_TRACE");
-+        if (!bitnet_rs_reference_layer_trace_dumped && bitnet_rs_reference_layer_trace_path != nullptr && bitnet_rs_reference_layer_trace_path[0] != '\0' && lctx.n_outputs > 0) {
-+            bitnet_rs_reference_layer_trace_dump(lctx, gf, n_tokens, lctx.n_outputs, bitnet_rs_reference_layer_trace_path);
++        if (!bitnet_rs_reference_layer_trace_dumped && bitnet_rs_reference_layer_trace_path != nullptr && bitnet_rs_reference_layer_trace_path[0] != '\0' && lctx.n_outputs > 0 && !bitnet_rs_reference_layer_trace_is_warmup(lctx, ubatch, n_tokens, lctx.n_outputs)) {
++            bitnet_rs_reference_layer_trace_dump(lctx, gf, ubatch, n_tokens, lctx.n_outputs, bitnet_rs_reference_layer_trace_path);
 +            bitnet_rs_reference_layer_trace_dumped = true;
 +        }
 +
