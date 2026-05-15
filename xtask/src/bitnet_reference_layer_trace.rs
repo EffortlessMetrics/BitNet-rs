@@ -1024,10 +1024,52 @@ fn build_embedding_row_authority(args: &EmbeddingRowAuthorityArgs) -> Result<Val
     let rust_loaded_matches_reference_row = sampled_row.as_ref().is_some_and(|row| {
         row_candidate_delta_le(row, "/reference_raw_vs_rust_loaded/max_abs_delta", 1.0e-3)
     });
+    let reference_trace_matching_layouts = sampled_row
+        .as_ref()
+        .map(|row| {
+            row_candidate_matching_layouts(
+                row,
+                "/reference_raw_vs_trace_first_values/max_abs_delta",
+                1.0e-3,
+            )
+        })
+        .unwrap_or_default();
+    let rust_loaded_matching_layouts = sampled_row
+        .as_ref()
+        .map(|row| {
+            row_candidate_matching_layouts(
+                row,
+                "/reference_raw_vs_rust_loaded/max_abs_delta",
+                1.0e-3,
+            )
+        })
+        .unwrap_or_default();
+    let shared_matching_layouts = reference_trace_matching_layouts
+        .iter()
+        .filter(|layout| rust_loaded_matching_layouts.contains(layout))
+        .cloned()
+        .collect::<Vec<_>>();
+    let layout_authority_aligned = !shared_matching_layouts.is_empty();
 
-    let authority_ready = blocked_reasons.is_empty() && sampled_row.is_some();
-    let next_action = if !authority_ready {
+    let input_authority_ready = blocked_reasons.is_empty() && sampled_row.is_some();
+    let mut current_blocked_reasons = blocked_reasons.clone();
+    if input_authority_ready
+        && reference_row_matches_trace_sample
+        && rust_loaded_matches_reference_row
+        && !layout_authority_aligned
+    {
+        current_blocked_reasons
+            .push("embedding_reference_and_rust_layout_authority_split".to_string());
+    }
+
+    let authority_ready = input_authority_ready && layout_authority_aligned;
+    let next_action = if !input_authority_ready {
         "make the reference trace, prompt token ids, and GGUF model path available"
+    } else if reference_row_matches_trace_sample
+        && rust_loaded_matches_reference_row
+        && !layout_authority_aligned
+    {
+        "inspect Rust embedding layout/transpose handling; reference trace and Rust-loaded embeddings match different raw layout candidates"
     } else if reference_row_matches_trace_sample && !rust_loaded_matches_reference_row {
         "inspect Rust GGUF embedding normalization or transformer handoff before changing downstream math"
     } else if rust_loaded_matches_reference_row && !reference_row_matches_trace_sample {
@@ -1068,9 +1110,14 @@ fn build_embedding_row_authority(args: &EmbeddingRowAuthorityArgs) -> Result<Val
         "rows": rows,
         "decision": {
             "embedding_row_authority_ready": authority_ready,
+            "embedding_row_authority_inputs_ready": input_authority_ready,
             "reference_row_matches_trace_sample": reference_row_matches_trace_sample,
             "rust_loaded_matches_reference_row": rust_loaded_matches_reference_row,
-            "current_blocked_reasons": blocked_reasons,
+            "reference_trace_matching_layouts": reference_trace_matching_layouts,
+            "rust_loaded_matching_layouts": rust_loaded_matching_layouts,
+            "shared_matching_layouts": shared_matching_layouts,
+            "layout_authority_aligned": layout_authority_aligned,
+            "current_blocked_reasons": current_blocked_reasons,
             "next_action": next_action,
             "claim_allowed": false,
         },
@@ -1349,6 +1396,31 @@ fn row_candidate_delta_le(row: &Value, pointer_suffix: &str, threshold: f64) -> 
                 .is_some_and(|delta| delta <= threshold)
         })
     })
+}
+
+fn row_candidate_matching_layouts(
+    row: &Value,
+    pointer_suffix: &str,
+    threshold: f64,
+) -> Vec<String> {
+    row.pointer("/reference_candidates")
+        .and_then(Value::as_array)
+        .map(|candidates| {
+            candidates
+                .iter()
+                .filter_map(|candidate| {
+                    let matches = candidate
+                        .pointer(pointer_suffix)
+                        .and_then(Value::as_f64)
+                        .is_some_and(|delta| delta <= threshold);
+                    if !matches {
+                        return None;
+                    }
+                    candidate.pointer("/layout/kind").and_then(Value::as_str).map(ToOwned::to_owned)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn decode_embedding_row(
@@ -2937,11 +3009,17 @@ mod tests {
         let row = json!({
             "reference_candidates": [
                 {
+                    "layout": {
+                        "kind": "layout_a"
+                    },
                     "reference_raw_vs_rust_loaded": {
                         "max_abs_delta": 4.0
                     }
                 },
                 {
+                    "layout": {
+                        "kind": "layout_b"
+                    },
                     "reference_raw_vs_rust_loaded": {
                         "max_abs_delta": 0.0
                     }
@@ -2959,6 +3037,58 @@ mod tests {
             "/reference_raw_vs_trace_first_values/max_abs_delta",
             1.0e-3
         ));
+    }
+
+    #[test]
+    fn embedding_layout_authority_requires_same_candidate_layout() {
+        let row = json!({
+            "reference_candidates": [
+                {
+                    "layout": {
+                        "kind": "reference_layout"
+                    },
+                    "reference_raw_vs_trace_first_values": {
+                        "max_abs_delta": 0.0
+                    },
+                    "reference_raw_vs_rust_loaded": {
+                        "max_abs_delta": 9.0
+                    }
+                },
+                {
+                    "layout": {
+                        "kind": "rust_layout"
+                    },
+                    "reference_raw_vs_trace_first_values": {
+                        "max_abs_delta": 9.0
+                    },
+                    "reference_raw_vs_rust_loaded": {
+                        "max_abs_delta": 0.0
+                    }
+                }
+            ]
+        });
+
+        let reference_layouts = row_candidate_matching_layouts(
+            &row,
+            "/reference_raw_vs_trace_first_values/max_abs_delta",
+            1.0e-3,
+        );
+        let rust_layouts = row_candidate_matching_layouts(
+            &row,
+            "/reference_raw_vs_rust_loaded/max_abs_delta",
+            1.0e-3,
+        );
+        let shared_layouts = reference_layouts
+            .iter()
+            .filter(|layout| rust_layouts.contains(layout))
+            .collect::<Vec<_>>();
+
+        assert_eq!(reference_layouts, vec!["reference_layout".to_string()]);
+        assert_eq!(rust_layouts, vec!["rust_layout".to_string()]);
+        assert!(
+            shared_layouts.is_empty(),
+            "different matching layout candidates must not count as embedding authority"
+        );
     }
 
     #[test]
