@@ -65,7 +65,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-013 | merged | Bounded Qwen3 Q8_0 dense linear no-bias hot-path cleanup landed in #4891; generated IDs and strict provenance remain the behavior oracle. |
 | SLM-CPU-014 | merged | Bounded dense output-head zero-bias allocation cleanup landed in #4900; generated IDs and strict provenance remain the behavior oracle. |
 | SLM-CPU-015 | merged | Bounded i5-8250U Qwen3 Q8_0 warm-session thread and timing envelope evidence landed in #4911; generated IDs and strict provenance remain the behavior oracle. |
-| SLM-CPU-016 | ready | Next bounded item: Kaby Lake Qwen3 Q8_0 operator appliance profile with strict receipts, selected thread envelope, and measured or explicit unavailable host context. |
+| SLM-CPU-016 | merged | Kaby Lake Qwen3 Q8_0 operator appliance profile host-context support merged in #4922; receipts now record process memory and storage/free-space where available while preserving explicit unavailable thermal/power fields. |
 
 ## Review Policy
 
