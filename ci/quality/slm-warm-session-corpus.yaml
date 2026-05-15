@@ -1,0 +1,52 @@
+schema: 1
+artifact_kind: slm_cpu_warm_session_corpus
+name: qwen3-kaby-warm-session
+description: Deterministic i5-8250U Qwen3 CPU warm-session corpus.
+model:
+  repo: Qwen/Qwen3-0.6B-GGUF
+  file: Qwen3-0.6B-Q8_0.gguf
+  sha256: 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031
+  family: qwen
+  architecture: qwen3
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen
+  qwen_no_think: true
+  max_new_tokens: 8
+  greedy: true
+  deterministic: true
+  temperature: 0.0
+  top_k: 1
+  repeat_runs: 2
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 1
+cases:
+  - id: bounded_yes_no_water
+    question: "Answer yes or no: is water wet?"
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "Yes"
+        - "yes"
+        - "No"
+        - "no"
+
+  - id: bounded_repeat_colors
+    question: "Repeat exactly: red blue green"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "red"
+        - "blue"
+        - "green"
+        - "Red"
+        - "Blue"
+        - "Green"
+
+  - id: bounded_capital_france
+    question: "Capital of France:"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"

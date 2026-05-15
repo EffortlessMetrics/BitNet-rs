@@ -1,0 +1,1165 @@
+{
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
+  "artifact_kind": "slm_cpu_warm_session",
+  "artifact_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session.json",
+  "backend": {
+    "fallback_reason": null,
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust"
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "metal_phase_contribution_only": false,
+    "model_loaded_once": true,
+    "speedup_claim": false,
+    "tokenizer_loaded_once": true,
+    "warm_session_flow": true
+  },
+  "corpus": {
+    "artifact_kind": "slm_cpu_warm_session_corpus",
+    "case_count": 3,
+    "defaults": {
+      "deterministic": true,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "min_distinct_generated_tokens": 1,
+      "min_generated_tokens": 1,
+      "prompt_template": "qwen",
+      "qwen_no_think": true,
+      "temperature": 0.0,
+      "top_k": 1
+    },
+    "description": "Deterministic i5-8250U Qwen3 CPU warm-session corpus.",
+    "model": {
+      "architecture": "qwen3",
+      "family": "qwen",
+      "file": "Qwen3-0.6B-Q8_0.gguf",
+      "quant_format": "Q8_0",
+      "repo": "Qwen/Qwen3-0.6B-GGUF",
+      "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+    },
+    "name": "qwen3-kaby-warm-session",
+    "path": "ci/quality/slm-warm-session-corpus.yaml",
+    "repeat_runs": 2
+  },
+  "counts": {
+    "n_kv": 28,
+    "n_tensors": 310
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "threads": 1
+  },
+  "determinism": {
+    "checked": true,
+    "groups": [
+      {
+        "attempt_count": 2,
+        "case_id": "bounded_yes_no_water",
+        "prompt": "Answer yes or no: is water wet?",
+        "prompt_indices": [
+          0,
+          1
+        ],
+        "reference_generated_ids": [
+          9454,
+          11,
+          3015,
+          374,
+          6509,
+          14401,
+          13,
+          151645
+        ],
+        "reference_text": "Yes, water is considered wet.<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "bounded_capital_france",
+        "prompt": "Capital of France:",
+        "prompt_indices": [
+          4,
+          5
+        ],
+        "reference_generated_ids": [
+          785,
+          6722,
+          315,
+          9625,
+          374,
+          3070,
+          59604,
+          334
+        ],
+        "reference_text": "The capital of France is **Paris**",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "bounded_repeat_colors",
+        "prompt": "Repeat exactly: red blue green",
+        "prompt_indices": [
+          2,
+          3
+        ],
+        "reference_generated_ids": [
+          6033,
+          11,
+          6303,
+          11,
+          6176,
+          13,
+          151645
+        ],
+        "reference_text": "Red, blue, green.<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      }
+    ],
+    "passed": true,
+    "repeated_prompt_groups": 3
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generation": {
+    "deterministic": true,
+    "max_new_tokens": 8,
+    "mode": "greedy",
+    "prompt_template": "qwen",
+    "qwen_no_think": true,
+    "repetition_penalty": 1.100000023841858,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "memory": {
+    "available": false,
+    "resident_memory_bytes": null,
+    "resident_memory_source": "not_sampled_in_slm_cpu_warm_session"
+  },
+  "metal_phase_contributions": {
+    "cpu_pipeline_for_remaining_phases": true,
+    "enabled": false,
+    "execution_phase": null,
+    "fallback_used": false,
+    "full_metal_inference_claimed": false,
+    "resident_generation_backend": "cpu-rust",
+    "resident_greedy_token_ids_match_cpu_reference": true,
+    "runtime_api": null,
+    "selected_backend": null,
+    "speedup_claim": false
+  },
+  "model": {
+    "architecture": "qwen3",
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "models/slm/Qwen3-0.6B-Q8_0.gguf",
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "sha256_rehash_skipped": false,
+    "sha256_source": "computed_from_model_file",
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "operator_ux": {
+    "aggregate_receipt_at_exit": true,
+    "clear_failure_messages": true,
+    "interactive_prompt_collection": false,
+    "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+    "per_turn_receipts_enabled": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": false,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true,
+    "token_stream": "disabled"
+  },
+  "power": {
+    "available": false,
+    "mode": null,
+    "source": "not_sampled_in_slm_cpu_warm_session"
+  },
+  "prompts": [
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "case_id": "bounded_yes_no_water",
+      "generated_token_ids": [
+        9454,
+        11,
+        3015,
+        374,
+        6509,
+        14401,
+        13,
+        151645
+      ],
+      "generated_tokens": 8,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Answer yes or no: is water wet?",
+      "prompt_index": 0,
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [],
+        "gate_kind": "starts_with_any",
+        "gate_passed": true,
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Yes, water is considered wet.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\01-answer-yes-or-no-is-water-wet.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "Yes, water is considered wet.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 1.55,
+        "decode_total_ms": 5427.32,
+        "embed_ms": {
+          "count": 8,
+          "max_ms": 0.034,
+          "mean_ms": 0.025,
+          "min_ms": 0.017,
+          "p50_ms": 0.027,
+          "p95_ms": 0.034,
+          "total_ms": 0.203
+        },
+        "first_token_decode_ms": 909.848,
+        "first_token_ms": 17189,
+        "forward_ms": {
+          "count": 8,
+          "max_ms": 662.452,
+          "mean_ms": 506.841,
+          "min_ms": 372.44,
+          "p50_ms": 445.647,
+          "p95_ms": 662.452,
+          "total_ms": 4054.727
+        },
+        "logits_ms": {
+          "count": 8,
+          "max_ms": 235.437,
+          "mean_ms": 163.57,
+          "min_ms": 121.652,
+          "p50_ms": 141.881,
+          "p95_ms": 235.437,
+          "total_ms": 1308.561
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 15246.192,
+        "sample_ms": {
+          "count": 8,
+          "max_ms": 11.587,
+          "mean_ms": 7.893,
+          "min_ms": 5.703,
+          "p50_ms": 6.917,
+          "p95_ms": 11.587,
+          "total_ms": 63.145
+        },
+        "sampling_ms_per_token": 7.893,
+        "session_model_load_ms": 45621.985,
+        "session_model_sha256_ms": 6019.726,
+        "session_tokenizer_load_ms": 1422.947,
+        "time_to_first_token_ms": 17189,
+        "token_decode_ms": {
+          "count": 8,
+          "max_ms": 0.212,
+          "mean_ms": 0.048,
+          "min_ms": 0.021,
+          "p50_ms": 0.025,
+          "p95_ms": 0.212,
+          "total_ms": 0.384
+        },
+        "tokenize_ms": 938.069,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 21708.96
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "case_id": "bounded_yes_no_water",
+      "generated_token_ids": [
+        9454,
+        11,
+        3015,
+        374,
+        6509,
+        14401,
+        13,
+        151645
+      ],
+      "generated_tokens": 8,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Answer yes or no: is water wet?",
+      "prompt_index": 1,
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [],
+        "gate_kind": "starts_with_any",
+        "gate_passed": true,
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Yes, water is considered wet.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\02-answer-yes-or-no-is-water-wet.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "Yes, water is considered wet.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 1.469,
+        "decode_total_ms": 5419.989,
+        "embed_ms": {
+          "count": 8,
+          "max_ms": 0.049,
+          "mean_ms": 0.027,
+          "min_ms": 0.015,
+          "p50_ms": 0.022,
+          "p95_ms": 0.049,
+          "total_ms": 0.22
+        },
+        "first_token_decode_ms": 654.989,
+        "first_token_ms": 18112,
+        "forward_ms": {
+          "count": 8,
+          "max_ms": 715.186,
+          "mean_ms": 499.826,
+          "min_ms": 398.87,
+          "p50_ms": 453.404,
+          "p95_ms": 715.186,
+          "total_ms": 3998.606
+        },
+        "logits_ms": {
+          "count": 8,
+          "max_ms": 252.533,
+          "mean_ms": 169.914,
+          "min_ms": 119.8,
+          "p50_ms": 141.93,
+          "p95_ms": 252.533,
+          "total_ms": 1359.312
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 16035.807,
+        "sample_ms": {
+          "count": 8,
+          "max_ms": 10.832,
+          "mean_ms": 7.68,
+          "min_ms": 5.432,
+          "p50_ms": 6.653,
+          "p95_ms": 10.832,
+          "total_ms": 61.443
+        },
+        "sampling_ms_per_token": 7.68,
+        "session_model_load_ms": 45621.985,
+        "session_model_sha256_ms": 6019.726,
+        "session_tokenizer_load_ms": 1422.947,
+        "time_to_first_token_ms": 18112,
+        "token_decode_ms": {
+          "count": 8,
+          "max_ms": 0.058,
+          "mean_ms": 0.033,
+          "min_ms": 0.02,
+          "p50_ms": 0.027,
+          "p95_ms": 0.058,
+          "total_ms": 0.267
+        },
+        "tokenize_ms": 1278.984,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 22877.579
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "case_id": "bounded_repeat_colors",
+      "generated_token_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "generated_tokens": 7,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Repeat exactly: red blue green",
+      "prompt_index": 2,
+      "quality": {
+        "distinct_generated_tokens": 6,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 7,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Red, blue, green.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\03-repeat-exactly-red-blue-green.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "Red, blue, green.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 1.534,
+        "decode_total_ms": 4835.537,
+        "embed_ms": {
+          "count": 7,
+          "max_ms": 0.053,
+          "mean_ms": 0.034,
+          "min_ms": 0.018,
+          "p50_ms": 0.031,
+          "p95_ms": 0.053,
+          "total_ms": 0.24
+        },
+        "first_token_decode_ms": 924.962,
+        "first_token_ms": 16347,
+        "forward_ms": {
+          "count": 7,
+          "max_ms": 703.255,
+          "mean_ms": 521.332,
+          "min_ms": 374.335,
+          "p50_ms": 428.19,
+          "p95_ms": 703.255,
+          "total_ms": 3649.326
+        },
+        "logits_ms": {
+          "count": 7,
+          "max_ms": 218.313,
+          "mean_ms": 160.995,
+          "min_ms": 125.114,
+          "p50_ms": 147.901,
+          "p95_ms": 218.313,
+          "total_ms": 1126.966
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 14097.159,
+        "sample_ms": {
+          "count": 7,
+          "max_ms": 11.473,
+          "mean_ms": 8.387,
+          "min_ms": 5.507,
+          "p50_ms": 8.115,
+          "p95_ms": 11.473,
+          "total_ms": 58.71
+        },
+        "sampling_ms_per_token": 8.387,
+        "session_model_load_ms": 45621.985,
+        "session_model_sha256_ms": 6019.726,
+        "session_tokenizer_load_ms": 1422.947,
+        "time_to_first_token_ms": 16347,
+        "token_decode_ms": {
+          "count": 7,
+          "max_ms": 0.033,
+          "mean_ms": 0.026,
+          "min_ms": 0.021,
+          "p50_ms": 0.026,
+          "p95_ms": 0.033,
+          "total_ms": 0.185
+        },
+        "tokenize_ms": 1213.759,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 20258.771
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "case_id": "bounded_repeat_colors",
+      "generated_token_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "generated_tokens": 7,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Repeat exactly: red blue green",
+      "prompt_index": 3,
+      "quality": {
+        "distinct_generated_tokens": 6,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 7,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Red, blue, green.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\04-repeat-exactly-red-blue-green.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "Red, blue, green.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 1.561,
+        "decode_total_ms": 4382.157,
+        "embed_ms": {
+          "count": 7,
+          "max_ms": 0.031,
+          "mean_ms": 0.02,
+          "min_ms": 0.014,
+          "p50_ms": 0.018,
+          "p95_ms": 0.031,
+          "total_ms": 0.138
+        },
+        "first_token_decode_ms": 538.138,
+        "first_token_ms": 16096,
+        "forward_ms": {
+          "count": 7,
+          "max_ms": 652.266,
+          "mean_ms": 456.793,
+          "min_ms": 333.986,
+          "p50_ms": 450.575,
+          "p95_ms": 652.266,
+          "total_ms": 3197.552
+        },
+        "logits_ms": {
+          "count": 7,
+          "max_ms": 232.529,
+          "mean_ms": 161.781,
+          "min_ms": 114.425,
+          "p50_ms": 130.317,
+          "p95_ms": 232.529,
+          "total_ms": 1132.468
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 14346.004,
+        "sample_ms": {
+          "count": 7,
+          "max_ms": 12.837,
+          "mean_ms": 7.39,
+          "min_ms": 4.857,
+          "p50_ms": 5.769,
+          "p95_ms": 12.837,
+          "total_ms": 51.732
+        },
+        "sampling_ms_per_token": 7.39,
+        "session_model_load_ms": 45621.985,
+        "session_model_sha256_ms": 6019.726,
+        "session_tokenizer_load_ms": 1422.947,
+        "time_to_first_token_ms": 16096,
+        "token_decode_ms": {
+          "count": 7,
+          "max_ms": 0.033,
+          "mean_ms": 0.023,
+          "min_ms": 0.016,
+          "p50_ms": 0.022,
+          "p95_ms": 0.033,
+          "total_ms": 0.159
+        },
+        "tokenize_ms": 1059.926,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 19941.382
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "case_id": "bounded_capital_france",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        3070,
+        59604,
+        334
+      ],
+      "generated_tokens": 8,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Capital of France:",
+      "prompt_index": 4,
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The capital of France is **Paris**",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\05-capital-of-france.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "The capital of France is **Paris**",
+      "timing": {
+        "decode_steady_state_tok_s": 1.46,
+        "decode_total_ms": 5359.214,
+        "embed_ms": {
+          "count": 8,
+          "max_ms": 0.035,
+          "mean_ms": 0.024,
+          "min_ms": 0.016,
+          "p50_ms": 0.024,
+          "p95_ms": 0.035,
+          "total_ms": 0.193
+        },
+        "first_token_decode_ms": 563.529,
+        "first_token_ms": 15156,
+        "forward_ms": {
+          "count": 8,
+          "max_ms": 662.335,
+          "mean_ms": 507.911,
+          "min_ms": 341.008,
+          "p50_ms": 401.7,
+          "p95_ms": 662.335,
+          "total_ms": 4063.289
+        },
+        "logits_ms": {
+          "count": 8,
+          "max_ms": 210.773,
+          "mean_ms": 153.779,
+          "min_ms": 111.308,
+          "p50_ms": 137.364,
+          "p95_ms": 210.773,
+          "total_ms": 1230.228
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 13181.967,
+        "sample_ms": {
+          "count": 8,
+          "max_ms": 13.758,
+          "mean_ms": 8.145,
+          "min_ms": 5.047,
+          "p50_ms": 6.444,
+          "p95_ms": 13.758,
+          "total_ms": 65.164
+        },
+        "sampling_ms_per_token": 8.145,
+        "session_model_load_ms": 45621.985,
+        "session_model_sha256_ms": 6019.726,
+        "session_tokenizer_load_ms": 1422.947,
+        "time_to_first_token_ms": 15156,
+        "token_decode_ms": {
+          "count": 8,
+          "max_ms": 0.033,
+          "mean_ms": 0.026,
+          "min_ms": 0.018,
+          "p50_ms": 0.027,
+          "p95_ms": 0.033,
+          "total_ms": 0.209
+        },
+        "tokenize_ms": 1297.854,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 19954.452
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "case_id": "bounded_capital_france",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        3070,
+        59604,
+        334
+      ],
+      "generated_tokens": 8,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Capital of France:",
+      "prompt_index": 5,
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The capital of France is **Paris**",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\06-capital-of-france.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "The capital of France is **Paris**",
+      "timing": {
+        "decode_steady_state_tok_s": 1.45,
+        "decode_total_ms": 5454.476,
+        "embed_ms": {
+          "count": 8,
+          "max_ms": 0.046,
+          "mean_ms": 0.027,
+          "min_ms": 0.018,
+          "p50_ms": 0.024,
+          "p95_ms": 0.046,
+          "total_ms": 0.219
+        },
+        "first_token_decode_ms": 626.975,
+        "first_token_ms": 14113,
+        "forward_ms": {
+          "count": 8,
+          "max_ms": 634.085,
+          "mean_ms": 500.997,
+          "min_ms": 402.25,
+          "p50_ms": 429.719,
+          "p95_ms": 634.085,
+          "total_ms": 4007.976
+        },
+        "logits_ms": {
+          "count": 8,
+          "max_ms": 217.024,
+          "mean_ms": 172.423,
+          "min_ms": 117.46,
+          "p50_ms": 156.091,
+          "p95_ms": 217.024,
+          "total_ms": 1379.384
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 12629.576,
+        "sample_ms": {
+          "count": 8,
+          "max_ms": 11.508,
+          "mean_ms": 8.313,
+          "min_ms": 5.594,
+          "p50_ms": 7.526,
+          "p95_ms": 11.508,
+          "total_ms": 66.508
+        },
+        "sampling_ms_per_token": 8.313,
+        "session_model_load_ms": 45621.985,
+        "session_model_sha256_ms": 6019.726,
+        "session_tokenizer_load_ms": 1422.947,
+        "time_to_first_token_ms": 14113,
+        "token_decode_ms": {
+          "count": 8,
+          "max_ms": 0.041,
+          "mean_ms": 0.028,
+          "min_ms": 0.02,
+          "p50_ms": 0.027,
+          "p95_ms": 0.041,
+          "total_ms": 0.225
+        },
+        "tokenize_ms": 783.412,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 18941.214
+      }
+    }
+  ],
+  "quality_summary": {
+    "fail_on_quality": false,
+    "failed_prompt_indices": [],
+    "min_distinct_generated_tokens": 1,
+    "min_generated_tokens": 1,
+    "passed": true
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "session": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+    "metal_phase_contributions_enabled": false,
+    "metal_phase_receipts": [],
+    "model_loaded_once": true,
+    "per_prompt_receipt_dir": "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts",
+    "per_prompt_receipts": [
+      "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\01-answer-yes-or-no-is-water-wet.json",
+      "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\02-answer-yes-or-no-is-water-wet.json",
+      "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\03-repeat-exactly-red-blue-green.json",
+      "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\04-repeat-exactly-red-blue-green.json",
+      "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\05-capital-of-france.json",
+      "ci/slm-cpu/intel-i5-8250u/2026-05-07\\qwen3-warm-session-prompts\\06-capital-of-france.json"
+    ],
+    "per_prompt_receipts_enabled": true,
+    "prompt_count": 6,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
+  "speed": {
+    "broad_performance_claim": false,
+    "claim": "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+    "counts": {
+      "generated_tokens": 46,
+      "prompt_count": 6,
+      "prompt_tokens": 176
+    },
+    "measurement_scope": "validated SLM warm session on cpu-rust",
+    "reuse": {
+      "allocation_audit_buffers_reused": true,
+      "generated_token_buffer_reused": true,
+      "kv_cache_recreated_per_prompt": true,
+      "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+      "logits_buffer_reuse_claimed": false,
+      "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+      "model_loaded_once": true,
+      "per_prompt_model_load_ms": 0.0,
+      "per_prompt_tokenizer_load_ms": 0.0,
+      "prompt_token_buffer_reused": true,
+      "reuse_scope": "resident_session",
+      "sampler_recreated_per_prompt": true,
+      "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+      "session_owned_buffers": true,
+      "stop_tail_buffer_reused": true,
+      "timing_buffers_reused": true,
+      "tokenizer_loaded_once": true
+    },
+    "speedup_claim": false,
+    "throughput": {
+      "cold_session_generated_tok_s": 0.26,
+      "decode_generated_tok_s": 1.49,
+      "warm_prompt_generated_tok_s": 0.372
+    },
+    "timing": {
+      "decode_total_ms": 30878.693,
+      "first_token_ms": {
+        "count": 6,
+        "max_ms": 18112.0,
+        "mean_ms": 16168.833,
+        "min_ms": 14113.0,
+        "p50_ms": 16096.0,
+        "p95_ms": 18112.0,
+        "total_ms": 97013.0
+      },
+      "model_load_ms": 45621.985,
+      "prefill_ms": 85536.706,
+      "sampling_ms": 366.702,
+      "steady_decode_tok_s": {
+        "count": 6,
+        "max": 1.561,
+        "mean": 1.504,
+        "min": 1.45,
+        "p50": 1.469,
+        "p95": 1.561
+      },
+      "time_to_first_token_ms": {
+        "count": 6,
+        "max_ms": 18112.0,
+        "mean_ms": 16168.833,
+        "min_ms": 14113.0,
+        "p50_ms": 16096.0,
+        "p95_ms": 18112.0,
+        "total_ms": 97013.0
+      },
+      "tokenize_ms": 6572.004,
+      "tokenizer_load_ms": 1422.947,
+      "total_session_ms": 176790.282,
+      "warm_prompt_wall_ms": 123682.359
+    }
+  },
+  "speedup_claim": false,
+  "thermal": {
+    "available": false,
+    "source": "not_sampled_in_slm_cpu_warm_session",
+    "temperature_c": null
+  },
+  "timestamp": "2026-05-15T06:17:05.241929600+00:00",
+  "timing": {
+    "model_load_ms": 45621.985,
+    "model_sha256_ms": 6019.726,
+    "tokenizer_load_ms": 1422.947,
+    "total_session_ms": 176790.282
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  }
+}

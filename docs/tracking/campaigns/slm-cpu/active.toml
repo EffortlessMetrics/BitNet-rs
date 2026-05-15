@@ -1416,7 +1416,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-010"]
 acceptance = "Add bounded Qwen3-0.6B Q8_0 warm-session receipts for the strict i5-8250U CPU path after multi-token stability. The slice must load the model and tokenizer once, run multiple fixed prompts in one process where the available command surface supports it, emit per-case and aggregate receipts, and record model SHA, tokenizer authority, selected backend/kernel, fallback_used=false, prompt/generated IDs, load time, prefill time, first-token time, decode timing, resident memory or explicit unavailable fields, thread count, and thermal/power context where available. It must not claim sustained throughput without warm/cold and thermal boundaries, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
 commands = [
-  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
   "cargo run -p xtask --no-default-features -- campaign generate",
   "cargo run -p xtask --no-default-features -- campaign doctor",
   "git diff --check",

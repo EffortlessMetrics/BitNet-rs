@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_warm_session_validation",
+  "source_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session.json",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "selected_backend": "cpu-rust",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "model_loaded_once": true,
+  "tokenizer_loaded_once": true,
+  "prompt_count": 6,
+  "per_prompt_receipts_enabled": true,
+  "qwen_no_think": true,
+  "quality_passed": true,
+  "determinism_checked": true,
+  "determinism_passed": true,
+  "prompt_ids_recorded": true,
+  "memory_context_recorded": true,
+  "thermal_context_recorded": true,
+  "power_context_recorded": true,
+  "speedup_claim": false,
+  "passed": true
+}

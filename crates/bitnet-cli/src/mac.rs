@@ -779,8 +779,8 @@ impl MacCommand {
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac bitnet-warm")?;
-                run_bitnet_warm(
-                    &model_id,
+                run_bitnet_warm(BitnetWarmRun {
+                    model_id: &model_id,
                     cache_dir,
                     model_path,
                     tokenizer,
@@ -789,7 +789,7 @@ impl MacCommand {
                     progress,
                     quiet,
                     json_out,
-                )
+                })
                 .await
             }
             MacAction::Doctor { model_id, cache_dir, max_new_tokens, threads, json_out } => {
@@ -2422,8 +2422,8 @@ async fn run_bitnet_smoke(
     Ok(())
 }
 
-async fn run_bitnet_warm(
-    model_id: &str,
+struct BitnetWarmRun<'a> {
+    model_id: &'a str,
     cache_dir: Option<PathBuf>,
     model_path: Option<PathBuf>,
     tokenizer: Option<PathBuf>,
@@ -2432,7 +2432,20 @@ async fn run_bitnet_warm(
     progress: bool,
     quiet: bool,
     json_out: PathBuf,
-) -> Result<()> {
+}
+
+async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
+    let BitnetWarmRun {
+        model_id,
+        cache_dir,
+        model_path,
+        tokenizer,
+        max_new_tokens,
+        threads,
+        progress,
+        quiet,
+        json_out,
+    } = request;
     if max_new_tokens == 0 {
         anyhow::bail!("`bitnet mac bitnet-warm` requires --max-new-tokens greater than zero");
     }
@@ -2473,6 +2486,7 @@ async fn run_bitnet_warm(
         true,
         threads,
         BITNET_M4_PROMPT_TEMPLATE.to_string(),
+        false,
         None,
         vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
         Vec::new(),
@@ -4298,6 +4312,7 @@ async fn run_chat_session(
         true,
         threads,
         QWEN_PROMPT_TEMPLATE.to_string(),
+        false,
         system_prompt,
         vec!["<|im_end|>".to_string()],
         Vec::new(),
@@ -4419,6 +4434,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         true,
         threads,
         QWEN_PROMPT_TEMPLATE.to_string(),
+        false,
         None,
         vec!["<|im_end|>".to_string()],
         Vec::new(),
@@ -4643,6 +4659,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             true,
             threads,
             QWEN_PROMPT_TEMPLATE.to_string(),
+            false,
             None,
             vec!["<|im_end|>".to_string()],
             Vec::new(),
@@ -5162,6 +5179,7 @@ async fn run_warm_profile_set(
             true,
             threads,
             QWEN_PROMPT_TEMPLATE.to_string(),
+            false,
             None,
             vec!["<|im_end|>".to_string()],
             Vec::new(),

@@ -3357,11 +3357,11 @@ fn slm_warm_session_requires_multiple_prompts_before_loading_model() {
 }
 
 #[test]
-fn slm_warm_session_requires_supported_apple_cpu_neon_before_loading_model() {
+fn slm_warm_session_requires_supported_cpu_receipt_label_before_loading_model() {
     bitnet()
         .args([
             "--device",
-            "cpu",
+            "cuda",
             "slm-warm-session",
             "--model",
             "missing.gguf",
@@ -3374,7 +3374,7 @@ fn slm_warm_session_requires_supported_apple_cpu_neon_before_loading_model() {
         ])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("apple-m4-cpu-neon or apple-m3-air-cpu-neon"));
+        .stderr(predicate::str::contains("cpu, apple-m4-cpu-neon, or apple-m3-air-cpu-neon"));
 }
 
 #[test]
