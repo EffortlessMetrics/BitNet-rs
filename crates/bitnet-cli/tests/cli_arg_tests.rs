@@ -308,6 +308,7 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
         .stdout(predicate::str::contains("bitnet-warm"))
+        .stdout(predicate::str::contains("bitnet-chat-gate"))
         .stdout(predicate::str::contains("doctor"))
         .stdout(predicate::str::contains("validate"))
         .stdout(predicate::str::contains("bitnet-proof"))
@@ -872,6 +873,70 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
         .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
         .stdout(predicate::str::contains("--json-out"));
+}
+
+#[test]
+fn mac_chat_rejects_bitnet_model_family_before_prompt_collection() {
+    bitnet()
+        .args(["mac", "chat", "--model-family", "bitnet"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("BitNet Mac chat is disabled"))
+        .stderr(predicate::str::contains("M4-BITNET-PROD-004"))
+        .stderr(predicate::str::contains("bitnet mac bitnet-chat-gate"))
+        .stderr(predicate::str::contains("mac chat requires at least two prompts").not());
+}
+
+#[test]
+fn mac_bitnet_chat_gate_writes_blocked_receipt_without_required_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let warm_receipt = dir.path().join("missing-warm-session.json");
+    let gate_receipt = dir.path().join("bitnet-chat-gate.json");
+    let warm_receipt_str = warm_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-chat-gate",
+            "--warm-receipt",
+            warm_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("BitNet chat gate is blocked"))
+        .stderr(predicate::str::contains("receipt written"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_chat_gate");
+    assert_eq!(receipt_json["status"], "blocked");
+    assert_eq!(receipt_json["chat_enablement"]["gate_passed"], false);
+    assert_eq!(receipt_json["chat_enablement"]["chat_enabled"], false);
+    assert_eq!(receipt_json["chat_enablement"]["serve_enabled"], false);
+    assert_eq!(receipt_json["requirements"]["variable_warm_session_receipt"]["passed"], false);
+    assert_eq!(
+        receipt_json["requirements"]["variable_warm_session_receipt"]["repeated_prompt_determinism_passed"],
+        false
+    );
+    assert_eq!(receipt_json["requirements"]["timeout_failure_receipt"]["passed"], false);
+    assert_eq!(
+        receipt_json["requirements"]["timeout_failure_receipt"]["timeout_boundary_recorded"],
+        false
+    );
+    assert_eq!(receipt_json["requirements"]["streaming_semantics_receipt"]["passed"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_chat_gate"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
 }
 
 #[test]

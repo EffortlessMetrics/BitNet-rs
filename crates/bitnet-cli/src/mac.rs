@@ -27,6 +27,8 @@ const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doc
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
     "target/apple-m4-bitnet-eval-and-benchmark/bitnet-benchmark/summary.json";
+const MAC_BITNET_CHAT_GATE_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-bitnet-productization/bitnet-chat-gate.json";
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
@@ -86,6 +88,14 @@ enum MacSmokeModelFamily {
     /// Run the dense Qwen SLM golden smoke path.
     DenseSlm,
     /// Run the explicit BitNet one-shot ask smoke path.
+    Bitnet,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum MacChatModelFamily {
+    /// Run the supported dense Qwen SLM resident chat path.
+    DenseSlm,
+    /// Reserved BitNet chat route. Currently gate-checked and disabled.
     Bitnet,
 }
 
@@ -320,6 +330,29 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Evaluate the receipt-backed gate for future BitNet Mac chat without enabling chat.
+    BitnetChatGate {
+        /// Variable BitNet warm-session receipt with operator prompts and repeated-prompt determinism.
+        #[arg(long = "warm-receipt", value_name = "PATH")]
+        warm_receipt: PathBuf,
+
+        /// Warm-session failure or timeout receipt proving partial-failure diagnostics.
+        #[arg(long = "failure-receipt", value_name = "PATH")]
+        failure_receipt: Option<PathBuf>,
+
+        /// Future streaming-semantics receipt. Missing evidence keeps the gate blocked.
+        #[arg(long = "streaming-receipt", value_name = "PATH")]
+        streaming_receipt: Option<PathBuf>,
+
+        /// Emit the gate receipt JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+
+        /// Output BitNet chat gate receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_BITNET_CHAT_GATE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Benchmark BitNet one-shot ask and fixed warm paths without enabling chat or serve.
     BitnetBenchmark {
         /// Accepted BitNet model id. Only microsoft-bitnet-b1.58-2B-4T-i2s is supported.
@@ -470,6 +503,10 @@ enum MacAction {
 
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
     Chat {
+        /// Model family for the resident chat route. BitNet is gate-checked and disabled.
+        #[arg(long, value_enum, default_value_t = MacChatModelFamily::DenseSlm)]
+        model_family: MacChatModelFamily,
+
         /// Prompt to answer. Repeat for each turn in the resident Mac session.
         #[arg(long = "prompt", value_name = "TEXT")]
         prompts: Vec<String>,
@@ -849,6 +886,22 @@ impl MacCommand {
                 })
                 .await
             }
+            MacAction::BitnetChatGate {
+                warm_receipt,
+                failure_receipt,
+                streaming_receipt,
+                json,
+                json_out,
+            } => {
+                ensure_supported_mac_device(explicit_device_label, "mac bitnet-chat-gate")?;
+                run_bitnet_chat_gate(
+                    &warm_receipt,
+                    failure_receipt.as_deref(),
+                    streaming_receipt.as_deref(),
+                    json_out,
+                    json,
+                )
+            }
             MacAction::BitnetBenchmark {
                 model_id,
                 cache_dir,
@@ -922,6 +975,7 @@ impl MacCommand {
                 run_mac_serve_check(&url, completion, &prompt, max_new_tokens, json_out)
             }
             MacAction::Chat {
+                model_family,
                 prompts,
                 stdin,
                 interactive,
@@ -944,6 +998,7 @@ impl MacCommand {
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac chat")?;
+                ensure_mac_chat_family_gate(model_family, &model_id)?;
                 let prompt_input = resolve_mac_chat_prompts(prompts, stdin, interactive, quiet)?;
                 let chat = run_chat_session(
                     &model_id,
@@ -1170,6 +1225,239 @@ fn collect_mac_chat_interactive_prompts<R: BufRead>(
         }
     }
     Ok(prompts)
+}
+
+fn ensure_mac_chat_family_gate(model_family: MacChatModelFamily, model_id: &str) -> Result<()> {
+    if model_family == MacChatModelFamily::Bitnet
+        || model_cache::is_apple_m4_bitnet_artifact_id(model_id)
+    {
+        anyhow::bail!(
+            "BitNet Mac chat is disabled by M4-BITNET-PROD-004 until the receipt-backed chat gate passes. Required evidence: variable `bitnet mac bitnet-warm` receipt with repeated-prompt determinism, timeout/partial-failure receipt, streaming semantics receipt, and preserved chat/serve=false claim boundaries. Use `bitnet mac bitnet-chat-gate --warm-receipt <PATH> --failure-receipt <PATH> --streaming-receipt <PATH>` to write the gate receipt. Current allowed BitNet routes remain `bitnet mac ask` and `bitnet mac bitnet-warm`; dense SLM chat remains available with --model-family dense-slm."
+        );
+    }
+    Ok(())
+}
+
+fn run_bitnet_chat_gate(
+    warm_receipt: &Path,
+    failure_receipt: Option<&Path>,
+    streaming_receipt: Option<&Path>,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    let warm = inspect_bitnet_chat_gate_warm_receipt(warm_receipt);
+    let failure = inspect_bitnet_chat_gate_failure_receipt(failure_receipt);
+    let streaming = inspect_bitnet_chat_gate_streaming_receipt(streaming_receipt);
+    let requirements_passed = warm["passed"].as_bool() == Some(true)
+        && warm["repeated_prompt_determinism_passed"].as_bool() == Some(true)
+        && failure["passed"].as_bool() == Some(true)
+        && failure["timeout_boundary_recorded"].as_bool() == Some(true)
+        && streaming["passed"].as_bool() == Some(true);
+    let status = if requirements_passed { "ready_to_enable" } else { "blocked" };
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac bitnet-chat-gate",
+        "status": status,
+        "model_id": BITNET_M4_MODEL_ID,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "model": {
+            "family": "bitnet",
+            "id": BITNET_M4_MODEL_ID,
+            "expected_sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "quant_format": "I2_S",
+        },
+        "tokenizer": {
+            "expected_sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "authority": "external_tokenizer_json",
+            "pretokenizer_authority": "llama-bpe",
+            "strict": true,
+        },
+        "prompt": {
+            "template_family": BITNET_M4_PROMPT_TEMPLATE,
+            "authority": "bitnetcpp-answer",
+        },
+        "requirements": {
+            "variable_warm_session_receipt": warm,
+            "timeout_failure_receipt": failure,
+            "streaming_semantics_receipt": streaming,
+        },
+        "chat_enablement": {
+            "gate_passed": requirements_passed,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "next_step": if requirements_passed {
+                "Open a separate route-enablement PR that consumes this gate receipt and proves BitNet chat receipts."
+            } else {
+                "Collect the missing BitNet warm, timeout/failure, and streaming-semantics receipts before enabling chat."
+            },
+        },
+        "mac_bitnet_claim_boundary": {
+            "bitnet_chat_gate": true,
+            "bitnet_chat_enabled": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    });
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else if requirements_passed {
+        println!("BitNet chat gate ready-to-enable receipt written: {}", json_out.display());
+    }
+    if !requirements_passed {
+        anyhow::bail!(
+            "BitNet chat gate is blocked; receipt written to {}. Missing evidence must be collected before `bitnet mac chat --model-family bitnet` can be enabled.",
+            json_out.display()
+        );
+    }
+    Ok(())
+}
+
+fn inspect_bitnet_chat_gate_warm_receipt(path: &Path) -> serde_json::Value {
+    match read_json_receipt(path).and_then(|receipt| {
+        let summary = validate_mac_receipt_value(path, &receipt)?;
+        if summary.artifact_kind != "bitnet_apple_m4_warm_session" {
+            anyhow::bail!("{} must be a bitnet_apple_m4_warm_session receipt", path.display());
+        }
+        let variable_prompts =
+            receipt["bitnet_warm_prompt_source"]["variable_prompts"].as_bool() == Some(true);
+        let determinism = receipt["determinism"]["checked"].as_bool() == Some(true)
+            && receipt["determinism"]["passed"].as_bool() == Some(true);
+        let chat_disabled =
+            receipt["mac_bitnet_claim_boundary"]["chat_enabled"].as_bool() == Some(false);
+        if !variable_prompts {
+            anyhow::bail!("{} must record operator variable warm prompts", path.display());
+        }
+        if !determinism {
+            anyhow::bail!("{} must record passing repeated-prompt determinism", path.display());
+        }
+        if !chat_disabled {
+            anyhow::bail!("{} must preserve chat_enabled=false", path.display());
+        }
+        Ok(serde_json::json!({
+            "required": true,
+            "passed": true,
+            "path": path,
+            "artifact_kind": summary.artifact_kind,
+            "variable_prompts": true,
+            "repeated_prompt_determinism_passed": true,
+            "chat_enabled": false,
+        }))
+    }) {
+        Ok(value) => value,
+        Err(error) => serde_json::json!({
+            "required": true,
+            "passed": false,
+            "path": path,
+            "repeated_prompt_determinism_passed": false,
+            "error": error.to_string(),
+        }),
+    }
+}
+
+fn inspect_bitnet_chat_gate_failure_receipt(path: Option<&Path>) -> serde_json::Value {
+    let Some(path) = path else {
+        return serde_json::json!({
+            "required": true,
+            "passed": false,
+            "path": null,
+            "timeout_boundary_recorded": false,
+            "error": "missing --failure-receipt",
+        });
+    };
+    match read_json_receipt(path).and_then(|receipt| {
+        let summary = validate_mac_receipt_value(path, &receipt)?;
+        if summary.artifact_kind != "bitnet_apple_m4_warm_session_failure" {
+            anyhow::bail!(
+                "{} must be a bitnet_apple_m4_warm_session_failure receipt",
+                path.display()
+            );
+        }
+        if receipt["timeout_boundary"]["enforced"].as_bool().is_none()
+            || receipt["timeout_boundary"]["reached"].as_bool().is_none()
+            || receipt["failure"]["stage"].as_str().is_none_or(str::is_empty)
+        {
+            anyhow::bail!("{} must record timeout boundary and failure stage", path.display());
+        }
+        Ok(serde_json::json!({
+            "required": true,
+            "passed": true,
+            "path": path,
+            "artifact_kind": summary.artifact_kind,
+            "failure_stage": receipt["failure"]["stage"],
+            "timeout_boundary_recorded": true,
+            "chat_enabled": false,
+        }))
+    }) {
+        Ok(value) => value,
+        Err(error) => serde_json::json!({
+            "required": true,
+            "passed": false,
+            "path": path,
+            "timeout_boundary_recorded": false,
+            "error": error.to_string(),
+        }),
+    }
+}
+
+fn inspect_bitnet_chat_gate_streaming_receipt(path: Option<&Path>) -> serde_json::Value {
+    let Some(path) = path else {
+        return serde_json::json!({
+            "required": true,
+            "passed": false,
+            "path": null,
+            "error": "missing --streaming-receipt",
+        });
+    };
+    match read_json_receipt(path).and_then(|receipt| {
+        if receipt["artifact_kind"].as_str() != Some("bitnet_apple_m4_chat_streaming_semantics") {
+            anyhow::bail!(
+                "{} must be a bitnet_apple_m4_chat_streaming_semantics receipt",
+                path.display()
+            );
+        }
+        if receipt["requested_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+            || receipt["selected_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+            || receipt["runtime_api"].as_str() != Some("cpu")
+            || receipt["fallback_used"].as_bool() != Some(false)
+            || receipt["streaming_semantics"]["token_order_preserved"].as_bool() != Some(true)
+            || receipt["streaming_semantics"]["final_receipt_exported"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} must prove strict backend, fallback=false, token order, and final receipt export",
+                path.display()
+            );
+        }
+        Ok(serde_json::json!({
+            "required": true,
+            "passed": true,
+            "path": path,
+            "artifact_kind": "bitnet_apple_m4_chat_streaming_semantics",
+        }))
+    }) {
+        Ok(value) => value,
+        Err(error) => serde_json::json!({
+            "required": true,
+            "passed": false,
+            "path": path,
+            "error": error.to_string(),
+        }),
+    }
 }
 
 fn ensure_supported_mac_device(explicit_device_label: Option<&str>, command: &str) -> Result<()> {
@@ -9476,6 +9764,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_mac_ask_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_warm_session_failure" {
         validate_bitnet_warm_session_failure_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_chat_gate" {
+        validate_bitnet_chat_gate_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -9708,6 +9998,126 @@ fn validate_bitnet_warm_session_failure_receipt(
         );
     }
     Ok((Some(receipt["prompt"]["count"].as_u64().unwrap_or_default() as usize), Some(0)))
+}
+
+fn validate_bitnet_chat_gate_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "bitnet_apple_m4_chat_gate")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac bitnet-chat-gate")?;
+    let status = require_non_empty_string_at(path, receipt, &["status"])?;
+    if !matches!(status, "blocked" | "ready_to_enable") {
+        anyhow::bail!(
+            "{} BitNet chat gate status must be blocked or ready_to_enable",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["model_id"], BITNET_M4_MODEL_ID)?;
+    require_exact_string_at(path, receipt, &["model", "family"], "bitnet")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["model", "expected_sha256"],
+        BITNET_M4_EXPECTED_MODEL_SHA256,
+    )?;
+    require_exact_string_at(path, receipt, &["model", "quant_format"], "I2_S")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["tokenizer", "expected_sha256"],
+        BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+    )?;
+    require_exact_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"], "llama-bpe")?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["prompt", "template_family"],
+        BITNET_M4_PROMPT_TEMPLATE,
+    )?;
+
+    for key in
+        ["variable_warm_session_receipt", "timeout_failure_receipt", "streaming_semantics_receipt"]
+    {
+        require_bool_at(path, receipt, &["requirements", key, "required"], true)?;
+        if json_value_at(receipt, &["requirements", key, "passed"]).as_bool().is_none() {
+            anyhow::bail!(
+                "{} BitNet chat gate requirement {key}.passed must be recorded",
+                path.display()
+            );
+        }
+    }
+    require_bool_at(
+        path,
+        receipt,
+        &["requirements", "variable_warm_session_receipt", "required"],
+        true,
+    )?;
+    if json_value_at(
+        receipt,
+        &["requirements", "variable_warm_session_receipt", "repeated_prompt_determinism_passed"],
+    )
+    .as_bool()
+    .is_none()
+    {
+        anyhow::bail!(
+            "{} BitNet chat gate must record repeated-prompt determinism evidence",
+            path.display()
+        );
+    }
+    if json_value_at(
+        receipt,
+        &["requirements", "timeout_failure_receipt", "timeout_boundary_recorded"],
+    )
+    .as_bool()
+    .is_none()
+    {
+        anyhow::bail!(
+            "{} BitNet chat gate must record timeout/failure boundary evidence",
+            path.display()
+        );
+    }
+    let gate_passed = receipt["chat_enablement"]["gate_passed"].as_bool().ok_or_else(|| {
+        anyhow!("{} BitNet chat gate must record chat_enablement.gate_passed", path.display())
+    })?;
+    let all_requirements_passed =
+        ["variable_warm_session_receipt", "timeout_failure_receipt", "streaming_semantics_receipt"]
+            .iter()
+            .all(|key| {
+                json_value_at(receipt, &["requirements", key, "passed"]).as_bool() == Some(true)
+            });
+    if gate_passed != all_requirements_passed {
+        anyhow::bail!(
+            "{} BitNet chat gate gate_passed must match requirement results",
+            path.display()
+        );
+    }
+    if (status == "ready_to_enable") != gate_passed {
+        anyhow::bail!("{} BitNet chat gate status must reflect gate_passed", path.display());
+    }
+    require_bool_at(path, receipt, &["chat_enablement", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["chat_enablement", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "bitnet_chat_gate"], true)?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "serve_enabled"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_bitnet_claim_boundary", "full_metal_inference_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_bitnet_claim_boundary", "broad_performance_claim"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["bitnet_quality_claimed"], false)?;
+    Ok((Some(0), Some(0)))
 }
 
 fn validate_slm_eval_summary_receipt(
