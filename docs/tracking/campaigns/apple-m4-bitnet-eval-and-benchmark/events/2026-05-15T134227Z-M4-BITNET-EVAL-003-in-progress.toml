@@ -1,0 +1,35 @@
+timestamp = "2026-05-15T13:42:27Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-003-m4-eval-reports"
+summary = "Ran and published the 2026-05-15 Apple M4 BitNet seeded eval receipt for the accepted I2_S artifact."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/mac.rs",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus-runs/",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "The receipt records the accepted Microsoft I2_S GGUF SHA, external tokenizer SHA/authority, bitnetcpp-answer prompt authority, apple-m4-cpu-neon backend, generated text, generated token IDs, timing, task-family scoring, and reference-vs-Rust schema fields.",
+  "The run measured bounded corpus behavior only: 100 cases, 75 passed, 25 failed, 0 timeout, 0 not_run, 765 generated tokens, fallback_used=false.",
+  "This does not claim broad BitNet quality, BitNet performance, dense SLM evidence, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon behavior.",
+]
+
+[evidence]
+aggregate_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json"
+child_receipts = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus-runs/*.json"
+quality_summary = "100 total, 75 passed, 25 failed, 0 timeout, 0 not_run"
+generated_tokens = 765
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+claim_boundary = "bounded corpus receipt only; no broad quality/performance, dense SLM, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claim"

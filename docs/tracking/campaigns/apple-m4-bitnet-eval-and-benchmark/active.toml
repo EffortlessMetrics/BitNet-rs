@@ -120,7 +120,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-003"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-003-m4-eval-reports"
 stackable = false
 review_mode = "codex_premerge"
@@ -130,8 +130,8 @@ blocked_by = ["M4-BITNET-EVAL-002"]
 acceptance = "Run the BitNet seeded corpus on the M4 Mac mini through the accepted I2_S GGUF, external tokenizer, bitnetcpp-answer prompt authority, and apple-m4-cpu-neon backend, then publish eval reports with generated text/token IDs, valid UTF-8, task-family pass rates, timeout/failure taxonomy, reference-vs-Rust comparison fields, and fallback_used=false."
 commands = [
   "cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
-  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/<report>.json --per-prompt-timeout-seconds 300",
-  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/<summary>.json --json",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-eval-and-benchmark",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

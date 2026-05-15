@@ -1494,22 +1494,9 @@ fn task_family_summary(rows: &[Value]) -> Value {
                 Some(false) => stats.scoring_failed += 1,
                 None => stats.scoring_not_run += 1,
             }
-            for taxonomy in scoring["failure_taxonomy"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-            {
-                *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
-            }
         }
 
-        for taxonomy in row["quality"]["failure_taxonomy"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-        {
+        for taxonomy in row_failure_taxonomy(row) {
             *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
         }
     }
@@ -1520,6 +1507,21 @@ fn task_family_summary(rows: &[Value]) -> Value {
             .map(|(family, stats)| (family, stats.into_json()))
             .collect::<Map<_, _>>(),
     )
+}
+
+fn row_failure_taxonomy(row: &Value) -> BTreeSet<&str> {
+    let mut taxonomy = BTreeSet::new();
+    for value in row["quality"]["failure_taxonomy"].as_array().into_iter().flatten() {
+        if let Some(value) = value.as_str() {
+            taxonomy.insert(value);
+        }
+    }
+    for value in row["quality"]["scoring"]["failure_taxonomy"].as_array().into_iter().flatten() {
+        if let Some(value) = value.as_str() {
+            taxonomy.insert(value);
+        }
+    }
+    taxonomy
 }
 
 #[derive(Default)]
@@ -2863,6 +2865,18 @@ mod tests {
                     }
                 }
             }),
+            json!({
+                "task_family": "numeric_tolerance",
+                "status": "quality_failed",
+                "quality": {
+                    "failure_taxonomy": ["answer_content"],
+                    "scoring": {
+                        "kind": "numeric_tolerance",
+                        "passed": false,
+                        "failure_taxonomy": ["answer_content"]
+                    }
+                }
+            }),
         ];
 
         let summary = task_family_summary(&rows);
@@ -2874,6 +2888,8 @@ mod tests {
         assert_eq!(summary["format_constrained_json"]["failed"], 1);
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["fenced_json"], 1);
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["format_only"], 1);
+        assert_eq!(summary["numeric_tolerance"]["failed"], 1);
+        assert_eq!(summary["numeric_tolerance"]["failure_taxonomy"]["answer_content"], 1);
     }
 
     #[test]
