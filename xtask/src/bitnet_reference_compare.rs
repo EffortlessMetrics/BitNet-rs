@@ -59,12 +59,14 @@ struct ReferenceServerSignal {
 #[derive(Clone, Debug)]
 struct TopLogit {
     token_id: i64,
+    token_piece: Option<String>,
     logit: f64,
 }
 
 #[derive(Clone, Debug)]
 struct SelectedLogit {
     token_id: i64,
+    token_piece: Option<String>,
     present: bool,
     logit: Option<f64>,
 }
@@ -421,7 +423,7 @@ fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
             .pointer("/logit")
             .and_then(Value::as_f64)
             .or_else(|| item.pointer("/value").and_then(Value::as_f64))?;
-        logits.push(TopLogit { token_id, logit });
+        logits.push(TopLogit { token_id, token_piece: token_piece(item), logit });
     }
     Some(logits)
 }
@@ -450,9 +452,17 @@ fn selected_logits_array(value: Option<&Value>) -> Option<Vec<SelectedLogit>> {
             .pointer("/logit")
             .and_then(Value::as_f64)
             .or_else(|| item.pointer("/value").and_then(Value::as_f64));
-        logits.push(SelectedLogit { token_id, present, logit });
+        logits.push(SelectedLogit { token_id, token_piece: token_piece(item), present, logit });
     }
     Some(logits)
+}
+
+fn token_piece(item: &Value) -> Option<String> {
+    item.pointer("/token_piece")
+        .and_then(Value::as_str)
+        .or_else(|| item.pointer("/piece").and_then(Value::as_str))
+        .or_else(|| item.pointer("/tok_str").and_then(Value::as_str))
+        .map(ToOwned::to_owned)
 }
 
 fn reference_text_candidate_ids(value: &Value) -> Option<Vec<i64>> {
@@ -589,7 +599,7 @@ fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_cla
         });
     };
 
-    let mut best_candidate: Option<(i64, f64)> = None;
+    let mut best_candidate: Option<(&SelectedLogit, f64)> = None;
     let mut rows = Vec::new();
     for token_id in candidate_ids {
         let selected = selected_logits.iter().find(|item| item.token_id == *token_id);
@@ -597,19 +607,24 @@ fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_cla
         let logit = selected.and_then(|item| item.logit);
         if let Some(logit) = logit
             && best_candidate.is_none_or(|(_, best)| logit > best)
+            && let Some(selected) = selected
         {
-            best_candidate = Some((*token_id, logit));
+            best_candidate = Some((selected, logit));
         }
         rows.push(json!({
             "token_id": token_id,
+            "token_piece": selected.and_then(|item| item.token_piece.clone()),
             "present": present,
             "logit": logit,
         }));
     }
 
-    let best_candidate_token_id = best_candidate.map(|(token_id, _)| token_id);
+    let best_candidate_token_id = best_candidate.map(|(selected, _)| selected.token_id);
+    let best_candidate_token_piece =
+        best_candidate.and_then(|(selected, _)| selected.token_piece.clone());
     let best_candidate_logit = best_candidate.map(|(_, logit)| logit);
     let top_token_id = top_logit.map(|item| item.token_id);
+    let top_token_piece = top_logit.and_then(|item| item.token_piece.clone());
     let top_logit_value = top_logit.map(|item| item.logit);
     let best_candidate_to_top_delta =
         best_candidate_logit.zip(top_logit_value).map(|(candidate, top)| top - candidate);
@@ -622,8 +637,10 @@ fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_cla
         "matched_candidate_count": rows.iter().filter(|row| row["present"] == true).count(),
         "candidate_logits": rows,
         "best_candidate_token_id": best_candidate_token_id,
+        "best_candidate_token_piece": best_candidate_token_piece,
         "best_candidate_logit": best_candidate_logit,
         "right_top_token_id": top_token_id,
+        "right_top_token_piece": top_token_piece,
         "right_top_logit": top_logit_value,
         "best_candidate_to_top_delta": best_candidate_to_top_delta,
         "not_claim": not_claim,
@@ -837,8 +854,8 @@ mod tests {
             token_ids: Some(vec![1, 2]),
             text: Some("a".to_string()),
             top_logits: Some(vec![
-                TopLogit { token_id: 1, logit: 2.0 },
-                TopLogit { token_id: 2, logit: 1.0 },
+                TopLogit { token_id: 1, token_piece: None, logit: 2.0 },
+                TopLogit { token_id: 2, token_piece: None, logit: 1.0 },
             ]),
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -848,8 +865,8 @@ mod tests {
             token_ids: Some(vec![1, 3]),
             text: Some("b".to_string()),
             top_logits: Some(vec![
-                TopLogit { token_id: 1, logit: 2.25 },
-                TopLogit { token_id: 3, logit: 0.75 },
+                TopLogit { token_id: 1, token_piece: None, logit: 2.25 },
+                TopLogit { token_id: 3, token_piece: None, logit: 0.75 },
             ]),
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -873,7 +890,7 @@ mod tests {
         let value = json!({
             "logits_dump": [{
                 "top_logits": [
-                    {"token_id": 10, "logit": 1.5},
+                    {"token_id": 10, "token_piece": "+", "logit": 1.5},
                     {"token_id": 11, "logit": 1.25}
                 ]
             }]
@@ -881,6 +898,7 @@ mod tests {
         let logits = top_logits(&value).expect("top logits");
         assert_eq!(logits.len(), 2);
         assert_eq!(logits[0].token_id, 10);
+        assert_eq!(logits[0].token_piece.as_deref(), Some("+"));
         assert_eq!(logits[0].logit, 1.5);
     }
 
@@ -894,7 +912,7 @@ mod tests {
             },
             "logits_dump": [{
                 "selected_logits": [
-                    {"token_id": 17, "present": true, "logit": 3.5},
+                    {"token_id": 17, "token_piece": "2", "present": true, "logit": 3.5},
                     {"token_id": 10, "present": true, "logit": -0.5}
                 ]
             }]
@@ -904,6 +922,7 @@ mod tests {
         let logits = selected_logits(&value).expect("selected logits");
         assert_eq!(logits.len(), 2);
         assert_eq!(logits[0].token_id, 17);
+        assert_eq!(logits[0].token_piece.as_deref(), Some("2"));
         assert_eq!(logits[0].logit, Some(3.5));
     }
 
@@ -920,10 +939,24 @@ mod tests {
         let right = OutputSignal {
             token_ids: Some(vec![54864]),
             text: Some("-fixed".to_string()),
-            top_logits: Some(vec![TopLogit { token_id: 54864, logit: 10.75 }]),
+            top_logits: Some(vec![TopLogit {
+                token_id: 54864,
+                token_piece: Some(".ps".to_string()),
+                logit: 10.75,
+            }]),
             selected_logits: Some(vec![
-                SelectedLogit { token_id: 17, present: true, logit: Some(3.5) },
-                SelectedLogit { token_id: 10, present: true, logit: Some(-0.5) },
+                SelectedLogit {
+                    token_id: 17,
+                    token_piece: Some("2".to_string()),
+                    present: true,
+                    logit: Some(3.5),
+                },
+                SelectedLogit {
+                    token_id: 10,
+                    token_piece: Some("+".to_string()),
+                    present: true,
+                    logit: Some(-0.5),
+                },
             ]),
             reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
@@ -935,9 +968,12 @@ mod tests {
         assert_eq!(candidate_logits["candidate_ids_available"], true);
         assert_eq!(candidate_logits["selected_logits_available"], true);
         assert_eq!(candidate_logits["best_candidate_token_id"], 17);
+        assert_eq!(candidate_logits["best_candidate_token_piece"], "2");
         assert_eq!(candidate_logits["best_candidate_logit"], 3.5);
         assert_eq!(candidate_logits["right_top_token_id"], 54864);
+        assert_eq!(candidate_logits["right_top_token_piece"], ".ps");
         assert_eq!(candidate_logits["best_candidate_to_top_delta"], 7.25);
+        assert_eq!(candidate_logits["candidate_logits"][0]["token_piece"], "2");
     }
 
     #[test]
@@ -1034,7 +1070,7 @@ mod tests {
         let left = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
-            top_logits: Some(vec![TopLogit { token_id: 1, logit: 1.0 }]),
+            top_logits: Some(vec![TopLogit { token_id: 1, token_piece: None, logit: 1.0 }]),
             selected_logits: None,
             reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
@@ -1042,7 +1078,7 @@ mod tests {
         let right = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
-            top_logits: Some(vec![TopLogit { token_id: 1, logit: 1.0 }]),
+            top_logits: Some(vec![TopLogit { token_id: 1, token_piece: None, logit: 1.0 }]),
             selected_logits: None,
             reference_text_candidate_ids: None,
             prompt: prompt("raw", "rendered-b", "ids-b", 8, true, false),
@@ -1105,10 +1141,24 @@ mod tests {
         let rust = OutputSignal {
             token_ids: Some(vec![58428]),
             text: Some(".ps".to_string()),
-            top_logits: Some(vec![TopLogit { token_id: 58428, logit: 13.7 }]),
+            top_logits: Some(vec![TopLogit {
+                token_id: 58428,
+                token_piece: Some(".ps".to_string()),
+                logit: 13.7,
+            }]),
             selected_logits: Some(vec![
-                SelectedLogit { token_id: 17, present: true, logit: Some(5.1) },
-                SelectedLogit { token_id: 791, present: true, logit: Some(4.2) },
+                SelectedLogit {
+                    token_id: 17,
+                    token_piece: Some("2".to_string()),
+                    present: true,
+                    logit: Some(5.1),
+                },
+                SelectedLogit {
+                    token_id: 791,
+                    token_piece: Some("The".to_string()),
+                    present: true,
+                    logit: Some(4.2),
+                },
             ]),
             reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered", "ids", 18, false, true),
@@ -1126,6 +1176,14 @@ mod tests {
         assert_eq!(
             report["probability_probe_candidate_logits"]["best_candidate_token_id"],
             json!(17)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["best_candidate_token_piece"],
+            json!("2")
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["right_top_token_piece"],
+            json!(".ps")
         );
         assert_eq!(
             report["probability_probe_candidate_logits"]["matched_candidate_count"],
