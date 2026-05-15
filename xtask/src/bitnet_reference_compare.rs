@@ -69,6 +69,7 @@ struct TopLogit {
     token_id: i64,
     token_piece: Option<String>,
     softmax_probability: Option<f64>,
+    softmax_rank: Option<u64>,
     logit: f64,
 }
 
@@ -77,6 +78,7 @@ struct SelectedLogit {
     token_id: i64,
     token_piece: Option<String>,
     softmax_probability: Option<f64>,
+    softmax_rank: Option<u64>,
     present: bool,
     logit: Option<f64>,
 }
@@ -439,6 +441,7 @@ fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
             token_id,
             token_piece: token_piece(item),
             softmax_probability: probability(item),
+            softmax_rank: softmax_rank(item),
             logit,
         });
     }
@@ -473,6 +476,7 @@ fn selected_logits_array(value: Option<&Value>) -> Option<Vec<SelectedLogit>> {
             token_id,
             token_piece: token_piece(item),
             softmax_probability: probability(item),
+            softmax_rank: softmax_rank(item),
             present,
             logit,
         });
@@ -492,6 +496,12 @@ fn probability(item: &Value) -> Option<f64> {
     item.pointer("/softmax_probability")
         .and_then(Value::as_f64)
         .or_else(|| item.pointer("/probability").and_then(Value::as_f64))
+}
+
+fn softmax_rank(item: &Value) -> Option<u64> {
+    item.pointer("/softmax_rank")
+        .and_then(Value::as_u64)
+        .or_else(|| item.pointer("/rank").and_then(Value::as_u64))
 }
 
 fn reference_text_candidate_ids(value: &Value) -> Option<Vec<i64>> {
@@ -666,6 +676,7 @@ fn candidate_logits(
         let present = selected.is_some_and(|item| item.present && item.logit.is_some());
         let logit = selected.and_then(|item| item.logit);
         let rust_probability = selected.and_then(|item| item.softmax_probability);
+        let rust_rank = selected.and_then(|item| item.softmax_rank);
         let reference_probability = reference_probe.and_then(|item| item.reference_probability);
         let probability_delta =
             rust_probability.zip(reference_probability).map(|(rust, reference)| rust - reference);
@@ -682,6 +693,7 @@ fn candidate_logits(
             "present": present,
             "logit": logit,
             "softmax_probability": rust_probability,
+            "softmax_rank": rust_rank,
             "reference_probability": reference_probability,
             "probability_delta": probability_delta,
         }));
@@ -692,10 +704,13 @@ fn candidate_logits(
         best_candidate.and_then(|(selected, _)| selected.token_piece.clone());
     let best_candidate_softmax_probability =
         best_candidate.and_then(|(selected, _)| selected.softmax_probability);
+    let best_candidate_softmax_rank =
+        best_candidate.and_then(|(selected, _)| selected.softmax_rank);
     let best_candidate_logit = best_candidate.map(|(_, logit)| logit);
     let top_token_id = top_logit.map(|item| item.token_id);
     let top_token_piece = top_logit.and_then(|item| item.token_piece.clone());
     let top_softmax_probability = top_logit.and_then(|item| item.softmax_probability);
+    let top_softmax_rank = top_logit.and_then(|item| item.softmax_rank);
     let top_logit_value = top_logit.map(|item| item.logit);
     let best_candidate_to_top_delta =
         best_candidate_logit.zip(top_logit_value).map(|(candidate, top)| top - candidate);
@@ -710,10 +725,12 @@ fn candidate_logits(
         "best_candidate_token_id": best_candidate_token_id,
         "best_candidate_token_piece": best_candidate_token_piece,
         "best_candidate_softmax_probability": best_candidate_softmax_probability,
+        "best_candidate_softmax_rank": best_candidate_softmax_rank,
         "best_candidate_logit": best_candidate_logit,
         "right_top_token_id": top_token_id,
         "right_top_token_piece": top_token_piece,
         "right_top_softmax_probability": top_softmax_probability,
+        "right_top_softmax_rank": top_softmax_rank,
         "right_top_logit": top_logit_value,
         "best_candidate_to_top_delta": best_candidate_to_top_delta,
         "not_claim": not_claim,
@@ -927,8 +944,20 @@ mod tests {
             token_ids: Some(vec![1, 2]),
             text: Some("a".to_string()),
             top_logits: Some(vec![
-                TopLogit { token_id: 1, token_piece: None, softmax_probability: None, logit: 2.0 },
-                TopLogit { token_id: 2, token_piece: None, softmax_probability: None, logit: 1.0 },
+                TopLogit {
+                    token_id: 1,
+                    token_piece: None,
+                    softmax_probability: None,
+                    softmax_rank: None,
+                    logit: 2.0,
+                },
+                TopLogit {
+                    token_id: 2,
+                    token_piece: None,
+                    softmax_probability: None,
+                    softmax_rank: None,
+                    logit: 1.0,
+                },
             ]),
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -938,8 +967,20 @@ mod tests {
             token_ids: Some(vec![1, 3]),
             text: Some("b".to_string()),
             top_logits: Some(vec![
-                TopLogit { token_id: 1, token_piece: None, softmax_probability: None, logit: 2.25 },
-                TopLogit { token_id: 3, token_piece: None, softmax_probability: None, logit: 0.75 },
+                TopLogit {
+                    token_id: 1,
+                    token_piece: None,
+                    softmax_probability: None,
+                    softmax_rank: None,
+                    logit: 2.25,
+                },
+                TopLogit {
+                    token_id: 3,
+                    token_piece: None,
+                    softmax_probability: None,
+                    softmax_rank: None,
+                    logit: 0.75,
+                },
             ]),
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -963,7 +1004,7 @@ mod tests {
         let value = json!({
             "logits_dump": [{
                 "top_logits": [
-                    {"token_id": 10, "token_piece": "+", "softmax_probability": 0.25, "logit": 1.5},
+                    {"token_id": 10, "token_piece": "+", "softmax_probability": 0.25, "softmax_rank": 3, "logit": 1.5},
                     {"token_id": 11, "logit": 1.25}
                 ]
             }]
@@ -973,6 +1014,7 @@ mod tests {
         assert_eq!(logits[0].token_id, 10);
         assert_eq!(logits[0].token_piece.as_deref(), Some("+"));
         assert_eq!(logits[0].softmax_probability, Some(0.25));
+        assert_eq!(logits[0].softmax_rank, Some(3));
         assert_eq!(logits[0].logit, 1.5);
     }
 
@@ -986,7 +1028,7 @@ mod tests {
             },
             "logits_dump": [{
                 "selected_logits": [
-                    {"token_id": 17, "token_piece": "2", "softmax_probability": 0.125, "present": true, "logit": 3.5},
+                    {"token_id": 17, "token_piece": "2", "softmax_probability": 0.125, "softmax_rank": 1173, "present": true, "logit": 3.5},
                     {"token_id": 10, "present": true, "logit": -0.5}
                 ]
             }]
@@ -998,6 +1040,7 @@ mod tests {
         assert_eq!(logits[0].token_id, 17);
         assert_eq!(logits[0].token_piece.as_deref(), Some("2"));
         assert_eq!(logits[0].softmax_probability, Some(0.125));
+        assert_eq!(logits[0].softmax_rank, Some(1173));
         assert_eq!(logits[0].logit, Some(3.5));
     }
 
@@ -1018,6 +1061,7 @@ mod tests {
                 token_id: 54864,
                 token_piece: Some(".ps".to_string()),
                 softmax_probability: Some(0.9),
+                softmax_rank: Some(1),
                 logit: 10.75,
             }]),
             selected_logits: Some(vec![
@@ -1025,6 +1069,7 @@ mod tests {
                     token_id: 17,
                     token_piece: Some("2".to_string()),
                     softmax_probability: Some(0.1),
+                    softmax_rank: Some(1173),
                     present: true,
                     logit: Some(3.5),
                 },
@@ -1032,6 +1077,7 @@ mod tests {
                     token_id: 10,
                     token_piece: Some("+".to_string()),
                     softmax_probability: Some(0.01),
+                    softmax_rank: Some(4000),
                     present: true,
                     logit: Some(-0.5),
                 },
@@ -1048,13 +1094,16 @@ mod tests {
         assert_eq!(candidate_logits["best_candidate_token_id"], 17);
         assert_eq!(candidate_logits["best_candidate_token_piece"], "2");
         assert_eq!(candidate_logits["best_candidate_softmax_probability"], 0.1);
+        assert_eq!(candidate_logits["best_candidate_softmax_rank"], 1173);
         assert_eq!(candidate_logits["best_candidate_logit"], 3.5);
         assert_eq!(candidate_logits["right_top_token_id"], 54864);
         assert_eq!(candidate_logits["right_top_token_piece"], ".ps");
         assert_eq!(candidate_logits["right_top_softmax_probability"], 0.9);
+        assert_eq!(candidate_logits["right_top_softmax_rank"], 1);
         assert_eq!(candidate_logits["best_candidate_to_top_delta"], 7.25);
         assert_eq!(candidate_logits["candidate_logits"][0]["token_piece"], "2");
         assert_eq!(candidate_logits["candidate_logits"][0]["softmax_probability"], 0.1);
+        assert_eq!(candidate_logits["candidate_logits"][0]["softmax_rank"], 1173);
     }
 
     #[test]
@@ -1155,6 +1204,7 @@ mod tests {
                 token_id: 1,
                 token_piece: None,
                 softmax_probability: None,
+                softmax_rank: None,
                 logit: 1.0,
             }]),
             selected_logits: None,
@@ -1168,6 +1218,7 @@ mod tests {
                 token_id: 1,
                 token_piece: None,
                 softmax_probability: None,
+                softmax_rank: None,
                 logit: 1.0,
             }]),
             selected_logits: None,
@@ -1248,6 +1299,7 @@ mod tests {
                 token_id: 58428,
                 token_piece: Some(".ps".to_string()),
                 softmax_probability: Some(0.35),
+                softmax_rank: Some(1),
                 logit: 13.7,
             }]),
             selected_logits: Some(vec![
@@ -1255,6 +1307,7 @@ mod tests {
                     token_id: 17,
                     token_piece: Some("2".to_string()),
                     softmax_probability: Some(0.00006),
+                    softmax_rank: Some(1173),
                     present: true,
                     logit: Some(5.1),
                 },
@@ -1262,6 +1315,7 @@ mod tests {
                     token_id: 791,
                     token_piece: Some("The".to_string()),
                     softmax_probability: Some(0.00002),
+                    softmax_rank: Some(6400),
                     present: true,
                     logit: Some(4.2),
                 },
@@ -1296,12 +1350,20 @@ mod tests {
             json!(0.35)
         );
         assert_eq!(
+            report["probability_probe_candidate_logits"]["right_top_softmax_rank"],
+            json!(1)
+        );
+        assert_eq!(
             report["probability_probe_candidate_logits"]["candidate_logits"][0]["reference_probability"],
             json!(0.75)
         );
         assert_eq!(
             report["probability_probe_candidate_logits"]["candidate_logits"][0]["softmax_probability"],
             json!(0.00006)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["candidate_logits"][0]["softmax_rank"],
+            json!(1173)
         );
         assert_eq!(
             report["probability_probe_candidate_logits"]["candidate_logits"][0]["reference_token_piece"],
