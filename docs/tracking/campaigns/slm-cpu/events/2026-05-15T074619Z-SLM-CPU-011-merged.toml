@@ -1,0 +1,45 @@
+timestamp = "2026-05-15T07:46:19Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-011"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4858
+merge_sha = "3bd117480c92a155a70be80efcfcd37826012f2e"
+branch = "codex/slm-cpu-011-warm-session-receipts"
+
+summary = "Record bounded Qwen3 CPU warm-session receipts on the strict i5-8250U path."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4858",
+  "ci/quality/slm-warm-session-corpus.yaml",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session-validation.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session-prompts/",
+  "docs/slm/SLM_CPU_QWEN3_WARM_SESSION.md",
+]
+
+notes = [
+  "The warm-session command loads the model and tokenizer once and runs six fixed prompt receipts in one process.",
+  "The validation artifact records selected_backend=cpu-rust, runtime_api=cpu, fallback_used=false, strict GGUF tokenizer metadata, qwen_no_think=true, deterministic repeated outputs, and prompt/generated IDs.",
+  "Memory, thermal, and power fields are recorded as explicit unavailable fields instead of inferred measurements.",
+  "This merge does not claim sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
+
+validation = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models/slm/Qwen3-0.6B-Q8_0.gguf --corpus ci/quality/slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 1 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --json-out ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session.json",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli --all-targets -- -D warnings",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+
+must_not_claim = [
+  "Sustained 8250U throughput is proven without warm/cold and thermal boundaries.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
