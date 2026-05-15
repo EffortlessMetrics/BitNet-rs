@@ -295,6 +295,9 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+// Clap owns this parsed command shape; boxing individual parsed fields breaks
+// value parser inference and would not improve command dispatch behavior.
+#[allow(clippy::large_enum_variant)]
 enum Commands {
     /// Run simple text generation
     ///

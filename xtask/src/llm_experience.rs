@@ -419,17 +419,17 @@ pub fn profile_cli_plan(
     }
 
     let cli_stage_output = "target/llm-experience/profile-cli-stage.json";
-    let cli_command = build_cli_command(
+    let cli_command = build_cli_command(CliCommandSpec {
         backend,
         model_path,
         tokenizer_path,
-        &user_prompt,
+        user_prompt: &user_prompt,
         max_new_tokens,
         template_name,
         cli_stage_output,
         model_contract,
         kernel_route,
-    );
+    });
 
     let mut not_claims = vec![
         "profile_cli_plan_proves_quality",
@@ -722,17 +722,19 @@ fn build_experience_receipt(
     })
 }
 
-fn build_cli_command(
-    backend: &str,
-    model_path: &str,
-    tokenizer_path: &str,
-    user_prompt: &str,
+struct CliCommandSpec<'a> {
+    backend: &'a str,
+    model_path: &'a str,
+    tokenizer_path: &'a str,
+    user_prompt: &'a str,
     max_new_tokens: usize,
-    template_name: &str,
-    cli_stage_output: &str,
-    model_contract: &Path,
-    kernel_route: &str,
-) -> Vec<String> {
+    template_name: &'a str,
+    cli_stage_output: &'a str,
+    model_contract: &'a Path,
+    kernel_route: &'a str,
+}
+
+fn build_cli_command(spec: CliCommandSpec<'_>) -> Vec<String> {
     vec![
         "cargo".to_string(),
         "run".to_string(),
@@ -744,16 +746,16 @@ fn build_cli_command(
         "cpu,opencl".to_string(),
         "--".to_string(),
         "--device".to_string(),
-        backend.to_string(),
+        spec.backend.to_string(),
         "run".to_string(),
         "--model".to_string(),
-        model_path.to_string(),
+        spec.model_path.to_string(),
         "--tokenizer".to_string(),
-        tokenizer_path.to_string(),
+        spec.tokenizer_path.to_string(),
         "--prompt".to_string(),
-        user_prompt.to_string(),
+        spec.user_prompt.to_string(),
         "--max-new-tokens".to_string(),
-        max_new_tokens.to_string(),
+        spec.max_new_tokens.to_string(),
         "--temperature".to_string(),
         "0.0".to_string(),
         "--greedy".to_string(),
@@ -762,13 +764,13 @@ fn build_cli_command(
         "--strict-loader".to_string(),
         "--strict-backend".to_string(),
         "--prompt-template".to_string(),
-        template_name.to_string(),
+        spec.template_name.to_string(),
         "--json-out".to_string(),
-        cli_stage_output.to_string(),
+        spec.cli_stage_output.to_string(),
         "--proof-model-contract".to_string(),
-        model_contract.display().to_string(),
+        spec.model_contract.display().to_string(),
         "--proof-kernel-route".to_string(),
-        kernel_route.to_string(),
+        spec.kernel_route.to_string(),
     ]
 }
 
@@ -896,17 +898,17 @@ fn ttft_section(cli_stage: Option<&Value>) -> Section {
         ("stream_first_byte_ms", "/ttft/stream_first_byte_ms"),
     ];
     let mut missing = collect_section_fields(cli_stage, &mut data, &fields);
-    if !data.contains_key("end_to_end_ms") {
-        if let Some(value) = cli_stage.and_then(|json| json.pointer("/latency/cmd_to_first_ms")) {
-            data.insert("end_to_end_ms".to_string(), value.clone());
-            missing.retain(|field| field != "end_to_end_ms");
-        }
+    if !data.contains_key("end_to_end_ms")
+        && let Some(value) = cli_stage.and_then(|json| json.pointer("/latency/cmd_to_first_ms"))
+    {
+        data.insert("end_to_end_ms".to_string(), value.clone());
+        missing.retain(|field| field != "end_to_end_ms");
     }
-    if !data.contains_key("first_decode_ms") {
-        if let Some(value) = cli_stage.and_then(|json| json.pointer("/latency/decode_first_ms")) {
-            data.insert("first_decode_ms".to_string(), value.clone());
-            missing.retain(|field| field != "first_decode_ms");
-        }
+    if !data.contains_key("first_decode_ms")
+        && let Some(value) = cli_stage.and_then(|json| json.pointer("/latency/decode_first_ms"))
+    {
+        data.insert("first_decode_ms".to_string(), value.clone());
+        missing.retain(|field| field != "first_decode_ms");
     }
     Section { complete: missing.is_empty(), data, missing }
 }
@@ -931,18 +933,14 @@ fn input_speed_section(bench: &Value, cli_stage: Option<&Value>) -> Section {
             .or_else(|| cli_stage.and_then(|json| json.pointer("/ttft/prefill_ms"))),
     );
     let complete = missing.is_empty();
-    if complete {
-        if let (Some(tokens), Some(prefill_ms)) = (
+    if complete
+        && let (Some(tokens), Some(prefill_ms)) = (
             data.get("prompt_tokens").and_then(Value::as_f64),
             data.get("prefill_ms").and_then(Value::as_f64),
-        ) {
-            if prefill_ms > 0.0 {
-                data.insert(
-                    "input_tokens_per_second".to_string(),
-                    json!(tokens / (prefill_ms / 1000.0)),
-                );
-            }
-        }
+        )
+        && prefill_ms > 0.0
+    {
+        data.insert("input_tokens_per_second".to_string(), json!(tokens / (prefill_ms / 1000.0)));
     }
     data.entry("input_tokens_per_second".to_string()).or_insert(Value::Null);
     Section { complete, data, missing }
@@ -1433,17 +1431,17 @@ mod tests {
 
     #[test]
     fn cli_command_binds_proof_identity() {
-        let command = build_cli_command(
-            "intel-arc-a770-opencl",
-            "models/model.gguf",
-            "models/tokenizer.json",
-            "prompt",
-            64,
-            "llama3-chat",
-            "target/llm-experience/profile-cli-stage.json",
-            Path::new("docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"),
-            "a770.bitnet.i2s.qk256",
-        );
+        let command = build_cli_command(CliCommandSpec {
+            backend: "intel-arc-a770-opencl",
+            model_path: "models/model.gguf",
+            tokenizer_path: "models/tokenizer.json",
+            user_prompt: "prompt",
+            max_new_tokens: 64,
+            template_name: "llama3-chat",
+            cli_stage_output: "target/llm-experience/profile-cli-stage.json",
+            model_contract: Path::new("docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"),
+            kernel_route: "a770.bitnet.i2s.qk256",
+        });
         assert!(command.windows(2).any(|args| args == ["--device", "intel-arc-a770-opencl"]));
         assert!(command.windows(2).any(|args| args == ["--features", "cpu,opencl"]));
         assert!(command.iter().any(|arg| arg == "--strict-backend"));
