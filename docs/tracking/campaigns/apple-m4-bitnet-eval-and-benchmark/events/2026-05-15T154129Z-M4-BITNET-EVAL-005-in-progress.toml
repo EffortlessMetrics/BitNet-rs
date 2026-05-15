@@ -1,0 +1,33 @@
+timestamp = "2026-05-15T15:41:29Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-005"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-005-regression-dashboard"
+summary = "Wired BitNet eval and benchmark receipts into the Apple M4 advisory regression comparison path."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "The regression path compares BitNet eval task-family pass rates, strict scoring totals, reference-vs-Rust summary counts, and safe claim boundaries.",
+  "The benchmark path compares TTFT, load time, prefill, tokenization, input/output/decode throughput, total wall time, peak memory, memory drift, process peak drift, and timeout boundaries.",
+  "Generic PR CI remains model-free; this item wires receipt comparison for advisory, nightly, scheduled, or release-refresh lanes only.",
+  "This does not enable BitNet chat, BitNet serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]
+
+[evidence]
+eval_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json"
+benchmark_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json"
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+generic_pr_ci_model_free = true
+claim_boundary = "receipt comparison only; no new runtime, model support, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claim"

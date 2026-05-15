@@ -1180,6 +1180,7 @@ fn mac_regression_help_documents_advisory_mode() {
         .assert()
         .success()
         .stdout(predicate::str::contains("stored local envelope"))
+        .stdout(predicate::str::contains("BitNet"))
         .stdout(predicate::str::contains("--baseline <PATH>"))
         .stdout(predicate::str::contains("--fail-on-drift"));
 }
@@ -1453,6 +1454,159 @@ fn mac_regression_rejects_slm_benchmark_v2_context_mismatch()
         .assert()
         .failure()
         .stderr(predicate::str::contains("model_cache.sha256 mismatch"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_accepts_matching_bitnet_eval_answer_corpus()
+-> Result<(), Box<dyn std::error::Error>> {
+    let receipt =
+        workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            receipt_str.as_str(),
+            "--baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_local_answer_corpus"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_bitnet_eval_quality_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline =
+        workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json");
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-eval.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["quality_summary"]["passed"] = serde_json::json!(74);
+    receipt["quality_summary"]["failed"] = serde_json::json!(26);
+    receipt["scoring_summary"]["passed"] = serde_json::json!(74);
+    receipt["scoring_summary"]["failed"] = serde_json::json!(26);
+    receipt["task_family_summary"]["arithmetic_exact"]["passed"] = serde_json::json!(9);
+    receipt["task_family_summary"]["arithmetic_exact"]["failed"] = serde_json::json!(1);
+    receipt["task_family_summary"]["arithmetic_exact"]["scoring"]["passed"] = serde_json::json!(9);
+    receipt["task_family_summary"]["arithmetic_exact"]["scoring"]["failed"] = serde_json::json!(1);
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_bitnet_eval_context_mismatch() -> Result<(), Box<dyn std::error::Error>> {
+    let baseline =
+        workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json");
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-eval.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["model"]["revision"] = serde_json::json!("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("model.revision mismatch"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_accepts_matching_bitnet_benchmark_v1() -> Result<(), Box<dyn std::error::Error>> {
+    let receipt =
+        workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            receipt_str.as_str(),
+            "--baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_benchmark_v1"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_bitnet_benchmark_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline =
+        workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json");
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-benchmark.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["speed"]["decode_tok_s_p50"] = serde_json::json!(0.5);
+    receipt["paths"]["fixed_warm"]["throughput"]["decode_tokens_per_second"]["p50"] =
+        serde_json::json!(0.5);
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_bitnet_benchmark_context_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline =
+        workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json");
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-benchmark.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["tokenizer"]["path"] = serde_json::json!("models/other-tokenizer.json");
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("tokenizer.path mismatch"));
     Ok(())
 }
 
