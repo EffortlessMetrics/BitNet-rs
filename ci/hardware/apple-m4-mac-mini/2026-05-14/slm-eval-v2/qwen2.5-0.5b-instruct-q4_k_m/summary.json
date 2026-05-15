@@ -1,0 +1,2943 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_slm_eval_summary",
+  "machine_id": "apple-m4-mac-mini",
+  "timestamp": "2026-05-15T02:20:05.458364+00:00",
+  "campaign": "apple-m4-slm-eval-v2",
+  "work_item": "M4-SLM-EVAL2-003",
+  "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "bytes": 491400032,
+    "family": "qwen",
+    "architecture": "qwen2",
+    "quantization": "Q4_K_M"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "authority": "gguf_metadata",
+    "pretokenizer_authority": "qwen2",
+    "gguf_tokenizer_model": "gpt2",
+    "strict": true
+  },
+  "prompt_template": "qwen2.5",
+  "corpus": {
+    "name": "apple-m4-slm-eval-seeded-corpus-v2",
+    "path": "ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml",
+    "seed": 777331,
+    "case_count": 120,
+    "selected_case_count": 120
+  },
+  "accuracy": {
+    "cases_total": 120,
+    "cases_scored": 120,
+    "cases_passed": 66,
+    "quality_gate_cases_passed": 66,
+    "exact_match": 0.661,
+    "normalized_match": 0.0,
+    "json_schema_pass": 0.0,
+    "numeric_tolerance_pass": 0.0,
+    "required_keywords_pass": 0.906,
+    "forbidden_tokens_pass": 1.0,
+    "bucket_counts": {
+      "exact_match": {
+        "passed": 37,
+        "total": 56
+      },
+      "normalized_match": {
+        "passed": 0,
+        "total": 12
+      },
+      "json_schema": {
+        "passed": 0,
+        "total": 10
+      },
+      "numeric_tolerance": {
+        "passed": 0,
+        "total": 10
+      },
+      "required_keywords": {
+        "passed": 29,
+        "total": 32
+      },
+      "forbidden_tokens": {
+        "passed": 10,
+        "total": 10
+      }
+    },
+    "scoring_kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ]
+  },
+  "quality_summary": {
+    "failed": 54,
+    "not_run": 0,
+    "passed": 66,
+    "timeout": 0,
+    "total": 120
+  },
+  "scoring_summary": {
+    "enabled": true,
+    "failed": 54,
+    "failure_taxonomy": {
+      "answer_content": 43,
+      "fenced_json": 10,
+      "format_only": 10,
+      "punctuation_casing_normalization": 1
+    },
+    "kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "not_run": 0,
+    "passed": 66,
+    "total": 120
+  },
+  "task_families": {
+    "arithmetic_exact": {
+      "cases_total": 20,
+      "cases_scored": 20,
+      "cases_passed": 19,
+      "pass_rate": 0.95,
+      "quality_gate_cases_passed": 19,
+      "quality_gate_pass_rate": 0.95,
+      "scoring_kinds": [
+        "exact_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 1
+      }
+    },
+    "closed_label_classification": {
+      "cases_total": 12,
+      "cases_scored": 12,
+      "cases_passed": 6,
+      "pass_rate": 0.5,
+      "quality_gate_cases_passed": 6,
+      "quality_gate_pass_rate": 0.5,
+      "scoring_kinds": [
+        "exact_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 5,
+        "punctuation_casing_normalization": 1
+      }
+    },
+    "constrained_summary": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 10,
+      "pass_rate": 1.0,
+      "quality_gate_cases_passed": 10,
+      "quality_gate_pass_rate": 1.0,
+      "scoring_kinds": [
+        "required_keywords"
+      ],
+      "failure_taxonomy": {}
+    },
+    "copy_edit_rewrite": {
+      "cases_total": 12,
+      "cases_scored": 12,
+      "cases_passed": 9,
+      "pass_rate": 0.75,
+      "quality_gate_cases_passed": 9,
+      "quality_gate_pass_rate": 0.75,
+      "scoring_kinds": [
+        "required_keywords"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 3
+      }
+    },
+    "fixed_table_qa": {
+      "cases_total": 12,
+      "cases_scored": 12,
+      "cases_passed": 0,
+      "pass_rate": 0.0,
+      "quality_gate_cases_passed": 0,
+      "quality_gate_pass_rate": 0.0,
+      "scoring_kinds": [
+        "exact_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 12
+      }
+    },
+    "format_constrained_json": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 0,
+      "pass_rate": 0.0,
+      "quality_gate_cases_passed": 0,
+      "quality_gate_pass_rate": 0.0,
+      "scoring_kinds": [
+        "json_schema"
+      ],
+      "failure_taxonomy": {
+        "fenced_json": 10,
+        "format_only": 10
+      }
+    },
+    "instruction_following_required_forbidden": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 10,
+      "pass_rate": 1.0,
+      "quality_gate_cases_passed": 10,
+      "quality_gate_pass_rate": 1.0,
+      "scoring_kinds": [
+        "required_forbidden_tokens"
+      ],
+      "failure_taxonomy": {}
+    },
+    "numeric_tolerance": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 0,
+      "pass_rate": 0.0,
+      "quality_gate_cases_passed": 0,
+      "quality_gate_pass_rate": 0.0,
+      "scoring_kinds": [
+        "numeric_tolerance"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 10
+      }
+    },
+    "ordering_sorting": {
+      "cases_total": 12,
+      "cases_scored": 12,
+      "cases_passed": 0,
+      "pass_rate": 0.0,
+      "quality_gate_cases_passed": 0,
+      "quality_gate_pass_rate": 0.0,
+      "scoring_kinds": [
+        "normalized_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 12
+      }
+    },
+    "synthetic_extraction": {
+      "cases_total": 12,
+      "cases_scored": 12,
+      "cases_passed": 12,
+      "pass_rate": 1.0,
+      "quality_gate_cases_passed": 12,
+      "quality_gate_pass_rate": 1.0,
+      "scoring_kinds": [
+        "exact_match"
+      ],
+      "failure_taxonomy": {}
+    }
+  },
+  "speed": {
+    "source": "seeded v2 answer-corpus child run receipts",
+    "benchmark_profile_source": "M4-SLM-EVAL2-004 will refresh dedicated p50/p90/p99 benchmark profiles; these fields summarize the M4-SLM-EVAL2-003 v2 answer-corpus runs.",
+    "cold_load_ms_p50": 2503.135,
+    "tokenizer_load_ms_p50": 53.474,
+    "prompt_tokenize_ms_p50": 41.14,
+    "prefill_ms_p50": 3669.713,
+    "ttft_ms_p50": 3793.0,
+    "ttft_ms_p90": 4944.4,
+    "input_tok_s_p50": 12.412,
+    "output_tok_s_p50": 1.097,
+    "decode_tok_s_p50": 9.052,
+    "sampling_ms_per_token_p50": 0.117,
+    "total_wall_ms_p50": 4475.0
+  },
+  "memory": {
+    "peak_memory_mb": 4013.844,
+    "source": "getrusage.ru_maxrss",
+    "stability_source": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality.json"
+  },
+  "stability": {
+    "resident_prompts": 14,
+    "quality_passed": true,
+    "memory_drift_mb": 0.0,
+    "memory_drift_source": "not_recorded_by_warm_session_receipt",
+    "model_loaded_once": true,
+    "tokenizer_loaded_once": true,
+    "source": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality.json",
+    "note": "Resident warm-session stability is carried from the matching v1 M4 dense SLM proof; M4-SLM-EVAL2-003 adds v2 answer-corpus quality reports, while M4-SLM-EVAL2-004 refreshes benchmark profiles."
+  },
+  "evidence": {
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "generated_tokens_total": 942,
+    "case_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_011.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_012.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_013.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_014.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_015.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_016.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_017.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_018.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_019.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_020.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_aurora.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_basalt.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_cider.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_delta.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_ember.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_fern.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_glacier.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_harbor.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_iris.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_juniper.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_kelp.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_linen.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_status_ready.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_mode_local.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_route_cpu.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_family_dense.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_state_ok.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_cache_warm.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_backend_neon.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_tier_nightly.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_result_pass.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_device_m4.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_011.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_012.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_011.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_012.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_011.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_012.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_011.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_012.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_010.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_001.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_002.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_003.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_004.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_005.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_006.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_007.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_008.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_009.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_010.json"
+    ],
+    "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus.json",
+    "resident_stability_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality.json",
+    "resident_prompt_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/01-what-is-22-answer-briefly.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/02-what-is-22-answer-briefly.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/03-name-the-capital-of-france.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/04-name-the-capital-of-france.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/05-write-one-short-sentence-about-rust.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/06-write-one-short-sentence-about-rust.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/07-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/08-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/09-return-the-answer-as-answer-blue-for-this-questi.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/10-return-the-answer-as-answer-blue-for-this-questi.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/11-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/12-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/14-rewrite-as-a-short-plain-sentence-the-model-cach.json"
+    ],
+    "stability_source_summary": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+  },
+  "case_results": [
+    {
+      "id": "arithmetic_seed777331_add_001",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n13<|im_end|>",
+      "generated_token_ids": [
+        198,
+        16,
+        18,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_001.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_002",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n21<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        16,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_002.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_003",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n29<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        24,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_003.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_004",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n14<|im_end|>",
+      "generated_token_ids": [
+        198,
+        16,
+        19,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_004.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_005",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n22<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        17,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_005.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_006",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n20<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        15,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_006.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_007",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n15<|im_end|>",
+      "generated_token_ids": [
+        198,
+        16,
+        20,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_007.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_008",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n23<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        18,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_008.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_009",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n31<|im_end|>",
+      "generated_token_ids": [
+        198,
+        18,
+        16,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_009.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_010",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n16<|im_end|>",
+      "generated_token_ids": [
+        198,
+        16,
+        21,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_010.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_011",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n24<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        19,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_011.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_012",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n32<|im_end|>",
+      "generated_token_ids": [
+        198,
+        18,
+        17,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_012.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_013",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n40<|im_end|>",
+      "generated_token_ids": [
+        198,
+        19,
+        15,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_013.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_014",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n25<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        20,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_014.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_015",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n33<|im_end|>",
+      "generated_token_ids": [
+        198,
+        18,
+        18,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_015.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_016",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n41<|im_end|>",
+      "generated_token_ids": [
+        198,
+        19,
+        16,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_016.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_017",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n26<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        21,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_017.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_018",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n34<|im_end|>",
+      "generated_token_ids": [
+        198,
+        18,
+        19,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_018.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_019",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n42<|im_end|>",
+      "generated_token_ids": [
+        198,
+        19,
+        17,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_019.json"
+    },
+    {
+      "id": "arithmetic_seed777331_add_020",
+      "category": "arithmetic_exact",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\n27<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17,
+        22,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed777331_add_020.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_001",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n11 / 4 = ",
+      "generated_token_ids": [
+        198,
+        16,
+        16,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_001.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_002",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n17 / 4 = ",
+      "generated_token_ids": [
+        198,
+        16,
+        22,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_002.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_003",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n23 / 4 = ",
+      "generated_token_ids": [
+        198,
+        17,
+        18,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_003.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_004",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n29 / 4 = ",
+      "generated_token_ids": [
+        198,
+        17,
+        24,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_004.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_005",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n35 / 4 = ",
+      "generated_token_ids": [
+        198,
+        18,
+        20,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_005.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_006",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n41 / 4 = ",
+      "generated_token_ids": [
+        198,
+        19,
+        16,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_006.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_007",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n47 / 4 = ",
+      "generated_token_ids": [
+        198,
+        19,
+        22,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_007.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_008",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n53 / 4 = ",
+      "generated_token_ids": [
+        198,
+        20,
+        18,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_008.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_009",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n59 / 4 = ",
+      "generated_token_ids": [
+        198,
+        20,
+        24,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_009.json"
+    },
+    {
+      "id": "numeric_seed777331_divide_010",
+      "category": "numeric_tolerance",
+      "scoring_kind": "numeric_tolerance",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\n65 / 4 = ",
+      "generated_token_ids": [
+        198,
+        21,
+        20,
+        608,
+        220,
+        19,
+        284,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/numeric_seed777331_divide_010.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_aurora",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Aurora is violet.<|im_end|>",
+      "generated_token_ids": [
+        34631,
+        6215,
+        374,
+        79736,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_aurora.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_basalt",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Basalt is amber.<|im_end|>",
+      "generated_token_ids": [
+        14662,
+        3145,
+        374,
+        67605,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_basalt.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_cider",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Cider is amber.<|im_end|>",
+      "generated_token_ids": [
+        356,
+        1776,
+        374,
+        67605,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_cider.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_delta",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Delta is amber.<|im_end|>",
+      "generated_token_ids": [
+        24957,
+        374,
+        67605,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_delta.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_ember",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Ember=red.<|im_end|>",
+      "generated_token_ids": [
+        48234,
+        28,
+        1151,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_ember.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_fern",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Fern is green.<|im_end|>",
+      "generated_token_ids": [
+        25987,
+        374,
+        6176,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_fern.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_glacier",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Glacial.<|im_end|>",
+      "generated_token_ids": [
+        8280,
+        32111,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_glacier.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_harbor",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Harbor=gray.<|im_end|>",
+      "generated_token_ids": [
+        39182,
+        28,
+        11650,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_harbor.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_iris",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Iris is purple.<|im_end|>",
+      "generated_token_ids": [
+        65721,
+        374,
+        24932,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_iris.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_juniper",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " juniper=teal<|im_end|>",
+      "generated_token_ids": [
+        17699,
+        12858,
+        28,
+        665,
+        278,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_juniper.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_kelp",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Kelp is olive.<|im_end|>",
+      "generated_token_ids": [
+        730,
+        1267,
+        374,
+        32113,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_kelp.json"
+    },
+    {
+      "id": "fixed_table_seed777331_color_linen",
+      "category": "fixed_table_qa",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": " Linen is cream.<|im_end|>",
+      "generated_token_ids": [
+        8564,
+        268,
+        374,
+        12644,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed777331_color_linen.json"
+    },
+    {
+      "id": "json_seed777331_status_ready",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"status\": \"ready\"\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        2829,
+        788,
+        330,
+        2307,
+        698,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_status_ready.json"
+    },
+    {
+      "id": "json_seed777331_mode_local",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"mode\": \"local\"\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        8516,
+        788,
+        330,
+        2438,
+        698,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_mode_local.json"
+    },
+    {
+      "id": "json_seed777331_route_cpu",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"route\": \"cpu\"\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        8966,
+        788,
+        330,
+        16475,
+        698,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_route_cpu.json"
+    },
+    {
+      "id": "json_seed777331_family_dense",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"family\": \"family\",\n  \"dense\": {\n    \"name\": [\n      {\n",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        18984,
+        788,
+        330,
+        18984,
+        756,
+        220,
+        330,
+        80286,
+        788,
+        341,
+        262,
+        330,
+        606,
+        788,
+        2278,
+        414,
+        341
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_family_dense.json"
+    },
+    {
+      "id": "json_seed777331_state_ok",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"state\": \"ok\"\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        2454,
+        788,
+        330,
+        562,
+        698,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_state_ok.json"
+    },
+    {
+      "id": "json_seed777331_cache_warm",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"cache\": {\n    \"key\": \"warm\"\n  }\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        9360,
+        788,
+        341,
+        262,
+        330,
+        792,
+        788,
+        330,
+        82597,
+        698,
+        220,
+        456,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_cache_warm.json"
+    },
+    {
+      "id": "json_seed777331_backend_neon",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"backend\": \"neon\"\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        20942,
+        788,
+        330,
+        811,
+        263,
+        698,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_backend_neon.json"
+    },
+    {
+      "id": "json_seed777331_tier_nightly",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": "\n```json\n{\n  \"tier\": \"nightly\"\n}\n```<|im_end|>",
+      "generated_token_ids": [
+        198,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        49335,
+        788,
+        330,
+        9287,
+        398,
+        698,
+        532,
+        73594,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_tier_nightly.json"
+    },
+    {
+      "id": "json_seed777331_result_pass",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": " Here is a compact JSON with exactly one key named result and value passed:\n\n```json\n{\n  \"result\": \"",
+      "generated_token_ids": [
+        5692,
+        374,
+        264,
+        16830,
+        4718,
+        448,
+        6896,
+        825,
+        1376,
+        6941,
+        1102,
+        323,
+        897,
+        5823,
+        1447,
+        73594,
+        2236,
+        198,
+        515,
+        220,
+        330,
+        1382,
+        788,
+        330
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_result_pass.json"
+    },
+    {
+      "id": "json_seed777331_device_m4",
+      "category": "format_constrained_json",
+      "scoring_kind": "json_schema",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "fenced_json",
+        "format_only"
+      ],
+      "generated_text": " Compact JSON with exactly one key named \"device\" and value \"m4\" would be:\n\n```json\n{\n ",
+      "generated_token_ids": [
+        54782,
+        4718,
+        448,
+        6896,
+        825,
+        1376,
+        6941,
+        330,
+        6111,
+        1,
+        323,
+        897,
+        330,
+        76,
+        19,
+        1,
+        1035,
+        387,
+        1447,
+        73594,
+        2236,
+        198,
+        515,
+        220
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed777331_device_m4.json"
+    },
+    {
+      "id": "classification_seed777331_status_001",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nsuccess<|im_end|>",
+      "generated_token_ids": [
+        198,
+        5630,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_001.json"
+    },
+    {
+      "id": "classification_seed777331_status_002",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_002.json"
+    },
+    {
+      "id": "classification_seed777331_status_003",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_003.json"
+    },
+    {
+      "id": "classification_seed777331_status_004",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nsuccess<|im_end|>",
+      "generated_token_ids": [
+        198,
+        5630,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_004.json"
+    },
+    {
+      "id": "classification_seed777331_status_005",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "punctuation_casing_normalization"
+      ],
+      "generated_text": "\nFailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        17507,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_005.json"
+    },
+    {
+      "id": "classification_seed777331_status_006",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nsuccess<|im_end|>",
+      "generated_token_ids": [
+        198,
+        5630,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_006.json"
+    },
+    {
+      "id": "classification_seed777331_status_007",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_007.json"
+    },
+    {
+      "id": "classification_seed777331_status_008",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_008.json"
+    },
+    {
+      "id": "classification_seed777331_status_009",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_009.json"
+    },
+    {
+      "id": "classification_seed777331_status_010",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_010.json"
+    },
+    {
+      "id": "classification_seed777331_status_011",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nfailure<|im_end|>",
+      "generated_token_ids": [
+        198,
+        28939,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_011.json"
+    },
+    {
+      "id": "classification_seed777331_status_012",
+      "category": "closed_label_classification",
+      "scoring_kind": "exact_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": "\nsuccess<|im_end|>",
+      "generated_token_ids": [
+        198,
+        5630,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed777331_status_012.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_001",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nMira<|im_end|>",
+      "generated_token_ids": [
+        198,
+        44,
+        8832,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_001.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_002",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nOwen<|im_end|>",
+      "generated_token_ids": [
+        198,
+        46,
+        16948,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_002.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_003",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nPriya<|im_end|>",
+      "generated_token_ids": [
+        198,
+        92878,
+        7755,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_003.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_004",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nSam<|im_end|>",
+      "generated_token_ids": [
+        198,
+        23950,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_004.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_005",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nTalia<|im_end|>",
+      "generated_token_ids": [
+        198,
+        51,
+        18848,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_005.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_006",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nUma<|im_end|>",
+      "generated_token_ids": [
+        198,
+        52,
+        1728,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_006.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_007",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nVik<|im_end|>",
+      "generated_token_ids": [
+        198,
+        53,
+        1579,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_007.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_008",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nWren<|im_end|>",
+      "generated_token_ids": [
+        198,
+        54,
+        1440,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_008.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_009",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nXena<|im_end|>",
+      "generated_token_ids": [
+        198,
+        55,
+        7157,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_009.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_010",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nYara<|im_end|>",
+      "generated_token_ids": [
+        198,
+        56,
+        5059,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_010.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_011",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nZed<|im_end|>",
+      "generated_token_ids": [
+        198,
+        57,
+        291,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_011.json"
+    },
+    {
+      "id": "extraction_seed777331_owner_012",
+      "category": "synthetic_extraction",
+      "scoring_kind": "exact_match",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nNora<|im_end|>",
+      "generated_token_ids": [
+        198,
+        45,
+        6215,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed777331_owner_012.json"
+    },
+    {
+      "id": "ordering_seed777331_words_001",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": delta, alpha, charlie<|im_end|>",
+      "generated_token_ids": [
+        25,
+        9477,
+        11,
+        8287,
+        11,
+        1161,
+        11567,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_001.json"
+    },
+    {
+      "id": "ordering_seed777331_words_002",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": pear, apple, mango<|im_end|>",
+      "generated_token_ids": [
+        25,
+        37690,
+        11,
+        23268,
+        11,
+        69268,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_002.json"
+    },
+    {
+      "id": "ordering_seed777331_words_003",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": zinc, argon, boron<|im_end|>",
+      "generated_token_ids": [
+        25,
+        48501,
+        11,
+        1392,
+        263,
+        11,
+        31632,
+        263,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_003.json"
+    },
+    {
+      "id": "ordering_seed777331_words_004",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": lake, river, bay<|im_end|>",
+      "generated_token_ids": [
+        25,
+        21800,
+        11,
+        14796,
+        11,
+        22708,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_004.json"
+    },
+    {
+      "id": "ordering_seed777331_words_005",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": red, blue, green<|im_end|>",
+      "generated_token_ids": [
+        25,
+        2518,
+        11,
+        6303,
+        11,
+        6176,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_005.json"
+    },
+    {
+      "id": "ordering_seed777331_words_006",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": west, east, north<|im_end|>",
+      "generated_token_ids": [
+        25,
+        9710,
+        11,
+        10984,
+        11,
+        10200,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_006.json"
+    },
+    {
+      "id": "ordering_seed777331_words_007",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": gamma, beta, alpha<|im_end|>",
+      "generated_token_ids": [
+        25,
+        21619,
+        11,
+        13440,
+        11,
+        8287,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_007.json"
+    },
+    {
+      "id": "ordering_seed777331_words_008",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": oak, elm, ash<|im_end|>",
+      "generated_token_ids": [
+        25,
+        37871,
+        11,
+        42205,
+        11,
+        23828,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_008.json"
+    },
+    {
+      "id": "ordering_seed777331_words_009",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": silver, copper, gold<|im_end|>",
+      "generated_token_ids": [
+        25,
+        14961,
+        11,
+        23285,
+        11,
+        6623,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_009.json"
+    },
+    {
+      "id": "ordering_seed777331_words_010",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": Mars, Venus, Earth<|im_end|>",
+      "generated_token_ids": [
+        25,
+        21048,
+        11,
+        48976,
+        11,
+        9237,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_010.json"
+    },
+    {
+      "id": "ordering_seed777331_words_011",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": three, one, two<|im_end|>",
+      "generated_token_ids": [
+        25,
+        2326,
+        11,
+        825,
+        11,
+        1378,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_011.json"
+    },
+    {
+      "id": "ordering_seed777331_words_012",
+      "category": "ordering_sorting",
+      "scoring_kind": "normalized_match",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": winter, spring, autumn<|im_end|>",
+      "generated_token_ids": [
+        25,
+        12406,
+        11,
+        10464,
+        11,
+        41674,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed777331_words_012.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_001",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": The cache has been verified.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        6500,
+        702,
+        1012,
+        23933,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_001.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_002",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The model is loaded once.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        1614,
+        374,
+        6661,
+        3055,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_002.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_003",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The receipt contains information about the timing.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        22567,
+        5610,
+        1995,
+        911,
+        279,
+        18405,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_003.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_004",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The backend was running on CPU.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        19163,
+        572,
+        4303,
+        389,
+        13940,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_004.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_005",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The prompt was set in strict mode.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        9934,
+        572,
+        738,
+        304,
+        7304,
+        3856,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_005.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_006",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The tokenizer's hash matched.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        45958,
+        594,
+        5175,
+        18054,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_006.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_007",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": The run avoided falling back.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        1598,
+        30790,
+        15679,
+        1182,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_007.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_008",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The output was a valid text.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        2550,
+        572,
+        264,
+        2697,
+        1467,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_008.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_009",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The disk check was warned early.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        13364,
+        1779,
+        572,
+        18683,
+        4124,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_009.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_010",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The service exports receipts.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        2473,
+        12794,
+        56480,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_010.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_011",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": The operator observed progress.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        5675,
+        13166,
+        5098,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_011.json"
+    },
+    {
+      "id": "rewrite_seed777331_plain_012",
+      "category": "copy_edit_rewrite",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": false,
+      "quality_gate_passed": false,
+      "failure_taxonomy": [
+        "answer_content"
+      ],
+      "generated_text": ": The report compared baseline values.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        576,
+        1895,
+        7707,
+        25869,
+        2750,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_012.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_001",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nLocal inference should be verified with repeatable receipts to ensure accuracy and reliability.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        7319,
+        44378,
+        1265,
+        387,
+        23933,
+        448,
+        13153,
+        480,
+        56480,
+        311,
+        5978,
+        13403,
+        323,
+        30538,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_001.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_002",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nA small model can be useful when the task is bounded, as it allows for precise and limited representation of larger objects or systems.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        32,
+        2613,
+        1614,
+        646,
+        387,
+        5390,
+        979,
+        279,
+        3383,
+        374,
+        61115,
+        11,
+        438,
+        432,
+        6147,
+        369,
+        23560,
+        323,
+        7199,
+        13042,
+        315,
+        8131,
+        6171,
+        476,
+        5942,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_002.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_003",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": Regression dashboards show slow drift by displaying the actual values instead of a moving average.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        47470,
+        23911,
+        19270,
+        1473,
+        6301,
+        33638,
+        553,
+        27940,
+        279,
+        5042,
+        2750,
+        4518,
+        315,
+        264,
+        7218,
+        5461,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_003.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_004",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": " Warm sessions should report memory and timing.<|im_end|>",
+      "generated_token_ids": [
+        45763,
+        15704,
+        1265,
+        1895,
+        4938,
+        323,
+        18405,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_004.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_005",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": " Operators should receive clear repair guidance for cache failures to ensure proper recovery and avoid potential issues.<|im_end|>",
+      "generated_token_ids": [
+        64420,
+        1265,
+        5258,
+        2797,
+        12733,
+        18821,
+        369,
+        6500,
+        27850,
+        311,
+        5978,
+        6169,
+        13351,
+        323,
+        5648,
+        4650,
+        4714,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_005.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_006",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nSeeded corpora make quality changes reviewable by providing a controlled environment for evaluating text quality, allowing for the identification and correction of errors",
+      "generated_token_ids": [
+        198,
+        1514,
+        29935,
+        8368,
+        64,
+        1281,
+        4271,
+        4344,
+        3395,
+        480,
+        553,
+        8241,
+        264,
+        14071,
+        4573,
+        369,
+        37563,
+        1467,
+        4271,
+        11,
+        10693,
+        369,
+        279,
+        21892,
+        323,
+        26262,
+        315,
+        5975
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_006.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_007",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nStrict mode in web development ensures that backend fallbacks are disabled, preventing unexpected behavior when the frontend is not available.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        41857,
+        3856,
+        304,
+        3482,
+        4401,
+        25351,
+        429,
+        19163,
+        32772,
+        82,
+        525,
+        8386,
+        11,
+        26160,
+        16500,
+        7709,
+        979,
+        279,
+        45645,
+        374,
+        537,
+        2500,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_007.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_008",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": ": Benchmarks need p50, p90, and p99 summaries to provide a comprehensive view of performance metrics.<|im_end|>",
+      "generated_token_ids": [
+        25,
+        35258,
+        15544,
+        1184,
+        281,
+        20,
+        15,
+        11,
+        281,
+        24,
+        15,
+        11,
+        323,
+        281,
+        24,
+        24,
+        68922,
+        311,
+        3410,
+        264,
+        15817,
+        1651,
+        315,
+        5068,
+        16734,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_008.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_009",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nServer endpoints should export request receipts for security and audit purposes.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        5475,
+        36342,
+        1265,
+        7485,
+        1681,
+        56480,
+        369,
+        4763,
+        323,
+        24275,
+        9895,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_009.json"
+    },
+    {
+      "id": "summary_seed777331_keywords_010",
+      "category": "constrained_summary",
+      "scoring_kind": "required_keywords",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": " Claim boundaries keep evidence honest. By clearly defining the scope and limitations of a claim, it ensures that all relevant information is accurately represented and does",
+      "generated_token_ids": [
+        37502,
+        22711,
+        2506,
+        5904,
+        10745,
+        13,
+        3216,
+        9355,
+        26312,
+        279,
+        6891,
+        323,
+        9481,
+        315,
+        264,
+        3717,
+        11,
+        432,
+        25351,
+        429,
+        678,
+        9760,
+        1995,
+        374,
+        29257,
+        15251,
+        323,
+        1558
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed777331_keywords_010.json"
+    },
+    {
+      "id": "instruction_seed777331_required_001",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": " Ready, please provide me with the question",
+      "generated_token_ids": [
+        30982,
+        11,
+        4486,
+        3410,
+        752,
+        448,
+        279,
+        3405
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_001.json"
+    },
+    {
+      "id": "instruction_seed777331_required_002",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nPass.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        12187,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_002.json"
+    },
+    {
+      "id": "instruction_seed777331_required_003",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nLocal.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        7319,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_003.json"
+    },
+    {
+      "id": "instruction_seed777331_required_004",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nStrict.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        41857,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_004.json"
+    },
+    {
+      "id": "instruction_seed777331_required_005",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nReceipt<|im_end|>",
+      "generated_token_ids": [
+        198,
+        67461,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_005.json"
+    },
+    {
+      "id": "instruction_seed777331_required_006",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nstable<|im_end|>",
+      "generated_token_ids": [
+        198,
+        27992,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_006.json"
+    },
+    {
+      "id": "instruction_seed777331_required_007",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nCache<|im_end|>",
+      "generated_token_ids": [
+        198,
+        8233,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_007.json"
+    },
+    {
+      "id": "instruction_seed777331_required_008",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nCPU, or Central Processing Unit,",
+      "generated_token_ids": [
+        198,
+        31615,
+        11,
+        476,
+        10684,
+        28125,
+        7954,
+        11
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_008.json"
+    },
+    {
+      "id": "instruction_seed777331_required_009",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nBounded.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        33,
+        13082,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_009.json"
+    },
+    {
+      "id": "instruction_seed777331_required_010",
+      "category": "instruction_following_required_forbidden",
+      "scoring_kind": "required_forbidden_tokens",
+      "scoring_passed": true,
+      "quality_gate_passed": true,
+      "failure_taxonomy": [],
+      "generated_text": "\nSafe.<|im_end|>",
+      "generated_token_ids": [
+        198,
+        25663,
+        13,
+        151645
+      ],
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed777331_required_010.json"
+    }
+  ],
+  "claim_boundary": {
+    "dense_slm_only": true,
+    "bounded_seeded_corpus_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "bitnet_evidence": false,
+    "bitnet_quality_claimed": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "speedup_claim": false
+  }
+}
