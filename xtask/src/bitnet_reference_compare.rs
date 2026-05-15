@@ -40,6 +40,8 @@ struct OutputSignal {
     token_ids: Option<Vec<i64>>,
     text: Option<String>,
     top_logits: Option<Vec<TopLogit>>,
+    selected_logits: Option<Vec<SelectedLogit>>,
+    reference_text_candidate_ids: Option<Vec<i64>>,
     prompt: PromptIdentity,
 }
 
@@ -47,6 +49,13 @@ struct OutputSignal {
 struct TopLogit {
     token_id: i64,
     logit: f64,
+}
+
+#[derive(Clone, Debug)]
+struct SelectedLogit {
+    token_id: i64,
+    present: bool,
+    logit: Option<f64>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -243,6 +252,8 @@ fn output_signal(value: Option<&Value>) -> OutputSignal {
             token_ids: None,
             text: None,
             top_logits: None,
+            selected_logits: None,
+            reference_text_candidate_ids: None,
             prompt: PromptIdentity::default(),
         };
     };
@@ -250,6 +261,8 @@ fn output_signal(value: Option<&Value>) -> OutputSignal {
         token_ids: token_ids(value),
         text: string_at(value, &["/text", "/generated_text", "/output", "/response"]),
         top_logits: top_logits(value),
+        selected_logits: selected_logits(value),
+        reference_text_candidate_ids: reference_text_candidate_ids(value),
         prompt: prompt_identity(value),
     }
 }
@@ -319,6 +332,48 @@ fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
     Some(logits)
 }
 
+fn selected_logits(value: &Value) -> Option<Vec<SelectedLogit>> {
+    for pointer in ["/logits_dump/0/selected_logits", "/selected_logits", "/logits/selected_logits"]
+    {
+        if let Some(logits) = selected_logits_array(value.pointer(pointer)) {
+            return Some(logits);
+        }
+    }
+    None
+}
+
+fn selected_logits_array(value: Option<&Value>) -> Option<Vec<SelectedLogit>> {
+    let array = value?.as_array()?;
+    let mut logits = Vec::with_capacity(array.len());
+    for item in array {
+        let token_id = item
+            .pointer("/token_id")
+            .and_then(Value::as_i64)
+            .or_else(|| item.pointer("/id").and_then(Value::as_i64))
+            .or_else(|| item.pointer("/token").and_then(Value::as_i64))?;
+        let present = item.pointer("/present").and_then(Value::as_bool).unwrap_or(true);
+        let logit = item
+            .pointer("/logit")
+            .and_then(Value::as_f64)
+            .or_else(|| item.pointer("/value").and_then(Value::as_f64));
+        logits.push(SelectedLogit { token_id, present, logit });
+    }
+    Some(logits)
+}
+
+fn reference_text_candidate_ids(value: &Value) -> Option<Vec<i64>> {
+    for pointer in [
+        "/reference_text_tokenization/selected_logit_probe_ids",
+        "/rust_commands/reference_text_tokenization/selected_logit_probe_ids",
+        "/plan/reference_text_tokenization/selected_logit_probe_ids",
+    ] {
+        if let Some(ids) = array_i64(value.pointer(pointer)) {
+            return Some(ids);
+        }
+    }
+    None
+}
+
 fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
     let token_ids_exact =
         left.token_ids.as_ref().zip(right.token_ids.as_ref()).map(|(left, right)| left == right);
@@ -354,6 +409,72 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
         "top_logit_count": left.top_logits.as_ref().zip(right.top_logits.as_ref()).map(|(left, right)| left.len().min(right.len())),
         "top_logit_token_ids_exact": top_logit_token_ids_exact,
         "top_logit_max_abs_delta": top_logit_max_abs_delta,
+        "reference_text_candidate_logits": reference_text_candidate_logits(left, right),
+    })
+}
+
+fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) -> Value {
+    let candidate_ids = left.reference_text_candidate_ids.as_deref();
+    let selected_logits = right.selected_logits.as_deref();
+    let top_logit = right.top_logits.as_ref().and_then(|logits| logits.first());
+    let Some(candidate_ids) = candidate_ids else {
+        return json!({
+            "diagnostic_only": true,
+            "candidate_ids_available": false,
+            "selected_logits_available": selected_logits.is_some(),
+            "matched_candidate_count": Value::Null,
+            "not_claim": "text-tokenized reference candidates are not reference generated token IDs",
+        });
+    };
+    let Some(selected_logits) = selected_logits else {
+        return json!({
+            "diagnostic_only": true,
+            "candidate_ids_available": true,
+            "selected_logits_available": false,
+            "candidate_count": candidate_ids.len(),
+            "matched_candidate_count": Value::Null,
+            "not_claim": "text-tokenized reference candidates are not reference generated token IDs",
+        });
+    };
+
+    let mut best_candidate: Option<(i64, f64)> = None;
+    let mut rows = Vec::new();
+    for token_id in candidate_ids {
+        let selected = selected_logits.iter().find(|item| item.token_id == *token_id);
+        let present = selected.is_some_and(|item| item.present && item.logit.is_some());
+        let logit = selected.and_then(|item| item.logit);
+        if let Some(logit) = logit
+            && best_candidate.is_none_or(|(_, best)| logit > best)
+        {
+            best_candidate = Some((*token_id, logit));
+        }
+        rows.push(json!({
+            "token_id": token_id,
+            "present": present,
+            "logit": logit,
+        }));
+    }
+
+    let best_candidate_token_id = best_candidate.map(|(token_id, _)| token_id);
+    let best_candidate_logit = best_candidate.map(|(_, logit)| logit);
+    let top_token_id = top_logit.map(|item| item.token_id);
+    let top_logit_value = top_logit.map(|item| item.logit);
+    let best_candidate_to_top_delta =
+        best_candidate_logit.zip(top_logit_value).map(|(candidate, top)| top - candidate);
+
+    json!({
+        "diagnostic_only": true,
+        "candidate_ids_available": true,
+        "selected_logits_available": true,
+        "candidate_count": candidate_ids.len(),
+        "matched_candidate_count": rows.iter().filter(|row| row["present"] == true).count(),
+        "candidate_logits": rows,
+        "best_candidate_token_id": best_candidate_token_id,
+        "best_candidate_logit": best_candidate_logit,
+        "right_top_token_id": top_token_id,
+        "right_top_logit": top_logit_value,
+        "best_candidate_to_top_delta": best_candidate_to_top_delta,
+        "not_claim": "text-tokenized reference candidates are not reference generated token IDs",
     })
 }
 
@@ -369,6 +490,10 @@ fn input_value(input: &ReceiptInput, signal: &OutputSignal) -> Value {
         "text_present": signal.text.is_some(),
         "top_logits_present": signal.top_logits.is_some(),
         "top_logit_count": signal.top_logits.as_ref().map(Vec::len),
+        "selected_logits_present": signal.selected_logits.is_some(),
+        "selected_logit_count": signal.selected_logits.as_ref().map(Vec::len),
+        "reference_text_candidate_ids_present": signal.reference_text_candidate_ids.is_some(),
+        "reference_text_candidate_id_count": signal.reference_text_candidate_ids.as_ref().map(Vec::len),
         "prompt_identity_present": signal.prompt.available(),
         "prompt_identity": prompt_identity_value(&signal.prompt),
     })
@@ -514,6 +639,8 @@ mod tests {
                 TopLogit { token_id: 1, logit: 2.0 },
                 TopLogit { token_id: 2, logit: 1.0 },
             ]),
+            selected_logits: None,
+            reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
         };
         let right = OutputSignal {
@@ -523,6 +650,8 @@ mod tests {
                 TopLogit { token_id: 1, logit: 2.25 },
                 TopLogit { token_id: 3, logit: 0.75 },
             ]),
+            selected_logits: None,
+            reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
         };
         let report = compare_pair(&left, &right);
@@ -553,6 +682,62 @@ mod tests {
     }
 
     #[test]
+    fn extracts_selected_logits_and_reference_text_candidates() {
+        let value = json!({
+            "rust_commands": {
+                "reference_text_tokenization": {
+                    "selected_logit_probe_ids": [17, 10, 17239]
+                }
+            },
+            "logits_dump": [{
+                "selected_logits": [
+                    {"token_id": 17, "present": true, "logit": 3.5},
+                    {"token_id": 10, "present": true, "logit": -0.5}
+                ]
+            }]
+        });
+
+        assert_eq!(reference_text_candidate_ids(&value), Some(vec![17, 10, 17239]));
+        let logits = selected_logits(&value).expect("selected logits");
+        assert_eq!(logits.len(), 2);
+        assert_eq!(logits[0].token_id, 17);
+        assert_eq!(logits[0].logit, Some(3.5));
+    }
+
+    #[test]
+    fn compare_pair_reports_reference_text_candidate_logit_gap() {
+        let left = OutputSignal {
+            token_ids: None,
+            text: Some("2+2 equals 4.".to_string()),
+            top_logits: None,
+            selected_logits: None,
+            reference_text_candidate_ids: Some(vec![17, 10]),
+            prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
+        };
+        let right = OutputSignal {
+            token_ids: Some(vec![54864]),
+            text: Some("-fixed".to_string()),
+            top_logits: Some(vec![TopLogit { token_id: 54864, logit: 10.75 }]),
+            selected_logits: Some(vec![
+                SelectedLogit { token_id: 17, present: true, logit: Some(3.5) },
+                SelectedLogit { token_id: 10, present: true, logit: Some(-0.5) },
+            ]),
+            reference_text_candidate_ids: None,
+            prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
+        };
+
+        let report = compare_pair(&left, &right);
+        let candidate_logits = &report["reference_text_candidate_logits"];
+        assert_eq!(candidate_logits["diagnostic_only"], true);
+        assert_eq!(candidate_logits["candidate_ids_available"], true);
+        assert_eq!(candidate_logits["selected_logits_available"], true);
+        assert_eq!(candidate_logits["best_candidate_token_id"], 17);
+        assert_eq!(candidate_logits["best_candidate_logit"], 3.5);
+        assert_eq!(candidate_logits["right_top_token_id"], 54864);
+        assert_eq!(candidate_logits["best_candidate_to_top_delta"], 7.25);
+    }
+
+    #[test]
     fn missing_reference_blocks_ready_report() {
         let args = CompareArgs {
             reference: PathBuf::from("target/missing-reference.json"),
@@ -573,12 +758,16 @@ mod tests {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
             top_logits: Some(vec![TopLogit { token_id: 1, logit: 1.0 }]),
+            selected_logits: None,
+            reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
         };
         let right = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
             top_logits: Some(vec![TopLogit { token_id: 1, logit: 1.0 }]),
+            selected_logits: None,
+            reference_text_candidate_ids: None,
             prompt: prompt("raw", "rendered-b", "ids-b", 8, true, false),
         };
         let report = compare_pair(&left, &right);
