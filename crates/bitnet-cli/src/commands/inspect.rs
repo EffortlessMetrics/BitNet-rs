@@ -148,6 +148,7 @@ impl InspectCommand {
 
         let reader = GgufReader::new(&mmap)?;
         let mut tensors = Vec::new();
+        let mut sibling_scale_tensor_count = 0usize;
 
         for i in 0..reader.tensor_count() as usize {
             let info = reader.get_tensor_info(i)?;
@@ -184,6 +185,20 @@ impl InspectCommand {
             let trailer_scale_bytes = if trailer_scale.is_some() { 4 } else { 0 };
             let padding_bytes =
                 data.len().saturating_sub(logical_packed_bytes + trailer_scale_bytes);
+            let sibling_scale_tensor_name = qk256_sibling_scale_tensor_name(&info.name);
+            let sibling_scale_info = reader.get_tensor_info_by_name(&sibling_scale_tensor_name);
+            let sibling_scale_tensor_present = sibling_scale_info.is_some();
+            let sibling_scale_tensor_type =
+                sibling_scale_info.map(|scale_info| format!("{:?}", scale_info.tensor_type));
+            let sibling_scale_tensor_actual_bytes = sibling_scale_info.map(|scale_info| {
+                reader
+                    .get_tensor_data_by_info(scale_info)
+                    .map(|scale_data| scale_data.len())
+                    .unwrap_or(scale_info.size as usize)
+            });
+            if sibling_scale_tensor_present {
+                sibling_scale_tensor_count += 1;
+            }
 
             let hist = qk256_code_histogram_act_parallel_rows(
                 qk_bytes,
@@ -211,6 +226,10 @@ impl InspectCommand {
                 trailer_scale,
                 trailer_scale_bytes,
                 padding_bytes,
+                sibling_scale_tensor_name,
+                sibling_scale_tensor_present,
+                sibling_scale_tensor_type,
+                sibling_scale_tensor_actual_bytes,
                 packing_mode_detected: if code_3_frequency == 0.0 {
                     "qk256_act_parallel_128_ternary_like".to_string()
                 } else {
@@ -238,6 +257,7 @@ impl InspectCommand {
             model: model_path.display().to_string(),
             model_sha256,
             tensor_count: tensors.len(),
+            sibling_scale_tensor_count,
             not_claims: critical_qk256_report_not_claims()
                 .into_iter()
                 .map(str::to_string)
@@ -1104,6 +1124,7 @@ struct Qk256LayoutReport {
     model: String,
     model_sha256: String,
     tensor_count: usize,
+    sibling_scale_tensor_count: usize,
     not_claims: Vec<String>,
     tensors: Vec<Qk256TensorLayoutReport>,
 }
@@ -1121,6 +1142,10 @@ struct Qk256TensorLayoutReport {
     trailer_scale: Option<f32>,
     trailer_scale_bytes: usize,
     padding_bytes: usize,
+    sibling_scale_tensor_name: String,
+    sibling_scale_tensor_present: bool,
+    sibling_scale_tensor_type: Option<String>,
+    sibling_scale_tensor_actual_bytes: Option<usize>,
     packing_mode_detected: String,
     code_histogram: [usize; 4],
     code_3_count: usize,
@@ -2424,6 +2449,13 @@ fn unpack_contiguous_codes(qk_bytes: &[u8], cols: usize) -> Vec<u8> {
     (0..cols).map(|col| qk256_contiguous_code_at(qk_bytes, col)).collect()
 }
 
+fn qk256_sibling_scale_tensor_name(weight_name: &str) -> String {
+    weight_name
+        .strip_suffix(".weight")
+        .map(|base| format!("{base}.scale"))
+        .unwrap_or_else(|| format!("{weight_name}.scale"))
+}
+
 fn sha256_hex_bytes(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -2493,6 +2525,19 @@ mod tests {
         assert_eq!(act[64], 2);
         assert_eq!(act[96], 3);
         assert_eq!(&contiguous[..4], &[3, 2, 1, 0]);
+    }
+
+    #[test]
+    fn qk256_sibling_scale_tensor_name_matches_reference_suffix() {
+        assert_eq!(
+            qk256_sibling_scale_tensor_name("blk.0.ffn_gate.weight"),
+            "blk.0.ffn_gate.scale"
+        );
+        assert_eq!(
+            qk256_sibling_scale_tensor_name("blk.0.attn_output.weight"),
+            "blk.0.attn_output.scale"
+        );
+        assert_eq!(qk256_sibling_scale_tensor_name("custom"), "custom.scale");
     }
 
     #[test]
