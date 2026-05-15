@@ -61,7 +61,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-009 | merged | Calibrated strict Qwen3 tiny corpus green artifact merged in #4846; records 5/5 passing constrained cases without claiming broad answer quality. |
 | SLM-CPU-010 | merged | Bounded deterministic multi-token decode stability evidence merged in #4851. |
 | SLM-CPU-011 | merged | Bounded strict i5-8250U Qwen3 warm-session receipts landed in #4858. |
-| SLM-CPU-012 | ready | Next bounded item: reduce allocation and KV/layout waste while preserving SLM-CPU-011 generated IDs. |
+| SLM-CPU-012 | merged | Bounded Qwen3 Q8_0 warm-session allocation/KV/layout cleanup landed in #4876; generated IDs remain the behavior oracle. |
+| SLM-CPU-013 | ready | Next bounded item: Q8_0 dense CPU dequant/GEMV hot-path cleanup with strict receipt and generated-ID preservation. |
 
 ## Review Policy
 
