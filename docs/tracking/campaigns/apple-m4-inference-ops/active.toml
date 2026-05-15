@@ -110,13 +110,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-INF-OPS-003"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-003-regression-dashboard"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-INF-OPS-002"]
+pr = 4967
+merge_sha = "b598ea3c36883d64a65d4674af33c7ddb74568df"
 acceptance = "Add compact regression dashboard artifacts across dense SLM and BitNet reports while keeping evidence families, model identity, tokenizer authority, backend, fallback, and claim boundaries separate."
 commands = [
   "cargo fmt --all -- --check",
