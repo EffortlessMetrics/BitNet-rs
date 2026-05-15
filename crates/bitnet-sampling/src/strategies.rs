@@ -277,18 +277,12 @@ impl RepetitionPenaltyConfig {
             logits[idx] -= self.presence_penalty;
 
             // Count penalty: multiplicative
-            #[allow(clippy::float_cmp)]
-            if self.count_penalty != 1.0 {
-                let mut penalty = 1.0;
-                let mut inverse_penalty = 1.0;
-                let inverse_base = 1.0 / self.count_penalty;
-                for _ in 0..count {
-                    penalty *= self.count_penalty;
-                    inverse_penalty *= inverse_base;
-                }
+            if self.count_penalty.to_bits() != 1.0f32.to_bits() {
+                let count = i32::try_from(count).unwrap_or(i32::MAX);
+                let penalty = self.count_penalty.powi(count);
 
                 if logits[idx] > 0.0 {
-                    logits[idx] *= inverse_penalty;
+                    logits[idx] /= penalty;
                 } else {
                     logits[idx] *= penalty;
                 }
@@ -680,6 +674,14 @@ mod tests {
         config.apply(&mut logits, &[(0, 3)]);
         // 8.0 / 2.0^3 = 1.0
         assert!((logits[0] - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn repetition_penalty_count_saturates_large_exponent() {
+        let config = RepetitionPenaltyConfig { count_penalty: 2.0, ..Default::default() };
+        let mut logits = vec![8.0f32];
+        config.apply(&mut logits, &[(0, i32::MAX as usize + 1)]);
+        assert_eq!(logits[0], 0.0);
     }
 
     #[test]
