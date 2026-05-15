@@ -1,0 +1,248 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_thread_timing_envelope",
+  "claim": "bounded_thread_timing_envelope",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "model": {
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "family": "qwen",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "corpus": {
+    "path": "ci\\quality\\slm-warm-session-corpus.yaml",
+    "case_count": 3,
+    "repeat_runs": 2,
+    "max_new_tokens": 8,
+    "prompt_template": "qwen",
+    "qwen_no_think": true,
+    "greedy": true,
+    "deterministic": true,
+    "temperature": 0.0
+  },
+  "backend": {
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "host": {
+    "machine_id": "intel-i5-8250u",
+    "cpu_model": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "requested_threads": [
+      1,
+      2,
+      4,
+      8
+    ]
+  },
+  "runs": [
+    {
+      "threads": 1,
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-1.json",
+      "selected_backend": "cpu-rust",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "qwen_no_think": true,
+      "quality_passed": true,
+      "determinism_passed": true,
+      "generated_ids_match_threads_1": true,
+      "prompt_count": 6,
+      "generated_tokens": 46,
+      "prompt_tokens": 176,
+      "timing": {
+        "model_load_ms": 36959.129,
+        "tokenizer_load_ms": 613.13,
+        "total_session_ms": 137179.478,
+        "warm_prompt_wall_ms": 94609.006,
+        "prefill_ms": 65837.089,
+        "decode_total_ms": 23650.743,
+        "first_token_mean_ms": 12311.833,
+        "first_token_p95_ms": 14077.0,
+        "steady_decode_mean_tok_s": 1.931,
+        "steady_decode_p95_tok_s": 2.004,
+        "warm_prompt_generated_tok_s": 0.486,
+        "cold_session_generated_tok_s": 0.335
+      },
+      "context": {
+        "thermal_available": false,
+        "thermal_source": "not_sampled_in_slm_cpu_warm_session",
+        "temperature_c": null,
+        "power_available": false,
+        "power_source": "not_sampled_in_slm_cpu_warm_session",
+        "power_mode": null,
+        "memory_available": false,
+        "resident_memory_bytes": null,
+        "resident_memory_source": "not_sampled_in_slm_cpu_warm_session"
+      }
+    },
+    {
+      "threads": 2,
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-2.json",
+      "selected_backend": "cpu-rust",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "qwen_no_think": true,
+      "quality_passed": true,
+      "determinism_passed": true,
+      "generated_ids_match_threads_1": true,
+      "prompt_count": 6,
+      "generated_tokens": 46,
+      "prompt_tokens": 176,
+      "timing": {
+        "model_load_ms": 35660.606,
+        "tokenizer_load_ms": 568.419,
+        "total_session_ms": 136826.761,
+        "warm_prompt_wall_ms": 95562.894,
+        "prefill_ms": 65459.825,
+        "decode_total_ms": 23672.087,
+        "first_token_mean_ms": 12405.667,
+        "first_token_p95_ms": 13865.0,
+        "steady_decode_mean_tok_s": 1.898,
+        "steady_decode_p95_tok_s": 2.011,
+        "warm_prompt_generated_tok_s": 0.481,
+        "cold_session_generated_tok_s": 0.336
+      },
+      "context": {
+        "thermal_available": false,
+        "thermal_source": "not_sampled_in_slm_cpu_warm_session",
+        "temperature_c": null,
+        "power_available": false,
+        "power_source": "not_sampled_in_slm_cpu_warm_session",
+        "power_mode": null,
+        "memory_available": false,
+        "resident_memory_bytes": null,
+        "resident_memory_source": "not_sampled_in_slm_cpu_warm_session"
+      }
+    },
+    {
+      "threads": 4,
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-4.json",
+      "selected_backend": "cpu-rust",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "qwen_no_think": true,
+      "quality_passed": true,
+      "determinism_passed": true,
+      "generated_ids_match_threads_1": true,
+      "prompt_count": 6,
+      "generated_tokens": 46,
+      "prompt_tokens": 176,
+      "timing": {
+        "model_load_ms": 35569.897,
+        "tokenizer_load_ms": 1209.892,
+        "total_session_ms": 135679.052,
+        "warm_prompt_wall_ms": 94416.265,
+        "prefill_ms": 64733.698,
+        "decode_total_ms": 23725.19,
+        "first_token_mean_ms": 12328.333,
+        "first_token_p95_ms": 13187.0,
+        "steady_decode_mean_tok_s": 1.963,
+        "steady_decode_p95_tok_s": 2.025,
+        "warm_prompt_generated_tok_s": 0.487,
+        "cold_session_generated_tok_s": 0.339
+      },
+      "context": {
+        "thermal_available": false,
+        "thermal_source": "not_sampled_in_slm_cpu_warm_session",
+        "temperature_c": null,
+        "power_available": false,
+        "power_source": "not_sampled_in_slm_cpu_warm_session",
+        "power_mode": null,
+        "memory_available": false,
+        "resident_memory_bytes": null,
+        "resident_memory_source": "not_sampled_in_slm_cpu_warm_session"
+      }
+    },
+    {
+      "threads": 8,
+      "receipt_path": "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-8.json",
+      "selected_backend": "cpu-rust",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "qwen_no_think": true,
+      "quality_passed": true,
+      "determinism_passed": true,
+      "generated_ids_match_threads_1": true,
+      "prompt_count": 6,
+      "generated_tokens": 46,
+      "prompt_tokens": 176,
+      "timing": {
+        "model_load_ms": 35957.584,
+        "tokenizer_load_ms": 1018.486,
+        "total_session_ms": 136190.928,
+        "warm_prompt_wall_ms": 94979.978,
+        "prefill_ms": 65590.721,
+        "decode_total_ms": 24318.391,
+        "first_token_mean_ms": 12332.833,
+        "first_token_p95_ms": 13690.0,
+        "steady_decode_mean_tok_s": 1.907,
+        "steady_decode_p95_tok_s": 1.977,
+        "warm_prompt_generated_tok_s": 0.484,
+        "cold_session_generated_tok_s": 0.338
+      },
+      "context": {
+        "thermal_available": false,
+        "thermal_source": "not_sampled_in_slm_cpu_warm_session",
+        "temperature_c": null,
+        "power_available": false,
+        "power_source": "not_sampled_in_slm_cpu_warm_session",
+        "power_mode": null,
+        "memory_available": false,
+        "resident_memory_bytes": null,
+        "resident_memory_source": "not_sampled_in_slm_cpu_warm_session"
+      }
+    }
+  ],
+  "validation": {
+    "all_receipts_present": true,
+    "all_quality_passed": true,
+    "all_determinism_passed": true,
+    "all_fallback_false": true,
+    "generated_ids_stable_across_thread_counts": true,
+    "thermal_fields_present": true,
+    "thermal_measured": false,
+    "power_fields_present": true,
+    "power_measured": false,
+    "memory_fields_present": true,
+    "memory_measured": false
+  },
+  "envelope": {
+    "best_total_session_threads": 4,
+    "best_total_session_ms": 135679.052,
+    "best_steady_decode_threads": 4,
+    "best_steady_decode_mean_tok_s": 1.963,
+    "operator_default_recommendation": null,
+    "recommendation_reason": "single-run bounded envelope only; thermal, power, and resident memory were not sampled, so no default thread-count change or sustained throughput claim is made"
+  },
+  "boundaries": {
+    "no_sustained_throughput_claim": true,
+    "no_q4_q5_claim": true,
+    "no_server_gpu_npu_openvino_uhd620_claim": true,
+    "no_qwen35_claim": true,
+    "no_bitnet_qk256_changes": true
+  }
+}

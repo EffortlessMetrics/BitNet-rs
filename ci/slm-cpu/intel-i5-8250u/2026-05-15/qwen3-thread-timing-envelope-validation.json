@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_thread_timing_envelope_validation",
+  "source_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope.json",
+  "checked_threads": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "selected_backend": "cpu-rust",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "tokenizer_source": "gguf_metadata",
+  "tokenizer_strict": true,
+  "quality_passed": true,
+  "determinism_passed": true,
+  "generated_ids_stable_across_thread_counts": true,
+  "thermal_fields_present": true,
+  "thermal_measured": false,
+  "power_fields_present": true,
+  "power_measured": false,
+  "memory_fields_present": true,
+  "memory_measured": false,
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "passed": true
+}
