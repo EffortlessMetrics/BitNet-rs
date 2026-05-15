@@ -39,6 +39,7 @@ use walkdir::WalkDir;
 mod bench_receipt;
 mod bitnet_reference_all_logits;
 mod bitnet_reference_compare;
+mod bitnet_reference_hidden_state;
 mod bitnet_reference_instrumentation;
 mod bitnet_reference_plan;
 mod bitnet_reference_run;
@@ -1336,6 +1337,9 @@ fn real_main() -> Result<()> {
         return Ok(());
     }
     if bitnet_reference_compare::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
+    if bitnet_reference_hidden_state::maybe_dispatch_from_env()? {
         return Ok(());
     }
     if bitnet_reference_plan::maybe_dispatch_from_env()? {
