@@ -1,0 +1,48 @@
+timestamp = "2026-05-15T16:31:52Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-002"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4950
+head_sha = "27123653eaa90608aa6814315f5cbacfe9e69d83"
+merge_sha = "5d95b142f0dabf3bb05e3209fe1d21a10c25caed"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-002-variable-warm-runtime"
+summary = "Closed M4-BITNET-PROD-002 after PR #4950 recorded a bounded Apple M4 BitNet variable warm-session runtime receipt."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session-prompts/01-answer-with-a-single-digit-22.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session-prompts/02-name-the-capital-of-france-answer-with-one-word.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session-prompts/03-return-exactly-ready.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session-prompts/04-answer-with-a-single-digit-31.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session-prompts/05-answer-with-a-single-digit-22.json",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "The merged receipt ran five operator prompts through bitnet mac bitnet-warm using the accepted Microsoft I2_S GGUF and accepted external tokenizer.",
+  "The aggregate receipt records apple-m4-cpu-neon, runtime_api=cpu, fallback_used=false, generated text, generated token IDs, per-turn timing, aggregate timing, memory, and prompt source operator_prompts.",
+  "Repeated-prompt determinism passed for the two 2+2 prompts with stable text and stable generated token IDs.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim was added.",
+]
+
+[evidence]
+receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json"
+model_sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+tokenizer_sha256 = "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+prompt_source = "operator_prompts"
+prompt_count = 5
+generated_tokens = 10
+determinism_passed = true
+chat_enabled = false
+serve_enabled = false
+next_item = "M4-BITNET-PROD-003"
+claim_boundary = "bounded variable warm-session runtime receipt only; no chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"
