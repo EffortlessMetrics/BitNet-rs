@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_qwen3_no_think_reference_diagnosis",
+  "claim": "qwen3_no_think_reference_alignment",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "prompt_template": "qwen",
+  "qwen_no_think": true,
+  "prompt_text": "What is 2+2? Answer with only the number.",
+  "inputs": {
+    "compare_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-checkpoint-compare.json",
+    "validation_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-reference-validation.json",
+    "bitnet_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-bitnet-rs-first-token.json",
+    "reference_capture_method": "temporary non-interactive public Candle quantized_qwen3 harness"
+  },
+  "outcome": {
+    "prompt_ids_match": true,
+    "reference_backend": "candle-transformers-0.10.2",
+    "reference_kernel": "quantized_qwen3",
+    "bitnet_backend": "cpu-rust",
+    "bitnet_kernel": "dense-qwen-cpu-reference",
+    "loader_mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "fallback_used": false,
+    "reference_chosen_id": 17,
+    "bitnet_chosen_id": 17,
+    "reference_text": "2",
+    "bitnet_text": "2",
+    "validation_passed": true,
+    "comparison_passed": false,
+    "first_divergence": "logits_or_shared_transformer_math"
+  },
+  "conclusion": "For the exact rendered Qwen no-thinking prompt, bitnet-rs and the Candle Qwen3 reference choose the same first token, 17 / '2'. This supersedes the older token 19 / '4' target for this no-thinking prompt policy. Numeric top-k logits still differ, so this artifact does not prove strict logits parity, answer quality, tiny corpus success, or multi-token stability.",
+  "must_not_claim": [
+    "Strict first-step logits parity is proven.",
+    "The answer corpus is green.",
+    "Qwen answer quality is proven.",
+    "Multi-token stability is proven.",
+    "Warm-session usability is proven.",
+    "Sustained 8250U throughput is proven.",
+    "Q4/Q5 quant expansion is in scope.",
+    "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+    "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+    "BitNet QK256/I2_S kernels are modified."
+  ]
+}
