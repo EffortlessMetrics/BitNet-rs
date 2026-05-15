@@ -1592,16 +1592,19 @@ fn normalize_embed_and_lm_head(
                 tensor_map.insert("token_embd.weight".to_string(), embed);
             }
             [h, v] if *h == hidden_size && *v == vocab_size => {
-                // Transposed [hidden, vocab] -> transpose to [vocab, hidden]
+                // GGML stores ne[0] as the fastest-moving dimension. For
+                // embeddings shaped [hidden, vocab], each token row is already
+                // contiguous in file order; only the Candle shape needs to
+                // become [vocab, hidden].
                 tracing::info!(
-                    "Transposing embed_tokens from [hidden={}, vocab={}] to [vocab={}, hidden={}]",
+                    "Reshaping embed_tokens from GGML [hidden={}, vocab={}] to [vocab={}, hidden={}] without transposing token rows",
                     h,
                     v,
                     vocab_size,
                     hidden_size
                 );
-                let embed_t = embed.t()?.contiguous()?;
-                tensor_map.insert("token_embd.weight".to_string(), embed_t);
+                let embed_reshaped = embed.reshape(&[vocab_size, hidden_size])?;
+                tensor_map.insert("token_embd.weight".to_string(), embed_reshaped);
             }
             _ => {
                 tracing::warn!(
@@ -1942,10 +1945,12 @@ mod tests {
     use super::{GGUFLoaderConfig, extract_config_from_gguf, load_gguf_full};
     use crate::formats::gguf::{GgufReader, GgufValue};
     use bitnet_common::{
-        Device,
+        BitNetConfig, Device,
         config::{ActivationType, NormType},
     };
+    use candle_core::{Device as CDevice, Tensor as CandleTensor};
     use serial_test::serial;
+    use std::collections::HashMap;
     use tempfile::TempDir;
 
     fn build_metadata_only_gguf(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
@@ -1999,6 +2004,65 @@ mod tests {
             }
             other => panic!("test helper does not write {other:?}"),
         }
+    }
+
+    fn small_model_config(vocab_size: usize, hidden_size: usize) -> BitNetConfig {
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config
+    }
+
+    #[test]
+    fn simple_normalize_ggml_hidden_by_vocab_embedding_preserves_token_rows() {
+        let device = CDevice::Cpu;
+        let config = small_model_config(3, 2);
+        let mut tensor_map = HashMap::new();
+        tensor_map.insert(
+            "token_embd.weight".to_string(),
+            CandleTensor::from_vec(vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 3], &device)
+                .expect("embedding tensor"),
+        );
+
+        super::normalize_embed_and_lm_head(&mut tensor_map, &config, &device)
+            .expect("normalize embedding");
+
+        let embedding = tensor_map.get("token_embd.weight").expect("normalized embedding");
+        assert_eq!(embedding.shape().dims(), &[3, 2]);
+        assert_eq!(
+            embedding.flatten_all().expect("flat").to_vec1::<f32>().expect("values"),
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "GGML [hidden, vocab] embeddings must preserve contiguous token rows"
+        );
+    }
+
+    #[test]
+    fn simple_normalize_lm_head_transposed_path_still_uses_transpose_flag() {
+        let device = CDevice::Cpu;
+        let config = small_model_config(3, 2);
+        let mut tensor_map = HashMap::new();
+        tensor_map.insert(
+            "output.weight".to_string(),
+            CandleTensor::from_vec(vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 3], &device)
+                .expect("lm head tensor"),
+        );
+
+        super::normalize_embed_and_lm_head(&mut tensor_map, &config, &device)
+            .expect("normalize lm head");
+
+        let output = tensor_map.get("output.weight").expect("normalized lm head");
+        assert_eq!(output.shape().dims(), &[2, 3]);
+        assert_eq!(
+            output.flatten_all().expect("flat").to_vec1::<f32>().expect("values"),
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "lm_head [hidden, vocab] path should keep storage and use the transposed flag"
+        );
+        let flag = tensor_map.get("lm_head.transposed").expect("transpose flag");
+        assert_eq!(
+            flag.flatten_all().expect("flat").to_vec1::<f32>().expect("flag"),
+            vec![1.0],
+            "lm_head transposed flag must remain set"
+        );
     }
 
     #[test]
