@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -13,6 +14,8 @@ const DEFAULT_OUTPUT: &str = "target/a770-diagnostic/bitnet-reference-layer-trac
 const DEFAULT_RUN_OUTPUT: &str = "target/a770-diagnostic/bitnet-reference-layer-trace-run.json";
 const DEFAULT_REFERENCE_PLAN: &str = "target/a770-diagnostic/bitnet-reference-plan.json";
 const DEFAULT_SIDECAR: &str = "target/a770-diagnostic/reference-first-token-layer-trace.json";
+const DEFAULT_COMPARE_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-layer-trace-compare.json";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -95,6 +98,15 @@ struct LayerTraceRunArgs {
 }
 
 #[derive(Debug)]
+struct LayerTraceCompareArgs {
+    reference: PathBuf,
+    cpu_trace_dir: PathBuf,
+    a770_trace_dir: Option<PathBuf>,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
 struct SourceText {
     path: PathBuf,
     exists: bool,
@@ -109,6 +121,34 @@ struct CommandCapture {
     success: bool,
     stdout: String,
     stderr: String,
+}
+
+#[derive(Debug, Clone)]
+struct ReferenceTraceRecord {
+    name: String,
+    stage: String,
+    graph_index: Option<i64>,
+    layer: Option<i64>,
+    dtype: String,
+    shape: Vec<i64>,
+    nelements: u64,
+    rms: Option<f64>,
+    values_available: bool,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct RustTraceRecord {
+    name: String,
+    shape: Vec<usize>,
+    dtype: String,
+    #[allow(dead_code)]
+    blake3: String,
+    rms: f64,
+    num_elements: usize,
+    #[allow(dead_code)]
+    seq: Option<usize>,
+    layer: Option<isize>,
+    stage: Option<String>,
 }
 
 pub fn maybe_dispatch_from_env() -> Result<bool> {
@@ -154,6 +194,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-layer-trace-compare") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_compare_help();
+                return Ok(true);
+            }
+            let opts = parse_compare_args(args)?;
+            let report = compare_reference_layer_trace(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -167,6 +225,12 @@ fn print_help() {
 fn print_run_help() {
     println!(
         "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>  BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>        llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>           Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>         Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+    );
+}
+
+fn print_compare_help() {
+    println!(
+        "Compare a BitNet reference layer trace receipt against Rust CPU/A770 trace directories\n\nUsage: xtask.exe bitnet-reference-layer-trace-compare [OPTIONS]\n\nOptions:\n      --reference <PATH>       Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output\n      --a770-trace-dir <PATH>  Optional strict A770 BITNET_TRACE_DIR output\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-compare.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -232,6 +296,37 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
         }
     }
     Ok(LayerTraceRunArgs { reference_root, cpp_root, patch, plan, sidecar, output, format })
+}
+
+fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-layer-trace-compare") {
+        bail!("parse_compare_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut cpu_trace_dir = None::<PathBuf>;
+    let mut a770_trace_dir = None::<PathBuf>;
+    let mut output = Some(PathBuf::from(DEFAULT_COMPARE_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--cpu-trace-dir" => cpu_trace_dir = Some(PathBuf::from(value()?)),
+            "--a770-trace-dir" => a770_trace_dir = Some(PathBuf::from(value()?)),
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => bail!("unknown bitnet-reference-layer-trace-compare option {other}"),
+        }
+    }
+    let cpu_trace_dir = cpu_trace_dir.context("--cpu-trace-dir is required")?;
+    Ok(LayerTraceCompareArgs { reference, cpu_trace_dir, a770_trace_dir, output, format })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -441,6 +536,308 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
         },
         "not_claims": CRITICAL_NOT_CLAIMS,
     }))
+}
+
+fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let a770_trace_dir = match &args.a770_trace_dir {
+        Some(path) => Some(normalize_path(path)?),
+        None => None,
+    };
+
+    let reference_json = read_json(&reference_path)?;
+    let reference_records = read_reference_records(&reference_json)?;
+    let cpu_records = read_rust_trace_dir(&cpu_trace_dir)?;
+    let a770_records = match &a770_trace_dir {
+        Some(dir) => Some(read_rust_trace_dir(dir)?),
+        None => None,
+    };
+
+    let stage_mapping = reference_stage_mapping();
+    let cpu_comparison =
+        compare_reference_to_rust(&reference_records, &cpu_records, &stage_mapping);
+    let a770_comparison = a770_records
+        .as_ref()
+        .map(|records| compare_reference_to_rust(&reference_records, records, &stage_mapping));
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if cpu_comparison["first_material_mismatch"].is_null() {
+        blocked_reasons
+            .push("rust_cpu_reference_layer_trace_no_material_mismatch_found".to_string());
+    } else {
+        blocked_reasons.push("rust_cpu_reference_layer_trace_divergence_unresolved".to_string());
+    }
+    if a770_trace_dir.is_none() {
+        blocked_reasons.push("strict_a770_trace_dir_not_supplied".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_layer_trace_compare",
+        "diagnostic": "bitnet_reference_layer_trace_compare",
+        "producer": "cargo xtask bitnet-reference-layer-trace-compare",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "promotion_allowed": false,
+        "claim_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "a770_trace_dir": a770_trace_dir.as_ref().map(|path| path_to_string(path)),
+        },
+        "reference": {
+            "record_count": reference_records.len(),
+            "stages": reference_records
+                .iter()
+                .map(|record| json!({
+                    "name": record.name,
+                    "stage": record.stage,
+                    "graph_index": record.graph_index,
+                    "shape": record.shape,
+                    "dtype": record.dtype,
+                    "nelements": record.nelements,
+                    "rms": record.rms,
+                    "values_available": record.values_available,
+                }))
+                .collect::<Vec<_>>(),
+        },
+        "stage_mapping": stage_mapping
+            .iter()
+            .map(|(reference, rust)| json!({"reference": reference, "rust": rust}))
+            .collect::<Vec<_>>(),
+        "cpu": cpu_comparison,
+        "a770": a770_comparison,
+        "decision": {
+            "reference_layer_trace_compared": true,
+            "claim_allowed": false,
+            "current_blocked_reasons": blocked_reasons,
+            "next_action": "use the first material mismatch to choose the next Rust/reference divergence capture; do not change model math until the mismatching boundary is stable",
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
+fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
+    let receipt = match root.pointer("/receipt_type").and_then(Value::as_str) {
+        Some("bitnet_reference_layer_trace_run") => root
+            .pointer("/sidecar/receipt")
+            .context("layer trace run receipt missing /sidecar/receipt")?,
+        _ => root,
+    };
+    let records = receipt
+        .pointer("/records")
+        .and_then(Value::as_array)
+        .context("reference layer trace receipt missing /records")?;
+    records
+        .iter()
+        .map(|record| {
+            let shape = record
+                .pointer("/shape")
+                .and_then(Value::as_array)
+                .context("reference record missing shape")?
+                .iter()
+                .map(|dim| dim.as_i64().context("reference shape dim is not integer"))
+                .collect::<Result<Vec<_>>>()?;
+            Ok(ReferenceTraceRecord {
+                name: record
+                    .pointer("/name")
+                    .and_then(Value::as_str)
+                    .context("reference record missing name")?
+                    .to_string(),
+                stage: record
+                    .pointer("/stage")
+                    .and_then(Value::as_str)
+                    .context("reference record missing stage")?
+                    .to_string(),
+                graph_index: record.pointer("/graph_index").and_then(Value::as_i64),
+                layer: record.pointer("/layer").and_then(Value::as_i64),
+                dtype: record
+                    .pointer("/dtype")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown")
+                    .to_string(),
+                shape,
+                nelements: record.pointer("/nelements").and_then(Value::as_u64).unwrap_or(0),
+                rms: record.pointer("/stats/rms").and_then(Value::as_f64),
+                values_available: record
+                    .pointer("/values_available")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+            })
+        })
+        .collect()
+}
+
+fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
+    if !dir.exists() {
+        bail!("rust trace directory missing: {}", dir.display());
+    }
+    if !dir.is_dir() {
+        bail!("rust trace path is not a directory: {}", dir.display());
+    }
+    let mut records = BTreeMap::new();
+    for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let entry = entry.with_context(|| format!("reading entry in {}", dir.display()))?;
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("trace") {
+            continue;
+        }
+        let text =
+            fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+        let record: RustTraceRecord =
+            serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        let stage = record
+            .stage
+            .clone()
+            .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string());
+        let should_insert = records.get(&stage).is_none_or(|existing| {
+            rust_trace_preference(&record) < rust_trace_preference(existing)
+        });
+        if should_insert {
+            records.insert(stage, record);
+        }
+    }
+    if records.is_empty() {
+        bail!("rust trace directory has no .trace files: {}", dir.display());
+    }
+    Ok(records)
+}
+
+fn rust_trace_preference(record: &RustTraceRecord) -> i64 {
+    match record.layer {
+        Some(0) => 0,
+        Some(-1) => 1,
+        Some(layer) if layer > 0 => 10 + layer as i64,
+        Some(layer) => 100 + layer.abs() as i64,
+        None => 1_000,
+    }
+}
+
+fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("inp_embd", "embeddings"),
+        ("attn_norm", "attn_norm"),
+        ("Qcur", "attention_q"),
+        ("Kcur", "attention_k"),
+        ("Vcur", "attention_v"),
+        ("attn_sub_norm", "post_attention_subnorm"),
+        ("attn_o_out", "post_o_proj"),
+        ("ffn_inp", "post_attention_residual"),
+        ("ffn_norm", "post_ffn_norm"),
+        ("ffn_out", "post_swiglu"),
+        ("ffn_sub_norm", "post_ffn_subnorm"),
+        ("ffn_down", "post_down_proj"),
+        ("l_out", "post_layer"),
+        ("result_norm", "final_norm"),
+        ("result_output", "logits"),
+    ]
+}
+
+fn compare_reference_to_rust(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    mapping: &[(&str, &str)],
+) -> Value {
+    let mut stages = Vec::new();
+    let mut first_material_mismatch = Value::Null;
+    let mut compared_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut missing_reference_count = 0usize;
+    let mut missing_rust_count = 0usize;
+
+    for (reference_stage, rust_stage) in mapping {
+        let candidates = reference_records
+            .iter()
+            .filter(|record| record.stage == *reference_stage)
+            .collect::<Vec<_>>();
+        let rust = rust_records.get(*rust_stage);
+        let reference = rust
+            .and_then(|rust| {
+                candidates
+                    .iter()
+                    .copied()
+                    .find(|record| record.nelements == rust.num_elements as u64)
+            })
+            .or_else(|| candidates.first().copied());
+
+        if reference.is_none() {
+            missing_reference_count += 1;
+        }
+        if rust.is_none() {
+            missing_rust_count += 1;
+        }
+
+        let mut status = "missing";
+        let mut rms_abs_delta = None::<f64>;
+        let mut material_mismatch = reference.is_none() || rust.is_none();
+        if let (Some(reference), Some(rust)) = (reference, rust) {
+            compared_count += 1;
+            let element_count_match = reference.nelements == rust.num_elements as u64;
+            let dtype_match = reference.dtype.eq_ignore_ascii_case(&rust.dtype);
+            rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
+            let rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
+            material_mismatch = !element_count_match || !dtype_match || rms_material;
+            status = if material_mismatch { "material_mismatch" } else { "summary_match" };
+        }
+        if material_mismatch {
+            material_mismatch_count += 1;
+        }
+
+        let stage = json!({
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "status": status,
+            "candidate_reference_records": candidates.len(),
+            "reference": reference.map(reference_record_summary),
+            "rust": rust.map(rust_record_summary),
+            "rms_abs_delta": rms_abs_delta,
+            "material_mismatch": material_mismatch,
+        });
+        if material_mismatch && first_material_mismatch.is_null() {
+            first_material_mismatch = stage.clone();
+        }
+        stages.push(stage);
+    }
+
+    json!({
+        "trace_record_count": rust_records.len(),
+        "compared_stage_count": compared_count,
+        "material_mismatch_count": material_mismatch_count,
+        "missing_reference_count": missing_reference_count,
+        "missing_rust_count": missing_rust_count,
+        "first_material_mismatch": first_material_mismatch,
+        "stages": stages,
+    })
+}
+
+fn reference_record_summary(record: &ReferenceTraceRecord) -> Value {
+    json!({
+        "name": record.name,
+        "stage": record.stage,
+        "graph_index": record.graph_index,
+        "layer": record.layer,
+        "shape": record.shape,
+        "dtype": record.dtype,
+        "nelements": record.nelements,
+        "rms": record.rms,
+        "values_available": record.values_available,
+    })
+}
+
+fn rust_record_summary(record: &RustTraceRecord) -> Value {
+    json!({
+        "name": record.name,
+        "stage": record.stage,
+        "layer": record.layer,
+        "shape": record.shape,
+        "dtype": record.dtype,
+        "num_elements": record.num_elements,
+        "rms": record.rms,
+    })
 }
 
 fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
@@ -900,6 +1297,24 @@ fn emit_report(report: &Value, format: &str) -> Result<()> {
                 }
                 return Ok(());
             }
+            if receipt_type == "bitnet_reference_layer_trace_compare" {
+                let first = report
+                    .pointer("/cpu/first_material_mismatch/status")
+                    .and_then(Value::as_str)
+                    .unwrap_or("none");
+                let stage = report
+                    .pointer("/cpu/first_material_mismatch/reference_stage")
+                    .and_then(Value::as_str)
+                    .unwrap_or("none");
+                let mismatches = report
+                    .pointer("/cpu/material_mismatch_count")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0);
+                println!(
+                    "bitnet reference layer trace compare: diagnostic_only=true claim_allowed=false cpu_first_mismatch={stage}:{first} cpu_mismatches={mismatches}"
+                );
+                return Ok(());
+            }
             let ready = report
                 .pointer("/decision/source_anchors_ready_for_target_local_patch")
                 .and_then(Value::as_bool)
@@ -938,6 +1353,22 @@ mod tests {
 
     fn joined_needles(anchors: &[(&str, &str)]) -> String {
         anchors.iter().map(|(_, needle)| *needle).collect::<Vec<_>>().join("\n")
+    }
+
+    fn write_rust_trace(dir: &Path, stage: &str, shape: &[usize], rms: f64) {
+        let path = dir.join(format!("{stage}.trace"));
+        let record = json!({
+            "name": format!("t0/blk0/{stage}"),
+            "shape": shape,
+            "dtype": "F32",
+            "blake3": "abc",
+            "rms": rms,
+            "num_elements": shape.iter().product::<usize>(),
+            "seq": 0,
+            "layer": 0,
+            "stage": stage,
+        });
+        fs::write(path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
     }
 
     #[test]
@@ -1015,5 +1446,67 @@ mod tests {
         assert!(reasons.contains(&json!("reference_root_missing")));
         assert!(reasons.contains(&json!("reference_layer_trace_patch_missing")));
         assert!(reasons.contains(&json!("reference_plan_missing")));
+    }
+
+    #[test]
+    fn compare_reports_first_material_mismatch() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let cpu = dir.path().join("cpu");
+        fs::create_dir_all(&cpu).unwrap();
+        fs::write(
+            &reference,
+            serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "inp_embd",
+                        "stage": "inp_embd",
+                        "graph_index": 0,
+                        "layer": -1,
+                        "dtype": "f32",
+                        "shape": [2, 2, 1, 1],
+                        "nelements": 4,
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    },
+                    {
+                        "name": "attn_norm-0",
+                        "stage": "attn_norm",
+                        "graph_index": 2,
+                        "layer": 0,
+                        "dtype": "f32",
+                        "shape": [2, 2, 1, 1],
+                        "nelements": 4,
+                        "values_available": true,
+                        "stats": {"rms": 2.0}
+                    }
+                ]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        write_rust_trace(&cpu, "embeddings", &[2, 2], 1.0);
+        write_rust_trace(&cpu, "attn_norm", &[2, 2], 1.0);
+
+        let report = compare_reference_layer_trace(&LayerTraceCompareArgs {
+            reference,
+            cpu_trace_dir: cpu,
+            a770_trace_dir: None,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/cpu/first_material_mismatch/reference_stage"),
+            Some(&json!("attn_norm"))
+        );
+        assert_eq!(
+            report.pointer("/cpu/first_material_mismatch/status"),
+            Some(&json!("material_mismatch"))
+        );
+        assert!(report.pointer("/decision/current_blocked_reasons").unwrap().is_array());
     }
 }
