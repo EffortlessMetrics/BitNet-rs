@@ -6,19 +6,29 @@ on:
     paths:
       - '.github/workflows/apple-m4-slm-eval-tier0.yml'
       - 'ci/quality/apple-m4-slm-eval-seeded-corpus.yaml'
+      - 'ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml'
       - 'ci/hardware/apple-m4-mac-mini/**/slm-eval/**/summary.json'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**/summary.json'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-benchmark-v2/**/summary.json'
       - 'crates/bitnet-cli/**'
       - 'docs/slm/apple-m4-slm-eval-and-proof.md'
+      - 'docs/slm/apple-m4-slm-eval-v2.md'
       - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
+      - 'docs/tracking/campaigns/apple-m4-slm-eval-v2/**'
   push:
     branches: [main]
     paths:
       - '.github/workflows/apple-m4-slm-eval-tier0.yml'
       - 'ci/quality/apple-m4-slm-eval-seeded-corpus.yaml'
+      - 'ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml'
       - 'ci/hardware/apple-m4-mac-mini/**/slm-eval/**/summary.json'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**/summary.json'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-benchmark-v2/**/summary.json'
       - 'crates/bitnet-cli/**'
       - 'docs/slm/apple-m4-slm-eval-and-proof.md'
+      - 'docs/slm/apple-m4-slm-eval-v2.md'
       - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
+      - 'docs/tracking/campaigns/apple-m4-slm-eval-v2/**'
   workflow_dispatch:
 
 concurrency:
@@ -59,6 +69,9 @@ jobs:
       - name: Run SLM eval parser and schema tests
         run: cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval
 
+      - name: Run SLM eval regression comparison tests
+        run: cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression
+
       - name: Run deterministic SLM eval scorer unit tests
         run: cargo test --locked -p bitnet-cli slm_eval_scoring
 
@@ -73,13 +86,24 @@ jobs:
             --model missing.gguf \
             --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml \
             --json-out "$TIER0_ARTIFACT_ROOT/seeded-corpus-dry-run.json"
+          cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+            answer-corpus \
+            --dry-run \
+            --device cpu \
+            --model missing.gguf \
+            --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml \
+            --json-out "$TIER0_ARTIFACT_ROOT/seeded-corpus-v2-dry-run.json"
 
-      - name: Validate committed Apple M4 SLM eval summaries
+      - name: Validate committed Apple M4 SLM eval and benchmark summaries
         run: |
           set -euo pipefail
-          mapfile -t summaries < <(find ci/hardware/apple-m4-mac-mini -path '*/slm-eval/*/summary.json' -type f | sort)
+          mapfile -t summaries < <({
+            find ci/hardware/apple-m4-mac-mini -path '*/slm-eval/*/summary.json' -type f
+            find ci/hardware/apple-m4-mac-mini -path '*/slm-eval-v2/*/summary.json' -type f
+            find ci/hardware/apple-m4-mac-mini -path '*/slm-benchmark-v2/*/summary.json' -type f
+          } | sort)
           if [ "${#summaries[@]}" -eq 0 ]; then
-            echo "No committed Apple M4 SLM eval summary reports found." >&2
+            echo "No committed Apple M4 SLM eval or benchmark summary reports found." >&2
             exit 1
           fi
           for summary in "${summaries[@]}"; do
@@ -89,12 +113,40 @@ jobs:
               > "$TIER0_ARTIFACT_ROOT/${safe_name}.receipts-check.json"
           done
 
+      - name: Run committed v2 self-baseline regression checks
+        run: |
+          set -euo pipefail
+          mapfile -t reports < <({
+            find ci/hardware/apple-m4-mac-mini -path '*/slm-eval-v2/*/summary.json' -type f
+            find ci/hardware/apple-m4-mac-mini -path '*/slm-benchmark-v2/*/summary.json' -type f
+          } | sort)
+          if [ "${#reports[@]}" -eq 0 ]; then
+            echo "No committed Apple M4 SLM v2 reports found." >&2
+            exit 1
+          fi
+          {
+            echo "## Apple M4 SLM v2 regression dashboard"
+            echo
+            echo "| Report | Result |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for report in "${reports[@]}"; do
+            safe_name="${report//\//__}"
+            cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+              mac regression "$report" \
+              --baseline "$report" \
+              --fail-on-drift \
+              --json \
+              > "$TIER0_ARTIFACT_ROOT/${safe_name}.regression.json"
+            echo "| \`$report\` | self-baseline matched, warnings=0 |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
       - name: Summarize Tier 0 boundary
         run: |
           {
             echo "## Apple M4 SLM Eval Tier 0"
             echo
-            echo "Tier 0 validated parser, scoring, dry-run corpus shape, and committed summary receipt schemas only."
+            echo "Tier 0 validated parser, scoring, dry-run corpus shape, committed summary receipt schemas, and model-free v2 regression comparison coverage only."
             echo
             echo "This workflow does not fetch models, run live M4 inference, run mac validate, publish performance, or claim broad model quality."
           } >> "$GITHUB_STEP_SUMMARY"

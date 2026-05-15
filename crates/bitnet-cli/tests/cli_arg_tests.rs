@@ -1308,6 +1308,120 @@ fn mac_regression_receipts_check_reports_slm_eval_summary_warning()
 }
 
 #[test]
+fn mac_regression_reports_slm_eval_task_family_warning() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-summary.json");
+    let observed = dir.path().join("observed-summary.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["scoring_summary"]["passed"] = serde_json::json!(8);
+    receipt["scoring_summary"]["failed"] = serde_json::json!(2);
+    receipt["task_families"]["arithmetic_exact"]["cases_passed"] = serde_json::json!(8);
+    receipt["task_families"]["arithmetic_exact"]["pass_rate"] = serde_json::json!(0.8);
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("scoring_summary.passed"))
+        .stdout(predicate::str::contains("scoring_summary.failed"))
+        .stdout(predicate::str::contains("task_family:arithmetic_exact"))
+        .stdout(predicate::str::contains("task_families.arithmetic_exact.cases_passed"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_accepts_matching_slm_benchmark_v2_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-benchmark.json");
+    let observed = dir.path().join("observed-benchmark.json");
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_benchmark_v2_summary())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&slm_benchmark_v2_summary())?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_slm_benchmark_v2_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-benchmark.json");
+    let observed = dir.path().join("observed-benchmark.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["speed"]["input_tok_s_p50"] = serde_json::json!(80.0);
+    receipt["profiles"][0]["timing"]["time_to_first_token_ms"]["p50"] = serde_json::json!(2400.0);
+    receipt["profiles"][0]["timing"]["time_to_first_token_ms"]["p90"] = serde_json::json!(2500.0);
+    receipt["profiles"][0]["timing"]["time_to_first_token_ms"]["p99"] = serde_json::json!(2600.0);
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_benchmark_v2_summary())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_slm_benchmark_v2_context_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-benchmark.json");
+    let observed = dir.path().join("observed-benchmark.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["model_cache"]["sha256"] =
+        serde_json::json!("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_benchmark_v2_summary())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("model_cache.sha256 mismatch"));
+    Ok(())
+}
+
+#[test]
 fn mac_bitnet_proof_help_documents_blocked_contract() {
     bitnet()
         .args(["mac", "bitnet-proof", "--help"])
@@ -3113,6 +3227,27 @@ fn slm_eval_summary_report() -> serde_json::Value {
             "required_keywords_pass": 1.0,
             "forbidden_tokens_pass": 1.0
         },
+        "scoring_summary": {
+            "enabled": true,
+            "passed": 9,
+            "failed": 1,
+            "not_run": 0,
+            "total": 10
+        },
+        "task_families": {
+            "arithmetic_exact": {
+                "cases_total": 10,
+                "cases_scored": 10,
+                "cases_passed": 9,
+                "pass_rate": 0.9,
+                "quality_gate_cases_passed": 9,
+                "quality_gate_pass_rate": 0.9,
+                "scoring_kinds": ["exact_match"],
+                "failure_taxonomy": {
+                    "answer_content": 1
+                }
+            }
+        },
         "evidence": {
             "generated_text_recorded": true,
             "generated_token_ids_recorded": true,
@@ -3159,6 +3294,65 @@ fn slm_eval_summary_report() -> serde_json::Value {
             "macbook_evidence": false,
             "speedup_claim": false
         }
+    })
+}
+
+fn slm_benchmark_v2_summary() -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_benchmark_v2",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "profile_set": "slm-benchmark-v2",
+        "profiles_required": ["short_prompt_16_out"],
+        "build": {
+            "profile": "release",
+            "release_mode": true
+        },
+        "model_cache": {
+            "id": "qwen2.5-0.5b-instruct-q8_0",
+            "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "architecture": "qwen2",
+            "quantization": "Q8_0",
+            "tokenizer_pre": "qwen2"
+        },
+        "profiles": [
+            benchmark_profile_v2_json("short_prompt_16_out")
+        ],
+        "prompt_count": 3,
+        "generated_tokens": 48,
+        "speed": benchmark_speed_v2_json(),
+        "memory": {
+            "peak_memory_mb_p50": 3900.0,
+            "peak_memory_mb_p90": 3950.0,
+            "peak_memory_mb_p99": 3975.0,
+            "memory_drift_mb_p50": 0.0,
+            "memory_drift_mb_p90": 12.0,
+            "memory_drift_mb_p99": 24.0,
+            "source": "getrusage.ru_maxrss process peak delta"
+        },
+        "evidence": {
+            "profile_receipts": ["ci/hardware/apple-m4-mac-mini/2026-05-14/slm-benchmark-v2/qwen/summary-profiles/short_prompt_16_out.json"],
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_command": "mac benchmark"
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "bounded_benchmark_profiles_only": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false
     })
 }
 
