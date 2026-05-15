@@ -545,6 +545,11 @@ impl MultiHeadAttention {
             (q, k)
         };
 
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            trace_layer0_tensor(self.layer_idx, _trace_base_seq, 2, "attention_q_rope", &q)?;
+        }
+
         // Update KV cache if provided (store HKV heads, not Hq)
         // **Performance note**: Borrow references instead of cloning after append.
         // Candle operations accept both owned and borrowed tensors.

@@ -78,6 +78,7 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("input_embedding", "trace_tensor_token_axis_record(\"embeddings\""),
     ("attention_norm", "attn_norm"),
     ("query_projection", "attention_q"),
+    ("query_after_rope", "attention_q_rope"),
     ("key_projection", "attention_k"),
     ("value_projection", "attention_v"),
     ("attention_scores_raw_head_lanes", "attention_scores_raw_head"),
@@ -2180,6 +2181,9 @@ fn compare_reference_to_rust(
         "missing_rust_count": missing_rust_count,
         "first_scope_mismatch": first_scope_mismatch,
         "first_material_mismatch": first_material_mismatch,
+        "attention_query_rope_ref_layout_delta": attention_query_rope_ref_layout_delta(reference_records, rust_records),
+        "attention_score_reference_scalar_recompute": attention_score_reference_scalar_recompute(reference_records),
+        "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
         "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
         "attention_key_cache_kv_head_best_matches": attention_key_cache_kv_head_best_matches(reference_records, rust_records),
@@ -2686,6 +2690,348 @@ fn attention_value_mix_input_attribution_section(
         "all_compared": !reference_value_mix_heads.is_empty() && missing_input_count == 0,
         "rows": rows,
     })
+}
+
+fn attention_query_rope_ref_layout_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference = reference_rope_query_record(reference_records);
+    let rust = rust_records.get("attention_q_rope");
+    let delta = reference
+        .zip(rust)
+        .map(|(reference, rust)| compare_vectors(&reference.first_values, &rust.first_values));
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "post-RoPE query ref-layout delta is diagnostic score-input evidence only; it does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
+        "reference_stage": "Qcur",
+        "reference_layout": "reference head-major score input selected from Qcur record with head_dim and head_count axes",
+        "rust_stage": "attention_q_rope",
+        "reference_present": reference.is_some(),
+        "rust_present": rust.is_some(),
+        "reference_shape": reference.map(|record| record.shape.clone()),
+        "rust_shape": rust.map(|record| record.shape.clone()),
+        "delta": delta,
+    })
+}
+
+fn attention_score_reference_scalar_recompute(reference_records: &[ReferenceTraceRecord]) -> Value {
+    let query = reference_rope_query_record(reference_records);
+    let key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let score_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let (head_dim, head_count) = query.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+    let group_size = if head_count > 0 && !key_heads.is_empty() && head_count % key_heads.len() == 0
+    {
+        Some(head_count / key_heads.len())
+    } else {
+        None
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, score) in &score_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let key = kv_head.and_then(|kv_head| key_heads.get(&kv_head).copied());
+        if let (Some(query), Some(key), Some(kv_head)) = (query, key, kv_head) {
+            let token_count = reference_key_token_count(key)
+                .unwrap_or(score.first_values.len())
+                .min(score.first_values.len());
+            if let Some(recomputed) =
+                reference_score_row_from_query_key(query, key, head, head_dim, token_count)
+            {
+                let delta = compare_vectors(&recomputed, &score.first_values);
+                max_abs_delta = max_abs_delta
+                    .max(delta.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0));
+                max_rms_delta = max_rms_delta
+                    .max(delta.pointer("/rms_abs_delta").and_then(Value::as_f64).unwrap_or(0.0));
+                compared_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "compared",
+                    "query_stage_present": true,
+                    "key_stage_present": true,
+                    "score_stage_present": true,
+                    "live_token_count": token_count,
+                    "recomputed_first_values": recomputed,
+                    "delta": delta,
+                }));
+            } else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "query_stage_present": true,
+                    "key_stage_present": true,
+                    "score_stage_present": true,
+                }));
+            }
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "query_stage_present": query.is_some(),
+                "key_stage_present": key.is_some(),
+                "score_stage_present": true,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "reference scalar score recompute is diagnostic arithmetic evidence only; it recomputes sampled raw attention rows from reference Qcur and reference K-cache samples and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
+        "query_stage_present": query.is_some(),
+        "query_stage": query.map(|record| record.stage.clone()),
+        "key_head_count": key_heads.len(),
+        "score_head_count": score_heads.len(),
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "group_size": group_size,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !score_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+fn attention_score_rust_scalar_recompute(
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let query = rust_records.get("attention_q_rope");
+    let key_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_cache_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let score_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let (head_dim, head_count) = query.and_then(rust_query_head_dim_count).unwrap_or((0, 0));
+    let group_size = if head_count > 0 && !key_heads.is_empty() && head_count % key_heads.len() == 0
+    {
+        Some(head_count / key_heads.len())
+    } else {
+        None
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, score) in &score_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let key = kv_head.and_then(|kv_head| key_heads.get(&kv_head).copied());
+        if let (Some(query), Some(key), Some(kv_head)) = (query, key, kv_head) {
+            let token_count = rust_key_token_count(key)
+                .unwrap_or(score.first_values.len())
+                .min(score.first_values.len());
+            if let Some(recomputed) =
+                rust_score_row_from_query_key(query, key, head, head_dim, token_count)
+            {
+                let delta = compare_vectors(&recomputed, &score.first_values);
+                max_abs_delta = max_abs_delta
+                    .max(delta.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0));
+                max_rms_delta = max_rms_delta
+                    .max(delta.pointer("/rms_abs_delta").and_then(Value::as_f64).unwrap_or(0.0));
+                compared_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "compared",
+                    "query_stage_present": true,
+                    "key_stage_present": true,
+                    "score_stage_present": true,
+                    "live_token_count": token_count,
+                    "recomputed_first_values": recomputed,
+                    "delta": delta,
+                }));
+            } else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "query_stage_present": true,
+                    "key_stage_present": true,
+                    "score_stage_present": true,
+                }));
+            }
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "query_stage_present": query.is_some(),
+                "key_stage_present": key.is_some(),
+                "score_stage_present": true,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Rust scalar score recompute is diagnostic arithmetic evidence only; it recomputes sampled raw attention rows from Rust traced post-RoPE Q and K-cache inputs and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
+        "query_stage_present": query.is_some(),
+        "query_stage": query.and_then(|record| record.stage.clone()),
+        "key_head_count": key_heads.len(),
+        "score_head_count": score_heads.len(),
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "group_size": group_size,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !score_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+fn reference_rope_query_record(
+    reference_records: &[ReferenceTraceRecord],
+) -> Option<&ReferenceTraceRecord> {
+    reference_records
+        .iter()
+        .find(|record| {
+            record.stage == "Qcur"
+                && record.values_available
+                && record.shape.len() >= 2
+                && record.shape[0] > 1
+                && record.shape[1] > 1
+                && record.first_values.len() == record.nelements as usize
+        })
+        .or_else(|| {
+            reference_records.iter().find(|record| {
+                record.stage == "Qcur" && record.values_available && !record.first_values.is_empty()
+            })
+        })
+}
+
+fn reference_query_head_dim_count(record: &ReferenceTraceRecord) -> Option<(usize, usize)> {
+    let head_dim = usize::try_from(*record.shape.first()?).ok()?;
+    let head_count = usize::try_from(*record.shape.get(1)?).ok()?;
+    if head_dim == 0 || head_count == 0 || record.first_values.len() < head_dim * head_count {
+        return None;
+    }
+    Some((head_dim, head_count))
+}
+
+fn rust_query_head_dim_count(record: &RustTraceRecord) -> Option<(usize, usize)> {
+    match record.shape.as_slice() {
+        [1, head_count, 1, head_dim] | [head_count, 1, head_dim] | [head_count, head_dim] => {
+            if *head_dim == 0
+                || *head_count == 0
+                || record.first_values.len() < head_dim * head_count
+            {
+                None
+            } else {
+                Some((*head_dim, *head_count))
+            }
+        }
+        _ => None,
+    }
+}
+
+fn reference_key_token_count(record: &ReferenceTraceRecord) -> Option<usize> {
+    usize::try_from(*record.shape.get(1)?).ok().filter(|count| *count > 0)
+}
+
+fn rust_key_token_count(record: &RustTraceRecord) -> Option<usize> {
+    record.shape.get(1).copied().filter(|count| *count > 0)
+}
+
+fn reference_score_row_from_query_key(
+    query: &ReferenceTraceRecord,
+    key: &ReferenceTraceRecord,
+    head: usize,
+    head_dim: usize,
+    token_count: usize,
+) -> Option<Vec<f32>> {
+    if head_dim == 0 || token_count == 0 {
+        return None;
+    }
+    let q_offset = head.checked_mul(head_dim)?;
+    if query.first_values.len() < q_offset + head_dim {
+        return None;
+    }
+    if key.first_values.len() < token_count.checked_mul(head_dim)? {
+        return None;
+    }
+    let mut scores = Vec::with_capacity(token_count);
+    for token in 0..token_count {
+        let mut sum = 0.0f64;
+        for dim in 0..head_dim {
+            let q = query.first_values[q_offset + dim] as f64;
+            let k = key.first_values[token * head_dim + dim] as f64;
+            sum += q * k;
+        }
+        scores.push(sum as f32);
+    }
+    Some(scores)
+}
+
+fn rust_score_row_from_query_key(
+    query: &RustTraceRecord,
+    key: &RustTraceRecord,
+    head: usize,
+    head_dim: usize,
+    token_count: usize,
+) -> Option<Vec<f32>> {
+    if head_dim == 0 || token_count == 0 {
+        return None;
+    }
+    let q_offset = head.checked_mul(head_dim)?;
+    if query.first_values.len() < q_offset + head_dim {
+        return None;
+    }
+    if key.first_values.len() < head_dim.checked_mul(token_count)? {
+        return None;
+    }
+    let mut scores = Vec::with_capacity(token_count);
+    for token in 0..token_count {
+        let mut sum = 0.0f64;
+        for dim in 0..head_dim {
+            let q = query.first_values[q_offset + dim] as f64;
+            let k = key.first_values[dim * token_count + token] as f64;
+            sum += q * k;
+        }
+        scores.push(sum as f32);
+    }
+    Some(scores)
 }
 
 fn trace_dtype_compatible(reference_dtype: &str, rust_dtype: &str) -> bool {
@@ -5331,6 +5677,70 @@ mod tests {
         assert_eq!(prob.pointer("/rust_stage_prefix"), Some(&json!("attn_scores_softmax_head")));
         assert_eq!(prob.pointer("/identity_best_count"), Some(&json!(2)));
         assert_eq!(prob.pointer("/all_identity_best"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn compare_reports_attention_score_scalar_recompute() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record("Qcur", vec![1.0, 2.0, 3.0, 4.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![5.0, 6.0, 7.0, 8.0],
+                ..test_reference_trace_record("k_kv_head0_live", vec![5.0, 6.0, 7.0, 8.0])
+            },
+            test_reference_trace_record("kq_head0", vec![17.0, 23.0]),
+            test_reference_trace_record("kq_head1", vec![39.0, 53.0]),
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_q_rope".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 2, 1, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record("attention_q_rope", vec![1.0, 2.0, 3.0, 4.0])
+            },
+        );
+        rust_records.insert(
+            "attention_k_cache_kv_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![5.0, 7.0, 6.0, 8.0],
+                ..test_rust_trace_record(
+                    "attention_k_cache_kv_head0_live_ref_layout",
+                    vec![5.0, 7.0, 6.0, 8.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            test_rust_trace_record("attention_scores_raw_head0", vec![17.0, 23.0]),
+        );
+        rust_records.insert(
+            "attention_scores_raw_head1".to_string(),
+            test_rust_trace_record("attention_scores_raw_head1", vec![39.0, 53.0]),
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let query_delta = report.pointer("/attention_query_rope_ref_layout_delta").unwrap();
+        let reference = report.pointer("/attention_score_reference_scalar_recompute").unwrap();
+        let rust = report.pointer("/attention_score_rust_scalar_recompute").unwrap();
+
+        assert_eq!(query_delta.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(query_delta.pointer("/delta/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(reference.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(reference.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(reference.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(rust.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(rust.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(rust.pointer("/max_abs_delta"), Some(&json!(0.0)));
     }
 
     #[test]
