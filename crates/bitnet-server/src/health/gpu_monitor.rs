@@ -421,6 +421,21 @@ impl GpuMemoryLeakDetector {
 mod tests {
     use super::*;
 
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    async fn record_sample_at(
+        detector: &GpuMemoryLeakDetector,
+        timestamp: Instant,
+        memory_used_mb: f64,
+    ) {
+        let mut samples = detector.samples.write().await;
+        samples.push(MemorySample { timestamp, memory_used_mb, memory_total_mb: 8192.0 });
+
+        if samples.len() > detector.max_samples {
+            let excess = samples.len() - detector.max_samples;
+            samples.drain(0..excess);
+        }
+    }
+
     #[test]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn test_parse_nvidia_smi_output() {
@@ -555,19 +570,11 @@ mod tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     async fn test_leak_detector_stable_memory() {
         let detector = GpuMemoryLeakDetector::new(10, 10.0);
+        let start = Instant::now();
 
         // Record samples with stable memory
-        for _ in 0..5 {
-            let metrics = GpuMetrics {
-                utilization_percent: 50.0,
-                memory_used_mb: 4096.0,
-                memory_total_mb: 8192.0,
-                temperature_celsius: 65.0,
-                has_cuda_errors: false,
-                error_message: None,
-            };
-            detector.record_sample(&metrics).await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        for i in 0..5 {
+            record_sample_at(&detector, start + std::time::Duration::from_secs(i), 4096.0).await;
         }
 
         let status = detector.analyze().await;
@@ -581,19 +588,16 @@ mod tests {
     async fn test_leak_detector_memory_growth() {
         // Use aggressive threshold for test
         let detector = GpuMemoryLeakDetector::new(10, 5.0);
+        let start = Instant::now();
 
         // Simulate memory leak: 100 MB growth per sample
         for i in 0..5 {
-            let metrics = GpuMetrics {
-                utilization_percent: 50.0,
-                memory_used_mb: 4000.0 + (i as f64 * 100.0), // Growing memory
-                memory_total_mb: 8192.0,
-                temperature_celsius: 65.0,
-                has_cuda_errors: false,
-                error_message: None,
-            };
-            detector.record_sample(&metrics).await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            record_sample_at(
+                &detector,
+                start + std::time::Duration::from_secs(i),
+                4000.0 + (i as f64 * 100.0), // Growing memory
+            )
+            .await;
         }
 
         let status = detector.analyze().await;

@@ -245,7 +245,7 @@ forbidden_claims = [
   "global_speedup",
   "server_ready",
 ]
-next_proof = "commit direct dense Qwen ask/chat user-path hardware receipts if product command evidence is required, then shared server reuse; keep speedup false unless a later governed benchmark review accepts a profile."
+next_proof = "bounded dense Qwen strict CUDA server-smoke receipt exists; keep server_ready false until a later readiness gate promotes an exact profile, and keep speedup false unless a later governed benchmark review accepts a profile."
 claim_boundary = "Qwen2.5 0.5B Q8_0 is the first dense CUDA SLM answer lane. Its receipts do not satisfy BitNet packed I2_S/QK256 proof."
 
   [entry.claims]

@@ -1,0 +1,20 @@
+timestamp = "2026-05-15T05:34:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "server/dense-qwen-strict-smoke-receipt"
+summary = "Started the bounded dense Qwen strict RTX 5070 Ti server-smoke receipt slice after CUDA-SERVER-001 landed claim-safe receipt classification."
+
+artifacts = [
+  "crates/bitnet-server/Cargo.toml",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json",
+  "docs/reports/CUDA_SERVER_002_DENSE_QWEN_STRICT_SMOKE.md",
+]
+
+notes = [
+  "The slice must commit an exact Qwen2.5 0.5B Q8_0 server-smoke receipt for selected_backend=nvidia-rtx-5070-ti-cuda and route=dense_regular_llm_cuda.",
+  "The receipt must preserve fallback_used=false, quality gate passed, speedup_claim=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]

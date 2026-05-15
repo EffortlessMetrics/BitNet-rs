@@ -108,6 +108,7 @@ cuda = [
   "bitnet-device-config-core/cuda",
   "bitnet-inference/cuda",
   "bitnet-kernels/cuda",
+  "bitnet-models/cuda",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cuda",
 ]
