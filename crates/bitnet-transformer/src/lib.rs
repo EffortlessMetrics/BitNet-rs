@@ -1251,8 +1251,7 @@ impl TransformerModel {
                         vocab_size,
                         hidden_size
                     );
-                    let bias = Tensor::zeros(vocab_size, DType::F32, vb.device())?;
-                    (Some(Linear::new(weight.clone(), Some(bias))), Some(weight), false)
+                    (Some(Linear::new(weight.clone(), None)), Some(weight), false)
                 }
                 Err(_) => match vb.get((hidden_size, vocab_size), "lm_head.weight") {
                     Ok(weight) => {
@@ -1271,8 +1270,7 @@ impl TransformerModel {
                                 hidden_size
                             );
                             let weight = weight.reshape((vocab_size, hidden_size))?;
-                            let bias = Tensor::zeros(vocab_size, DType::F32, vb.device())?;
-                            (Some(Linear::new(weight.clone(), Some(bias))), Some(weight), false)
+                            (Some(Linear::new(weight.clone(), None)), Some(weight), false)
                         }
                         Err(_) => {
                             tracing::info!(
