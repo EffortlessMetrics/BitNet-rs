@@ -34,6 +34,10 @@ pub struct InspectCommand {
     #[arg(long)]
     pub qk256_layout_report: bool,
 
+    /// Emit an I2_S/QK256 matmul contract report against the reference policy
+    #[arg(long)]
+    pub i2s_matmul_contract_report: bool,
+
     /// Emit a RoPE tensor/factor contract report for real GGUF tensors
     #[arg(long)]
     pub rope_contract_report: bool,
@@ -71,6 +75,8 @@ impl InspectCommand {
     pub async fn execute(&self) -> Result<()> {
         if self.qk256_layout_report {
             self.write_qk256_layout_report().await
+        } else if self.i2s_matmul_contract_report {
+            self.write_i2s_matmul_contract_report().await
         } else if self.rope_contract_report {
             self.write_rope_contract_report().await
         } else if self.runtime_contract_report {
@@ -79,7 +85,7 @@ impl InspectCommand {
             self.check_ln_gamma_stats().await
         } else {
             anyhow::bail!(
-                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --rope-contract-report, or --runtime-contract-report."
+                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --i2s-matmul-contract-report, --rope-contract-report, or --runtime-contract-report."
             );
         }
     }
@@ -221,6 +227,72 @@ impl InspectCommand {
                 .map(str::to_string)
                 .collect(),
             tensors,
+        })
+    }
+
+    async fn write_i2s_matmul_contract_report(&self) -> Result<()> {
+        let report = self.i2s_matmul_contract_report()?;
+        self.write_json(serde_json::to_string_pretty(&report)?)?;
+        Ok(())
+    }
+
+    fn i2s_matmul_contract_report(&self) -> Result<I2sMatmulContractReport> {
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
+        let mmap = unsafe { Mmap::map(&file)? };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let model_sha256 = format!("{:x}", hasher.finalize());
+
+        let reader = GgufReader::new(&mmap)?;
+        let architecture = reader.get_string_metadata("general.architecture");
+        let file_type = reader.get_u32_metadata("general.file_type");
+
+        let qk256_inventory = qk256_contract_inventory(&reader)?;
+        let rust_uses_reference_activation_quantization = false;
+        let summary = i2s_matmul_contract_summary(
+            &qk256_inventory,
+            rust_uses_reference_activation_quantization,
+        );
+
+        Ok(I2sMatmulContractReport {
+            schema_version: 1,
+            diagnostic: "bitnet_i2s_matmul_contract_report".to_string(),
+            diagnostic_only: true,
+            promotion_allowed: false,
+            proof_receipts_written: false,
+            manifest_updated: false,
+            model: model_path.display().to_string(),
+            model_sha256,
+            gguf_metadata: I2sMatmulGgufMetadata { architecture, file_type },
+            qk256_inventory,
+            rust_policy: I2sRustMatmulPolicy {
+                activation_quantization: "none_dense_f32_input".to_string(),
+                dot_formula: "sum(code_to_f32(code) * activation_f32) * trailer_scale".to_string(),
+                code3_value: 2.0,
+                uses_reference_activation_quantization: rust_uses_reference_activation_quantization,
+            },
+            reference_policy: I2sReferenceMatmulPolicy {
+                source: "ggml.c I2_S matmul + quantize_row_i8_s + ggml_vec_dot_i2_i8_s".to_string(),
+                activation_quantization: "quantize_row_i8_s".to_string(),
+                correction_formula: "(integer_dot - act_sum) / act_scale * trailer_scale"
+                    .to_string(),
+                matmul_effective_code3_value: 2.0,
+                dequantize_row_i2_s_code3_value: 0.0,
+            },
+            summary,
+            not_claims: critical_qk256_report_not_claims()
+                .into_iter()
+                .chain([
+                    "runtime_reference_parity",
+                    "semantic_quality",
+                    "i2s_activation_quantization_implemented",
+                    "a770_semantic_quality",
+                ])
+                .map(str::to_string)
+                .collect(),
         })
     }
 
@@ -868,6 +940,64 @@ struct Qk256TensorLayoutReport {
 }
 
 #[derive(Debug, Serialize)]
+struct I2sMatmulContractReport {
+    schema_version: u32,
+    diagnostic: String,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    model: String,
+    model_sha256: String,
+    gguf_metadata: I2sMatmulGgufMetadata,
+    qk256_inventory: I2sQk256Inventory,
+    rust_policy: I2sRustMatmulPolicy,
+    reference_policy: I2sReferenceMatmulPolicy,
+    summary: I2sMatmulContractSummary,
+    not_claims: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct I2sMatmulGgufMetadata {
+    architecture: Option<String>,
+    file_type: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+struct I2sQk256Inventory {
+    tensor_count: usize,
+    total_values: usize,
+    total_code3_count: usize,
+    total_code3_frequency: f64,
+    max_tensor_code3_frequency: f64,
+}
+
+#[derive(Debug, Serialize)]
+struct I2sRustMatmulPolicy {
+    activation_quantization: String,
+    dot_formula: String,
+    code3_value: f32,
+    uses_reference_activation_quantization: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct I2sReferenceMatmulPolicy {
+    source: String,
+    activation_quantization: String,
+    correction_formula: String,
+    matmul_effective_code3_value: f32,
+    dequantize_row_i2_s_code3_value: f32,
+}
+
+#[derive(Debug, Serialize)]
+struct I2sMatmulContractSummary {
+    activation_quantization_policy_matched: bool,
+    code3_runtime_blocker: bool,
+    blocker: Option<String>,
+    next_action: String,
+}
+
+#[derive(Debug, Serialize)]
 struct RopeContractReport {
     schema_version: u32,
     diagnostic: String,
@@ -1188,6 +1318,83 @@ fn bool_any(reader: &GgufReader, keys: &[&str]) -> Option<bool> {
     keys.iter().find_map(|key| reader.get_bool_metadata(key))
 }
 
+fn qk256_contract_inventory(reader: &GgufReader) -> Result<I2sQk256Inventory> {
+    let mut tensor_count = 0usize;
+    let mut total_values = 0usize;
+    let mut total_code3_count = 0usize;
+    let mut max_tensor_code3_frequency = 0.0f64;
+
+    for i in 0..reader.tensor_count() as usize {
+        let info = reader.get_tensor_info(i)?;
+        if info.tensor_type != GgufTensorType::I2_S || info.shape.len() != 2 {
+            continue;
+        }
+
+        let gguf_cols = info.shape[0];
+        let gguf_rows = info.shape[1];
+        let nelems = gguf_rows.checked_mul(gguf_cols).ok_or_else(|| {
+            anyhow::anyhow!("QK256 tensor '{}' element count overflow", info.name)
+        })?;
+        let row_stride_bytes = qk256_logical_packed_bytes(gguf_cols);
+        let logical_packed_bytes = gguf_rows
+            .checked_mul(row_stride_bytes)
+            .ok_or_else(|| anyhow::anyhow!("QK256 tensor '{}' byte count overflow", info.name))?;
+        let data = reader.get_tensor_data_by_info(info)?;
+        if data.len() < logical_packed_bytes {
+            continue;
+        }
+
+        let hist = qk256_code_histogram_act_parallel_rows(
+            &data[..logical_packed_bytes],
+            gguf_rows,
+            gguf_cols,
+            row_stride_bytes,
+        );
+        let code3_frequency = if nelems == 0 { 0.0 } else { hist[3] as f64 / nelems as f64 };
+
+        tensor_count += 1;
+        total_values += nelems;
+        total_code3_count += hist[3];
+        max_tensor_code3_frequency = max_tensor_code3_frequency.max(code3_frequency);
+    }
+
+    let total_code3_frequency =
+        if total_values == 0 { 0.0 } else { total_code3_count as f64 / total_values as f64 };
+
+    Ok(I2sQk256Inventory {
+        tensor_count,
+        total_values,
+        total_code3_count,
+        total_code3_frequency,
+        max_tensor_code3_frequency,
+    })
+}
+
+fn i2s_matmul_contract_summary(
+    _inventory: &I2sQk256Inventory,
+    rust_uses_reference_activation_quantization: bool,
+) -> I2sMatmulContractSummary {
+    let activation_quantization_policy_matched = rust_uses_reference_activation_quantization;
+    let code3_runtime_blocker = false;
+    let blocker = if !activation_quantization_policy_matched {
+        Some("qk256_activation_quantization_rule_unimplemented".to_string())
+    } else {
+        None
+    };
+    let next_action = if !activation_quantization_policy_matched {
+        "write a focused reference-compatible I2_S activation-quantized GEMV proof before changing claim state"
+    } else {
+        "continue Rust/reference localization outside I2_S activation quantization"
+    };
+
+    I2sMatmulContractSummary {
+        activation_quantization_policy_matched,
+        code3_runtime_blocker,
+        blocker,
+        next_action: next_action.to_string(),
+    }
+}
+
 fn is_rope_freqs_tensor_name(name: &str) -> bool {
     name.ends_with("rope_freqs.weight") || name.contains(".rope_freqs.")
 }
@@ -1492,5 +1699,42 @@ mod tests {
             decode_rope_freq_values("blk.0.rope_freqs.weight", GgufTensorType::F16, f16_bytes)
                 .unwrap();
         assert_eq!(f16_values, vec![0.5, 1.5]);
+    }
+
+    #[test]
+    fn i2s_matmul_summary_blocks_missing_activation_quantization() {
+        let inventory = I2sQk256Inventory {
+            tensor_count: 210,
+            total_values: 2_084_044_800,
+            total_code3_count: 0,
+            total_code3_frequency: 0.0,
+            max_tensor_code3_frequency: 0.0,
+        };
+
+        let summary = i2s_matmul_contract_summary(&inventory, false);
+
+        assert!(!summary.activation_quantization_policy_matched);
+        assert!(!summary.code3_runtime_blocker);
+        assert_eq!(
+            summary.blocker.as_deref(),
+            Some("qk256_activation_quantization_rule_unimplemented")
+        );
+    }
+
+    #[test]
+    fn i2s_matmul_summary_does_not_treat_code3_as_matmul_blocker() {
+        let inventory = I2sQk256Inventory {
+            tensor_count: 1,
+            total_values: 256,
+            total_code3_count: 1,
+            total_code3_frequency: 1.0 / 256.0,
+            max_tensor_code3_frequency: 1.0 / 256.0,
+        };
+
+        let summary = i2s_matmul_contract_summary(&inventory, true);
+
+        assert!(summary.activation_quantization_policy_matched);
+        assert!(!summary.code3_runtime_blocker);
+        assert_eq!(summary.blocker, None);
     }
 }
