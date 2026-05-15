@@ -303,6 +303,10 @@ enum MacAction {
         #[arg(long, default_value_t = 0)]
         threads: usize,
 
+        /// Optional wall-clock timeout for the whole warm session.
+        #[arg(long, value_name = "SECONDS")]
+        timeout_seconds: Option<u64>,
+
         /// Emit operator progress lines to stderr.
         #[arg(long, default_value_t = false)]
         progress: bool,
@@ -824,6 +828,7 @@ impl MacCommand {
                 prompts,
                 max_new_tokens,
                 threads,
+                timeout_seconds,
                 progress,
                 quiet,
                 json_out,
@@ -837,6 +842,7 @@ impl MacCommand {
                     prompts,
                     max_new_tokens,
                     threads,
+                    timeout_seconds,
                     progress,
                     quiet,
                     json_out,
@@ -2508,6 +2514,7 @@ struct BitnetWarmRun<'a> {
     prompts: Vec<String>,
     max_new_tokens: usize,
     threads: usize,
+    timeout_seconds: Option<u64>,
     progress: bool,
     quiet: bool,
     json_out: PathBuf,
@@ -2522,10 +2529,13 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         prompts,
         max_new_tokens,
         threads,
+        timeout_seconds,
         progress,
         quiet,
         json_out,
     } = request;
+    let started_at = std::time::Instant::now();
+    let progress_enabled = progress && !quiet;
     if max_new_tokens == 0 {
         anyhow::bail!("`bitnet mac bitnet-warm` requires --max-new-tokens greater than zero");
     }
@@ -2535,19 +2545,80 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         );
     }
     let (prompts, prompt_source) = resolve_bitnet_warm_prompts(prompts)?;
+    let prompt_count = prompts.len();
+    let mut failure_context = BitNetWarmFailureContext {
+        model_id: model_id.to_string(),
+        cache_dir: cache_dir.clone(),
+        model_path: model_path.clone(),
+        tokenizer_path: tokenizer.clone(),
+        prompt_count,
+        prompt_source,
+        prompt_sha256s: prompts.iter().map(|prompt| sha256_hex(prompt.as_bytes())).collect(),
+        max_new_tokens,
+        timeout_seconds,
+        progress_enabled,
+        started_at,
+    };
     let tokenizer = tokenizer.unwrap_or_else(|| PathBuf::from(BITNET_M4_DEFAULT_TOKENIZER_PATH));
+    failure_context.tokenizer_path = Some(tokenizer.clone());
+    bitnet_warm_progress(progress_enabled, "tokenizer_verify_start", || {
+        format!("path={}", tokenizer.display())
+    });
     if !tokenizer.exists() {
-        anyhow::bail!(
-            "BitNet warm session requires the accepted external tokenizer at {}; pass --tokenizer {}",
-            tokenizer.display(),
-            BITNET_M4_DEFAULT_TOKENIZER_PATH
+        return fail_bitnet_warm_with_receipt(
+            &json_out,
+            failure_context,
+            "tokenizer_missing",
+            &format!(
+                "BitNet warm session requires the accepted external tokenizer at {}; pass --tokenizer {}",
+                tokenizer.display(),
+                BITNET_M4_DEFAULT_TOKENIZER_PATH
+            ),
+            false,
         );
     }
-    let tokenizer_sha256 = verify_bitnet_m4_tokenizer(&tokenizer)?;
-    let model = model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path)?;
-    let prompt_count = prompts.len();
-
-    crate::run_slm_warm_session(
+    let tokenizer_sha256 = match verify_bitnet_m4_tokenizer(&tokenizer) {
+        Ok(sha256) => sha256,
+        Err(error) => {
+            return fail_bitnet_warm_with_receipt(
+                &json_out,
+                failure_context,
+                "tokenizer_verify_failed",
+                &error.to_string(),
+                false,
+            );
+        }
+    };
+    bitnet_warm_progress(progress_enabled, "tokenizer_verify_complete", || {
+        format!("sha256={}...", short_sha(&tokenizer_sha256))
+    });
+    bitnet_warm_progress(progress_enabled, "model_verify_start", || format!("model_id={model_id}"));
+    let model = match model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path) {
+        Ok(model) => model,
+        Err(error) => {
+            return fail_bitnet_warm_with_receipt(
+                &json_out,
+                failure_context,
+                "model_verify_failed",
+                &error.to_string(),
+                false,
+            );
+        }
+    };
+    failure_context.model_path = Some(model.path.clone());
+    bitnet_warm_progress(progress_enabled, "model_verify_complete", || {
+        format!("path={} sha256={}...", model.path.display(), short_sha(&model.sha256))
+    });
+    bitnet_warm_progress(progress_enabled, "warm_session_start", || {
+        format!(
+            "prompts={prompt_count} max_new_tokens={max_new_tokens} timeout_seconds={} stages=model_load,tokenizer_load,prefill,first_token,decode,receipt_write receipt={}",
+            timeout_seconds
+                .map(|seconds| seconds.to_string())
+                .unwrap_or_else(|| "none".to_string()),
+            json_out.display()
+        )
+    });
+    let warm_session = crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
         model.path.clone(),
         "gguf".to_string(),
@@ -2579,15 +2650,49 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         1,
         1,
         json_out.clone(),
-    )
-    .await?;
-    annotate_and_validate_bitnet_warm_session_receipt(
+    );
+    let warm_result = if let Some(seconds) = timeout_seconds {
+        match tokio::time::timeout(std::time::Duration::from_secs(seconds), warm_session).await {
+            Ok(result) => result,
+            Err(_) => {
+                return fail_bitnet_warm_with_receipt(
+                    &json_out,
+                    failure_context,
+                    "timeout",
+                    &format!("BitNet warm session exceeded --timeout-seconds {seconds}"),
+                    true,
+                );
+            }
+        }
+    } else {
+        warm_session.await
+    };
+    if let Err(error) = warm_result {
+        let message = error.to_string();
+        let stage = bitnet_warm_failure_stage(&message);
+        return fail_bitnet_warm_with_receipt(&json_out, failure_context, stage, &message, false);
+    }
+    bitnet_warm_progress(progress_enabled, "receipt_write_complete", || {
+        format!("path={}", json_out.display())
+    });
+    if let Err(error) = annotate_and_validate_bitnet_warm_session_receipt(
         &json_out,
         &model,
         &tokenizer,
         &tokenizer_sha256,
         prompt_source,
-    )?;
+    ) {
+        return fail_bitnet_warm_with_receipt(
+            &json_out,
+            failure_context,
+            "receipt_validation_failed",
+            &error.to_string(),
+            false,
+        );
+    }
+    bitnet_warm_progress(progress_enabled, "receipt_validated", || {
+        format!("path={} chat=false serve=false", json_out.display())
+    });
     if !quiet {
         println!(
             "Mac BitNet warm session passed: {} (prompts={}, prompt_source={}, chat=false, serve=false)",
@@ -2650,6 +2755,250 @@ fn resolve_bitnet_warm_prompts(
         );
     }
     Ok((prompts, BitnetWarmPromptSource::OperatorPrompts))
+}
+
+#[derive(Clone)]
+struct BitNetWarmFailureContext {
+    model_id: String,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer_path: Option<PathBuf>,
+    prompt_count: usize,
+    prompt_source: BitnetWarmPromptSource,
+    prompt_sha256s: Vec<String>,
+    max_new_tokens: usize,
+    timeout_seconds: Option<u64>,
+    progress_enabled: bool,
+    started_at: std::time::Instant,
+}
+
+fn fail_bitnet_warm_with_receipt(
+    json_out: &Path,
+    context: BitNetWarmFailureContext,
+    stage: &str,
+    message: &str,
+    timeout_reached: bool,
+) -> Result<()> {
+    let repair_guidance = bitnet_warm_failure_repair_guidance(stage, &context, timeout_reached);
+    let repair_text = bitnet_mac_ask_failure_repair_text(&repair_guidance);
+    if let Err(receipt_error) = write_bitnet_warm_failure_receipt(
+        json_out,
+        context,
+        stage,
+        message,
+        timeout_reached,
+        &repair_guidance,
+    ) {
+        anyhow::bail!(
+            "{message}{repair_text}; additionally failed to write BitNet warm failure receipt {}: {receipt_error}",
+            json_out.display()
+        );
+    }
+    anyhow::bail!("{message}; failure receipt written to {}{repair_text}", json_out.display())
+}
+
+fn write_bitnet_warm_failure_receipt(
+    path: &Path,
+    context: BitNetWarmFailureContext,
+    stage: &str,
+    message: &str,
+    timeout_reached: bool,
+    repair_guidance: &[String],
+) -> Result<()> {
+    let elapsed_ms = context.started_at.elapsed().as_secs_f64() * 1000.0;
+    let timeout_enforced = context.timeout_seconds.is_some();
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_kind": "bitnet_apple_m4_warm_session_failure",
+        "artifact_path": path.display().to_string(),
+        "operator_command": "mac bitnet-warm",
+        "status": "failed",
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "model_id": context.model_id,
+        "model": {
+            "expected_sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "path": context.model_path.as_ref().map(|path| path.display().to_string()),
+            "family": "bitnet",
+        },
+        "tokenizer": {
+            "expected_sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "path": context.tokenizer_path.as_ref().map(|path| path.display().to_string()),
+            "strict": true,
+            "pretokenizer_authority": "llama-bpe",
+        },
+        "cache": {
+            "cache_dir": context.cache_dir.as_ref().map(|path| path.display().to_string()),
+        },
+        "prompt": {
+            "count": context.prompt_count,
+            "source": context.prompt_source.as_str(),
+            "sha256s": context.prompt_sha256s,
+            "template_family": BITNET_M4_PROMPT_TEMPLATE,
+        },
+        "generation": {
+            "max_new_tokens": context.max_new_tokens,
+            "generated_text": "",
+            "generated_token_ids": [],
+            "generated_tokens": 0,
+            "partial_text": "",
+            "partial_token_ids": [],
+        },
+        "failure": {
+            "stage": stage,
+            "message": message,
+            "elapsed_ms": (elapsed_ms * 1000.0).round() / 1000.0,
+        },
+        "progress": {
+            "enabled": context.progress_enabled,
+            "status_stream": "stderr",
+            "last_stage": stage,
+            "stage_taxonomy": bitnet_warm_stage_taxonomy(),
+            "diagnostic_note": "model_load, tokenizer_load, prefill, first_token, decode, and receipt_write are explicit warm-session diagnostic stages",
+        },
+        "timeout_boundary": {
+            "configured_seconds": context.timeout_seconds,
+            "reached": timeout_reached,
+            "enforced": timeout_enforced,
+            "status": if timeout_reached { "reached" } else { "not_reached" },
+            "stage": stage,
+            "note": "failure occurred before a complete BitNet warm-session aggregate receipt was produced",
+        },
+        "repair_guidance": repair_guidance,
+        "mac_bitnet_claim_boundary": {
+            "bitnet_warm_session": true,
+            "partial_failure_receipt": true,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+        "memory": memory_receipt_json(),
+    });
+    write_json_receipt(path, &receipt)
+}
+
+fn bitnet_warm_failure_repair_guidance(
+    stage: &str,
+    context: &BitNetWarmFailureContext,
+    timeout_reached: bool,
+) -> Vec<String> {
+    let mut guidance = Vec::new();
+    let cache_dir_arg = context
+        .cache_dir
+        .as_ref()
+        .map(|path| format!(" --cache-dir {}", path.display()))
+        .unwrap_or_default();
+    if stage.contains("tokenizer") {
+        guidance.push(format!(
+            "pass --tokenizer {BITNET_M4_DEFAULT_TOKENIZER_PATH} with SHA256 {BITNET_M4_EXPECTED_TOKENIZER_SHA256}"
+        ));
+        if let Some(tokenizer_path) = context.tokenizer_path.as_ref() {
+            guidance.push(format!(
+                "verify the tokenizer path with `shasum -a 256 {}` before retrying",
+                tokenizer_path.display()
+            ));
+        }
+    }
+    if stage.contains("model") || stage == "warm_session_failed" {
+        if context.model_path.is_some() {
+            guidance.push(format!(
+                "replace --model-path with the accepted Microsoft I2_S GGUF with SHA256 {BITNET_M4_EXPECTED_MODEL_SHA256}"
+            ));
+        } else {
+            guidance.push(format!(
+                "run `bitnet model fetch {}`{} or pass --model-path <accepted-bitnet-gguf>",
+                context.model_id, cache_dir_arg
+            ));
+        }
+        guidance.push(format!(
+            "inspect cache state with `bitnet mac models{cache_dir_arg}` and `bitnet model verify {}`{}",
+            context.model_id, cache_dir_arg
+        ));
+    }
+    if timeout_reached || stage == "timeout" {
+        guidance.push(
+            "rerun with --progress to see the last completed warm-session stage, then increase --timeout-seconds or reduce the prompt/max-token set".to_string(),
+        );
+    }
+    if matches!(
+        stage,
+        "prompt_tokenize"
+            | "prefill"
+            | "first_token"
+            | "decode"
+            | "receipt_write"
+            | "receipt_validation_failed"
+    ) {
+        guidance.push(
+            "retry the same prompt set with --progress and inspect any per-prompt receipts beside the aggregate receipt".to_string(),
+        );
+    }
+    guidance.push(
+        "keep BitNet chat and serve disabled; this receipt is a failed warm-session attempt"
+            .to_string(),
+    );
+    guidance
+}
+
+fn bitnet_warm_failure_stage(message: &str) -> &'static str {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("failed to load real model") || lower.contains("model load") {
+        "model_load"
+    } else if lower.contains("failed to resolve tokenizer") || lower.contains("tokenizer load") {
+        "tokenizer_load"
+    } else if lower.contains("tokenize") || lower.contains("encode") {
+        "prompt_tokenize"
+    } else if lower.contains("prefill") {
+        "prefill"
+    } else if lower.contains("first token") || lower.contains("time_to_first") {
+        "first_token"
+    } else if lower.contains("decode")
+        || lower.contains("forward")
+        || lower.contains("logits")
+        || lower.contains("sample")
+    {
+        "decode"
+    } else if lower.contains("receipt") || lower.contains("write") || lower.contains("create") {
+        "receipt_write"
+    } else {
+        "warm_session_failed"
+    }
+}
+
+fn bitnet_warm_stage_taxonomy() -> Vec<&'static str> {
+    vec![
+        "tokenizer_verify",
+        "model_verify",
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "prefill",
+        "first_token",
+        "decode",
+        "receipt_write",
+        "receipt_validation",
+    ]
+}
+
+fn bitnet_warm_progress<F>(enabled: bool, stage: &str, details: F)
+where
+    F: FnOnce() -> String,
+{
+    if enabled {
+        eprintln!("mac bitnet-warm progress: {stage} {}", details());
+    }
 }
 
 struct BitnetBenchmarkRun<'a> {
@@ -2807,6 +3156,7 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
         prompts: Vec::new(),
         max_new_tokens,
         threads,
+        timeout_seconds: None,
         progress,
         quiet,
         json_out: warm_receipt.clone(),
@@ -9124,6 +9474,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_benchmark_v1_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_mac_ask_failure" {
         validate_bitnet_mac_ask_failure_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_warm_session_failure" {
+        validate_bitnet_warm_session_failure_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -9242,6 +9594,120 @@ fn validate_bitnet_mac_ask_failure_receipt(
         );
     }
     Ok((Some(1), Some(0)))
+}
+
+fn validate_bitnet_warm_session_failure_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    if receipt["schema_version"].as_str() != Some("1.0.0") {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt schema_version must be 1.0.0",
+            path.display()
+        );
+    }
+    if receipt["status"].as_str() != Some("failed") {
+        anyhow::bail!("{} BitNet warm failure receipt status must be failed", path.display());
+    }
+    if receipt["operator_command"].as_str() != Some("mac bitnet-warm") {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record operator_command=mac bitnet-warm",
+            path.display()
+        );
+    }
+    if receipt["model_id"].as_str() != Some(BITNET_M4_MODEL_ID) {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record the accepted BitNet model id",
+            path.display()
+        );
+    }
+    if receipt["model"]["expected_sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256) {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record the accepted model SHA256",
+            path.display()
+        );
+    }
+    if receipt["tokenizer"]["expected_sha256"].as_str() != Some(BITNET_M4_EXPECTED_TOKENIZER_SHA256)
+        || receipt["tokenizer"]["strict"].as_bool() != Some(true)
+        || receipt["tokenizer"]["pretokenizer_authority"].as_str() != Some("llama-bpe")
+    {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record strict external llama-bpe tokenizer authority",
+            path.display()
+        );
+    }
+    if receipt["prompt"]["template_family"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE)
+        || receipt["prompt"]["count"].as_u64().unwrap_or_default() < 2
+        || receipt["prompt"]["source"].as_str().is_none_or(str::is_empty)
+    {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record prompt count, source, and template",
+            path.display()
+        );
+    }
+    if receipt["generation"]["generated_text"].as_str() != Some("")
+        || receipt["generation"]["generated_token_ids"].as_array().is_none_or(|ids| !ids.is_empty())
+        || receipt["generation"]["generated_tokens"].as_u64() != Some(0)
+    {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record empty partial generation",
+            path.display()
+        );
+    }
+    if receipt["failure"]["stage"].as_str().is_none_or(str::is_empty)
+        || receipt["failure"]["message"].as_str().is_none_or(str::is_empty)
+        || receipt["failure"]["elapsed_ms"].as_f64().is_none()
+    {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record failure stage, message, and elapsed_ms",
+            path.display()
+        );
+    }
+    let taxonomy = receipt["progress"]["stage_taxonomy"].as_array().ok_or_else(|| {
+        anyhow!("{} BitNet warm failure receipt is missing progress.stage_taxonomy", path.display())
+    })?;
+    for required in
+        ["model_load", "tokenizer_load", "prefill", "first_token", "decode", "receipt_write"]
+    {
+        if !taxonomy.iter().any(|stage| stage.as_str() == Some(required)) {
+            anyhow::bail!(
+                "{} BitNet warm failure receipt progress taxonomy must include {required}",
+                path.display()
+            );
+        }
+    }
+    if receipt["timeout_boundary"]["reached"].as_bool().is_none()
+        || receipt["timeout_boundary"]["enforced"].as_bool().is_none()
+        || receipt["timeout_boundary"]["status"].as_str().is_none_or(str::is_empty)
+    {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must record an explicit timeout boundary",
+            path.display()
+        );
+    }
+    if receipt["repair_guidance"].as_array().is_none_or(|guidance| guidance.is_empty()) {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must include repair guidance",
+            path.display()
+        );
+    }
+    if receipt["mac_bitnet_claim_boundary"]["bitnet_warm_session"].as_bool() != Some(true)
+        || receipt["mac_bitnet_claim_boundary"]["partial_failure_receipt"].as_bool() != Some(true)
+        || receipt["mac_bitnet_claim_boundary"]["chat_enabled"].as_bool() != Some(false)
+        || receipt["mac_bitnet_claim_boundary"]["serve_enabled"].as_bool() != Some(false)
+        || receipt["mac_bitnet_claim_boundary"]["full_metal_inference_claimed"].as_bool()
+            != Some(false)
+        || receipt["mac_bitnet_claim_boundary"]["qk256_apple_claimed"].as_bool() != Some(false)
+        || receipt["mac_bitnet_claim_boundary"]["broad_performance_claim"].as_bool() != Some(false)
+        || receipt["mac_bitnet_claim_boundary"]["speedup_claim"].as_bool() != Some(false)
+        || receipt["bitnet_quality_claimed"].as_bool() != Some(false)
+    {
+        anyhow::bail!(
+            "{} BitNet warm failure receipt must preserve BitNet warm claim boundaries",
+            path.display()
+        );
+    }
+    Ok((Some(receipt["prompt"]["count"].as_u64().unwrap_or_default() as usize), Some(0)))
 }
 
 fn validate_slm_eval_summary_receipt(
