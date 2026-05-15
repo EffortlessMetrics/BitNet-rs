@@ -66,6 +66,19 @@ struct ReferenceProbabilityProbe {
 }
 
 #[derive(Clone, Debug)]
+struct ReferenceProbabilityCandidateSummary {
+    token_id: i64,
+    reference_token_piece: Option<String>,
+    reference_probability: f64,
+    token_piece: Option<String>,
+    present: bool,
+    logit: Option<f64>,
+    softmax_probability: Option<f64>,
+    softmax_rank: Option<u64>,
+    probability_delta: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
 struct HiddenStateStats {
     value_count: Option<u64>,
     mean: Option<f64>,
@@ -766,6 +779,10 @@ fn candidate_logits(
     };
 
     let mut best_candidate: Option<(&SelectedLogit, f64)> = None;
+    let mut best_reference_probability_candidate: Option<ReferenceProbabilityCandidateSummary> =
+        None;
+    let mut matched_reference_probability_count = 0usize;
+    let mut max_abs_probability_delta: Option<f64> = None;
     let mut rows = Vec::new();
     for token_id in candidate_ids {
         let selected = selected_logits.iter().find(|item| item.token_id == *token_id);
@@ -778,11 +795,34 @@ fn candidate_logits(
         let reference_probability = reference_probe.and_then(|item| item.reference_probability);
         let probability_delta =
             rust_probability.zip(reference_probability).map(|(rust, reference)| rust - reference);
+        if let Some(delta) = probability_delta {
+            matched_reference_probability_count += 1;
+            let abs_delta = delta.abs();
+            max_abs_probability_delta =
+                Some(max_abs_probability_delta.map_or(abs_delta, |current| current.max(abs_delta)));
+        }
         if let Some(logit) = logit
             && best_candidate.is_none_or(|(_, best)| logit > best)
             && let Some(selected) = selected
         {
             best_candidate = Some((selected, logit));
+        }
+        if let Some(reference_probability) = reference_probability
+            && best_reference_probability_candidate
+                .as_ref()
+                .is_none_or(|candidate| reference_probability > candidate.reference_probability)
+        {
+            best_reference_probability_candidate = Some(ReferenceProbabilityCandidateSummary {
+                token_id: *token_id,
+                reference_token_piece: reference_probe.and_then(|item| item.token_piece.clone()),
+                reference_probability,
+                token_piece: selected.and_then(|item| item.token_piece.clone()),
+                present,
+                logit,
+                softmax_probability: rust_probability,
+                softmax_rank: rust_rank,
+                probability_delta,
+            });
         }
         rows.push(json!({
             "token_id": token_id,
@@ -812,6 +852,7 @@ fn candidate_logits(
     let top_logit_value = top_logit.map(|item| item.logit);
     let best_candidate_to_top_delta =
         best_candidate_logit.zip(top_logit_value).map(|(candidate, top)| top - candidate);
+    let best_reference_probability_candidate = best_reference_probability_candidate.as_ref();
 
     json!({
         "diagnostic_only": true,
@@ -819,6 +860,18 @@ fn candidate_logits(
         "selected_logits_available": true,
         "candidate_count": candidate_ids.len(),
         "matched_candidate_count": rows.iter().filter(|row| row["present"] == true).count(),
+        "reference_probability_probe_count": reference_probability_probes.map(|items| items.len()),
+        "matched_reference_probability_count": matched_reference_probability_count,
+        "max_abs_probability_delta": max_abs_probability_delta,
+        "best_reference_probability_token_id": best_reference_probability_candidate.map(|candidate| candidate.token_id),
+        "best_reference_probability_token_piece": best_reference_probability_candidate.and_then(|candidate| candidate.token_piece.clone()),
+        "best_reference_probability_reference_token_piece": best_reference_probability_candidate.and_then(|candidate| candidate.reference_token_piece.clone()),
+        "best_reference_probability": best_reference_probability_candidate.map(|candidate| candidate.reference_probability),
+        "best_reference_probability_present": best_reference_probability_candidate.map(|candidate| candidate.present),
+        "best_reference_probability_logit": best_reference_probability_candidate.and_then(|candidate| candidate.logit),
+        "best_reference_probability_softmax_probability": best_reference_probability_candidate.and_then(|candidate| candidate.softmax_probability),
+        "best_reference_probability_softmax_rank": best_reference_probability_candidate.and_then(|candidate| candidate.softmax_rank),
+        "best_reference_probability_delta": best_reference_probability_candidate.and_then(|candidate| candidate.probability_delta),
         "candidate_logits": rows,
         "best_candidate_token_id": best_candidate_token_id,
         "best_candidate_token_piece": best_candidate_token_piece,
@@ -1531,8 +1584,36 @@ mod tests {
             json!("2")
         );
         assert_eq!(
+            report["probability_probe_candidate_logits"]["reference_probability_probe_count"],
+            json!(2)
+        );
+        assert_eq!(
             report["probability_probe_candidate_logits"]["matched_candidate_count"],
             json!(2)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["matched_reference_probability_count"],
+            json!(2)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["best_reference_probability_token_id"],
+            json!(17)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["best_reference_probability"],
+            json!(0.75)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["best_reference_probability_softmax_rank"],
+            json!(1173)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["best_reference_probability_delta"],
+            json!(-0.74994)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["max_abs_probability_delta"],
+            json!(0.74994)
         );
         assert_eq!(
             report["probability_probe_candidate_logits"]["not_claim"],
