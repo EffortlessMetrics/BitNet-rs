@@ -4441,8 +4441,41 @@ pub fn validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt: &Value
     )?;
     require_positive_u64(descriptor, "tensor_count")?;
     require_positive_u64(descriptor, "metadata_count")?;
-    require_bool_eq(descriptor, "required_roles_present", true)?;
-    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    let required_roles_present = object_field(descriptor, "required_roles_present")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `required_roles_present` must be a bool"))?;
+    let strict_descriptor_complete = object_field(descriptor, "strict_descriptor_complete")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `strict_descriptor_complete` must be a bool"))?;
+    let transformer_block_required_roles_present =
+        match descriptor.get("transformer_block_required_roles_present") {
+            Some(value) => value.as_bool().ok_or_else(|| {
+                anyhow!("field `transformer_block_required_roles_present` must be a bool")
+            })?,
+            None => required_roles_present,
+        };
+    if !transformer_block_required_roles_present {
+        return Err(anyhow!(
+            "descriptor_coverage.transformer_block_required_roles_present must be true"
+        ));
+    }
+    if let Some(missing) = descriptor.get("missing_transformer_block_roles") {
+        let missing = missing
+            .as_array()
+            .ok_or_else(|| anyhow!("field `missing_transformer_block_roles` must be an array"))?;
+        if !missing.is_empty() {
+            return Err(anyhow!(
+                "descriptor_coverage.missing_transformer_block_roles must be empty"
+            ));
+        }
+    }
+    if !(required_roles_present && strict_descriptor_complete)
+        && descriptor.get("missing_model_boundary_roles").is_none()
+    {
+        return Err(anyhow!(
+            "incomplete all-layer descriptor coverage must list missing_model_boundary_roles"
+        ));
+    }
     require_string_non_empty(descriptor, "dense_cuda_route_status")?;
     reject_bitnet_packed_marker(
         required_string(descriptor, "dense_cuda_route_status")?,

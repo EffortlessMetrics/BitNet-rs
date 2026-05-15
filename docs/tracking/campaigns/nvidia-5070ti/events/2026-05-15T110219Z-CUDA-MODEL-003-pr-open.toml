@@ -1,0 +1,12 @@
+timestamp = "2026-05-15T11:02:19Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-003"
+event = "pr_open"
+pr = 4903
+head_sha = "29d8c75ce23a4ab99e3c02c065ba8122494d6083"
+actor = "codex"
+
+notes = [
+  "Opened draft PR #4903 for the Qwen3 0.6B RTX 5070 Ti CUDA all-layer route-plan receipt.",
+  "The PR keeps Qwen3 one-token CUDA, short-decode, warm-session, speedup, server readiness, full residency, and BitNet QK256 claims false.",
+]

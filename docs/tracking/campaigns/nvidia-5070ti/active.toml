@@ -2323,8 +2323,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-003"
-status = "proposed"
+status = "pr_open"
 branch = "model/cuda-qwen3-0_6b-all-layer-plan"
+pr = 4903
+head_sha = "29d8c75ce23a4ab99e3c02c065ba8122494d6083"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

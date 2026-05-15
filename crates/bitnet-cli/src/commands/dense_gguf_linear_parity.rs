@@ -9640,9 +9640,7 @@ fn dense_gguf_all_layer_execution_plan_receipt_json(
     artifact_path: &str,
     timestamp_utc: &str,
 ) -> Result<Value> {
-    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
-        bail!("dense GGUF all-layer plan requires complete dense descriptor coverage");
-    }
+    ensure_dense_all_layer_block_descriptor_coverage(inspection)?;
 
     let layer_indices = dense_transformer_layer_indices(inspection)?;
     if layer_indices.is_empty() {
@@ -9782,6 +9780,14 @@ fn dense_gguf_all_layer_execution_plan_receipt_json(
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
             "required_roles_present": inspection.required_roles_present,
+            "model_boundary_required_roles_present": inspection.required_roles_present,
+            "missing_model_boundary_roles": inspection
+                .missing_required_roles
+                .iter()
+                .map(|role| dense_role_label(*role))
+                .collect::<Vec<_>>(),
+            "transformer_block_required_roles_present": true,
+            "missing_transformer_block_roles": Vec::<&str>::new(),
             "strict_descriptor_complete": inspection.strict_descriptor_complete,
             "dense_cuda_route_status": inspection.dense_cuda_route_status,
             "quantization_families": inspection.quantization_families,
@@ -12516,6 +12522,12 @@ fn dense_layer_operation_signature(operations: &[Value]) -> Result<Vec<Value>> {
 fn dense_model_boundary_gaps_json(inspection: &DenseGgufDescriptorInspection) -> Value {
     let token_embedding = descriptor_for_role(inspection, DenseGgufTensorRole::TokenEmbedding).ok();
     let lm_head = descriptor_for_role(inspection, DenseGgufTensorRole::Output).ok();
+    let lm_head_source = lm_head.or(token_embedding);
+    let lm_head_disposition = if lm_head.is_some() {
+        "LM head and logits fixture not yet governed"
+    } else {
+        "LM head appears tied to token embeddings; logits fixture not yet governed"
+    };
     let gap =
         |name: &str, disposition: &str, source: Option<&DenseGgufTensorDescriptor>, proof: &str| {
             json!({
@@ -12535,7 +12547,7 @@ fn dense_model_boundary_gaps_json(inspection: &DenseGgufDescriptorInspection) ->
         "gaps": [
             gap("token_embedding", "embedding lookup fixture and route not yet governed", token_embedding, "dense_gguf_embedding_fixture"),
             gap("final_norm", "final model normalization fixture not yet governed", None, "dense_gguf_final_norm_fixture"),
-            gap("lm_head_logits", "LM head and logits fixture not yet governed", lm_head, "dense_gguf_lm_head_logits_fixture"),
+            gap("lm_head_logits", lm_head_disposition, lm_head_source, "dense_gguf_lm_head_logits_fixture"),
             gap("kv_cache_policy", "KV cache residency and transfer policy not yet recorded", None, "dense_gguf_kv_cache_policy_receipt"),
             gap("sampling", "sampler integration and logits transfer policy not yet governed", None, "dense_gguf_sampling_policy_receipt")
         ],
@@ -12549,6 +12561,38 @@ fn dense_model_boundary_gaps_json(inspection: &DenseGgufDescriptorInspection) ->
         "full_cuda_residency_claimed": false
     })
 }
+
+fn ensure_dense_all_layer_block_descriptor_coverage(
+    inspection: &DenseGgufDescriptorInspection,
+) -> Result<()> {
+    let missing_roles = DENSE_ALL_LAYER_BLOCK_ROLES
+        .iter()
+        .copied()
+        .filter(|role| !inspection.descriptors.iter().any(|descriptor| descriptor.role == *role))
+        .map(dense_role_label)
+        .collect::<Vec<_>>();
+
+    if !missing_roles.is_empty() {
+        bail!(
+            "dense GGUF all-layer plan requires complete transformer block descriptor coverage, missing roles: {}",
+            missing_roles.join(", ")
+        );
+    }
+
+    Ok(())
+}
+
+const DENSE_ALL_LAYER_BLOCK_ROLES: &[DenseGgufTensorRole] = &[
+    DenseGgufTensorRole::AttentionQ,
+    DenseGgufTensorRole::AttentionK,
+    DenseGgufTensorRole::AttentionV,
+    DenseGgufTensorRole::AttentionOutput,
+    DenseGgufTensorRole::MlpGate,
+    DenseGgufTensorRole::MlpUp,
+    DenseGgufTensorRole::MlpDown,
+    DenseGgufTensorRole::AttentionNorm,
+    DenseGgufTensorRole::FfnNorm,
+];
 
 fn dense_one_layer_plan_entries(
     inspection: &DenseGgufDescriptorInspection,
@@ -13078,6 +13122,54 @@ mod tests {
         assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_all_layer_plan_receipt_allows_tied_lm_head_boundary_gap() -> Result<()> {
+        let data = build_two_layer_qwen_tied_lm_head_gguf();
+        let reader = GgufReader::new(&data)?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        assert!(!inspection.required_roles_present);
+        assert!(!inspection.strict_descriptor_complete);
+        assert!(inspection.missing_required_roles.contains(&DenseGgufTensorRole::Output));
+
+        let receipt = dense_gguf_all_layer_execution_plan_receipt_json(
+            &inspection,
+            None,
+            Path::new("synthetic-qwen3-q8_0-all-layer-plan-tied-head.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-all-layer-plan-tied-head.json",
+            "2026-05-15T00:00:00Z",
+        )?;
+
+        validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)?;
+        assert_eq!(receipt["descriptor_coverage"]["required_roles_present"], false);
+        assert_eq!(receipt["descriptor_coverage"]["strict_descriptor_complete"], false);
+        assert_eq!(
+            receipt["descriptor_coverage"]["transformer_block_required_roles_present"],
+            true
+        );
+        let missing_model_boundary_roles =
+            receipt["descriptor_coverage"]["missing_model_boundary_roles"]
+                .as_array()
+                .ok_or_else(|| anyhow!("missing_model_boundary_roles must be an array"))?;
+        assert_eq!(missing_model_boundary_roles.iter().any(|role| role == "output"), true);
+        let boundary_gaps = receipt["model_boundary_gaps"]["gaps"]
+            .as_array()
+            .ok_or_else(|| anyhow!("model_boundary_gaps.gaps must be an array"))?;
+        let lm_head_gap = boundary_gaps
+            .iter()
+            .find(|gap| gap["gap"] == "lm_head_logits")
+            .ok_or_else(|| anyhow!("missing lm_head_logits boundary gap"))?;
+        assert_eq!(lm_head_gap["source_tensor"], "token_embd.weight");
+        let disposition = lm_head_gap["disposition"]
+            .as_str()
+            .ok_or_else(|| anyhow!("lm_head_logits disposition must be a string"))?;
+        assert!(disposition.contains("tied"));
+        assert_eq!(receipt["all_layer_plan"]["strict_cuda_ready"], true);
+        assert_eq!(receipt["all_layer_plan"]["qwen_one_token_cuda_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        Ok(())
     }
 
     #[test]
@@ -14242,6 +14334,41 @@ mod tests {
         build_qwen_gguf(vec![
             ("token_embd.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
             ("output.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.attn_q.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.attn_k.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.0.attn_v.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            (
+                "blk.0.attn_output.weight",
+                vec![4, 3],
+                GgufTensorType::Q8_0,
+                q8_0_blob(0.0625, &values),
+            ),
+            ("blk.0.ffn_gate.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.ffn_up.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.0.ffn_down.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            ("blk.0.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ("blk.0.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ("blk.1.attn_q.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.1.attn_k.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.1.attn_v.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            (
+                "blk.1.attn_output.weight",
+                vec![4, 3],
+                GgufTensorType::Q8_0,
+                q8_0_blob(0.0625, &values),
+            ),
+            ("blk.1.ffn_gate.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.1.ffn_up.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.1.ffn_down.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            ("blk.1.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ("blk.1.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+        ])
+    }
+
+    fn build_two_layer_qwen_tied_lm_head_gguf() -> Vec<u8> {
+        let values = (1..=12).collect::<Vec<_>>();
+        build_qwen_gguf(vec![
+            ("token_embd.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
             ("blk.0.attn_q.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
             ("blk.0.attn_k.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
             ("blk.0.attn_v.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),

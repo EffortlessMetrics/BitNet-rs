@@ -1,0 +1,18 @@
+timestamp = "2026-05-15T10:53:08Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "model/cuda-qwen3-0_6b-all-layer-plan"
+summary = "Started Qwen3 0.6B RTX 5070 Ti CUDA all-layer planning after CPU answer sanity landed."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-cuda-all-layer-plan.json",
+]
+
+notes = [
+  "The all-layer plan is scoped to transformer-block route coverage before any Qwen3 one-token CUDA proof.",
+  "The receipt must keep Qwen3 one-token, short-decode, warm-session, speedup, server readiness, full residency, and BitNet QK256 claims false.",
+]
