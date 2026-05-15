@@ -1,0 +1,21 @@
+timestamp = "2026-05-15T07:45:36Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "model/cuda-qwen3-0_6b-cpu-sanity"
+summary = "Started Qwen3 0.6B CPU answer sanity after the artifact contract landed."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-cpu-answer-corpus.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-cpu-answer-corpus-runs/",
+  "docs/reports/CUDA_MODEL_002_QWEN3_06B_CPU_SANITY.md",
+]
+
+notes = [
+  "The same-box strict CPU answer corpus selected cpu-rust with requested CPU kernel avx512 and fallback_used=false.",
+  "All five bounded Qwen3 cases passed under the qwen no-thinking prompt policy and strict GGUF tokenizer provenance.",
+  "The model coverage row is promoted only to cpu_answer_ready; accelerator, product CLI, speedup, server, full residency, and BitNet QK256 claims remain false.",
+]
