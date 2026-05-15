@@ -1,0 +1,37 @@
+timestamp = "2026-05-15T18:15:44Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-003"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-003-regression-dashboard"
+pr = 4967
+merge_sha = "b598ea3c36883d64a65d4674af33c7ddb74568df"
+summary = "Merged model-free Apple M4 regression dashboard artifacts."
+
+artifacts = [
+  ".github/workflows/apple-m4-inference-ops-tier0.yml",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "PR #4967 added `bitnet mac regression-dashboard` and the `apple_m4_regression_dashboard` receipt.",
+  "The dashboard groups committed dense SLM and BitNet reports by evidence family, model identity, tokenizer authority, backend, and fallback state.",
+  "The first committed dashboard state has insufficient_history groups until future matching report refreshes land.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim was added.",
+]
+
+[evidence]
+route = "bitnet mac regression-dashboard"
+artifact_kind = "apple_m4_regression_dashboard"
+backend = "apple-m4-cpu-neon"
+fallback_used = false
+next_item = "M4-INF-OPS-004"
+claim_boundary = "dashboard only; no live model run, model download, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"
