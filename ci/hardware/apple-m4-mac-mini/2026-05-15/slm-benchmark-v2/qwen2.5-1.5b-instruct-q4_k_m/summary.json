@@ -1,0 +1,2716 @@
+{
+  "artifact_kind": "apple_m4_slm_benchmark_v2",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+  "benchmark_contract": {
+    "cold_load_separated": true,
+    "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+    "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+    "memory_drift_definition": "per-profile ru_maxrss process peak delta; monotonic peak, not live RSS",
+    "model_tokenizer_reuse_visible_per_profile": true,
+    "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+    "percentiles": [
+      "p50",
+      "p90",
+      "p99"
+    ],
+    "profile_execution_model": "one resident warm-session run per named profile",
+    "profile_set_model_loads": 8,
+    "profiles_loaded_independently": true,
+    "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+    "thresholds_are_claim_bounds_not_speed_guarantees": true
+  },
+  "build": {
+    "profile": "release",
+    "release_mode": true
+  },
+  "evidence": {
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "operator_command": "mac benchmark",
+    "profile_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/short_prompt_16_out.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/short_prompt_64_out.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/long_prompt_16_out.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/long_prompt_128_out.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/context_1k.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/context_4k.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/resident_25.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/resident_50.json"
+    ]
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_tokens": 1458,
+  "mac_claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bounded_benchmark_profiles_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false,
+    "timing_profile": true
+  },
+  "memory": {
+    "end_peak_memory_mb": 8673.922,
+    "memory_drift_mb_p50": 0.0,
+    "memory_drift_mb_p90": 7559.922,
+    "memory_drift_mb_p99": 7559.922,
+    "peak_memory_mb_p50": 8394.875,
+    "peak_memory_mb_p90": 8673.922,
+    "peak_memory_mb_p99": 8673.922,
+    "process_peak_drift_mb": 8661.734,
+    "source": "getrusage.ru_maxrss process peak delta",
+    "start_peak_memory_mb": 12.188
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 1117320736,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 1.5B Instruct Q4_K_M",
+    "id": "qwen2.5-1.5b-instruct-q4_k_m",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "quantization": "Q4_K_M",
+    "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+    "support_note": "Rust-native Apple M4 CPU/NEON larger Qwen-class SLM artifact; non-default.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "profile_set": "slm-benchmark-v2",
+  "profiles": [
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 49,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 7559.922,
+          "min": 7559.922,
+          "p50": 7559.922,
+          "p90": 7559.922,
+          "p99": 7559.922,
+          "samples": [
+            7559.922
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 7572.141,
+          "min": 7572.141,
+          "p50": 7572.141,
+          "p90": 7572.141,
+          "p99": 7572.141,
+          "samples": [
+            7572.141
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 5,
+        "max": 16.0,
+        "min": 2.0,
+        "p50": 11.0,
+        "p90": 16.0,
+        "p99": 16.0,
+        "samples": [
+          4.0,
+          2.0,
+          16.0,
+          16.0,
+          11.0
+        ]
+      },
+      "profile_id": "short_prompt_16_out",
+      "prompt_count": 5,
+      "prompt_tokens": {
+        "count": 5,
+        "max": 45.0,
+        "min": 35.0,
+        "p50": 41.0,
+        "p90": 45.0,
+        "p99": 45.0,
+        "samples": [
+          41.0,
+          39.0,
+          35.0,
+          42.0,
+          45.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/short_prompt_16_out.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "short_prompt",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 5,
+          "max": 5.175,
+          "min": 2.647,
+          "p50": 4.77,
+          "p90": 5.175,
+          "p99": 5.175,
+          "samples": [
+            2.647,
+            5.175,
+            5.137,
+            4.703,
+            4.77
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 5,
+          "max": 6.279,
+          "min": 2.92,
+          "p50": 5.795,
+          "p90": 6.279,
+          "p99": 6.279,
+          "samples": [
+            2.92,
+            6.279,
+            5.887,
+            5.795,
+            5.526
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 5,
+          "max": 1.707,
+          "min": 0.257,
+          "p50": 1.027,
+          "p90": 1.707,
+          "p99": 1.707,
+          "samples": [
+            0.257,
+            0.303,
+            1.707,
+            1.463,
+            1.027
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 8856.462,
+          "min": 8856.462,
+          "p50": 8856.462,
+          "p90": 8856.462,
+          "p99": 8856.462,
+          "samples": [
+            8856.462
+          ]
+        },
+        "decode_total_ms": {
+          "count": 5,
+          "max": 3402.327,
+          "min": 386.487,
+          "p50": 2305.945,
+          "p90": 3402.327,
+          "p99": 3402.327,
+          "samples": [
+            1511.123,
+            386.487,
+            3114.424,
+            3402.327,
+            2305.945
+          ]
+        },
+        "prefill_ms": {
+          "count": 5,
+          "max": 13992.406,
+          "min": 5909.49,
+          "p50": 7210.387,
+          "p90": 13992.406,
+          "p99": 13992.406,
+          "samples": [
+            13992.406,
+            6172.446,
+            5909.49,
+            7210.387,
+            8095.146
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 5,
+          "max": 48.577,
+          "min": 35.46,
+          "p50": 38.699,
+          "p90": 48.577,
+          "p99": 48.577,
+          "samples": [
+            47.202,
+            38.699,
+            35.46,
+            36.661,
+            48.577
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 5,
+          "max": 0.128,
+          "min": 0.066,
+          "p50": 0.073,
+          "p90": 0.128,
+          "p99": 0.128,
+          "samples": [
+            0.128,
+            0.073,
+            0.067,
+            0.066,
+            0.08
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 5,
+          "max": 14652.0,
+          "min": 6411.0,
+          "p50": 7833.0,
+          "p90": 14652.0,
+          "p99": 14652.0,
+          "samples": [
+            14652.0,
+            6411.0,
+            6452.0,
+            7833.0,
+            8706.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 103.499,
+          "min": 103.499,
+          "p50": 103.499,
+          "p90": 103.499,
+          "p99": 103.499,
+          "samples": [
+            103.499
+          ]
+        },
+        "total_wall_ms": {
+          "count": 5,
+          "max": 15579.218,
+          "min": 6604.817,
+          "p50": 10712.42,
+          "p90": 15579.218,
+          "p99": 15579.218,
+          "samples": [
+            15579.218,
+            6604.817,
+            9372.933,
+            10937.825,
+            10712.42
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 101,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 618.422,
+          "min": 618.422,
+          "p50": 618.422,
+          "p90": 618.422,
+          "p99": 618.422,
+          "samples": [
+            618.422
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8190.563,
+          "min": 8190.563,
+          "p50": 8190.563,
+          "p90": 8190.563,
+          "p99": 8190.563,
+          "samples": [
+            8190.563
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 5,
+        "max": 64.0,
+        "min": 2.0,
+        "p50": 11.0,
+        "p90": 64.0,
+        "p99": 64.0,
+        "samples": [
+          4.0,
+          2.0,
+          20.0,
+          64.0,
+          11.0
+        ]
+      },
+      "profile_id": "short_prompt_64_out",
+      "prompt_count": 5,
+      "prompt_tokens": {
+        "count": 5,
+        "max": 45.0,
+        "min": 35.0,
+        "p50": 41.0,
+        "p90": 45.0,
+        "p99": 45.0,
+        "samples": [
+          41.0,
+          39.0,
+          35.0,
+          42.0,
+          45.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/short_prompt_64_out.json",
+      "requested_max_new_tokens": 64,
+      "reuse_scope": "resident_session",
+      "scenario": "short_prompt",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 5,
+          "max": 5.054,
+          "min": 4.366,
+          "p50": 4.976,
+          "p90": 5.054,
+          "p99": 5.054,
+          "samples": [
+            4.366,
+            5.054,
+            5.049,
+            4.976,
+            4.766
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 5,
+          "max": 6.074,
+          "min": 5.307,
+          "p50": 5.687,
+          "p90": 6.074,
+          "p99": 6.074,
+          "samples": [
+            5.307,
+            6.074,
+            5.884,
+            5.687,
+            5.438
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 5,
+          "max": 3.133,
+          "min": 0.293,
+          "p50": 1.011,
+          "p90": 3.133,
+          "p99": 3.133,
+          "samples": [
+            0.462,
+            0.293,
+            1.985,
+            3.133,
+            1.011
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 7736.135,
+          "min": 7736.135,
+          "p50": 7736.135,
+          "p90": 7736.135,
+          "p99": 7736.135,
+          "samples": [
+            7736.135
+          ]
+        },
+        "decode_total_ms": {
+          "count": 5,
+          "max": 12860.668,
+          "min": 395.716,
+          "p50": 2307.976,
+          "p90": 12860.668,
+          "p99": 12860.668,
+          "samples": [
+            916.172,
+            395.716,
+            3961.201,
+            12860.668,
+            2307.976
+          ]
+        },
+        "prefill_ms": {
+          "count": 5,
+          "max": 8228.225,
+          "min": 5912.62,
+          "p50": 7348.514,
+          "p90": 8228.225,
+          "p99": 8228.225,
+          "samples": [
+            7689.38,
+            6382.394,
+            5912.62,
+            7348.514,
+            8228.225
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 5,
+          "max": 46.16,
+          "min": 35.607,
+          "p50": 37.086,
+          "p90": 46.16,
+          "p99": 46.16,
+          "samples": [
+            36.154,
+            38.449,
+            35.607,
+            37.086,
+            46.16
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 5,
+          "max": 0.078,
+          "min": 0.065,
+          "p50": 0.067,
+          "p90": 0.078,
+          "p99": 0.078,
+          "samples": [
+            0.078,
+            0.065,
+            0.067,
+            0.066,
+            0.068
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 5,
+          "max": 8882.0,
+          "min": 6314.0,
+          "p50": 7874.0,
+          "p90": 8882.0,
+          "p99": 8882.0,
+          "samples": [
+            8035.0,
+            6627.0,
+            6314.0,
+            7874.0,
+            8882.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 51.44,
+          "min": 51.44,
+          "p50": 51.44,
+          "p90": 51.44,
+          "p99": 51.44,
+          "samples": [
+            51.44
+          ]
+        },
+        "total_wall_ms": {
+          "count": 5,
+          "max": 20430.771,
+          "min": 6825.882,
+          "p50": 10077.311,
+          "p90": 20430.771,
+          "p99": 20430.771,
+          "samples": [
+            8649.132,
+            6825.882,
+            10077.311,
+            20430.771,
+            10884.521
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 80,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 204.312,
+          "min": 204.312,
+          "p50": 204.312,
+          "p90": 204.312,
+          "p99": 204.312,
+          "samples": [
+            204.312
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8394.875,
+          "min": 8394.875,
+          "p50": 8394.875,
+          "p90": 8394.875,
+          "p99": 8394.875,
+          "samples": [
+            8394.875
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 5,
+        "max": 16.0,
+        "min": 16.0,
+        "p50": 16.0,
+        "p90": 16.0,
+        "p99": 16.0,
+        "samples": [
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0
+        ]
+      },
+      "profile_id": "long_prompt_16_out",
+      "prompt_count": 5,
+      "prompt_tokens": {
+        "count": 5,
+        "max": 93.0,
+        "min": 66.0,
+        "p50": 75.0,
+        "p90": 93.0,
+        "p99": 93.0,
+        "samples": [
+          93.0,
+          76.0,
+          75.0,
+          72.0,
+          66.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/long_prompt_16_out.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "long_prompt",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 5,
+          "max": 4.165,
+          "min": 3.75,
+          "p50": 3.869,
+          "p90": 4.165,
+          "p99": 4.165,
+          "samples": [
+            3.75,
+            4.165,
+            4.069,
+            3.869,
+            3.752
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 5,
+          "max": 5.12,
+          "min": 4.452,
+          "p50": 4.563,
+          "p90": 5.12,
+          "p99": 5.12,
+          "samples": [
+            5.12,
+            4.836,
+            4.563,
+            4.463,
+            4.452
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 5,
+          "max": 0.828,
+          "min": 0.713,
+          "p50": 0.778,
+          "p90": 0.828,
+          "p99": 0.828,
+          "samples": [
+            0.713,
+            0.8,
+            0.749,
+            0.778,
+            0.828
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 7766.547,
+          "min": 7766.547,
+          "p50": 7766.547,
+          "p90": 7766.547,
+          "p99": 7766.547,
+          "samples": [
+            7766.547
+          ]
+        },
+        "decode_total_ms": {
+          "count": 5,
+          "max": 4266.891,
+          "min": 3841.793,
+          "p50": 4135.514,
+          "p90": 4266.891,
+          "p99": 4266.891,
+          "samples": [
+            4266.891,
+            3841.793,
+            3932.006,
+            4135.514,
+            4264.373
+          ]
+        },
+        "prefill_ms": {
+          "count": 5,
+          "max": 18125.701,
+          "min": 14765.0,
+          "p50": 16086.895,
+          "p90": 18125.701,
+          "p99": 18125.701,
+          "samples": [
+            18125.701,
+            15655.313,
+            16393.995,
+            16086.895,
+            14765.0
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 5,
+          "max": 60.341,
+          "min": 38.334,
+          "p50": 46.926,
+          "p90": 60.341,
+          "p99": 60.341,
+          "samples": [
+            38.334,
+            60.341,
+            43.125,
+            46.926,
+            58.221
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 5,
+          "max": 0.09,
+          "min": 0.081,
+          "p50": 0.088,
+          "p90": 0.09,
+          "p99": 0.09,
+          "samples": [
+            0.09,
+            0.089,
+            0.081,
+            0.087,
+            0.088
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 5,
+          "max": 18773.0,
+          "min": 15493.0,
+          "p50": 16835.0,
+          "p90": 18773.0,
+          "p99": 18773.0,
+          "samples": [
+            18773.0,
+            16396.0,
+            17814.0,
+            16835.0,
+            15493.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 50.699,
+          "min": 50.699,
+          "p50": 50.699,
+          "p90": 50.699,
+          "p99": 50.699,
+          "samples": [
+            50.699
+          ]
+        },
+        "total_wall_ms": {
+          "count": 5,
+          "max": 22438.456,
+          "min": 19334.207,
+          "p50": 20570.006,
+          "p90": 22438.456,
+          "p99": 22438.456,
+          "samples": [
+            22438.456,
+            20004.964,
+            21360.739,
+            20570.006,
+            19334.207
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 547,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8394.875,
+          "min": 8394.875,
+          "p50": 8394.875,
+          "p90": 8394.875,
+          "p99": 8394.875,
+          "samples": [
+            8394.875
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 5,
+        "max": 128.0,
+        "min": 35.0,
+        "p50": 128.0,
+        "p90": 128.0,
+        "p99": 128.0,
+        "samples": [
+          35.0,
+          128.0,
+          128.0,
+          128.0,
+          128.0
+        ]
+      },
+      "profile_id": "long_prompt_128_out",
+      "prompt_count": 5,
+      "prompt_tokens": {
+        "count": 5,
+        "max": 93.0,
+        "min": 66.0,
+        "p50": 75.0,
+        "p90": 93.0,
+        "p99": 93.0,
+        "samples": [
+          93.0,
+          76.0,
+          75.0,
+          72.0,
+          66.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/long_prompt_128_out.json",
+      "requested_max_new_tokens": 128,
+      "reuse_scope": "resident_session",
+      "scenario": "long_prompt",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 5,
+          "max": 3.645,
+          "min": 3.018,
+          "p50": 3.562,
+          "p90": 3.645,
+          "p99": 3.645,
+          "samples": [
+            3.627,
+            3.349,
+            3.645,
+            3.018,
+            3.562
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 5,
+          "max": 4.348,
+          "min": 3.852,
+          "p50": 4.045,
+          "p90": 4.348,
+          "p99": 4.348,
+          "samples": [
+            3.951,
+            4.348,
+            4.045,
+            3.852,
+            4.053
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 5,
+          "max": 2.426,
+          "min": 1.054,
+          "p50": 2.274,
+          "p90": 2.426,
+          "p99": 2.426,
+          "samples": [
+            1.054,
+            2.274,
+            2.33,
+            2.089,
+            2.426
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 7932.577,
+          "min": 7932.577,
+          "p50": 7932.577,
+          "p90": 7932.577,
+          "p99": 7932.577,
+          "samples": [
+            7932.577
+          ]
+        },
+        "decode_total_ms": {
+          "count": 5,
+          "max": 42410.892,
+          "min": 9651.024,
+          "p50": 35939.505,
+          "p90": 42410.892,
+          "p99": 42410.892,
+          "samples": [
+            9651.024,
+            38223.411,
+            35111.883,
+            42410.892,
+            35939.505
+          ]
+        },
+        "prefill_ms": {
+          "count": 5,
+          "max": 23494.885,
+          "min": 16227.095,
+          "p50": 18484.922,
+          "p90": 23494.885,
+          "p99": 23494.885,
+          "samples": [
+            23494.885,
+            17428.727,
+            18484.922,
+            18639.459,
+            16227.095
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 5,
+          "max": 58.662,
+          "min": 41.115,
+          "p50": 53.854,
+          "p90": 58.662,
+          "p99": 58.662,
+          "samples": [
+            41.115,
+            50.855,
+            58.662,
+            53.854,
+            58.445
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 5,
+          "max": 0.107,
+          "min": 0.089,
+          "p50": 0.091,
+          "p90": 0.107,
+          "p99": 0.107,
+          "samples": [
+            0.089,
+            0.098,
+            0.09,
+            0.107,
+            0.091
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 5,
+          "max": 23958.0,
+          "min": 17155.0,
+          "p50": 19196.0,
+          "p90": 23958.0,
+          "p99": 23958.0,
+          "samples": [
+            23958.0,
+            18334.0,
+            20257.0,
+            19196.0,
+            17155.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 56.684,
+          "min": 56.684,
+          "p50": 56.684,
+          "p90": 56.684,
+          "p99": 56.684,
+          "samples": [
+            56.684
+          ]
+        },
+        "total_wall_ms": {
+          "count": 5,
+          "max": 61262.978,
+          "min": 33195.422,
+          "p50": 54942.272,
+          "p90": 61262.978,
+          "p99": 61262.978,
+          "samples": [
+            33195.422,
+            56287.951,
+            54942.272,
+            61262.978,
+            52752.942
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 45,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 279.047,
+          "min": 279.047,
+          "p50": 279.047,
+          "p90": 279.047,
+          "p99": 279.047,
+          "samples": [
+            279.047
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8673.922,
+          "min": 8673.922,
+          "p50": 8673.922,
+          "p90": 8673.922,
+          "p99": 8673.922,
+          "samples": [
+            8673.922
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 3,
+        "max": 15.0,
+        "min": 15.0,
+        "p50": 15.0,
+        "p90": 15.0,
+        "p99": 15.0,
+        "samples": [
+          15.0,
+          15.0,
+          15.0
+        ]
+      },
+      "profile_id": "context_1k",
+      "prompt_count": 3,
+      "prompt_tokens": {
+        "count": 3,
+        "max": 1041.0,
+        "min": 1037.0,
+        "p50": 1038.0,
+        "p90": 1041.0,
+        "p99": 1041.0,
+        "samples": [
+          1037.0,
+          1038.0,
+          1041.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/context_1k.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "synthetic_context",
+      "target_context_tokens": 1000,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 3,
+          "max": 2.942,
+          "min": 2.66,
+          "p50": 2.711,
+          "p90": 2.942,
+          "p99": 2.942,
+          "samples": [
+            2.942,
+            2.711,
+            2.66
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 3,
+          "max": 3.676,
+          "min": 3.276,
+          "p50": 3.28,
+          "p90": 3.676,
+          "p99": 3.676,
+          "samples": [
+            3.676,
+            3.28,
+            3.276
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 3,
+          "max": 0.052,
+          "min": 0.046,
+          "p50": 0.047,
+          "p90": 0.052,
+          "p99": 0.052,
+          "samples": [
+            0.052,
+            0.047,
+            0.046
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 7997.458,
+          "min": 7997.458,
+          "p50": 7997.458,
+          "p90": 7997.458,
+          "p99": 7997.458,
+          "samples": [
+            7997.458
+          ]
+        },
+        "decode_total_ms": {
+          "count": 3,
+          "max": 5639.577,
+          "min": 5098.706,
+          "p50": 5533.816,
+          "p90": 5639.577,
+          "p99": 5639.577,
+          "samples": [
+            5098.706,
+            5533.816,
+            5639.577
+          ]
+        },
+        "prefill_ms": {
+          "count": 3,
+          "max": 317728.395,
+          "min": 282017.55,
+          "p50": 316415.184,
+          "p90": 317728.395,
+          "p99": 317728.395,
+          "samples": [
+            282017.55,
+            316415.184,
+            317728.395
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 3,
+          "max": 65.894,
+          "min": 48.562,
+          "p50": 65.708,
+          "p90": 65.894,
+          "p99": 65.894,
+          "samples": [
+            48.562,
+            65.708,
+            65.894
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 3,
+          "max": 0.112,
+          "min": 0.1,
+          "p50": 0.111,
+          "p90": 0.112,
+          "p99": 0.112,
+          "samples": [
+            0.1,
+            0.111,
+            0.112
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max": 318180.0,
+          "min": 282558.0,
+          "p50": 316860.0,
+          "p90": 318180.0,
+          "p99": 318180.0,
+          "samples": [
+            282558.0,
+            316860.0,
+            318180.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 66.115,
+          "min": 66.115,
+          "p50": 66.115,
+          "p90": 66.115,
+          "p99": 66.115,
+          "samples": [
+            66.115
+          ]
+        },
+        "total_wall_ms": {
+          "count": 3,
+          "max": 323444.797,
+          "min": 287174.41,
+          "p50": 322025.629,
+          "p90": 323444.797,
+          "p99": 323444.797,
+          "samples": [
+            287174.41,
+            322025.629,
+            323444.797
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 33,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8673.922,
+          "min": 8673.922,
+          "p50": 8673.922,
+          "p90": 8673.922,
+          "p99": 8673.922,
+          "samples": [
+            8673.922
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 3,
+        "max": 11.0,
+        "min": 11.0,
+        "p50": 11.0,
+        "p90": 11.0,
+        "p99": 11.0,
+        "samples": [
+          11.0,
+          11.0,
+          11.0
+        ]
+      },
+      "profile_id": "context_4k",
+      "prompt_count": 3,
+      "prompt_tokens": {
+        "count": 3,
+        "max": 4076.0,
+        "min": 4074.0,
+        "p50": 4075.0,
+        "p90": 4076.0,
+        "p99": 4076.0,
+        "samples": [
+          4074.0,
+          4075.0,
+          4076.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/context_4k.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "synthetic_context",
+      "target_context_tokens": 4000,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 3,
+          "max": 2.372,
+          "min": 1.985,
+          "p50": 2.002,
+          "p90": 2.372,
+          "p99": 2.372,
+          "samples": [
+            2.002,
+            2.372,
+            1.985
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 3,
+          "max": 3.225,
+          "min": 2.795,
+          "p50": 2.844,
+          "p90": 3.225,
+          "p99": 3.225,
+          "samples": [
+            2.795,
+            3.225,
+            2.844
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 3,
+          "max": 0.009,
+          "min": 0.008,
+          "p50": 0.008,
+          "p90": 0.009,
+          "p99": 0.009,
+          "samples": [
+            0.008,
+            0.009,
+            0.008
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 9203.99,
+          "min": 9203.99,
+          "p50": 9203.99,
+          "p90": 9203.99,
+          "p99": 9203.99,
+          "samples": [
+            9203.99
+          ]
+        },
+        "decode_total_ms": {
+          "count": 3,
+          "max": 5541.055,
+          "min": 4637.19,
+          "p50": 5494.014,
+          "p90": 5541.055,
+          "p99": 5541.055,
+          "samples": [
+            5494.014,
+            4637.19,
+            5541.055
+          ]
+        },
+        "prefill_ms": {
+          "count": 3,
+          "max": 1457488.81,
+          "min": 1263499.258,
+          "p50": 1432895.03,
+          "p90": 1457488.81,
+          "p99": 1457488.81,
+          "samples": [
+            1457488.81,
+            1263499.258,
+            1432895.03
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 3,
+          "max": 74.966,
+          "min": 69.321,
+          "p50": 74.855,
+          "p90": 74.966,
+          "p99": 74.966,
+          "samples": [
+            69.321,
+            74.966,
+            74.855
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 3,
+          "max": 0.129,
+          "min": 0.104,
+          "p50": 0.129,
+          "p90": 0.129,
+          "p99": 0.129,
+          "samples": [
+            0.129,
+            0.104,
+            0.129
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max": 1458291.0,
+          "min": 1264147.0,
+          "p50": 1433677.0,
+          "p90": 1458291.0,
+          "p99": 1458291.0,
+          "samples": [
+            1458291.0,
+            1264147.0,
+            1433677.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 120.942,
+          "min": 120.942,
+          "p50": 120.942,
+          "p90": 120.942,
+          "p99": 120.942,
+          "samples": [
+            120.942
+          ]
+        },
+        "total_wall_ms": {
+          "count": 3,
+          "max": 1463064.522,
+          "min": 1268222.529,
+          "p50": 1438521.99,
+          "p90": 1463064.522,
+          "p99": 1463064.522,
+          "samples": [
+            1463064.522,
+            1268222.529,
+            1438521.99
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 200,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8673.922,
+          "min": 8673.922,
+          "p50": 8673.922,
+          "p90": 8673.922,
+          "p99": 8673.922,
+          "samples": [
+            8673.922
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 25,
+        "max": 16.0,
+        "min": 2.0,
+        "p50": 3.0,
+        "p90": 16.0,
+        "p99": 16.0,
+        "samples": [
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0
+        ]
+      },
+      "profile_id": "resident_25",
+      "prompt_count": 25,
+      "prompt_tokens": {
+        "count": 25,
+        "max": 47.0,
+        "min": 41.0,
+        "p50": 44.0,
+        "p90": 47.0,
+        "p99": 47.0,
+        "samples": [
+          44.0,
+          44.0,
+          41.0,
+          46.0,
+          41.0,
+          44.0,
+          44.0,
+          41.0,
+          46.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/resident_25.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "resident_session",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 25,
+          "max": 2.937,
+          "min": 2.117,
+          "p50": 2.505,
+          "p90": 2.854,
+          "p99": 2.937,
+          "samples": [
+            2.427,
+            2.937,
+            2.852,
+            2.36,
+            2.888,
+            2.449,
+            2.162,
+            2.837,
+            2.507,
+            2.833,
+            2.431,
+            2.117,
+            2.841,
+            2.505,
+            2.854,
+            2.365,
+            2.17,
+            2.756,
+            2.443,
+            2.725,
+            2.428,
+            2.152,
+            2.845,
+            2.458,
+            2.852
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 25,
+          "max": 3.434,
+          "min": 3.163,
+          "p50": 3.244,
+          "p90": 3.394,
+          "p99": 3.434,
+          "samples": [
+            3.434,
+            3.394,
+            3.184,
+            3.207,
+            3.212,
+            3.222,
+            3.219,
+            3.267,
+            3.216,
+            3.415,
+            3.204,
+            3.244,
+            3.227,
+            3.349,
+            3.163,
+            3.228,
+            3.284,
+            3.353,
+            3.261,
+            3.274,
+            3.256,
+            3.34,
+            3.163,
+            3.267,
+            3.214
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 25,
+          "max": 0.874,
+          "min": 0.131,
+          "p50": 0.193,
+          "p90": 0.858,
+          "p99": 0.874,
+          "samples": [
+            0.213,
+            0.141,
+            0.832,
+            0.186,
+            0.854,
+            0.195,
+            0.133,
+            0.858,
+            0.186,
+            0.874,
+            0.19,
+            0.131,
+            0.834,
+            0.193,
+            0.828,
+            0.19,
+            0.133,
+            0.859,
+            0.183,
+            0.84,
+            0.189,
+            0.136,
+            0.824,
+            0.188,
+            0.829
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 9471.664,
+          "min": 9471.664,
+          "p50": 9471.664,
+          "p90": 9471.664,
+          "p99": 9471.664,
+          "samples": [
+            9471.664
+          ]
+        },
+        "decode_total_ms": {
+          "count": 25,
+          "max": 5871.092,
+          "min": 680.854,
+          "p50": 1235.998,
+          "p90": 5647.681,
+          "p99": 5871.092,
+          "samples": [
+            1235.998,
+            680.854,
+            5609.78,
+            1271.427,
+            5540.181,
+            1224.993,
+            924.887,
+            5639.635,
+            1196.452,
+            5647.681,
+            1234.232,
+            944.819,
+            5632.314,
+            1197.777,
+            5605.528,
+            1268.518,
+            921.505,
+            5805.541,
+            1227.932,
+            5871.092,
+            1235.685,
+            929.369,
+            5623.14,
+            1220.407,
+            5609.941
+          ]
+        },
+        "prefill_ms": {
+          "count": 25,
+          "max": 14334.487,
+          "min": 12237.212,
+          "p50": 13398.192,
+          "p90": 14273.047,
+          "p99": 14334.487,
+          "samples": [
+            12734.886,
+            12907.302,
+            12814.155,
+            14273.047,
+            12696.975,
+            13590.599,
+            13607.137,
+            12481.681,
+            14230.532,
+            12237.212,
+            13961.15,
+            13809.295,
+            12933.745,
+            13965.752,
+            13213.75,
+            13857.706,
+            13626.172,
+            12458.035,
+            14334.487,
+            12754.511,
+            13748.393,
+            13398.192,
+            13203.53,
+            14315.359,
+            13001.32
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 25,
+          "max": 84.231,
+          "min": 55.664,
+          "p50": 69.907,
+          "p90": 81.084,
+          "p99": 84.231,
+          "samples": [
+            76.898,
+            55.664,
+            62.805,
+            69.069,
+            66.641,
+            67.139,
+            62.481,
+            68.617,
+            73.037,
+            62.108,
+            84.231,
+            62.252,
+            81.923,
+            69.907,
+            63.921,
+            81.084,
+            75.47,
+            69.362,
+            79.069,
+            72.268,
+            71.554,
+            74.046,
+            76.686,
+            71.992,
+            65.752
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 25,
+          "max": 0.204,
+          "min": 0.111,
+          "p50": 0.127,
+          "p90": 0.189,
+          "p99": 0.204,
+          "samples": [
+            0.112,
+            0.111,
+            0.12,
+            0.171,
+            0.118,
+            0.162,
+            0.187,
+            0.121,
+            0.132,
+            0.114,
+            0.126,
+            0.204,
+            0.14,
+            0.127,
+            0.122,
+            0.139,
+            0.189,
+            0.122,
+            0.163,
+            0.127,
+            0.162,
+            0.193,
+            0.122,
+            0.166,
+            0.115
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 25,
+          "max": 15753.0,
+          "min": 13249.0,
+          "p50": 14373.0,
+          "p90": 15440.0,
+          "p99": 15753.0,
+          "samples": [
+            13394.0,
+            13880.0,
+            14203.0,
+            15440.0,
+            13773.0,
+            14725.0,
+            14658.0,
+            13582.0,
+            15457.0,
+            13249.0,
+            15137.0,
+            14885.0,
+            14150.0,
+            14900.0,
+            14301.0,
+            15108.0,
+            14703.0,
+            13413.0,
+            15753.0,
+            13747.0,
+            15238.0,
+            14373.0,
+            14372.0,
+            15300.0,
+            14298.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 125.244,
+          "min": 125.244,
+          "p50": 125.244,
+          "p90": 125.244,
+          "p99": 125.244,
+          "samples": [
+            125.244
+          ]
+        },
+        "total_wall_ms": {
+          "count": 25,
+          "max": 19409.824,
+          "min": 14059.661,
+          "p50": 16104.403,
+          "p90": 19293.568,
+          "p99": 19409.824,
+          "samples": [
+            14059.661,
+            14221.214,
+            19230.202,
+            16129.565,
+            18735.121,
+            15369.5,
+            14997.103,
+            18645.619,
+            16104.403,
+            18316.751,
+            15787.3,
+            15259.19,
+            19192.894,
+            15537.81,
+            19320.285,
+            15780.397,
+            15044.523,
+            18630.251,
+            16406.245,
+            19036.829,
+            15882.513,
+            14721.524,
+            19409.824,
+            15944.479,
+            19293.568
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 403,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 8673.922,
+          "min": 8673.922,
+          "p50": 8673.922,
+          "p90": 8673.922,
+          "p99": 8673.922,
+          "samples": [
+            8673.922
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak delta"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 50,
+        "max": 16.0,
+        "min": 2.0,
+        "p50": 3.0,
+        "p90": 16.0,
+        "p99": 16.0,
+        "samples": [
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          4.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          4.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0,
+          4.0,
+          2.0,
+          16.0,
+          3.0,
+          16.0
+        ]
+      },
+      "profile_id": "resident_50",
+      "prompt_count": 50,
+      "prompt_tokens": {
+        "count": 50,
+        "max": 47.0,
+        "min": 41.0,
+        "p50": 45.0,
+        "p90": 47.0,
+        "p99": 47.0,
+        "samples": [
+          44.0,
+          44.0,
+          41.0,
+          46.0,
+          41.0,
+          44.0,
+          44.0,
+          41.0,
+          46.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0,
+          45.0,
+          45.0,
+          42.0,
+          47.0,
+          42.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/resident_50.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "resident_session",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 50,
+          "max": 3.107,
+          "min": 2.109,
+          "p50": 2.766,
+          "p90": 2.922,
+          "p99": 3.107,
+          "samples": [
+            2.346,
+            2.913,
+            2.866,
+            2.934,
+            2.922,
+            2.335,
+            2.555,
+            2.912,
+            2.677,
+            2.882,
+            2.805,
+            3.107,
+            2.968,
+            2.973,
+            2.913,
+            2.914,
+            2.341,
+            2.717,
+            2.427,
+            2.772,
+            2.556,
+            2.146,
+            2.817,
+            2.938,
+            2.755,
+            2.445,
+            2.721,
+            2.77,
+            2.522,
+            2.889,
+            2.841,
+            2.223,
+            2.776,
+            2.529,
+            2.887,
+            2.678,
+            2.599,
+            2.866,
+            2.366,
+            2.752,
+            2.565,
+            2.109,
+            2.873,
+            2.295,
+            2.877,
+            2.766,
+            2.489,
+            2.868,
+            2.584,
+            2.908
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 50,
+          "max": 3.528,
+          "min": 3.223,
+          "p50": 3.388,
+          "p90": 3.484,
+          "p99": 3.528,
+          "samples": [
+            3.229,
+            3.442,
+            3.226,
+            3.484,
+            3.436,
+            3.355,
+            3.429,
+            3.509,
+            3.336,
+            3.484,
+            3.304,
+            3.435,
+            3.26,
+            3.42,
+            3.403,
+            3.392,
+            3.384,
+            3.379,
+            3.299,
+            3.528,
+            3.364,
+            3.387,
+            3.32,
+            3.49,
+            3.448,
+            3.223,
+            3.46,
+            3.468,
+            3.466,
+            3.373,
+            3.466,
+            3.375,
+            3.339,
+            3.5,
+            3.426,
+            3.369,
+            3.412,
+            3.392,
+            3.341,
+            3.339,
+            3.285,
+            3.29,
+            3.308,
+            3.29,
+            3.361,
+            3.429,
+            3.441,
+            3.474,
+            3.388,
+            3.447
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 50,
+          "max": 0.916,
+          "min": 0.132,
+          "p50": 0.203,
+          "p90": 0.887,
+          "p99": 0.916,
+          "samples": [
+            0.201,
+            0.142,
+            0.827,
+            0.209,
+            0.896,
+            0.203,
+            0.143,
+            0.916,
+            0.196,
+            0.887,
+            0.2,
+            0.142,
+            0.856,
+            0.197,
+            0.879,
+            0.203,
+            0.139,
+            0.851,
+            0.187,
+            0.894,
+            0.201,
+            0.136,
+            0.85,
+            0.201,
+            0.884,
+            0.19,
+            0.142,
+            0.877,
+            0.2,
+            0.867,
+            0.207,
+            0.137,
+            0.841,
+            0.198,
+            0.887,
+            0.26,
+            0.14,
+            0.873,
+            0.19,
+            0.846,
+            0.255,
+            0.132,
+            0.856,
+            0.185,
+            0.868,
+            0.269,
+            0.142,
+            0.884,
+            0.194,
+            0.892
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 8876.361,
+          "min": 8876.361,
+          "p50": 8876.361,
+          "p90": 8876.361,
+          "p99": 8876.361,
+          "samples": [
+            8876.361
+          ]
+        },
+        "decode_total_ms": {
+          "count": 50,
+          "max": 5888.264,
+          "min": 643.709,
+          "p50": 1278.745,
+          "p90": 5764.389,
+          "p99": 5888.264,
+          "samples": [
+            1278.745,
+            686.638,
+            5583.269,
+            1022.461,
+            5476.63,
+            1284.568,
+            782.701,
+            5495.358,
+            1120.704,
+            5551.138,
+            1069.526,
+            643.709,
+            5390.32,
+            1008.949,
+            5491.82,
+            1029.556,
+            854.465,
+            5888.264,
+            1235.857,
+            5772.407,
+            1173.915,
+            931.916,
+            5680.325,
+            1020.992,
+            5807.786,
+            1227.228,
+            735.037,
+            5775.226,
+            1189.628,
+            5538.066,
+            1056.137,
+            899.694,
+            5764.389,
+            1186.196,
+            5541.795,
+            1493.896,
+            769.557,
+            5581.741,
+            1268.115,
+            5813.74,
+            1559.212,
+            948.165,
+            5568.528,
+            1307.387,
+            5561.188,
+            1446.079,
+            803.467,
+            5578.177,
+            1161.012,
+            5501.167
+          ]
+        },
+        "prefill_ms": {
+          "count": 50,
+          "max": 14215.987,
+          "min": 11620.226,
+          "p50": 13011.392,
+          "p90": 13724.053,
+          "p99": 14215.987,
+          "samples": [
+            13565.028,
+            12714.076,
+            12645.717,
+            13130.108,
+            11871.102,
+            13053.356,
+            12768.297,
+            11620.226,
+            13724.053,
+            11991.828,
+            13557.93,
+            13041.006,
+            12825.682,
+            13677.184,
+            12283.641,
+            13203.083,
+            13232.753,
+            12368.152,
+            14175.058,
+            11847.236,
+            13308.736,
+            13215.165,
+            12578.516,
+            13389.914,
+            12118.81,
+            13885.171,
+            12937.014,
+            12049.584,
+            13493.463,
+            12394.568,
+            12912.45,
+            13272.9,
+            12486.724,
+            13340.575,
+            12200.122,
+            13289.356,
+            13118.723,
+            12321.787,
+            14000.273,
+            12514.21,
+            13627.509,
+            13601.516,
+            12622.868,
+            14215.987,
+            12421.45,
+            13056.842,
+            13011.392,
+            12020.993,
+            13803.196,
+            12118.884
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 50,
+          "max": 91.246,
+          "min": 56.524,
+          "p50": 66.5,
+          "p90": 74.608,
+          "p99": 91.246,
+          "samples": [
+            62.587,
+            68.003,
+            64.423,
+            72.223,
+            62.362,
+            63.241,
+            64.22,
+            63.711,
+            63.839,
+            63.53,
+            60.791,
+            60.837,
+            58.509,
+            67.363,
+            56.635,
+            64.304,
+            66.772,
+            63.353,
+            72.368,
+            58.906,
+            69.29,
+            71.401,
+            73.742,
+            78.677,
+            61.976,
+            74.948,
+            70.205,
+            59.822,
+            68.726,
+            56.524,
+            72.012,
+            62.322,
+            91.246,
+            89.049,
+            59.74,
+            67.027,
+            69.784,
+            59.795,
+            66.5,
+            62.948,
+            72.061,
+            74.311,
+            74.81,
+            68.926,
+            74.608,
+            65.642,
+            66.743,
+            67.129,
+            68.285,
+            64.439
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 50,
+          "max": 0.594,
+          "min": 0.11,
+          "p50": 0.124,
+          "p90": 0.171,
+          "p99": 0.594,
+          "samples": [
+            0.156,
+            0.11,
+            0.119,
+            0.111,
+            0.112,
+            0.174,
+            0.189,
+            0.121,
+            0.171,
+            0.115,
+            0.161,
+            0.135,
+            0.114,
+            0.125,
+            0.121,
+            0.112,
+            0.162,
+            0.124,
+            0.16,
+            0.11,
+            0.142,
+            0.192,
+            0.594,
+            0.111,
+            0.116,
+            0.162,
+            0.119,
+            0.118,
+            0.125,
+            0.116,
+            0.155,
+            0.133,
+            0.119,
+            0.17,
+            0.113,
+            0.143,
+            0.205,
+            0.122,
+            0.165,
+            0.124,
+            0.132,
+            0.171,
+            0.119,
+            0.158,
+            0.115,
+            0.116,
+            0.168,
+            0.114,
+            0.129,
+            0.118
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 50,
+          "max": 15500.0,
+          "min": 12411.0,
+          "p50": 13812.0,
+          "p90": 14749.0,
+          "p99": 15500.0,
+          "samples": [
+            14201.0,
+            13708.0,
+            14345.0,
+            13685.0,
+            12802.0,
+            14088.0,
+            13636.0,
+            12411.0,
+            14599.0,
+            12969.0,
+            14370.0,
+            13800.0,
+            13812.0,
+            14557.0,
+            13200.0,
+            14122.0,
+            14082.0,
+            13525.0,
+            15398.0,
+            12468.0,
+            14262.0,
+            14336.0,
+            13746.0,
+            14240.0,
+            12893.0,
+            15123.0,
+            13739.0,
+            12973.0,
+            14340.0,
+            13325.0,
+            13815.0,
+            14160.0,
+            13761.0,
+            14445.0,
+            12851.0,
+            14460.0,
+            13936.0,
+            13305.0,
+            15107.0,
+            13677.0,
+            14730.0,
+            14749.0,
+            13700.0,
+            15500.0,
+            13289.0,
+            13938.0,
+            13762.0,
+            13073.0,
+            14793.0,
+            12807.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 124.051,
+          "min": 124.051,
+          "p50": 124.051,
+          "p90": 124.051,
+          "p99": 124.051,
+          "samples": [
+            124.051
+          ]
+        },
+        "total_wall_ms": {
+          "count": 50,
+          "max": 19336.727,
+          "min": 13977.359,
+          "p50": 15477.215,
+          "p90": 18691.721,
+          "p99": 19336.727,
+          "samples": [
+            14918.585,
+            14053.598,
+            19336.727,
+            14367.205,
+            17851.901,
+            14794.079,
+            13977.359,
+            17465.854,
+            15281.054,
+            18041.608,
+            15014.551,
+            14124.207,
+            18691.721,
+            15222.326,
+            18193.09,
+            14804.194,
+            14415.643,
+            18805.293,
+            16044.083,
+            17900.398,
+            14948.486,
+            14670.007,
+            18827.817,
+            14921.764,
+            18109.728,
+            15766.794,
+            14050.395,
+            18244.242,
+            15014.231,
+            18446.541,
+            14497.072,
+            14559.897,
+            19025.151,
+            15138.026,
+            18046.764,
+            15410.294,
+            14265.026,
+            18329.957,
+            15791.514,
+            18905.732,
+            15702.959,
+            15124.57,
+            18681.915,
+            16205.343,
+            18429.963,
+            14886.975,
+            14132.984,
+            18091.037,
+            15477.215,
+            17932.149
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    }
+  ],
+  "profiles_required": [
+    "short_prompt_16_out",
+    "short_prompt_64_out",
+    "long_prompt_16_out",
+    "long_prompt_128_out",
+    "context_1k",
+    "context_4k",
+    "resident_25",
+    "resident_50"
+  ],
+  "prompt_count": 101,
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speed": {
+    "cold_load_ms_p50": 7997.458,
+    "cold_load_ms_p90": 9471.664,
+    "cold_load_ms_p99": 9471.664,
+    "decode_tok_s_p50": 2.805,
+    "decode_tok_s_p90": 4.069,
+    "decode_tok_s_p99": 5.137,
+    "input_tok_s_p50": 3.384,
+    "input_tok_s_p90": 4.836,
+    "input_tok_s_p99": 6.074,
+    "output_tok_s_p50": 0.26,
+    "output_tok_s_p90": 1.011,
+    "output_tok_s_p99": 2.426,
+    "prefill_ms_p50": 13203.53,
+    "prefill_ms_p90": 17428.727,
+    "prefill_ms_p99": 1432895.03,
+    "prompt_tokenize_ms_p50": 65.642,
+    "prompt_tokenize_ms_p90": 74.966,
+    "prompt_tokenize_ms_p99": 89.049,
+    "tokenizer_load_ms_p50": 66.115,
+    "tokenizer_load_ms_p90": 125.244,
+    "tokenizer_load_ms_p99": 125.244,
+    "total_wall_ms_p50": 16104.403,
+    "total_wall_ms_p90": 33195.422,
+    "total_wall_ms_p99": 1438521.99,
+    "ttft_ms_p50": 14203.0,
+    "ttft_ms_p90": 18334.0,
+    "ttft_ms_p99": 1433677.0
+  },
+  "speedup_claim": false,
+  "timestamp": "2026-05-15T09:01:16.682108+00:00"
+}
