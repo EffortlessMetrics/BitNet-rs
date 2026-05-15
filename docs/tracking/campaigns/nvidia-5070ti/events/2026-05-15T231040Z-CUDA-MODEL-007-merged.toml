@@ -1,0 +1,14 @@
+timestamp = "2026-05-15T23:10:40Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-007"
+event = "merged"
+pr = 4996
+head_sha = "52c8d0b1c9bbe99e0f3700a0eb003bb239829e8b"
+merge_sha = "7a4f184ba02766be229104732c525c7ef5d67ffa"
+actor = "codex"
+
+notes = [
+  "Merged PR #4996, recording the Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict RTX 5070 Ti CUDA proof receipts.",
+  "The merged review rejects speedup for every reviewed profile because current evidence is single-run, CUDA total time is slower than the same-artifact CPU reference, pure H2D timing is unmeasured, and no profile threshold has been accepted.",
+  "Server readiness, full CUDA residency, broad dense GGUF readiness, and BitNet packed I2_S/QK256 proof remain false.",
+]
