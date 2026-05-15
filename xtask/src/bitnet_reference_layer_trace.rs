@@ -54,6 +54,10 @@ const REFERENCE_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("value_projection", "cb(Vcur, \"Vcur\", il)"),
     ("attention_scores_raw", "cb(kq, \"kq\", il)"),
     ("attention_scores_softmax", "cb(kq, \"kq_soft_max_ext\", il)"),
+    ("attention_value_cache", "cb(v, \"v\", il)"),
+    ("attention_value_mix_premerge", "cb(kqv, \"kqv\", il)"),
+    ("attention_value_mix_merged", "cb(kqv_merged, \"kqv_merged\", il)"),
+    ("attention_value_mix_merged_cont", "cb(cur, \"kqv_merged_cont\", il)"),
     ("attention_value_mix_insertion_point", "cur = llm_build_kv(ctx0, lctx, kv_self, gf"),
     ("attention_subnorm", "cb(cur, \"attn_sub_norm\", il)"),
     ("attention_output", "cb(cur, \"attn_o_out\", il)"),
@@ -77,6 +81,9 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("value_projection", "attention_v"),
     ("attention_scores_raw_head0", "attention_scores_raw_head0"),
     ("attention_scores_softmax_head0", "attn_scores_softmax_head0"),
+    ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
+    ("attention_value_mix_head0", "attention_value_mix_head0"),
+    ("attention_value_mix_merged", "attention_value_mix_merged"),
     ("attention_value_mix", "attention_value_mix"),
     ("attention_subnorm", "post_attention_subnorm"),
     ("attention_output", "post_o_proj"),
@@ -1956,7 +1963,10 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("Vcur", "attention_v"),
         ("kq", "attention_scores_raw_head0"),
         ("kq_soft_max_ext", "attn_scores_softmax_head0"),
-        ("attn_value_mix", "attention_value_mix"),
+        ("v", "attention_v_cache_head0_ref_layout_padded"),
+        ("kqv", "attention_value_mix_head0"),
+        ("kqv_merged", "attention_value_mix_merged"),
+        ("attn_value_mix", "attention_value_mix_merged"),
         ("attn_sub_norm", "post_attention_subnorm"),
         ("attn_o_out", "post_o_proj"),
         ("ffn_inp", "post_attention_residual"),
@@ -2081,6 +2091,11 @@ fn trace_scope_mismatch(
 ) -> Option<Value> {
     let reference = reference?;
     let rust = rust?;
+    if let Some(scope) = reference_value_cache_head0_scope(reference, rust)
+        .or_else(|| reference_value_mix_merged_scope(reference, rust))
+    {
+        return Some(scope);
+    }
     let reference_sampled_token_index = reference_sampled_token_index(reference)?;
     let rust_seq = rust.seq.map(|seq| seq as u64);
     if rust_seq == Some(reference_sampled_token_index) {
@@ -2093,6 +2108,74 @@ fn trace_scope_mismatch(
         "reference_token_axis": reference.token_axis,
         "rust_seq": rust_seq,
         "policy": "stage summaries with mismatched trace scope are diagnostic alignment blockers, not stable numeric divergence evidence",
+    }))
+}
+
+fn reference_value_cache_head0_scope(
+    reference: &ReferenceTraceRecord,
+    rust: &RustTraceRecord,
+) -> Option<Value> {
+    if reference.stage != "v"
+        || rust.stage.as_deref() != Some("attention_v_cache_head0_ref_layout_padded")
+    {
+        return None;
+    }
+    let reference_nelements = usize::try_from(reference.nelements).ok()?;
+    let rust_nelements = usize::try_from(rust.num_elements).ok()?;
+    let reference_values_unavailable =
+        !reference.values_available || reference.first_values.is_empty();
+    let reference_contains_all_kv_heads = reference_nelements > rust_nelements;
+    if !reference_values_unavailable && !reference_contains_all_kv_heads {
+        return None;
+    }
+    let reason = if reference_values_unavailable {
+        "reference_value_cache_values_unavailable_for_numeric_compare"
+    } else {
+        "reference_value_cache_contains_all_kv_heads_rust_trace_samples_head0_reference_layout"
+    };
+    Some(json!({
+        "reason": reason,
+        "reference_nelements": reference.nelements,
+        "rust_num_elements": rust.num_elements,
+        "reference_values_available": reference.values_available,
+        "reference_first_values_count": reference.first_values.len(),
+        "compared_head0_prefix_count": rust.num_elements,
+        "reference_sampled_token_index": reference_sampled_token_index(reference),
+        "reference_sample_offset": reference.sample_offset,
+        "reference_token_axis": reference.token_axis,
+        "rust_seq": rust.seq,
+        "policy": "reference cached-value tensors include all KV heads; the Rust diagnostic samples head0 in reference key-padded layout, so prefix deltas are head0 evidence but not full-cache equality claims",
+    }))
+}
+
+fn reference_value_mix_merged_scope(
+    reference: &ReferenceTraceRecord,
+    rust: &RustTraceRecord,
+) -> Option<Value> {
+    if reference.stage != "kqv_merged"
+        || rust.stage.as_deref() != Some("attention_value_mix_merged")
+    {
+        return None;
+    }
+    let reference_nelements = usize::try_from(reference.nelements).ok()?;
+    let rust_nelements = usize::try_from(rust.num_elements).ok()?;
+    let reference_values_unavailable =
+        !reference.values_available || reference.first_values.is_empty();
+    let reference_contains_all_tokens = reference_nelements > rust_nelements;
+    if !reference_values_unavailable && !reference_contains_all_tokens {
+        return None;
+    }
+    Some(json!({
+        "reason": "reference_value_mix_merged_noncontiguous_all_tokens_scope_not_direct_numeric_compare",
+        "reference_nelements": reference.nelements,
+        "rust_num_elements": rust.num_elements,
+        "reference_values_available": reference.values_available,
+        "reference_first_values_count": reference.first_values.len(),
+        "reference_sampled_token_index": reference_sampled_token_index(reference),
+        "reference_sample_offset": reference.sample_offset,
+        "reference_token_axis": reference.token_axis,
+        "rust_seq": rust.seq,
+        "policy": "reference kqv_merged is a non-contiguous all-token/all-head view in this trace; compare the contiguous attn_value_mix record against Rust attention_value_mix_merged for material evidence",
     }))
 }
 
@@ -2245,7 +2328,10 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
             {"reference": "Vcur", "rust": "attention_v", "scope": "layer0"},
             {"reference": "kq", "rust": "attention_scores_raw_head0", "scope": "layer0 head0 sampled-query scores before scale/mask"},
             {"reference": "kq_soft_max_ext", "rust": "attn_scores_softmax_head0", "scope": "layer0 head0 sampled-query probabilities"},
-            {"reference": "attn_value_mix", "rust": "attention_value_mix", "scope": "layer0"},
+            {"reference": "v", "rust": "attention_v_cache_head0_ref_layout_padded", "scope": "layer0 head0 cached value matrix in reference padded layout"},
+            {"reference": "kqv", "rust": "attention_value_mix_head0", "scope": "layer0 head0 value-mix output before head merge"},
+            {"reference": "kqv_merged", "rust": "attention_value_mix_merged", "scope": "layer0 non-contiguous all-token value-mix merge view"},
+            {"reference": "attn_value_mix", "rust": "attention_value_mix_merged", "scope": "layer0 contiguous merged value-mix before subnorm"},
             {"reference": "attn_sub_norm", "rust": "post_attention_subnorm", "scope": "layer0"},
             {"reference": "attn_o_out", "rust": "post_o_proj", "scope": "layer0"},
             {"reference": "ffn_inp", "rust": "post_attention_residual", "scope": "layer0"},
@@ -3415,6 +3501,174 @@ mod tests {
         assert_eq!(
             report.pointer("/first_scope_mismatch/first_values_delta/max_abs_delta"),
             Some(&json!(0.0))
+        );
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
+    fn compare_marks_reference_value_cache_all_heads_as_scope_evidence() {
+        let reference = ReferenceTraceRecord {
+            name: "v-0".to_string(),
+            stage: "v".to_string(),
+            graph_index: Some(43),
+            layer: Some(0),
+            graph_op: Some("VIEW".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![4, 2, 2, 1],
+            sample_offset: Some(0),
+            token_axis: Some(-1),
+            dtype: "f32".to_string(),
+            shape: vec![4, 2, 2, 1],
+            nelements: 16,
+            rms: Some(3.0),
+            values_available: true,
+            first_values: vec![1.0, 2.0, 3.0, 4.0],
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_cache_head0_ref_layout_padded".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_v_cache_head0_ref_layout_padded".to_string(),
+                shape: vec![2, 4],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.5,
+                num_elements: 8,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                seq: Some(0),
+                layer: Some(0),
+                stage: Some("attention_v_cache_head0_ref_layout_padded".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("v", "attention_v_cache_head0_ref_layout_padded")],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reason"),
+            Some(&json!(
+                "reference_value_cache_contains_all_kv_heads_rust_trace_samples_head0_reference_layout"
+            ))
+        );
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/first_values_delta/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
+    fn compare_marks_reference_value_cache_unavailable_values_as_scope_evidence() {
+        let reference = ReferenceTraceRecord {
+            name: "v-0".to_string(),
+            stage: "v".to_string(),
+            graph_index: Some(43),
+            layer: Some(0),
+            graph_op: Some("VIEW".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![4, 2, 2, 1],
+            sample_offset: Some(0),
+            token_axis: Some(-1),
+            dtype: "f16".to_string(),
+            shape: vec![4, 2, 2, 1],
+            nelements: 16,
+            rms: None,
+            values_available: false,
+            first_values: Vec::new(),
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_cache_head0_ref_layout_padded".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_v_cache_head0_ref_layout_padded".to_string(),
+                shape: vec![2, 4],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.5,
+                num_elements: 8,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                seq: Some(0),
+                layer: Some(0),
+                stage: Some("attention_v_cache_head0_ref_layout_padded".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("v", "attention_v_cache_head0_ref_layout_padded")],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reason"),
+            Some(&json!("reference_value_cache_values_unavailable_for_numeric_compare"))
+        );
+        assert_eq!(report.pointer("/first_scope_mismatch/first_values_delta"), Some(&Value::Null));
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
+    fn compare_marks_reference_value_mix_merged_view_as_scope_evidence() {
+        let reference = ReferenceTraceRecord {
+            name: "kqv_merged-0".to_string(),
+            stage: "kqv_merged".to_string(),
+            graph_index: Some(45),
+            layer: Some(0),
+            graph_op: Some("PERMUTE".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: None,
+            full_shape: vec![4, 2, 2, 1],
+            sample_offset: None,
+            token_axis: None,
+            dtype: "f32".to_string(),
+            shape: vec![4, 2, 2, 1],
+            nelements: 16,
+            rms: None,
+            values_available: false,
+            first_values: Vec::new(),
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_value_mix_merged".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_value_mix_merged".to_string(),
+                shape: vec![1, 1, 8],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.5,
+                num_elements: 8,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                seq: Some(0),
+                layer: Some(0),
+                stage: Some("attention_value_mix_merged".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("kqv_merged", "attention_value_mix_merged")],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reason"),
+            Some(&json!(
+                "reference_value_mix_merged_noncontiguous_all_tokens_scope_not_direct_numeric_compare"
+            ))
         );
         assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
     }

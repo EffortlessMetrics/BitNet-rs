@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,526 @@ struct llama_context {
+@@ -3441,6 +3444,542 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -46,6 +46,10 @@ index 666fcc4d..23ee29ff 100644
 +        "Vcur-0",
 +        "kq-0",
 +        "kq_soft_max_ext-0",
++        "v-0",
++        "kqv-0",
++        "kqv_merged-0",
++        "kqv_merged_cont-0",
 +        "attn_value_mix-0",
 +        "attn_sub_norm-0",
 +        "attn_o_out-0",
@@ -88,6 +92,18 @@ index 666fcc4d..23ee29ff 100644
 +    }
 +    if (strcmp(name, "kq_soft_max_ext-0") == 0) {
 +        return "kq_soft_max_ext";
++    }
++    if (strcmp(name, "v-0") == 0) {
++        return "v";
++    }
++    if (strcmp(name, "kqv-0") == 0) {
++        return "kqv";
++    }
++    if (strcmp(name, "kqv_merged-0") == 0) {
++        return "kqv_merged";
++    }
++    if (strcmp(name, "kqv_merged_cont-0") == 0) {
++        return "kqv_merged_cont";
 +    }
 +    if (strcmp(name, "attn_value_mix-0") == 0) {
 +        return "attn_value_mix";
@@ -556,7 +572,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +15983,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -15460,6 +15999,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
@@ -564,7 +580,7 @@ index 666fcc4d..23ee29ff 100644
              
                  cur = llm_build_norm(ctx0, cur, hparams,
                          model.layers[il].attn_sub_norm, NULL,
-@@ -17655,8 +18179,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18195,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  

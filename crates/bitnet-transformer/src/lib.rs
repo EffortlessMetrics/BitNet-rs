@@ -572,6 +572,31 @@ impl MultiHeadAttention {
             .unsqueeze(2)?                               // [B, HKV, 1, Tk, D]
             .repeat(&[1, 1, self.group_size, 1, 1])?    // [B, HKV, group, Tk, D]
             .reshape(&[batch_size, self.n_heads, t_k, self.head_dim])?; // [B, Hq, Tk, D]
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            let head0_ref_layout =
+                v_expanded.narrow(1, 0, 1)?.reshape(&[t_k, self.head_dim])?.transpose(0, 1)?;
+            let reference_padded_tk = t_k.next_power_of_two().max(t_k);
+            let head0_ref_layout = if reference_padded_tk > t_k {
+                let pad = Tensor::zeros(
+                    &[self.head_dim, reference_padded_tk - t_k],
+                    DType::F32,
+                    v_expanded.device(),
+                )?;
+                Tensor::cat(&[&head0_ref_layout.to_dtype(DType::F32)?, &pad], 1)?
+            } else {
+                head0_ref_layout.to_dtype(DType::F32)?
+            };
+            let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+            let trace_name = format!("t{trace_seq}/blk0/attention_v_cache_head0_ref_layout_padded");
+            trace_tensor_record(
+                &trace_name,
+                &head0_ref_layout,
+                trace_seq,
+                Some(0),
+                "attention_v_cache_head0_ref_layout_padded",
+            )?;
+        }
 
         // Scaled dot-product attention with explicit fp32 handling
         // For head_dim=128, scale = 1/sqrt(128) ≈ 0.0883883
@@ -706,6 +731,18 @@ impl MultiHeadAttention {
 
         let attn_value_mix = attn_weights.matmul(&v_expanded)?;
         #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            let head0 = attn_value_mix.narrow(1, 0, 1)?;
+            trace_tensor_token_axis_record(
+                "blk0/attention_value_mix_head0",
+                &head0,
+                _trace_base_seq,
+                2,
+                Some(0),
+                "attention_value_mix_head0",
+            )?;
+        }
+        #[cfg(feature = "trace")]
         trace_layer0_tensor(
             self.layer_idx,
             _trace_base_seq,
@@ -720,6 +757,14 @@ impl MultiHeadAttention {
             seq_len,
             self.n_heads * self.head_dim,
         ])?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(
+            self.layer_idx,
+            _trace_base_seq,
+            1,
+            "attention_value_mix_merged",
+            &attn_output,
+        )?;
         let attn_output = match &self.sub_layernorm {
             Some(norm) => norm.forward(&attn_output)?,
             None => attn_output,
