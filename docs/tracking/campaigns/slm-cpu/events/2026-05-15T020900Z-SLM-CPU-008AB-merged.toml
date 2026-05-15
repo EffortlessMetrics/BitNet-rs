@@ -1,0 +1,26 @@
+timestamp = "2026-05-15T02:09:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008AB"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4822
+merge_sha = "dba4ca6d0714cf70aa4d144a86ac98fe0a06bb5e"
+branch = "codex/slm-cpu-008ab-constrained-answer-target"
+summary = "Merged #4822 with Qwen3 no-thinking 2+2= calibration artifacts for the i5-8250U SLM lane."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4822",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-bitnet-rs-first-token.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-calibration-diagnosis.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-reference-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-reference-validation.json",
+]
+
+notes = [
+  "The shorter `2+2=` no-thinking seed is also unsuitable as a first-token token-19 / '4' gate because both Candle and bitnet-rs choose token 17 / '2'.",
+  "The artifact validates prompt IDs, generated IDs, strict tokenizer policy, selected CPU backend identity, and fallback=false evidence for the calibrated seed.",
+  "This merge keeps SLM-CPU-009 blocked until a reference-backed constrained-answer scoring policy is selected.",
+  "This merge does not claim Qwen answer quality, tiny corpus success, unbounded multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
