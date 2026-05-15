@@ -1030,6 +1030,20 @@ impl GgufLoader {
         Ok(out)
     }
 
+    /// GGML stores `ne[0]` as the fastest-moving dimension. For an embedding
+    /// tensor shaped `[hidden, vocab]`, each token column is already contiguous
+    /// as `[hidden]` in file order. Candle wants `[vocab, hidden]`, so only the
+    /// tensor dimensions change; the raw element order must not be transposed.
+    fn reshape_ggml_hidden_by_vocab_f16_to_vocab_hidden(bytes: &[u8]) -> Result<Vec<f32>> {
+        let half_data = bytemuck::cast_slice::<u8, u16>(bytes);
+        Ok(half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect())
+    }
+
+    /// F32 equivalent of `reshape_ggml_hidden_by_vocab_f16_to_vocab_hidden`.
+    fn reshape_ggml_hidden_by_vocab_f32_to_vocab_hidden(bytes: &[u8]) -> Result<Vec<f32>> {
+        Ok(bytemuck::cast_slice::<u8, f32>(bytes).to_vec())
+    }
+
     /// Helper to transpose F32 data to F32 transposed layout
     fn transpose_f32_to_f32(bytes: &[u8], dims: &[usize]) -> Result<Vec<f32>> {
         let (rows, cols) = (dims[0], dims[1]);
@@ -1828,10 +1842,11 @@ impl GgufLoader {
                         && Self::embedding_is_transposed(&info.shape)
                     {
                         info!(
-                            "Embedding appears transposed ({:?}) -> decoding transposed",
+                            "Embedding appears GGML [hidden, vocab] ({:?}) -> reshaping as [vocab, hidden]",
                             info.shape
                         );
-                        let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
+                        let f32_data =
+                            Self::reshape_ggml_hidden_by_vocab_f32_to_vocab_hidden(data)?;
                         // Now dims become [vocab, hidden]
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
@@ -1891,10 +1906,11 @@ impl GgufLoader {
                         && Self::embedding_is_transposed(&info.shape)
                     {
                         info!(
-                            "Embedding appears transposed ({:?}) -> decoding transposed",
+                            "Embedding appears GGML [hidden, vocab] ({:?}) -> reshaping as [vocab, hidden]",
                             info.shape
                         );
-                        let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
+                        let f32_data =
+                            Self::reshape_ggml_hidden_by_vocab_f16_to_vocab_hidden(data)?;
                         // Now dims become [vocab, hidden]
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
@@ -2067,5 +2083,57 @@ mod tests {
                 "default strict LayerNorm envelope should remain unchanged"
             );
         });
+    }
+
+    #[test]
+    fn ggml_hidden_by_vocab_f16_embedding_preserves_token_rows_when_reshaped() {
+        let raw_values = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let mut data = Vec::new();
+        for value in raw_values {
+            data.extend_from_slice(&half::f16::from_f32(value).to_bits().to_le_bytes());
+        }
+
+        let reshaped = GgufLoader::reshape_ggml_hidden_by_vocab_f16_to_vocab_hidden(&data)
+            .expect("embedding reshape");
+        let transposed =
+            GgufLoader::transpose_f16_to_f32(&data, &[2, 3]).expect("legacy transpose helper");
+
+        assert_eq!(reshaped, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(
+            &reshaped[2..4],
+            &[3.0, 4.0],
+            "token 1 row should be contiguous after reshape to [vocab, hidden]"
+        );
+        assert_eq!(
+            transposed,
+            vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0],
+            "projection transpose helper must remain a true row-major transpose"
+        );
+    }
+
+    #[test]
+    fn ggml_hidden_by_vocab_f32_embedding_preserves_token_rows_when_reshaped() {
+        let raw_values = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let mut data = Vec::new();
+        for value in raw_values {
+            data.extend_from_slice(&value.to_le_bytes());
+        }
+
+        let reshaped = GgufLoader::reshape_ggml_hidden_by_vocab_f32_to_vocab_hidden(&data)
+            .expect("embedding reshape");
+        let transposed =
+            GgufLoader::transpose_f32_to_f32(&data, &[2, 3]).expect("legacy transpose helper");
+
+        assert_eq!(reshaped, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(
+            &reshaped[4..6],
+            &[5.0, 6.0],
+            "token 2 row should be contiguous after reshape to [vocab, hidden]"
+        );
+        assert_eq!(
+            transposed,
+            vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0],
+            "projection transpose helper must remain a true row-major transpose"
+        );
     }
 }
