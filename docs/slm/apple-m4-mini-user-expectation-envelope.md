@@ -269,6 +269,14 @@ bitnet mac bitnet-warm \
   --prompt "Answer with a single digit: 2+2="
 ```
 
+For slow BitNet warm runs, pass `--progress` and, when scripting, an explicit
+`--timeout-seconds <SECONDS>`. Progress goes to stderr and names tokenizer
+verification, model verification, warm-session start, receipt write, and receipt
+validation. If the run fails before the aggregate receipt is complete, the
+wrapper writes a `bitnet_apple_m4_warm_session_failure` receipt to `--json-out`
+with failure stage, timeout boundary, repair guidance, empty partial generation,
+and the unchanged chat/serve/Metal-disabled claim boundary.
+
 The operator-prompt route is still a warm-session proof surface, not BitNet
 chat, BitNet serve, broad BitNet quality, or broad performance evidence.
 

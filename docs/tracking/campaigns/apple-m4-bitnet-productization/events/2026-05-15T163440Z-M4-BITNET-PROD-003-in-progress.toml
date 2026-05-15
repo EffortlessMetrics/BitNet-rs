@@ -1,0 +1,31 @@
+timestamp = "2026-05-15T16:34:40Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-003-timeout-failure-ux"
+summary = "Started BitNet warm-session progress, timeout, partial-failure receipt, and repair guidance work."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "The work starts from the accepted variable warm-session runtime receipt in M4-BITNET-PROD-002.",
+  "The goal is to make slow or failed BitNet warm sessions diagnosable through progress stages, timeout boundary fields, partial-failure receipts, and repair guidance.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim is allowed.",
+]
+
+[evidence]
+route = "bitnet mac bitnet-warm"
+backend = "apple-m4-cpu-neon"
+chat_enabled = false
+serve_enabled = false
+claim_boundary = "progress and partial-failure UX only; no chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"

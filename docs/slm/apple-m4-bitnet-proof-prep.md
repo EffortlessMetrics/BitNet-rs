@@ -144,6 +144,48 @@ total_session_ms = 206419.425
 resident_memory_bytes = 2140225536
 ```
 
+## Warm Progress And Failure Receipts
+
+`M4-BITNET-PROD-003` adds warm-session operator diagnostics before BitNet chat is
+allowed. Use `--progress` to print stderr milestones while keeping generated
+text and receipt data separate:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac bitnet-warm \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --prompt "Answer with a single digit: 2+2=" \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-new-tokens 8 \
+  --timeout-seconds 300 \
+  --progress \
+  --json-out target/apple-m4-bitnet-productization/bitnet-warm.json
+```
+
+Progress stages include tokenizer verification, model verification, warm-session
+start, receipt write completion, and receipt validation. The failure receipt
+taxonomy also explicitly names the slow/failure zones operators need to debug:
+
+```text
+model_load
+tokenizer_load
+prompt_tokenize
+prefill
+first_token
+decode
+receipt_write
+receipt_validation
+```
+
+If the warm route fails before a complete aggregate receipt is produced, it
+writes a `bitnet_apple_m4_warm_session_failure` receipt to `--json-out`. That
+receipt records the accepted model/tokenizer expectations, prompt count and
+prompt hashes, `apple-m4-cpu-neon`, `runtime_api=cpu`, `fallback_used=false`,
+empty partial generation, failure stage/message/elapsed time, timeout boundary,
+repair guidance, and unchanged disabled chat/serve/Metal/QK256/Neural
+Engine/MPSGraph/MacBook/broad-claim boundaries.
+
 ## Accepted Artifact Input
 
 The `--accepted-artifact` receipt must come from the Apple BitNet artifact
@@ -215,6 +257,8 @@ Allowed now:
   repeated, so deterministic warm reuse remains receipt-gated before chat.
 - The operator-prompt warm route has one committed Apple M4 CPU/NEON runtime
   receipt for the five-prompt bounded set above.
+- BitNet warm-session failures write partial-failure receipts with repair
+  guidance and an explicit progress/timeout stage taxonomy.
 
 Not allowed now:
 

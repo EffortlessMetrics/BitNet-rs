@@ -869,6 +869,8 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
         .stdout(predicate::str::contains("--model-path"))
         .stdout(predicate::str::contains("--tokenizer"))
         .stdout(predicate::str::contains("--prompt <TEXT>"))
+        .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
+        .stdout(predicate::str::contains("--progress"))
         .stdout(predicate::str::contains("--json-out"));
 }
 
@@ -976,6 +978,68 @@ fn mac_bitnet_warm_rejects_empty_operator_prompt_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("value 2 must not be empty"))
         .stderr(predicate::str::contains("BitNet warm session requires").not());
+}
+
+#[test]
+fn mac_bitnet_warm_writes_failure_receipt_for_missing_tokenizer()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("bitnet-warm-failure.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--timeout-seconds",
+            "60",
+            "--progress",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("accepted external tokenizer"))
+        .stderr(predicate::str::contains("failure receipt written"))
+        .stderr(predicate::str::contains("Repair guidance:"))
+        .stderr(predicate::str::contains("mac bitnet-warm progress: tokenizer_verify_start"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_warm_session_failure");
+    assert_eq!(receipt_json["operator_command"], "mac bitnet-warm");
+    assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["generation"]["generated_tokens"], 0);
+    assert_eq!(receipt_json["timeout_boundary"]["enforced"], true);
+    assert_eq!(receipt_json["timeout_boundary"]["reached"], false);
+    assert_eq!(receipt_json["progress"]["enabled"], true);
+    assert!(
+        receipt_json["progress"]["stage_taxonomy"]
+            .as_array()
+            .expect("stage taxonomy")
+            .iter()
+            .any(|stage| stage.as_str() == Some("receipt_write"))
+    );
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session_failure"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
 }
 
 #[test]
