@@ -192,9 +192,12 @@ ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/<model-id>/summary.jso
 ```
 
 Those reports cover the original v2 profile set through `resident_50`. The
-follow-on durable evidence refresh adds `resident_100` to the contract; a new
-live M4 refresh is required before any 100-prompt dense SLM stability claim is
-made.
+follow-on durable evidence refresh adds `resident_100` to the contract and
+publishes a first full nine-profile live refresh under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/<model-id>/summary.json
+```
 
 The 2026-05-15 runs use `apple-m4-cpu-neon`, `fallback_used=false`, the
 catalog-pinned model identity for each dense model, and the original v2
@@ -220,6 +223,32 @@ receipts make that tail explicit:
 | `qwen2.5-0.5b-instruct-q4_k_m` | `resident_50` | 50 | 473 | 45.0 | 3772.0 ms | 3986.0 ms | 12.313 | 8.863 | 4158.281 |
 | `qwen2.5-1.5b-instruct-q4_k_m` | `context_4k` | 3 | 33 | 4075.0 | 1433677.0 ms | 1458291.0 ms | 2.844 | 2.002 | 8673.922 |
 | `qwen2.5-1.5b-instruct-q4_k_m` | `resident_50` | 50 | 403 | 45.0 | 13812.0 ms | 15500.0 ms | 3.388 | 2.766 | 8673.922 |
+
+The 2026-05-15T1845Z durable refresh keeps the same dense model IDs, backend,
+fallback status, and claim boundary, but it changes the benchmark profile set by
+adding `resident_100`. Each summary validated with `bitnet mac receipts-check`
+as `apple_m4_slm_benchmark_v2` and records 201 prompts. Direct strict
+`bitnet mac regression` against the earlier 2026-05-15 summaries stops with
+`profiles_required mismatch`; that is expected because the previous baseline did
+not include `resident_100`.
+
+| Model | Prompts | Generated | TTFT p50 | TTFT p99 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 201 | 2382 | 2150.0 ms | 262573.0 ms | 21.701 | 1.708 | 15.652 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 201 | 2543 | 2150.0 ms | 262456.0 ms | 21.698 | 3.079 | 15.653 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 201 | 2262 | 8184.0 ms | 822688.0 ms | 5.773 | 0.357 | 4.808 |
+
+The refreshed profile receipts make the new long-context and `resident_100`
+boundaries explicit:
+
+| Model | Profile | Prompts | Generated | TTFT p50 | TTFT p99 | Input tok/s p50 | Decode tok/s p50 | Peak MB p50 | Memory drift MB p50 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | `context_4k` | 3 | 45 | 262608.0 ms | 262615.0 ms | 15.526 | 9.958 | 4051.297 | 0.000 |
+| `qwen2.5-0.5b-instruct-q8_0` | `resident_100` | 100 | 860 | 2150.0 ms | 2246.0 ms | 21.698 | 15.650 | 4156.750 | 1.875 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | `context_4k` | 3 | 36 | 262519.0 ms | 262698.0 ms | 15.529 | 9.951 | 4053.719 | 0.000 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | `resident_100` | 100 | 928 | 2151.0 ms | 2246.0 ms | 21.694 | 15.650 | 4159.609 | 0.968 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | `context_4k` | 3 | 33 | 822691.0 ms | 823143.0 ms | 4.954 | 3.572 | 8395.047 | 0.000 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | `resident_100` | 100 | 804 | 8078.0 ms | 8966.0 ms | 5.816 | 4.780 | 8395.047 | 0.000 |
 
 ## Regression Dashboard
 

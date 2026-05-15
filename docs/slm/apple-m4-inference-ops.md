@@ -110,6 +110,13 @@ The dashboard keeps dense SLM and BitNet families separate and records
 `full_metal_inference_claimed=false`, `qk256_apple_claimed=false`, and no broad
 quality, performance, or speedup claim.
 
+The 2026-05-15T1845Z dense SLM durable refresh gives the dashboard two
+benchmark reports for each supported dense model identity. The dashboard can
+group those reports by model SHA, tokenizer authority, backend, and fallback
+state, but strict `bitnet mac regression` remains profile-set aware: direct
+comparison from the 2026-05-15 baseline to the 2026-05-15T1845Z refresh stops
+with `profiles_required mismatch` because the refresh adds `resident_100`.
+
 ## Operator Envelope V2
 
 `M4-INF-OPS-004` publishes the command-to-receipt contract in

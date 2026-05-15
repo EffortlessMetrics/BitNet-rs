@@ -1,0 +1,12 @@
+timestamp = "2026-05-15T21:12:45Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-002"
+event = "pr_open"
+pr = 4988
+head_sha = "2ab5c60c3ffa6d4900efd48b27593c6e8c0e6080"
+actor = "codex"
+
+notes = [
+  "Opened dense durable benchmark refresh PR after recording 2026-05-15T1845Z Apple M4 dense SLM benchmark v2 receipts for all supported dense model IDs.",
+  "The refresh adds live `resident_100` evidence and keeps the strict claim boundary: dense SLM receipts only, no BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claim.",
+]
