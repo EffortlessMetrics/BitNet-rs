@@ -1,0 +1,15 @@
+timestamp = "2026-05-15T09:27:51Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-012"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4876
+merge_sha = "6c766f8f020cd892cfbf15574691450cafe6a3c6"
+branch = "codex/slm-cpu-012-allocation-kv-cleanup"
+
+summary = "Record bounded Qwen3 Q8_0 warm-session allocation/KV/layout cleanup on the strict i5-8250U CPU path."
+notes = [
+  "Merged #4876 and advanced SLM-CPU-013 as the next ready bounded hot-path cleanup item.",
+]
