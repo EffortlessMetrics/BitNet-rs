@@ -41,6 +41,7 @@ mod bitnet_reference_all_logits;
 mod bitnet_reference_compare;
 mod bitnet_reference_hidden_state;
 mod bitnet_reference_instrumentation;
+mod bitnet_reference_layer_trace;
 mod bitnet_reference_plan;
 mod bitnet_reference_run;
 mod bitnet_reference_server_run;
@@ -1340,6 +1341,9 @@ fn real_main() -> Result<()> {
         return Ok(());
     }
     if bitnet_reference_hidden_state::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
+    if bitnet_reference_layer_trace::maybe_dispatch_from_env()? {
         return Ok(());
     }
     if bitnet_reference_plan::maybe_dispatch_from_env()? {
