@@ -17,7 +17,7 @@
 | apple-m3-macbook-air | M3MBA-005B | M3MBA-005A | merged |
 | apple-m3-macbook-air | M3MBA-005C | M3MBA-005B | merged |
 | apple-m3-macbook-air | M3MBA-011 | M3MBA-001 | merged |
-| apple-m3-macbook-air | M3MBA-006 | M3MBA-005C, M3MBA-010 | proposed |
+| apple-m3-macbook-air | M3MBA-006 | M3MBA-005C, M3MBA-010 | blocked |
 | apple-m3-macbook-air | M3MBA-007 | M3MBA-005C, M3MBA-010 | proposed |
 | apple-m3-macbook-air | M3MBA-008 | M3MBA-005C, M3MBA-006, M3MBA-007 | proposed |
 | apple-m3-macbook-air | M3MBA-009 | M3MBA-004B | merged |
@@ -381,7 +381,7 @@
 | slm-cpu | SLM-CPU-012 | SLM-CPU-011 | merged |
 | slm-cpu | SLM-CPU-013 | SLM-CPU-012 | merged |
 | slm-cpu | SLM-CPU-014 | SLM-CPU-013 | merged |
-| slm-cpu | SLM-CPU-015 | SLM-CPU-014 | pr_open |
+| slm-cpu | SLM-CPU-015 | SLM-CPU-014 | merged |
 | slm-cpu | SLM-CPU-008Y1 | SLM-CPU-008YB | merged |
 | slm-cpu | SLM-CPU-008Z | SLM-CPU-008Y | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
