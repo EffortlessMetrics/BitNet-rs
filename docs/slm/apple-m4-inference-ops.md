@@ -110,11 +110,17 @@ The dashboard keeps dense SLM and BitNet families separate and records
 `full_metal_inference_claimed=false`, `qk256_apple_claimed=false`, and no broad
 quality, performance, or speedup claim.
 
+## Operator Envelope V2
+
+`M4-INF-OPS-004` publishes the command-to-receipt contract in
+`docs/slm/apple-m4-operator-envelope-v2.md`. It maps each supported M4 operator
+command to its receipt kind, gate, report family, and unsupported claim
+boundary.
+
 ## Remaining Ops Work
 
-The remaining inference-ops lane should stay model-free in generic PR CI:
-
-- publish an operator envelope v2 that maps supported commands to receipt
-  requirements and claim boundaries.
+The inference-ops lane is complete when the campaign tracker marks
+`M4-INF-OPS-004` merged. Follow-on runtime work should start a separate campaign
+and keep generic PR CI model-free.
 
 Live M4 model runs belong in local, advisory, scheduled, or release lanes.
