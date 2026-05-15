@@ -245,7 +245,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-DENSE-053 | merged | PR #4713 recorded the current-source dense Qwen2.5 Q8_0 warm-session strict CUDA proof with model/tokenizer/context loaded once, runtime buffer reuse, upload-once weights, generated-token equality, fallback false, and speed/full-residency/BitNet proof claims false. |
 | CUDA-DENSE-054 | merged | PR #4720 recorded the current-source dense Qwen2.5 Q8_0 benchmark qualification review, consumed the one-token, short-decode, and warm-session receipts, rejected speedup for every reviewed profile, and kept BitNet QK256 proof false. |
 | CUDA-MODEL-001 | merged | PR #4836 added the Qwen3 0.6B artifact contract as the first generalized dense model onboarding item without promoting CPU, CUDA, speed, server, or BitNet claims. |
-| CUDA-MODEL-002 | in_progress | Add Qwen3 0.6B CPU answer sanity proof after the artifact contract lands. |
+| CUDA-MODEL-002 | pr_open | Add Qwen3 0.6B CPU answer sanity proof after the artifact contract lands. |
 | CUDA-MODEL-003 | proposed | Add the Qwen3 0.6B CUDA all-layer plan after CPU sanity lands. |
 | CUDA-MODEL-004 | proposed | Add Qwen3 0.6B one-token strict CUDA proof after the all-layer plan lands. |
 | CUDA-MODEL-005 | proposed | Add Qwen3 0.6B short-decode and warm-session strict CUDA proof after one-token CUDA lands. |

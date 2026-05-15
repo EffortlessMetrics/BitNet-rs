@@ -2282,8 +2282,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-002"
-status = "in_progress"
+status = "pr_open"
 branch = "model/cuda-qwen3-0_6b-cpu-sanity"
+pr = 4866
+head_sha = "157a53997144ab8b6c791e656142d7c39ae47011"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
