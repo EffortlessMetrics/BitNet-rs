@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:32:05Z"
+campaign = "apple-m4"
+item = "M4-009"
+event = "merged"
+pr = 3732
+merge_sha = "07f8e2e5a9657f792367e5f25355adf12a1afc50"
+actor = "maintainer"
+
+notes = [
+  "Merged Apple M4 benchmark-baseline campaign item.",
+  "No general Metal speedup, BitNet inference acceleration, or Neural Engine execution claim is made by this tracker closeout.",
+]

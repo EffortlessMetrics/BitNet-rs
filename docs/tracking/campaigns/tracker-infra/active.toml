@@ -89,7 +89,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "TRACKER-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/tracker-infra/TRACKER-003-current-pr-reconciliation"
 stackable = false
 requires_human_merge = true

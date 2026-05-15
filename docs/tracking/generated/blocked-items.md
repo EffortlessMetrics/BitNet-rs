@@ -10,7 +10,7 @@
 | apple-m4 | M4-006 | M4-005 | merged |
 | apple-m4 | M4-007 | M4-006 | merged |
 | apple-m4 | M4-008 | M4-007 | merged |
-| apple-m4 | M4-009 | M4-008 | pr_open |
+| apple-m4 | M4-009 | M4-008 | merged |
 | apple-m4 | M4-010 | M4-009 | proposed |
 | apple-m4 | M4-011 | M4-010 | proposed |
 | apple-m4 | M4-012 | M4-011 | proposed |
@@ -24,6 +24,6 @@
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | proposed |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
-| nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | pr_open |
+| nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
-| tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
+| tracker-infra | TRACKER-003 | TRACKER-002 | merged |

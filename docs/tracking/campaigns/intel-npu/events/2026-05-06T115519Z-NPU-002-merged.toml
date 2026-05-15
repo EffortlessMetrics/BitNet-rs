@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T11:55:19Z"
+campaign = "intel-npu"
+item = "NPU-002"
+event = "merged"
+pr = 3722
+merge_sha = "20688198547dbb29a14e31fbdcf46c8c703a2a86"
+actor = "maintainer"
+
+notes = [
+  "Merged Intel NPU backend identity preservation.",
+  "No OpenVINO graph execution, NPU inference, or BitNet subgraph parity claim is made by this tracker closeout.",
+]

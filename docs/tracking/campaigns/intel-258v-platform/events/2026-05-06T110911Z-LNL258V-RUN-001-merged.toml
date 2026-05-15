@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T11:09:11Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-RUN-001"
+event = "merged"
+pr = 3714
+merge_sha = "4dfd156a7e731ccf57f70213566ad63f668a98af"
+actor = "maintainer"
+
+notes = [
+  "Merged Lunar Lake 258V platform probe receipt scaffolding.",
+  "No BitNet inference, Arc 140V packed kernel, or Intel NPU execution claim is made by this tracker closeout.",
+]
