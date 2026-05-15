@@ -141,6 +141,7 @@ context_1k
 context_4k
 resident_25
 resident_50
+resident_100
 ```
 
 Reports should summarize p50, p90, and p99 for:
@@ -162,9 +163,8 @@ memory_drift_mb
 The operator command is:
 
 ```bash
-target/release/bitnet mac benchmark \
+target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --model-id <model-id> \
-  --device apple-m4-cpu-neon \
   --profile short_prompt_16_out \
   --profile short_prompt_64_out \
   --profile long_prompt_16_out \
@@ -173,6 +173,7 @@ target/release/bitnet mac benchmark \
   --profile context_4k \
   --profile resident_25 \
   --profile resident_50 \
+  --profile resident_100 \
   --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-benchmark-v2/<model-id>/summary.json
 ```
 
@@ -190,10 +191,15 @@ dense M4 model ID:
 ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/<model-id>/summary.json
 ```
 
-The runs use `apple-m4-cpu-neon`, `fallback_used=false`, the catalog-pinned
-model identity for each dense model, and the full benchmark profile set listed
-above. Each summary validated with `bitnet mac receipts-check` as
-`apple_m4_slm_benchmark_v2` and records 101 prompts. These receipts are a
+Those reports cover the original v2 profile set through `resident_50`. The
+follow-on durable evidence refresh adds `resident_100` to the contract; a new
+live M4 refresh is required before any 100-prompt dense SLM stability claim is
+made.
+
+The 2026-05-15 runs use `apple-m4-cpu-neon`, `fallback_used=false`, the
+catalog-pinned model identity for each dense model, and the original v2
+benchmark profile set. Each summary validated with `bitnet mac receipts-check`
+as `apple_m4_slm_benchmark_v2` and records 101 prompts. These receipts are a
 recorded M4 Mac mini benchmark envelope for the supported dense model IDs, not a
 broad Apple Silicon benchmark.
 

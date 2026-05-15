@@ -2742,6 +2742,15 @@ fn mac_benchmark_requires_release_build() {
 }
 
 #[test]
+fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "resident_100"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
 fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("slm-benchmark-v2.json");
@@ -2806,6 +2815,25 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
         .expect("json"),
     )
     .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
+        .stdout(predicate::str::contains("\"prompt_count\": 3"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-benchmark-v2-resident-100.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["profiles_required"] = serde_json::json!(["resident_100"]);
+    receipt["profiles"] = serde_json::json!([benchmark_profile_v2_json("resident_100")]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
