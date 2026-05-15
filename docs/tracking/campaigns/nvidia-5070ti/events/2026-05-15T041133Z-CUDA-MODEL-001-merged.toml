@@ -1,0 +1,25 @@
+timestamp = "2026-05-15T04:11:33Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-001"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "model/cuda-qwen3-0_6b-artifact-contract"
+pr = 4836
+head_sha = "27345cde6a6d1507a079c678612479302987ce06"
+merge_sha = "2b748fec053dbcc57a46b3c626b5402b648f0dab"
+summary = "Marked CUDA-MODEL-001 merged after PR #4836 added the Qwen3 0.6B Q8_0 artifact contract."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4836",
+  "ci/model-artifacts/dense-slm-model-contracts.toml",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/reports/CUDA_MODEL_001_QWEN3_06B_ARTIFACT_CONTRACT.md",
+]
+
+notes = [
+  "The merged PR records exact source, revision, file identity, SHA256, bytes, GGUF type, architecture, quantization, tokenizer metadata, chat-template presence, context length, license, storage envelope, and candidate VRAM envelope.",
+  "The model coverage row is structurally_valid only; CPU answer, CUDA, speed, server, full-residency, dense CUDA proof, and BitNet QK256 proof remain false.",
+  "CUDA-MODEL-002 is the next Qwen3 step and must decide CPU answer sanity or commit a precise blocker receipt before any CUDA proof starts.",
+]
