@@ -1,0 +1,23 @@
+timestamp = "2026-05-15T10:57:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-009"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-009-slm-synthesis"
+summary = "Started the M3 Air dense SLM cross-lane synthesis item."
+
+artifacts = [
+  "docs/reports/apple-silicon-macbook-m3-air-slm-synthesis.md",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-warm-session.json",
+]
+
+notes = [
+  "This item compares comparable receipt fields only and keeps M3 Air timing out of M4 product/performance claims.",
+  "The SLM CPU lane uses a different Qwen3 model, host, prompt corpus, and token budget, so it is failure-signature and receipt-shape context rather than a timing baseline.",
+]
