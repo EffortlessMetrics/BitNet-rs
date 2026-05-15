@@ -5547,14 +5547,8 @@ fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Resu
     Ok(())
 }
 
-/// Validate strict dense Qwen one-token CUDA proof receipts.
-///
-/// This artifact may claim only that one deterministic greedy token was
-/// generated through the dense regular-LLM CUDA route and matched the CPU
-/// reference selected token. It must reject fixture-only policy receipts,
-/// short-decode/chat/server/speedup claims, full-residency claims, hidden CPU
-/// fallback, and BitNet packed I2_S/QK256 proof claims.
-fn require_verified_dense_qwen_one_token_model(model: &Value) -> Result<()> {
+/// Validate the exact dense Qwen model identities allowed in runtime CUDA proofs.
+fn require_verified_dense_qwen_runtime_model(model: &Value) -> Result<()> {
     let id = required_string(model, "id")?;
     match id {
         QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => {
@@ -5570,7 +5564,7 @@ fn require_verified_dense_qwen_one_token_model(model: &Value) -> Result<()> {
             require_string_eq(model, "sha256", QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256)?;
         }
         other => {
-            return Err(anyhow!("dense Qwen one-token proof has unverified model id `{other}`"));
+            return Err(anyhow!("dense Qwen runtime proof has unverified model id `{other}`"));
         }
     }
 
@@ -5589,7 +5583,7 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_verified_dense_qwen_one_token_model(model)?;
+    require_verified_dense_qwen_runtime_model(model)?;
     reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
 
@@ -5844,13 +5838,9 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;

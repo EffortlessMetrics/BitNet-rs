@@ -2411,17 +2411,23 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-005"
-status = "proposed"
-branch = "model/cuda-qwen3-0_6b-short-decode-warm-session"
+status = "pr_open"
+pr = 4971
+head_sha = "a888f2ac46c5f5bf9e84541b02d9f5cb2e5f61e2"
+branch = "model/cuda-qwen3-0_6b-short-decode"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["CUDA-MODEL-004"]
-acceptance = "Add Qwen3 0.6B short-decode and warm-session strict CUDA proof with fallback_used=false, receipt-backed quality boundaries, and no speed claim unless a later benchmark qualification accepts an exact profile."
+acceptance = "Add Qwen3 0.6B short-decode strict CUDA proof with fallback_used=false, receipt-backed quality boundaries, valid UTF-8 decoded text, CPU/CUDA generated-token equality or explicit first-divergence evidence, and no speed/server/BitNet QK256 claim."
 commands = [
-  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\qwen3-0_6b-short-decode-warm-session.json",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\qwen3-0_6b-short-decode-cuda.json",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen3_06b_model_identity",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen_short_decode",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
@@ -2442,7 +2448,51 @@ forbidden_paths = [
   "README.md",
 ]
 may_claim = [
-  "Qwen3 0.6B has short-decode and warm-session strict RTX 5070 Ti CUDA proof after the receipt exists.",
+  "Qwen3 0.6B has short-decode strict RTX 5070 Ti CUDA proof after the receipt exists.",
+]
+must_not_claim = [
+  "Qwen3 warm-session, speedup, or server readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
+]
+
+[[work_item]]
+id = "CUDA-MODEL-006"
+status = "proposed"
+branch = "model/cuda-qwen3-0_6b-warm-session"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-005"]
+acceptance = "Add Qwen3 0.6B warm-session strict CUDA proof with model/tokenizer/CUDA context loaded once, runtime buffers reused where intended, weights_uploaded_once=true, per_turn_weight_upload=false, fallback_used=false for every turn, and no speed/server/full-residency/BitNet QK256 claim."
+commands = [
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\qwen3-0_6b-warm-session-cuda.json",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen_warm_session",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  ".github/workflows/**",
+  "README.md",
+]
+may_claim = [
+  "Qwen3 0.6B has bounded warm-session strict RTX 5070 Ti CUDA proof after the receipt exists.",
 ]
 must_not_claim = [
   "Qwen3 speedup or server readiness exists.",
