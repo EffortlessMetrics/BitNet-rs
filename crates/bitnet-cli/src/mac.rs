@@ -7319,6 +7319,8 @@ fn validate_mac_receipt_value(
         )?
     } else if artifact_kind == "apple_m4_slm_eval_summary" {
         validate_slm_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
+        validate_bitnet_eval_answer_corpus_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_mac_ask_failure" {
@@ -7564,6 +7566,268 @@ fn validate_slm_eval_summary_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
 
     Ok((Some(cases_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_bitnet_eval_answer_corpus_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_local_answer_corpus",
+    )?;
+    require_exact_string_at(path, receipt, &["model_family"], "bitnet")?;
+    require_exact_string_at(path, receipt, &["prompt_template"], BITNET_M4_PROMPT_TEMPLATE)?;
+
+    require_exact_string_at(path, receipt, &["model", "family"], "bitnet")?;
+    require_exact_string_at(path, receipt, &["model", "sha256"], BITNET_M4_EXPECTED_MODEL_SHA256)?;
+    require_exact_string_at(path, receipt, &["model", "quant_format"], "I2_S")?;
+    require_bool_at(path, receipt, &["model", "answer_ready_artifact_available"], true)?;
+    require_exact_string_at(path, receipt, &["model", "answer_ready", "state"], "answer_ready")?;
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["tokenizer", "authority", "source"],
+        "external_tokenizer_json",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["tokenizer", "authority", "sha256"],
+        BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+    )?;
+    require_exact_string_at(path, receipt, &["tokenizer", "authority", "ggml_pre"], "llama-bpe")?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["corpus", "name"],
+        "apple-m4-bitnet-eval-seeded-corpus",
+    )?;
+    let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
+    let quality_total = require_u64_at(path, receipt, &["quality_summary", "total"], true)?;
+    let quality_passed = require_u64_at(path, receipt, &["quality_summary", "passed"], false)?;
+    let quality_failed = require_u64_at(path, receipt, &["quality_summary", "failed"], false)?;
+    let quality_timeout = require_u64_at(path, receipt, &["quality_summary", "timeout"], false)?;
+    let quality_not_run = require_u64_at(path, receipt, &["quality_summary", "not_run"], false)?;
+    if quality_total != corpus_case_count {
+        anyhow::bail!(
+            "{} BitNet eval receipt quality_summary.total must match corpus.case_count",
+            path.display()
+        );
+    }
+    if quality_passed + quality_failed + quality_timeout + quality_not_run != quality_total {
+        anyhow::bail!(
+            "{} BitNet eval receipt quality_summary counts must sum to total",
+            path.display()
+        );
+    }
+    if quality_timeout != 0 || quality_not_run != 0 {
+        anyhow::bail!(
+            "{} BitNet eval receipt must complete every case without timeout or not_run rows",
+            path.display()
+        );
+    }
+
+    require_bool_at(path, receipt, &["scoring_summary", "enabled"], true)?;
+    let scoring_total = require_u64_at(path, receipt, &["scoring_summary", "total"], true)?;
+    if scoring_total != quality_total {
+        anyhow::bail!(
+            "{} BitNet eval receipt scoring_summary.total must match quality_summary.total",
+            path.display()
+        );
+    }
+
+    let task_family_summary =
+        json_value_at(receipt, &["task_family_summary"]).as_object().ok_or_else(|| {
+            anyhow!("{} BitNet eval receipt is missing task_family_summary object", path.display())
+        })?;
+    if task_family_summary.is_empty() {
+        anyhow::bail!(
+            "{} BitNet eval receipt task_family_summary must not be empty",
+            path.display()
+        );
+    }
+    let mut task_family_total = 0_u64;
+    for (family, summary) in task_family_summary {
+        let total = summary["total"].as_u64().ok_or_else(|| {
+            anyhow!(
+                "{} BitNet eval receipt task_family_summary.{family}.total is missing",
+                path.display()
+            )
+        })?;
+        let passed = summary["passed"].as_u64().unwrap_or(0);
+        let failed = summary["failed"].as_u64().unwrap_or(0);
+        let timeout = summary["timeout"].as_u64().unwrap_or(0);
+        let not_run = summary["not_run"].as_u64().unwrap_or(0);
+        if passed + failed + timeout + not_run != total {
+            anyhow::bail!(
+                "{} BitNet eval receipt task_family_summary.{family} counts must sum to total",
+                path.display()
+            );
+        }
+        if summary["scoring"]["enabled"].as_bool() != Some(true) {
+            anyhow::bail!(
+                "{} BitNet eval receipt task_family_summary.{family}.scoring.enabled must be true",
+                path.display()
+            );
+        }
+        task_family_total = task_family_total.saturating_add(total);
+    }
+    if task_family_total != quality_total {
+        anyhow::bail!(
+            "{} BitNet eval receipt task-family totals must match quality_summary.total",
+            path.display()
+        );
+    }
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["reference_comparison", "schema"],
+        "bitnet_reference_vs_rust_v1",
+    )?;
+    let reference_total =
+        require_u64_at(path, receipt, &["reference_comparison", "summary", "total"], true)?;
+    if reference_total != quality_total {
+        anyhow::bail!(
+            "{} BitNet eval receipt reference_comparison.summary.total must match quality_summary.total",
+            path.display()
+        );
+    }
+    for claim in [
+        "dense_slm_evidence_used",
+        "chat_enabled",
+        "serve_enabled",
+        "performance_claimed",
+        "full_metal_inference_claimed",
+        "qk256_apple_claimed",
+        "neural_engine_claimed",
+        "mpsgraph_claimed",
+        "broad_apple_silicon_claimed",
+        "runtime_accuracy_claimed",
+    ] {
+        require_bool_at(path, receipt, &["reference_comparison", "claim_boundary", claim], false)?;
+    }
+    for claim in [
+        "full_metal_inference_claimed",
+        "neural_engine_claimed",
+        "qk256_apple_claimed",
+        "broad_performance_claimed",
+    ] {
+        require_bool_at(path, receipt, &["claim_boundary", claim], false)?;
+    }
+
+    let cases = receipt["cases"]
+        .as_array()
+        .ok_or_else(|| anyhow!("{} BitNet eval receipt cases must be an array", path.display()))?;
+    if cases.len() as u64 != quality_total {
+        anyhow::bail!(
+            "{} BitNet eval receipt cases length must match quality_summary.total",
+            path.display()
+        );
+    }
+
+    let mut generated_tokens = 0_u64;
+    for (index, case) in cases.iter().enumerate() {
+        let case_label = case["id"].as_str().unwrap_or("<unknown>");
+        match case["status"].as_str() {
+            Some("passed" | "quality_failed") => {}
+            observed => {
+                anyhow::bail!(
+                    "{} BitNet eval receipt case {index} ({case_label}) must be passed or quality_failed, got {observed:?}",
+                    path.display()
+                );
+            }
+        }
+        if case["answer"].as_str().unwrap_or_default().trim().is_empty()
+            || case["quality"]["non_empty_answer"].as_bool() != Some(true)
+            || case["quality"]["printable_utf8"].as_bool() != Some(true)
+            || case["quality"]["no_replacement_chars"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) must record valid non-empty UTF-8 answer text",
+                path.display()
+            );
+        }
+        if case["backend"]["requested_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+            || case["backend"]["selected_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+            || case["backend"]["runtime_api"].as_str() != Some("cpu")
+            || case["backend"]["fallback_used"].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) backend/fallback fields are not strict apple-m4-cpu-neon",
+                path.display()
+            );
+        }
+        if case["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256)
+            || case["model"]["family"].as_str() != Some("bitnet")
+            || case["loader"]["mode"].as_str() != Some("real_gguf")
+        {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) model/loader identity is not strict BitNet real GGUF",
+                path.display()
+            );
+        }
+        if case["tokenizer"]["strict"].as_bool() != Some(true)
+            || case["tokenizer"]["pretokenizer_authority"].as_str() != Some("llama-bpe")
+        {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) tokenizer authority is not strict llama-bpe",
+                path.display()
+            );
+        }
+        if case["prompt_template"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE)
+            || case["prompt"]["template_family"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE)
+            || case["prompt_prefill"]["exercised"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) prompt/template/prefill evidence is incomplete",
+                path.display()
+            );
+        }
+        let token_ids = case["token_ids"]["generated"].as_array().ok_or_else(|| {
+            anyhow!(
+                "{} BitNet eval receipt case {index} ({case_label}) is missing generated token IDs",
+                path.display()
+            )
+        })?;
+        let case_generated_tokens = case["tokens"]["generated"].as_u64().unwrap_or(0);
+        if token_ids.is_empty() || case_generated_tokens == 0 {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) has no generated token IDs",
+                path.display()
+            );
+        }
+        if case_generated_tokens as usize != token_ids.len() {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) token count does not match generated token IDs",
+                path.display()
+            );
+        }
+        if case["reference_comparison"]["schema"].as_str() != Some("bitnet_reference_vs_rust_v1") {
+            anyhow::bail!(
+                "{} BitNet eval receipt case {index} ({case_label}) is missing reference comparison schema",
+                path.display()
+            );
+        }
+        for path_name in [&["timing", "decode_total_ms"][..], &["latency", "total_ms"][..]] {
+            if !json_number_at(case, path_name) {
+                anyhow::bail!(
+                    "{} BitNet eval receipt case {index} ({case_label}) is missing timing/latency fields",
+                    path.display()
+                );
+            }
+        }
+        generated_tokens = generated_tokens.saturating_add(case_generated_tokens);
+    }
+
+    Ok((Some(quality_total as usize), Some(generated_tokens as usize)))
 }
 
 fn validate_slm_benchmark_v2_receipt(
@@ -8885,6 +9149,21 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_bitnet_eval_answer_corpus()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_bitnet_eval_answer_corpus_receipt();
+
+        let summary = validate_mac_receipt_value(Path::new("bitnet-eval.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_local_answer_corpus");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(3));
+        Ok(())
+    }
+
+    #[test]
     fn mac_profile_set_allocation_scope_preserves_m3_backend_label() {
         assert_eq!(
             profile_set_allocation_scope(APPLE_M3_AIR_CPU_NEON),
@@ -8929,6 +9208,194 @@ mod tests {
                         "non_degenerate": true,
                         "failed_rules": [],
                         "distinct_generated_tokens": 2
+                    }
+                }
+            ]
+        })
+    }
+
+    fn test_bitnet_eval_answer_corpus_receipt() -> serde_json::Value {
+        let case_backend = serde_json::json!({
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false
+        });
+        let case_model = serde_json::json!({
+            "family": "bitnet",
+            "sha256": BITNET_M4_EXPECTED_MODEL_SHA256
+        });
+        let case_tokenizer = serde_json::json!({
+            "strict": true,
+            "pretokenizer_authority": "llama-bpe"
+        });
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+            "model_family": "bitnet",
+            "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "model": {
+                "family": "bitnet",
+                "sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+                "quant_format": "I2_S",
+                "answer_ready_artifact_available": true,
+                "answer_ready": {
+                    "state": "answer_ready"
+                }
+            },
+            "tokenizer": {
+                "strict": true,
+                "authority": {
+                    "source": "external_tokenizer_json",
+                    "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+                    "ggml_pre": "llama-bpe"
+                }
+            },
+            "corpus": {
+                "name": "apple-m4-bitnet-eval-seeded-corpus",
+                "case_count": 2
+            },
+            "quality_summary": {
+                "total": 2,
+                "passed": 1,
+                "failed": 1,
+                "timeout": 0,
+                "not_run": 0
+            },
+            "scoring_summary": {
+                "enabled": true,
+                "total": 2,
+                "passed": 1,
+                "failed": 1,
+                "not_run": 0
+            },
+            "task_family_summary": {
+                "arithmetic_exact": {
+                    "total": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "timeout": 0,
+                    "not_run": 0,
+                    "scoring": {
+                        "enabled": true
+                    }
+                },
+                "numeric_tolerance": {
+                    "total": 1,
+                    "passed": 0,
+                    "failed": 1,
+                    "timeout": 0,
+                    "not_run": 0,
+                    "scoring": {
+                        "enabled": true
+                    }
+                }
+            },
+            "reference_comparison": {
+                "schema": "bitnet_reference_vs_rust_v1",
+                "summary": {
+                    "total": 2
+                },
+                "claim_boundary": {
+                    "dense_slm_evidence_used": false,
+                    "chat_enabled": false,
+                    "serve_enabled": false,
+                    "performance_claimed": false,
+                    "full_metal_inference_claimed": false,
+                    "qk256_apple_claimed": false,
+                    "neural_engine_claimed": false,
+                    "mpsgraph_claimed": false,
+                    "broad_apple_silicon_claimed": false,
+                    "runtime_accuracy_claimed": false
+                }
+            },
+            "claim_boundary": {
+                "full_metal_inference_claimed": false,
+                "neural_engine_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_performance_claimed": false
+            },
+            "cases": [
+                {
+                    "id": "case-1",
+                    "status": "passed",
+                    "answer": "4",
+                    "quality": {
+                        "passed": true,
+                        "non_empty_answer": true,
+                        "printable_utf8": true,
+                        "no_replacement_chars": true
+                    },
+                    "backend": case_backend.clone(),
+                    "model": case_model.clone(),
+                    "loader": {
+                        "mode": "real_gguf"
+                    },
+                    "tokenizer": case_tokenizer.clone(),
+                    "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+                    "prompt": {
+                        "template_family": BITNET_M4_PROMPT_TEMPLATE
+                    },
+                    "prompt_prefill": {
+                        "exercised": true
+                    },
+                    "token_ids": {
+                        "generated": [4]
+                    },
+                    "tokens": {
+                        "generated": 1
+                    },
+                    "reference_comparison": {
+                        "schema": "bitnet_reference_vs_rust_v1"
+                    },
+                    "timing": {
+                        "decode_total_ms": 1.0
+                    },
+                    "latency": {
+                        "total_ms": 2.0
+                    }
+                },
+                {
+                    "id": "case-2",
+                    "status": "quality_failed",
+                    "answer": "wrong",
+                    "quality": {
+                        "passed": false,
+                        "non_empty_answer": true,
+                        "printable_utf8": true,
+                        "no_replacement_chars": true
+                    },
+                    "backend": case_backend,
+                    "model": case_model,
+                    "loader": {
+                        "mode": "real_gguf"
+                    },
+                    "tokenizer": case_tokenizer,
+                    "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+                    "prompt": {
+                        "template_family": BITNET_M4_PROMPT_TEMPLATE
+                    },
+                    "prompt_prefill": {
+                        "exercised": true
+                    },
+                    "token_ids": {
+                        "generated": [1, 2]
+                    },
+                    "tokens": {
+                        "generated": 2
+                    },
+                    "reference_comparison": {
+                        "schema": "bitnet_reference_vs_rust_v1"
+                    },
+                    "timing": {
+                        "decode_total_ms": 1.0
+                    },
+                    "latency": {
+                        "total_ms": 2.0
                     }
                 }
             ]

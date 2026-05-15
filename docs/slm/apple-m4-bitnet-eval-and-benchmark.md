@@ -74,6 +74,54 @@ Dry-run validation for this slice still records all 100 corpus cases as
 supplied. This is schema readiness only, not runtime BitNet accuracy or
 performance evidence.
 
+## M4 Eval Report Slice
+
+`M4-BITNET-EVAL-003` runs the 100-case seeded BitNet corpus on the M4 Mac mini
+through the accepted I2_S GGUF, external tokenizer authority, and
+`apple-m4-cpu-neon` backend.
+
+Recorded report:
+
+- Aggregate receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json`
+- Child receipts:
+  `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus-runs/*.json`
+- Artifact kind: `bitnet_apple_m4_local_answer_corpus`
+- Corpus: `apple-m4-bitnet-eval-seeded-corpus`
+- Cases: 100
+- Passed: 75
+- Failed: 25
+- Timeout: 0
+- Not run: 0
+- Generated tokens: 765
+- Backend: `apple-m4-cpu-neon`
+- Runtime API: `cpu`
+- Fallback used: `false`
+- Reference comparison schema: `bitnet_reference_vs_rust_v1`
+- Reference answers supplied: 0
+
+Task-family pass rates:
+
+| Task family | Passed | Failed |
+|---|---:|---:|
+| arithmetic_exact | 10 | 0 |
+| closed_label_classification | 9 | 1 |
+| constrained_summary | 9 | 1 |
+| fixed_table_qa | 6 | 4 |
+| format_constrained_json | 5 | 5 |
+| numeric_tolerance | 5 | 5 |
+| ordering_sorting | 8 | 2 |
+| required_forbidden_tokens | 7 | 3 |
+| rewrite_normalized | 9 | 1 |
+| synthetic_extraction | 7 | 3 |
+
+The receipt records generated text, generated token IDs, tokenizer authority,
+model SHA, per-case timing, task-family scoring, and failure taxonomy for the
+bounded corpus. It also keeps the explicit claim boundary: this is not a broad
+BitNet quality benchmark, not a performance envelope, not dense SLM evidence,
+and not chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad
+Apple Silicon proof.
+
 ## Claim Policy
 
 Allowed after the first slice:
@@ -111,6 +159,25 @@ Still not allowed after the report-schema slice:
 The full BitNet eval corpus has run on M4.
 Runtime BitNet accuracy has been measured for this corpus.
 BitNet performance has been benchmarked.
+BitNet chat works.
+BitNet serve works.
+Full apple-m4-metal inference works.
+QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.
+```
+
+Allowed after the M4 eval report slice:
+
+```text
+The recorded Apple M4 BitNet eval receipts describe the accepted I2_S
+artifact's bounded 100-case corpus behavior for those exact runs.
+```
+
+Still not allowed after the M4 eval report slice:
+
+```text
+The reports are broad BitNet quality benchmarks.
+The reports are BitNet performance benchmarks.
+Dense SLM evidence supports BitNet quality.
 BitNet chat works.
 BitNet serve works.
 Full apple-m4-metal inference works.
