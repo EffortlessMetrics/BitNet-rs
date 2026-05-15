@@ -119,6 +119,11 @@ fn canonical_proof_backend_label(label: &str) -> String {
     }
 }
 
+fn proof_backend_labels_match(requested_backend: &str, execution_backend: &str) -> bool {
+    canonical_proof_backend_label(requested_backend)
+        == canonical_proof_backend_label(execution_backend)
+}
+
 fn resolve_simple_generation_device(
     requested_backend_label: &str,
     strict_backend: bool,
@@ -167,6 +172,16 @@ mod proof_summary_tests {
             proof.reason.as_deref(),
             Some("requested backend intel-arc-a770-opencl executed on cpu")
         );
+    }
+
+    #[test]
+    fn a770_alias_matches_canonical_execution_backend() {
+        assert!(proof_backend_labels_match("a770-opencl", "intel-arc-a770-opencl"));
+    }
+
+    #[test]
+    fn a770_alias_does_not_match_cpu_execution_backend() {
+        assert!(!proof_backend_labels_match("a770-opencl", "cpu"));
     }
 
     #[test]
@@ -2098,7 +2113,8 @@ async fn run_simple_generation(
         let backend_fallback = backend_fallback_proof(requested_backend, execution_backend);
         let fallback_used =
             loader_fallback_used || tokenizer_fallback_used || backend_fallback.used;
-        let execution_backend_matched = requested_backend.eq_ignore_ascii_case(execution_backend);
+        let execution_backend_matched =
+            proof_backend_labels_match(requested_backend, execution_backend);
         let proof_model_contract_path =
             proof_model_contract.as_ref().map(|path| path.display().to_string());
         let proof_kernel_route_id = proof_kernel_route.as_deref();

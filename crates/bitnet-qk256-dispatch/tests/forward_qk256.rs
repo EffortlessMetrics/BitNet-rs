@@ -107,6 +107,8 @@ fn qk256_opencl_source_matches_ggml_no_scale_mapping() {
 
     assert_eq!(QK256_OPENCL_KERNEL_NAME, "qk256_gemm_no_scale");
     assert!(QK256_OPENCL_KERNEL_SRC.contains("__kernel void qk256_gemm_no_scale"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("row_bytes[col >> 2]"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("(packed >> ((col & 3u) * 2u)) & 3u"));
     assert!(QK256_OPENCL_KERNEL_SRC.contains("w = -2.0f"));
     assert!(QK256_OPENCL_KERNEL_SRC.contains("w = -1.0f"));
     assert!(QK256_OPENCL_KERNEL_SRC.contains("w = 1.0f"));

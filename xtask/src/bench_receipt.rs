@@ -488,35 +488,51 @@ fn cli_stage_identity(plan: &Value, cli_stage: &Value, model_contract_path: &Pat
         }
     }
 
-    let requested_backend_matched =
-        planned_backend.is_some() && requested_backend.is_some() && planned_backend == requested_backend;
+    let requested_backend_matched = planned_backend.is_some()
+        && requested_backend.is_some()
+        && planned_backend == requested_backend;
     object.insert("requested_backend_matched".to_string(), Value::Bool(requested_backend_matched));
     if !requested_backend_matched {
-        route_failures.push(field_failure("requested_backend_matched", planned_backend, requested_backend));
+        route_failures.push(field_failure(
+            "requested_backend_matched",
+            planned_backend,
+            requested_backend,
+        ));
     }
 
-    let selected_backend_matched =
-        planned_backend.is_some() && selected_backend.is_some() && planned_backend == selected_backend;
+    let selected_backend_matched = planned_backend.is_some()
+        && selected_backend.is_some()
+        && planned_backend == selected_backend;
     object.insert("selected_backend_matched".to_string(), Value::Bool(selected_backend_matched));
     if !selected_backend_matched {
-        route_failures.push(field_failure("selected_backend_matched", planned_backend, selected_backend));
+        route_failures.push(field_failure(
+            "selected_backend_matched",
+            planned_backend,
+            selected_backend,
+        ));
     }
 
-    let execution_backend_matched =
-        planned_backend.is_some() && execution_backend.is_some() && planned_backend == execution_backend;
-    object.insert(
-        "execution_backend_matched".to_string(),
-        Value::Bool(execution_backend_matched),
-    );
+    let execution_backend_matched = planned_backend.is_some()
+        && execution_backend.is_some()
+        && planned_backend == execution_backend;
+    object.insert("execution_backend_matched".to_string(), Value::Bool(execution_backend_matched));
     if !execution_backend_matched {
-        route_failures.push(field_failure("execution_backend_matched", planned_backend, execution_backend));
+        route_failures.push(field_failure(
+            "execution_backend_matched",
+            planned_backend,
+            execution_backend,
+        ));
     }
 
     let route_declared = bool_at(cli_stage, "/proof_summary/route_declared").unwrap_or(false)
         && declared_route.and_then(Value::as_str).is_some_and(|route| !route.is_empty());
     object.insert("route_declared".to_string(), Value::Bool(route_declared));
     if !route_declared {
-        route_failures.push(field_failure("route_declared", Some(&Value::Bool(true)), Some(&Value::Bool(false))));
+        route_failures.push(field_failure(
+            "route_declared",
+            Some(&Value::Bool(true)),
+            Some(&Value::Bool(false)),
+        ));
     }
 
     let same_kernel_route =
@@ -526,7 +542,8 @@ fn cli_stage_identity(plan: &Value, cli_stage: &Value, model_contract_path: &Pat
         route_failures.push(field_failure("same_kernel_route", planned_route, declared_route));
     }
 
-    let route_claimable = bool_at(cli_stage, "/proof_summary/kernel_route/claimable").unwrap_or(false);
+    let route_claimable =
+        bool_at(cli_stage, "/proof_summary/kernel_route/claimable").unwrap_or(false);
     object.insert("route_claimable".to_string(), Value::Bool(route_claimable));
     if !route_claimable {
         route_failures.push(field_failure(
@@ -871,8 +888,11 @@ mod tests {
     #[test]
     fn cli_stage_identity_rejects_cpu_execution_with_declared_a770_route() {
         let (plan, cli) = plan_and_cli_stage("cpu");
-        let identity =
-            cli_stage_identity(&plan, &cli, Path::new("docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"));
+        let identity = cli_stage_identity(
+            &plan,
+            &cli,
+            Path::new("docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"),
+        );
 
         assert_eq!(identity["profile_matched"], true);
         assert_eq!(identity["model_matched"], true);
