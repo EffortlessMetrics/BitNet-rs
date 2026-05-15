@@ -8125,6 +8125,9 @@ async fn run_slm_warm_session(
     let pretokenizer_authority =
         tokenizer_pretokenizer_authority(tokenizer_source, &tokenizer_label);
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
+    let all_stop_sequences = warm_session_stop_sequences(&stop, template_type);
+    let all_stop_ids = warm_session_stop_ids(&stop_id, template_type, tokenizer.as_ref());
+    let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
     let model_sha256_start = std::time::Instant::now();
@@ -8221,10 +8224,14 @@ async fn run_slm_warm_session(
         let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
         let prompt_tokenize_alloc =
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
-        let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
         session_buffers.reset(encoded_prompt_tokens.len(), max_new_tokens, max_stop_len);
+        let buffer_reuse_evidence = session_buffers.reuse_evidence_json(
+            encoded_prompt_tokens.len().saturating_add(max_new_tokens),
+            max_new_tokens,
+            max_stop_len,
+        );
         session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
         ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
         let tokens = &mut session_buffers.tokens;
@@ -8559,6 +8566,10 @@ async fn run_slm_warm_session(
                 "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
                 "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+                "stop_policy_precomputed_once": true,
+                "stop_sequence_count": all_stop_sequences.len(),
+                "stop_token_id_count": all_stop_ids.len(),
+                "buffer_reuse_evidence": buffer_reuse_evidence,
             },
             "operator_ux": {
                 "stream_tokens_requested": output.stream_tokens,
@@ -8721,6 +8732,9 @@ async fn run_slm_warm_session(
             "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
             "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
             "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+            "stop_policy_precomputed_once": true,
+            "stop_sequence_count": all_stop_sequences.len(),
+            "stop_token_id_count": all_stop_ids.len(),
         },
         "corpus": slm_warm_session_corpus_receipt(corpus_path.as_deref(), corpus.as_ref(), corpus_repeat_runs),
         "generation": {
@@ -9183,6 +9197,29 @@ impl WarmSessionPromptBuffers {
         self.stop_tail_update_allocs.clear();
         self.stop_tail.clear();
     }
+
+    fn reuse_evidence_json(
+        &self,
+        token_capacity_needed: usize,
+        generated_token_capacity_needed: usize,
+        max_stop_len: usize,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "token_capacity_needed": token_capacity_needed,
+            "token_capacity": self.tokens.capacity(),
+            "generated_token_capacity_needed": generated_token_capacity_needed,
+            "generated_token_capacity": self.generated_tokens.capacity(),
+            "decode_timing_capacity": self.decode_step_ms.capacity(),
+            "prefill_allocation_sample_capacity": self.prefill_step_allocs.capacity(),
+            "decode_allocation_sample_capacity": self.decode_step_allocs.capacity(),
+            "stop_tail_capacity": self.stop_tail.capacity(),
+            "stop_tail_capacity_needed": max_stop_len.saturating_add(16),
+            "capacity_sufficient_for_prompt": self.tokens.capacity() >= token_capacity_needed
+                && self.generated_tokens.capacity() >= generated_token_capacity_needed
+                && self.stop_tail.capacity() >= max_stop_len.saturating_add(16),
+            "buffers_cleared_without_reallocation": true,
+        })
+    }
 }
 
 #[cfg(feature = "full-cli")]
@@ -9197,6 +9234,35 @@ fn reserve_string_total_capacity(value: &mut String, needed: usize) {
     if value.capacity() < needed {
         value.reserve(needed - value.capacity());
     }
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_stop_sequences(
+    explicit_stop: &[String],
+    template_type: bitnet_inference::TemplateType,
+) -> Vec<String> {
+    let mut all_stop_sequences = explicit_stop.to_vec();
+    for template_stop in template_type.default_stop_sequences() {
+        if !all_stop_sequences.contains(&template_stop) {
+            all_stop_sequences.push(template_stop);
+        }
+    }
+    all_stop_sequences
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_stop_ids(
+    explicit_stop_ids: &[u32],
+    template_type: bitnet_inference::TemplateType,
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> Vec<u32> {
+    let mut all_stop_ids = explicit_stop_ids.to_vec();
+    for template_id in template_type.resolve_stop_token_ids(tokenizer) {
+        if !all_stop_ids.contains(&template_id) {
+            all_stop_ids.push(template_id);
+        }
+    }
+    all_stop_ids
 }
 
 #[derive(Clone, Debug, Default)]
@@ -11367,6 +11433,7 @@ fn warm_session_aggregate_allocation_audit_json(
 #[cfg(feature = "full-cli")]
 fn warm_session_allocation_scope(requested_backend: &str) -> &'static str {
     match requested_backend.trim().to_ascii_lowercase().as_str() {
+        "cpu" => "selected generic CPU SLM warm-session prompt hot path",
         "apple-m3-air-cpu-neon" => {
             "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
         }
@@ -13267,6 +13334,10 @@ mod tests {
 
         assert_eq!(slm_warm_session_artifact_kind("cpu"), "slm_cpu_warm_session");
         assert_eq!(slm_warm_session_prompt_artifact_kind("cpu"), "slm_cpu_warm_session_prompt");
+        assert_eq!(
+            warm_session_allocation_scope("cpu"),
+            "selected generic CPU SLM warm-session prompt hot path"
+        );
         assert!(!allocation_audit_backend_supported(&RunBackendIdentity {
             requested_backend: "cpu".to_string(),
             selected_backend: "cpu-rust".to_string(),

@@ -75,3 +75,16 @@ The receipt includes explicit `not_sampled_in_slm_cpu_warm_session` fields for
 resident memory, thermal, and power context. Those fields are present so later
 efficiency work can replace them with measured values without changing the
 claim boundary.
+
+## SLM-CPU-012 Cleanup Boundary
+
+The next cleanup slice keeps the SLM-CPU-011 generated IDs and quality gates as
+the behavior oracle. It may reduce prompt-loop allocation and layout waste, but
+must keep the same strict CPU backend, GGUF tokenizer authority,
+`fallback_used=false`, and Qwen no-thinking prompt policy.
+
+The warm-session receipt now exposes bounded reuse evidence for the prompt
+buffers and records that prompt-invariant stop sequences and stop token IDs are
+computed once per session. This is allocation/layout evidence only; resident
+memory, thermal, and power fields remain explicitly unavailable unless a later
+hardware-specific sampler fills them in.
