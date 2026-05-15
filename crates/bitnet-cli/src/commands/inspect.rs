@@ -50,6 +50,10 @@ pub struct InspectCommand {
     #[arg(long)]
     pub logits_contract_report: bool,
 
+    /// Token IDs to probe in the logits/embedding contract report
+    #[arg(long = "logits-token-id", value_name = "TOKEN_ID")]
+    pub logits_token_ids: Vec<u32>,
+
     /// Emit BitNet-b1.58 graph-order/subnorm contract metadata for the GGUF model
     #[arg(long)]
     pub bitnet_graph_contract_report: bool,
@@ -606,6 +610,12 @@ impl InspectCommand {
                 lm_head: lm_head_candidates,
                 final_norm: final_norm_candidates,
             },
+            token_probes: logits_token_probe_reports(
+                &reader,
+                &self.logits_token_ids,
+                config.model.vocab_size,
+                config.model.hidden_size,
+            )?,
             runtime_mapping_policy: LogitsRuntimeMappingPolicy {
                 embedding_candidates: vec![
                     "token_embd.weight".to_string(),
@@ -1363,6 +1373,7 @@ struct LogitsContractReport {
     gguf_metadata: LogitsContractGgufMetadata,
     effective_config: LogitsContractEffectiveConfig,
     tensor_candidates: LogitsTensorCandidates,
+    token_probes: Vec<LogitsTokenProbeReport>,
     runtime_mapping_policy: LogitsRuntimeMappingPolicy,
     summary: LogitsContractSummary,
     not_claims: Vec<String>,
@@ -1397,6 +1408,23 @@ struct LogitsTensorReport {
     tensor_type: String,
     actual_bytes: usize,
     sample_sha256_first_4096: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LogitsTokenProbeReport {
+    token_id: u32,
+    source_tensor: Option<String>,
+    source_orientation: Option<String>,
+    extraction_axis: Option<String>,
+    present: bool,
+    reason: Option<String>,
+    value_count: Option<usize>,
+    mean: Option<f32>,
+    rms: Option<f32>,
+    min: Option<f32>,
+    max: Option<f32>,
+    vector_sha256_f32_le: Option<String>,
+    first_values: Vec<f32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1519,6 +1547,207 @@ fn logits_tensor_candidates_report(
         }
     }
     Ok(reports)
+}
+
+fn logits_token_probe_reports(
+    reader: &GgufReader,
+    token_ids: &[u32],
+    vocab_size: usize,
+    hidden_size: usize,
+) -> Result<Vec<LogitsTokenProbeReport>> {
+    if token_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let Some(info) = ["token_embd.weight", "tok_embeddings.weight", "model.embed_tokens.weight"]
+        .iter()
+        .find_map(|name| reader.get_tensor_info_by_name(name))
+    else {
+        return Ok(token_ids
+            .iter()
+            .copied()
+            .map(|token_id| LogitsTokenProbeReport {
+                token_id,
+                source_tensor: None,
+                source_orientation: None,
+                extraction_axis: None,
+                present: false,
+                reason: Some("embedding_tensor_missing".to_string()),
+                value_count: None,
+                mean: None,
+                rms: None,
+                min: None,
+                max: None,
+                vector_sha256_f32_le: None,
+                first_values: Vec::new(),
+            })
+            .collect());
+    };
+
+    let data = reader.get_tensor_data_by_info(info)?;
+    token_ids
+        .iter()
+        .copied()
+        .map(|token_id| {
+            logits_token_probe_report(info, data, token_id, vocab_size, hidden_size)
+                .with_context(|| format!("probing logits token id {token_id}"))
+        })
+        .collect()
+}
+
+fn logits_token_probe_report(
+    info: &bitnet_models::formats::gguf::TensorInfo,
+    data: &[u8],
+    token_id: u32,
+    vocab_size: usize,
+    hidden_size: usize,
+) -> Result<LogitsTokenProbeReport> {
+    let orientation = logits_matrix_orientation(&info.shape, vocab_size, hidden_size);
+    let token_index = token_id as usize;
+    if token_index >= vocab_size {
+        return Ok(LogitsTokenProbeReport {
+            token_id,
+            source_tensor: Some(info.name.clone()),
+            source_orientation: Some(orientation),
+            extraction_axis: None,
+            present: false,
+            reason: Some("token_id_out_of_vocab".to_string()),
+            value_count: None,
+            mean: None,
+            rms: None,
+            min: None,
+            max: None,
+            vector_sha256_f32_le: None,
+            first_values: Vec::new(),
+        });
+    }
+
+    let (axis, values) = match orientation.as_str() {
+        "vocab_hidden" => {
+            let base = token_index.checked_mul(hidden_size).ok_or_else(|| {
+                anyhow::anyhow!("token probe row offset overflow for {}", info.name)
+            })?;
+            let values = (0..hidden_size)
+                .map(|idx| tensor_scalar_at(data, info.tensor_type, base + idx))
+                .collect::<Result<Vec<_>>>()?;
+            ("row", values)
+        }
+        "hidden_vocab" => {
+            let values = (0..hidden_size)
+                .map(|row| {
+                    let idx = row
+                        .checked_mul(vocab_size)
+                        .and_then(|base| base.checked_add(token_index))
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("token probe column offset overflow for {}", info.name)
+                        })?;
+                    tensor_scalar_at(data, info.tensor_type, idx)
+                })
+                .collect::<Result<Vec<_>>>()?;
+            ("column", values)
+        }
+        _ => {
+            return Ok(LogitsTokenProbeReport {
+                token_id,
+                source_tensor: Some(info.name.clone()),
+                source_orientation: Some(orientation),
+                extraction_axis: None,
+                present: false,
+                reason: Some("embedding_shape_unexpected_for_token_probe".to_string()),
+                value_count: None,
+                mean: None,
+                rms: None,
+                min: None,
+                max: None,
+                vector_sha256_f32_le: None,
+                first_values: Vec::new(),
+            });
+        }
+    };
+
+    let stats = f32_stats(&values);
+    Ok(LogitsTokenProbeReport {
+        token_id,
+        source_tensor: Some(info.name.clone()),
+        source_orientation: Some(orientation),
+        extraction_axis: Some(axis.to_string()),
+        present: true,
+        reason: None,
+        value_count: Some(values.len()),
+        mean: stats.mean,
+        rms: stats.rms,
+        min: stats.min,
+        max: stats.max,
+        vector_sha256_f32_le: Some(sha256_hex_f32_values(&values)),
+        first_values: values.into_iter().take(8).collect(),
+    })
+}
+
+fn tensor_scalar_at(data: &[u8], tensor_type: GgufTensorType, index: usize) -> Result<f32> {
+    match tensor_type {
+        GgufTensorType::F32 => {
+            let offset =
+                index.checked_mul(4).ok_or_else(|| anyhow::anyhow!("f32 byte offset overflow"))?;
+            let end =
+                offset.checked_add(4).ok_or_else(|| anyhow::anyhow!("f32 byte end overflow"))?;
+            let bytes = data
+                .get(offset..end)
+                .ok_or_else(|| anyhow::anyhow!("f32 tensor index {index} out of bounds"))?;
+            Ok(f32::from_le_bytes(bytes.try_into()?))
+        }
+        GgufTensorType::F16 => {
+            let offset =
+                index.checked_mul(2).ok_or_else(|| anyhow::anyhow!("f16 byte offset overflow"))?;
+            let end =
+                offset.checked_add(2).ok_or_else(|| anyhow::anyhow!("f16 byte end overflow"))?;
+            let bytes = data
+                .get(offset..end)
+                .ok_or_else(|| anyhow::anyhow!("f16 tensor index {index} out of bounds"))?;
+            Ok(half::f16::from_bits(u16::from_le_bytes(bytes.try_into()?)).to_f32())
+        }
+        other => anyhow::bail!(
+            "unsupported logits token probe tensor type {:?}; expected F32 or F16",
+            other
+        ),
+    }
+}
+
+struct F32Stats {
+    mean: Option<f32>,
+    rms: Option<f32>,
+    min: Option<f32>,
+    max: Option<f32>,
+}
+
+fn f32_stats(values: &[f32]) -> F32Stats {
+    if values.is_empty() {
+        return F32Stats { mean: None, rms: None, min: None, max: None };
+    }
+    let mut min = f32::INFINITY;
+    let mut max = f32::NEG_INFINITY;
+    let mut sum = 0.0f64;
+    let mut sum_sq = 0.0f64;
+    for value in values {
+        min = min.min(*value);
+        max = max.max(*value);
+        sum += *value as f64;
+        sum_sq += (*value as f64) * (*value as f64);
+    }
+    let count = values.len() as f64;
+    F32Stats {
+        mean: Some((sum / count) as f32),
+        rms: Some((sum_sq / count).sqrt() as f32),
+        min: Some(min),
+        max: Some(max),
+    }
+}
+
+fn sha256_hex_f32_values(values: &[f32]) -> String {
+    let mut hasher = Sha256::new();
+    for value in values {
+        hasher.update(value.to_le_bytes());
+    }
+    format!("{:x}", hasher.finalize())
 }
 
 fn logits_matrix_orientation(shape: &[usize], vocab_size: usize, hidden_size: usize) -> String {
@@ -2381,6 +2610,76 @@ mod tests {
         assert!(summary.tied_logits_expected);
         assert_eq!(summary.runtime_logits_source, "tied_embeddings");
         assert_eq!(summary.blocker, None);
+    }
+
+    #[test]
+    fn logits_token_probe_extracts_hidden_vocab_column() {
+        let info = bitnet_models::formats::gguf::TensorInfo {
+            name: "token_embd.weight".to_string(),
+            shape: vec![3, 4],
+            tensor_type: GgufTensorType::F32,
+            offset: 0,
+            size: 48,
+        };
+        let values = [0.0f32, 1.0, 2.0, 3.0, 10.0, 11.0, 12.0, 13.0, 20.0, 21.0, 22.0, 23.0];
+        let data = bytemuck::cast_slice::<f32, u8>(&values);
+
+        let report = logits_token_probe_report(&info, data, 2, 4, 3).expect("token probe");
+
+        assert!(report.present);
+        assert_eq!(report.source_orientation.as_deref(), Some("hidden_vocab"));
+        assert_eq!(report.extraction_axis.as_deref(), Some("column"));
+        assert_eq!(report.value_count, Some(3));
+        assert_eq!(report.first_values, vec![2.0, 12.0, 22.0]);
+        assert_eq!(report.mean, Some(12.0));
+        assert_eq!(report.min, Some(2.0));
+        assert_eq!(report.max, Some(22.0));
+        assert!(report.vector_sha256_f32_le.is_some());
+    }
+
+    #[test]
+    fn logits_token_probe_extracts_vocab_hidden_row() {
+        let info = bitnet_models::formats::gguf::TensorInfo {
+            name: "token_embd.weight".to_string(),
+            shape: vec![4, 3],
+            tensor_type: GgufTensorType::F32,
+            offset: 0,
+            size: 48,
+        };
+        let values = [0.0f32, 1.0, 2.0, 10.0, 11.0, 12.0, 20.0, 21.0, 22.0, 30.0, 31.0, 32.0];
+        let data = bytemuck::cast_slice::<f32, u8>(&values);
+
+        let report = logits_token_probe_report(&info, data, 2, 4, 3).expect("token probe");
+
+        assert!(report.present);
+        assert_eq!(report.source_orientation.as_deref(), Some("vocab_hidden"));
+        assert_eq!(report.extraction_axis.as_deref(), Some("row"));
+        assert_eq!(report.value_count, Some(3));
+        assert_eq!(report.first_values, vec![20.0, 21.0, 22.0]);
+        assert_eq!(report.mean, Some(21.0));
+        assert_eq!(report.min, Some(20.0));
+        assert_eq!(report.max, Some(22.0));
+        assert!(report.vector_sha256_f32_le.is_some());
+    }
+
+    #[test]
+    fn logits_token_probe_reports_out_of_vocab() {
+        let info = bitnet_models::formats::gguf::TensorInfo {
+            name: "token_embd.weight".to_string(),
+            shape: vec![4, 3],
+            tensor_type: GgufTensorType::F32,
+            offset: 0,
+            size: 48,
+        };
+        let values = [0.0f32; 12];
+        let data = bytemuck::cast_slice::<f32, u8>(&values);
+
+        let report = logits_token_probe_report(&info, data, 99, 4, 3).expect("token probe");
+
+        assert!(!report.present);
+        assert_eq!(report.reason.as_deref(), Some("token_id_out_of_vocab"));
+        assert_eq!(report.value_count, None);
+        assert!(report.first_values.is_empty());
     }
 
     #[test]
