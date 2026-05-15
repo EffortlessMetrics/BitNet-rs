@@ -1,0 +1,14 @@
+timestamp = "2026-05-15T23:53:26Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-004"
+event = "pr_open"
+pr = 5009
+head_sha = "379fca52890b585cb7a0837780fd87892e06f5ac"
+actor = "codex"
+
+notes = [
+  "Opened the durable M4 dashboard-history PR after regenerating the report-refresh manifest and regression dashboard from committed receipts only.",
+  "The dashboard found five M4 evidence families, nine matching-identity groups, and five comparable groups: three dense SLM benchmark groups, one BitNet eval group, and one BitNet benchmark group.",
+  "Dense SLM eval v2 and BitNet variable warm remain `insufficient_history`; no trend is claimed for those groups.",
+  "Scope remains dashboard/tracking/docs only: no live model run, model download, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon claim.",
+]
