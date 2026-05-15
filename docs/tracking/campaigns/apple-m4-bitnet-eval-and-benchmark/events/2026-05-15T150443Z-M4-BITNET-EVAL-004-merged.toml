@@ -1,0 +1,46 @@
+timestamp = "2026-05-15T15:04:43Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-004"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+pr = 4933
+head_sha = "efae7c4b01daf96426bf62f0e74d98952df4aea4"
+merge_sha = "a45014d410eda1beec010870c92024b0c619a79a"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-004-benchmark-reports"
+summary = "Closed M4-BITNET-EVAL-004 after PR #4933 published bounded Apple M4 BitNet one-shot and fixed-warm benchmark receipts."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+]
+
+notes = [
+  "The merged benchmark receipt records 4 prompts total: 1 one-shot mac ask prompt and 3 fixed warm prompts, 8 generated tokens total, and fallback_used=false.",
+  "The receipt includes model load, tokenizer load, prompt tokenize, prefill, TTFT, input/output/decode throughput, total wall time, peak memory, timeout boundary, and p50/p90/p99 summaries.",
+  "This closeout keeps the claim boundary scoped to the accepted BitNet I2_S artifact and bounded Apple M4 CPU/NEON benchmark only; chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, and broad Apple Silicon claims remain out of scope.",
+]
+
+[evidence]
+aggregate_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json"
+one_shot_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-ask-benchmark.json"
+warm_receipt = "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-bitnet-warm-benchmark.json"
+prompt_count = 4
+generated_tokens = 8
+backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+ttft_ms_p50 = 10777.0
+ttft_ms_p90 = 12042.0
+output_tok_s_p50 = 0.158
+decode_tok_s_p50 = 1.411
+peak_memory_mb_p50 = 4246.359
+timeout_boundary = "not_reached"
+claim_boundary = "bounded BitNet benchmark receipt only; no broad quality/performance, dense SLM, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claim"

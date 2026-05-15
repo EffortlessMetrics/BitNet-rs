@@ -164,7 +164,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-004"
-status = "in_progress"
+status = "merged"
+pr = 4933
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-004-benchmark-reports"
 stackable = false
 review_mode = "codex_premerge"
