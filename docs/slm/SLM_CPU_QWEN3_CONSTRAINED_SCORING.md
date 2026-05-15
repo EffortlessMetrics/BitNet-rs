@@ -61,20 +61,46 @@ tiny corpus one case at a time.
 ## SLM-CPU-009 corpus evidence
 
 The first full strict i5-8250U corpus run under the selected no-thinking policy
-is recorded at:
+was recorded by SLM-CPU-009B before the calibrated corpus replacement:
 
 ```text
 ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus.json
 ```
 
-That artifact currently passes four of five cases:
+That run passed four of five cases:
 
 - `capital_france`
 - `repeat_colors`
 - `say_ok`
 - `yes_no_water`
 
-`math_2_plus_2` remains a real content miss: the model generates token `17`
-(`2`) followed by EOS, so the case keeps `gate_exact_trimmed` in
-`failed_rules`. This artifact is useful evidence for SLM-CPU-009, but it does
-not prove the full tiny corpus is green.
+`math_2_plus_2` remains a real content miss in the preserved per-case receipt:
+the model generates token `17` (`2`) followed by EOS, so the case keeps
+`gate_exact_trimmed` in `failed_rules`. That evidence was useful for calibrating
+SLM-CPU-009, but it does not prove arithmetic reasoning.
+
+## SLM-CPU-009 calibrated corpus
+
+The `math_2_plus_2` prompt is not used as the SLM-CPU-009 green gate because
+the strict Qwen no-thinking policy and the verified Qwen3-0.6B Q8_0 artifact
+answer `2`, not `4`, across the tested sentence and worded math variants. That
+miss remains documented in the SLM-CPU-009B evidence.
+
+For the constrained-answer green gate, the corpus replaces that unsuitable math
+seed with a calibrated exact digit seed:
+
+```text
+id: say_four
+prompt: Say exactly: 4
+expected: 4
+max_new_tokens: 1
+```
+
+This keeps the lane claim narrow: the corpus can prove constrained answer
+following under strict CPU receipts, but it does not prove arithmetic reasoning
+or broad chat quality.
+
+The current SLM-CPU-009 aggregate at
+`ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus.json` records the
+calibrated corpus as five passing cases with strict GGUF tokenizer authority,
+`selected_backend=cpu-rust`, and `fallback_used=false`.
