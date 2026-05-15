@@ -250,14 +250,27 @@ Those receipts prove one explicit accepted-artifact smoke run, not BitNet chat,
 serve, full Metal inference, QK256 on Apple Silicon, or a broad performance
 envelope.
 
-For BitNet warm reuse proof, use the dedicated fixed-prompt route. It loads the
-accepted model/tokenizer once, runs a small repeated-prompt set, writes per-turn
-receipts plus an aggregate receipt, and still does not enable BitNet chat or
-serve:
+For BitNet warm reuse proof, use the dedicated warm route. With no prompt flags
+it loads the accepted model/tokenizer once, runs the fixed repeated-prompt proof
+set, writes per-turn receipts plus an aggregate receipt, and still does not
+enable BitNet chat or serve:
 
 ```bash
 bitnet mac bitnet-warm
 ```
+
+For operator prompt sets, repeat `--prompt` and include at least one exact
+repeated prompt so the receipt can prove deterministic warm reuse:
+
+```bash
+bitnet mac bitnet-warm \
+  --prompt "Answer with a single digit: 2+2=" \
+  --prompt "Name the capital of France. Answer with one word." \
+  --prompt "Answer with a single digit: 2+2="
+```
+
+The operator-prompt route is still a warm-session proof surface, not BitNet
+chat, BitNet serve, broad BitNet quality, or broad performance evidence.
 
 The committed aggregate warm receipt is:
 

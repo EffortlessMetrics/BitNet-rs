@@ -1,0 +1,179 @@
+id = "apple-m4-bitnet-productization"
+title = "Apple M4 BitNet productization"
+status = "active"
+
+objective = "Move Apple M4 BitNet from fixed one-shot and fixed-warm proof into operator-ready warm sessions, then chat and serve only after receipt-backed correctness, determinism, timeout, streaming, and failure-mode gates pass."
+
+end_state = [
+  "BitNet warm sessions accept operator-provided prompt sets while preserving the fixed proof prompt default.",
+  "Warm-session receipts record accepted Microsoft I2_S GGUF identity, external tokenizer authority, bitnetcpp-answer prompt authority, backend/fallback identity, generated text, generated token IDs, per-turn timing, aggregate timing, memory, prompt source, and deterministic repeated-prompt evidence.",
+  "Progress, timeout, and partial-failure receipts make slow BitNet runs diagnosable instead of appearing hung.",
+  "BitNet chat is enabled only after variable warm-session receipts prove reuse, determinism, and failure boundaries.",
+  "BitNet serve is considered only after chat, streaming, request/response, and receipt-export semantics are proven.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini BitNet campaign.",
+  "Use only the accepted Microsoft I2_S GGUF paired with external Microsoft tokenizer authority for answer claims.",
+  "Use the bitnetcpp-answer prompt authority for BitNet M4 answer and warm-session reports.",
+  "Do not use dense Qwen or dense SLM evidence as BitNet quality, performance, or UX evidence.",
+  "Do not enable BitNet chat until variable warm-session receipts prove stable correctness, determinism, timeout behavior, and failure boundaries.",
+  "Do not enable BitNet serve until chat and streaming/request receipts pass.",
+  "Do not claim full apple-m4-metal inference, QK256 support, Neural Engine execution, MPSGraph model inference, MacBook evidence, speedup, broad BitNet quality, or broad Apple Silicon performance.",
+  "Do not add live model downloads, long hardware timing runs, variable warm-session soaks, or model binaries to generic required PR CI.",
+]
+
+[[work_item]]
+id = "M4-BITNET-PROD-001"
+status = "in_progress"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-001-variable-warm-prompts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Allow `bitnet mac bitnet-warm` to run operator-supplied repeated prompts in one resident Apple M4 CPU/NEON BitNet process while preserving the fixed proof prompt default, accepted model/tokenizer checks, repeated-prompt determinism, per-turn receipts, aggregate prompt-source metadata, and disabled chat/serve/Metal/QK256/Neural Engine/MPSGraph/broad-claim boundaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_warm",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_receipts_check_accepts_bitnet_warm_session_receipt",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-productization",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/**",
+  "docs/tracking/campaigns/apple-m4-bitnet-eval-and-benchmark/CAMPAIGN.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "`bitnet mac bitnet-warm` accepts operator-supplied repeated prompts for resident BitNet warm-session runs.",
+]
+must_not_claim = [
+  "A fresh live M4 variable warm-session runtime receipt is committed by this item.",
+  "BitNet chat or serve is enabled.",
+  "Full apple-m4-metal inference works.",
+  "Broad BitNet quality or performance is proven.",
+]
+
+[[work_item]]
+id = "M4-BITNET-PROD-002"
+status = "proposed"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-002-variable-warm-runtime"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-PROD-001"]
+acceptance = "Run the operator-prompt BitNet warm route on the M4 Mac mini with accepted model/tokenizer identity, at least five variable prompts including one exact repeat, fallback_used=false, generated text/token IDs, repeated-prompt determinism, per-turn and aggregate timing/memory receipts, timeout boundary, and no chat/serve/Metal/broad claims."
+commands = [
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --prompt \"Answer with a single digit: 2+2=\" --prompt \"Name the capital of France. Answer with one word.\" --prompt \"Return exactly: ready\" --prompt \"Answer with a single digit: 3+1=\" --prompt \"Answer with a single digit: 2+2=\" --max-new-tokens 8 --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-productization",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A bounded Apple M4 BitNet variable warm-session runtime receipt exists for the accepted artifact.",
+]
+must_not_claim = [
+  "BitNet chat or serve is enabled.",
+  "Broad BitNet warm-session quality or performance is proven.",
+]
+
+[[work_item]]
+id = "M4-BITNET-PROD-003"
+status = "proposed"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-003-timeout-failure-ux"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-PROD-002"]
+acceptance = "Add BitNet warm-session progress, timeout, and partial-failure receipts that identify model load, tokenizer load, prefill, first-token, decode, and receipt-write stages with repair guidance, while preserving disabled chat/serve/Metal/broad-claim boundaries."
+commands = [
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_warm",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-productization",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "BitNet warm-session slow and failed runs expose progress, timeout, and repair evidence.",
+]
+must_not_claim = [
+  "BitNet chat or serve is enabled.",
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-BITNET-PROD-004"
+status = "proposed"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-004-chat-gate"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-PROD-002", "M4-BITNET-PROD-003"]
+acceptance = "Define and enforce the BitNet chat enablement gate from variable warm-session receipts, repeated-prompt determinism, timeout/failure evidence, streaming semantics, and claim boundaries before any `bitnet mac chat --model-family bitnet` route is enabled."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-bitnet-productization",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The BitNet chat gate is explicit and receipt-backed.",
+]
+must_not_claim = [
+  "BitNet serve is enabled.",
+  "Broad BitNet chat quality or performance is proven.",
+]

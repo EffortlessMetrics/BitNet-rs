@@ -864,10 +864,11 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
         .args(["mac", "bitnet-warm", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("fixed BitNet prompts"))
+        .stdout(predicate::str::contains("BitNet prompts"))
         .stdout(predicate::str::contains("--model-id"))
         .stdout(predicate::str::contains("--model-path"))
         .stdout(predicate::str::contains("--tokenizer"))
+        .stdout(predicate::str::contains("--prompt <TEXT>"))
         .stdout(predicate::str::contains("--json-out"));
 }
 
@@ -927,6 +928,54 @@ fn mac_bitnet_warm_rejects_non_bitnet_model_before_cache_lookup() {
         .stderr(predicate::str::contains(
             "`bitnet mac bitnet-warm` only supports microsoft-bitnet-b1.58-2B-4T-i2s",
         ));
+}
+
+#[test]
+fn mac_bitnet_warm_rejects_single_operator_prompt_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "bitnet-warm", "--prompt", "What is 2+2?"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "`bitnet mac bitnet-warm --prompt` requires at least two prompt values",
+        ))
+        .stderr(predicate::str::contains("BitNet warm session requires").not());
+}
+
+#[test]
+fn mac_bitnet_warm_rejects_non_repeated_operator_prompts_before_cache_lookup() {
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--prompt",
+            "What is 2+2?",
+            "--prompt",
+            "Name the capital of France.",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("requires at least one exact repeated prompt"))
+        .stderr(predicate::str::contains("BitNet warm session requires").not());
+}
+
+#[test]
+fn mac_bitnet_warm_rejects_empty_operator_prompt_before_cache_lookup() {
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--prompt",
+            "What is 2+2?",
+            "--prompt",
+            "",
+            "--prompt",
+            "What is 2+2?",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("value 2 must not be empty"))
+        .stderr(predicate::str::contains("BitNet warm session requires").not());
 }
 
 #[test]

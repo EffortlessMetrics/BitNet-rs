@@ -1,0 +1,36 @@
+timestamp = "2026-05-15T15:57:05Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-001-variable-warm-prompts"
+summary = "Started BitNet productization by allowing the M4 warm route to accept operator-supplied repeated prompts without enabling chat or serve."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "The fixed proof prompt set remains the default when no --prompt values are supplied.",
+  "Operator prompt mode requires at least two prompts and at least one exact repeated prompt so determinism remains gateable before chat.",
+  "The receipt annotates prompt source and preserves accepted model/tokenizer/backend/fallback and disabled chat/serve/Metal/QK256/Neural Engine/MPSGraph/broad-claim boundaries.",
+  "This item does not commit a fresh live M4 runtime receipt and does not enable BitNet chat or serve.",
+]
+
+[evidence]
+route = "bitnet mac bitnet-warm"
+operator_prompt_flag = "--prompt"
+default_prompt_source = "fixed_proof_prompts"
+variable_prompt_source = "operator_prompts"
+backend = "apple-m4-cpu-neon"
+chat_enabled = false
+serve_enabled = false
+generic_pr_ci_model_free = true
+claim_boundary = "CLI and receipt contract only; no new runtime receipt, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon claim"
