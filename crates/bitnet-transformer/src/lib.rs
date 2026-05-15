@@ -767,6 +767,43 @@ impl MultiHeadAttention {
         let attn_value_mix = attn_weights.matmul(&v_expanded)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
+            let v_expanded_f16_roundtrip = v_expanded.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
+            let attn_value_mix_f16_cache = attn_weights.matmul(&v_expanded_f16_roundtrip)?;
+            for head_idx in 0..self.n_heads {
+                let head = attn_value_mix_f16_cache.narrow(1, head_idx, 1)?;
+                let suffix = format!("blk0/attention_value_mix_f16_cache_head{head_idx}");
+                let stage = format!("attention_value_mix_f16_cache_head{head_idx}");
+                trace_tensor_token_axis_record(
+                    &suffix,
+                    &head,
+                    _trace_base_seq,
+                    2,
+                    Some(0),
+                    &stage,
+                )?;
+            }
+            trace_layer0_tensor(
+                self.layer_idx,
+                _trace_base_seq,
+                2,
+                "attention_value_mix_f16_cache",
+                &attn_value_mix_f16_cache,
+            )?;
+            let attn_output_f16_cache = attn_value_mix_f16_cache.transpose(1, 2)?.reshape(&[
+                batch_size,
+                seq_len,
+                self.n_heads * self.head_dim,
+            ])?;
+            trace_layer0_tensor(
+                self.layer_idx,
+                _trace_base_seq,
+                1,
+                "attention_value_mix_f16_cache_merged",
+                &attn_output_f16_cache,
+            )?;
+        }
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
             for head_idx in 0..self.n_heads {
                 let head = attn_value_mix.narrow(1, head_idx, 1)?;
                 let suffix = format!("blk0/attention_value_mix_head{head_idx}");

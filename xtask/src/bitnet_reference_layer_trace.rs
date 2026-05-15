@@ -84,6 +84,8 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
     ("attention_value_cache_kv_head_live", "attention_v_cache_kv_head"),
     ("attention_value_cache_f16_roundtrip", "attention_v_cache_f16_roundtrip_kv_head"),
+    ("attention_value_mix_f16_cache_head_lanes", "attention_value_mix_f16_cache_head"),
+    ("attention_value_mix_f16_cache_merged", "attention_value_mix_f16_cache_merged"),
     ("attention_value_mix_head_lanes", "attention_value_mix_head"),
     ("attention_value_mix_merged", "attention_value_mix_merged"),
     ("attention_value_mix", "attention_value_mix"),
@@ -2173,6 +2175,7 @@ fn compare_reference_to_rust(
         "attention_value_cache_kv_head_best_matches": attention_value_cache_kv_head_best_matches(reference_records, rust_records),
         "attention_value_cache_rust_layout_best_matches": attention_value_cache_rust_layout_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
+        "attention_value_mix_f16_cache_head_lane_best_matches": attention_value_mix_f16_cache_head_lane_best_matches(reference_records, rust_records),
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
     })
@@ -2197,6 +2200,19 @@ fn attention_value_mix_head_lane_best_matches(
         "kqv_head",
         "attention_value_mix_head",
         "head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, selected attention, value mix residency, or any support claim",
+    )
+}
+
+fn attention_value_mix_f16_cache_head_lane_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    head_lane_best_matches(
+        reference_records,
+        rust_records,
+        "kqv_head",
+        "attention_value_mix_f16_cache_head",
+        "F16-cache value-mix head-lane best matches are diagnostic alternate-path evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
     )
 }
 
@@ -4320,6 +4336,18 @@ mod tests {
             "attention_value_mix_head2".to_string(),
             test_rust_trace_record("attention_value_mix_head2", vec![8.0, 8.0, 8.0]),
         );
+        rust_records.insert(
+            "attention_value_mix_f16_cache_head0".to_string(),
+            test_rust_trace_record("attention_value_mix_f16_cache_head0", vec![1.0, 2.0, 3.0]),
+        );
+        rust_records.insert(
+            "attention_value_mix_f16_cache_head1".to_string(),
+            test_rust_trace_record("attention_value_mix_f16_cache_head1", vec![0.0, 0.0, 0.0]),
+        );
+        rust_records.insert(
+            "attention_value_mix_f16_cache_head2".to_string(),
+            test_rust_trace_record("attention_value_mix_f16_cache_head2", vec![8.0, 8.0, 8.0]),
+        );
 
         let report = compare_reference_to_rust(
             &reference_records,
@@ -4342,6 +4370,19 @@ mod tests {
         assert_eq!(matches.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
         assert_eq!(matches.pointer("/rows/1/identity_is_best"), Some(&json!(false)));
         assert_eq!(matches.pointer("/rows/1/identity_rank"), Some(&json!(3)));
+
+        let f16_matches =
+            report.pointer("/attention_value_mix_f16_cache_head_lane_best_matches").unwrap();
+        assert_eq!(f16_matches.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(f16_matches.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(f16_matches.pointer("/reference_stage_prefix"), Some(&json!("kqv_head")));
+        assert_eq!(
+            f16_matches.pointer("/rust_stage_prefix"),
+            Some(&json!("attention_value_mix_f16_cache_head"))
+        );
+        assert_eq!(f16_matches.pointer("/identity_best_count"), Some(&json!(1)));
+        assert_eq!(f16_matches.pointer("/non_identity_best_count"), Some(&json!(1)));
+        assert_eq!(f16_matches.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
     }
 
     #[test]
