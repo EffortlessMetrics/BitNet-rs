@@ -52,6 +52,7 @@ struct OutputSignal {
 struct ReferenceServerSignal {
     selected_content: Option<String>,
     top_probability_strings: Option<Vec<String>>,
+    probability_probe_ids: Option<Vec<i64>>,
     prompt: PromptIdentity,
 }
 
@@ -334,6 +335,7 @@ fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
         return ReferenceServerSignal {
             selected_content: None,
             top_probability_strings: None,
+            probability_probe_ids: None,
             prompt: PromptIdentity::default(),
         };
     };
@@ -354,6 +356,7 @@ fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
             &["/reference_probability_summary/selected_content", "/response/content"],
         ),
         top_probability_strings,
+        probability_probe_ids: reference_server_probability_probe_ids(value),
         prompt: prompt_identity(value),
     }
 }
@@ -465,6 +468,19 @@ fn reference_text_candidate_ids(value: &Value) -> Option<Vec<i64>> {
     None
 }
 
+fn reference_server_probability_probe_ids(value: &Value) -> Option<Vec<i64>> {
+    for pointer in [
+        "/reference_probability_tokenization/selected_logit_probe_ids",
+        "/rust_commands/reference_server_probability_tokenization/selected_logit_probe_ids",
+        "/plan/reference_server_probability_tokenization/selected_logit_probe_ids",
+    ] {
+        if let Some(ids) = array_i64(value.pointer(pointer)) {
+            return Some(ids);
+        }
+    }
+    None
+}
+
 fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
     let token_ids_exact =
         left.token_ids.as_ref().zip(right.token_ids.as_ref()).map(|(left, right)| left == right);
@@ -526,6 +542,7 @@ fn compare_reference_server_to_output(left: &ReferenceServerSignal, right: &Outp
         "right_text": right.text.clone(),
         "top_probability_strings_available": left.top_probability_strings.is_some(),
         "top_probability_strings": left.top_probability_strings.clone(),
+        "probability_probe_candidate_logits": probability_probe_candidate_logits(left, right),
         "prompt_identity": compare_prompt_identity(&left.prompt, &right.prompt),
         "prompt_identity_available": left.prompt.available() && right.prompt.available(),
         "prompt_identity_matched": left.prompt.matches(&right.prompt),
@@ -534,7 +551,22 @@ fn compare_reference_server_to_output(left: &ReferenceServerSignal, right: &Outp
 }
 
 fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) -> Value {
-    let candidate_ids = left.reference_text_candidate_ids.as_deref();
+    candidate_logits(
+        left.reference_text_candidate_ids.as_deref(),
+        right,
+        "text-tokenized reference candidates are not reference generated token IDs",
+    )
+}
+
+fn probability_probe_candidate_logits(left: &ReferenceServerSignal, right: &OutputSignal) -> Value {
+    candidate_logits(
+        left.probability_probe_ids.as_deref(),
+        right,
+        "reference-server probability-string probes are not reference generated token IDs or raw logits",
+    )
+}
+
+fn candidate_logits(candidate_ids: Option<&[i64]>, right: &OutputSignal, not_claim: &str) -> Value {
     let selected_logits = right.selected_logits.as_deref();
     let top_logit = right.top_logits.as_ref().and_then(|logits| logits.first());
     let Some(candidate_ids) = candidate_ids else {
@@ -543,7 +575,7 @@ fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) ->
             "candidate_ids_available": false,
             "selected_logits_available": selected_logits.is_some(),
             "matched_candidate_count": Value::Null,
-            "not_claim": "text-tokenized reference candidates are not reference generated token IDs",
+            "not_claim": not_claim,
         });
     };
     let Some(selected_logits) = selected_logits else {
@@ -553,7 +585,7 @@ fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) ->
             "selected_logits_available": false,
             "candidate_count": candidate_ids.len(),
             "matched_candidate_count": Value::Null,
-            "not_claim": "text-tokenized reference candidates are not reference generated token IDs",
+            "not_claim": not_claim,
         });
     };
 
@@ -594,7 +626,7 @@ fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) ->
         "right_top_token_id": top_token_id,
         "right_top_logit": top_logit_value,
         "best_candidate_to_top_delta": best_candidate_to_top_delta,
-        "not_claim": "text-tokenized reference candidates are not reference generated token IDs",
+        "not_claim": not_claim,
     })
 }
 
@@ -629,6 +661,8 @@ fn reference_server_input_value(input: &ReceiptInput, signal: &ReferenceServerSi
         "selected_content_present": signal.selected_content.is_some(),
         "top_probability_strings_present": signal.top_probability_strings.is_some(),
         "top_probability_string_count": signal.top_probability_strings.as_ref().map(Vec::len),
+        "probability_probe_ids_present": signal.probability_probe_ids.is_some(),
+        "probability_probe_id_count": signal.probability_probe_ids.as_ref().map(Vec::len),
         "prompt_identity_present": signal.prompt.available(),
         "prompt_identity": prompt_identity_value(&signal.prompt),
     })
@@ -1063,13 +1097,19 @@ mod tests {
                     {"tok_str": "2", "prob": 0.75, "token_id_present": false},
                     {"tok_str": "The", "prob": 0.12, "token_id_present": false}
                 ]
+            },
+            "reference_probability_tokenization": {
+                "selected_logit_probe_ids": [17, 791]
             }
         })));
         let rust = OutputSignal {
             token_ids: Some(vec![58428]),
             text: Some(".ps".to_string()),
             top_logits: Some(vec![TopLogit { token_id: 58428, logit: 13.7 }]),
-            selected_logits: None,
+            selected_logits: Some(vec![
+                SelectedLogit { token_id: 17, present: true, logit: Some(5.1) },
+                SelectedLogit { token_id: 791, present: true, logit: Some(4.2) },
+            ]),
             reference_text_candidate_ids: None,
             prompt: prompt("llama3-chat", "rendered", "ids", 18, false, true),
         };
@@ -1083,6 +1123,20 @@ mod tests {
         assert_eq!(report["selected_content_text_exact"], false);
         assert_eq!(report["top_probability_strings_available"], true);
         assert_eq!(report["prompt_identity_matched"], true);
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["best_candidate_token_id"],
+            json!(17)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["matched_candidate_count"],
+            json!(2)
+        );
+        assert_eq!(
+            report["probability_probe_candidate_logits"]["not_claim"],
+            json!(
+                "reference-server probability-string probes are not reference generated token IDs or raw logits"
+            )
+        );
         assert_eq!(
             report["not_claim"],
             json!("reference server probability strings are not generated token IDs or raw logits")
