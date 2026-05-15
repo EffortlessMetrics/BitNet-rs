@@ -53,9 +53,19 @@ struct OutputSignal {
 struct ReferenceServerSignal {
     selected_content: Option<String>,
     top_probability_strings: Option<Vec<String>>,
+    probability_probe_source: ReferenceProbabilityProbeSource,
     probability_probe_ids: Option<Vec<i64>>,
     probability_probes: Option<Vec<ReferenceProbabilityProbe>>,
     prompt: PromptIdentity,
+}
+
+#[derive(Clone, Debug, Default)]
+struct ReferenceProbabilityProbeSource {
+    selected_source: Option<String>,
+    selected_source_key: Option<&'static str>,
+    source: Option<String>,
+    selected_logit_probe_ids_sha256: Option<String>,
+    tokenization_ready: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -375,6 +385,7 @@ fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
         return ReferenceServerSignal {
             selected_content: None,
             top_probability_strings: None,
+            probability_probe_source: ReferenceProbabilityProbeSource::default(),
             probability_probe_ids: None,
             probability_probes: None,
             prompt: PromptIdentity::default(),
@@ -397,6 +408,7 @@ fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
             &["/reference_probability_summary/selected_content", "/response/content"],
         ),
         top_probability_strings,
+        probability_probe_source: reference_server_probability_probe_source(value),
         probability_probe_ids: reference_server_probability_probe_ids(value),
         probability_probes: reference_server_probability_probes(value),
         prompt: prompt_identity(value),
@@ -572,13 +584,93 @@ fn reference_text_candidate_ids(value: &Value) -> Option<Vec<i64>> {
 
 fn reference_server_probability_probe_ids(value: &Value) -> Option<Vec<i64>> {
     for pointer in [
+        "/reference_probability_tokenization_sources/reference_server_probability_tokenization/selected_logit_probe_ids",
         "/reference_probability_tokenization/selected_logit_probe_ids",
+        "/reference_probability_tokenization_sources/rust_probability_tokenization/selected_logit_probe_ids",
         "/rust_commands/reference_server_probability_tokenization/selected_logit_probe_ids",
         "/plan/reference_server_probability_tokenization/selected_logit_probe_ids",
     ] {
         if let Some(ids) = array_i64(value.pointer(pointer)) {
             return Some(ids);
         }
+    }
+    None
+}
+
+fn reference_server_probability_probe_source(value: &Value) -> ReferenceProbabilityProbeSource {
+    let selected_source =
+        string_at(value, &["/reference_probability_tokenization_sources/selected_source"]);
+    let selected_source_key =
+        reference_probability_selected_source_key(value, selected_source.as_deref());
+    let selected_base = match selected_source_key {
+        Some("reference_server_probability_tokenization") => Some(
+            "/reference_probability_tokenization_sources/reference_server_probability_tokenization",
+        ),
+        Some("rust_probability_tokenization") => {
+            Some("/reference_probability_tokenization_sources/rust_probability_tokenization")
+        }
+        _ => None,
+    };
+    let source = selected_base
+        .and_then(|base| string_at(value, &[&format!("{base}/source")]))
+        .or_else(|| string_at(value, &["/reference_probability_tokenization/source"]));
+    let selected_logit_probe_ids_sha256 = selected_base
+        .and_then(|base| string_at(value, &[&format!("{base}/selected_logit_probe_ids_sha256")]))
+        .or_else(|| {
+            string_at(
+                value,
+                &["/reference_probability_tokenization/selected_logit_probe_ids_sha256"],
+            )
+        });
+    let tokenization_ready = selected_base
+        .and_then(|base| {
+            value.pointer(&format!("{base}/tokenization_ready")).and_then(Value::as_bool)
+        })
+        .or_else(|| {
+            value
+                .pointer("/reference_probability_tokenization/tokenization_ready")
+                .and_then(Value::as_bool)
+        });
+
+    ReferenceProbabilityProbeSource {
+        selected_source,
+        selected_source_key,
+        source,
+        selected_logit_probe_ids_sha256,
+        tokenization_ready,
+    }
+}
+
+fn reference_probability_selected_source_key(
+    value: &Value,
+    selected_source: Option<&str>,
+) -> Option<&'static str> {
+    match selected_source {
+        Some("reference_server_probability_tokenization")
+        | Some("llama_server_tokenize_endpoint_probability_string_probe") => {
+            return Some("reference_server_probability_tokenization");
+        }
+        Some("rust_probability_tokenization") | Some("rust_tokenizer_probability_string_probe") => {
+            return Some("rust_probability_tokenization");
+        }
+        _ => {}
+    }
+
+    let reference_server_source = string_at(
+        value,
+        &[
+            "/reference_probability_tokenization_sources/reference_server_probability_tokenization/source",
+        ],
+    );
+    if selected_source.is_some() && selected_source == reference_server_source.as_deref() {
+        return Some("reference_server_probability_tokenization");
+    }
+    let rust_source = string_at(
+        value,
+        &["/reference_probability_tokenization_sources/rust_probability_tokenization/source"],
+    );
+    if selected_source.is_some() && selected_source == rust_source.as_deref() {
+        return Some("rust_probability_tokenization");
     }
     None
 }
@@ -724,6 +816,7 @@ fn compare_reference_server_to_output(left: &ReferenceServerSignal, right: &Outp
         "right_text": right.text.clone(),
         "top_probability_strings_available": left.top_probability_strings.is_some(),
         "top_probability_strings": left.top_probability_strings.clone(),
+        "probability_probe_source": probability_probe_source_value(&left.probability_probe_source),
         "probability_probe_candidate_logits": probability_probe_candidate_logits(left, right),
         "prompt_identity": compare_prompt_identity(&left.prompt, &right.prompt),
         "prompt_identity_available": left.prompt.available() && right.prompt.available(),
@@ -924,8 +1017,22 @@ fn reference_server_input_value(input: &ReceiptInput, signal: &ReferenceServerSi
         "top_probability_string_count": signal.top_probability_strings.as_ref().map(Vec::len),
         "probability_probe_ids_present": signal.probability_probe_ids.is_some(),
         "probability_probe_id_count": signal.probability_probe_ids.as_ref().map(Vec::len),
+        "probability_probe_source": probability_probe_source_value(&signal.probability_probe_source),
         "prompt_identity_present": signal.prompt.available(),
         "prompt_identity": prompt_identity_value(&signal.prompt),
+    })
+}
+
+fn probability_probe_source_value(source: &ReferenceProbabilityProbeSource) -> Value {
+    json!({
+        "selected_source": source.selected_source,
+        "selected_source_key": source.selected_source_key,
+        "source": source.source,
+        "selected_logit_probe_ids_sha256": source.selected_logit_probe_ids_sha256,
+        "tokenization_ready": source.tokenization_ready,
+        "diagnostic_only": true,
+        "claimable": false,
+        "not_claim": "probability probe tokenization source identifies diagnostic Rust selected-logit probes only, not reference generated token ids or raw logits",
     })
 }
 
@@ -1491,6 +1598,9 @@ mod tests {
             },
             "reference_probability_tokenization": {
                 "selected_logit_probe_ids": [17, 791],
+                "selected_logit_probe_ids_sha256": "rust-fallback-hash",
+                "source": "rust_tokenizer_probability_string_probe",
+                "tokenization_ready": true,
                 "top_probability_tokenizations": [
                     {
                         "tok_str": "2",
@@ -1503,6 +1613,21 @@ mod tests {
                         "tokenization": {"candidate_token_ids": [791]}
                     }
                 ]
+            },
+            "reference_probability_tokenization_sources": {
+                "selected_source": "llama_server_tokenize_endpoint_probability_string_probe",
+                "reference_server_probability_tokenization": {
+                    "source": "llama_server_tokenize_endpoint_probability_string_probe",
+                    "tokenization_ready": true,
+                    "selected_logit_probe_ids": [17, 791],
+                    "selected_logit_probe_ids_sha256": "server-tokenize-hash"
+                },
+                "rust_probability_tokenization": {
+                    "source": "rust_tokenizer_probability_string_probe",
+                    "tokenization_ready": true,
+                    "selected_logit_probe_ids": [17, 791],
+                    "selected_logit_probe_ids_sha256": "rust-fallback-hash"
+                }
             }
         })));
         let rust = OutputSignal {
@@ -1547,6 +1672,24 @@ mod tests {
         assert_eq!(report["selected_content_text_exact"], false);
         assert_eq!(report["top_probability_strings_available"], true);
         assert_eq!(report["prompt_identity_matched"], true);
+        assert_eq!(
+            report["probability_probe_source"]["selected_source"],
+            json!("llama_server_tokenize_endpoint_probability_string_probe")
+        );
+        assert_eq!(
+            report["probability_probe_source"]["selected_source_key"],
+            json!("reference_server_probability_tokenization")
+        );
+        assert_eq!(
+            report["probability_probe_source"]["source"],
+            json!("llama_server_tokenize_endpoint_probability_string_probe")
+        );
+        assert_eq!(
+            report["probability_probe_source"]["selected_logit_probe_ids_sha256"],
+            json!("server-tokenize-hash")
+        );
+        assert_eq!(report["probability_probe_source"]["tokenization_ready"], true);
+        assert_eq!(report["probability_probe_source"]["diagnostic_only"], true);
         assert_eq!(
             report["probability_probe_candidate_logits"]["best_candidate_token_id"],
             json!(17)
