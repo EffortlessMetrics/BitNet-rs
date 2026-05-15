@@ -621,15 +621,19 @@ impl MultiHeadAttention {
         let scores_f32 = scores.to_dtype(DType::F32)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
-            let head0 = scores_f32.narrow(1, 0, 1)?;
-            trace_tensor_token_axis_record(
-                "blk0/attention_scores_raw_head0",
-                &head0,
-                _trace_base_seq,
-                2,
-                Some(0),
-                "attention_scores_raw_head0",
-            )?;
+            for head_idx in 0..self.n_heads {
+                let head = scores_f32.narrow(1, head_idx, 1)?;
+                let suffix = format!("blk0/attention_scores_raw_head{head_idx}");
+                let stage = format!("attention_scores_raw_head{head_idx}");
+                trace_tensor_token_axis_record(
+                    &suffix,
+                    &head,
+                    _trace_base_seq,
+                    2,
+                    Some(0),
+                    &stage,
+                )?;
+            }
         }
 
         // Scale in fp32
@@ -695,15 +699,19 @@ impl MultiHeadAttention {
         let attn_weights = candle_nn::ops::softmax(&scores_stabilized, 3)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
-            let head0 = attn_weights.narrow(1, 0, 1)?;
-            trace_tensor_token_axis_record(
-                "blk0/attn_scores_softmax_head0",
-                &head0,
-                _trace_base_seq,
-                2,
-                Some(0),
-                "attn_scores_softmax_head0",
-            )?;
+            for head_idx in 0..self.n_heads {
+                let head = attn_weights.narrow(1, head_idx, 1)?;
+                let suffix = format!("blk0/attn_scores_softmax_head{head_idx}");
+                let stage = format!("attn_scores_softmax_head{head_idx}");
+                trace_tensor_token_axis_record(
+                    &suffix,
+                    &head,
+                    _trace_base_seq,
+                    2,
+                    Some(0),
+                    &stage,
+                )?;
+            }
         }
 
         // Tracepoint 4: Attention scores post-softmax (layer-specific)

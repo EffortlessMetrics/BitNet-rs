@@ -79,8 +79,8 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("query_projection", "attention_q"),
     ("key_projection", "attention_k"),
     ("value_projection", "attention_v"),
-    ("attention_scores_raw_head0", "attention_scores_raw_head0"),
-    ("attention_scores_softmax_head0", "attn_scores_softmax_head0"),
+    ("attention_scores_raw_head_lanes", "attention_scores_raw_head"),
+    ("attention_scores_softmax_head_lanes", "attn_scores_softmax_head"),
     ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
     ("attention_value_mix_head_lanes", "attention_value_mix_head"),
     ("attention_value_mix_merged", "attention_value_mix_merged"),
@@ -1962,7 +1962,47 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("Kcur", "attention_k"),
         ("Vcur", "attention_v"),
         ("kq", "attention_scores_raw_head0"),
+        ("kq_head0", "attention_scores_raw_head0"),
+        ("kq_head1", "attention_scores_raw_head1"),
+        ("kq_head2", "attention_scores_raw_head2"),
+        ("kq_head3", "attention_scores_raw_head3"),
+        ("kq_head4", "attention_scores_raw_head4"),
+        ("kq_head5", "attention_scores_raw_head5"),
+        ("kq_head6", "attention_scores_raw_head6"),
+        ("kq_head7", "attention_scores_raw_head7"),
+        ("kq_head8", "attention_scores_raw_head8"),
+        ("kq_head9", "attention_scores_raw_head9"),
+        ("kq_head10", "attention_scores_raw_head10"),
+        ("kq_head11", "attention_scores_raw_head11"),
+        ("kq_head12", "attention_scores_raw_head12"),
+        ("kq_head13", "attention_scores_raw_head13"),
+        ("kq_head14", "attention_scores_raw_head14"),
+        ("kq_head15", "attention_scores_raw_head15"),
+        ("kq_head16", "attention_scores_raw_head16"),
+        ("kq_head17", "attention_scores_raw_head17"),
+        ("kq_head18", "attention_scores_raw_head18"),
+        ("kq_head19", "attention_scores_raw_head19"),
         ("kq_soft_max_ext", "attn_scores_softmax_head0"),
+        ("kq_soft_max_ext_head0", "attn_scores_softmax_head0"),
+        ("kq_soft_max_ext_head1", "attn_scores_softmax_head1"),
+        ("kq_soft_max_ext_head2", "attn_scores_softmax_head2"),
+        ("kq_soft_max_ext_head3", "attn_scores_softmax_head3"),
+        ("kq_soft_max_ext_head4", "attn_scores_softmax_head4"),
+        ("kq_soft_max_ext_head5", "attn_scores_softmax_head5"),
+        ("kq_soft_max_ext_head6", "attn_scores_softmax_head6"),
+        ("kq_soft_max_ext_head7", "attn_scores_softmax_head7"),
+        ("kq_soft_max_ext_head8", "attn_scores_softmax_head8"),
+        ("kq_soft_max_ext_head9", "attn_scores_softmax_head9"),
+        ("kq_soft_max_ext_head10", "attn_scores_softmax_head10"),
+        ("kq_soft_max_ext_head11", "attn_scores_softmax_head11"),
+        ("kq_soft_max_ext_head12", "attn_scores_softmax_head12"),
+        ("kq_soft_max_ext_head13", "attn_scores_softmax_head13"),
+        ("kq_soft_max_ext_head14", "attn_scores_softmax_head14"),
+        ("kq_soft_max_ext_head15", "attn_scores_softmax_head15"),
+        ("kq_soft_max_ext_head16", "attn_scores_softmax_head16"),
+        ("kq_soft_max_ext_head17", "attn_scores_softmax_head17"),
+        ("kq_soft_max_ext_head18", "attn_scores_softmax_head18"),
+        ("kq_soft_max_ext_head19", "attn_scores_softmax_head19"),
         ("v", "attention_v_cache_head0_ref_layout_padded"),
         ("kqv", "attention_value_mix_head0"),
         ("kqv_head0", "attention_value_mix_head0"),
@@ -2101,6 +2141,8 @@ fn compare_reference_to_rust(
         "missing_rust_count": missing_rust_count,
         "first_scope_mismatch": first_scope_mismatch,
         "first_material_mismatch": first_material_mismatch,
+        "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
+        "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
     })
@@ -2119,15 +2161,59 @@ fn attention_value_mix_head_lane_best_matches(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
 ) -> Value {
+    head_lane_best_matches(
+        reference_records,
+        rust_records,
+        "kqv_head",
+        "attention_value_mix_head",
+        "head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, selected attention, value mix residency, or any support claim",
+    )
+}
+
+fn attention_score_raw_head_lane_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    head_lane_best_matches(
+        reference_records,
+        rust_records,
+        "kq_head",
+        "attention_scores_raw_head",
+        "raw score head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, attention score residency, selected attention, or any support claim",
+    )
+}
+
+fn attention_probability_head_lane_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    head_lane_best_matches(
+        reference_records,
+        rust_records,
+        "kq_soft_max_ext_head",
+        "attn_scores_softmax_head",
+        "softmax probability head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, softmax residency, selected attention, or any support claim",
+    )
+}
+
+fn head_lane_best_matches(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    reference_prefix: &str,
+    rust_prefix: &str,
+    policy: &str,
+) -> Value {
     let reference_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kqv_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, reference_prefix).map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let rust_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attention_value_mix_head").map(|head| (head, record))
+            parse_stage_head(stage, rust_prefix).map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -2187,7 +2273,9 @@ fn attention_value_mix_head_lane_best_matches(
     json!({
         "diagnostic_only": true,
         "claim_allowed": false,
-        "policy": "head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, selected attention, value mix residency, or any support claim",
+        "policy": policy,
+        "reference_stage_prefix": reference_prefix,
+        "rust_stage_prefix": rust_prefix,
         "reference_head_count": reference_heads.len(),
         "rust_head_count": rust_heads.len(),
         "identity_best_count": identity_best_count,
@@ -2346,7 +2434,7 @@ fn attention_row_padded_tail_scope(
     reference: &ReferenceTraceRecord,
     rust: &RustTraceRecord,
 ) -> Option<Value> {
-    if reference.stage != "kq" && reference.stage != "kq_soft_max_ext" {
+    if !is_attention_row_stage(&reference.stage) {
         return None;
     }
     let reference_nelements = usize::try_from(reference.nelements).ok()?;
@@ -2371,6 +2459,13 @@ fn attention_row_padded_tail_scope(
         "rust_seq": rust.seq,
         "policy": "attention score/probability row summaries with reference KV-cache padding are diagnostic scope differences; live-prefix deltas remain useful evidence",
     }))
+}
+
+fn is_attention_row_stage(stage: &str) -> bool {
+    stage == "kq"
+        || stage == "kq_soft_max_ext"
+        || parse_stage_head(stage, "kq_head").is_some()
+        || parse_stage_head(stage, "kq_soft_max_ext_head").is_some()
 }
 
 fn reference_sampled_token_index(record: &ReferenceTraceRecord) -> Option<u64> {
@@ -2478,6 +2573,20 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
         json!({"reference": "v", "rust": "attention_v_cache_head0_ref_layout_padded", "scope": "layer0 head0 cached value matrix in reference padded layout"}),
         json!({"reference": "kqv", "rust": "attention_value_mix_head0", "scope": "layer0 head0 value-mix output before head merge"}),
     ];
+    for head in 0..20 {
+        stage_mapping.push(json!({
+            "reference": format!("kq_head{head}"),
+            "rust": format!("attention_scores_raw_head{head}"),
+            "scope": format!("layer0 sampled-query score row head{head}"),
+        }));
+    }
+    for head in 0..20 {
+        stage_mapping.push(json!({
+            "reference": format!("kq_soft_max_ext_head{head}"),
+            "rust": format!("attn_scores_softmax_head{head}"),
+            "scope": format!("layer0 sampled-query probability row head{head}"),
+        }));
+    }
     for head in 0..20 {
         stage_mapping.push(json!({
             "reference": format!("kqv_head{head}"),
@@ -3368,6 +3477,15 @@ mod tests {
             Some(&json!(["reference_layer_trace_patch_not_applied"]))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        let stage_mapping = report.pointer("/stage_mapping").and_then(Value::as_array).unwrap();
+        assert!(stage_mapping.iter().any(|entry| {
+            entry.pointer("/reference") == Some(&json!("kq_head19"))
+                && entry.pointer("/rust") == Some(&json!("attention_scores_raw_head19"))
+        }));
+        assert!(stage_mapping.iter().any(|entry| {
+            entry.pointer("/reference") == Some(&json!("kq_soft_max_ext_head19"))
+                && entry.pointer("/rust") == Some(&json!("attn_scores_softmax_head19"))
+        }));
     }
 
     #[test]
@@ -3729,6 +3847,63 @@ mod tests {
     }
 
     #[test]
+    fn compare_marks_synthetic_attention_head_padding_as_scope_evidence() {
+        let reference = ReferenceTraceRecord {
+            name: "kq_head7-0".to_string(),
+            stage: "kq_head7".to_string(),
+            graph_index: Some(40),
+            layer: Some(0),
+            graph_op: Some("MUL_MAT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![4, 3, 20, 1],
+            sample_offset: Some(4 * 2 + 4 * 3 * 7),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![4, 1, 1, 1],
+            nelements: 4,
+            rms: Some(2.0),
+            values_available: true,
+            first_values: vec![1.0, 2.0, 3.0, 0.0],
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head7".to_string(),
+            RustTraceRecord {
+                name: "t2/blk0/attention_scores_raw_head7".to_string(),
+                shape: vec![1, 1, 1, 3],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.5,
+                num_elements: 3,
+                first_values: vec![1.0, 2.0, 3.0],
+                seq: Some(2),
+                layer: Some(0),
+                stage: Some("attention_scores_raw_head7".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("kq_head7", "attention_scores_raw_head7")],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reference_sampled_token_index"),
+            Some(&json!(2))
+        );
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reason"),
+            Some(&json!("reference_attention_row_includes_padded_zero_tail_not_emitted_by_rust"))
+        );
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
     fn compare_marks_reference_value_cache_all_heads_as_scope_evidence() {
         let reference = ReferenceTraceRecord {
             name: "v-0".to_string(),
@@ -4021,6 +4196,56 @@ mod tests {
         assert_eq!(matches.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
         assert_eq!(matches.pointer("/rows/1/identity_is_best"), Some(&json!(false)));
         assert_eq!(matches.pointer("/rows/1/identity_rank"), Some(&json!(3)));
+    }
+
+    #[test]
+    fn compare_reports_attention_score_and_probability_head_lane_best_matches() {
+        let reference_records = vec![
+            test_reference_trace_record("kq_head0", vec![1.0, 2.0]),
+            test_reference_trace_record("kq_head1", vec![5.0, 5.0]),
+            test_reference_trace_record("kq_soft_max_ext_head0", vec![0.25, 0.75]),
+            test_reference_trace_record("kq_soft_max_ext_head1", vec![0.9, 0.1]),
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            test_rust_trace_record("attention_scores_raw_head0", vec![1.0, 2.0]),
+        );
+        rust_records.insert(
+            "attention_scores_raw_head1".to_string(),
+            test_rust_trace_record("attention_scores_raw_head1", vec![0.0, 0.0]),
+        );
+        rust_records.insert(
+            "attention_scores_raw_head2".to_string(),
+            test_rust_trace_record("attention_scores_raw_head2", vec![5.0, 5.0]),
+        );
+        rust_records.insert(
+            "attn_scores_softmax_head0".to_string(),
+            test_rust_trace_record("attn_scores_softmax_head0", vec![0.25, 0.75]),
+        );
+        rust_records.insert(
+            "attn_scores_softmax_head1".to_string(),
+            test_rust_trace_record("attn_scores_softmax_head1", vec![0.9, 0.1]),
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let raw = report.pointer("/attention_score_raw_head_lane_best_matches").unwrap();
+        let prob = report.pointer("/attention_probability_head_lane_best_matches").unwrap();
+
+        assert_eq!(raw.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(raw.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(raw.pointer("/reference_stage_prefix"), Some(&json!("kq_head")));
+        assert_eq!(raw.pointer("/rust_stage_prefix"), Some(&json!("attention_scores_raw_head")));
+        assert_eq!(raw.pointer("/identity_best_count"), Some(&json!(1)));
+        assert_eq!(raw.pointer("/non_identity_best_count"), Some(&json!(1)));
+        assert_eq!(raw.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
+
+        assert_eq!(prob.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(prob.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(prob.pointer("/reference_stage_prefix"), Some(&json!("kq_soft_max_ext_head")));
+        assert_eq!(prob.pointer("/rust_stage_prefix"), Some(&json!("attn_scores_softmax_head")));
+        assert_eq!(prob.pointer("/identity_best_count"), Some(&json!(2)));
+        assert_eq!(prob.pointer("/all_identity_best"), Some(&json!(true)));
     }
 
     #[test]
