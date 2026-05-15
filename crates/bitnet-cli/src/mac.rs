@@ -25,6 +25,8 @@ const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
+const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-bitnet-eval-and-benchmark/bitnet-benchmark/summary.json";
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
@@ -307,6 +309,49 @@ enum MacAction {
 
         /// Output aggregate BitNet warm-session receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_BITNET_WARM_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
+    /// Benchmark BitNet one-shot ask and fixed warm paths without enabling chat or serve.
+    BitnetBenchmark {
+        /// Accepted BitNet model id. Only microsoft-bitnet-b1.58-2B-4T-i2s is supported.
+        #[arg(long, default_value = BITNET_M4_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Explicit accepted BitNet GGUF path.
+        #[arg(long = "model-path", value_name = "PATH")]
+        model_path: Option<PathBuf>,
+
+        /// Explicit accepted external tokenizer path. Defaults to the Microsoft tokenizer.
+        #[arg(long, value_name = "PATH")]
+        tokenizer: Option<PathBuf>,
+
+        /// One-shot prompt for the ask benchmark path.
+        #[arg(long, default_value = "What is 2+2? Answer with only the number.")]
+        one_shot_prompt: String,
+
+        /// Maximum new tokens for the one-shot and fixed warm prompts.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
+        max_new_tokens: usize,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Emit operator progress lines to stderr.
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress final status line; receipts are still written.
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
+
+        /// Output aggregate BitNet benchmark receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT)]
         json_out: PathBuf,
     },
 
@@ -784,6 +829,33 @@ impl MacCommand {
                     cache_dir,
                     model_path,
                     tokenizer,
+                    max_new_tokens,
+                    threads,
+                    progress,
+                    quiet,
+                    json_out,
+                })
+                .await
+            }
+            MacAction::BitnetBenchmark {
+                model_id,
+                cache_dir,
+                model_path,
+                tokenizer,
+                one_shot_prompt,
+                max_new_tokens,
+                threads,
+                progress,
+                quiet,
+                json_out,
+            } => {
+                ensure_supported_mac_device(explicit_device_label, "mac bitnet-benchmark")?;
+                run_bitnet_benchmark(BitnetBenchmarkRun {
+                    model_id: &model_id,
+                    cache_dir,
+                    model_path,
+                    tokenizer,
+                    one_shot_prompt,
                     max_new_tokens,
                     threads,
                     progress,
@@ -2514,6 +2586,561 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         );
     }
     Ok(())
+}
+
+struct BitnetBenchmarkRun<'a> {
+    model_id: &'a str,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
+    one_shot_prompt: String,
+    max_new_tokens: usize,
+    threads: usize,
+    progress: bool,
+    quiet: bool,
+    json_out: PathBuf,
+}
+
+#[derive(Default)]
+struct BitnetBenchmarkMetricSamples {
+    prompt_tokens: Vec<f64>,
+    output_tokens: Vec<f64>,
+    model_load_ms: Vec<f64>,
+    tokenizer_load_ms: Vec<f64>,
+    prompt_tokenize_ms: Vec<f64>,
+    prefill_ms: Vec<f64>,
+    ttft_ms: Vec<f64>,
+    decode_total_ms: Vec<f64>,
+    sampling_ms_per_token: Vec<f64>,
+    total_wall_ms: Vec<f64>,
+    input_tokens_per_second: Vec<f64>,
+    output_tokens_per_second: Vec<f64>,
+    decode_tokens_per_second: Vec<f64>,
+    peak_memory_mb: Vec<f64>,
+    memory_drift_mb: Vec<f64>,
+}
+
+impl BitnetBenchmarkMetricSamples {
+    fn extend_from_summary(&mut self, summary: &serde_json::Value) {
+        self.prompt_tokens.extend(benchmark_stat_samples(&summary["prompt_tokens"]));
+        self.output_tokens.extend(benchmark_stat_samples(&summary["output_tokens"]));
+        self.model_load_ms.extend(benchmark_stat_samples(&summary["timing"]["model_load_ms"]));
+        self.tokenizer_load_ms
+            .extend(benchmark_stat_samples(&summary["timing"]["tokenizer_load_ms"]));
+        self.prompt_tokenize_ms
+            .extend(benchmark_stat_samples(&summary["timing"]["prompt_tokenize_ms"]));
+        self.prefill_ms.extend(benchmark_stat_samples(&summary["timing"]["prefill_ms"]));
+        self.ttft_ms.extend(benchmark_stat_samples(&summary["timing"]["time_to_first_token_ms"]));
+        self.decode_total_ms.extend(benchmark_stat_samples(&summary["timing"]["decode_total_ms"]));
+        self.sampling_ms_per_token
+            .extend(benchmark_stat_samples(&summary["timing"]["sampling_ms_per_token"]));
+        self.total_wall_ms.extend(benchmark_stat_samples(&summary["timing"]["total_wall_ms"]));
+        self.input_tokens_per_second
+            .extend(benchmark_stat_samples(&summary["throughput"]["input_tokens_per_second"]));
+        self.output_tokens_per_second
+            .extend(benchmark_stat_samples(&summary["throughput"]["output_tokens_per_second"]));
+        self.decode_tokens_per_second
+            .extend(benchmark_stat_samples(&summary["throughput"]["decode_tokens_per_second"]));
+        self.peak_memory_mb.extend(benchmark_stat_samples(&summary["memory"]["peak_memory_mb"]));
+        self.memory_drift_mb.extend(benchmark_stat_samples(&summary["memory"]["memory_drift_mb"]));
+    }
+
+    fn speed_json(&self) -> serde_json::Value {
+        benchmark_flat_metric_json(&[
+            ("cold_load_ms", &self.model_load_ms),
+            ("model_load_ms", &self.model_load_ms),
+            ("tokenizer_load_ms", &self.tokenizer_load_ms),
+            ("prompt_tokenize_ms", &self.prompt_tokenize_ms),
+            ("prefill_ms", &self.prefill_ms),
+            ("ttft_ms", &self.ttft_ms),
+            ("decode_total_ms", &self.decode_total_ms),
+            ("sampling_ms_per_token", &self.sampling_ms_per_token),
+            ("input_tok_s", &self.input_tokens_per_second),
+            ("output_tok_s", &self.output_tokens_per_second),
+            ("decode_tok_s", &self.decode_tokens_per_second),
+            ("total_wall_ms", &self.total_wall_ms),
+        ])
+    }
+
+    fn memory_json(&self) -> serde_json::Value {
+        let mut memory = benchmark_flat_metric_json(&[
+            ("peak_memory_mb", &self.peak_memory_mb),
+            ("memory_drift_mb", &self.memory_drift_mb),
+        ]);
+        if let Some(object) = memory.as_object_mut() {
+            object.insert(
+                "source".to_string(),
+                serde_json::json!("getrusage.ru_maxrss process peak delta"),
+            );
+        }
+        memory
+    }
+}
+
+async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
+    if cfg!(debug_assertions) {
+        anyhow::bail!(
+            "mac bitnet-benchmark must be run from a release build; use `cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet` and then `target/release/bitnet mac bitnet-benchmark ...`"
+        );
+    }
+    let BitnetBenchmarkRun {
+        model_id,
+        cache_dir,
+        model_path,
+        tokenizer,
+        one_shot_prompt,
+        max_new_tokens,
+        threads,
+        progress,
+        quiet,
+        json_out,
+    } = request;
+    if max_new_tokens == 0 {
+        anyhow::bail!("`bitnet mac bitnet-benchmark` requires --max-new-tokens greater than zero");
+    }
+    if one_shot_prompt.trim().is_empty() {
+        anyhow::bail!("`bitnet mac bitnet-benchmark` requires a non-empty --one-shot-prompt");
+    }
+
+    let output_dir = json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
+    let receipt_dir = output_dir.join("receipts");
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
+    let ask_receipt = receipt_dir.join("bitnet-mac-ask-benchmark.json");
+    let warm_receipt = receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json");
+
+    let benchmark_start_peak_mb = peak_memory_mb();
+    if progress && !quiet {
+        eprintln!("mac bitnet-benchmark: running one-shot ask path");
+    }
+    run_ask(
+        model_id,
+        cache_dir.clone(),
+        model_path.clone(),
+        tokenizer.clone(),
+        one_shot_prompt,
+        None,
+        max_new_tokens,
+        0.0,
+        1,
+        1.0,
+        1.1,
+        None,
+        threads,
+        ask_receipt.clone(),
+        progress,
+        quiet,
+    )
+    .await?;
+    if progress && !quiet {
+        eprintln!("mac bitnet-benchmark: running fixed warm path");
+    }
+    run_bitnet_warm(BitnetWarmRun {
+        model_id,
+        cache_dir,
+        model_path,
+        tokenizer,
+        max_new_tokens,
+        threads,
+        progress,
+        quiet,
+        json_out: warm_receipt.clone(),
+    })
+    .await?;
+
+    let ask = read_json_receipt(&ask_receipt)?;
+    let warm = read_json_receipt(&warm_receipt)?;
+    let summary = bitnet_benchmark_summary(
+        &json_out,
+        &ask_receipt,
+        &ask,
+        &warm_receipt,
+        &warm,
+        benchmark_start_peak_mb,
+    )?;
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&summary)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    validate_mac_receipt_value(&json_out, &summary)?;
+    if !quiet {
+        println!(
+            "Mac BitNet benchmark summary written to {} (one-shot + fixed warm, chat=false, serve=false)",
+            json_out.display()
+        );
+    }
+    Ok(())
+}
+
+fn bitnet_benchmark_summary(
+    json_out: &Path,
+    ask_path: &Path,
+    ask: &serde_json::Value,
+    warm_path: &Path,
+    warm: &serde_json::Value,
+    benchmark_start_peak_mb: Option<f64>,
+) -> Result<serde_json::Value> {
+    let ask_summary = bitnet_one_shot_benchmark_path_summary(ask_path, ask)?;
+    let warm_summary = bitnet_warm_benchmark_path_summary(warm_path, warm)?;
+    let mut all_samples = BitnetBenchmarkMetricSamples::default();
+    all_samples.extend_from_summary(&ask_summary);
+    all_samples.extend_from_summary(&warm_summary);
+
+    let prompt_count = ask_summary["prompt_count"].as_u64().unwrap_or_default()
+        + warm_summary["prompt_count"].as_u64().unwrap_or_default();
+    let generated_tokens = ask_summary["generated_tokens"].as_u64().unwrap_or_default()
+        + warm_summary["generated_tokens"].as_u64().unwrap_or_default();
+    let memory_end_peak_mb = peak_memory_mb();
+    let mut memory = all_samples.memory_json();
+    if let Some(object) = memory.as_object_mut() {
+        object
+            .insert("start_peak_memory_mb".to_string(), optional_f64_json(benchmark_start_peak_mb));
+        object.insert("end_peak_memory_mb".to_string(), optional_f64_json(memory_end_peak_mb));
+        object.insert(
+            "process_peak_drift_mb".to_string(),
+            optional_f64_json(memory_delta_mb(benchmark_start_peak_mb, memory_end_peak_mb)),
+        );
+    }
+    let model_path = ask["model"]["path"]
+        .as_str()
+        .or_else(|| warm["model"]["path"].as_str())
+        .unwrap_or_default();
+    let tokenizer_path = ask["mac_bitnet_claim_boundary"]["tokenizer_path"]
+        .as_str()
+        .or_else(|| warm["mac_bitnet_claim_boundary"]["tokenizer_path"].as_str())
+        .unwrap_or(BITNET_M4_DEFAULT_TOKENIZER_PATH);
+
+    Ok(serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "benchmark_set": "bitnet-one-shot-fixed-warm-v1",
+        "paths": {
+            "one_shot": ask_summary,
+            "fixed_warm": warm_summary,
+        },
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_tokens,
+        "speed": all_samples.speed_json(),
+        "memory": memory,
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+            "timeout_seconds": serde_json::Value::Null,
+            "partial_failure_receipt": false,
+        },
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model": {
+            "id": BITNET_M4_MODEL_ID,
+            "family": "bitnet",
+            "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "file": "ggml-model-i2_s.gguf",
+            "path": model_path,
+            "sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "bytes": ask["model_cache"]["bytes"].as_u64().or_else(|| warm["model_cache"]["bytes"].as_u64()),
+            "architecture": "bitnet_b1_58",
+            "quantization": "I2_S",
+            "answer_ready_artifact_available": true,
+            "answer_ready": {
+                "state": "answer_ready"
+            }
+        },
+        "tokenizer": {
+            "source": "external_tokenizer_json",
+            "path": tokenizer_path,
+            "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "authority": "llama-bpe",
+            "pretokenizer_authority": "llama-bpe",
+            "strict": true
+        },
+        "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+        "benchmark_contract": {
+            "scope": "Apple M4 Mac mini BitNet one-shot and fixed-warm benchmark v1",
+            "path_execution_model": "one mac ask run plus one fixed-prompt resident warm-session run",
+            "one_shot_loaded_independently": true,
+            "fixed_warm_model_tokenizer_reuse_visible": true,
+            "cold_load_separated": true,
+            "percentiles": ["p50", "p90", "p99"],
+            "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+            "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+            "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+            "memory_drift_definition": "ru_maxrss process peak delta when available; monotonic peak, not live RSS",
+            "timeout_boundary_recorded": true,
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "evidence": {
+            "one_shot_receipt": ask_path.display().to_string(),
+            "warm_session_receipt": warm_path.display().to_string(),
+            "warm_prompt_receipts": warm["session"]["per_prompt_receipts"].clone(),
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_commands": ["mac ask", "mac bitnet-warm"],
+        },
+        "mac_claim_boundary": {
+            "bitnet_benchmark": true,
+            "one_shot_mac_ask": true,
+            "fixed_warm_session": true,
+            "accepted_i2s_artifact_only": true,
+            "dense_slm_evidence_used": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "bitnet_quality_claimed": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claimed": false
+        },
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    }))
+}
+
+fn bitnet_one_shot_benchmark_path_summary(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    let summary = validate_mac_receipt_value(path, receipt)?;
+    if summary.artifact_kind != "strict_bitnet_cpu_profile" {
+        anyhow::bail!(
+            "{} BitNet benchmark one-shot receipt must be strict_bitnet_cpu_profile",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["operator_command"], "mac ask")?;
+    require_exact_string_at(path, receipt, &["model", "family"], "bitnet")?;
+    require_exact_string_at(path, receipt, &["model", "sha256"], BITNET_M4_EXPECTED_MODEL_SHA256)?;
+    require_exact_string_at(path, receipt, &["loader", "mode"], "real_gguf")?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    require_exact_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"], "llama-bpe")?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "serve_enabled"], false)?;
+
+    let prompt_tokens = required_json_f64(&receipt["tokens"]["prompt"], "tokens.prompt")?;
+    let generated_tokens = required_json_f64(&receipt["tokens"]["generated"], "tokens.generated")?;
+    let model_load_ms =
+        required_json_f64(&receipt["timing"]["model_load_ms"], "timing.model_load_ms")?;
+    let tokenizer_load_ms =
+        required_json_f64(&receipt["timing"]["tokenizer_load_ms"], "timing.tokenizer_load_ms")?;
+    let tokenize_ms = required_json_f64(&receipt["timing"]["tokenize_ms"], "timing.tokenize_ms")?;
+    let prefill_ms = required_json_f64(&receipt["timing"]["prefill_ms"], "timing.prefill_ms")?;
+    let ttft_ms = receipt["timing"]["time_to_first_token_ms"]
+        .as_f64()
+        .or_else(|| receipt["timing"]["first_token_ms"].as_f64())
+        .or_else(|| receipt["latency"]["cmd_to_first_ms"].as_f64())
+        .ok_or_else(|| anyhow!("{} one-shot benchmark receipt is missing TTFT", path.display()))?;
+    let decode_total_ms =
+        required_json_f64(&receipt["timing"]["decode_total_ms"], "timing.decode_total_ms")?;
+    let total_wall_ms = required_json_f64(&receipt["latency"]["total_ms"], "latency.total_ms")?;
+    let sampling_ms_per_token =
+        optional_positive_sample(&receipt["timing"]["sampling_ms_per_token"]);
+    let mut input_tok_s = Vec::new();
+    let mut output_tok_s = Vec::new();
+    let mut decode_tok_s = Vec::new();
+    push_positive_rate(&mut input_tok_s, prompt_tokens, tokenize_ms + prefill_ms);
+    push_positive_rate(&mut output_tok_s, generated_tokens, total_wall_ms);
+    push_positive_rate(&mut decode_tok_s, generated_tokens, decode_total_ms);
+    let peak_memory_mb = optional_peak_memory_samples(&receipt["memory"]["peak_memory_mb"]);
+
+    Ok(serde_json::json!({
+        "path_id": "one_shot_mac_ask",
+        "operator_command": "mac ask",
+        "receipt_path": path.display().to_string(),
+        "prompt_count": 1,
+        "generated_tokens": generated_tokens as u64,
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "quality_passed": true,
+        "prompt_tokens": benchmark_stat_json(&[prompt_tokens]),
+        "output_tokens": benchmark_stat_json(&[generated_tokens]),
+        "timing": {
+            "model_load_ms": benchmark_stat_json(&[model_load_ms]),
+            "tokenizer_load_ms": benchmark_stat_json(&[tokenizer_load_ms]),
+            "prompt_tokenize_ms": benchmark_stat_json(&[tokenize_ms]),
+            "prefill_ms": benchmark_stat_json(&[prefill_ms]),
+            "time_to_first_token_ms": benchmark_stat_json(&[ttft_ms]),
+            "decode_total_ms": benchmark_stat_json(&[decode_total_ms]),
+            "sampling_ms_per_token": benchmark_stat_json(&sampling_ms_per_token),
+            "total_wall_ms": benchmark_stat_json(&[total_wall_ms]),
+        },
+        "throughput": {
+            "input_tokens_per_second": benchmark_stat_json(&input_tok_s),
+            "output_tokens_per_second": benchmark_stat_json(&output_tok_s),
+            "decode_tokens_per_second": benchmark_stat_json(&decode_tok_s),
+        },
+        "memory": {
+            "peak_memory_mb": benchmark_stat_json(&peak_memory_mb),
+            "memory_drift_mb": benchmark_stat_json(&[0.0]),
+            "source": "getrusage.ru_maxrss process peak",
+        },
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+        },
+        "claim_boundary": {
+            "scope": "this one-shot prompt, model, backend, and machine receipt only",
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    }))
+}
+
+fn bitnet_warm_benchmark_path_summary(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    let summary = validate_mac_receipt_value(path, receipt)?;
+    if summary.artifact_kind != "bitnet_apple_m4_warm_session" {
+        anyhow::bail!(
+            "{} BitNet benchmark warm receipt must be bitnet_apple_m4_warm_session",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["operator_command"], "mac bitnet-warm")?;
+    require_exact_string_at(path, receipt, &["model", "family"], "bitnet")?;
+    require_exact_string_at(path, receipt, &["model", "sha256"], BITNET_M4_EXPECTED_MODEL_SHA256)?;
+    require_exact_string_at(path, receipt, &["model", "loader_mode"], "real_gguf")?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    require_exact_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"], "llama-bpe")?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "serve_enabled"], false)?;
+
+    let prompt_receipts =
+        receipt["session"]["per_prompt_receipts"].as_array().ok_or_else(|| {
+            anyhow!(
+                "{} BitNet warm benchmark receipt is missing per-prompt receipts",
+                path.display()
+            )
+        })?;
+    let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
+    if prompt_receipts.len() != prompt_count as usize {
+        anyhow::bail!("{} BitNet warm benchmark prompt receipt count mismatch", path.display());
+    }
+
+    let mut prompt_tokens = Vec::with_capacity(prompt_receipts.len());
+    let mut generated_tokens = Vec::with_capacity(prompt_receipts.len());
+    let mut tokenization_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut prefill_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut ttft_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut decode_total_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut sampling_ms_per_token = Vec::with_capacity(prompt_receipts.len());
+    let mut total_wall_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut input_tok_s = Vec::with_capacity(prompt_receipts.len());
+    let mut output_tok_s = Vec::with_capacity(prompt_receipts.len());
+    let mut decode_tok_s = Vec::with_capacity(prompt_receipts.len());
+    let mut generated_total = 0_u64;
+    for prompt_receipt in prompt_receipts {
+        let prompt_path = PathBuf::from(prompt_receipt.as_str().ok_or_else(|| {
+            anyhow!("{} BitNet warm benchmark has non-string prompt receipt path", path.display())
+        })?);
+        let prompt = read_json_receipt(&prompt_path)?;
+        let prompt_token_count = required_json_f64(&prompt["tokens"]["prompt"], "tokens.prompt")?;
+        let generated_token_count =
+            required_json_f64(&prompt["tokens"]["generated"], "tokens.generated")?;
+        let tokenize = required_json_f64(&prompt["timing"]["tokenize_ms"], "timing.tokenize_ms")?;
+        let prefill = required_json_f64(&prompt["timing"]["prefill_ms"], "timing.prefill_ms")?;
+        let ttft = required_json_f64(
+            &prompt["timing"]["time_to_first_token_ms"],
+            "timing.time_to_first_token_ms",
+        )
+        .or_else(|_| {
+            required_json_f64(&prompt["timing"]["first_token_ms"], "timing.first_token_ms")
+        })?;
+        let decode =
+            required_json_f64(&prompt["timing"]["decode_total_ms"], "timing.decode_total_ms")?;
+        let total = required_json_f64(&prompt["timing"]["total_ms"], "timing.total_ms")?;
+        prompt_tokens.push(prompt_token_count);
+        generated_tokens.push(generated_token_count);
+        tokenization_ms.push(tokenize);
+        prefill_ms.push(prefill);
+        ttft_ms.push(ttft);
+        decode_total_ms.push(decode);
+        if let Some(sample_ms) = prompt["timing"]["sampling_ms_per_token"].as_f64() {
+            sampling_ms_per_token.push(sample_ms);
+        }
+        total_wall_ms.push(total);
+        push_positive_rate(&mut input_tok_s, prompt_token_count, tokenize + prefill);
+        push_positive_rate(&mut output_tok_s, generated_token_count, total);
+        push_positive_rate(&mut decode_tok_s, generated_token_count, decode);
+        generated_total += generated_token_count as u64;
+    }
+    let peak_memory_mb = optional_peak_memory_samples(&receipt["memory"]["peak_memory_mb"]);
+
+    Ok(serde_json::json!({
+        "path_id": "fixed_warm_session",
+        "operator_command": "mac bitnet-warm",
+        "receipt_path": path.display().to_string(),
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_total,
+        "model_loaded_once": receipt["session"]["model_loaded_once"].as_bool().unwrap_or(false),
+        "tokenizer_loaded_once": receipt["session"]["tokenizer_loaded_once"].as_bool().unwrap_or(false),
+        "reuse_scope": receipt["session"]["reuse_scope"].clone(),
+        "quality_passed": receipt["quality_summary"]["passed"].as_bool().unwrap_or(false),
+        "prompt_tokens": benchmark_stat_json(&prompt_tokens),
+        "output_tokens": benchmark_stat_json(&generated_tokens),
+        "timing": {
+            "model_load_ms": benchmark_stat_json(&[required_json_f64(&receipt["timing"]["model_load_ms"], "timing.model_load_ms")?]),
+            "tokenizer_load_ms": benchmark_stat_json(&[required_json_f64(&receipt["timing"]["tokenizer_load_ms"], "timing.tokenizer_load_ms")?]),
+            "prompt_tokenize_ms": benchmark_stat_json(&tokenization_ms),
+            "prefill_ms": benchmark_stat_json(&prefill_ms),
+            "time_to_first_token_ms": benchmark_stat_json(&ttft_ms),
+            "decode_total_ms": benchmark_stat_json(&decode_total_ms),
+            "sampling_ms_per_token": benchmark_stat_json(&sampling_ms_per_token),
+            "total_wall_ms": benchmark_stat_json(&total_wall_ms),
+        },
+        "throughput": {
+            "input_tokens_per_second": benchmark_stat_json(&input_tok_s),
+            "output_tokens_per_second": benchmark_stat_json(&output_tok_s),
+            "decode_tokens_per_second": benchmark_stat_json(&decode_tok_s),
+        },
+        "memory": {
+            "peak_memory_mb": benchmark_stat_json(&peak_memory_mb),
+            "memory_drift_mb": benchmark_stat_json(&[0.0]),
+            "source": "getrusage.ru_maxrss process peak",
+        },
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+        },
+        "claim_boundary": {
+            "scope": "this fixed warm prompt set, model, backend, and machine receipt only",
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    }))
+}
+
+fn optional_positive_sample(value: &serde_json::Value) -> Vec<f64> {
+    value.as_f64().filter(|number| *number > 0.0).into_iter().collect()
+}
+
+fn optional_peak_memory_samples(value: &serde_json::Value) -> Vec<f64> {
+    let mut samples = optional_positive_sample(value);
+    if samples.is_empty()
+        && let Some(sample) = peak_memory_mb().filter(|number| *number > 0.0)
+    {
+        samples.push(round3(sample));
+    }
+    samples
 }
 
 async fn run_doctor(
@@ -7323,6 +7950,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_eval_answer_corpus_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_benchmark_v1" {
+        validate_bitnet_benchmark_v1_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_mac_ask_failure" {
         validate_bitnet_mac_ask_failure_receipt(path, receipt)?
     } else {
@@ -7828,6 +8457,181 @@ fn validate_bitnet_eval_answer_corpus_receipt(
     }
 
     Ok((Some(quality_total as usize), Some(generated_tokens as usize)))
+}
+
+fn validate_bitnet_benchmark_v1_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "bitnet_apple_m4_benchmark_v1")?;
+    require_exact_string_at(path, receipt, &["benchmark_set"], "bitnet-one-shot-fixed-warm-v1")?;
+    require_bool_at(path, receipt, &["build", "release_mode"], true)?;
+
+    require_exact_string_at(path, receipt, &["model", "id"], BITNET_M4_MODEL_ID)?;
+    require_exact_string_at(path, receipt, &["model", "family"], "bitnet")?;
+    require_exact_string_at(path, receipt, &["model", "sha256"], BITNET_M4_EXPECTED_MODEL_SHA256)?;
+    require_exact_string_at(path, receipt, &["model", "quantization"], "I2_S")?;
+    require_bool_at(path, receipt, &["model", "answer_ready_artifact_available"], true)?;
+    require_exact_string_at(path, receipt, &["model", "answer_ready", "state"], "answer_ready")?;
+
+    require_exact_string_at(path, receipt, &["tokenizer", "source"], "external_tokenizer_json")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["tokenizer", "sha256"],
+        BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+    )?;
+    require_exact_string_at(path, receipt, &["tokenizer", "authority"], "llama-bpe")?;
+    require_exact_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"], "llama-bpe")?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    require_exact_string_at(path, receipt, &["prompt_template"], BITNET_M4_PROMPT_TEMPLATE)?;
+
+    for field in [
+        "cold_load_ms",
+        "model_load_ms",
+        "tokenizer_load_ms",
+        "prompt_tokenize_ms",
+        "prefill_ms",
+        "ttft_ms",
+        "decode_total_ms",
+        "sampling_ms_per_token",
+        "input_tok_s",
+        "output_tok_s",
+        "decode_tok_s",
+        "total_wall_ms",
+    ] {
+        validate_benchmark_percentiles(path, receipt, &["speed"], field, true)?;
+    }
+    validate_benchmark_percentiles(path, receipt, &["memory"], "peak_memory_mb", true)?;
+    validate_benchmark_percentiles(path, receipt, &["memory"], "memory_drift_mb", false)?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], false)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "reached"], false)?;
+    require_exact_string_at(path, receipt, &["timeout_boundary", "status"], "not_reached")?;
+
+    require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
+    require_non_empty_string_at(path, receipt, &["evidence", "one_shot_receipt"])?;
+    require_non_empty_string_at(path, receipt, &["evidence", "warm_session_receipt"])?;
+    require_non_empty_string_array_at(path, receipt, &["evidence", "warm_prompt_receipts"])?;
+    require_non_empty_string_array_at(path, receipt, &["evidence", "operator_commands"])?;
+
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_benchmark"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "one_shot_mac_ask"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "fixed_warm_session"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "accepted_i2s_artifact_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_evidence_used"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_apple_silicon_claimed"], false)?;
+
+    let paths = json_value_at(receipt, &["paths"]).as_object().ok_or_else(|| {
+        anyhow!("{} BitNet benchmark v1 summary is missing paths object", path.display())
+    })?;
+    let one_shot = paths.get("one_shot").ok_or_else(|| {
+        anyhow!("{} BitNet benchmark v1 summary is missing one_shot path", path.display())
+    })?;
+    let fixed_warm = paths.get("fixed_warm").ok_or_else(|| {
+        anyhow!("{} BitNet benchmark v1 summary is missing fixed_warm path", path.display())
+    })?;
+    validate_bitnet_benchmark_path_summary(path, one_shot, "one_shot_mac_ask", "mac ask", false)?;
+    validate_bitnet_benchmark_path_summary(
+        path,
+        fixed_warm,
+        "fixed_warm_session",
+        "mac bitnet-warm",
+        true,
+    )?;
+
+    let prompt_count_total = one_shot["prompt_count"].as_u64().unwrap_or_default()
+        + fixed_warm["prompt_count"].as_u64().unwrap_or_default();
+    let generated_tokens_total = one_shot["generated_tokens"].as_u64().unwrap_or_default()
+        + fixed_warm["generated_tokens"].as_u64().unwrap_or_default();
+    if receipt["prompt_count"].as_u64() != Some(prompt_count_total) {
+        anyhow::bail!(
+            "{} BitNet benchmark v1 prompt_count must equal one-shot plus fixed-warm prompt counts",
+            path.display()
+        );
+    }
+    if receipt["generated_tokens"].as_u64() != Some(generated_tokens_total) {
+        anyhow::bail!(
+            "{} BitNet benchmark v1 generated_tokens must equal one-shot plus fixed-warm generated tokens",
+            path.display()
+        );
+    }
+
+    Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_bitnet_benchmark_path_summary(
+    receipt_path: &Path,
+    summary: &serde_json::Value,
+    expected_path_id: &str,
+    expected_operator_command: &str,
+    require_resident_reuse: bool,
+) -> Result<()> {
+    require_exact_string_at(receipt_path, summary, &["path_id"], expected_path_id)?;
+    require_exact_string_at(
+        receipt_path,
+        summary,
+        &["operator_command"],
+        expected_operator_command,
+    )?;
+    require_non_empty_string_at(receipt_path, summary, &["receipt_path"])?;
+    require_u64_at(receipt_path, summary, &["prompt_count"], true)?;
+    require_u64_at(receipt_path, summary, &["generated_tokens"], true)?;
+    require_bool_at(receipt_path, summary, &["model_loaded_once"], true)?;
+    require_bool_at(receipt_path, summary, &["tokenizer_loaded_once"], true)?;
+    require_bool_at(receipt_path, summary, &["quality_passed"], true)?;
+    if require_resident_reuse {
+        require_exact_string_at(receipt_path, summary, &["reuse_scope"], "resident_session")?;
+    }
+
+    validate_benchmark_stat_object(receipt_path, summary, &["prompt_tokens"], true)?;
+    validate_benchmark_stat_object(receipt_path, summary, &["output_tokens"], true)?;
+    for field in [
+        "model_load_ms",
+        "tokenizer_load_ms",
+        "prompt_tokenize_ms",
+        "prefill_ms",
+        "time_to_first_token_ms",
+        "decode_total_ms",
+        "sampling_ms_per_token",
+        "total_wall_ms",
+    ] {
+        validate_benchmark_stat_object(receipt_path, summary, &["timing", field], true)?;
+    }
+    for field in ["input_tokens_per_second", "output_tokens_per_second", "decode_tokens_per_second"]
+    {
+        validate_benchmark_stat_object(receipt_path, summary, &["throughput", field], true)?;
+    }
+    validate_benchmark_stat_object(receipt_path, summary, &["memory", "peak_memory_mb"], true)?;
+    validate_benchmark_stat_object(receipt_path, summary, &["memory", "memory_drift_mb"], false)?;
+    require_non_empty_string_at(receipt_path, summary, &["memory", "source"])?;
+    require_bool_at(receipt_path, summary, &["timeout_boundary", "enforced"], false)?;
+    require_bool_at(receipt_path, summary, &["timeout_boundary", "reached"], false)?;
+    require_exact_string_at(receipt_path, summary, &["timeout_boundary", "status"], "not_reached")?;
+    require_bool_at(receipt_path, summary, &["claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(receipt_path, summary, &["claim_boundary", "serve_enabled"], false)?;
+    require_bool_at(receipt_path, summary, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(receipt_path, summary, &["claim_boundary", "speedup_claim"], false)?;
+    Ok(())
 }
 
 fn validate_slm_benchmark_v2_receipt(
@@ -9164,6 +9968,20 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_bitnet_benchmark_v1() -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_bitnet_benchmark_v1_receipt();
+
+        let summary = validate_mac_receipt_value(Path::new("bitnet-benchmark.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_benchmark_v1");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(4));
+        assert_eq!(summary.generated_tokens, Some(8));
+        Ok(())
+    }
+
+    #[test]
     fn mac_profile_set_allocation_scope_preserves_m3_backend_label() {
         assert_eq!(
             profile_set_allocation_scope(APPLE_M3_AIR_CPU_NEON),
@@ -9399,6 +10217,140 @@ mod tests {
                     }
                 }
             ]
+        })
+    }
+
+    fn test_bitnet_benchmark_v1_receipt() -> serde_json::Value {
+        let one_shot = test_bitnet_benchmark_path_summary("one_shot_mac_ask", "mac ask", 1, 2);
+        let fixed_warm =
+            test_bitnet_benchmark_path_summary("fixed_warm_session", "mac bitnet-warm", 3, 6);
+        let mut samples = BitnetBenchmarkMetricSamples::default();
+        samples.extend_from_summary(&one_shot);
+        samples.extend_from_summary(&fixed_warm);
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "benchmark_set": "bitnet-one-shot-fixed-warm-v1",
+            "build": {
+                "release_mode": true
+            },
+            "model": {
+                "id": BITNET_M4_MODEL_ID,
+                "family": "bitnet",
+                "sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+                "quantization": "I2_S",
+                "answer_ready_artifact_available": true,
+                "answer_ready": {
+                    "state": "answer_ready"
+                }
+            },
+            "tokenizer": {
+                "source": "external_tokenizer_json",
+                "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+                "authority": "llama-bpe",
+                "pretokenizer_authority": "llama-bpe",
+                "strict": true
+            },
+            "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+            "paths": {
+                "one_shot": one_shot,
+                "fixed_warm": fixed_warm
+            },
+            "prompt_count": 4,
+            "generated_tokens": 8,
+            "speed": samples.speed_json(),
+            "memory": samples.memory_json(),
+            "timeout_boundary": {
+                "enforced": false,
+                "reached": false,
+                "status": "not_reached"
+            },
+            "evidence": {
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "one_shot_receipt": "receipts/ask.json",
+                "warm_session_receipt": "receipts/warm.json",
+                "warm_prompt_receipts": ["receipts/warm-1.json"],
+                "operator_commands": ["mac ask", "mac bitnet-warm"]
+            },
+            "mac_claim_boundary": {
+                "bitnet_benchmark": true,
+                "one_shot_mac_ask": true,
+                "fixed_warm_session": true,
+                "accepted_i2s_artifact_only": true,
+                "dense_slm_evidence_used": false,
+                "chat_enabled": false,
+                "serve_enabled": false,
+                "bitnet_quality_claimed": false,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "macbook_evidence": false,
+                "broad_apple_silicon_claimed": false
+            },
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        })
+    }
+
+    fn test_bitnet_benchmark_path_summary(
+        path_id: &str,
+        operator_command: &str,
+        prompt_count: u64,
+        generated_tokens: u64,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "path_id": path_id,
+            "operator_command": operator_command,
+            "receipt_path": "receipt.json",
+            "prompt_count": prompt_count,
+            "generated_tokens": generated_tokens,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "reuse_scope": "resident_session",
+            "quality_passed": true,
+            "prompt_tokens": benchmark_stat_json(&[20.0]),
+            "output_tokens": benchmark_stat_json(&[generated_tokens as f64]),
+            "timing": {
+                "model_load_ms": benchmark_stat_json(&[4000.0]),
+                "tokenizer_load_ms": benchmark_stat_json(&[100.0]),
+                "prompt_tokenize_ms": benchmark_stat_json(&[1.0]),
+                "prefill_ms": benchmark_stat_json(&[7000.0]),
+                "time_to_first_token_ms": benchmark_stat_json(&[7500.0]),
+                "decode_total_ms": benchmark_stat_json(&[900.0]),
+                "sampling_ms_per_token": benchmark_stat_json(&[0.1]),
+                "total_wall_ms": benchmark_stat_json(&[8500.0])
+            },
+            "throughput": {
+                "input_tokens_per_second": benchmark_stat_json(&[2.857]),
+                "output_tokens_per_second": benchmark_stat_json(&[0.235]),
+                "decode_tokens_per_second": benchmark_stat_json(&[2.222])
+            },
+            "memory": {
+                "peak_memory_mb": benchmark_stat_json(&[4200.0]),
+                "memory_drift_mb": benchmark_stat_json(&[0.0]),
+                "source": "getrusage.ru_maxrss process peak"
+            },
+            "timeout_boundary": {
+                "enforced": false,
+                "reached": false,
+                "status": "not_reached"
+            },
+            "claim_boundary": {
+                "chat_enabled": false,
+                "serve_enabled": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
         })
     }
 

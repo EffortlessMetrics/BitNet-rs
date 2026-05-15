@@ -122,6 +122,63 @@ BitNet quality benchmark, not a performance envelope, not dense SLM evidence,
 and not chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad
 Apple Silicon proof.
 
+## M4 Benchmark Report Slice
+
+`M4-BITNET-EVAL-004` benchmarks the explicit one-shot `bitnet mac ask` route and
+the fixed-prompt `bitnet mac bitnet-warm` route for the accepted BitNet artifact.
+It adds a BitNet-specific aggregate benchmark receipt and teaches
+`bitnet mac receipts-check` to validate it.
+
+Recorded report:
+
+- Aggregate receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json`
+- One-shot receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-ask-benchmark.json`
+- Fixed-warm receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-bitnet-warm-benchmark.json`
+- Fixed-warm prompt receipts:
+  `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/*.json`
+- Artifact kind: `bitnet_apple_m4_benchmark_v1`
+- Benchmark set: `bitnet-one-shot-fixed-warm-v1`
+- Prompts: 4 total, 1 one-shot and 3 fixed-warm
+- Generated tokens: 8
+- Backend: `apple-m4-cpu-neon`
+- Runtime API: `cpu`
+- Fallback used: `false`
+- Timeout boundary: not reached, not enforced
+- Chat enabled: `false`
+- Serve enabled: `false`
+
+Aggregate speed and memory summary:
+
+| Metric | p50 | p90 | p99 |
+|---|---:|---:|---:|
+| Model/cold load ms | 4410.309 | 4443.249 | 4443.249 |
+| Tokenizer load ms | 163.834 | 169.638 | 169.638 |
+| Prompt tokenize ms | 0.056 | 0.205 | 0.205 |
+| Prefill ms | 10063.830 | 11316.592 | 11316.592 |
+| TTFT ms | 10777.000 | 12042.000 | 12042.000 |
+| Input tok/s | 1.625 | 2.408 | 2.408 |
+| Output tok/s | 0.158 | 0.216 | 0.216 |
+| Decode tok/s | 1.411 | 2.055 | 2.055 |
+| Total wall ms | 11489.261 | 12739.703 | 12739.703 |
+| Peak memory MiB | 4246.359 | 4322.078 | 4322.078 |
+
+Path-level summary:
+
+| Path | Prompts | Generated tokens | TTFT p50 ms | Output tok/s p50 | Decode tok/s p50 |
+|---|---:|---:|---:|---:|---:|
+| `mac ask` one-shot | 1 | 2 | 8800.000 | 0.216 | 2.055 |
+| `mac bitnet-warm` fixed warm | 3 | 6 | 11878.000 | 0.158 | 1.411 |
+
+The one-shot prompt answered `4`. The fixed-warm prompts answered `4`, `Paris`,
+and `4`. These benchmark receipts are timing evidence for the exact accepted
+artifact/tokenizer/backend on the recorded M4 Mac mini only. They are not a broad
+Apple Silicon performance claim, not a speedup claim, not a BitNet quality
+benchmark, and not evidence that BitNet chat, BitNet serve, full Metal, QK256,
+Neural Engine, MPSGraph, MacBook, or broader Apple Silicon routes work.
+
 ## Claim Policy
 
 Allowed after the first slice:
@@ -178,6 +235,24 @@ Still not allowed after the M4 eval report slice:
 The reports are broad BitNet quality benchmarks.
 The reports are BitNet performance benchmarks.
 Dense SLM evidence supports BitNet quality.
+BitNet chat works.
+BitNet serve works.
+Full apple-m4-metal inference works.
+QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.
+```
+
+Allowed after the benchmark report slice:
+
+```text
+Recorded Apple M4 BitNet one-shot and fixed-warm benchmark receipts exist for
+the accepted I2_S artifact and external tokenizer authority.
+```
+
+Still not allowed after the benchmark report slice:
+
+```text
+The benchmark is broad Apple Silicon performance evidence.
+The benchmark is a broad BitNet quality benchmark.
 BitNet chat works.
 BitNet serve works.
 Full apple-m4-metal inference works.
