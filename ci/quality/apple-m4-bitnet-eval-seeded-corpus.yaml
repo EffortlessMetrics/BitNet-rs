@@ -1,0 +1,869 @@
+schema: 1
+artifact_kind: bitnet_answer_corpus
+name: apple-m4-bitnet-eval-seeded-corpus
+description: Seeded deterministic BitNet eval corpus for Apple M4 quality and benchmark reports.
+metadata:
+  campaign: apple-m4-bitnet-eval-and-benchmark
+  work_item: M4-BITNET-EVAL-001
+  seed: 912587
+  generator_policy: deterministic-static-fixture-bitnet-v1
+  case_count_target: 100
+  prompt_template: bitnetcpp-answer
+  scoring_status: deterministic_fixture_scoring
+  claim_boundary:
+    runtime_proof: false
+    bitnet_accuracy_claim: false
+    bitnet_performance_claim: false
+    dense_slm_evidence: false
+    chat_enabled: false
+    serve_enabled: false
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  repo_revision: a1f2f1c765812aa8af3f6eda4a313707064bba15
+  file: ggml-model-i2_s.gguf
+  sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+  bytes: 1187801280
+  family: bitnet
+  architecture: bitnet_b1_58
+  quant_format: I2_S
+  answer_ready:
+    state: answer_ready
+    gate: MODEL-ARTIFACT-007
+    manifest: ci/model-artifacts/artifact-manifest.toml
+    evidence: docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md
+  tokenizer_authority:
+    source: external_tokenizer_json
+    repo: microsoft/bitnet-b1.58-2B-4T
+    revision: 04c3b9ad9361b824064a1f25ea60a8be9599b127
+    sha256: e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+    ggml_pre: llama-bpe
+defaults:
+  prompt_template: bitnetcpp-answer
+  max_new_tokens: 32
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 300
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 1
+cases:
+  - id: bitnet_arithmetic_seed912587_add_001
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=add index=1 a=3 b=8"
+    question: "Compute 3 + 8. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "11"}
+    gate: {kind: exact_trimmed, expected: "11"}
+
+  - id: bitnet_arithmetic_seed912587_add_002
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=add index=2 a=6 b=7"
+    question: "Compute 6 + 7. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "13"}
+    gate: {kind: exact_trimmed, expected: "13"}
+
+  - id: bitnet_arithmetic_seed912587_add_003
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=add index=3 a=9 b=5"
+    question: "Compute 9 + 5. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "14"}
+    gate: {kind: exact_trimmed, expected: "14"}
+
+  - id: bitnet_arithmetic_seed912587_add_004
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=add index=4 a=12 b=4"
+    question: "Compute 12 + 4. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "16"}
+    gate: {kind: exact_trimmed, expected: "16"}
+
+  - id: bitnet_arithmetic_seed912587_add_005
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=add index=5 a=15 b=6"
+    question: "Compute 15 + 6. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "21"}
+    gate: {kind: exact_trimmed, expected: "21"}
+
+  - id: bitnet_arithmetic_seed912587_sub_006
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=sub index=6 a=18 b=7"
+    question: "Compute 18 - 7. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "11"}
+    gate: {kind: exact_trimmed, expected: "11"}
+
+  - id: bitnet_arithmetic_seed912587_sub_007
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=sub index=7 a=25 b=9"
+    question: "Compute 25 - 9. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "16"}
+    gate: {kind: exact_trimmed, expected: "16"}
+
+  - id: bitnet_arithmetic_seed912587_mul_008
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=mul index=8 a=4 b=6"
+    question: "Compute 4 x 6. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "24"}
+    gate: {kind: exact_trimmed, expected: "24"}
+
+  - id: bitnet_arithmetic_seed912587_mul_009
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=mul index=9 a=7 b=3"
+    question: "Compute 7 x 3. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "21"}
+    gate: {kind: exact_trimmed, expected: "21"}
+
+  - id: bitnet_arithmetic_seed912587_mix_010
+    category: arithmetic_exact
+    seed_material: "seed=912587 family=arithmetic op=mix index=10 expr=(5+4)*2"
+    question: "Compute (5 + 4) x 2. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "18"}
+    gate: {kind: exact_trimmed, expected: "18"}
+
+  - id: bitnet_numeric_seed912587_div_001
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=divide index=1 numerator=7 denominator=2"
+    question: "Compute 7 divided by 2. Answer with a decimal number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 3.5, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["3.5"]}
+
+  - id: bitnet_numeric_seed912587_div_002
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=divide index=2 numerator=9 denominator=4"
+    question: "Compute 9 divided by 4. Answer with a decimal number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 2.25, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["2.25"]}
+
+  - id: bitnet_numeric_seed912587_div_003
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=divide index=3 numerator=11 denominator=5"
+    question: "Compute 11 divided by 5. Answer with a decimal number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 2.2, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["2.2"]}
+
+  - id: bitnet_numeric_seed912587_percent_004
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=percent index=4 value=25 percent=20"
+    question: "What is 20 percent of 25? Answer with a number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 5, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["5"]}
+
+  - id: bitnet_numeric_seed912587_percent_005
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=percent index=5 value=80 percent=12.5"
+    question: "What is 12.5 percent of 80? Answer with a number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 10, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["10"]}
+
+  - id: bitnet_numeric_seed912587_average_006
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=average index=6 values=4,8,10"
+    question: "What is the average of 4, 8, and 10? Answer with a decimal number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 7.33, numeric_tolerance: 0.02}
+    gate: {kind: contains_any, contains_any: ["7.33", "7.3"]}
+
+  - id: bitnet_numeric_seed912587_average_007
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=average index=7 values=6,9,12"
+    question: "What is the average of 6, 9, and 12? Answer with a number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 9, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["9"]}
+
+  - id: bitnet_numeric_seed912587_fraction_008
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=fraction index=8 value=3/8"
+    question: "Convert 3/8 to a decimal. Answer with a decimal number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 0.375, numeric_tolerance: 0.001}
+    gate: {kind: contains_any, contains_any: ["0.375"]}
+
+  - id: bitnet_numeric_seed912587_fraction_009
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=fraction index=9 value=5/8"
+    question: "Convert 5/8 to a decimal. Answer with a decimal number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 0.625, numeric_tolerance: 0.001}
+    gate: {kind: contains_any, contains_any: ["0.625"]}
+
+  - id: bitnet_numeric_seed912587_ratio_010
+    category: numeric_tolerance
+    seed_material: "seed=912587 family=numeric op=ratio index=10 values=18:6"
+    question: "Simplify the ratio 18 to 6 into one number for 18/6. Answer with a number only."
+    max_new_tokens: 8
+    scoring: {kind: numeric_tolerance, expected_number: 3, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["3"]}
+
+  - id: bitnet_table_seed912587_city_001
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=1"
+    question: "Table: Ada=red, Ben=blue, Cyd=green. What color is Ben? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "blue"}
+    gate: {kind: contains_any, contains_any: ["blue"]}
+
+  - id: bitnet_table_seed912587_city_002
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=2"
+    question: "Table: Ada=red, Ben=blue, Cyd=green. Who has green? Answer with one name."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "cyd"}
+    gate: {kind: contains_any, contains_any: ["Cyd", "cyd"]}
+
+  - id: bitnet_table_seed912587_city_003
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=3"
+    question: "Table: item A costs 4, item B costs 9, item C costs 12. What does item C cost? Answer with only the number."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "12"}
+    gate: {kind: exact_trimmed, expected: "12"}
+
+  - id: bitnet_table_seed912587_city_004
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=4"
+    question: "Table: item A costs 4, item B costs 9, item C costs 12. Which item costs 9? Answer with the item letter only."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "b"}
+    gate: {kind: contains_any, contains_any: ["B", "b"]}
+
+  - id: bitnet_table_seed912587_city_005
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=5"
+    question: "Table: north=12, south=7, east=5. Which direction has value 7? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "south"}
+    gate: {kind: contains_any, contains_any: ["south"]}
+
+  - id: bitnet_table_seed912587_city_006
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=6"
+    question: "Table: north=12, south=7, east=5. What value is north? Answer with only the number."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "12"}
+    gate: {kind: exact_trimmed, expected: "12"}
+
+  - id: bitnet_table_seed912587_city_007
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=7"
+    question: "Table: R1=open, R2=closed, R3=open. What is R2? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "closed"}
+    gate: {kind: contains_any, contains_any: ["closed"]}
+
+  - id: bitnet_table_seed912587_city_008
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=8"
+    question: "Table: R1=open, R2=closed, R3=open. Which row is closed? Answer with the row id."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "r2"}
+    gate: {kind: contains_any, contains_any: ["R2", "r2"]}
+
+  - id: bitnet_table_seed912587_city_009
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=9"
+    question: "Table: cat=mammal, trout=fish, robin=bird. What type is trout? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "fish"}
+    gate: {kind: contains_any, contains_any: ["fish"]}
+
+  - id: bitnet_table_seed912587_city_010
+    category: fixed_table_qa
+    seed_material: "seed=912587 family=fixed_table index=10"
+    question: "Table: cat=mammal, trout=fish, robin=bird. Which animal is a bird? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "robin"}
+    gate: {kind: contains_any, contains_any: ["robin"]}
+
+  - id: bitnet_json_seed912587_001
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=1"
+    question: 'Return exactly this JSON object and no other text: {"status":"ready"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["status"],"additionalProperties":false,"properties":{"status":{"const":"ready"}}}'
+    gate: {kind: contains_any, contains_any: ["ready"]}
+
+  - id: bitnet_json_seed912587_002
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=2"
+    question: 'Return exactly this JSON object and no other text: {"route":"ask"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["route"],"additionalProperties":false,"properties":{"route":{"const":"ask"}}}'
+    gate: {kind: contains_any, contains_any: ["ask"]}
+
+  - id: bitnet_json_seed912587_003
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=3"
+    question: 'Return exactly this JSON object and no other text: {"backend":"cpu"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["backend"],"additionalProperties":false,"properties":{"backend":{"const":"cpu"}}}'
+    gate: {kind: contains_any, contains_any: ["cpu"]}
+
+  - id: bitnet_json_seed912587_004
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=4"
+    question: 'Return exactly this JSON object and no other text: {"family":"bitnet"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["family"],"additionalProperties":false,"properties":{"family":{"const":"bitnet"}}}'
+    gate: {kind: contains_any, contains_any: ["bitnet"]}
+
+  - id: bitnet_json_seed912587_005
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=5"
+    question: 'Return exactly this JSON object and no other text: {"mode":"local"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["mode"],"additionalProperties":false,"properties":{"mode":{"const":"local"}}}'
+    gate: {kind: contains_any, contains_any: ["local"]}
+
+  - id: bitnet_json_seed912587_006
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=6"
+    question: 'Return exactly this JSON object and no other text: {"cache":"warm"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["cache"],"additionalProperties":false,"properties":{"cache":{"const":"warm"}}}'
+    gate: {kind: contains_any, contains_any: ["warm"]}
+
+  - id: bitnet_json_seed912587_007
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=7"
+    question: 'Return exactly this JSON object and no other text: {"result":"pass"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["result"],"additionalProperties":false,"properties":{"result":{"const":"pass"}}}'
+    gate: {kind: contains_any, contains_any: ["pass"]}
+
+  - id: bitnet_json_seed912587_008
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=8"
+    question: 'Return exactly this JSON object and no other text: {"device":"m4"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["device"],"additionalProperties":false,"properties":{"device":{"const":"m4"}}}'
+    gate: {kind: contains_any, contains_any: ["m4"]}
+
+  - id: bitnet_json_seed912587_009
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=9"
+    question: 'Return exactly this JSON object and no other text: {"state":"ok"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["state"],"additionalProperties":false,"properties":{"state":{"const":"ok"}}}'
+    gate: {kind: contains_any, contains_any: ["ok"]}
+
+  - id: bitnet_json_seed912587_010
+    category: format_constrained_json
+    seed_material: "seed=912587 family=json index=10"
+    question: 'Return exactly this JSON object and no other text: {"eval":"seeded"}'
+    max_new_tokens: 16
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["eval"],"additionalProperties":false,"properties":{"eval":{"const":"seeded"}}}'
+    gate: {kind: contains_any, contains_any: ["seeded"]}
+
+  - id: bitnet_label_seed912587_001
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=1"
+    question: "Classify sentiment as positive, negative, or neutral: The install completed successfully. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "positive"}
+    gate: {kind: contains_any, contains_any: ["positive"]}
+
+  - id: bitnet_label_seed912587_002
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=2"
+    question: "Classify sentiment as positive, negative, or neutral: The command failed twice. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "negative"}
+    gate: {kind: contains_any, contains_any: ["negative"]}
+
+  - id: bitnet_label_seed912587_003
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=3"
+    question: "Classify sentiment as positive, negative, or neutral: The report is available. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "neutral"}
+    gate: {kind: contains_any, contains_any: ["neutral"]}
+
+  - id: bitnet_label_seed912587_004
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=4"
+    question: "Classify size as small, medium, or large: 3 millimeters. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "small"}
+    gate: {kind: contains_any, contains_any: ["small"]}
+
+  - id: bitnet_label_seed912587_005
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=5"
+    question: "Classify size as small, medium, or large: 3 meters. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "medium"}
+    gate: {kind: contains_any, contains_any: ["medium"]}
+
+  - id: bitnet_label_seed912587_006
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=6"
+    question: "Classify size as small, medium, or large: 3 kilometers. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "large"}
+    gate: {kind: contains_any, contains_any: ["large"]}
+
+  - id: bitnet_label_seed912587_007
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=7"
+    question: "Classify route as local or remote: The request stays on this Mac. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "local"}
+    gate: {kind: contains_any, contains_any: ["local"]}
+
+  - id: bitnet_label_seed912587_008
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=8"
+    question: "Classify route as local or remote: The request goes to a cloud API. Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "remote"}
+    gate: {kind: contains_any, contains_any: ["remote"]}
+
+  - id: bitnet_label_seed912587_009
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=9"
+    question: "Classify answer as yes or no: Is ice frozen water? Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "yes"}
+    gate: {kind: starts_with_any, starts_with_any: ["yes"]}
+
+  - id: bitnet_label_seed912587_010
+    category: closed_label_classification
+    seed_material: "seed=912587 family=closed_label index=10"
+    question: "Classify answer as yes or no: Is the sun made of ice? Answer with one label."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "no"}
+    gate: {kind: starts_with_any, starts_with_any: ["no"]}
+
+  - id: bitnet_extract_seed912587_001
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=1"
+    question: "Extract the code from this text: 'ticket code is AX-14 and owner is Mia'. Answer with only the code."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "ax-14"}
+    gate: {kind: contains_any, contains_any: ["AX-14", "ax-14"]}
+
+  - id: bitnet_extract_seed912587_002
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=2"
+    question: "Extract the owner from this text: 'ticket code is AX-14 and owner is Mia'. Answer with only the owner."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "mia"}
+    gate: {kind: contains_any, contains_any: ["Mia", "mia"]}
+
+  - id: bitnet_extract_seed912587_003
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=3"
+    question: "Extract the port from this text: 'server host alpha uses port 8080'. Answer with only the number."
+    max_new_tokens: 12
+    scoring: {kind: exact_match, expected_normalized: "8080"}
+    gate: {kind: exact_trimmed, expected: "8080"}
+
+  - id: bitnet_extract_seed912587_004
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=4"
+    question: "Extract the host from this text: 'server host alpha uses port 8080'. Answer with only the host."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "alpha"}
+    gate: {kind: contains_any, contains_any: ["alpha"]}
+
+  - id: bitnet_extract_seed912587_005
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=5"
+    question: "Extract the date from this text: 'backup date is 2026-05-15 and status is ok'. Answer with only the date."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "2026-05-15"}
+    gate: {kind: contains_any, contains_any: ["2026-05-15"]}
+
+  - id: bitnet_extract_seed912587_006
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=6"
+    question: "Extract the status from this text: 'backup date is 2026-05-15 and status is ok'. Answer with only the status."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "ok"}
+    gate: {kind: contains_any, contains_any: ["ok"]}
+
+  - id: bitnet_extract_seed912587_007
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=7"
+    question: "Extract the SKU from this text: 'SKU Z9Q and quantity 17 were shipped'. Answer with only the SKU."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "z9q"}
+    gate: {kind: contains_any, contains_any: ["Z9Q", "z9q"]}
+
+  - id: bitnet_extract_seed912587_008
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=8"
+    question: "Extract the quantity from this text: 'SKU Z9Q and quantity 17 were shipped'. Answer with only the number."
+    max_new_tokens: 12
+    scoring: {kind: exact_match, expected_normalized: "17"}
+    gate: {kind: exact_trimmed, expected: "17"}
+
+  - id: bitnet_extract_seed912587_009
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=9"
+    question: "Extract the region from this text: 'region west, priority high, owner Lee'. Answer with only the region."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "west"}
+    gate: {kind: contains_any, contains_any: ["west"]}
+
+  - id: bitnet_extract_seed912587_010
+    category: synthetic_extraction
+    seed_material: "seed=912587 family=extraction index=10"
+    question: "Extract the priority from this text: 'region west, priority high, owner Lee'. Answer with only the priority."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "high"}
+    gate: {kind: contains_any, contains_any: ["high"]}
+
+  - id: bitnet_sort_seed912587_001
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=1"
+    question: "Sort these numbers ascending: 9, 2, 5. Answer as comma-separated numbers."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "2, 5, 9"}
+    gate: {kind: contains_any, contains_any: ["2, 5, 9", "2,5,9"]}
+
+  - id: bitnet_sort_seed912587_002
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=2"
+    question: "Sort these numbers ascending: 4, 1, 7. Answer as comma-separated numbers."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "1, 4, 7"}
+    gate: {kind: contains_any, contains_any: ["1, 4, 7", "1,4,7"]}
+
+  - id: bitnet_sort_seed912587_003
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=3"
+    question: "Sort these words alphabetically: pear, apple, lime. Answer as comma-separated words."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "apple, lime, pear"}
+    gate: {kind: contains_any, contains_any: ["apple, lime, pear", "apple,lime,pear"]}
+
+  - id: bitnet_sort_seed912587_004
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=4"
+    question: "Sort these words alphabetically: beta, alpha, gamma. Answer as comma-separated words."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "alpha, beta, gamma"}
+    gate: {kind: contains_any, contains_any: ["alpha, beta, gamma", "alpha,beta,gamma"]}
+
+  - id: bitnet_sort_seed912587_005
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=5"
+    question: "Order these steps from first to last: finish, start, middle. Answer as comma-separated words."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "start, middle, finish"}
+    gate: {kind: contains_any, contains_any: ["start, middle, finish", "start,middle,finish"]}
+
+  - id: bitnet_sort_seed912587_006
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=6"
+    question: "Order these sizes from smallest to largest: large, small, medium. Answer as comma-separated words."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "small, medium, large"}
+    gate: {kind: contains_any, contains_any: ["small, medium, large", "small,medium,large"]}
+
+  - id: bitnet_sort_seed912587_007
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=7"
+    question: "Sort these numbers descending: 3, 8, 1. Answer as comma-separated numbers."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "8, 3, 1"}
+    gate: {kind: contains_any, contains_any: ["8, 3, 1", "8,3,1"]}
+
+  - id: bitnet_sort_seed912587_008
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=8"
+    question: "Sort these numbers descending: 10, 4, 6. Answer as comma-separated numbers."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "10, 6, 4"}
+    gate: {kind: contains_any, contains_any: ["10, 6, 4", "10,6,4"]}
+
+  - id: bitnet_sort_seed912587_009
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=9"
+    question: "Order these days from earliest to latest in a week: Friday, Monday, Wednesday. Answer as comma-separated words."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "monday, wednesday, friday"}
+    gate: {kind: contains_any, contains_any: ["Monday, Wednesday, Friday", "monday, wednesday, friday"]}
+
+  - id: bitnet_sort_seed912587_010
+    category: ordering_sorting
+    seed_material: "seed=912587 family=sorting index=10"
+    question: "Order these months from earliest to latest: March, January, February. Answer as comma-separated words."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "january, february, march"}
+    gate: {kind: contains_any, contains_any: ["January, February, March", "january, february, march"]}
+
+  - id: bitnet_rewrite_seed912587_001
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=1"
+    question: "Rewrite in lowercase only: LOCAL MODEL"
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "local model"}
+    gate: {kind: contains_any, contains_any: ["local model"]}
+
+  - id: bitnet_rewrite_seed912587_002
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=2"
+    question: "Rewrite in uppercase only: local model"
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "local model"}
+    gate: {kind: contains_any, contains_any: ["LOCAL MODEL", "local model"]}
+
+  - id: bitnet_rewrite_seed912587_003
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=3"
+    question: "Remove extra spaces and repeat: alpha   beta   gamma"
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "alpha beta gamma"}
+    gate: {kind: contains_any, contains_any: ["alpha beta gamma"]}
+
+  - id: bitnet_rewrite_seed912587_004
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=4"
+    question: "Correct the casing and answer with only the phrase: biTnEt runNeR"
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "bitnet runner"}
+    gate: {kind: contains_any, contains_any: ["bitnet runner", "BitNet runner", "BitNet Runner"]}
+
+  - id: bitnet_rewrite_seed912587_005
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=5"
+    question: "Rewrite as two words without punctuation: fast, local."
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "fast local"}
+    gate: {kind: contains_any, contains_any: ["fast local"]}
+
+  - id: bitnet_rewrite_seed912587_006
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=6"
+    question: "Change this sentence to present tense: The model loaded. Answer with only the sentence."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "the model loads"}
+    gate: {kind: contains_any, contains_any: ["model loads"]}
+
+  - id: bitnet_rewrite_seed912587_007
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=7"
+    question: "Change this sentence to past tense: The cache warms. Answer with only the sentence."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "the cache warmed"}
+    gate: {kind: contains_any, contains_any: ["cache warmed"]}
+
+  - id: bitnet_rewrite_seed912587_008
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=8"
+    question: "Replace the word slow with fast: The run is slow. Answer with only the new sentence."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "the run is fast"}
+    gate: {kind: contains_any, contains_any: ["run is fast"]}
+
+  - id: bitnet_rewrite_seed912587_009
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=9"
+    question: "Replace the word remote with local: The route is remote. Answer with only the new sentence."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "the route is local"}
+    gate: {kind: contains_any, contains_any: ["route is local"]}
+
+  - id: bitnet_rewrite_seed912587_010
+    category: rewrite_normalized
+    seed_material: "seed=912587 family=rewrite index=10"
+    question: "Repeat exactly without quotes: receipt ready"
+    max_new_tokens: 12
+    scoring: {kind: normalized_match, expected_normalized: "receipt ready"}
+    gate: {kind: contains_any, contains_any: ["receipt ready"]}
+
+  - id: bitnet_summary_seed912587_001
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=1"
+    question: "Summarize in one short sentence and include the word local: The model runs on the Mac without sending data elsewhere."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["local"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_002
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=2"
+    question: "Summarize in one short sentence and include the word receipt: The run records timing, model hash, and generated tokens."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["receipt"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_003
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=3"
+    question: "Summarize in one short sentence and include the word cache: Reusing a loaded model can reduce repeated setup work."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["cache"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_004
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=4"
+    question: "Summarize in one short sentence and include the word token: The system records the IDs produced by generation."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["token"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_005
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=5"
+    question: "Summarize in one short sentence and include the word fallback: The run must say whether it used another backend."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["fallback"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_006
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=6"
+    question: "Summarize in one short sentence and include the word timeout: A slow run should explain where it stopped."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["timeout"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_007
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=7"
+    question: "Summarize in one short sentence and include the word backend: The selected runtime path must be written into the receipt."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["backend"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_008
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=8"
+    question: "Summarize in one short sentence and include the word prompt: The input is rendered through a fixed template before generation."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["prompt"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_009
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=9"
+    question: "Summarize in one short sentence and include the word memory: Benchmarks should report peak resident size."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["memory"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_summary_seed912587_010
+    category: constrained_summary
+    seed_material: "seed=912587 family=summary index=10"
+    question: "Summarize in one short sentence and include the word warm: A reused session should avoid reloading the model each turn."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["warm"]}
+    gate: {kind: readable, min_words: 3}
+
+  - id: bitnet_required_forbidden_seed912587_001
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=1"
+    question: "Answer in one sentence. Include local. Do not use cloud."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["local"], forbidden_tokens: ["cloud"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_002
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=2"
+    question: "Answer in one sentence. Include receipt. Do not use hidden."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["receipt"], forbidden_tokens: ["hidden"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_003
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=3"
+    question: "Answer in one sentence. Include hash. Do not use unknown."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["hash"], forbidden_tokens: ["unknown"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_004
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=4"
+    question: "Answer in one sentence. Include tokenizer. Do not use default."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["tokenizer"], forbidden_tokens: ["default"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_005
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=5"
+    question: "Answer in one sentence. Include cpu. Do not use gpu."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["cpu"], forbidden_tokens: ["gpu"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_006
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=6"
+    question: "Answer in one sentence. Include strict. Do not use loose."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["strict"], forbidden_tokens: ["loose"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_007
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=7"
+    question: "Answer in one sentence. Include timing. Do not use instant."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["timing"], forbidden_tokens: ["instant"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_008
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=8"
+    question: "Answer in one sentence. Include warm. Do not use chat."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["warm"], forbidden_tokens: ["chat"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_009
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=9"
+    question: "Answer in one sentence. Include ask. Do not use serve."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["ask"], forbidden_tokens: ["serve"]}
+    gate: {kind: readable, min_words: 2}
+
+  - id: bitnet_required_forbidden_seed912587_010
+    category: required_forbidden_tokens
+    seed_material: "seed=912587 family=required_forbidden index=10"
+    question: "Answer in one sentence. Include measured. Do not use magic."
+    max_new_tokens: 24
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["measured"], forbidden_tokens: ["magic"]}
+    gate: {kind: readable, min_words: 2}

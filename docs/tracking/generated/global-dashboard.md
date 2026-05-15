@@ -7,6 +7,7 @@
 | apple-bitnet-artifact-sweep | ABAS-001 | TBD | proposed | ABAS-002 | Use MacBook first for larger artifact sweeps; do not manufacture MacBook receipts from the M4 Mac mini. |
 | apple-m3-macbook-air | M3MBA-010 | #4839 | in_progress | none | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
+| apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-001 | TBD | in_progress | M4-BITNET-EVAL-002 | This is an M4 Mac mini BitNet campaign. |
 | apple-m4-continuity | M4-CONT-005 | #4270 | merged | none | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | #4198 | merged | none | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
 | apple-m4-local-answer | M4-BITNET-WARM-002 | #4705 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
