@@ -934,8 +934,17 @@ fn reference_server_probe(receipt_path: Option<&Path>) -> Result<ReferenceServer
     }
 
     let receipt = read_json(path)?;
-    let raw_ids =
-        array_u32(&receipt, "/reference_probability_tokenization/selected_logit_probe_ids");
+    let raw_ids = {
+        let server_ids = array_u32(
+            &receipt,
+            "/reference_probability_tokenization_sources/reference_server_probability_tokenization/selected_logit_probe_ids",
+        );
+        if server_ids.is_empty() {
+            array_u32(&receipt, "/reference_probability_tokenization/selected_logit_probe_ids")
+        } else {
+            server_ids
+        }
+    };
     let logit_ids = unique_limited_token_ids(&raw_ids, REFERENCE_SELECTED_LOGIT_PROBE_LIMIT);
     Ok(ReferenceServerProbe {
         report: json!({
@@ -954,6 +963,14 @@ fn reference_server_probe(receipt_path: Option<&Path>) -> Result<ReferenceServer
                 .pointer("/reference_probability_tokenization/policy")
                 .cloned()
                 .unwrap_or(Value::Null),
+            "preferred_source": if receipt
+                .pointer("/reference_probability_tokenization_sources/reference_server_probability_tokenization/selected_logit_probe_ids")
+                .and_then(Value::as_array)
+                .is_some_and(|items| !items.is_empty()) {
+                "reference_server_probability_tokenization"
+            } else {
+                "reference_probability_tokenization"
+            },
             "source_not_claims": receipt
                 .pointer("/reference_probability_tokenization/not_claims")
                 .cloned()
@@ -1299,6 +1316,11 @@ mod tests {
                     "not_claims": [
                         "reference_probability_tokenization_proves_reference_generated_token_ids"
                     ]
+                },
+                "reference_probability_tokenization_sources": {
+                    "reference_server_probability_tokenization": {
+                        "selected_logit_probe_ids": [220, 17, 220]
+                    }
                 }
             }))
             .unwrap(),
@@ -1307,12 +1329,16 @@ mod tests {
 
         let probe = reference_server_probe(Some(&receipt_path)).unwrap();
 
-        assert_eq!(probe.logit_ids, vec![17, 791, 644]);
+        assert_eq!(probe.logit_ids, vec![220, 17]);
         assert_eq!(probe.report["diagnostic_only"], true);
         assert_eq!(probe.report["claimable"], false);
         assert_eq!(probe.report["tokenization_ready"], true);
         assert_eq!(probe.report["source_receipt_type"], json!("bitnet_reference_server_run"));
         assert_eq!(probe.report["source_tokenization_ready"], true);
+        assert_eq!(
+            probe.report["preferred_source"],
+            json!("reference_server_probability_tokenization")
+        );
         let not_claims = probe.report["not_claims"].as_array().unwrap();
         assert!(not_claims.contains(&json!(
             "reference_server_probability_tokenization_proves_reference_generated_token_ids"

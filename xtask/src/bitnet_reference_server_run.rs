@@ -190,6 +190,26 @@ fn run_reference_server(args: &ReferenceServerRunArgs) -> Result<Value> {
         .json()
         .context("parsing reference server completion JSON")?;
     let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let probability_strings = probability_strings_from_response(&response);
+    let reference_server_probability_tokenization =
+        reference_server_probability_tokenization_from_endpoint(
+            &client,
+            port,
+            probability_strings.selected_content.as_deref(),
+            &probability_strings.top_probability_strings,
+        )
+        .unwrap_or_else(|error| {
+            json!({
+                "source": "llama_server_tokenize_endpoint",
+                "diagnostic_only": true,
+                "claimable": false,
+                "tokenization_ready": false,
+                "blocked_reasons": ["reference_server_tokenize_endpoint_failed"],
+                "error": error.to_string(),
+                "tokenization_policy": reference_server_probability_tokenization_policy(),
+                "not_claims": REFERENCE_PROBABILITY_TOKENIZATION_NOT_CLAIMS,
+            })
+        });
     Ok(build_receipt(
         &args.plan,
         &args.reference_run_receipt,
@@ -200,6 +220,7 @@ fn run_reference_server(args: &ReferenceServerRunArgs) -> Result<Value> {
         &request,
         &response,
         elapsed_ms,
+        Some(reference_server_probability_tokenization),
     ))
 }
 
@@ -272,6 +293,7 @@ fn build_receipt(
     request: &Value,
     response: &Value,
     elapsed_ms: f64,
+    reference_server_probability_tokenization: Option<Value>,
 ) -> Value {
     let prompt_token_ids =
         array_u32(reference_run_receipt, "/reference_prompt_tokenization/token_ids");
@@ -284,40 +306,27 @@ fn build_receipt(
         plan_prompt_token_count.map(|count| count as usize == prompt_token_ids.len());
     let completion_probabilities =
         response.pointer("/completion_probabilities").cloned().unwrap_or(Value::Null);
-    let first_completion = response.pointer("/completion_probabilities/0");
-    let first_selected_content =
-        first_completion.and_then(|value| value.pointer("/content")).and_then(Value::as_str);
-    let first_top_probability_strings = first_completion
-        .and_then(|value| value.pointer("/probs"))
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .map(|item| {
-                    json!({
-                        "tok_str": item.pointer("/tok_str").and_then(Value::as_str),
-                        "prob": item.pointer("/prob").and_then(Value::as_f64),
-                        "token_id_present": item.pointer("/id")
-                            .or_else(|| item.pointer("/token_id"))
-                            .is_some(),
-                    })
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    let top_probability_token_ids_present = first_top_probability_strings
-        .iter()
-        .any(|item| item.pointer("/token_id_present").and_then(Value::as_bool) == Some(true));
-    let reference_probability_tokenization = reference_probability_tokenization_from_plan(
+    let probability_strings = probability_strings_from_response(response);
+    let rust_probability_tokenization = reference_probability_tokenization_from_plan(
         plan,
-        first_selected_content,
-        &first_top_probability_strings,
+        probability_strings.selected_content.as_deref(),
+        &probability_strings.top_probability_strings,
     );
+    let reference_server_probability_tokenization = reference_server_probability_tokenization
+        .unwrap_or_else(|| reference_server_probability_tokenization_not_attempted());
+    let reference_probability_tokenization =
+        if tokenization_ready(&reference_server_probability_tokenization) {
+            reference_server_probability_tokenization.clone()
+        } else {
+            rust_probability_tokenization.clone()
+        };
+    let selected_tokenization_source = str_at(&reference_probability_tokenization, "/source")
+        .unwrap_or("unknown_probability_string_probe");
     let mut blocked_reasons = Vec::new();
     if response.pointer("/content").and_then(Value::as_str).unwrap_or("").is_empty() {
         blocked_reasons.push("reference_server_content_missing".to_string());
     }
-    if first_selected_content.is_none() {
+    if probability_strings.selected_content.is_none() {
         blocked_reasons.push("reference_server_selected_content_missing".to_string());
     }
     if prompt_token_ids_sha256_matches_plan == Some(false) {
@@ -386,9 +395,9 @@ fn build_receipt(
             "source": "llama-server_completion_probabilities",
             "diagnostic_only": true,
             "claimable": false,
-            "selected_content": first_selected_content,
-            "top_probability_strings": first_top_probability_strings,
-            "top_probability_token_ids_present": top_probability_token_ids_present,
+            "selected_content": probability_strings.selected_content,
+            "top_probability_strings": probability_strings.top_probability_strings,
+            "top_probability_token_ids_present": probability_strings.top_probability_token_ids_present,
             "policy": "llama-server completion_probabilities expose selected text and probability strings in this build; token ids and raw logits are not present and are not inferred",
             "not_claims": [
                 "reference_probability_strings_prove_reference_generated_token_ids",
@@ -398,11 +407,18 @@ fn build_receipt(
             ],
         },
         "reference_probability_tokenization": reference_probability_tokenization,
+        "reference_probability_tokenization_sources": {
+            "selected_source": selected_tokenization_source,
+            "reference_server_probability_tokenization": reference_server_probability_tokenization,
+            "rust_probability_tokenization": rust_probability_tokenization,
+            "policy": "prefer live llama-server /tokenize IDs for probability-string selected-logit probes when available; fall back to Rust tokenizer probes only as diagnostic candidates",
+            "not_claims": REFERENCE_PROBABILITY_TOKENIZATION_NOT_CLAIMS,
+        },
         "signals": {
             "server_completion_present": response.pointer("/content").and_then(Value::as_str).is_some_and(|text| !text.is_empty()),
             "completion_probabilities_present": response.pointer("/completion_probabilities").is_some(),
-            "selected_content_present": first_selected_content.is_some(),
-            "top_probability_strings_present": !first_top_probability_strings.is_empty(),
+            "selected_content_present": probability_strings.selected_content.is_some(),
+            "top_probability_strings_present": !probability_strings.top_probability_strings.is_empty(),
             "actual_generated_token_ids_present": false,
             "top_logits_present": false,
             "policy": "reference server receipts capture exact prompt-token input and probability strings only; generated token ids and top logits remain unclaimed unless the reference endpoint provides token ids/logits explicitly",
@@ -414,6 +430,47 @@ fn build_receipt(
         },
         "not_claims": CRITICAL_NOT_CLAIMS,
     })
+}
+
+struct ProbabilityStrings {
+    selected_content: Option<String>,
+    top_probability_strings: Vec<Value>,
+    top_probability_token_ids_present: bool,
+}
+
+fn probability_strings_from_response(response: &Value) -> ProbabilityStrings {
+    let first_completion = response.pointer("/completion_probabilities/0");
+    let selected_content = first_completion
+        .and_then(|value| value.pointer("/content"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let top_probability_strings = first_completion
+        .and_then(|value| value.pointer("/probs"))
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| {
+                    json!({
+                        "tok_str": item.pointer("/tok_str").and_then(Value::as_str),
+                        "prob": item.pointer("/prob").and_then(Value::as_f64),
+                        "token_id_present": item.pointer("/id")
+                            .or_else(|| item.pointer("/token_id"))
+                            .is_some(),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let top_probability_token_ids_present = top_probability_strings
+        .iter()
+        .any(|item| item.pointer("/token_id_present").and_then(Value::as_bool) == Some(true));
+
+    ProbabilityStrings {
+        selected_content,
+        top_probability_strings,
+        top_probability_token_ids_present,
+    }
 }
 
 fn reference_probability_tokenization_from_plan(
@@ -462,6 +519,158 @@ fn reference_probability_tokenization_from_plan(
             "not_claims": REFERENCE_PROBABILITY_TOKENIZATION_NOT_CLAIMS,
         }),
     }
+}
+
+fn reference_server_probability_tokenization_from_endpoint(
+    client: &reqwest::blocking::Client,
+    port: u16,
+    selected_content: Option<&str>,
+    top_probability_strings: &[Value],
+) -> Result<Value> {
+    let selected_content_tokenization = selected_content
+        .map(|text| tokenize_probability_string_with_reference_server(client, port, text))
+        .transpose()?;
+    let top_probability_tokenizations = top_probability_strings
+        .iter()
+        .map(|item| {
+            let tok_str = item.pointer("/tok_str").and_then(Value::as_str);
+            let tokenization = tok_str
+                .map(|text| tokenize_probability_string_with_reference_server(client, port, text))
+                .transpose()?
+                .unwrap_or_else(|| {
+                    json!({
+                        "tokenization_ready": false,
+                        "blocked_reasons": ["probability_string_missing"],
+                    })
+                });
+            Ok(json!({
+                "tok_str": tok_str,
+                "prob": item.pointer("/prob").and_then(Value::as_f64),
+                "tokenization": tokenization,
+            }))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(reference_server_probability_tokenization_report(
+        selected_content_tokenization,
+        top_probability_tokenizations,
+    ))
+}
+
+fn tokenize_probability_string_with_reference_server(
+    client: &reqwest::blocking::Client,
+    port: u16,
+    text: &str,
+) -> Result<Value> {
+    let response: Value = client
+        .post(format!("http://127.0.0.1:{port}/tokenize"))
+        .json(&json!({
+            "content": text,
+            "add_special": false,
+            "with_pieces": true,
+        }))
+        .send()
+        .with_context(|| format!("posting reference tokenizer request for {text:?}"))?
+        .error_for_status()
+        .with_context(|| format!("reference tokenizer request failed for {text:?}"))?
+        .json()
+        .with_context(|| format!("parsing reference tokenizer response for {text:?}"))?;
+    Ok(reference_server_probability_string_tokenization(text, &response))
+}
+
+fn reference_server_probability_tokenization_report(
+    selected_content_tokenization: Option<Value>,
+    top_probability_tokenizations: Vec<Value>,
+) -> Value {
+    let mut selected_logit_probe_ids = Vec::new();
+    if let Some(tokenization) = &selected_content_tokenization {
+        push_candidate_ids_from_tokenization(&mut selected_logit_probe_ids, tokenization);
+    }
+    for item in &top_probability_tokenizations {
+        if let Some(tokenization) = item.pointer("/tokenization") {
+            push_candidate_ids_from_tokenization(&mut selected_logit_probe_ids, tokenization);
+        }
+        if selected_logit_probe_ids.len() >= REFERENCE_PROBABILITY_PROBE_ID_LIMIT {
+            selected_logit_probe_ids.truncate(REFERENCE_PROBABILITY_PROBE_ID_LIMIT);
+            break;
+        }
+    }
+    let selected_logit_probe_ids_sha256 = if selected_logit_probe_ids.is_empty() {
+        None
+    } else {
+        sha256_token_ids(&selected_logit_probe_ids).ok()
+    };
+    json!({
+        "source": "llama_server_tokenize_endpoint_probability_string_probe",
+        "diagnostic_only": true,
+        "claimable": false,
+        "tokenization_ready": selected_logit_probe_ids_sha256.is_some(),
+        "tokenization_policy": reference_server_probability_tokenization_policy(),
+        "selected_content_tokenization": selected_content_tokenization,
+        "top_probability_tokenizations": top_probability_tokenizations,
+        "selected_logit_probe_ids": selected_logit_probe_ids,
+        "selected_logit_probe_ids_sha256": selected_logit_probe_ids_sha256,
+        "policy": "tokenizes reference probability strings with the live llama-server /tokenize endpoint to choose bounded Rust selected-logit probes only; this does not prove reference generated token ids or reference top logits",
+        "not_claims": REFERENCE_PROBABILITY_TOKENIZATION_NOT_CLAIMS,
+    })
+}
+
+fn reference_server_probability_string_tokenization(text: &str, response: &Value) -> Value {
+    let mut candidate_token_ids = Vec::new();
+    let token_items =
+        response.pointer("/tokens").and_then(Value::as_array).cloned().unwrap_or_default();
+    let tokens = token_items
+        .iter()
+        .map(|item| {
+            if let Some(id) = item.as_u64().and_then(|id| u32::try_from(id).ok()) {
+                push_unique(&mut candidate_token_ids, id);
+                json!({ "id": id, "piece": Value::Null })
+            } else {
+                let id = item
+                    .pointer("/id")
+                    .and_then(Value::as_u64)
+                    .and_then(|id| u32::try_from(id).ok());
+                if let Some(id) = id {
+                    push_unique(&mut candidate_token_ids, id);
+                }
+                json!({
+                    "id": id,
+                    "piece": item.pointer("/piece").cloned().unwrap_or(Value::Null),
+                })
+            }
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "tokenization_ready": !candidate_token_ids.is_empty(),
+        "content": text,
+        "tokens": tokens,
+        "candidate_token_ids": candidate_token_ids,
+    })
+}
+
+fn reference_server_probability_tokenization_not_attempted() -> Value {
+    json!({
+        "source": "llama_server_tokenize_endpoint_probability_string_probe",
+        "diagnostic_only": true,
+        "claimable": false,
+        "tokenization_ready": false,
+        "blocked_reasons": ["reference_server_tokenize_endpoint_not_attempted"],
+        "tokenization_policy": reference_server_probability_tokenization_policy(),
+        "not_claims": REFERENCE_PROBABILITY_TOKENIZATION_NOT_CLAIMS,
+    })
+}
+
+fn reference_server_probability_tokenization_policy() -> Value {
+    json!({
+        "endpoint": "/tokenize",
+        "add_special": false,
+        "with_pieces": true,
+        "deduplicate_probe_ids_preserving_order": true,
+        "probe_id_limit": REFERENCE_PROBABILITY_PROBE_ID_LIMIT,
+    })
+}
+
+fn tokenization_ready(value: &Value) -> bool {
+    value.pointer("/tokenization_ready").and_then(Value::as_bool).unwrap_or(false)
 }
 
 fn probability_string_tokenization(
@@ -756,6 +965,30 @@ mod tests {
             &request,
             &response,
             5.0,
+            Some(reference_server_probability_tokenization_report(
+                Some(reference_server_probability_string_tokenization(
+                    "2",
+                    &json!({"tokens": [{"id": 17, "piece": "2"}]}),
+                )),
+                vec![
+                    json!({
+                        "tok_str": "2",
+                        "prob": 0.75,
+                        "tokenization": reference_server_probability_string_tokenization(
+                            "2",
+                            &json!({"tokens": [{"id": 17, "piece": "2"}]})
+                        ),
+                    }),
+                    json!({
+                        "tok_str": "The",
+                        "prob": 0.12,
+                        "tokenization": reference_server_probability_string_tokenization(
+                            "The",
+                            &json!({"tokens": [{"id": 791, "piece": "The"}]})
+                        ),
+                    }),
+                ],
+            )),
         );
 
         assert_eq!(receipt["claim_allowed"], false);
@@ -773,6 +1006,23 @@ mod tests {
         );
         assert_eq!(receipt["reference_probability_tokenization"]["diagnostic_only"], true);
         assert_eq!(receipt["reference_probability_tokenization"]["claimable"], false);
+        assert_eq!(
+            receipt["reference_probability_tokenization"]["source"],
+            json!("llama_server_tokenize_endpoint_probability_string_probe")
+        );
+        assert_eq!(
+            receipt["reference_probability_tokenization"]["selected_logit_probe_ids"],
+            json!([17, 791])
+        );
+        assert_eq!(
+            receipt["reference_probability_tokenization_sources"]["selected_source"],
+            json!("llama_server_tokenize_endpoint_probability_string_probe")
+        );
+        assert_eq!(
+            receipt["reference_probability_tokenization_sources"]["rust_probability_tokenization"]
+                ["source"],
+            json!("rust_tokenizer_probability_string_probe")
+        );
         let not_claims = receipt["not_claims"].as_array().unwrap();
         assert!(not_claims.contains(&json!("reference_generated_token_ids")));
         assert!(not_claims.contains(&json!("reference_top_logits")));
@@ -822,6 +1072,52 @@ mod tests {
     }
 
     #[test]
+    fn reference_server_tokenization_probe_prefers_live_token_ids_without_promoting_claims() {
+        let selected = reference_server_probability_string_tokenization(
+            "2",
+            &json!({"tokens": [{"id": 17, "piece": "2"}]}),
+        );
+        let top = vec![
+            json!({
+                "tok_str": "2",
+                "prob": 0.75,
+                "tokenization": reference_server_probability_string_tokenization(
+                    "2",
+                    &json!({"tokens": [{"id": 17, "piece": "2"}]})
+                ),
+            }),
+            json!({
+                "tok_str": "The",
+                "prob": 0.12,
+                "tokenization": reference_server_probability_string_tokenization(
+                    "The",
+                    &json!({"tokens": [{"id": 791, "piece": "The"}]})
+                ),
+            }),
+        ];
+
+        let report = reference_server_probability_tokenization_report(Some(selected), top);
+
+        assert_eq!(
+            report["source"],
+            json!("llama_server_tokenize_endpoint_probability_string_probe")
+        );
+        assert_eq!(report["diagnostic_only"], true);
+        assert_eq!(report["claimable"], false);
+        assert_eq!(report["tokenization_ready"], true);
+        assert_eq!(report["selected_logit_probe_ids"], json!([17, 791]));
+        assert_eq!(report["selected_content_tokenization"]["tokens"][0]["piece"], json!("2"));
+        let not_claims = report["not_claims"].as_array().unwrap();
+        assert!(not_claims.contains(&json!(
+            "reference_probability_tokenization_proves_reference_generated_token_ids"
+        )));
+        assert!(
+            not_claims
+                .contains(&json!("reference_probability_tokenization_proves_reference_top_logits"))
+        );
+    }
+
+    #[test]
     fn server_receipt_blocks_prompt_hash_mismatch() {
         let plan = json!({
             "prompt_identity": {
@@ -850,6 +1146,7 @@ mod tests {
                 "completion_probabilities": [{"content": "x", "probs": []}]
             }),
             5.0,
+            None,
         );
 
         assert_eq!(receipt["decision"]["reference_server_execution_ready"], false);
