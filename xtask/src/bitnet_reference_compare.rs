@@ -12,6 +12,8 @@ const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "full_support_op_residency",
     "full_device_residency",
     "completion",
+    "reference_generated_token_ids",
+    "reference_top_logits",
     "reference_parity_promotion",
     "a770_semantic_quality_proven",
 ];
@@ -19,6 +21,7 @@ const CRITICAL_NOT_CLAIMS: &[&str] = &[
 #[derive(Debug)]
 struct CompareArgs {
     reference: PathBuf,
+    reference_server: Option<PathBuf>,
     cpu: PathBuf,
     a770: PathBuf,
     output: Option<PathBuf>,
@@ -42,6 +45,13 @@ struct OutputSignal {
     top_logits: Option<Vec<TopLogit>>,
     selected_logits: Option<Vec<SelectedLogit>>,
     reference_text_candidate_ids: Option<Vec<i64>>,
+    prompt: PromptIdentity,
+}
+
+#[derive(Clone, Debug)]
+struct ReferenceServerSignal {
+    selected_content: Option<String>,
+    top_probability_strings: Option<Vec<String>>,
     prompt: PromptIdentity,
 }
 
@@ -96,12 +106,13 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
 
 fn print_help() {
     println!(
-        "cargo xtask bitnet-reference-compare --reference <json> --cpu <json> --a770 <json> [--output <json>] [--format human|json]"
+        "cargo xtask bitnet-reference-compare --reference <json> [--reference-server <json>] --cpu <json> --a770 <json> [--output <json>] [--format human|json]"
     );
 }
 
 fn parse_args(args: &[String]) -> Result<CompareArgs> {
     let mut reference: Option<PathBuf> = None;
+    let mut reference_server: Option<PathBuf> = None;
     let mut cpu: Option<PathBuf> = None;
     let mut a770: Option<PathBuf> = None;
     let mut output: Option<PathBuf> = None;
@@ -117,6 +128,7 @@ fn parse_args(args: &[String]) -> Result<CompareArgs> {
         };
         match key {
             "--reference" => reference = Some(PathBuf::from(value()?)),
+            "--reference-server" => reference_server = Some(PathBuf::from(value()?)),
             "--cpu" => cpu = Some(PathBuf::from(value()?)),
             "--a770" => a770 = Some(PathBuf::from(value()?)),
             "--output" => output = Some(PathBuf::from(value()?)),
@@ -126,6 +138,7 @@ fn parse_args(args: &[String]) -> Result<CompareArgs> {
     }
     Ok(CompareArgs {
         reference: reference.context("--reference is required")?,
+        reference_server,
         cpu: cpu.context("--cpu is required")?,
         a770: a770.context("--a770 is required")?,
         output,
@@ -135,19 +148,55 @@ fn parse_args(args: &[String]) -> Result<CompareArgs> {
 
 fn build_report(args: &CompareArgs) -> Value {
     let reference = read_receipt(&args.reference);
+    let reference_server = args.reference_server.as_ref().map(|path| read_receipt(path));
     let cpu = read_receipt(&args.cpu);
     let a770 = read_receipt(&args.a770);
     let reference_signal = output_signal(reference.value.as_ref());
+    let reference_server_signal =
+        reference_server.as_ref().map(|input| reference_server_signal(input.value.as_ref()));
     let cpu_signal = output_signal(cpu.value.as_ref());
     let a770_signal = output_signal(a770.value.as_ref());
     let comparisons = json!({
         "reference_vs_cpu": compare_pair(&reference_signal, &cpu_signal),
         "reference_vs_a770": compare_pair(&reference_signal, &a770_signal),
         "cpu_vs_a770": compare_pair(&cpu_signal, &a770_signal),
+        "reference_server_vs_cpu": reference_server_signal
+            .as_ref()
+            .map(|signal| compare_reference_server_to_output(signal, &cpu_signal)),
+        "reference_server_vs_a770": reference_server_signal
+            .as_ref()
+            .map(|signal| compare_reference_server_to_output(signal, &a770_signal)),
     });
 
     let mut blocked_reasons = Vec::new();
     push_input_blockers(&mut blocked_reasons, "reference", &reference, &reference_signal);
+    if let Some(reference_server) = &reference_server {
+        push_reference_server_blockers(
+            &mut blocked_reasons,
+            reference_server,
+            reference_server_signal.as_ref(),
+        );
+        if !bool_at(&comparisons, "/reference_server_vs_cpu/selected_content_text_exact")
+            .unwrap_or(false)
+        {
+            blocked_reasons.push("reference_server_cpu_selected_content_not_exact".to_string());
+        }
+        if !bool_at(&comparisons, "/reference_server_vs_a770/selected_content_text_exact")
+            .unwrap_or(false)
+        {
+            blocked_reasons.push("reference_server_a770_selected_content_not_exact".to_string());
+        }
+        if !bool_at(&comparisons, "/reference_server_vs_cpu/prompt_identity_matched")
+            .unwrap_or(false)
+        {
+            blocked_reasons.push("reference_server_cpu_prompt_identity_not_matched".to_string());
+        }
+        if !bool_at(&comparisons, "/reference_server_vs_a770/prompt_identity_matched")
+            .unwrap_or(false)
+        {
+            blocked_reasons.push("reference_server_a770_prompt_identity_not_matched".to_string());
+        }
+    }
     push_input_blockers(&mut blocked_reasons, "cpu", &cpu, &cpu_signal);
     push_input_blockers(&mut blocked_reasons, "a770", &a770, &a770_signal);
     if !bool_at(&comparisons, "/cpu_vs_a770/token_ids_exact").unwrap_or(false) {
@@ -200,6 +249,10 @@ fn build_report(args: &CompareArgs) -> Value {
         "classification": "diagnostic_only",
         "inputs": {
             "reference": input_value(&reference, &reference_signal),
+            "reference_server": reference_server
+                .as_ref()
+                .zip(reference_server_signal.as_ref())
+                .map(|(input, signal)| reference_server_input_value(input, signal)),
             "cpu": input_value(&cpu, &cpu_signal),
             "a770": input_value(&a770, &a770_signal),
         },
@@ -272,6 +325,35 @@ fn output_signal(value: Option<&Value>) -> OutputSignal {
         top_logits: top_logits(value),
         selected_logits: selected_logits(value),
         reference_text_candidate_ids: reference_text_candidate_ids(value),
+        prompt: prompt_identity(value),
+    }
+}
+
+fn reference_server_signal(value: Option<&Value>) -> ReferenceServerSignal {
+    let Some(value) = value else {
+        return ReferenceServerSignal {
+            selected_content: None,
+            top_probability_strings: None,
+            prompt: PromptIdentity::default(),
+        };
+    };
+    let top_probability_strings = value
+        .pointer("/reference_probability_summary/top_probability_strings")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.pointer("/tok_str").and_then(Value::as_str))
+                .map(ToOwned::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .filter(|items| !items.is_empty());
+    ReferenceServerSignal {
+        selected_content: string_at(
+            value,
+            &["/reference_probability_summary/selected_content", "/response/content"],
+        ),
+        top_probability_strings,
         prompt: prompt_identity(value),
     }
 }
@@ -432,6 +514,25 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
     })
 }
 
+fn compare_reference_server_to_output(left: &ReferenceServerSignal, right: &OutputSignal) -> Value {
+    let selected_content_text_exact =
+        left.selected_content.as_ref().zip(right.text.as_ref()).map(|(left, right)| left == right);
+    json!({
+        "diagnostic_only": true,
+        "selected_content_available": left.selected_content.is_some(),
+        "right_text_available": right.text.is_some(),
+        "selected_content_text_exact": selected_content_text_exact,
+        "selected_content": left.selected_content.clone(),
+        "right_text": right.text.clone(),
+        "top_probability_strings_available": left.top_probability_strings.is_some(),
+        "top_probability_strings": left.top_probability_strings.clone(),
+        "prompt_identity": compare_prompt_identity(&left.prompt, &right.prompt),
+        "prompt_identity_available": left.prompt.available() && right.prompt.available(),
+        "prompt_identity_matched": left.prompt.matches(&right.prompt),
+        "not_claim": "reference server probability strings are not generated token IDs or raw logits",
+    })
+}
+
 fn reference_text_candidate_logits(left: &OutputSignal, right: &OutputSignal) -> Value {
     let candidate_ids = left.reference_text_candidate_ids.as_deref();
     let selected_logits = right.selected_logits.as_deref();
@@ -518,6 +619,21 @@ fn input_value(input: &ReceiptInput, signal: &OutputSignal) -> Value {
     })
 }
 
+fn reference_server_input_value(input: &ReceiptInput, signal: &ReferenceServerSignal) -> Value {
+    json!({
+        "path": input.path.display().to_string(),
+        "exists": input.exists,
+        "read_ok": input.read_ok,
+        "parse_ok": input.parse_ok,
+        "error": input.error,
+        "selected_content_present": signal.selected_content.is_some(),
+        "top_probability_strings_present": signal.top_probability_strings.is_some(),
+        "top_probability_string_count": signal.top_probability_strings.as_ref().map(Vec::len),
+        "prompt_identity_present": signal.prompt.available(),
+        "prompt_identity": prompt_identity_value(&signal.prompt),
+    })
+}
+
 fn push_input_blockers(
     blocked_reasons: &mut Vec<String>,
     label: &str,
@@ -544,6 +660,38 @@ fn push_input_blockers(
     }
     if !signal.prompt.available() {
         blocked_reasons.push(format!("{label}_prompt_identity_missing"));
+    }
+}
+
+fn push_reference_server_blockers(
+    blocked_reasons: &mut Vec<String>,
+    input: &ReceiptInput,
+    signal: Option<&ReferenceServerSignal>,
+) {
+    if !input.exists {
+        blocked_reasons.push("reference_server_receipt_missing".to_string());
+        return;
+    }
+    if !input.read_ok {
+        blocked_reasons.push("reference_server_receipt_unreadable".to_string());
+        return;
+    }
+    if !input.parse_ok {
+        blocked_reasons.push("reference_server_receipt_json_invalid".to_string());
+        return;
+    }
+    let Some(signal) = signal else {
+        blocked_reasons.push("reference_server_signal_missing".to_string());
+        return;
+    };
+    if signal.selected_content.is_none() {
+        blocked_reasons.push("reference_server_selected_content_missing".to_string());
+    }
+    if signal.top_probability_strings.is_none() {
+        blocked_reasons.push("reference_server_top_probability_strings_missing".to_string());
+    }
+    if !signal.prompt.available() {
+        blocked_reasons.push("reference_server_prompt_identity_missing".to_string());
     }
 }
 
@@ -762,6 +910,7 @@ mod tests {
     fn missing_reference_blocks_ready_report() {
         let args = CompareArgs {
             reference: PathBuf::from("target/missing-reference.json"),
+            reference_server: None,
             cpu: PathBuf::from("target/missing-cpu.json"),
             a770: PathBuf::from("target/missing-a770.json"),
             output: None,
@@ -824,6 +973,7 @@ mod tests {
 
         let report = build_report(&CompareArgs {
             reference: reference_path,
+            reference_server: None,
             cpu: cpu_path,
             a770: a770_path,
             output: None,
@@ -892,6 +1042,131 @@ mod tests {
         assert_eq!(identity.prompt_token_count, Some(17));
         assert_eq!(identity.add_bos_or_bos_policy, Some(false));
         assert_eq!(identity.parse_special, Some(true));
+    }
+
+    #[test]
+    fn compares_reference_server_selected_content_without_token_claims() {
+        let signal = reference_server_signal(Some(&json!({
+            "plan": {
+                "prompt_identity": {
+                    "prompt_template": "llama3-chat",
+                    "rendered_prompt_sha256": "rendered",
+                    "prompt_token_ids_sha256": "ids",
+                    "prompt_token_count": 18,
+                    "add_bos": false,
+                    "parse_special": true
+                }
+            },
+            "reference_probability_summary": {
+                "selected_content": "2",
+                "top_probability_strings": [
+                    {"tok_str": "2", "prob": 0.75, "token_id_present": false},
+                    {"tok_str": "The", "prob": 0.12, "token_id_present": false}
+                ]
+            }
+        })));
+        let rust = OutputSignal {
+            token_ids: Some(vec![58428]),
+            text: Some(".ps".to_string()),
+            top_logits: Some(vec![TopLogit { token_id: 58428, logit: 13.7 }]),
+            selected_logits: None,
+            reference_text_candidate_ids: None,
+            prompt: prompt("llama3-chat", "rendered", "ids", 18, false, true),
+        };
+
+        let report = compare_reference_server_to_output(&signal, &rust);
+
+        assert_eq!(report["diagnostic_only"], true);
+        assert_eq!(report["selected_content_available"], true);
+        assert_eq!(report["selected_content"], json!("2"));
+        assert_eq!(report["right_text"], json!(".ps"));
+        assert_eq!(report["selected_content_text_exact"], false);
+        assert_eq!(report["top_probability_strings_available"], true);
+        assert_eq!(report["prompt_identity_matched"], true);
+        assert_eq!(
+            report["not_claim"],
+            json!("reference server probability strings are not generated token IDs or raw logits")
+        );
+    }
+
+    #[test]
+    fn reference_server_receipt_adds_explicit_selected_content_blocker() {
+        let dir = tempfile::tempdir().unwrap();
+        let reference_path = dir.path().join("reference.json");
+        let reference_server_path = dir.path().join("reference-server.json");
+        let cpu_path = dir.path().join("cpu.json");
+        let a770_path = dir.path().join("a770.json");
+        let prompt = json!({
+            "prompt_template": "llama3-chat",
+            "rendered_prompt_sha256": "rendered",
+            "prompt_token_ids_sha256": "ids",
+            "prompt_token_count": 18,
+            "add_bos": false,
+            "parse_special": true
+        });
+        let top_logits = json!([{"token_id": 58428, "logit": 13.7}]);
+        let rust_receipt = json!({
+            "tokens": {"ids": [58428]},
+            "text": ".ps",
+            "logits_dump": [{"top_logits": top_logits}],
+            "prompt_identity": prompt.clone(),
+        });
+        std::fs::write(
+            &reference_path,
+            serde_json::to_vec(&json!({
+                "generated_text": "2+2 equals 4.",
+                "plan": {"prompt_identity": prompt.clone()}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &reference_server_path,
+            serde_json::to_vec(&json!({
+                "plan": {"prompt_identity": prompt},
+                "reference_probability_summary": {
+                    "selected_content": "2",
+                    "top_probability_strings": [{"tok_str": "2", "prob": 0.75}]
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(&cpu_path, serde_json::to_vec(&rust_receipt).unwrap()).unwrap();
+        std::fs::write(&a770_path, serde_json::to_vec(&rust_receipt).unwrap()).unwrap();
+
+        let report = build_report(&CompareArgs {
+            reference: reference_path,
+            reference_server: Some(reference_server_path),
+            cpu: cpu_path,
+            a770: a770_path,
+            output: None,
+            format: "json".to_string(),
+        });
+
+        assert_eq!(
+            report["comparisons"]["reference_server_vs_cpu"]["selected_content_text_exact"],
+            false
+        );
+        assert_eq!(
+            report["comparisons"]["reference_server_vs_a770"]["selected_content_text_exact"],
+            false
+        );
+        assert_eq!(
+            report["comparisons"]["reference_server_vs_cpu"]["prompt_identity_matched"],
+            true
+        );
+        let reasons = report["decision"]["current_blocked_reasons"].as_array().unwrap();
+        assert!(
+            reasons
+                .iter()
+                .any(|reason| reason == "reference_server_cpu_selected_content_not_exact")
+        );
+        assert!(
+            reasons
+                .iter()
+                .any(|reason| reason == "reference_server_a770_selected_content_not_exact")
+        );
     }
 
     fn prompt(
