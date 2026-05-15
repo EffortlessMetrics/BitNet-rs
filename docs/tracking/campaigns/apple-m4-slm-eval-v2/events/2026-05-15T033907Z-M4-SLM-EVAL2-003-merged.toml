@@ -1,0 +1,27 @@
+timestamp = "2026-05-15T03:39:07Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-003"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-003-v2-reports"
+pr = 4834
+head_sha = "f1b1e8444c4f0f632fd85234df701853982f871d"
+merge_sha = "8a023edad69cc6a3686cdfa606993f941bd8e8f4"
+summary = "Marked M4-SLM-EVAL2-003 merged after Apple M4 dense SLM eval v2 reports landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4834",
+  "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "The merged PR publishes v2 answer-corpus and summary receipts for every supported dense Apple M4 model ID.",
+  "The reported strict scores are bounded to the 120-case seeded v2 corpus: Qwen 0.5B Q8_0 62/120, Qwen 0.5B Q4_K_M 66/120, and Qwen 1.5B Q4_K_M 59/120.",
+  "The merged PR also aligns answer-corpus quality normalization with warm-session handling for Qwen <|im_end|> stop markers while preserving generated text and token IDs in receipts.",
+  "No BitNet quality/proof claim, full Metal route, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon performance, broad model-quality, or speedup claim is made.",
+]
