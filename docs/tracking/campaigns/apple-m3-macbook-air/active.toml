@@ -277,8 +277,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-015"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m3-macbook-air/M3MBA-015-device-labels"
+pr = 4929
+head_sha = "8543a61bbb41493406f0420cf67ff04cc657ae1c"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
