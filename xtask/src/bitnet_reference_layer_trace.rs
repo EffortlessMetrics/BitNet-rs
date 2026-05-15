@@ -52,6 +52,8 @@ const REFERENCE_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("query_projection", "cb(Qcur, \"Qcur\", il)"),
     ("key_projection", "cb(Kcur, \"Kcur\", il)"),
     ("value_projection", "cb(Vcur, \"Vcur\", il)"),
+    ("attention_scores_raw", "cb(kq, \"kq\", il)"),
+    ("attention_scores_softmax", "cb(kq, \"kq_soft_max_ext\", il)"),
     ("attention_value_mix_insertion_point", "cur = llm_build_kv(ctx0, lctx, kv_self, gf"),
     ("attention_subnorm", "cb(cur, \"attn_sub_norm\", il)"),
     ("attention_output", "cb(cur, \"attn_o_out\", il)"),
@@ -73,6 +75,8 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("query_projection", "attention_q"),
     ("key_projection", "attention_k"),
     ("value_projection", "attention_v"),
+    ("attention_scores_raw_head0", "attention_scores_raw_head0"),
+    ("attention_scores_softmax_head0", "attn_scores_softmax_head0"),
     ("attention_value_mix", "attention_value_mix"),
     ("attention_subnorm", "post_attention_subnorm"),
     ("attention_output", "post_o_proj"),
@@ -1950,6 +1954,8 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("Qcur", "attention_q"),
         ("Kcur", "attention_k"),
         ("Vcur", "attention_v"),
+        ("kq", "attention_scores_raw_head0"),
+        ("kq_soft_max_ext", "attn_scores_softmax_head0"),
         ("attn_value_mix", "attention_value_mix"),
         ("attn_sub_norm", "post_attention_subnorm"),
         ("attn_o_out", "post_o_proj"),
@@ -2012,17 +2018,17 @@ fn compare_reference_to_rust(
             let dtype_match = reference.dtype.eq_ignore_ascii_case(&rust.dtype);
             rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
             let rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
+            if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
+                first_values_delta = compare_prefix(
+                    &reference.first_values,
+                    &rust.first_values,
+                    reference.first_values.len().min(rust.first_values.len()),
+                );
+            }
             if has_scope_mismatch {
                 material_mismatch = false;
                 status = "scope_mismatch";
             } else {
-                if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
-                    first_values_delta = compare_prefix(
-                        &reference.first_values,
-                        &rust.first_values,
-                        reference.first_values.len().min(rust.first_values.len()),
-                    );
-                }
                 material_mismatch = !element_count_match || !dtype_match || rms_material;
                 status = if material_mismatch { "material_mismatch" } else { "summary_match" };
             }
@@ -2078,7 +2084,7 @@ fn trace_scope_mismatch(
     let reference_sampled_token_index = reference_sampled_token_index(reference)?;
     let rust_seq = rust.seq.map(|seq| seq as u64);
     if rust_seq == Some(reference_sampled_token_index) {
-        return None;
+        return attention_row_padded_tail_scope(reference, rust);
     }
     Some(json!({
         "reason": "reference_sampled_prompt_token_does_not_match_rust_trace_seq",
@@ -2087,6 +2093,37 @@ fn trace_scope_mismatch(
         "reference_token_axis": reference.token_axis,
         "rust_seq": rust_seq,
         "policy": "stage summaries with mismatched trace scope are diagnostic alignment blockers, not stable numeric divergence evidence",
+    }))
+}
+
+fn attention_row_padded_tail_scope(
+    reference: &ReferenceTraceRecord,
+    rust: &RustTraceRecord,
+) -> Option<Value> {
+    if reference.stage != "kq" && reference.stage != "kq_soft_max_ext" {
+        return None;
+    }
+    let reference_nelements = usize::try_from(reference.nelements).ok()?;
+    let rust_nelements = usize::try_from(rust.num_elements).ok()?;
+    if reference_nelements <= rust_nelements || reference.first_values.len() <= rust_nelements {
+        return None;
+    }
+    let tail = &reference.first_values[rust_nelements..];
+    if tail.iter().any(|value| value.abs() > 1.0e-12) {
+        return None;
+    }
+    Some(json!({
+        "reason": "reference_attention_row_includes_padded_zero_tail_not_emitted_by_rust",
+        "reference_nelements": reference.nelements,
+        "rust_num_elements": rust.num_elements,
+        "compared_live_prefix_count": rust.num_elements,
+        "reference_zero_tail_count": reference_nelements.saturating_sub(rust_nelements),
+        "reference_sampled_zero_tail_count": tail.len(),
+        "reference_sampled_token_index": reference_sampled_token_index(reference),
+        "reference_sample_offset": reference.sample_offset,
+        "reference_token_axis": reference.token_axis,
+        "rust_seq": rust.seq,
+        "policy": "attention score/probability row summaries with reference KV-cache padding are diagnostic scope differences; live-prefix deltas remain useful evidence",
     }))
 }
 
@@ -2206,6 +2243,8 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
             {"reference": "Qcur", "rust": "attention_q", "scope": "layer0"},
             {"reference": "Kcur", "rust": "attention_k", "scope": "layer0"},
             {"reference": "Vcur", "rust": "attention_v", "scope": "layer0"},
+            {"reference": "kq", "rust": "attention_scores_raw_head0", "scope": "layer0 head0 sampled-query scores before scale/mask"},
+            {"reference": "kq_soft_max_ext", "rust": "attn_scores_softmax_head0", "scope": "layer0 head0 sampled-query probabilities"},
             {"reference": "attn_value_mix", "rust": "attention_value_mix", "scope": "layer0"},
             {"reference": "attn_sub_norm", "rust": "post_attention_subnorm", "scope": "layer0"},
             {"reference": "attn_o_out", "rust": "post_o_proj", "scope": "layer0"},
@@ -3324,6 +3363,63 @@ mod tests {
     }
 
     #[test]
+    fn compare_marks_reference_attention_score_padding_as_scope_evidence() {
+        let reference = ReferenceTraceRecord {
+            name: "kq-0".to_string(),
+            stage: "kq".to_string(),
+            graph_index: Some(40),
+            layer: Some(0),
+            graph_op: Some("MUL_MAT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![4, 3, 1, 1],
+            sample_offset: Some(8),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![4, 1, 1, 1],
+            nelements: 4,
+            rms: Some(2.0),
+            values_available: true,
+            first_values: vec![1.0, 2.0, 3.0, 0.0],
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            RustTraceRecord {
+                name: "t2/blk0/attention_scores_raw_head0".to_string(),
+                shape: vec![1, 1, 1, 3],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.5,
+                num_elements: 3,
+                first_values: vec![1.0, 2.0, 3.0],
+                seq: Some(2),
+                layer: Some(0),
+                stage: Some("attention_scores_raw_head0".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("kq", "attention_scores_raw_head0")],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reason"),
+            Some(&json!("reference_attention_row_includes_padded_zero_tail_not_emitted_by_rust"))
+        );
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/first_values_delta/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
     fn compare_maps_reference_attention_value_mix_to_rust_trace() {
         let reference = ReferenceTraceRecord {
             name: "attn_value_mix-0".to_string(),
@@ -3380,6 +3476,100 @@ mod tests {
             Some(&json!(0.5))
         );
         assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(0)));
+    }
+
+    #[test]
+    fn compare_maps_reference_attention_probability_rows_to_rust_head0_traces() {
+        let kq = ReferenceTraceRecord {
+            name: "kq-0".to_string(),
+            stage: "kq".to_string(),
+            graph_index: Some(40),
+            layer: Some(0),
+            graph_op: Some("MUL_MAT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![3, 2, 1, 1],
+            sample_offset: Some(3),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![3, 1, 1, 1],
+            nelements: 3,
+            rms: Some(2.0),
+            values_available: true,
+            first_values: vec![1.0, 2.0, 3.0],
+        };
+        let softmax = ReferenceTraceRecord {
+            name: "kq_soft_max_ext-0".to_string(),
+            stage: "kq_soft_max_ext".to_string(),
+            graph_index: Some(41),
+            layer: Some(0),
+            graph_op: Some("SOFT_MAX_EXT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![3, 2, 1, 1],
+            sample_offset: Some(3),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![3, 1, 1, 1],
+            nelements: 3,
+            rms: Some(0.5),
+            values_available: true,
+            first_values: vec![0.1, 0.2, 0.7],
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            RustTraceRecord {
+                name: "t1/blk0/attention_scores_raw_head0".to_string(),
+                shape: vec![1, 1, 1, 3],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.0,
+                num_elements: 3,
+                first_values: vec![1.0, 2.0, 3.0],
+                seq: Some(1),
+                layer: Some(0),
+                stage: Some("attention_scores_raw_head0".to_string()),
+            },
+        );
+        rust_records.insert(
+            "attn_scores_softmax_head0".to_string(),
+            RustTraceRecord {
+                name: "t1/blk0/attn_scores_softmax_head0".to_string(),
+                shape: vec![1, 1, 1, 3],
+                dtype: "F32".to_string(),
+                blake3: "def".to_string(),
+                rms: 0.25,
+                num_elements: 3,
+                first_values: vec![0.1, 0.2, 0.8],
+                seq: Some(1),
+                layer: Some(0),
+                stage: Some("attn_scores_softmax_head0".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[kq, softmax],
+            &rust_records,
+            &[
+                ("kq", "attention_scores_raw_head0"),
+                ("kq_soft_max_ext", "attn_scores_softmax_head0"),
+            ],
+        );
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/stages/0/status"), Some(&json!("summary_match")));
+        assert_eq!(
+            report.pointer("/first_material_mismatch/reference_stage"),
+            Some(&json!("kq_soft_max_ext"))
+        );
+        let max_delta = report
+            .pointer("/first_material_mismatch/first_values_delta/max_abs_delta")
+            .and_then(Value::as_f64)
+            .unwrap();
+        assert!((max_delta - 0.10000002).abs() < 1.0e-7);
     }
 
     #[test]

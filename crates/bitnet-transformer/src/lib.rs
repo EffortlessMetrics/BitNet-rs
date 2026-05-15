@@ -594,6 +594,18 @@ impl MultiHeadAttention {
 
         // Convert to fp32 for numerically stable computation
         let scores_f32 = scores.to_dtype(DType::F32)?;
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            let head0 = scores_f32.narrow(1, 0, 1)?;
+            trace_tensor_token_axis_record(
+                "blk0/attention_scores_raw_head0",
+                &head0,
+                _trace_base_seq,
+                2,
+                Some(0),
+                "attention_scores_raw_head0",
+            )?;
+        }
 
         // Scale in fp32
         let scores_f32 = scores_f32.affine(scale_factor as f64, 0.0)?;
@@ -656,6 +668,18 @@ impl MultiHeadAttention {
         // Apply softmax (exp then normalize)
         // VERIFIED: axis=3 is correct - softmax over keys (Tk dimension) in [B, H, Tq, Tk]
         let attn_weights = candle_nn::ops::softmax(&scores_stabilized, 3)?;
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            let head0 = attn_weights.narrow(1, 0, 1)?;
+            trace_tensor_token_axis_record(
+                "blk0/attn_scores_softmax_head0",
+                &head0,
+                _trace_base_seq,
+                2,
+                Some(0),
+                "attn_scores_softmax_head0",
+            )?;
+        }
 
         // Tracepoint 4: Attention scores post-softmax (layer-specific)
         #[cfg(feature = "trace")]
