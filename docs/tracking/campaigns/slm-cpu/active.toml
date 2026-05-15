@@ -1636,8 +1636,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-016"
-status = "pr_open"
-pr = 4918
+status = "ready"
 branch = "codex/slm-cpu-016-kaby-operator-profile"
 stackable = false
 review_mode = "codex_premerge"
