@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bitnet-rs.local/schemas/bench-run.schema.json",
+  "title": "BitNet-rs quality-gated benchmark run receipt",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "receipt_type",
+    "run_id",
+    "repo",
+    "device",
+    "model",
+    "backend",
+    "kernel_route",
+    "benchmark_profile",
+    "quality_gate",
+    "claim_gate",
+    "measurements",
+    "not_claims"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "receipt_type": { "const": "bench_run" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string" },
+    "repo": {
+      "type": "object",
+      "required": ["commit", "tree", "dirty", "cargo_lock_hash", "rustc", "features"],
+      "properties": {
+        "commit": { "type": "string", "minLength": 1 },
+        "tree": { "type": "string", "minLength": 1 },
+        "dirty": { "type": "boolean" },
+        "cargo_lock_hash": { "type": "string", "minLength": 1 },
+        "rustc": { "type": "string", "minLength": 1 },
+        "features": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "device": {
+      "type": "object",
+      "required": ["device_slug", "device_instance_hash"],
+      "properties": {
+        "device_slug": { "type": "string", "minLength": 1 },
+        "device_instance_hash": { "type": "string", "minLength": 1 }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["contract", "model_id", "weights_sha256", "tokenizer_sha256", "chat_template_hash"],
+      "properties": {
+        "contract": { "type": "string", "minLength": 1 },
+        "model_id": { "type": "string", "minLength": 1 },
+        "weights_sha256": { "type": "string", "minLength": 1 },
+        "tokenizer_sha256": { "type": "string", "minLength": 1 },
+        "chat_template_hash": { "type": "string", "minLength": 1 }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "required": ["selected_backend", "backend_family", "fallback_used"],
+      "properties": {
+        "selected_backend": { "type": "string", "minLength": 1 },
+        "backend_family": { "type": "string", "minLength": 1 },
+        "fallback_used": { "type": "boolean" }
+      }
+    },
+    "kernel_route": {
+      "type": "object",
+      "required": ["route_verified", "device_slug", "selected_backend", "kernel_variants"],
+      "properties": {
+        "route_verified": { "type": "boolean" },
+        "device_slug": { "type": "string", "minLength": 1 },
+        "selected_backend": { "type": "string", "minLength": 1 },
+        "kernel_variants": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "benchmark_profile": {
+      "type": "object",
+      "required": ["id", "profile_hash"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "profile_hash": { "type": "string", "minLength": 1 }
+      }
+    },
+    "quality_gate": {
+      "type": "object",
+      "required": ["required", "quality_passed", "quality_receipt"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "quality_passed": { "type": "boolean" },
+        "quality_receipt": { "type": "string" }
+      }
+    },
+    "claim_gate": {
+      "type": "object",
+      "required": ["benchmark_claim_allowed", "classification"],
+      "properties": {
+        "benchmark_claim_allowed": { "type": "boolean" },
+        "classification": {
+          "enum": [
+            "diagnostic_only",
+            "load_proven",
+            "quality_proven",
+            "performance_proven",
+            "resident_proven",
+            "complete"
+          ]
+        }
+      }
+    },
+    "measurements": { "type": "object" },
+    "not_claims": { "type": "array", "items": { "type": "string" } }
+  }
+}
