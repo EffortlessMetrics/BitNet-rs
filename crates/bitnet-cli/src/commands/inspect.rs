@@ -34,6 +34,10 @@ pub struct InspectCommand {
     #[arg(long)]
     pub qk256_layout_report: bool,
 
+    /// Emit a RoPE tensor/factor contract report for real GGUF tensors
+    #[arg(long)]
+    pub rope_contract_report: bool,
+
     /// Emit effective runtime contract metadata for the GGUF model
     #[arg(long)]
     pub runtime_contract_report: bool,
@@ -67,13 +71,15 @@ impl InspectCommand {
     pub async fn execute(&self) -> Result<()> {
         if self.qk256_layout_report {
             self.write_qk256_layout_report().await
+        } else if self.rope_contract_report {
+            self.write_rope_contract_report().await
         } else if self.runtime_contract_report {
             self.write_runtime_contract_report().await
         } else if self.ln_stats {
             self.check_ln_gamma_stats().await
         } else {
             anyhow::bail!(
-                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, or --runtime-contract-report."
+                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, --rope-contract-report, or --runtime-contract-report."
             );
         }
     }
@@ -215,6 +221,114 @@ impl InspectCommand {
                 .map(str::to_string)
                 .collect(),
             tensors,
+        })
+    }
+
+    async fn write_rope_contract_report(&self) -> Result<()> {
+        let report = self.rope_contract_report()?;
+        self.write_json(serde_json::to_string_pretty(&report)?)?;
+        Ok(())
+    }
+
+    fn rope_contract_report(&self) -> Result<RopeContractReport> {
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
+        let mmap = unsafe { Mmap::map(&file)? };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let model_sha256 = format!("{:x}", hasher.finalize());
+
+        let reader = GgufReader::new(&mmap)?;
+        let architecture = reader.get_string_metadata("general.architecture");
+
+        let mut config = BitNetConfig::default();
+        if let Some(architecture) = &architecture {
+            config.model.apply_architecture_defaults(architecture);
+        }
+        fill_runtime_contract_config(&reader, &mut config);
+
+        let mut rope_freqs = Vec::new();
+        for i in 0..reader.tensor_count() as usize {
+            let info = reader.get_tensor_info(i)?;
+            if !is_rope_freqs_tensor_name(&info.name) {
+                continue;
+            }
+
+            let data = reader.get_tensor_data_by_info(info)?;
+            let values = decode_rope_freq_values(&info.name, info.tensor_type, data)?;
+            let stats = rope_value_stats(&values);
+
+            rope_freqs.push(RopeFreqsTensorReport {
+                name: info.name.clone(),
+                shape: info.shape.clone(),
+                tensor_type: format!("{:?}", info.tensor_type),
+                element_count: values.len(),
+                actual_bytes: data.len(),
+                raw_sha256: sha256_hex_bytes(data),
+                sample_len: values.len().min(8),
+                sample_values_first_8: values.iter().take(8).copied().collect(),
+                min: stats.min,
+                max: stats.max,
+                mean: stats.mean,
+            });
+        }
+
+        let rust_uses_gguf_rope_freqs = false;
+        let summary = rope_contract_summary(rope_freqs.len(), rust_uses_gguf_rope_freqs);
+        let head_dim = if config.model.num_heads == 0 {
+            None
+        } else {
+            Some(config.model.hidden_size / config.model.num_heads)
+        };
+
+        Ok(RopeContractReport {
+            schema_version: 1,
+            diagnostic: "bitnet_rope_contract_report".to_string(),
+            diagnostic_only: true,
+            promotion_allowed: false,
+            proof_receipts_written: false,
+            manifest_updated: false,
+            model: model_path.display().to_string(),
+            model_sha256,
+            gguf_metadata: RopeGgufMetadata {
+                architecture,
+                context_length: u32_any(
+                    &reader,
+                    &["bitnet-b1.58.context_length", "llama.context_length"],
+                ),
+                rope_freq_base: f32_any(
+                    &reader,
+                    &["bitnet-b1.58.rope.freq_base", "llama.rope.freq_base", "rope.freq_base"],
+                ),
+            },
+            effective_rust_policy: RopeRustPolicy {
+                policy: "base_theta_sincos_tables_without_gguf_rope_freqs".to_string(),
+                uses_gguf_rope_freqs: rust_uses_gguf_rope_freqs,
+                rope_theta: config.model.rope_theta,
+                num_heads: config.model.num_heads,
+                num_key_value_heads: config.model.num_key_value_heads,
+                head_dim,
+                max_position_embeddings: config.model.max_position_embeddings,
+            },
+            reference_policy: RopeReferencePolicy {
+                source: "llama.cpp build_bitnet_158/build_rope_factors/ggml_rope_ext".to_string(),
+                expects_optional_rope_freqs_tensor: true,
+                expected_tensor_suffix: "rope_freqs.weight".to_string(),
+            },
+            summary,
+            rope_freqs,
+            not_claims: critical_qk256_report_not_claims()
+                .into_iter()
+                .chain([
+                    "runtime_reference_parity",
+                    "semantic_quality",
+                    "rope_factor_implementation",
+                    "a770_semantic_quality",
+                ])
+                .map(str::to_string)
+                .collect(),
         })
     }
 
@@ -754,6 +868,80 @@ struct Qk256TensorLayoutReport {
 }
 
 #[derive(Debug, Serialize)]
+struct RopeContractReport {
+    schema_version: u32,
+    diagnostic: String,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    model: String,
+    model_sha256: String,
+    gguf_metadata: RopeGgufMetadata,
+    effective_rust_policy: RopeRustPolicy,
+    reference_policy: RopeReferencePolicy,
+    summary: RopeContractSummary,
+    rope_freqs: Vec<RopeFreqsTensorReport>,
+    not_claims: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct RopeGgufMetadata {
+    architecture: Option<String>,
+    context_length: Option<u32>,
+    rope_freq_base: Option<f32>,
+}
+
+#[derive(Debug, Serialize)]
+struct RopeRustPolicy {
+    policy: String,
+    uses_gguf_rope_freqs: bool,
+    rope_theta: Option<f32>,
+    num_heads: usize,
+    num_key_value_heads: usize,
+    head_dim: Option<usize>,
+    max_position_embeddings: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct RopeReferencePolicy {
+    source: String,
+    expects_optional_rope_freqs_tensor: bool,
+    expected_tensor_suffix: String,
+}
+
+#[derive(Debug, Serialize)]
+struct RopeContractSummary {
+    rope_freqs_tensor_count: usize,
+    any_rope_freqs_tensor_present: bool,
+    rust_uses_gguf_rope_freqs: bool,
+    blocker: Option<String>,
+    next_action: String,
+}
+
+#[derive(Debug, Serialize)]
+struct RopeFreqsTensorReport {
+    name: String,
+    shape: Vec<usize>,
+    tensor_type: String,
+    element_count: usize,
+    actual_bytes: usize,
+    raw_sha256: String,
+    sample_len: usize,
+    sample_values_first_8: Vec<f32>,
+    min: Option<f32>,
+    max: Option<f32>,
+    mean: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RopeValueStats {
+    min: Option<f32>,
+    max: Option<f32>,
+    mean: Option<f32>,
+}
+
+#[derive(Debug, Serialize)]
 struct RuntimeContractReport {
     schema_version: u32,
     diagnostic: String,
@@ -1000,6 +1188,95 @@ fn bool_any(reader: &GgufReader, keys: &[&str]) -> Option<bool> {
     keys.iter().find_map(|key| reader.get_bool_metadata(key))
 }
 
+fn is_rope_freqs_tensor_name(name: &str) -> bool {
+    name.ends_with("rope_freqs.weight") || name.contains(".rope_freqs.")
+}
+
+fn decode_rope_freq_values(
+    name: &str,
+    tensor_type: GgufTensorType,
+    data: &[u8],
+) -> Result<Vec<f32>> {
+    match tensor_type {
+        GgufTensorType::F32 => {
+            if !data.len().is_multiple_of(std::mem::size_of::<f32>()) {
+                anyhow::bail!(
+                    "rope_freqs tensor '{}' has {} bytes, not divisible by f32 size",
+                    name,
+                    data.len()
+                );
+            }
+            Ok(bytemuck::cast_slice::<u8, f32>(data).to_vec())
+        }
+        GgufTensorType::F16 => {
+            if !data.len().is_multiple_of(std::mem::size_of::<u16>()) {
+                anyhow::bail!(
+                    "rope_freqs tensor '{}' has {} bytes, not divisible by f16 size",
+                    name,
+                    data.len()
+                );
+            }
+            Ok(bytemuck::cast_slice::<u8, u16>(data)
+                .iter()
+                .map(|bits| half::f16::from_bits(*bits).to_f32())
+                .collect())
+        }
+        other => anyhow::bail!(
+            "rope_freqs tensor '{}' has unsupported tensor type {:?}; expected F32 or F16",
+            name,
+            other
+        ),
+    }
+}
+
+fn rope_value_stats(values: &[f32]) -> RopeValueStats {
+    if values.is_empty() {
+        return RopeValueStats { min: None, max: None, mean: None };
+    }
+
+    let mut min = f32::INFINITY;
+    let mut max = f32::NEG_INFINITY;
+    let mut sum = 0.0f64;
+    for value in values {
+        min = min.min(*value);
+        max = max.max(*value);
+        sum += *value as f64;
+    }
+
+    RopeValueStats {
+        min: Some(min),
+        max: Some(max),
+        mean: Some((sum / values.len() as f64) as f32),
+    }
+}
+
+fn rope_contract_summary(
+    rope_freqs_tensor_count: usize,
+    rust_uses_gguf_rope_freqs: bool,
+) -> RopeContractSummary {
+    let any_rope_freqs_tensor_present = rope_freqs_tensor_count > 0;
+    let blocker = if any_rope_freqs_tensor_present && !rust_uses_gguf_rope_freqs {
+        Some("bitnet_b158_rope_factors_present_but_rust_policy_ignores_them".to_string())
+    } else {
+        None
+    };
+    let next_action = if blocker.is_some() {
+        "add a focused Rust/reference RoPE factor parity proof before changing runtime math"
+    } else if any_rope_freqs_tensor_present {
+        "verify RoPE factor use against reference receipt"
+    } else {
+        "continue shared Rust/reference localization; no GGUF rope_freqs tensor was found"
+    };
+
+    RopeContractSummary {
+        rope_freqs_tensor_count,
+        any_rope_freqs_tensor_present,
+        rust_uses_gguf_rope_freqs,
+        blocker,
+        next_action: next_action.to_string(),
+    }
+}
+
 fn external_tokenizer_contract(path: &PathBuf) -> Result<RuntimeExternalTokenizer> {
     let bytes = std::fs::read(path)
         .with_context(|| format!("failed to read tokenizer {}", path.display()))?;
@@ -1171,5 +1448,49 @@ mod tests {
         assert_eq!(act[64], 2);
         assert_eq!(act[96], 3);
         assert_eq!(&contiguous[..4], &[3, 2, 1, 0]);
+    }
+
+    #[test]
+    fn rope_freqs_tensor_name_matches_reference_suffix_only() {
+        assert!(is_rope_freqs_tensor_name("blk.0.rope_freqs.weight"));
+        assert!(is_rope_freqs_tensor_name("model.layers.0.rope_freqs.weight"));
+        assert!(!is_rope_freqs_tensor_name("blk.0.attn_q.weight"));
+        assert!(!is_rope_freqs_tensor_name("rope.freq_base"));
+    }
+
+    #[test]
+    fn rope_contract_summary_blocks_present_factors_when_rust_ignores_them() {
+        let summary = rope_contract_summary(1, false);
+
+        assert!(summary.any_rope_freqs_tensor_present);
+        assert!(!summary.rust_uses_gguf_rope_freqs);
+        assert_eq!(
+            summary.blocker.as_deref(),
+            Some("bitnet_b158_rope_factors_present_but_rust_policy_ignores_them")
+        );
+    }
+
+    #[test]
+    fn rope_contract_summary_allows_absent_factors_without_rope_blocker() {
+        let summary = rope_contract_summary(0, false);
+
+        assert!(!summary.any_rope_freqs_tensor_present);
+        assert_eq!(summary.blocker, None);
+    }
+
+    #[test]
+    fn decode_rope_freq_values_reads_f32_and_f16_values() {
+        let f32_bytes = bytemuck::cast_slice::<f32, u8>(&[1.0, 2.5, 4.0]);
+        let f32_values =
+            decode_rope_freq_values("blk.0.rope_freqs.weight", GgufTensorType::F32, f32_bytes)
+                .unwrap();
+        assert_eq!(f32_values, vec![1.0, 2.5, 4.0]);
+
+        let f16_bits = [half::f16::from_f32(0.5).to_bits(), half::f16::from_f32(1.5).to_bits()];
+        let f16_bytes = bytemuck::cast_slice::<u16, u8>(&f16_bits);
+        let f16_values =
+            decode_rope_freq_values("blk.0.rope_freqs.weight", GgufTensorType::F16, f16_bytes)
+                .unwrap();
+        assert_eq!(f16_values, vec![0.5, 1.5]);
     }
 }
