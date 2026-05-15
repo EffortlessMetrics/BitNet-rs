@@ -60,23 +60,25 @@ artifacts to separate strict proof items.
 | M3MBA-001 | merged | Add the campaign control plane and roadmap linkage for the M3 MacBook Air lane. |
 | M3MBA-002 | merged | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields; merged in #4592. |
 | M3MBA-003 | merged | Add or confirm the explicit `apple-m3-air-cpu-neon` receipt label without weakening M4 validation; merged in #4596. |
-| M3MBA-012 | in progress | Specify the dense SLM harness contract before live M3 smoke runs, including `mac validate`, `mac receipts-check`, synthetic CI receipt evidence, and local-only timing boundaries. |
-| M3MBA-013 | proposed | Encode the M3 Air CI completion policy so selected long jobs are routed, preflighted, and capped from completed-run evidence instead of ending just before receipts. |
-| M3MBA-004A | proposed | Mirror the known dense Qwen SLM smoke route on M3 Air. |
-| M3MBA-004B | proposed | Run the bounded dense Qwen operator profile only after smoke passes. |
-| M3MBA-005A | proposed | Record official Microsoft 2B I2_S artifact identity, source revision, size, hash, and storage context. |
-| M3MBA-005B | proposed | Record Microsoft 2B tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence. |
-| M3MBA-005C | proposed | Decide Microsoft 2B reference output acceptance, rejection, or blocker state. |
+| M3MBA-012 | merged | Specify the dense SLM harness contract before live M3 smoke runs, including `mac validate`, `mac receipts-check`, synthetic CI receipt evidence, and local-only timing boundaries. |
+| M3MBA-013 | merged | Encode the M3 Air CI completion policy so selected long jobs are routed, preflighted, and capped from completed-run evidence instead of ending just before receipts. |
+| M3MBA-014 | merged | Preserve M3 Air Mac validate and receipt-check identity before live model work. |
+| M3MBA-004A | merged | Mirror the known dense Qwen SLM smoke route on M3 Air. |
+| M3MBA-004B | merged | Run the bounded dense Qwen operator profile only after smoke passes. |
+| M3MBA-005A | merged | Record official Microsoft 2B I2_S artifact identity, source revision, size, hash, and storage context. |
+| M3MBA-005B | merged | Record Microsoft 2B tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence. |
+| M3MBA-005C | merged | Decide Microsoft 2B reference output acceptance, rejection, or blocker state. |
 | M3MBA-006 | proposed | Evaluate the smaller 0.7B 1bitLLM control candidate after Microsoft 2B is accepted, rejected, or blocked. |
 | M3MBA-007 | proposed | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim. |
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
 | M3MBA-009 | proposed | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists. |
-| M3MBA-010 | in progress | Audit MacBook model-cache retention and cleanup after the first large BitNet download. |
+| M3MBA-010 | merged | Audit MacBook model-cache retention and cleanup after the first large BitNet download; merged in #4839. |
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 
-Current focus: `M3MBA-012` defines the dense SLM harness contract that
-`M3MBA-004A` depends on. Do not start `M3MBA-005A` large BitNet artifact work
-until dense smoke passes or leaves a committed blocker report.
+Current focus: `M3MBA-006`, `M3MBA-009`, and `M3MBA-007` are now the next
+bounded M3 Air work surfaces. `M3MBA-010` permits another large candidate only
+as serialized work with fresh disk preflight, before/after free-space evidence,
+hash evidence, and no committed model binaries.
 
 ## Phase Roadmap
 
@@ -233,10 +235,10 @@ Do not skip the dense control path and jump straight to BitNet downloads. The
 dense run proves the MacBook runner, receipts, cache policy, backend labels, and
 operator flow before larger artifacts consume the local storage budget.
 
-`M3MBA-010` is a blocker for secondary large downloads. `M3MBA-006` and
-`M3MBA-007` may proceed only after the storage audit records retained/deleted
-artifacts, free-space before/after, and whether the lane has headroom for
-another candidate.
+`M3MBA-010` has recorded retained/deleted artifacts, free-space before/after,
+and enough headroom for the next serialized large-candidate step. `M3MBA-006`
+and `M3MBA-007` still need their own preflight, hash, cleanup/retention, and
+claim-boundary evidence before they can merge.
 
 `M3MBA-008` is conditional on an accepted artifact. If the Microsoft path and
 secondary candidates are rejected or blocked, close the handoff with a

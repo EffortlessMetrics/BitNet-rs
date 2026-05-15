@@ -711,10 +711,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-010"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-010-storage-audit"
 pr = 4839
 head_sha = "8f8916cd5d2d32058457ae86fa68178637b131cd"
+merge_sha = "3c28779a4409baa4b92b5039ef6df3c22efee962"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
