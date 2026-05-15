@@ -215,6 +215,21 @@ fn greedy_effective_argmax(
     best
 }
 
+fn selected_logit_values(logits: &[f32], token_ids: &[u32]) -> Vec<serde_json::Value> {
+    token_ids
+        .iter()
+        .copied()
+        .map(|token_id| {
+            let logit = usize::try_from(token_id).ok().and_then(|idx| logits.get(idx).copied());
+            serde_json::json!({
+                "token_id": token_id,
+                "present": logit.is_some(),
+                "logit": logit,
+            })
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct BackendFallbackProof {
     used: bool,
@@ -311,6 +326,19 @@ mod proof_summary_tests {
         let logits = [1.0, 1.0, 0.0];
 
         assert_eq!(greedy_effective_argmax(&logits, &[], 1.0), Some((0, 1.0)));
+    }
+
+    #[test]
+    fn selected_logit_values_include_outside_topk_probe_ids() {
+        let logits = [0.25, -1.5, 3.0];
+        let selected = selected_logit_values(&logits, &[2, 42]);
+
+        assert_eq!(selected[0]["token_id"], serde_json::json!(2));
+        assert_eq!(selected[0]["present"], serde_json::json!(true));
+        assert_eq!(selected[0]["logit"], serde_json::json!(3.0));
+        assert_eq!(selected[1]["token_id"], serde_json::json!(42));
+        assert_eq!(selected[1]["present"], serde_json::json!(false));
+        assert_eq!(selected[1]["logit"], serde_json::Value::Null);
     }
 
     #[test]
@@ -696,6 +724,10 @@ enum Commands {
         #[arg(long, default_value = "10", value_name = "K")]
         logits_topk: usize,
 
+        /// Specific token IDs to include in logit dumps, even when outside top-k
+        #[arg(long = "logit-id", value_name = "ID")]
+        logit_id: Vec<u32>,
+
         /// Assert greedy argmax invariant when dumping logits
         #[arg(long, default_value_t = false)]
         assert_greedy: bool,
@@ -968,6 +1000,7 @@ async fn main() -> Result<()> {
             stop_id,
             dump_logit_steps,
             logits_topk,
+            logit_id,
             assert_greedy,
             no_warnings,
         }) => {
@@ -1003,6 +1036,7 @@ async fn main() -> Result<()> {
                 stop_id,
                 dump_logit_steps,
                 logits_topk,
+                logit_id,
                 assert_greedy,
                 no_warnings,
             )
@@ -1752,6 +1786,7 @@ async fn run_simple_generation(
     stop_id: Vec<u32>,
     dump_logit_steps: Option<usize>,
     logits_topk: usize,
+    logit_id: Vec<u32>,
     assert_greedy: bool,
     no_warnings: bool,
 ) -> Result<()> {
@@ -1783,6 +1818,7 @@ async fn run_simple_generation(
     struct LogitStep {
         step: usize,
         top_logits: Vec<serde_json::Value>,
+        selected_logits: Vec<serde_json::Value>,
         chosen_id: Option<u32>,
     }
 
@@ -2198,6 +2234,7 @@ async fn run_simple_generation(
                         })
                     })
                     .collect(),
+                selected_logits: selected_logit_values(&logits_vec, &logit_id),
                 chosen_id: None, // Will set after sampling
             };
             logits_dump.push(step);
@@ -2453,6 +2490,7 @@ async fn run_simple_generation(
                     serde_json::json!({
                         "step": step.step,
                         "top_logits": step.top_logits,
+                        "selected_logits": step.selected_logits,
                         "chosen_id": step.chosen_id
                     })
                 }).collect::<Vec<_>>())
