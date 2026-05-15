@@ -1,0 +1,27 @@
+timestamp = "2026-05-15T02:37:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008AC"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4826
+merge_sha = "c69927f37d9b19300e36f09ac60c5105621b59c4"
+branch = "codex/slm-cpu-008ac-constrained-answer-scoring"
+summary = "Merged #4826 with Qwen3 no-thinking constrained-answer scoring evidence for the i5-8250U SLM lane."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4826",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-bitnet-rs-first-token.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-reference-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-reference-validation.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-scoring-diagnosis.json",
+  "docs/slm/SLM_CPU_QWEN3_CONSTRAINED_SCORING.md",
+]
+
+notes = [
+  "The `Say exactly: OK` no-thinking seed is selected because the Candle reference and bitnet-rs both choose token 3925 / 'OK'.",
+  "Top-k logits still differ numerically and remain diagnostic shared-math evidence; the selected seed is a bounded constrained-answer scoring gate, not strict logits parity.",
+  "This merge allows SLM-CPU-009 to begin tiny-corpus work from the selected scoring policy.",
+  "This merge does not claim Qwen tiny-corpus success, broad answer quality, unbounded multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]

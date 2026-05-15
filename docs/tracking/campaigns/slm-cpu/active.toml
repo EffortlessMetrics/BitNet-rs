@@ -1167,7 +1167,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008AC"
-status = "ready"
+status = "merged"
+pr = 4826
+merge_sha = "c69927f37d9b19300e36f09ac60c5105621b59c4"
 branch = "codex/slm-cpu-008ac-constrained-answer-scoring"
 stackable = false
 review_mode = "codex_premerge"
@@ -1176,7 +1178,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-008AB"]
 acceptance = "Define and validate the Qwen3 constrained-answer scoring policy that can safely unblock SLM-CPU-009. The slice must use the verified Qwen3-0.6B Q8_0 model SHA, strict GGUF tokenizer authority, selected_backend=cpu-rust, fallback=false, and a known-good reference for the exact rendered prompt policy. It must either find a prompt policy where the reference emits the expected constrained answer as the first token, or switch the seed to a bounded multi-token score where the reference and bitnet-rs generated IDs/text agree on the constrained answer. It must preserve prompt IDs, generated IDs, decoded text, selected backend/kernel, strict tokenizer policy, and failure rules. It must not claim the tiny corpus is green, broad answer quality, multi-token stability beyond the bounded seed, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
 commands = [
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- reference-compare --artifact ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-reference-compare.json --json-out target/slm-cpu/qwen3-no-think-2plus2eq-reference-validation.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- reference-compare --artifact ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-say-ok-reference-compare.json --json-out target/slm-cpu/qwen3-no-think-say-ok-reference-validation.json",
   "cargo run -p xtask --no-default-features -- campaign generate",
   "cargo run -p xtask --no-default-features -- campaign doctor",
   "git diff --check",
@@ -1197,7 +1199,8 @@ forbidden_paths = [
 ]
 may_claim = [
   "The first-token `2+2=` and sentence-form no-thinking seeds are unsuitable as token-19 constrained-answer gates because the known-good reference chooses token 17 / '2'.",
-  "SLM-CPU-009 remains blocked until the reference-backed scoring policy is selected.",
+  "The `Say exactly: OK` no-thinking seed is selected as the first constrained-answer scoring gate because the known-good reference and bitnet-rs both choose token 3925 / 'OK'.",
+  "SLM-CPU-009 can start from the selected bounded scoring policy without claiming the full tiny corpus is green.",
 ]
 must_not_claim = [
   "Qwen answer quality is proven.",
@@ -1208,6 +1211,52 @@ must_not_claim = [
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-009"
+status = "ready"
+branch = "codex/slm-cpu-009-tiny-corpus-green"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-008AC"]
+acceptance = "Run the Qwen3-0.6B Q8_0 tiny answer corpus through the strict i5-8250U CPU path using the SLM-CPU-008AC constrained-answer scoring policy. The slice must record prompt IDs, generated IDs, decoded text, selected backend/kernel, loader.mode=real_gguf, tokenizer.source=gguf_metadata, tokenizer.strict=true, and fallback_used=false for every case. It may adjust the corpus prompt policy to qwen no-thinking or score cases one at a time, but it must preserve explicit failed_rules for any miss. It must not claim broad chat quality, unbounded multi-token stability, warm-session usability, sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci/quality/slm-answer-corpus.yaml --model models/slm/Qwen3-0.6B-Q8_0.gguf --device cpu --json-out target/slm-cpu/qwen3-answer-corpus.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The selected tiny corpus cases pass only when their explicit gates pass under strict CPU receipts.",
+  "Per-case failures are acceptable evidence when failed_rules remain visible and the item is not marked merged.",
+]
+must_not_claim = [
+  "Broad Qwen answer quality is proven.",
+  "Unbounded multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
 
