@@ -277,10 +277,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-015"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-015-device-labels"
 pr = 4929
-head_sha = "8543a61bbb41493406f0420cf67ff04cc657ae1c"
+head_sha = "4bba8ea9f7d7d10474b0f6ffcf4e8b5982e4b384"
+merge_sha = "7df11e9bde314a2a0aa61de86a8e0a1664a4a6da"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -326,6 +327,51 @@ must_not_claim = [
   "M3 Air MPSGraph model inference works.",
   "M3 Air labels are M4 Mac mini labels.",
   "Any model inference was run.",
+]
+
+[[work_item]]
+id = "M3MBA-016"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-016-backend-visibility-preflight"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-015"]
+acceptance = "Add M3 Air Metal and MPSGraph backend visibility receipts plus a bounded Apple preflight contract that records host/runtime visibility, requested backend identity, machine identity, fallback status, and claim boundaries without loading models, downloading artifacts, or claiming full Metal/MPSGraph inference."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-device-probe --no-default-features apple",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m3",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-cli/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "M3 Air Metal and MPSGraph backend visibility can be recorded with explicit M3 Air request identity.",
+  "The preflight is bounded to host/runtime visibility and does not execute model inference.",
+]
+must_not_claim = [
+  "M3 Air Metal inference works.",
+  "M3 Air MPSGraph model inference works.",
+  "Neural Engine execution works.",
+  "Any model artifact was downloaded or loaded.",
+  "Any speedup or performance result was measured.",
 ]
 
 [[work_item]]

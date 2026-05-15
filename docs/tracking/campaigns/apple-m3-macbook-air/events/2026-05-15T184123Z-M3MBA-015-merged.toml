@@ -1,0 +1,25 @@
+timestamp = "2026-05-15T18:41:23Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-015"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-015-device-labels"
+pr = 4929
+head_sha = "4bba8ea9f7d7d10474b0f6ffcf4e8b5982e4b384"
+merge_sha = "7df11e9bde314a2a0aa61de86a8e0a1664a4a6da"
+summary = "Merged M3 Air Metal and MPSGraph device-model label completion."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4929",
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-cli-config-core/src/lib.rs",
+  "crates/bitnet-device-probe/src/apple_metal.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+notes = [
+  "The merged work preserves M3 Air CPU/NEON, Metal, and MPSGraph request identities as distinct labels.",
+  "M3 Air Metal and MPSGraph remain strict/unavailable runtime requests until a later receipt-backed visibility or execution item lands.",
+  "The closeout does not claim model inference, full Metal inference, MPSGraph model inference, Neural Engine execution, speedup, or M4 Mac mini evidence.",
+]
