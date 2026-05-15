@@ -136,10 +136,10 @@ mod tests {
 
     #[test]
     fn parses_strict_rtx_5070_ti_cuda_device_arg() {
-        assert_eq!(
-            parse_default_device_arg("nvidia-rtx-5070-ti-cuda").unwrap(),
-            DeviceConfig::NvidiaRtx5070TiCuda
-        );
+        assert!(matches!(
+            parse_default_device_arg("nvidia-rtx-5070-ti-cuda"),
+            Ok(DeviceConfig::NvidiaRtx5070TiCuda)
+        ));
     }
 
     #[test]
