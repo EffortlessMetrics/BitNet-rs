@@ -253,7 +253,7 @@ fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
     Ok(())
 }
 
-/// Helper to create linear layers with optional bias tensors (zero-injection)
+/// Helper to create linear layers with optional bias tensors.
 fn linear_with_optional_bias(
     in_dim: usize,
     out_dim: usize,
@@ -261,12 +261,13 @@ fn linear_with_optional_bias(
 ) -> candle_core::Result<Linear> {
     let weight = vb.get((out_dim, in_dim), "weight")?;
 
-    // Try to get bias, create zeros if missing
+    // Missing bias is semantically a no-bias linear layer. Avoid materializing
+    // zero tensors and a runtime add for dense GGUF weights that omit bias.
     let bias = match vb.get(out_dim, "bias") {
         Ok(b) => Some(b),
         Err(_) => {
-            tracing::debug!("Bias tensor missing for linear layer; injecting zeros [{}]", out_dim);
-            Some(Tensor::zeros(out_dim, DType::F32, vb.device())?)
+            tracing::debug!("Bias tensor missing for linear layer; using no-bias path [{out_dim}]");
+            None
         }
     };
 
@@ -1926,6 +1927,28 @@ mod tests {
         let has_inf = vec_data.iter().any(|x| x.is_infinite());
         assert!(!has_nan, "Output should not contain NaN");
         assert!(!has_inf, "Output should not contain Inf");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linear_with_optional_bias_uses_no_bias_path() -> candle_core::Result<()> {
+        let device = Device::Cpu;
+        let weight = Tensor::from_slice(&[1.0f32, 2.0, 3.0, 4.0], (2, 2), &device)?;
+        let input = Tensor::from_slice(&[5.0f32, 6.0], (1, 2), &device)?;
+
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), weight.clone());
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+
+        let no_bias = linear_with_optional_bias(2, 2, vb)?;
+        let no_bias_output = no_bias.forward(&input)?;
+
+        let explicit_zero_bias = Linear::new(weight, Some(Tensor::zeros(2, DType::F32, &device)?));
+        let zero_bias_output = explicit_zero_bias.forward(&input)?;
+
+        assert_eq!(no_bias_output.to_vec2::<f32>()?, zero_bias_output.to_vec2::<f32>()?);
+        assert_eq!(no_bias_output.to_vec2::<f32>()?, vec![vec![17.0, 39.0]]);
 
         Ok(())
     }

@@ -88,3 +88,13 @@ buffers and records that prompt-invariant stop sequences and stop token IDs are
 computed once per session. This is allocation/layout evidence only; resident
 memory, thermal, and power fields remain explicitly unavailable unless a later
 hardware-specific sampler fills them in.
+
+## SLM-CPU-013 Q8_0 Hot-Path Boundary
+
+The first Q8_0 hot-path cleanup keeps the SLM-CPU-011/012 generated IDs and
+strict receipt provenance as the behavior oracle. Dense GGUF linear layers that
+omit a bias now use the no-bias `Linear` path instead of materializing a zero
+bias tensor, preserving numerical output while avoiding unnecessary allocation
+and per-forward bias addition. This is implementation cleanup only; it does not
+claim sustained throughput, Q4/Q5 support, GPU/NPU/OpenVINO/UHD 620 execution,
+server inference, Qwen3.5 support, or BitNet QK256 kernel changes.
