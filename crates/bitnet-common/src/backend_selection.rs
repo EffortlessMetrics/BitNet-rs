@@ -72,6 +72,10 @@ pub enum BackendRequest {
     AppleM4MpsGraph,
     /// Require the Apple M4 CPU/NEON fallback/parity lane.
     AppleM4CpuNeon,
+    /// Require the Apple M3 MacBook Air native Metal lane.
+    AppleM3AirMetal,
+    /// Require the Apple M3 MacBook Air MPSGraph graph/reference lane.
+    AppleM3AirMpsGraph,
     /// Require the Apple M3 MacBook Air CPU/NEON lane.
     AppleM3AirCpuNeon,
 }
@@ -95,6 +99,8 @@ impl BackendRequest {
             "apple-m4-metal" => Some(BackendRequest::AppleM4Metal),
             "apple-m4-mpsgraph" => Some(BackendRequest::AppleM4MpsGraph),
             "apple-m4-cpu-neon" => Some(BackendRequest::AppleM4CpuNeon),
+            "apple-m3-air-metal" => Some(BackendRequest::AppleM3AirMetal),
+            "apple-m3-air-mpsgraph" => Some(BackendRequest::AppleM3AirMpsGraph),
             "apple-m3-air-cpu-neon" => Some(BackendRequest::AppleM3AirCpuNeon),
             _ => None,
         }
@@ -119,6 +125,8 @@ impl fmt::Display for BackendRequest {
             BackendRequest::AppleM4Metal => write!(f, "apple-m4-metal"),
             BackendRequest::AppleM4MpsGraph => write!(f, "apple-m4-mpsgraph"),
             BackendRequest::AppleM4CpuNeon => write!(f, "apple-m4-cpu-neon"),
+            BackendRequest::AppleM3AirMetal => write!(f, "apple-m3-air-metal"),
+            BackendRequest::AppleM3AirMpsGraph => write!(f, "apple-m3-air-mpsgraph"),
             BackendRequest::AppleM3AirCpuNeon => write!(f, "apple-m3-air-cpu-neon"),
         }
     }
@@ -179,8 +187,8 @@ impl BackendSelectionResult {
             "hip" => "hip",
             "oneapi" => "oneapi",
             "opencl" => "opencl",
-            "apple-m4-metal" | "metal" => "metal",
-            "apple-m4-mpsgraph" | "mpsgraph" => "mpsgraph",
+            "apple-m4-metal" | "apple-m3-air-metal" | "metal" => "metal",
+            "apple-m4-mpsgraph" | "apple-m3-air-mpsgraph" | "mpsgraph" => "mpsgraph",
             _ => "cpu",
         }
     }
@@ -203,6 +211,8 @@ impl BackendSelectionResult {
             | BackendRequest::AppleM4Metal
             | BackendRequest::AppleM4MpsGraph
             | BackendRequest::AppleM4CpuNeon
+            | BackendRequest::AppleM3AirMetal
+            | BackendRequest::AppleM3AirMpsGraph
             | BackendRequest::AppleM3AirCpuNeon => {
                 self.requested_backend() != self.selected_backend()
             }
@@ -343,13 +353,15 @@ pub fn select_backend(
                 available: detected.clone(),
             });
         }
-        BackendRequest::Metal | BackendRequest::AppleM4Metal => {
+        BackendRequest::Metal | BackendRequest::AppleM4Metal | BackendRequest::AppleM3AirMetal => {
             return Err(BackendSelectionError::RequestedUnavailable {
                 requested: request,
                 available: detected.clone(),
             });
         }
-        BackendRequest::MpsGraph | BackendRequest::AppleM4MpsGraph => {
+        BackendRequest::MpsGraph
+        | BackendRequest::AppleM4MpsGraph
+        | BackendRequest::AppleM3AirMpsGraph => {
             return Err(BackendSelectionError::RequestedUnavailable {
                 requested: request,
                 available: detected.clone(),
@@ -530,6 +542,14 @@ mod tests {
             Some(BackendRequest::AppleM4CpuNeon)
         );
         assert_eq!(
+            BackendRequest::from_label("apple-m3-air-metal"),
+            Some(BackendRequest::AppleM3AirMetal)
+        );
+        assert_eq!(
+            BackendRequest::from_label("apple-m3-air-mpsgraph"),
+            Some(BackendRequest::AppleM3AirMpsGraph)
+        );
+        assert_eq!(
             BackendRequest::from_label("apple-m3-air-cpu-neon"),
             Some(BackendRequest::AppleM3AirCpuNeon)
         );
@@ -611,15 +631,31 @@ mod tests {
 
     #[test]
     fn apple_m3_air_cpu_neon_request_is_distinct_from_m4_cpu_neon() {
+        assert_eq!(BackendRequest::AppleM3AirMetal.to_string(), "apple-m3-air-metal");
+        assert_eq!(BackendRequest::AppleM3AirMpsGraph.to_string(), "apple-m3-air-mpsgraph");
         assert_eq!(BackendRequest::AppleM3AirCpuNeon.to_string(), "apple-m3-air-cpu-neon");
         assert_ne!(
             BackendRequest::AppleM3AirCpuNeon.to_string(),
             BackendRequest::AppleM4CpuNeon.to_string()
         );
+        assert_ne!(
+            BackendRequest::AppleM3AirMetal.to_string(),
+            BackendRequest::AppleM4Metal.to_string()
+        );
+        assert_ne!(
+            BackendRequest::AppleM3AirMpsGraph.to_string(),
+            BackendRequest::AppleM4MpsGraph.to_string()
+        );
 
         let err = select_backend(BackendRequest::AppleM3AirCpuNeon, &cpu_only_caps()).unwrap_err();
         assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
         assert!(err.to_string().contains("apple-m3-air-cpu-neon"));
+
+        for request in [BackendRequest::AppleM3AirMetal, BackendRequest::AppleM3AirMpsGraph] {
+            let err = select_backend(request, &cpu_only_caps()).unwrap_err();
+            assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+            assert!(err.to_string().contains(&request.to_string()));
+        }
     }
 
     #[test]

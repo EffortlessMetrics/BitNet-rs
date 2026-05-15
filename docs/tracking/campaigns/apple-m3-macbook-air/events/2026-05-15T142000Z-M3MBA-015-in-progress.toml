@@ -1,0 +1,25 @@
+timestamp = "2026-05-15T14:20:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-015"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-015-device-labels"
+
+summary = "Started the M3 Air device-model label completion slice."
+
+artifacts = [
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-cli-config-core/src/lib.rs",
+  "crates/bitnet-device-probe/src/apple_metal.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+]
+
+notes = [
+  "The slice adds explicit apple-m3-air-metal and apple-m3-air-mpsgraph request identities next to the existing apple-m3-air-cpu-neon label.",
+  "The new labels remain strict/unavailable execution requests until a later receipt-backed runtime item lands.",
+  "No M3 Air Metal inference, MPSGraph model inference, Neural Engine execution, BitNet QK256 support, model download, or hardware run is claimed.",
+]

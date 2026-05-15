@@ -97,16 +97,17 @@ thin: proof still belongs to a fresh M4 item with fresh M4 receipts.
 | 4 | `M3MBA-012` | Dense SLM harness contract | `mac validate`/`mac receipts-check` contract, synthetic CI receipt plan, and local-only timing boundary |
 | 5 | `M3MBA-013` | CI completion policy for selected long jobs | Routing, preflight, artifact upload, cap sizing, and CI actuals policy |
 | 6 | `M3MBA-014` | M3 Air Mac validate receipt bridge | Runtime path preserves M3 Air backend and machine identity before live smoke |
-| 7 | `M3MBA-004A` | Dense Qwen SLM smoke mirror on M3 Air | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` plus report |
-| 8 | `M3MBA-004B` | Dense Qwen SLM operator profile on M3 Air | Operator receipt with allocation-audit, thermal, power, and comparison-grade context |
-| 9 | `M3MBA-005A` | Official Microsoft 2B I2_S artifact identity | Source revision, filename, size, SHA256, cache root, storage context |
-| 10 | `M3MBA-005B` | Official Microsoft 2B I2_S tokenizer authority | Tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence |
-| 11 | `M3MBA-005C` | Official Microsoft 2B I2_S reference output decision | Reference-runner report, answer-gate result or failing prompt IDs, cleanup state |
-| 12 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
-| 13 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
-| 14 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
-| 15 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
-| 16 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
+| 7 | `M3MBA-015` | M3 Air device-model label completion | Explicit M3 Air Metal/MPSGraph/CPU identities without runtime claims |
+| 8 | `M3MBA-004A` | Dense Qwen SLM smoke mirror on M3 Air | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` plus report |
+| 9 | `M3MBA-004B` | Dense Qwen SLM operator profile on M3 Air | Operator receipt with allocation-audit, thermal, power, and comparison-grade context |
+| 10 | `M3MBA-005A` | Official Microsoft 2B I2_S artifact identity | Source revision, filename, size, SHA256, cache root, storage context |
+| 11 | `M3MBA-005B` | Official Microsoft 2B I2_S tokenizer authority | Tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence |
+| 12 | `M3MBA-005C` | Official Microsoft 2B I2_S reference output decision | Reference-runner report, answer-gate result or failing prompt IDs, cleanup state |
+| 13 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
+| 14 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
+| 15 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
+| 16 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
+| 17 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
 
 ## Current PR Stack
 
@@ -119,8 +120,11 @@ M3 validate bridge, dense Qwen smoke/operator evidence, Microsoft 2B I2_S
 identity, tokenizer authority, reference-output decision, cache-retention audit,
 and dense SLM cross-lane synthesis.
 
-The active stack now starts with the remaining secondary candidate surface:
-`M3MBA-007` for 3B TL diagnostics, then `M3MBA-008` for handoff or
+`M3MBA-015` is the current device-model cleanup slice. It adds explicit M3 Air
+Metal and MPSGraph request identities alongside the existing CPU/NEON label, but
+keeps those routes strict/unavailable until a later receipt-backed runtime item
+lands. After that, the active stack returns to the remaining secondary candidate
+surface: `M3MBA-007` for 3B TL diagnostics, then `M3MBA-008` for handoff or
 no-accepted-artifact closure. `M3MBA-006` is blocked until the 0.7B control
 candidate has an official GGUF, reproducible conversion path, or explicitly
 approved third-party artifact path. Any new large candidate remains serialized
@@ -131,8 +135,9 @@ or naming a blocker:
 
 | Stack position | Item | PR shape | Blocks |
 |---:|---|---|---|
-| 1 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence with no I2_S support claim. |
-| 2 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
+| 1 | `M3MBA-015` | Complete M3 Air device identities without enabling runtime claims. | Prevents M3 Air Metal/MPSGraph requests from aliasing generic or M4 labels. |
+| 2 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence with no I2_S support claim. |
+| 3 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
 
 ## 2026-05-13 Tactical Plan
 
@@ -416,6 +421,7 @@ that a reviewer can inspect without access to the local model cache.
 |---|---|---|---|---|
 | Machine readiness | `M3MBA-002` | Machine-profile receipt, schema-valid profile JSON, campaign event | None | Ready for receipt-label work |
 | Receipt label readiness | `M3MBA-003` | Validator or documented label support for `apple-m3-air-cpu-neon` | None | Ready to record M3 timing without M4 wording |
+| Device model completion | `M3MBA-015` | Shared backend/config labels for `apple-m3-air-metal`, `apple-m3-air-mpsgraph`, and `apple-m3-air-cpu-neon` | None | Ready to plan future M3 Air Metal or graph receipts without generic or M4 aliasing |
 | Dense harness readiness | `M3MBA-012` | `mac validate`/`mac receipts-check` contract, synthetic no-model CI receipt expectation, and local-only timing boundary | None | Ready for live dense smoke or implementation PR |
 | CI completion readiness | `M3MBA-013` | Routing, preflight, artifact upload, cap sizing, and CI actuals policy for selected long M3 jobs | None | Ready for scheduled/labeled live M3 evidence without near-completion caps |
 | M3 validate bridge | `M3MBA-014` | Mac validate and receipts-check preserve `apple-m3-air-cpu-neon` backend, M3 machine ID, and M3-specific artifact kinds without live inference | None | Ready for live dense smoke |

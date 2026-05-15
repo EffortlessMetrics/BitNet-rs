@@ -1,16 +1,18 @@
 //! Apple Metal runtime visibility probing.
 //!
 //! This module records whether macOS exposes a Metal device and the machine
-//! facts needed for later Apple M4 receipts. It does not compile or dispatch a
-//! Metal pipeline.
+//! facts needed for later Apple proof-lane receipts. It does not compile or
+//! dispatch a Metal pipeline.
 
 /// Apple M4 native Metal backend label.
 pub const APPLE_M4_METAL_BACKEND: &str = "apple-m4-metal";
+/// Apple M3 MacBook Air native Metal backend label.
+pub const APPLE_M3_AIR_METAL_BACKEND: &str = "apple-m3-air-metal";
 /// Runtime API recorded by Apple Metal probe receipts.
 pub const APPLE_M4_METAL_RUNTIME_API: &str = "metal";
-/// Proof stage for a visible Apple M4-family Metal runtime probe.
+/// Proof stage for a visible supported Apple Metal runtime probe.
 pub const APPLE_M4_METAL_PROOF_STAGE_DETECTED: &str = "runtime_detected";
-/// Proof stage for a Metal runtime probe where Apple M4-family Metal is not visible.
+/// Proof stage for a Metal runtime probe where supported Apple Metal is not visible.
 pub const APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE: &str = "runtime_unavailable";
 
 /// Raw command text used to build an [`AppleMetalProbe`].
@@ -45,7 +47,7 @@ pub struct AppleMetalProbeText {
 pub struct AppleMetalProbe {
     /// Requested backend identity.
     pub requested_backend: &'static str,
-    /// Selected backend identity when Apple M4-family Metal is visible.
+    /// Selected backend identity when a supported Apple Metal proof-lane chip is visible.
     pub selected_backend: Option<&'static str>,
     /// Runtime API identity.
     pub runtime_api: &'static str,
@@ -136,9 +138,21 @@ impl AppleMetalProbe {
             .or_else(|| parse_colon_value(&text.metal, "Chipset Model"))
             .or_else(|| parse_colon_value(&text.displays, "Chipset Model"));
         let apple_m4_family_chip = chip.as_deref().is_some_and(is_apple_m4_family_chip);
+        let apple_m3_air_hardware =
+            chip.as_deref().is_some_and(|chip| is_apple_m3_air_hardware(chip, &text.hardware));
         let metal_visible =
             is_macos && text.metal_command_succeeded && metal_text_reports_visibility(&text.metal);
         let apple_m4_metal_visible = metal_visible && apple_m4_family_chip;
+        let apple_m3_air_metal_visible = metal_visible && apple_m3_air_hardware;
+        let requested_backend =
+            if apple_m3_air_hardware { APPLE_M3_AIR_METAL_BACKEND } else { APPLE_M4_METAL_BACKEND };
+        let selected_backend = if apple_m3_air_metal_visible {
+            Some(APPLE_M3_AIR_METAL_BACKEND)
+        } else if apple_m4_metal_visible {
+            Some(APPLE_M4_METAL_BACKEND)
+        } else {
+            None
+        };
         let unified_memory_bytes =
             parse_colon_value(&text.memsize, "hw.memsize").and_then(|value| {
                 value.split_whitespace().next().and_then(|number| number.parse::<u64>().ok())
@@ -156,8 +170,8 @@ impl AppleMetalProbe {
             });
 
         Self {
-            requested_backend: APPLE_M4_METAL_BACKEND,
-            selected_backend: apple_m4_metal_visible.then_some(APPLE_M4_METAL_BACKEND),
+            requested_backend,
+            selected_backend,
             runtime_api: APPLE_M4_METAL_RUNTIME_API,
             host_os: text.host_os.clone(),
             macos_version: parse_colon_value(&text.sw_vers, "ProductVersion"),
@@ -178,7 +192,7 @@ impl AppleMetalProbe {
             native_or_virtualized,
             metal_visible,
             fallback_used: false,
-            proof_stage: if apple_m4_metal_visible {
+            proof_stage: if selected_backend.is_some() {
                 APPLE_M4_METAL_PROOF_STAGE_DETECTED
             } else {
                 APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE
@@ -258,6 +272,19 @@ fn is_apple_m4_family_chip(chip: &str) -> bool {
     chip == "Apple M4" || chip.starts_with("Apple M4 ")
 }
 
+fn is_apple_m3_air_hardware(chip: &str, hardware: &str) -> bool {
+    if chip != "Apple M3" {
+        return false;
+    }
+
+    let model_name_is_air = parse_colon_value(hardware, "Model Name")
+        .is_some_and(|model_name| model_name == "MacBook Air");
+    let model_identifier_is_air = parse_colon_value(hardware, "Model Identifier")
+        .is_some_and(|identifier| matches!(identifier.as_str(), "Mac15,12" | "Mac15,13"));
+
+    model_name_is_air || model_identifier_is_air
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,10 +351,10 @@ mod tests {
     }
 
     #[test]
-    fn metal_visible_on_non_m4_mac_does_not_select_m4_backend() {
+    fn metal_visible_on_m3_mac_selects_m3_air_backend_without_m4_aliasing() {
         let text = AppleMetalProbeText {
             host_os: "macos".to_owned(),
-            hardware: "Hardware:\n\n    Chip: Apple M3\n    Total Number of Cores: 8\n"
+            hardware: "Hardware:\n\n    Model Name: MacBook Air\n    Model Identifier: Mac15,13\n    Chip: Apple M3\n    Total Number of Cores: 8\n"
                 .to_owned(),
             metal: "Metal:\n\n    Apple M3:\n      Chipset Model: Apple M3\n      Metal Support: Metal 3\n"
                 .to_owned(),
@@ -341,6 +368,71 @@ mod tests {
 
         assert_eq!(probe.chip.as_deref(), Some("Apple M3"));
         assert!(probe.metal_visible);
+        assert_eq!(probe.requested_backend, APPLE_M3_AIR_METAL_BACKEND);
+        assert_eq!(probe.selected_backend, Some(APPLE_M3_AIR_METAL_BACKEND));
+        assert_ne!(probe.selected_backend, Some(APPLE_M4_METAL_BACKEND));
+        assert_eq!(probe.proof_stage, APPLE_M4_METAL_PROOF_STAGE_DETECTED);
+    }
+
+    #[test]
+    fn metal_unavailable_on_m3_mac_keeps_m3_air_requested_backend() {
+        let text = AppleMetalProbeText {
+            host_os: "macos".to_owned(),
+            hardware:
+                "Hardware:\n\n    Model Name: MacBook Air\n    Chip: Apple M3\n    Total Number of Cores: 8\n"
+                    .to_owned(),
+            metal: "Metal:\n\n    No Metal device found\n".to_owned(),
+            metal_command_succeeded: true,
+            ..AppleMetalProbeText::default()
+        };
+
+        let probe = parse_apple_metal_probe(&text);
+
+        assert_eq!(probe.chip.as_deref(), Some("Apple M3"));
+        assert!(!probe.metal_visible);
+        assert_eq!(probe.requested_backend, APPLE_M3_AIR_METAL_BACKEND);
+        assert_eq!(probe.selected_backend, None);
+        assert_eq!(probe.proof_stage, APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn metal_visible_on_non_air_m3_mac_does_not_select_m3_air_backend() {
+        let text = AppleMetalProbeText {
+            host_os: "macos".to_owned(),
+            hardware:
+                "Hardware:\n\n    Model Name: MacBook Pro\n    Chip: Apple M3\n    Total Number of Cores: 8\n"
+                    .to_owned(),
+            metal: "Metal:\n\n    Apple M3:\n      Chipset Model: Apple M3\n      Metal Support: Metal 3\n"
+                .to_owned(),
+            metal_command_succeeded: true,
+            ..AppleMetalProbeText::default()
+        };
+
+        let probe = parse_apple_metal_probe(&text);
+
+        assert!(probe.metal_visible);
+        assert_eq!(probe.requested_backend, APPLE_M4_METAL_BACKEND);
+        assert_eq!(probe.selected_backend, None);
+        assert_eq!(probe.proof_stage, APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn metal_visible_on_m3_pro_mac_does_not_select_m3_air_backend() {
+        let text = AppleMetalProbeText {
+            host_os: "macos".to_owned(),
+            hardware:
+                "Hardware:\n\n    Model Name: MacBook Pro\n    Chip: Apple M3 Pro\n    Total Number of Cores: 11\n"
+                    .to_owned(),
+            metal: "Metal:\n\n    Apple M3 Pro:\n      Chipset Model: Apple M3 Pro\n      Metal Support: Metal 3\n"
+                .to_owned(),
+            metal_command_succeeded: true,
+            ..AppleMetalProbeText::default()
+        };
+
+        let probe = parse_apple_metal_probe(&text);
+
+        assert!(probe.metal_visible);
+        assert_eq!(probe.requested_backend, APPLE_M4_METAL_BACKEND);
         assert_eq!(probe.selected_backend, None);
         assert_eq!(probe.proof_stage, APPLE_M4_METAL_PROOF_STAGE_UNAVAILABLE);
     }
