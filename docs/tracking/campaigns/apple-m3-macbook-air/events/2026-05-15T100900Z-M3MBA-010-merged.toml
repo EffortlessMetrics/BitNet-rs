@@ -1,0 +1,21 @@
+timestamp = "2026-05-15T10:09:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-010"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-010-storage-audit"
+pr = 4839
+head_sha = "8f8916cd5d2d32058457ae86fa68178637b131cd"
+merge_sha = "3c28779a4409baa4b92b5039ef6df3c22efee962"
+summary = "Merged the M3 Air storage and cache retention audit."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4839",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/storage-audit.json",
+  "docs/reports/apple-silicon-macbook-m3-air-storage-audit.md",
+]
+notes = [
+  "The M3 Air lane remains above the preferred free-space floor after retaining the dense Qwen control artifact and Microsoft 2B I2_S reference artifact.",
+  "M3MBA-006 and M3MBA-007 may proceed only as serialized large-candidate work with fresh preflight, before/after free-space recording, hash evidence, and no committed model binaries.",
+]
