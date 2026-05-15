@@ -1,5 +1,9 @@
 use bitnet_qk256_dispatch::{
-    Qk256DispatchBackend, forward_qk256, forward_qk256_with_backend, qk256_dispatch_status,
+    Qk256DispatchBackend, forward_qk256, forward_qk256_scaled_with_backend,
+    forward_qk256_with_backend, qk256_dispatch_status,
+};
+use bitnet_quantization::i2s_qk256::{
+    QK256_BLOCK, gemv_qk256_row_activation_quantized_reference, pack_qk256_codes_for_cols,
 };
 use candle_core::{Device, Tensor};
 
@@ -80,6 +84,32 @@ fn forward_qk256_rank3_preserves_varied_token_rows() {
 }
 
 #[test]
+fn forward_qk256_cpu_uses_reference_activation_quantization() {
+    let device = Device::Cpu;
+    let cols = QK256_BLOCK;
+    let scale = 0.375f32;
+    let codes: Vec<u8> = (0..cols).map(|i| (i % 4) as u8).collect();
+    let qk_bytes = pack_qk256_codes_for_cols(&codes, cols);
+    let input_values: Vec<f32> = (0..cols).map(|i| ((i % 13) as f32 - 6.0) / 7.0).collect();
+
+    let input = Tensor::from_vec(input_values.clone(), (1, cols), &device).unwrap();
+    let qk = Tensor::from_vec(qk_bytes.clone(), (1, qk_bytes.len()), &device).unwrap();
+    let out = forward_qk256_scaled_with_backend(
+        &input,
+        &qk,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Qk256DispatchBackend::Cpu,
+        scale,
+    )
+    .unwrap();
+
+    let expected =
+        gemv_qk256_row_activation_quantized_reference(&qk_bytes, &input_values, cols, scale);
+    let out_vals = out.to_vec2::<f32>().unwrap();
+    assert!((out_vals[0][0] - expected).abs() < 1e-5);
+}
+
+#[test]
 fn forward_qk256_rejects_dimension_mismatch() {
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 128], (1, 128), &device).unwrap();
@@ -114,16 +144,18 @@ fn qk256_dispatch_status_keeps_opencl_non_claiming() {
     assert_eq!(status.compiled_opencl, cfg!(feature = "opencl"));
     assert_eq!(status.compiled_oneapi, cfg!(feature = "oneapi"));
     assert_eq!(status.opencl_launcher_available, cfg!(feature = "opencl"));
-    assert_eq!(status.runtime_backend, "cpu_qk256_reference");
     assert!(!status.accelerator_claimable);
     assert!(status.not_claims.contains(&"a770_qk256_opencl_execution"));
 
     if cfg!(feature = "oneapi") {
-        assert_eq!(status.blocker, Some("oneapi_qk256_transformer_dispatch_not_wired"));
+        assert_eq!(status.runtime_backend, "oneapi_qk256_activation_quantized_diagnostic");
+        assert_eq!(status.blocker, Some("oneapi_qk256_semantic_quality_unproven"));
     } else if cfg!(feature = "opencl") {
-        assert_eq!(status.blocker, Some("opencl_qk256_transformer_dispatch_not_wired"));
+        assert_eq!(status.runtime_backend, "opencl_qk256_activation_quantized_diagnostic");
+        assert_eq!(status.blocker, Some("opencl_qk256_semantic_quality_unproven"));
     } else {
-        assert_eq!(status.blocker, Some("cpu_qk256_dispatch_only"));
+        assert_eq!(status.runtime_backend, "cpu_qk256_activation_quantized_reference");
+        assert_eq!(status.blocker, Some("cpu_qk256_semantic_quality_unproven"));
     }
 }
 
@@ -141,7 +173,9 @@ fn qk256_opencl_source_matches_microsoft_bitnet_mapping() {
     assert!(
         QK256_OPENCL_KERNEL_SRC.contains("const uchar code = (packed >> (6u - (lane * 2u))) & 3u")
     );
-    assert!(QK256_OPENCL_KERNEL_SRC.contains("const float w = ((float)code) - 1.0f"));
-    assert!(QK256_OPENCL_KERNEL_SRC.contains("acc * scale"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("qk256_nearest_int_reference"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("const float act_scale = 127.0f / max_abs"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("integer_dot += ((int)code) * q"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("(integer_dot - act_sum"));
     assert!(QK256_OPENCL_KERNEL_SRC.contains("const float scale"));
 }

@@ -251,7 +251,7 @@ impl InspectCommand {
         let file_type = reader.get_u32_metadata("general.file_type");
 
         let qk256_inventory = qk256_contract_inventory(&reader)?;
-        let rust_uses_reference_activation_quantization = false;
+        let rust_uses_reference_activation_quantization = true;
         let summary = i2s_matmul_contract_summary(
             &qk256_inventory,
             rust_uses_reference_activation_quantization,
@@ -269,8 +269,8 @@ impl InspectCommand {
             gguf_metadata: I2sMatmulGgufMetadata { architecture, file_type },
             qk256_inventory,
             rust_policy: I2sRustMatmulPolicy {
-                activation_quantization: "none_dense_f32_input".to_string(),
-                dot_formula: "sum(code_to_f32(code) * activation_f32) * trailer_scale".to_string(),
+                activation_quantization: "quantize_row_i8_s".to_string(),
+                dot_formula: "(integer_dot - act_sum) / act_scale * trailer_scale".to_string(),
                 code3_value: 2.0,
                 uses_reference_activation_quantization: rust_uses_reference_activation_quantization,
             },
@@ -285,12 +285,7 @@ impl InspectCommand {
             summary,
             not_claims: critical_qk256_report_not_claims()
                 .into_iter()
-                .chain([
-                    "runtime_reference_parity",
-                    "semantic_quality",
-                    "i2s_activation_quantization_implemented",
-                    "a770_semantic_quality",
-                ])
+                .chain(["runtime_reference_parity", "semantic_quality", "a770_semantic_quality"])
                 .map(str::to_string)
                 .collect(),
         })

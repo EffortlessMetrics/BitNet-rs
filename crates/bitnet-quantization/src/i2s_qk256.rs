@@ -231,6 +231,22 @@ pub fn gemv_qk256_row_activation_quantized_reference(
     debug_assert!(x.len() >= cols, "I2S_QK256: x too short: {} < {}", x.len(), cols);
 
     let activation = quantize_row_i8_s_reference(&x[..cols]);
+    gemv_qk256_row_with_activation_quantized_reference(qs_row, &activation, cols, trailer_scale)
+}
+
+#[inline]
+fn gemv_qk256_row_with_activation_quantized_reference(
+    qs_row: &[u8],
+    activation: &I2SActivationQuant,
+    cols: usize,
+    trailer_scale: f32,
+) -> f32 {
+    debug_assert!(
+        activation.values.len() >= cols,
+        "I2S_QK256: activation values too short: {} < {}",
+        activation.values.len(),
+        cols
+    );
     let mut integer_dot = 0i32;
     for (col, &q) in activation.values.iter().enumerate().take(cols) {
         let raw_code = i32::from(packed_code_at(qs_row, col));
@@ -582,6 +598,55 @@ pub fn gemv_qk256_scaled(
             *output *= scale;
         }
     }
+    Ok(())
+}
+
+/// Multi-row GEMV using the reference `I2_S` activation quantization contract.
+///
+/// This matches GGML's BitNet matmul rule:
+/// `(integer_dot - act_sum) / act_scale * trailer_scale`.
+pub fn gemv_qk256_activation_quantized_scaled(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    scale: f32,
+) -> Result<()> {
+    if y_out.len() != rows {
+        bail!("I2S_QK256: y_out length {} != rows {}", y_out.len(), rows);
+    }
+    if x.len() < cols {
+        bail!("I2S_QK256: x length {} < cols {}", x.len(), cols);
+    }
+    let expected_stride = qk256_row_stride_bytes(cols)?;
+    if row_stride_bytes != expected_stride {
+        bail!(
+            "I2S_QK256: row_stride_bytes {} != expected {} for cols={}",
+            row_stride_bytes,
+            expected_stride,
+            cols
+        );
+    }
+
+    let expected_total = rows * row_stride_bytes;
+    if qs_data.len() < expected_total {
+        bail!("I2S_QK256: data too short: {} < {}", qs_data.len(), expected_total);
+    }
+
+    let activation = quantize_row_i8_s_reference(&x[..cols]);
+    for (row, output) in y_out.iter_mut().enumerate().take(rows) {
+        let start = row * row_stride_bytes;
+        let end = start + row_stride_bytes;
+        *output = gemv_qk256_row_with_activation_quantized_reference(
+            &qs_data[start..end],
+            &activation,
+            cols,
+            scale,
+        );
+    }
+
     Ok(())
 }
 

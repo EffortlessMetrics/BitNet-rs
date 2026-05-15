@@ -13,6 +13,12 @@ use std::sync::{Arc, OnceLock};
 pub const QK256_OPENCL_KERNEL_NAME: &str = "qk256_gemm_no_scale";
 
 pub const QK256_OPENCL_KERNEL_SRC: &str = r#"
+inline int qk256_nearest_int_reference(const float fval) {
+    const float val = fval + 12582912.0f;
+    const int bits = as_int(val);
+    return (bits & 0x007fffff) - 0x00400000;
+}
+
 __kernel void qk256_gemm_no_scale(
     __global const uchar* qs,
     __global const float* input,
@@ -32,7 +38,14 @@ __kernel void qk256_gemm_no_scale(
     __global const uchar* row_bytes = qs + ((ulong)row * (ulong)row_stride_bytes);
     __global const float* x = input + ((ulong)input_row * (ulong)cols);
 
-    float acc = 0.0f;
+    float max_abs = 0.00001f;
+    for (uint col = 0; col < cols; ++col) {
+        max_abs = fmax(max_abs, fabs(x[col]));
+    }
+
+    const float act_scale = 127.0f / max_abs;
+    int integer_dot = 0;
+    int act_sum = 0;
     for (uint col = 0; col < cols; ++col) {
         const uint group128 = col / 128u;
         const uint within = col - (group128 * 128u);
@@ -40,11 +53,13 @@ __kernel void qk256_gemm_no_scale(
         const uint pos = within - (lane * 32u);
         const uchar packed = row_bytes[(group128 * 32u) + pos];
         const uchar code = (packed >> (6u - (lane * 2u))) & 3u;
-        const float w = ((float)code) - 1.0f;
-        acc += w * x[col];
+        const int q = max(-128, min(127, qk256_nearest_int_reference(x[col] * act_scale)));
+        integer_dot += ((int)code) * q;
+        act_sum += q;
     }
 
-    output[((ulong)input_row * (ulong)rows) + (ulong)row] = acc * scale;
+    output[((ulong)input_row * (ulong)rows) + (ulong)row] =
+        (((float)(integer_dot - act_sum)) / act_scale) * scale;
 }
 "#;
 

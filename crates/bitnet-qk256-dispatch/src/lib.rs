@@ -51,9 +51,9 @@ pub fn reset_qk256_dispatch_counters() {
 
 /// Describes which QK256 runtime is currently used by this dispatch crate.
 ///
-/// OpenCL/oneAPI features currently compile the route dependencies only. The actual
-/// GGML QK256 no-scale GEMV remains the CPU implementation until a format-correct
-/// OpenCL QK256 runtime is wired here.
+/// OpenCL/oneAPI features expose an explicit diagnostic route when selected by
+/// the transformer. The route remains non-claiming until semantic quality and
+/// route receipts prove the full model path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Qk256DispatchStatus {
     pub compiled_opencl: bool,
@@ -70,18 +70,25 @@ pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
     let compiled_opencl = cfg!(feature = "opencl");
     let compiled_oneapi = cfg!(feature = "oneapi");
     let blocker = if compiled_oneapi {
-        Some("oneapi_qk256_transformer_dispatch_not_wired")
+        Some("oneapi_qk256_semantic_quality_unproven")
     } else if compiled_opencl {
-        Some("opencl_qk256_transformer_dispatch_not_wired")
+        Some("opencl_qk256_semantic_quality_unproven")
     } else {
-        Some("cpu_qk256_dispatch_only")
+        Some("cpu_qk256_semantic_quality_unproven")
+    };
+    let runtime_backend = if compiled_oneapi {
+        "oneapi_qk256_activation_quantized_diagnostic"
+    } else if compiled_opencl {
+        "opencl_qk256_activation_quantized_diagnostic"
+    } else {
+        "cpu_qk256_activation_quantized_reference"
     };
 
     Qk256DispatchStatus {
         compiled_opencl,
         compiled_oneapi,
         opencl_launcher_available: cfg!(feature = "opencl"),
-        runtime_backend: "cpu_qk256_reference",
+        runtime_backend,
         accelerator_claimable: false,
         blocker,
         not_claims: NOT_CLAIMED_OPENCL_QK256,
@@ -117,7 +124,7 @@ pub fn forward_qk256_scaled_with_backend(
     backend: Qk256DispatchBackend,
     scale: f32,
 ) -> Result<Tensor> {
-    use bitnet_quantization::i2s_qk256::gemv_qk256_scaled;
+    use bitnet_quantization::i2s_qk256::gemv_qk256_activation_quantized_scaled;
 
     let qk256_dims = qk256_tensor.dims();
     let layout = parse_qk256_layout(weight_name, qk256_dims)
@@ -172,7 +179,7 @@ pub fn forward_qk256_scaled_with_backend(
             for (i, input_row) in input_vec.iter().enumerate() {
                 let start = i * layout.rows;
                 let end = start + layout.rows;
-                gemv_qk256_scaled(
+                gemv_qk256_activation_quantized_scaled(
                     &flat_bytes,
                     input_row,
                     &mut output_flat[start..end],
