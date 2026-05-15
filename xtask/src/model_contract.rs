@@ -149,7 +149,7 @@ fn lint_one_contract(path: &Path, allow_missing_assets: bool) -> Result<Contract
 
     let mut missing = Vec::new();
     for pointer in REQUIRED_POINTERS {
-        if value.pointer(pointer).map_or(true, Value::is_null) {
+        if value.pointer(pointer).is_none_or(Value::is_null) {
             missing.push((*pointer).to_string());
         }
     }

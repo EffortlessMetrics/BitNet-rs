@@ -246,14 +246,14 @@ fn build_verify_report(suite_path: &Path, suite: &PromptSuite) -> PromptSuiteVer
             failures.push(format!("{} has unknown oracle {}", case.id, case.oracle));
         }
         if (case.requires_pair || case.oracle == "semantic_pair_difference")
-            && case.pair_prompt.as_deref().map_or(true, str::is_empty)
+            && case.pair_prompt.as_deref().is_none_or(str::is_empty)
         {
             failures.push(format!("{} requires pair_prompt", case.id));
         }
         if (case.oracle == "repetition_guard"
             || case.oracle == "stop_condition"
             || case.category == "stop_repetition_stress")
-            && case.stop_expectation.as_deref().map_or(true, str::is_empty)
+            && case.stop_expectation.as_deref().is_none_or(str::is_empty)
         {
             failures.push(format!("{} missing stop_expectation", case.id));
         }

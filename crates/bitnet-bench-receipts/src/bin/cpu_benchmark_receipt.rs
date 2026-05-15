@@ -942,7 +942,7 @@ fn run_threaded_gemv_qk256(
         }
         Ok(())
     });
-    scope_result.map_err(|err| std::io::Error::other(err))?;
+    scope_result.map_err(std::io::Error::other)?;
 
     let selection =
         selections.into_iter().next().ok_or("threaded GEMV produced no worker selection")?;
@@ -981,7 +981,7 @@ fn run_threaded_gemm_qk256(
         }
         Ok(())
     });
-    scope_result.map_err(|err| std::io::Error::other(err))?;
+    scope_result.map_err(std::io::Error::other)?;
     Ok(applied_thread_count)
 }
 
