@@ -6027,9 +6027,10 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
         Some("apple_m4_slm_performance_profiles")
             | Some("slm_apple_m4_warm_session")
             | Some("apple_m4_slm_eval_summary")
+            | Some("apple_m4_slm_benchmark_v2")
     ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, or apple_m4_slm_eval_summary receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, or apple_m4_slm_benchmark_v2 receipt",
             path.display()
         );
     }
@@ -6050,6 +6051,9 @@ fn compare_dense_slm_regression(
         }
         Some("apple_m4_slm_eval_summary") => {
             compare_dense_slm_eval_summary_regression(path, receipt, baseline)
+        }
+        Some("apple_m4_slm_benchmark_v2") => {
+            compare_dense_slm_benchmark_v2_regression(path, receipt, baseline)
         }
         _ => anyhow::bail!("{} is not an Apple M4 dense SLM envelope receipt", path.display()),
     }
@@ -6245,6 +6249,22 @@ fn compare_dense_slm_eval_summary_regression(
             ACCURACY_LOWER_PCT,
         );
     }
+    compare_slm_eval_scoring_summary_regression(
+        &mut warnings,
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+        ACCURACY_LOWER_PCT,
+    )?;
+    compare_slm_eval_task_family_regression(
+        &mut warnings,
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+        ACCURACY_LOWER_PCT,
+    )?;
     for (field, threshold) in [
         ("input_tok_s_p50", THROUGHPUT_LOWER_PCT),
         ("output_tok_s_p50", THROUGHPUT_LOWER_PCT),
@@ -6286,6 +6306,150 @@ fn compare_dense_slm_eval_summary_regression(
         regression_metric(receipt, &["memory", "peak_memory_mb"])?,
         PEAK_MEMORY_MB_HIGHER_PCT,
     );
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn compare_dense_slm_benchmark_v2_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const THROUGHPUT_LOWER_PCT: f64 = 15.0;
+    const LATENCY_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+    const MEMORY_DRIFT_MB_HIGHER_PCT: f64 = 15.0;
+
+    ensure_slm_benchmark_v2_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    for percentile in ["p50", "p90", "p99"] {
+        for (metric, threshold) in [
+            ("cold_load_ms", LOAD_HIGHER_PCT),
+            ("tokenizer_load_ms", LOAD_HIGHER_PCT),
+            ("prompt_tokenize_ms", LATENCY_HIGHER_PCT),
+            ("prefill_ms", LATENCY_HIGHER_PCT),
+            ("ttft_ms", LATENCY_HIGHER_PCT),
+            ("total_wall_ms", LATENCY_HIGHER_PCT),
+        ] {
+            let field = format!("{metric}_{percentile}");
+            compare_higher_is_worse(
+                &mut warnings,
+                "benchmark_summary",
+                &format!("speed.{field}"),
+                regression_metric(&baseline.receipt, &["speed", field.as_str()])?,
+                regression_metric(receipt, &["speed", field.as_str()])?,
+                threshold,
+            );
+        }
+        for (metric, threshold) in [
+            ("input_tok_s", THROUGHPUT_LOWER_PCT),
+            ("output_tok_s", THROUGHPUT_LOWER_PCT),
+            ("decode_tok_s", DECODE_TOK_S_LOWER_PCT),
+        ] {
+            let field = format!("{metric}_{percentile}");
+            compare_lower_is_worse(
+                &mut warnings,
+                "benchmark_summary",
+                &format!("speed.{field}"),
+                regression_metric(&baseline.receipt, &["speed", field.as_str()])?,
+                regression_metric(receipt, &["speed", field.as_str()])?,
+                threshold,
+            );
+        }
+        for (metric, threshold) in [
+            ("peak_memory_mb", PEAK_MEMORY_MB_HIGHER_PCT),
+            ("memory_drift_mb", MEMORY_DRIFT_MB_HIGHER_PCT),
+        ] {
+            let field = format!("{metric}_{percentile}");
+            compare_higher_is_worse(
+                &mut warnings,
+                "benchmark_summary",
+                &format!("memory.{field}"),
+                regression_metric(&baseline.receipt, &["memory", field.as_str()])?,
+                regression_metric(receipt, &["memory", field.as_str()])?,
+                threshold,
+            );
+        }
+    }
+
+    let profiles = receipt["profiles"].as_array().ok_or_else(|| {
+        anyhow!("{} SLM benchmark v2 summary is missing profiles", path.display())
+    })?;
+    for profile in profiles {
+        let Some(profile_id) = profile["profile_id"].as_str() else {
+            anyhow::bail!("{} SLM benchmark v2 profile is missing profile_id", path.display());
+        };
+        let baseline_profile = find_profile(&baseline.receipt, profile_id).ok_or_else(|| {
+            anyhow!(
+                "regression baseline {} is missing SLM benchmark v2 profile {profile_id}",
+                baseline.path.display()
+            )
+        })?;
+
+        for percentile in ["p50", "p90", "p99"] {
+            for (metric, threshold) in [
+                ("cold_load_ms", LOAD_HIGHER_PCT),
+                ("tokenizer_load_ms", LOAD_HIGHER_PCT),
+                ("prompt_tokenize_ms", LATENCY_HIGHER_PCT),
+                ("prefill_ms", LATENCY_HIGHER_PCT),
+                ("time_to_first_token_ms", LATENCY_HIGHER_PCT),
+                ("decode_total_ms", LATENCY_HIGHER_PCT),
+                ("sampling_ms_per_token", SAMPLING_HIGHER_PCT),
+                ("total_wall_ms", LATENCY_HIGHER_PCT),
+            ] {
+                compare_higher_is_worse(
+                    &mut warnings,
+                    profile_id,
+                    &format!("timing.{metric}.{percentile}"),
+                    regression_metric(baseline_profile, &["timing", metric, percentile])?,
+                    regression_metric(profile, &["timing", metric, percentile])?,
+                    threshold,
+                );
+            }
+            for (metric, threshold) in [
+                ("input_tokens_per_second", THROUGHPUT_LOWER_PCT),
+                ("output_tokens_per_second", THROUGHPUT_LOWER_PCT),
+                ("decode_tokens_per_second", DECODE_TOK_S_LOWER_PCT),
+            ] {
+                compare_lower_is_worse(
+                    &mut warnings,
+                    profile_id,
+                    &format!("throughput.{metric}.{percentile}"),
+                    regression_metric(baseline_profile, &["throughput", metric, percentile])?,
+                    regression_metric(profile, &["throughput", metric, percentile])?,
+                    threshold,
+                );
+            }
+            for (metric, threshold) in [
+                ("peak_memory_mb", PEAK_MEMORY_MB_HIGHER_PCT),
+                ("memory_drift_mb", MEMORY_DRIFT_MB_HIGHER_PCT),
+            ] {
+                compare_higher_is_worse(
+                    &mut warnings,
+                    profile_id,
+                    &format!("memory.{metric}.{percentile}"),
+                    regression_metric(baseline_profile, &["memory", metric, percentile])?,
+                    regression_metric(profile, &["memory", metric, percentile])?,
+                    threshold,
+                );
+            }
+        }
+    }
 
     Ok(RegressionCheckSummary {
         baseline_path: baseline.path.clone(),
@@ -6355,6 +6519,172 @@ fn ensure_regression_context_matches(
             "{} cannot be compared to baseline {}: fallback_used mismatch",
             path.display(),
             baseline_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn compare_slm_eval_task_family_regression(
+    warnings: &mut Vec<RegressionWarning>,
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+    threshold_percent: f64,
+) -> Result<()> {
+    let baseline_families = &baseline["task_families"];
+    let observed_families = &receipt["task_families"];
+    if baseline_families.is_null() && observed_families.is_null() {
+        return Ok(());
+    }
+    let baseline_families = baseline_families.as_object().ok_or_else(|| {
+        anyhow!(
+            "regression baseline {} task_families must be an object when present",
+            baseline_path.display()
+        )
+    })?;
+    let observed_families = observed_families.as_object().ok_or_else(|| {
+        anyhow!("{} task_families must be an object when present", path.display())
+    })?;
+    for family in baseline_families.keys() {
+        let observed_family = observed_families.get(family).ok_or_else(|| {
+            anyhow!(
+                "{} cannot be compared to baseline {}: task_families.{family} is missing",
+                path.display(),
+                baseline_path.display()
+            )
+        })?;
+        let baseline_family = &baseline_families[family];
+        for field in ["cases_total", "cases_scored"] {
+            if baseline_family[field].as_u64() != observed_family[field].as_u64() {
+                anyhow::bail!(
+                    "{} cannot be compared to baseline {}: task_families.{family}.{field} mismatch",
+                    path.display(),
+                    baseline_path.display()
+                );
+            }
+        }
+        if baseline_family["scoring_kinds"] != observed_family["scoring_kinds"] {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: task_families.{family}.scoring_kinds mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+        for field in
+            ["cases_passed", "pass_rate", "quality_gate_cases_passed", "quality_gate_pass_rate"]
+        {
+            compare_lower_is_worse(
+                warnings,
+                &format!("task_family:{family}"),
+                &format!("task_families.{family}.{field}"),
+                metric_value(&baseline_family[field]).ok_or_else(|| {
+                    anyhow!(
+                        "regression baseline {} is missing numeric regression metric task_families.{family}.{field}",
+                        baseline_path.display()
+                    )
+                })?,
+                metric_value(&observed_family[field]).ok_or_else(|| {
+                    anyhow!(
+                        "{} is missing numeric regression metric task_families.{family}.{field}",
+                        path.display()
+                    )
+                })?,
+                threshold_percent,
+            );
+        }
+    }
+    for family in observed_families.keys() {
+        if !baseline_families.contains_key(family) {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: task_families.{family} is not present in baseline",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn compare_slm_eval_scoring_summary_regression(
+    warnings: &mut Vec<RegressionWarning>,
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+    threshold_percent: f64,
+) -> Result<()> {
+    let baseline_summary = &baseline["scoring_summary"];
+    let observed_summary = &receipt["scoring_summary"];
+    if baseline_summary.is_null() && observed_summary.is_null() {
+        return Ok(());
+    }
+    let baseline_summary = baseline_summary.as_object().ok_or_else(|| {
+        anyhow!(
+            "regression baseline {} scoring_summary must be an object when present",
+            baseline_path.display()
+        )
+    })?;
+    let observed_summary = observed_summary.as_object().ok_or_else(|| {
+        anyhow!("{} scoring_summary must be an object when present", path.display())
+    })?;
+    if baseline_summary.get("enabled").and_then(|value| value.as_bool())
+        != observed_summary.get("enabled").and_then(|value| value.as_bool())
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: scoring_summary.enabled mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if baseline_summary.get("total").and_then(|value| value.as_u64())
+        != observed_summary.get("total").and_then(|value| value.as_u64())
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: scoring_summary.total mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if baseline_summary.get("kinds") != observed_summary.get("kinds") {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: scoring_summary.kinds mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    for field in ["passed"] {
+        compare_lower_is_worse(
+            warnings,
+            "seeded_corpus",
+            &format!("scoring_summary.{field}"),
+            metric_value(&baseline["scoring_summary"][field]).ok_or_else(|| {
+                anyhow!(
+                    "regression baseline {} is missing numeric regression metric scoring_summary.{field}",
+                    baseline_path.display()
+                )
+            })?,
+            metric_value(&receipt["scoring_summary"][field]).ok_or_else(|| {
+                anyhow!("{} is missing numeric regression metric scoring_summary.{field}", path.display())
+            })?,
+            threshold_percent,
+        );
+    }
+    for field in ["failed", "not_run"] {
+        compare_higher_is_worse(
+            warnings,
+            "seeded_corpus",
+            &format!("scoring_summary.{field}"),
+            metric_value(&baseline["scoring_summary"][field]).ok_or_else(|| {
+                anyhow!(
+                    "regression baseline {} is missing numeric regression metric scoring_summary.{field}",
+                    baseline_path.display()
+                )
+            })?,
+            metric_value(&receipt["scoring_summary"][field]).ok_or_else(|| {
+                anyhow!("{} is missing numeric regression metric scoring_summary.{field}", path.display())
+            })?,
+            threshold_percent,
         );
     }
     Ok(())
@@ -6514,6 +6844,208 @@ fn ensure_slm_eval_summary_regression_context_matches(
         {
             anyhow::bail!(
                 "{} cannot be compared to baseline {}: claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn ensure_slm_benchmark_v2_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("profile_set", receipt["profile_set"].as_str(), baseline["profile_set"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "model_cache.id",
+            receipt["model_cache"]["id"].as_str(),
+            baseline["model_cache"]["id"].as_str(),
+        ),
+        (
+            "model_cache.sha256",
+            receipt["model_cache"]["sha256"].as_str(),
+            baseline["model_cache"]["sha256"].as_str(),
+        ),
+        (
+            "model_cache.architecture",
+            receipt["model_cache"]["architecture"].as_str(),
+            baseline["model_cache"]["architecture"].as_str(),
+        ),
+        (
+            "model_cache.quantization",
+            receipt["model_cache"]["quantization"].as_str(),
+            baseline["model_cache"]["quantization"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_pre",
+            receipt["model_cache"]["tokenizer_pre"].as_str(),
+            baseline["model_cache"]["tokenizer_pre"].as_str(),
+        ),
+        (
+            "evidence.operator_command",
+            receipt["evidence"]["operator_command"].as_str(),
+            baseline["evidence"]["operator_command"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "build.release_mode",
+            receipt["build"]["release_mode"].as_bool(),
+            baseline["build"]["release_mode"].as_bool(),
+        ),
+        (
+            "evidence.generated_text_recorded",
+            receipt["evidence"]["generated_text_recorded"].as_bool(),
+            baseline["evidence"]["generated_text_recorded"].as_bool(),
+        ),
+        (
+            "evidence.generated_token_ids_recorded",
+            receipt["evidence"]["generated_token_ids_recorded"].as_bool(),
+            baseline["evidence"]["generated_token_ids_recorded"].as_bool(),
+        ),
+        (
+            "mac_claim_boundary.dense_slm_only",
+            receipt["mac_claim_boundary"]["dense_slm_only"].as_bool(),
+            baseline["mac_claim_boundary"]["dense_slm_only"].as_bool(),
+        ),
+        (
+            "mac_claim_boundary.bounded_benchmark_profiles_only",
+            receipt["mac_claim_boundary"]["bounded_benchmark_profiles_only"].as_bool(),
+            baseline["mac_claim_boundary"]["bounded_benchmark_profiles_only"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "broad_model_quality_claim",
+        "broad_performance_claim",
+        "speedup_claim",
+        "bitnet_quality_claimed",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+        "macbook_evidence",
+    ] {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if receipt["profiles_required"] != baseline["profiles_required"] {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: profiles_required mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+
+    let profiles = receipt["profiles"].as_array().ok_or_else(|| {
+        anyhow!("{} SLM benchmark v2 summary is missing profiles", path.display())
+    })?;
+    for profile in profiles {
+        let Some(profile_id) = profile["profile_id"].as_str() else {
+            anyhow::bail!("{} SLM benchmark v2 profile is missing profile_id", path.display());
+        };
+        let baseline_profile = find_profile(baseline, profile_id).ok_or_else(|| {
+            anyhow!(
+                "regression baseline {} is missing SLM benchmark v2 profile {profile_id}",
+                baseline_path.display()
+            )
+        })?;
+        for (label, observed, expected) in [
+            ("scenario", profile["scenario"].as_str(), baseline_profile["scenario"].as_str()),
+            (
+                "reuse_scope",
+                profile["reuse_scope"].as_str(),
+                baseline_profile["reuse_scope"].as_str(),
+            ),
+        ] {
+            if observed.is_none() || expected.is_none() || observed != expected {
+                anyhow::bail!(
+                    "{} cannot be compared to baseline {}: profile {profile_id} {label} mismatch",
+                    path.display(),
+                    baseline_path.display()
+                );
+            }
+        }
+        for (label, observed, expected) in [
+            (
+                "prompt_count",
+                profile["prompt_count"].as_u64(),
+                baseline_profile["prompt_count"].as_u64(),
+            ),
+            (
+                "requested_max_new_tokens",
+                profile["requested_max_new_tokens"].as_u64(),
+                baseline_profile["requested_max_new_tokens"].as_u64(),
+            ),
+        ] {
+            if observed.is_none() || expected.is_none() || observed != expected {
+                anyhow::bail!(
+                    "{} cannot be compared to baseline {}: profile {profile_id} {label} mismatch",
+                    path.display(),
+                    baseline_path.display()
+                );
+            }
+        }
+        if profile["target_context_tokens"] != baseline_profile["target_context_tokens"] {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: profile {profile_id} target_context_tokens mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    let baseline_profiles = baseline["profiles"].as_array().ok_or_else(|| {
+        anyhow!("regression baseline {} is missing profiles", baseline_path.display())
+    })?;
+    for baseline_profile in baseline_profiles {
+        let Some(profile_id) = baseline_profile["profile_id"].as_str() else {
+            anyhow::bail!(
+                "regression baseline {} SLM benchmark v2 profile is missing profile_id",
+                baseline_path.display()
+            );
+        };
+        if find_profile(receipt, profile_id).is_none() {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: profile {profile_id} is missing",
                 path.display(),
                 baseline_path.display()
             );

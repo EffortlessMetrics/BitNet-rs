@@ -1,0 +1,20 @@
+timestamp = "2026-05-15T09:27:01Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-005"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-005-regression-dashboard"
+summary = "Started dense SLM eval v2 regression dashboard work after M4-SLM-EVAL2-004 landed."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  ".github/workflows/apple-m4-slm-eval-tier0.yml",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "This item is receipt-only regression comparison and workflow/dashboard wiring.",
+  "Generic PR CI must stay model-free: no model fetch, no live M4 inference, no new timing evidence, and no broad quality or performance claims.",
+]

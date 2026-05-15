@@ -215,6 +215,57 @@ receipts make that tail explicit:
 | `qwen2.5-1.5b-instruct-q4_k_m` | `context_4k` | 3 | 33 | 4075.0 | 1433677.0 ms | 1458291.0 ms | 2.844 | 2.002 | 8673.922 |
 | `qwen2.5-1.5b-instruct-q4_k_m` | `resident_50` | 50 | 403 | 45.0 | 13812.0 ms | 15500.0 ms | 3.388 | 2.766 | 8673.922 |
 
+## Regression Dashboard
+
+`M4-SLM-EVAL2-005` wires v2 reports into the receipt-only regression path:
+
+```bash
+target/release/bitnet mac regression \
+  ci/hardware/apple-m4-mac-mini/<current-date>/slm-eval-v2/<model-id>/summary.json \
+  --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/slm-eval-v2/<model-id>/summary.json \
+  --json
+
+target/release/bitnet mac regression \
+  ci/hardware/apple-m4-mac-mini/<current-date>/slm-benchmark-v2/<model-id>/summary.json \
+  --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/slm-benchmark-v2/<model-id>/summary.json \
+  --json
+```
+
+The comparison is advisory by default. `--fail-on-drift` turns advisory
+warnings into a non-zero exit for release or nightly gates. Matching requires
+the same M4 machine, model identity, tokenizer authority, prompt template or
+benchmark profile set, backend, fallback status, and claim-boundary flags. A
+different model, tokenizer, corpus, backend, profile set, or claim boundary is a
+new baseline rather than a regression comparison.
+
+The v2 eval comparison watches:
+
+- strict seeded-corpus totals and scoring-summary passed count;
+- task-family `cases_passed`, `pass_rate`, `quality_gate_cases_passed`, and
+  `quality_gate_pass_rate`;
+- input, output, and decode throughput;
+- cold load, tokenizer load, prompt tokenization, prefill, TTFT, sampling, and
+  total wall time;
+- peak memory.
+
+The v2 benchmark comparison watches p50, p90, and p99 for:
+
+- cold load, tokenizer load, prompt tokenization, prefill, TTFT, total wall
+  time, and per-profile sampling overhead;
+- input, output, and decode throughput;
+- peak memory and process-peak memory drift.
+
+Generic PR CI remains model-free through:
+
+```text
+.github/workflows/apple-m4-slm-eval-tier0.yml
+```
+
+Tier 0 validates parser/scoring tests, v1 and v2 corpus dry-runs, committed v1
+and v2 summary receipt schemas, and self-baseline v2 regression comparison
+coverage under `--fail-on-drift`. It does not fetch models, run live M4
+inference, produce new timing evidence, or publish quality/performance claims.
+
 ## Claim Boundary
 
 This lane may claim only bounded, recorded dense SLM evidence for the M4 Mac

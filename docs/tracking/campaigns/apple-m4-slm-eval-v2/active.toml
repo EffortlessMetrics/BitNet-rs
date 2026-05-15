@@ -195,7 +195,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL2-005"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-005-regression-dashboard"
 stackable = false
 review_mode = "codex_premerge"
@@ -205,7 +205,11 @@ blocked_by = ["M4-SLM-EVAL2-003", "M4-SLM-EVAL2-004"]
 acceptance = "Wire v2 eval and benchmark reports into advisory/nightly regression dashboards with thresholds for task-family pass rates, strict scoring totals, TTFT, input/output/decode throughput, total wall time, peak memory, and memory drift while keeping generic PR CI model-free."
 commands = [
   "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval",
+  "cargo test --locked -p bitnet-cli slm_eval_scoring",
+  "target/debug/bitnet --log-level warn answer-corpus --dry-run --device cpu --model missing.gguf --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out target/apple-m4-slm-eval-v2/seeded-corpus-v2-dry-run.json",
+  "target/debug/bitnet --log-level warn mac regression <v2-summary.json> --baseline <v2-summary.json> --fail-on-drift --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-v2",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
