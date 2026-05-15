@@ -1,0 +1,23 @@
+timestamp = "2026-05-15T10:29:02Z"
+campaign = "apple-m4-bitnet-eval-and-benchmark"
+item = "M4-BITNET-EVAL-001"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-001-campaign-corpus"
+pr = 4895
+head_sha = "fee70956c7d9e3132953a997169c960893dc3faf"
+merge_sha = "17c25469420d92bc0fee8e10b1fdafc407ffa4fb"
+summary = "Marked M4-BITNET-EVAL-001 merged after the BitNet eval/benchmark campaign and 100-case dry-run corpus landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4895",
+  "ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml",
+  "docs/slm/apple-m4-bitnet-eval-and-benchmark.md",
+]
+
+notes = [
+  "The merged PR defines the apple-m4-bitnet-eval-and-benchmark campaign and adds the 100-case deterministic BitNet eval corpus.",
+  "The evidence is parser/scoring dry-run only and does not claim runtime BitNet accuracy, BitNet performance, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon support.",
+]
