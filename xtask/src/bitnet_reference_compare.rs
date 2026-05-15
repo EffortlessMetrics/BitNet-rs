@@ -42,6 +42,7 @@ struct ReceiptInput {
 struct OutputSignal {
     token_ids: Option<Vec<i64>>,
     text: Option<String>,
+    hidden_state: Option<HiddenStateStats>,
     top_logits: Option<Vec<TopLogit>>,
     selected_logits: Option<Vec<SelectedLogit>>,
     reference_text_candidate_ids: Option<Vec<i64>>,
@@ -62,6 +63,16 @@ struct ReferenceProbabilityProbe {
     token_id: i64,
     token_piece: Option<String>,
     reference_probability: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+struct HiddenStateStats {
+    value_count: Option<u64>,
+    mean: Option<f64>,
+    rms: Option<f64>,
+    min: Option<f64>,
+    max: Option<f64>,
+    vector_sha256_f32_le: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -328,6 +339,7 @@ fn output_signal(value: Option<&Value>) -> OutputSignal {
         return OutputSignal {
             token_ids: None,
             text: None,
+            hidden_state: None,
             top_logits: None,
             selected_logits: None,
             reference_text_candidate_ids: None,
@@ -337,6 +349,7 @@ fn output_signal(value: Option<&Value>) -> OutputSignal {
     OutputSignal {
         token_ids: token_ids(value),
         text: string_at(value, &["/text", "/generated_text", "/output", "/response"]),
+        hidden_state: hidden_state(value),
         top_logits: top_logits(value),
         selected_logits: selected_logits(value),
         reference_text_candidate_ids: reference_text_candidate_ids(value),
@@ -422,6 +435,33 @@ fn top_logits(value: &Value) -> Option<Vec<TopLogit>> {
         }
     }
     None
+}
+
+fn hidden_state(value: &Value) -> Option<HiddenStateStats> {
+    for pointer in ["/logits_dump/0/hidden_state", "/hidden_state"] {
+        if let Some(stats) = hidden_state_stats(value.pointer(pointer)) {
+            return Some(stats);
+        }
+    }
+    None
+}
+
+fn hidden_state_stats(value: Option<&Value>) -> Option<HiddenStateStats> {
+    let value = value?;
+    if value.pointer("/present").and_then(Value::as_bool) == Some(false) {
+        return None;
+    }
+    Some(HiddenStateStats {
+        value_count: value.pointer("/value_count").and_then(Value::as_u64),
+        mean: value.pointer("/mean").and_then(Value::as_f64),
+        rms: value.pointer("/rms").and_then(Value::as_f64),
+        min: value.pointer("/min").and_then(Value::as_f64),
+        max: value.pointer("/max").and_then(Value::as_f64),
+        vector_sha256_f32_le: value
+            .pointer("/vector_sha256_f32_le")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+    })
 }
 
 fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
@@ -580,6 +620,8 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
                 .map(|(left, right)| (left.logit - right.logit).abs())
                 .fold(0.0_f64, f64::max)
         });
+    let hidden_state =
+        compare_hidden_state(left.hidden_state.as_ref(), right.hidden_state.as_ref());
     json!({
         "prompt_identity": compare_prompt_identity(&left.prompt, &right.prompt),
         "prompt_identity_available": left.prompt.available() && right.prompt.available(),
@@ -597,7 +639,63 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
         "top_logit_argmax_token_exact": top_logit_argmax_token_exact,
         "top_logit_argmax_delta": top_logit_argmax_delta,
         "top_logit_max_abs_delta": top_logit_max_abs_delta,
+        "hidden_state": hidden_state,
         "reference_text_candidate_logits": reference_text_candidate_logits(left, right),
+    })
+}
+
+fn compare_hidden_state(
+    left: Option<&HiddenStateStats>,
+    right: Option<&HiddenStateStats>,
+) -> Value {
+    let hidden_state_available = left.is_some() && right.is_some();
+    let value_count_exact = left
+        .zip(right)
+        .and_then(|(left, right)| left.value_count.zip(right.value_count))
+        .map(|(left, right)| left == right);
+    let hash_exact = left
+        .zip(right)
+        .and_then(|(left, right)| {
+            left.vector_sha256_f32_le.as_ref().zip(right.vector_sha256_f32_le.as_ref())
+        })
+        .map(|(left, right)| left == right);
+    let mean_abs_delta = left
+        .zip(right)
+        .and_then(|(left, right)| left.mean.zip(right.mean))
+        .map(|(left, right)| (left - right).abs());
+    let rms_abs_delta = left
+        .zip(right)
+        .and_then(|(left, right)| left.rms.zip(right.rms))
+        .map(|(left, right)| (left - right).abs());
+    let min_abs_delta = left
+        .zip(right)
+        .and_then(|(left, right)| left.min.zip(right.min))
+        .map(|(left, right)| (left - right).abs());
+    let max_abs_delta = left
+        .zip(right)
+        .and_then(|(left, right)| left.max.zip(right.max))
+        .map(|(left, right)| (left - right).abs());
+
+    json!({
+        "available": hidden_state_available,
+        "left_value_count": left.and_then(|stats| stats.value_count),
+        "right_value_count": right.and_then(|stats| stats.value_count),
+        "value_count_exact": value_count_exact,
+        "left_mean": left.and_then(|stats| stats.mean),
+        "right_mean": right.and_then(|stats| stats.mean),
+        "mean_abs_delta": mean_abs_delta,
+        "left_rms": left.and_then(|stats| stats.rms),
+        "right_rms": right.and_then(|stats| stats.rms),
+        "rms_abs_delta": rms_abs_delta,
+        "left_min": left.and_then(|stats| stats.min),
+        "right_min": right.and_then(|stats| stats.min),
+        "min_abs_delta": min_abs_delta,
+        "left_max": left.and_then(|stats| stats.max),
+        "right_max": right.and_then(|stats| stats.max),
+        "max_abs_delta": max_abs_delta,
+        "vector_sha256_f32_le_exact": hash_exact,
+        "left_vector_sha256_f32_le": left.and_then(|stats| stats.vector_sha256_f32_le.clone()),
+        "right_vector_sha256_f32_le": right.and_then(|stats| stats.vector_sha256_f32_le.clone()),
     })
 }
 
@@ -747,6 +845,9 @@ fn input_value(input: &ReceiptInput, signal: &OutputSignal) -> Value {
         "token_ids_present": signal.token_ids.is_some(),
         "token_count": signal.token_ids.as_ref().map(Vec::len),
         "text_present": signal.text.is_some(),
+        "hidden_state_present": signal.hidden_state.is_some(),
+        "hidden_state_value_count": signal.hidden_state.as_ref().and_then(|stats| stats.value_count),
+        "hidden_state_rms": signal.hidden_state.as_ref().and_then(|stats| stats.rms),
         "top_logits_present": signal.top_logits.is_some(),
         "top_logit_count": signal.top_logits.as_ref().map(Vec::len),
         "selected_logits_present": signal.selected_logits.is_some(),
@@ -943,6 +1044,7 @@ mod tests {
         let left = OutputSignal {
             token_ids: Some(vec![1, 2]),
             text: Some("a".to_string()),
+            hidden_state: None,
             top_logits: Some(vec![
                 TopLogit {
                     token_id: 1,
@@ -966,6 +1068,7 @@ mod tests {
         let right = OutputSignal {
             token_ids: Some(vec![1, 3]),
             text: Some("b".to_string()),
+            hidden_state: None,
             top_logits: Some(vec![
                 TopLogit {
                     token_id: 1,
@@ -1019,6 +1122,59 @@ mod tests {
     }
 
     #[test]
+    fn extracts_and_compares_hidden_state_stats() {
+        let value = json!({
+            "logits_dump": [{
+                "hidden_state": {
+                    "present": true,
+                    "value_count": 2560,
+                    "mean": -0.002,
+                    "rms": 0.055,
+                    "min": -0.5,
+                    "max": 0.75,
+                    "vector_sha256_f32_le": "abc123"
+                }
+            }]
+        });
+        let stats = hidden_state(&value).expect("hidden state stats");
+        assert_eq!(stats.value_count, Some(2560));
+        assert_eq!(stats.mean, Some(-0.002));
+        assert_eq!(stats.rms, Some(0.055));
+        assert_eq!(stats.vector_sha256_f32_le.as_deref(), Some("abc123"));
+
+        let left = HiddenStateStats {
+            value_count: Some(2560),
+            mean: Some(-0.002),
+            rms: Some(0.055),
+            min: Some(-0.5),
+            max: Some(0.75),
+            vector_sha256_f32_le: Some("abc123".to_string()),
+        };
+        let right = HiddenStateStats {
+            value_count: Some(2560),
+            mean: Some(-0.003),
+            rms: Some(0.057),
+            min: Some(-0.55),
+            max: Some(0.7),
+            vector_sha256_f32_le: Some("def456".to_string()),
+        };
+        let report = compare_hidden_state(Some(&left), Some(&right));
+        assert_eq!(report["available"], true);
+        assert_eq!(report["value_count_exact"], true);
+        assert!(
+            (report["mean_abs_delta"].as_f64().unwrap() - 0.001).abs() < 1e-12,
+            "unexpected mean delta: {}",
+            report["mean_abs_delta"]
+        );
+        assert!(
+            (report["rms_abs_delta"].as_f64().unwrap() - 0.002).abs() < 1e-12,
+            "unexpected rms delta: {}",
+            report["rms_abs_delta"]
+        );
+        assert_eq!(report["vector_sha256_f32_le_exact"], false);
+    }
+
+    #[test]
     fn extracts_selected_logits_and_reference_text_candidates() {
         let value = json!({
             "rust_commands": {
@@ -1049,6 +1205,7 @@ mod tests {
         let left = OutputSignal {
             token_ids: None,
             text: Some("2+2 equals 4.".to_string()),
+            hidden_state: None,
             top_logits: None,
             selected_logits: None,
             reference_text_candidate_ids: Some(vec![17, 10]),
@@ -1057,6 +1214,7 @@ mod tests {
         let right = OutputSignal {
             token_ids: Some(vec![54864]),
             text: Some("-fixed".to_string()),
+            hidden_state: None,
             top_logits: Some(vec![TopLogit {
                 token_id: 54864,
                 token_piece: Some(".ps".to_string()),
@@ -1200,6 +1358,7 @@ mod tests {
         let left = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
+            hidden_state: None,
             top_logits: Some(vec![TopLogit {
                 token_id: 1,
                 token_piece: None,
@@ -1214,6 +1373,7 @@ mod tests {
         let right = OutputSignal {
             token_ids: Some(vec![1]),
             text: Some("a".to_string()),
+            hidden_state: None,
             top_logits: Some(vec![TopLogit {
                 token_id: 1,
                 token_piece: None,
@@ -1295,6 +1455,7 @@ mod tests {
         let rust = OutputSignal {
             token_ids: Some(vec![58428]),
             text: Some(".ps".to_string()),
+            hidden_state: None,
             top_logits: Some(vec![TopLogit {
                 token_id: 58428,
                 token_piece: Some(".ps".to_string()),
