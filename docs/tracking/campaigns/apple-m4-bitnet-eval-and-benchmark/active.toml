@@ -26,7 +26,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-BITNET-EVAL-001"
-status = "in_progress"
+status = "merged"
+pr = 4895
 branch = "codex/apple-m4-bitnet-eval-and-benchmark/M4-BITNET-EVAL-001-campaign-corpus"
 stackable = false
 review_mode = "codex_premerge"
