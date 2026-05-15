@@ -40,12 +40,23 @@ struct OutputSignal {
     token_ids: Option<Vec<i64>>,
     text: Option<String>,
     top_logits: Option<Vec<TopLogit>>,
+    prompt: PromptIdentity,
 }
 
 #[derive(Clone, Debug)]
 struct TopLogit {
     token_id: i64,
     logit: f64,
+}
+
+#[derive(Clone, Debug, Default)]
+struct PromptIdentity {
+    template: Option<String>,
+    rendered_prompt_sha256: Option<String>,
+    prompt_token_ids_sha256: Option<String>,
+    prompt_token_count: Option<u64>,
+    add_bos_or_bos_policy: Option<bool>,
+    parse_special: Option<bool>,
 }
 
 pub fn maybe_dispatch_from_env() -> Result<bool> {
@@ -148,6 +159,15 @@ fn build_report(args: &CompareArgs) -> Value {
     if !bool_at(&comparisons, "/reference_vs_a770/top_logit_token_ids_exact").unwrap_or(false) {
         blocked_reasons.push("reference_a770_top_logit_ids_not_proven_exact".to_string());
     }
+    if !bool_at(&comparisons, "/reference_vs_cpu/prompt_identity_matched").unwrap_or(false) {
+        blocked_reasons.push("reference_cpu_prompt_identity_not_matched".to_string());
+    }
+    if !bool_at(&comparisons, "/reference_vs_a770/prompt_identity_matched").unwrap_or(false) {
+        blocked_reasons.push("reference_a770_prompt_identity_not_matched".to_string());
+    }
+    if !bool_at(&comparisons, "/cpu_vs_a770/prompt_identity_matched").unwrap_or(false) {
+        blocked_reasons.push("rust_cpu_a770_prompt_identity_not_matched".to_string());
+    }
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
@@ -219,12 +239,18 @@ fn read_receipt(path: &Path) -> ReceiptInput {
 
 fn output_signal(value: Option<&Value>) -> OutputSignal {
     let Some(value) = value else {
-        return OutputSignal { token_ids: None, text: None, top_logits: None };
+        return OutputSignal {
+            token_ids: None,
+            text: None,
+            top_logits: None,
+            prompt: PromptIdentity::default(),
+        };
     };
     OutputSignal {
         token_ids: token_ids(value),
         text: string_at(value, &["/text", "/generated_text", "/output", "/response"]),
         top_logits: top_logits(value),
+        prompt: prompt_identity(value),
     }
 }
 
@@ -314,6 +340,9 @@ fn compare_pair(left: &OutputSignal, right: &OutputSignal) -> Value {
                 .fold(0.0_f64, f64::max)
         });
     json!({
+        "prompt_identity": compare_prompt_identity(&left.prompt, &right.prompt),
+        "prompt_identity_available": left.prompt.available() && right.prompt.available(),
+        "prompt_identity_matched": left.prompt.matches(&right.prompt),
         "token_ids_available": left.token_ids.is_some() && right.token_ids.is_some(),
         "token_ids_exact": token_ids_exact,
         "first_token_exact": first_token_exact,
@@ -340,6 +369,8 @@ fn input_value(input: &ReceiptInput, signal: &OutputSignal) -> Value {
         "text_present": signal.text.is_some(),
         "top_logits_present": signal.top_logits.is_some(),
         "top_logit_count": signal.top_logits.as_ref().map(Vec::len),
+        "prompt_identity_present": signal.prompt.available(),
+        "prompt_identity": prompt_identity_value(&signal.prompt),
     })
 }
 
@@ -367,10 +398,75 @@ fn push_input_blockers(
     if signal.top_logits.is_none() {
         blocked_reasons.push(format!("{label}_top_logits_missing"));
     }
+    if !signal.prompt.available() {
+        blocked_reasons.push(format!("{label}_prompt_identity_missing"));
+    }
 }
 
 fn bool_at(value: &Value, pointer: &str) -> Option<bool> {
     value.pointer(pointer).and_then(Value::as_bool)
+}
+
+fn prompt_identity(value: &Value) -> PromptIdentity {
+    let prompt =
+        value.pointer("/prompt_identity").or_else(|| value.pointer("/plan/prompt_identity"));
+    let Some(prompt) = prompt else {
+        return PromptIdentity::default();
+    };
+    PromptIdentity {
+        template: string_at(prompt, &["/template", "/prompt_template"]),
+        rendered_prompt_sha256: string_at(prompt, &["/rendered_prompt_sha256"]),
+        prompt_token_ids_sha256: string_at(prompt, &["/prompt_token_ids_sha256"]),
+        prompt_token_count: prompt.pointer("/prompt_token_count").and_then(Value::as_u64),
+        add_bos_or_bos_policy: prompt
+            .pointer("/add_bos")
+            .and_then(Value::as_bool)
+            .or_else(|| prompt.pointer("/bos_policy").and_then(Value::as_bool)),
+        parse_special: prompt.pointer("/parse_special").and_then(Value::as_bool),
+    }
+}
+
+impl PromptIdentity {
+    fn available(&self) -> bool {
+        self.rendered_prompt_sha256.is_some()
+            && self.prompt_token_ids_sha256.is_some()
+            && self.prompt_token_count.is_some()
+    }
+
+    fn matches(&self, other: &Self) -> bool {
+        self.available()
+            && other.available()
+            && self.template == other.template
+            && self.rendered_prompt_sha256 == other.rendered_prompt_sha256
+            && self.prompt_token_ids_sha256 == other.prompt_token_ids_sha256
+            && self.prompt_token_count == other.prompt_token_count
+            && self.add_bos_or_bos_policy == other.add_bos_or_bos_policy
+            && self.parse_special == other.parse_special
+    }
+}
+
+fn compare_prompt_identity(left: &PromptIdentity, right: &PromptIdentity) -> Value {
+    json!({
+        "template_matched": left.template == right.template,
+        "rendered_prompt_sha256_matched": left.rendered_prompt_sha256 == right.rendered_prompt_sha256,
+        "prompt_token_ids_sha256_matched": left.prompt_token_ids_sha256 == right.prompt_token_ids_sha256,
+        "prompt_token_count_matched": left.prompt_token_count == right.prompt_token_count,
+        "bos_policy_matched": left.add_bos_or_bos_policy == right.add_bos_or_bos_policy,
+        "parse_special_matched": left.parse_special == right.parse_special,
+        "left": prompt_identity_value(left),
+        "right": prompt_identity_value(right),
+    })
+}
+
+fn prompt_identity_value(prompt: &PromptIdentity) -> Value {
+    json!({
+        "template": prompt.template,
+        "rendered_prompt_sha256": prompt.rendered_prompt_sha256,
+        "prompt_token_ids_sha256": prompt.prompt_token_ids_sha256,
+        "prompt_token_count": prompt.prompt_token_count,
+        "add_bos_or_bos_policy": prompt.add_bos_or_bos_policy,
+        "parse_special": prompt.parse_special,
+    })
 }
 
 fn emit_report(value: &Value, format: &str) -> Result<()> {
@@ -418,6 +514,7 @@ mod tests {
                 TopLogit { token_id: 1, logit: 2.0 },
                 TopLogit { token_id: 2, logit: 1.0 },
             ]),
+            prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
         };
         let right = OutputSignal {
             token_ids: Some(vec![1, 3]),
@@ -426,8 +523,10 @@ mod tests {
                 TopLogit { token_id: 1, logit: 2.25 },
                 TopLogit { token_id: 3, logit: 0.75 },
             ]),
+            prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
         };
         let report = compare_pair(&left, &right);
+        assert_eq!(report["prompt_identity_matched"], true);
         assert_eq!(report["token_ids_available"], true);
         assert_eq!(report["token_ids_exact"], false);
         assert_eq!(report["first_token_exact"], true);
@@ -466,5 +565,68 @@ mod tests {
         assert_eq!(report["claim_allowed"], false);
         let reasons = report["decision"]["current_blocked_reasons"].as_array().unwrap();
         assert!(reasons.iter().any(|reason| reason == "reference_receipt_missing"));
+    }
+
+    #[test]
+    fn prompt_identity_mismatch_blocks_comparison_ready() {
+        let left = OutputSignal {
+            token_ids: Some(vec![1]),
+            text: Some("a".to_string()),
+            top_logits: Some(vec![TopLogit { token_id: 1, logit: 1.0 }]),
+            prompt: prompt("llama3-chat", "rendered-a", "ids-a", 17, false, true),
+        };
+        let right = OutputSignal {
+            token_ids: Some(vec![1]),
+            text: Some("a".to_string()),
+            top_logits: Some(vec![TopLogit { token_id: 1, logit: 1.0 }]),
+            prompt: prompt("raw", "rendered-b", "ids-b", 8, true, false),
+        };
+        let report = compare_pair(&left, &right);
+
+        assert_eq!(report["token_ids_exact"], true);
+        assert_eq!(report["top_logit_token_ids_exact"], true);
+        assert_eq!(report["prompt_identity_matched"], false);
+        assert_eq!(report["prompt_identity"]["prompt_token_count_matched"], false);
+    }
+
+    #[test]
+    fn extracts_reference_run_plan_prompt_identity() {
+        let value = json!({
+            "plan": {
+                "prompt_identity": {
+                    "prompt_template": "llama3-chat",
+                    "rendered_prompt_sha256": "rendered",
+                    "prompt_token_ids_sha256": "ids",
+                    "prompt_token_count": 17,
+                    "add_bos": false,
+                    "parse_special": true
+                }
+            }
+        });
+        let identity = prompt_identity(&value);
+
+        assert!(identity.available());
+        assert_eq!(identity.template.as_deref(), Some("llama3-chat"));
+        assert_eq!(identity.prompt_token_count, Some(17));
+        assert_eq!(identity.add_bos_or_bos_policy, Some(false));
+        assert_eq!(identity.parse_special, Some(true));
+    }
+
+    fn prompt(
+        template: &str,
+        rendered_prompt_sha256: &str,
+        prompt_token_ids_sha256: &str,
+        prompt_token_count: u64,
+        bos_policy: bool,
+        parse_special: bool,
+    ) -> PromptIdentity {
+        PromptIdentity {
+            template: Some(template.to_string()),
+            rendered_prompt_sha256: Some(rendered_prompt_sha256.to_string()),
+            prompt_token_ids_sha256: Some(prompt_token_ids_sha256.to_string()),
+            prompt_token_count: Some(prompt_token_count),
+            add_bos_or_bos_policy: Some(bos_policy),
+            parse_special: Some(parse_special),
+        }
     }
 }
