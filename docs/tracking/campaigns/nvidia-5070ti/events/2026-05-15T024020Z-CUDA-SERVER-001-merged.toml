@@ -1,0 +1,25 @@
+timestamp = "2026-05-15T02:40:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-001"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "server/strict-cuda-smoke"
+pr = 4820
+head_sha = "3fd3f392c979ad2128635daac82bd8df1ff3152f"
+merge_sha = "599b5595fcb09d2fcb5e082380bc4778a72d47a7"
+summary = "Closed CUDA-SERVER-001 after PR #4820 merged strict dense Qwen server receipt classification."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4820",
+  "crates/bitnet-server/src/lib.rs",
+  "crates/bitnet-cli/src/commands/receipts.rs",
+]
+
+notes = [
+  "PR #4820 teaches the shared-engine server receipt path to preserve exact RTX 5070 Ti dense Qwen route, backend, model coverage, runtime, quality-gate, and claim booleans.",
+  "This closeout does not claim a committed hardware server-smoke receipt.",
+  "CUDA-SERVER-002 remains proposed for the exact bounded dense Qwen server-smoke receipt and any justified server_ready coverage promotion.",
+  "Speedup, full residency, production server readiness, and BitNet packed I2_S/QK256 proof remain false for this dense server receipt classification slice.",
+]

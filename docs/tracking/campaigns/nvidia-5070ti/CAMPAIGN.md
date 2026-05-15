@@ -252,7 +252,8 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-UX-008 | merged | PR #4724 added a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | merged | PR #4754 added the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |
-| CUDA-SERVER-001 | pr_open | PR #4820 adds claim-safe strict dense Qwen server receipt classification without promoting server readiness or speed. |
+| CUDA-SERVER-001 | merged | PR #4820 added claim-safe strict dense Qwen server receipt classification without promoting server readiness or speed. |
+| CUDA-SERVER-002 | proposed | Commit the exact bounded dense Qwen strict RTX 5070 Ti server-smoke receipt before any server-ready coverage promotion. |
 
 ## Review Policy
 
