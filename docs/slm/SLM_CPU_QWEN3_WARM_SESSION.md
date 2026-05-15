@@ -135,3 +135,20 @@ keeps `fallback_used=false`, and records `speedup_claim=false` and
 remain present but explicitly unavailable (`not_sampled_in_slm_cpu_warm_session`),
 so the artifact is not a sustained Kaby Lake throughput claim and does not
 change the operator default thread count.
+
+## SLM-CPU-016 Operator Profile Boundary
+
+The next operator-profile slice keeps Qwen3-0.6B Q8_0 as the only Kaby SLM
+appliance model and preserves the SLM-CPU-009/010/011/015 generated-token
+behavior oracle. The warm-session receipt now samples process resident memory
+with `sysinfo_current_process` and records storage/free-space context for the
+model and receipt paths with `sysinfo_disk` where the host exposes it. Thermal
+and power fields remain explicit unavailable fields until a host-specific
+sampler is added.
+
+This profile is still a bounded proof-host artifact: strict GGUF tokenizer
+authority, selected CPU backend, `fallback_used=false`, prompt/generated IDs,
+thread count, timing, memory/storage context, and unsupported-path boundaries
+must be inspectable. It does not claim sustained throughput, Q4/Q5 support, a
+second dense model, server inference, GPU/NPU/OpenVINO/UHD 620 execution,
+Qwen3.5 support, or BitNet QK256 kernel changes.

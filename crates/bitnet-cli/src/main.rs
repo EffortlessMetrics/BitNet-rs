@@ -8794,21 +8794,10 @@ async fn run_slm_warm_session(
             "features": &cpu_features,
             "threads": thread_count,
         },
-        "memory": {
-            "resident_memory_bytes": serde_json::Value::Null,
-            "resident_memory_source": "not_sampled_in_slm_cpu_warm_session",
-            "available": false,
-        },
-        "thermal": {
-            "temperature_c": serde_json::Value::Null,
-            "source": "not_sampled_in_slm_cpu_warm_session",
-            "available": false,
-        },
-        "power": {
-            "mode": serde_json::Value::Null,
-            "source": "not_sampled_in_slm_cpu_warm_session",
-            "available": false,
-        },
+        "memory": slm_cpu_warm_session_memory_context_json(),
+        "thermal": slm_cpu_warm_session_thermal_context_json(),
+        "power": slm_cpu_warm_session_power_context_json(),
+        "storage": slm_cpu_warm_session_storage_context_json(&model_path, &json_out),
         "counts": {
             "n_kv": n_kv,
             "n_tensors": n_tensors,
@@ -9754,6 +9743,118 @@ fn slm_warm_session_determinism_receipt(
         "repeated_prompt_groups": groups.len(),
         "groups": groups,
     })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_memory_context_json() -> serde_json::Value {
+    let mut system = sysinfo::System::new();
+    let pid = match sysinfo::get_current_pid() {
+        Ok(pid) => pid,
+        Err(error) => {
+            return serde_json::json!({
+                "resident_memory_bytes": serde_json::Value::Null,
+                "virtual_memory_bytes": serde_json::Value::Null,
+                "resident_memory_source": "sysinfo_current_process_unavailable",
+                "available": false,
+                "error": error.to_string(),
+            });
+        }
+    };
+
+    system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid]), true);
+    if let Some(process) = system.process(pid) {
+        serde_json::json!({
+            "resident_memory_bytes": process.memory(),
+            "virtual_memory_bytes": process.virtual_memory(),
+            "resident_memory_source": "sysinfo_current_process",
+            "available": true,
+        })
+    } else {
+        serde_json::json!({
+            "resident_memory_bytes": serde_json::Value::Null,
+            "virtual_memory_bytes": serde_json::Value::Null,
+            "resident_memory_source": "sysinfo_current_process_missing",
+            "available": false,
+        })
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_thermal_context_json() -> serde_json::Value {
+    serde_json::json!({
+        "temperature_c": serde_json::Value::Null,
+        "source": "not_sampled_in_slm_cpu_warm_session",
+        "available": false,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_power_context_json() -> serde_json::Value {
+    serde_json::json!({
+        "mode": serde_json::Value::Null,
+        "source": "not_sampled_in_slm_cpu_warm_session",
+        "available": false,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_storage_context_json(
+    model_path: &std::path::Path,
+    receipt_path: &std::path::Path,
+) -> serde_json::Value {
+    serde_json::json!({
+        "model_path": slm_cpu_warm_session_disk_context_json(model_path),
+        "receipt_path": slm_cpu_warm_session_disk_context_json(receipt_path),
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_disk_context_json(path: &std::path::Path) -> serde_json::Value {
+    let absolute_path = slm_cpu_warm_session_absolute_disk_path(path);
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    let disk = disks
+        .list()
+        .iter()
+        .filter(|disk| absolute_path.starts_with(disk.mount_point()))
+        .max_by_key(|disk| disk.mount_point().components().count());
+
+    if let Some(disk) = disk {
+        serde_json::json!({
+            "path": absolute_path.display().to_string(),
+            "mount_point": disk.mount_point().display().to_string(),
+            "available_bytes": disk.available_space(),
+            "total_bytes": disk.total_space(),
+            "source": "sysinfo_disk",
+            "available": true,
+        })
+    } else {
+        serde_json::json!({
+            "path": absolute_path.display().to_string(),
+            "mount_point": serde_json::Value::Null,
+            "available_bytes": serde_json::Value::Null,
+            "total_bytes": serde_json::Value::Null,
+            "source": "sysinfo_disk_match_unavailable",
+            "available": false,
+        })
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_absolute_disk_path(path: &std::path::Path) -> std::path::PathBuf {
+    if let Ok(absolute_path) = path.canonicalize() {
+        return absolute_path;
+    }
+
+    if let Some(parent) = path.parent()
+        && let Ok(parent) = parent.canonicalize()
+    {
+        if let Some(file_name) = path.file_name() {
+            return parent.join(file_name);
+        }
+        return parent;
+    }
+
+    path.to_path_buf()
 }
 
 fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) -> Result<String> {
@@ -12040,6 +12141,18 @@ mod tests {
         assert_eq!(determinism["passed"], false);
         assert_eq!(determinism["groups"][0]["stable_generated_token_ids"], false);
         assert_eq!(determinism["groups"][0]["stable_text"], false);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn slm_warm_session_disk_context_resolves_missing_receipt_parent() {
+        let relative_missing_receipt =
+            std::path::Path::new(".").join("__bitnet_missing_warm_session_receipt.json");
+
+        let resolved = slm_cpu_warm_session_absolute_disk_path(&relative_missing_receipt);
+
+        assert!(resolved.is_absolute(), "resolved path should be absolute: {resolved:?}");
+        assert!(resolved.ends_with("__bitnet_missing_warm_session_receipt.json"));
     }
 
     #[test]
