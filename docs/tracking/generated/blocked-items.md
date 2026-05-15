@@ -305,7 +305,7 @@
 | nvidia-5070ti | CUDA-MODEL-004 | CUDA-MODEL-003 | merged |
 | nvidia-5070ti | CUDA-MODEL-005 | CUDA-MODEL-004 | merged |
 | nvidia-5070ti | CUDA-MODEL-006 | CUDA-MODEL-005 | merged |
-| nvidia-5070ti | CUDA-MODEL-007 | CUDA-MODEL-006 | pr_open |
+| nvidia-5070ti | CUDA-MODEL-007 | CUDA-MODEL-006 | merged |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
 | nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | merged |
 | nvidia-5070ti | CUDA-SERVER-001 | CUDA-UX-008, CUDA-DENSE-054 | merged |
