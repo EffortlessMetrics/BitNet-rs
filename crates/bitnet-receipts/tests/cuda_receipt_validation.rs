@@ -1255,6 +1255,19 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_validates() {
 }
 
 #[test]
+fn dense_gguf_qwen_one_token_accepts_qwen3_06b_model_identity() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["model"]["id"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model"]["file"] = json!("Qwen3-0.6B-Q8_0.gguf");
+    receipt["model"]["architecture"] = json!("qwen3");
+    receipt["model"]["sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["parity"]["fixture_id"] = json!("qwen3-0.6b-instruct-q8_0-one-token-greedy");
+
+    validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt).unwrap();
+}
+
+#[test]
 fn dense_gguf_qwen_one_token_rejects_sampling_policy_only_receipt() {
     let receipt = valid_dense_gguf_sampling_policy_receipt();
 
