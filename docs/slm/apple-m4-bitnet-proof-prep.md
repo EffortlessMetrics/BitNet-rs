@@ -150,6 +150,9 @@ Allowed now:
 - The fixed-prompt `bitnet mac bitnet-warm` route has a committed Apple M4
   CPU/NEON aggregate receipt plus per-prompt receipts for repeated-prompt
   determinism.
+- The `bitnet mac bitnet-warm --prompt ... --prompt ...` route accepts
+  operator-provided warm prompt sets only when at least one exact prompt is
+  repeated, so deterministic warm reuse remains receipt-gated before chat.
 
 Not allowed now:
 

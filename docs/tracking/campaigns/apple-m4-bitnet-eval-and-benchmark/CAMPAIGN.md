@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-bitnet-eval-and-benchmark`
 
-Status: active
+Status: complete
 
 ## Objective
 

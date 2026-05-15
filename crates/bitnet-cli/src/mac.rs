@@ -273,7 +273,7 @@ enum MacAction {
         json_out: PathBuf,
     },
 
-    /// Run fixed BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat.
+    /// Run BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat.
     BitnetWarm {
         /// Accepted BitNet model id. Only microsoft-bitnet-b1.58-2B-4T-i2s is supported.
         #[arg(long, default_value = BITNET_M4_MODEL_ID)]
@@ -291,7 +291,11 @@ enum MacAction {
         #[arg(long, value_name = "PATH")]
         tokenizer: Option<PathBuf>,
 
-        /// Maximum new tokens per fixed warm prompt.
+        /// Operator prompt to run in the warm session. Repeat the flag and include at least one exact repeated prompt for determinism. Defaults to the fixed proof prompt set when omitted.
+        #[arg(long = "prompt", value_name = "TEXT")]
+        prompts: Vec<String>,
+
+        /// Maximum new tokens per warm prompt.
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
         max_new_tokens: usize,
 
@@ -817,6 +821,7 @@ impl MacCommand {
                 cache_dir,
                 model_path,
                 tokenizer,
+                prompts,
                 max_new_tokens,
                 threads,
                 progress,
@@ -829,6 +834,7 @@ impl MacCommand {
                     cache_dir,
                     model_path,
                     tokenizer,
+                    prompts,
                     max_new_tokens,
                     threads,
                     progress,
@@ -2499,6 +2505,7 @@ struct BitnetWarmRun<'a> {
     cache_dir: Option<PathBuf>,
     model_path: Option<PathBuf>,
     tokenizer: Option<PathBuf>,
+    prompts: Vec<String>,
     max_new_tokens: usize,
     threads: usize,
     progress: bool,
@@ -2512,6 +2519,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         cache_dir,
         model_path,
         tokenizer,
+        prompts,
         max_new_tokens,
         threads,
         progress,
@@ -2526,6 +2534,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
             "`bitnet mac bitnet-warm` only supports {BITNET_M4_MODEL_ID}; got `{model_id}`"
         );
     }
+    let (prompts, prompt_source) = resolve_bitnet_warm_prompts(prompts)?;
     let tokenizer = tokenizer.unwrap_or_else(|| PathBuf::from(BITNET_M4_DEFAULT_TOKENIZER_PATH));
     if !tokenizer.exists() {
         anyhow::bail!(
@@ -2536,7 +2545,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
     }
     let tokenizer_sha256 = verify_bitnet_m4_tokenizer(&tokenizer)?;
     let model = model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path)?;
-    let prompts = BITNET_WARM_PROMPTS.iter().map(|prompt| (*prompt).to_string()).collect();
+    let prompt_count = prompts.len();
 
     crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
@@ -2577,15 +2586,70 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         &model,
         &tokenizer,
         &tokenizer_sha256,
+        prompt_source,
     )?;
     if !quiet {
         println!(
-            "Mac BitNet warm session passed: {} (prompts={}, chat=false, serve=false)",
+            "Mac BitNet warm session passed: {} (prompts={}, prompt_source={}, chat=false, serve=false)",
             json_out.display(),
-            BITNET_WARM_PROMPTS.len()
+            prompt_count,
+            prompt_source.as_str()
         );
     }
     Ok(())
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BitnetWarmPromptSource {
+    FixedProof,
+    OperatorPrompts,
+}
+
+impl BitnetWarmPromptSource {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::FixedProof => "fixed_proof_prompts",
+            Self::OperatorPrompts => "operator_prompts",
+        }
+    }
+
+    const fn variable_prompts(self) -> bool {
+        matches!(self, Self::OperatorPrompts)
+    }
+}
+
+fn resolve_bitnet_warm_prompts(
+    prompts: Vec<String>,
+) -> Result<(Vec<String>, BitnetWarmPromptSource)> {
+    if prompts.is_empty() {
+        return Ok((
+            BITNET_WARM_PROMPTS.iter().map(|prompt| (*prompt).to_string()).collect(),
+            BitnetWarmPromptSource::FixedProof,
+        ));
+    }
+    if prompts.len() < 2 {
+        anyhow::bail!(
+            "`bitnet mac bitnet-warm --prompt` requires at least two prompt values for a warm session"
+        );
+    }
+    for (index, prompt) in prompts.iter().enumerate() {
+        if prompt.trim().is_empty() {
+            anyhow::bail!(
+                "`bitnet mac bitnet-warm --prompt` value {} must not be empty",
+                index + 1
+            );
+        }
+    }
+    let mut counts = std::collections::BTreeMap::<&str, usize>::new();
+    for prompt in &prompts {
+        *counts.entry(prompt.as_str()).or_default() += 1;
+    }
+    if !counts.values().any(|count| *count >= 2) {
+        anyhow::bail!(
+            "`bitnet mac bitnet-warm --prompt` requires at least one exact repeated prompt so deterministic warm reuse can be checked before chat is enabled"
+        );
+    }
+    Ok((prompts, BitnetWarmPromptSource::OperatorPrompts))
 }
 
 struct BitnetBenchmarkRun<'a> {
@@ -2740,6 +2804,7 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
         cache_dir,
         model_path,
         tokenizer,
+        prompts: Vec::new(),
         max_new_tokens,
         threads,
         progress,
@@ -6354,6 +6419,7 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     model: &VerifiedCachedModel,
     tokenizer: &Path,
     tokenizer_sha256: &str,
+    prompt_source: BitnetWarmPromptSource,
 ) -> Result<()> {
     let bytes = std::fs::read(path).with_context(|| {
         format!("failed to read BitNet warm-session receipt {}", path.display())
@@ -6387,12 +6453,20 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     if receipt["generation"]["prompt_template"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE) {
         anyhow::bail!("{} does not use the BitNet.cpp answer prompt template", path.display());
     }
-    if receipt["session"]["prompt_count"].as_u64() != Some(BITNET_WARM_PROMPTS.len() as u64)
-        || receipt["session"]["model_loaded_once"].as_bool() != Some(true)
+    let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
+    if prompt_source == BitnetWarmPromptSource::FixedProof
+        && prompt_count != BITNET_WARM_PROMPTS.len() as u64
+    {
+        anyhow::bail!("{} must record the fixed BitNet warm proof prompt count", path.display());
+    }
+    if prompt_source == BitnetWarmPromptSource::OperatorPrompts && prompt_count < 2 {
+        anyhow::bail!("{} must record at least two operator BitNet warm prompts", path.display());
+    }
+    if receipt["session"]["model_loaded_once"].as_bool() != Some(true)
         || receipt["session"]["tokenizer_loaded_once"].as_bool() != Some(true)
     {
         anyhow::bail!(
-            "{} must record the fixed BitNet warm prompt count and one model/tokenizer load",
+            "{} must record one BitNet warm-session model/tokenizer load",
             path.display()
         );
     }
@@ -6407,6 +6481,16 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     object.insert("artifact_kind".to_string(), serde_json::json!("bitnet_apple_m4_warm_session"));
     object.insert("operator_command".to_string(), serde_json::json!("mac bitnet-warm"));
     object.insert("model_id".to_string(), serde_json::json!(model.id));
+    object.insert(
+        "bitnet_warm_prompt_source".to_string(),
+        serde_json::json!({
+            "source": prompt_source.as_str(),
+            "variable_prompts": prompt_source.variable_prompts(),
+            "fixed_proof_prompt_count": BITNET_WARM_PROMPTS.len(),
+            "session_prompt_count": prompt_count,
+            "determinism_requires_repeated_prompt": true,
+        }),
+    );
     object.insert(
         "model_cache".to_string(),
         serde_json::json!({
