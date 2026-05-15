@@ -1,0 +1,22 @@
+timestamp = "2026-05-15T04:05:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-010"
+event = "pr_open"
+from = "in_progress"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-010-storage-audit"
+pr = 4839
+head_sha = "8f8916cd5d2d32058457ae86fa68178637b131cd"
+summary = "Opened PR #4839 for the M3 Air storage and cache retention audit."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4839",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/storage-audit.json",
+  "docs/reports/apple-silicon-macbook-m3-air-storage-audit.md",
+]
+
+notes = [
+  "The PR records retained artifacts, free-space state, SHA-256 evidence, and the decision that serialized follow-on candidate downloads may proceed.",
+  "No model binaries are committed, and the PR makes no artifact-quality, Rust Apple backend, Apple Metal BitNet inference, QK256, M4 Mac mini proof, or broad Apple Silicon performance claim.",
+]
