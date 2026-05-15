@@ -98,6 +98,7 @@ struct HiddenStateStats {
     min: Option<f64>,
     max: Option<f64>,
     vector_sha256_f32_le: Option<String>,
+    values: Option<Vec<f64>>,
 }
 
 #[derive(Clone, Debug)]
@@ -494,7 +495,12 @@ fn hidden_state_stats(value: Option<&Value>) -> Option<HiddenStateStats> {
             .and_then(Value::as_str)
             .map(ToOwned::to_owned)
             .or_else(|| vector_sha256_f32_le_from_values(value.pointer("/values"))),
+        values: f64_array(value.pointer("/values")),
     })
+}
+
+fn f64_array(value: Option<&Value>) -> Option<Vec<f64>> {
+    value?.as_array()?.iter().map(Value::as_f64).collect()
 }
 
 fn vector_sha256_f32_le_from_values(value: Option<&Value>) -> Option<String> {
@@ -891,6 +897,7 @@ fn compare_hidden_state(
     right: Option<&HiddenStateStats>,
 ) -> Value {
     let hidden_state_available = left.is_some() && right.is_some();
+    let elementwise = compare_hidden_state_values(left, right);
     let value_count_exact = left
         .zip(right)
         .and_then(|(left, right)| left.value_count.zip(right.value_count))
@@ -938,6 +945,81 @@ fn compare_hidden_state(
         "vector_sha256_f32_le_exact": hash_exact,
         "left_vector_sha256_f32_le": left.and_then(|stats| stats.vector_sha256_f32_le.clone()),
         "right_vector_sha256_f32_le": right.and_then(|stats| stats.vector_sha256_f32_le.clone()),
+        "elementwise": elementwise,
+    })
+}
+
+fn compare_hidden_state_values(
+    left: Option<&HiddenStateStats>,
+    right: Option<&HiddenStateStats>,
+) -> Value {
+    let Some((left, right)) = left.zip(right) else {
+        return json!({
+            "available": false,
+            "reason": "hidden_state_missing",
+        });
+    };
+    let Some((left_values, right_values)) = left.values.as_ref().zip(right.values.as_ref()) else {
+        return json!({
+            "available": false,
+            "reason": "hidden_state_values_missing",
+            "left_values_present": left.values.is_some(),
+            "right_values_present": right.values.is_some(),
+        });
+    };
+    if left_values.len() != right_values.len() {
+        return json!({
+            "available": false,
+            "reason": "hidden_state_value_count_mismatch",
+            "left_len": left_values.len(),
+            "right_len": right_values.len(),
+        });
+    }
+
+    let mut max_abs_delta = 0.0f64;
+    let mut max_abs_index = None;
+    let mut sum_abs_delta = 0.0f64;
+    let mut sum_sq_delta = 0.0f64;
+    let mut rows = left_values
+        .iter()
+        .zip(right_values.iter())
+        .enumerate()
+        .map(|(index, (left, right))| {
+            let delta = right - left;
+            let abs_delta = delta.abs();
+            if abs_delta > max_abs_delta {
+                max_abs_delta = abs_delta;
+                max_abs_index = Some(index);
+            }
+            sum_abs_delta += abs_delta;
+            sum_sq_delta += delta * delta;
+            (index, *left, *right, delta, abs_delta)
+        })
+        .collect::<Vec<_>>();
+    rows.sort_by(|a, b| b.4.partial_cmp(&a.4).unwrap_or(std::cmp::Ordering::Equal));
+    let top_abs_deltas = rows
+        .into_iter()
+        .take(8)
+        .map(|(index, left, right, delta, abs_delta)| {
+            json!({
+                "index": index,
+                "left": left,
+                "right": right,
+                "delta_right_minus_left": delta,
+                "abs_delta": abs_delta,
+            })
+        })
+        .collect::<Vec<_>>();
+    let len = left_values.len() as f64;
+
+    json!({
+        "available": true,
+        "value_count": left_values.len(),
+        "mean_abs_delta": sum_abs_delta / len,
+        "rms_delta": (sum_sq_delta / len).sqrt(),
+        "max_abs_delta": max_abs_delta,
+        "max_abs_index": max_abs_index,
+        "top_abs_deltas": top_abs_deltas,
     })
 }
 
@@ -1585,6 +1667,7 @@ mod tests {
         assert_eq!(sidecar_stats.mean, Some(-0.004));
         assert_eq!(sidecar_stats.rms, Some(0.061));
         assert!(sidecar_stats.vector_sha256_f32_le.is_some());
+        assert_eq!(sidecar_stats.values.as_deref(), Some(&[1.0, -2.0][..]));
 
         let left = HiddenStateStats {
             value_count: Some(2560),
@@ -1593,6 +1676,7 @@ mod tests {
             min: Some(-0.5),
             max: Some(0.75),
             vector_sha256_f32_le: Some("abc123".to_string()),
+            values: Some(vec![1.0, 2.0, 3.0]),
         };
         let right = HiddenStateStats {
             value_count: Some(2560),
@@ -1601,6 +1685,7 @@ mod tests {
             min: Some(-0.55),
             max: Some(0.7),
             vector_sha256_f32_le: Some("def456".to_string()),
+            values: Some(vec![1.5, -1.0, 3.25]),
         };
         let report = compare_hidden_state(Some(&left), Some(&right));
         assert_eq!(report["available"], true);
@@ -1616,6 +1701,11 @@ mod tests {
             report["rms_abs_delta"]
         );
         assert_eq!(report["vector_sha256_f32_le_exact"], false);
+        assert_eq!(report["elementwise"]["available"], true);
+        assert_eq!(report["elementwise"]["value_count"], 3);
+        assert_eq!(report["elementwise"]["max_abs_delta"], 3.0);
+        assert_eq!(report["elementwise"]["max_abs_index"], 1);
+        assert_eq!(report["elementwise"]["top_abs_deltas"][0]["index"], 1);
     }
 
     #[test]

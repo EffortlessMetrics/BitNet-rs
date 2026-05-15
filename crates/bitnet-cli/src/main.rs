@@ -467,7 +467,7 @@ mod proof_summary_tests {
     #[test]
     fn f32_vector_stats_receipt_reports_hidden_state_shape_and_hash() {
         let values = [1.0f32, -2.0, 3.0, 4.0];
-        let receipt = f32_vector_stats_receipt(&values);
+        let receipt = f32_vector_stats_receipt(&values, false);
 
         assert_eq!(receipt["present"], serde_json::json!(true));
         assert_eq!(receipt["value_count"], serde_json::json!(4));
@@ -477,6 +477,20 @@ mod proof_summary_tests {
         assert_eq!(receipt["max"], serde_json::json!(4.0f32));
         assert_eq!(receipt["vector_sha256_f32_le"], serde_json::json!(sha256_f32_le(&values)));
         assert_eq!(receipt["first_values"], serde_json::json!([1.0f32, -2.0, 3.0, 4.0]));
+        assert_eq!(receipt["values_included"], serde_json::json!(false));
+        assert!(receipt.get("values").is_none());
+    }
+
+    #[test]
+    fn f32_vector_stats_receipt_can_include_full_hidden_values() {
+        let values = [1.0f32, -2.0, 3.0, 4.0];
+        let receipt = f32_vector_stats_receipt(&values, true);
+
+        assert_eq!(receipt["present"], serde_json::json!(true));
+        assert_eq!(receipt["value_count"], serde_json::json!(4));
+        assert_eq!(receipt["vector_sha256_f32_le"], serde_json::json!(sha256_f32_le(&values)));
+        assert_eq!(receipt["values_included"], serde_json::json!(true));
+        assert_eq!(receipt["values"], serde_json::json!([1.0f32, -2.0, 3.0, 4.0]));
     }
 
     #[test]
@@ -879,6 +893,10 @@ enum Commands {
         #[arg(long)]
         dump_logit_steps: Option<usize>,
 
+        /// Include full hidden-state vectors in dumped logit steps (diagnostic only)
+        #[arg(long, default_value_t = false)]
+        dump_hidden_values: bool,
+
         /// Top-k tokens to include in logit dump
         #[arg(long, default_value = "10", value_name = "K")]
         logits_topk: usize,
@@ -1158,6 +1176,7 @@ async fn main() -> Result<()> {
             stop,
             stop_id,
             dump_logit_steps,
+            dump_hidden_values,
             logits_topk,
             logit_id,
             assert_greedy,
@@ -1194,6 +1213,7 @@ async fn main() -> Result<()> {
                 stop,
                 stop_id,
                 dump_logit_steps,
+                dump_hidden_values,
                 logits_topk,
                 logit_id,
                 assert_greedy,
@@ -1944,6 +1964,7 @@ async fn run_simple_generation(
     stop: Vec<String>,
     stop_id: Vec<u32>,
     dump_logit_steps: Option<usize>,
+    dump_hidden_values: bool,
     logits_topk: usize,
     logit_id: Vec<u32>,
     assert_greedy: bool,
@@ -2364,7 +2385,7 @@ async fn run_simple_generation(
             // Will capture chosen_id after sampling
             let step = LogitStep {
                 step: step_idx,
-                hidden_state: f32_vector_stats_receipt(&hidden_vec),
+                hidden_state: f32_vector_stats_receipt(&hidden_vec, dump_hidden_values),
                 top_logits: top_logits
                     .iter()
                     .map(|&(token_id, logit)| {
@@ -2774,9 +2795,9 @@ fn compute_rms(xs: &[f32]) -> f32 {
     (sum_sq / (xs.len() as f32)).sqrt()
 }
 
-fn f32_vector_stats_receipt(values: &[f32]) -> serde_json::Value {
+fn f32_vector_stats_receipt(values: &[f32], include_values: bool) -> serde_json::Value {
     if values.is_empty() {
-        return serde_json::json!({
+        let mut receipt = serde_json::json!({
             "present": false,
             "value_count": 0,
             "mean": serde_json::Value::Null,
@@ -2785,7 +2806,12 @@ fn f32_vector_stats_receipt(values: &[f32]) -> serde_json::Value {
             "max": serde_json::Value::Null,
             "vector_sha256_f32_le": serde_json::Value::Null,
             "first_values": Vec::<f32>::new(),
+            "values_included": include_values,
         });
+        if include_values {
+            receipt["values"] = serde_json::json!(Vec::<f32>::new());
+        }
+        return receipt;
     }
 
     let mut min = f32::INFINITY;
@@ -2797,7 +2823,7 @@ fn f32_vector_stats_receipt(values: &[f32]) -> serde_json::Value {
         sum += *value as f64;
     }
 
-    serde_json::json!({
+    let mut receipt = serde_json::json!({
         "present": true,
         "value_count": values.len(),
         "mean": (sum / values.len() as f64) as f32,
@@ -2806,7 +2832,12 @@ fn f32_vector_stats_receipt(values: &[f32]) -> serde_json::Value {
         "max": max,
         "vector_sha256_f32_le": sha256_f32_le(values),
         "first_values": values.iter().copied().take(8).collect::<Vec<_>>(),
-    })
+        "values_included": include_values,
+    });
+    if include_values {
+        receipt["values"] = serde_json::json!(values);
+    }
+    receipt
 }
 
 /// Show system information
