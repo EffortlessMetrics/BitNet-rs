@@ -176,21 +176,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
     }
 
     let reference_argv = selected.map(|candidate| {
-        vec![
-            candidate.path.clone(),
-            "-m".to_string(),
-            model_path.clone(),
-            "--override-kv".to_string(),
-            "tokenizer.ggml.add_bos_token=bool:false".to_string(),
-            "-p".to_string(),
-            rendered_prompt.clone(),
-            "-n".to_string(),
-            args.max_new_tokens.to_string(),
-            "--temp".to_string(),
-            "0".to_string(),
-            "--seed".to_string(),
-            "0".to_string(),
-        ]
+        reference_argv(&candidate.path, &model_path, &rendered_prompt, args.max_new_tokens)
     });
 
     Ok(json!({
@@ -235,7 +221,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 })
             }).collect::<Vec<_>>(),
             "command_argv": reference_argv,
-            "command_policy": "uses_rendered_prompt_text_for_template_parity; disables reference auto-BOS because the rendered Llama3 prompt already contains BOS; token parity still must be verified against reference output",
+            "command_policy": "uses_rendered_prompt_text_for_template_parity; disables reference auto-BOS because the rendered Llama3 prompt already contains BOS; suppresses prompt echo so stdout is generated text; token parity still must be verified against reference output",
             "setup_command_pwsh": format!(
                 "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -ModelDir \"{}\" -QuantType i2_s -Force -SkipPatches",
                 model_dir.replace('"', "\\\"")
@@ -281,6 +267,30 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
         },
         "not_claims": CRITICAL_NOT_CLAIMS,
     }))
+}
+
+fn reference_argv(
+    executable: &str,
+    model_path: &str,
+    rendered_prompt: &str,
+    max_new_tokens: usize,
+) -> Vec<String> {
+    vec![
+        executable.to_string(),
+        "-m".to_string(),
+        model_path.to_string(),
+        "--override-kv".to_string(),
+        "tokenizer.ggml.add_bos_token=bool:false".to_string(),
+        "-p".to_string(),
+        rendered_prompt.to_string(),
+        "-n".to_string(),
+        max_new_tokens.to_string(),
+        "--temp".to_string(),
+        "0".to_string(),
+        "--seed".to_string(),
+        "0".to_string(),
+        "--no-display-prompt".to_string(),
+    ]
 }
 
 #[derive(Debug)]
@@ -768,5 +778,17 @@ mod tests {
                 || path.ends_with("C:/BuildTools/VC/Tools/Llvm/x64/bin/clang++.exe"))
         );
         assert_eq!(candidate_strings.iter().collect::<HashSet<_>>().len(), candidate_strings.len());
+    }
+
+    #[test]
+    fn reference_argv_disables_auto_bos_and_prompt_echo() {
+        let argv = reference_argv("llama-cli", "model.gguf", "<|begin_of_text|>prompt", 16);
+
+        assert!(
+            argv.windows(2).any(|args| {
+                args == ["--override-kv", "tokenizer.ggml.add_bos_token=bool:false"]
+            })
+        );
+        assert!(argv.iter().any(|arg| arg == "--no-display-prompt"));
     }
 }
