@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T00:20:40Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005C"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005C-microsoft-2b-reference-output"
+pr = 4811
+head_sha = "3590143516c7d101404c5a28597d0db2de196edb"
+merge_sha = "5f3088d7c17ba97206ae9c8e7abdc4d01c78fb48"
+summary = "Merged the M3 Air Microsoft 2B I2_S reference-output decision."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4811",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-reference-output.json",
+  "docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md",
+]
+
+notes = [
+  "The merged receipt accepts the official Microsoft 2B I2_S artifact only for the recorded M3 Air BitNet.cpp reference-runner context.",
+  "The receipt records 5/5 prompt-suite gates passing and records the failed forced -ngl 0 diagnostic as non-decision evidence.",
+  "The item does not claim Rust M4 BitNet local answers, Apple Metal BitNet inference, QK256 on Apple Silicon, repository Rust Apple backend acceptance, speedup, or broad Apple Silicon performance.",
+]
