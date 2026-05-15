@@ -1,0 +1,23 @@
+timestamp = "2026-05-15T03:45:54Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-001"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "model/cuda-qwen3-0_6b-artifact-contract"
+pr = 4836
+head_sha = "b9fb104e470cbc92ef5745221465dbd796b7043f"
+summary = "Opened draft PR #4836 for the Qwen3 0.6B Q8_0 artifact contract."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4836",
+  "ci/model-artifacts/dense-slm-model-contracts.toml",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/reports/CUDA_MODEL_001_QWEN3_06B_ARTIFACT_CONTRACT.md",
+]
+
+notes = [
+  "The PR records source, revision, file identity, SHA256, bytes, GGUF type, architecture, quantization, tokenizer metadata, chat-template presence, context length, license, storage envelope, and candidate VRAM envelope.",
+  "The model coverage row advances only to structurally_valid and keeps CPU answer, CUDA, speed, server, full-residency, dense CUDA proof, and BitNet QK256 proof false.",
+]
