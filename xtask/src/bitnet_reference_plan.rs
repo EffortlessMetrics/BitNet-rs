@@ -25,6 +25,14 @@ const DEFAULT_REFERENCE_RUN_RECEIPT: &str = "target/a770-diagnostic/bitnet-refer
 const REFERENCE_TEXT_END_MARKER: &str = " [end of text]";
 const REFERENCE_TEXT_PROBE_TOKEN_LIMIT: usize = 32;
 
+struct PlanTokenizer {
+    tokenizer: std::sync::Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
+    source: String,
+    path: Option<String>,
+    contract_path: Option<String>,
+    rust_cli_tokenizer_arg: Option<String>,
+}
+
 #[derive(Debug)]
 pub struct ReferencePlanArgs<'a> {
     pub model_contract: &'a Path,
@@ -144,13 +152,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
         .map(path_to_string)
         .or_else(|| str_at(&contract, "/local_path").map(ToOwned::to_owned))
         .context("model path missing; pass --model or set /local_path in the model contract")?;
-    let tokenizer_path = args
-        .tokenizer
-        .map(path_to_string)
-        .or_else(|| str_at(&contract, "/tokenizer/path").map(ToOwned::to_owned))
-        .context(
-            "tokenizer path missing; pass --tokenizer or set /tokenizer/path in the model contract",
-        )?;
+    let plan_tokenizer = resolve_plan_tokenizer(&model_path, args.tokenizer, &contract)?;
     let model_dir =
         Path::new(&model_path).parent().map(path_to_string).unwrap_or_else(|| ".".to_string());
     let template = args
@@ -160,13 +162,15 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
     let rendered_prompt = template.apply(args.prompt, args.system_prompt);
     let add_bos = template.should_add_bos();
     let parse_special = template.parse_special();
-    let tokenizer = bitnet_tokenizers::load_tokenizer(Path::new(&tokenizer_path))
-        .with_context(|| format!("loading tokenizer {tokenizer_path}"))?;
-    let token_ids = tokenizer
+    let token_ids = plan_tokenizer
+        .tokenizer
         .encode(&rendered_prompt, add_bos, parse_special)
         .with_context(|| "tokenizing rendered prompt with contract tokenizer")?;
-    let reference_text_probe =
-        reference_text_probe(args.reference_text, args.reference_run_receipt, tokenizer.as_ref())?;
+    let reference_text_probe = reference_text_probe(
+        args.reference_text,
+        args.reference_run_receipt,
+        plan_tokenizer.tokenizer.as_ref(),
+    )?;
 
     let candidates = reference_candidates(args.reference_exe, args.cpp_root);
     let selected = candidates.iter().find(|candidate| candidate.exists);
@@ -184,7 +188,9 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
     if !Path::new(&model_path).exists() {
         blocked_reasons.push("model_file_missing".to_string());
     }
-    if !Path::new(&tokenizer_path).exists() {
+    if let Some(path) = plan_tokenizer.path.as_deref()
+        && !Path::new(path).exists()
+    {
         blocked_reasons.push("tokenizer_file_missing".to_string());
     }
 
@@ -206,13 +212,23 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "model_id": str_at(&contract, "/model_id").unwrap_or("unknown-model"),
             "model_path": model_path,
             "model_exists": Path::new(&model_path).exists(),
-            "tokenizer_path": tokenizer_path,
-            "tokenizer_exists": Path::new(&tokenizer_path).exists(),
+            "tokenizer_path": plan_tokenizer.path,
+            "tokenizer_source": plan_tokenizer.source,
+            "tokenizer_exists": plan_tokenizer
+                .path
+                .as_deref()
+                .is_some_and(|path| Path::new(path).exists()),
+            "contract_tokenizer_path": plan_tokenizer.contract_path,
+            "contract_tokenizer_exists": plan_tokenizer
+                .contract_path
+                .as_deref()
+                .is_some_and(|path| Path::new(path).exists()),
             "weights_sha256": str_at(&contract, "/sha256").unwrap_or(""),
             "tokenizer_sha256": str_at(&contract, "/tokenizer/sha256").unwrap_or(""),
         },
         "prompt_identity": {
             "prompt_template": args.prompt_template,
+            "tokenizer_source": plan_tokenizer.source,
             "system_prompt_present": args.system_prompt.is_some(),
             "rendered_prompt_sha256": sha256_text(&rendered_prompt),
             "prompt_token_ids_sha256": sha256_token_ids(&token_ids)?,
@@ -251,7 +267,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "cpu_argv": rust_cli_argv(
                 "cpu",
                 &model_path,
-                &tokenizer_path,
+                plan_tokenizer.rust_cli_tokenizer_arg.as_deref(),
                 args.prompt_template,
                 args.system_prompt,
                 args.prompt,
@@ -263,7 +279,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "a770_argv": rust_cli_argv(
                 "intel-arc-a770-opencl",
                 &model_path,
-                &tokenizer_path,
+                plan_tokenizer.rust_cli_tokenizer_arg.as_deref(),
                 args.prompt_template,
                 args.system_prompt,
                 args.prompt,
@@ -284,7 +300,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "cpu_first_token_logit_argv": rust_cli_first_token_logit_argv(
                 "cpu",
                 &model_path,
-                &tokenizer_path,
+                plan_tokenizer.rust_cli_tokenizer_arg.as_deref(),
                 args.prompt_template,
                 args.system_prompt,
                 args.prompt,
@@ -296,7 +312,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "a770_first_token_logit_argv": rust_cli_first_token_logit_argv(
                 "intel-arc-a770-opencl",
                 &model_path,
-                &tokenizer_path,
+                plan_tokenizer.rust_cli_tokenizer_arg.as_deref(),
                 args.prompt_template,
                 args.system_prompt,
                 args.prompt,
@@ -313,6 +329,60 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
         },
         "not_claims": CRITICAL_NOT_CLAIMS,
     }))
+}
+
+fn resolve_plan_tokenizer(
+    model_path: &str,
+    tokenizer_override: Option<&Path>,
+    contract: &Value,
+) -> Result<PlanTokenizer> {
+    let contract_path = str_at(contract, "/tokenizer/path").map(ToOwned::to_owned);
+    if let Some(path) = tokenizer_override {
+        let path_string = path_to_string(path);
+        let tokenizer = bitnet_tokenizers::load_tokenizer(path)
+            .with_context(|| format!("loading explicit tokenizer {path_string}"))?;
+        return Ok(PlanTokenizer {
+            tokenizer,
+            source: "explicit".to_string(),
+            path: Some(path_string.clone()),
+            contract_path,
+            rust_cli_tokenizer_arg: Some(path_string),
+        });
+    }
+
+    let model = Path::new(model_path);
+    if model.extension().and_then(|ext| ext.to_str()) == Some("gguf")
+        && let Ok(resolution) = bitnet_tokenizers::auto::resolve_tokenizer(model, None, true)
+    {
+        let source = resolution.source.as_str().to_string();
+        let path = resolution.path.as_deref().map(path_to_string);
+        let rust_cli_tokenizer_arg =
+            if resolution.source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+                None
+            } else {
+                path.clone()
+            };
+        return Ok(PlanTokenizer {
+            tokenizer: resolution.tokenizer,
+            source,
+            path,
+            contract_path,
+            rust_cli_tokenizer_arg,
+        });
+    }
+
+    let tokenizer_path = contract_path.clone().context(
+        "tokenizer path missing; pass --tokenizer or set /tokenizer/path in the model contract",
+    )?;
+    let tokenizer = bitnet_tokenizers::load_tokenizer(Path::new(&tokenizer_path))
+        .with_context(|| format!("loading contract tokenizer {tokenizer_path}"))?;
+    Ok(PlanTokenizer {
+        tokenizer,
+        source: "contract_tokenizer".to_string(),
+        path: Some(tokenizer_path.clone()),
+        contract_path,
+        rust_cli_tokenizer_arg: Some(tokenizer_path),
+    })
 }
 
 fn reference_argv(
@@ -596,7 +666,7 @@ fn visual_studio_build_tools_probe() -> Value {
 fn rust_cli_argv(
     device: &str,
     model: &str,
-    tokenizer: &str,
+    tokenizer: Option<&str>,
     prompt_template: &str,
     system_prompt: Option<&str>,
     prompt: &str,
@@ -622,13 +692,15 @@ fn rust_cli_argv(
         device.to_string(),
         "--model".to_string(),
         model.to_string(),
-        "--tokenizer".to_string(),
-        tokenizer.to_string(),
         "--model-format".to_string(),
         "gguf".to_string(),
         "--prompt-template".to_string(),
         prompt_template.to_string(),
     ];
+    if let Some(tokenizer) = tokenizer {
+        argv.push("--tokenizer".to_string());
+        argv.push(tokenizer.to_string());
+    }
     if let Some(system_prompt) = system_prompt {
         argv.push("--system-prompt".to_string());
         argv.push(system_prompt.to_string());
@@ -661,7 +733,7 @@ fn rust_cli_argv(
 fn rust_cli_first_token_logit_argv(
     device: &str,
     model: &str,
-    tokenizer: &str,
+    tokenizer: Option<&str>,
     prompt_template: &str,
     system_prompt: Option<&str>,
     prompt: &str,
@@ -886,7 +958,7 @@ mod tests {
         let cpu = rust_cli_argv(
             "cpu",
             "m.gguf",
-            "tok.json",
+            Some("tok.json"),
             "raw",
             None,
             "x",
@@ -898,7 +970,7 @@ mod tests {
         let a770 = rust_cli_argv(
             "intel-arc-a770-opencl",
             "m.gguf",
-            "tok.json",
+            Some("tok.json"),
             "raw",
             None,
             "x",
@@ -923,6 +995,25 @@ mod tests {
             a770.windows(2)
                 .any(|args| args == ["--proof-kernel-route", A770_BITNET_QK256_ROUTE_ID])
         );
+    }
+
+    #[test]
+    fn rust_cli_argv_can_use_embedded_gguf_tokenizer() {
+        let argv = rust_cli_argv(
+            "cpu",
+            "m.gguf",
+            None,
+            "llama3-chat",
+            None,
+            "What is 2+2?",
+            1,
+            "cpu.json",
+            None,
+            None,
+        );
+
+        assert!(!argv.iter().any(|arg| arg == "--tokenizer"));
+        assert!(argv.iter().any(|arg| arg == "--strict-tokenizer"));
     }
 
     #[test]
@@ -999,7 +1090,7 @@ mod tests {
         let argv = rust_cli_first_token_logit_argv(
             "intel-arc-a770-opencl",
             "m.gguf",
-            "tok.json",
+            Some("tok.json"),
             "llama3-chat",
             None,
             "What is 2+2?",
