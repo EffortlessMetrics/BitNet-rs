@@ -204,6 +204,10 @@ fn build_receipt(
                 .pointer("/rust_commands/reference_text_tokenization")
                 .cloned()
                 .unwrap_or(Value::Null),
+            "reference_top_logit_capability": plan
+                .pointer("/reference/top_logit_capability")
+                .cloned()
+                .unwrap_or(Value::Null),
             "command_policy": str_at(plan, "/reference/command_policy").unwrap_or(""),
         },
         "reference_text_tokenization": plan
@@ -430,7 +434,17 @@ mod tests {
             "reference": {
                 "backend": "bitnet.cpp_or_llama.cpp_cli",
                 "selected_executable": "llama-cli",
-                "command_policy": "test"
+                "command_policy": "test",
+                "top_logit_capability": {
+                    "diagnostic_only": true,
+                    "claimable": false,
+                    "capability_ready": false,
+                    "decision": {
+                        "current_blocked_reasons": [
+                            "reference_top_logits_executable_hook_missing"
+                        ]
+                    }
+                }
             }
         });
         let capture = CommandCapture {
@@ -464,6 +478,11 @@ sampler seed: 0\n"
         assert_eq!(
             receipt["plan"]["reference_text_tokenization"]["selected_logit_probe_ids"],
             json!([17, 10])
+        );
+        assert_eq!(
+            receipt["plan"]["reference_top_logit_capability"]["decision"]["current_blocked_reasons"]
+                [0],
+            json!("reference_top_logits_executable_hook_missing")
         );
         let not_claims = receipt["not_claims"].as_array().unwrap();
         assert!(not_claims.contains(&json!("reference_generated_token_ids")));

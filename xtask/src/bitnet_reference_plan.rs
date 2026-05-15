@@ -209,6 +209,10 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
     let reference_argv = selected.map(|candidate| {
         reference_argv(&candidate.path, &model_path, &rendered_prompt, args.max_new_tokens)
     });
+    let reference_top_logit_capability = reference_top_logit_capability(
+        args.cpp_root,
+        selected.map(|candidate| candidate.path.as_str()),
+    );
 
     Ok(json!({
         "schema_version": 1,
@@ -263,6 +267,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             }).collect::<Vec<_>>(),
             "command_argv": reference_argv,
             "command_policy": "uses_rendered_prompt_text_for_template_parity; disables reference auto-BOS because the rendered Llama3 prompt already contains BOS; suppresses prompt echo so stdout is generated text; enables verbose prompt output so the reference run receipt can compare actual reference prompt tokenization",
+            "top_logit_capability": reference_top_logit_capability,
             "setup_command_pwsh": format!(
                 "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -ModelDir \"{}\" -QuantType i2_s -Force -SkipPatches",
                 model_dir.replace('"', "\\\"")
@@ -490,6 +495,210 @@ fn reference_candidates(reference_exe: Option<&Path>, cpp_root: Option<&Path>) -
 fn push_candidate(candidates: &mut Vec<Candidate>, path: PathBuf, source: &str) {
     let exists = path.is_file();
     candidates.push(Candidate { path: path_to_string(&path), source: source.to_string(), exists });
+}
+
+const REFERENCE_SOURCE_SCAN_MAX_FILES: usize = 4096;
+const REFERENCE_SOURCE_SCAN_MAX_BYTES: u64 = 2 * 1024 * 1024;
+
+const RAW_TOP_LOGIT_HOOK_PATTERNS: &[(&str, &str)] = &[
+    ("--logits-file", "cli_logits_file_flag"),
+    ("--logits-all", "cli_logits_all_flag"),
+    ("llama_get_logits", "llama_raw_logits_api"),
+    ("get_all_logits", "reference_all_logits_api"),
+    ("top_logits", "top_logits_json_surface"),
+];
+
+const GENERATED_TOKEN_ID_HOOK_PATTERNS: &[(&str, &str)] = &[
+    ("generated_token_ids", "generated_token_ids_json_surface"),
+    ("output_tokens", "output_tokens_json_surface"),
+    ("token_ids", "token_ids_json_surface"),
+];
+
+const PROBABILITY_STRING_PATTERNS: &[(&str, &str)] = &[
+    ("completion_probabilities", "server_completion_probabilities"),
+    ("n_probs", "server_probability_string_count"),
+];
+
+fn reference_top_logit_capability(
+    cpp_root: Option<&Path>,
+    selected_executable: Option<&str>,
+) -> Value {
+    let roots = reference_source_roots(cpp_root, selected_executable);
+    let source_files = reference_source_files(&roots);
+    let raw_top_logit_hits = source_pattern_hits(&source_files, RAW_TOP_LOGIT_HOOK_PATTERNS);
+    let generated_token_id_hits =
+        source_pattern_hits(&source_files, GENERATED_TOKEN_ID_HOOK_PATTERNS);
+    let probability_string_hits = source_pattern_hits(&source_files, PROBABILITY_STRING_PATTERNS);
+    let raw_top_logit_hook_candidate = !raw_top_logit_hits.is_empty();
+    let generated_token_id_hook_candidate = !generated_token_id_hits.is_empty();
+
+    let mut blocked_reasons = Vec::new();
+    if source_files.is_empty() {
+        blocked_reasons.push("reference_source_tree_missing".to_string());
+    }
+    if raw_top_logit_hook_candidate {
+        blocked_reasons.push("reference_top_logits_receipt_not_wired".to_string());
+    } else {
+        blocked_reasons.push("reference_top_logits_executable_hook_missing".to_string());
+    }
+    if generated_token_id_hook_candidate {
+        blocked_reasons.push("reference_generated_token_ids_receipt_not_wired".to_string());
+    } else {
+        blocked_reasons.push("reference_generated_token_ids_executable_hook_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    json!({
+        "diagnostic_only": true,
+        "claimable": false,
+        "capability_ready": false,
+        "raw_top_logits_available": false,
+        "generated_token_ids_available": false,
+        "source_scan": {
+            "roots": roots.iter().map(|root| json!({
+                "path": path_to_string(root),
+                "exists": root.is_dir(),
+            })).collect::<Vec<_>>(),
+            "source_file_count": source_files.len(),
+            "file_limit": REFERENCE_SOURCE_SCAN_MAX_FILES,
+            "max_bytes_per_file": REFERENCE_SOURCE_SCAN_MAX_BYTES,
+        },
+        "raw_top_logits": {
+            "hook_candidate": raw_top_logit_hook_candidate,
+            "hits": raw_top_logit_hits,
+        },
+        "generated_token_ids": {
+            "hook_candidate": generated_token_id_hook_candidate,
+            "hits": generated_token_id_hits,
+        },
+        "probability_strings": {
+            "surface_candidate": !probability_string_hits.is_empty(),
+            "hits": probability_string_hits,
+            "policy": "probability strings are useful diagnostic evidence but are not generated token ids or raw logits",
+        },
+        "decision": {
+            "reference_top_logit_capability_ready": false,
+            "current_blocked_reasons": blocked_reasons,
+            "next_when_hook_available": "wire a reference receipt that emits generated token ids and top logits, then compare against Rust CPU and strict A770 receipts",
+        },
+        "not_claims": [
+            "reference_generated_token_ids",
+            "reference_top_logits",
+            "reference_parity_promotion",
+            "a770_semantic_quality_proven"
+        ],
+    })
+}
+
+fn reference_source_roots(
+    cpp_root: Option<&Path>,
+    selected_executable: Option<&str>,
+) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if let Some(root) = cpp_root {
+        roots.push(root.to_path_buf());
+    }
+    if let Some(executable) = selected_executable {
+        for ancestor in Path::new(executable).ancestors() {
+            if ancestor.as_os_str().is_empty() {
+                continue;
+            }
+            if ancestor.join("3rdparty").join("llama.cpp").is_dir()
+                || ancestor.join("src").is_dir()
+                || ancestor.join("common").is_dir()
+            {
+                roots.push(ancestor.to_path_buf());
+            }
+        }
+    }
+    roots.push(PathBuf::from("target/external/BitNet-reference"));
+    roots.push(PathBuf::from("target/external/BitNet"));
+    dedupe_paths(roots)
+}
+
+fn reference_source_files(roots: &[PathBuf]) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    for root in roots {
+        collect_reference_source_files(root, &mut files);
+        if files.len() >= REFERENCE_SOURCE_SCAN_MAX_FILES {
+            files.truncate(REFERENCE_SOURCE_SCAN_MAX_FILES);
+            break;
+        }
+    }
+    dedupe_paths(files)
+}
+
+fn collect_reference_source_files(path: &Path, files: &mut Vec<PathBuf>) {
+    if files.len() >= REFERENCE_SOURCE_SCAN_MAX_FILES || !path.exists() {
+        return;
+    }
+    if path.is_file() {
+        if is_reference_source_file(path) {
+            files.push(path.to_path_buf());
+        }
+        return;
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if should_skip_reference_source_dir(&path) {
+                continue;
+            }
+            collect_reference_source_files(&path, files);
+        } else if is_reference_source_file(&path) {
+            files.push(path);
+        }
+        if files.len() >= REFERENCE_SOURCE_SCAN_MAX_FILES {
+            break;
+        }
+    }
+}
+
+fn should_skip_reference_source_dir(path: &Path) -> bool {
+    matches!(
+        path.file_name().and_then(|name| name.to_str()),
+        Some(".git" | "build" | "CMakeFiles" | "__pycache__")
+    )
+}
+
+fn is_reference_source_file(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|ext| ext.to_str()).map(|ext| ext.to_ascii_lowercase()),
+        Some(ext)
+            if matches!(
+                ext.as_str(),
+                "c" | "cc" | "cpp" | "cxx" | "h" | "hh" | "hpp" | "hxx" | "rs" | "md"
+            )
+    )
+}
+
+fn source_pattern_hits(files: &[PathBuf], patterns: &[(&str, &str)]) -> Vec<Value> {
+    let mut hits = Vec::new();
+    for file in files {
+        let Ok(metadata) = fs::metadata(file) else {
+            continue;
+        };
+        if metadata.len() > REFERENCE_SOURCE_SCAN_MAX_BYTES {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(file) else {
+            continue;
+        };
+        for (pattern, kind) in patterns {
+            if text.contains(pattern) {
+                hits.push(json!({
+                    "path": path_to_string(file),
+                    "pattern": pattern,
+                    "kind": kind,
+                }));
+            }
+        }
+    }
+    hits
 }
 
 fn executable_names() -> &'static [&'static str] {
@@ -1254,6 +1463,69 @@ mod tests {
         );
         assert!(argv.iter().any(|arg| arg == "--no-display-prompt"));
         assert!(argv.iter().any(|arg| arg == "--verbose-prompt"));
+    }
+
+    #[test]
+    fn reference_top_logit_capability_reports_missing_hook_without_promoting() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("src")).unwrap();
+        fs::write(dir.path().join("src").join("main.cpp"), "int main() { return 0; }\n").unwrap();
+
+        let report = reference_top_logit_capability(Some(dir.path()), None);
+
+        assert_eq!(report["diagnostic_only"], true);
+        assert_eq!(report["claimable"], false);
+        assert_eq!(report["capability_ready"], false);
+        assert_eq!(report["raw_top_logits"]["hook_candidate"], false);
+        assert_eq!(report["generated_token_ids"]["hook_candidate"], false);
+        let blockers = report["decision"]["current_blocked_reasons"].as_array().expect("blockers");
+        assert!(blockers.contains(&json!("reference_top_logits_executable_hook_missing")));
+        assert!(blockers.contains(&json!("reference_generated_token_ids_executable_hook_missing")));
+        let not_claims = report["not_claims"].as_array().unwrap();
+        assert!(not_claims.contains(&json!("reference_generated_token_ids")));
+        assert!(not_claims.contains(&json!("reference_top_logits")));
+    }
+
+    #[test]
+    fn reference_top_logit_capability_surfaces_source_candidates_without_claiming() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("3rdparty").join("llama.cpp").join("tools");
+        fs::create_dir_all(&source).unwrap();
+        fs::write(
+            source.join("main.cpp"),
+            "--logits-file\nllama_get_logits\ncompletion_probabilities\ngenerated_token_ids\n",
+        )
+        .unwrap();
+
+        let report = reference_top_logit_capability(Some(dir.path()), None);
+
+        assert_eq!(report["diagnostic_only"], true);
+        assert_eq!(report["claimable"], false);
+        assert_eq!(report["capability_ready"], false);
+        assert_eq!(report["raw_top_logits"]["hook_candidate"], true);
+        assert_eq!(report["generated_token_ids"]["hook_candidate"], true);
+        assert_eq!(report["probability_strings"]["surface_candidate"], true);
+        assert!(
+            report["raw_top_logits"]["hits"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|hit| hit["pattern"] == "--logits-file")
+        );
+        let blockers = report["decision"]["current_blocked_reasons"].as_array().expect("blockers");
+        assert!(blockers.contains(&json!("reference_top_logits_receipt_not_wired")));
+        assert!(blockers.contains(&json!("reference_generated_token_ids_receipt_not_wired")));
+        assert!(!blockers.contains(&json!("reference_top_logits_executable_hook_missing")));
+    }
+
+    #[test]
+    fn reference_source_roots_skip_empty_relative_ancestor() {
+        let roots = reference_source_roots(
+            None,
+            Some("target/external/BitNet-reference/build/bin/llama-cli.exe"),
+        );
+
+        assert!(roots.iter().all(|root| !root.as_os_str().is_empty()));
     }
 
     #[test]

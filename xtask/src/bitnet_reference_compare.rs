@@ -1000,6 +1000,12 @@ fn input_value(input: &ReceiptInput, signal: &OutputSignal) -> Value {
         "selected_logit_count": signal.selected_logits.as_ref().map(Vec::len),
         "reference_text_candidate_ids_present": signal.reference_text_candidate_ids.is_some(),
         "reference_text_candidate_id_count": signal.reference_text_candidate_ids.as_ref().map(Vec::len),
+        "reference_top_logit_capability": input
+            .value
+            .as_ref()
+            .and_then(reference_top_logit_capability_value)
+            .cloned()
+            .unwrap_or(Value::Null),
         "prompt_identity_present": signal.prompt.available(),
         "prompt_identity": prompt_identity_value(&signal.prompt),
     })
@@ -1060,9 +1066,42 @@ fn push_input_blockers(
     if signal.top_logits.is_none() {
         blocked_reasons.push(format!("{label}_top_logits_missing"));
     }
+    if label == "reference"
+        && signal.top_logits.is_none()
+        && let Some(capability) =
+            input.value.as_ref().and_then(reference_top_logit_capability_value)
+    {
+        for reason in string_array_at(capability, "/decision/current_blocked_reasons") {
+            if reason.starts_with("reference_top_logits_")
+                || reason.starts_with("reference_generated_token_ids_")
+            {
+                blocked_reasons.push(reason);
+            }
+        }
+    }
     if !signal.prompt.available() {
         blocked_reasons.push(format!("{label}_prompt_identity_missing"));
     }
+}
+
+fn reference_top_logit_capability_value(value: &Value) -> Option<&Value> {
+    [
+        "/plan/reference_top_logit_capability",
+        "/reference/top_logit_capability",
+        "/reference_top_logit_capability",
+    ]
+    .into_iter()
+    .find_map(|pointer| value.pointer(pointer))
+}
+
+fn string_array_at(value: &Value, pointer: &str) -> Vec<String> {
+    value
+        .pointer(pointer)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items.iter().filter_map(Value::as_str).map(ToOwned::to_owned).collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
 }
 
 fn push_reference_server_blockers(
@@ -1511,6 +1550,74 @@ mod tests {
         assert!(
             !reasons.iter().any(|reason| reason == "reference_cpu_top_logit_ids_not_proven_exact")
         );
+    }
+
+    #[test]
+    fn reference_capability_blockers_are_carried_when_top_logits_are_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let reference_path = dir.path().join("reference.json");
+        let cpu_path = dir.path().join("cpu.json");
+        let a770_path = dir.path().join("a770.json");
+        let prompt = json!({
+            "prompt_template": "llama3-chat",
+            "rendered_prompt_sha256": "rendered",
+            "prompt_token_ids_sha256": "ids",
+            "prompt_token_count": 17,
+            "add_bos": false,
+            "parse_special": true
+        });
+        let top_logits = json!([{"token_id": 123, "logit": 4.0}]);
+        std::fs::write(
+            &reference_path,
+            serde_json::to_vec(&json!({
+                "generated_text": "2+2 equals 4.",
+                "plan": {
+                    "prompt_identity": prompt.clone(),
+                    "reference_top_logit_capability": {
+                        "diagnostic_only": true,
+                        "claimable": false,
+                        "decision": {
+                            "current_blocked_reasons": [
+                                "reference_top_logits_executable_hook_missing",
+                                "reference_generated_token_ids_executable_hook_missing"
+                            ]
+                        }
+                    }
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &cpu_path,
+            serde_json::to_vec(&json!({
+                "generated_tokens": [123],
+                "generated_text": "2+2 equals 4.",
+                "top_logits": top_logits,
+                "prompt_identity": prompt,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(&a770_path, std::fs::read(&cpu_path).unwrap()).unwrap();
+
+        let report = build_report(&CompareArgs {
+            reference: reference_path,
+            reference_server: None,
+            cpu: cpu_path,
+            a770: a770_path,
+            output: None,
+            format: "json".to_string(),
+        });
+
+        assert_eq!(
+            report["inputs"]["reference"]["reference_top_logit_capability"]["claimable"],
+            false
+        );
+        let reasons = report["decision"]["current_blocked_reasons"].as_array().unwrap();
+        assert!(reasons.contains(&json!("reference_top_logits_executable_hook_missing")));
+        assert!(reasons.contains(&json!("reference_generated_token_ids_executable_hook_missing")));
+        assert!(reasons.contains(&json!("reference_top_logits_missing")));
     }
 
     #[test]
