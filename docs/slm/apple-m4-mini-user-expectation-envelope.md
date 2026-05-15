@@ -49,6 +49,9 @@ evidence family, model identity, tokenizer authority, backend, and fallback
 state before offering regression commands. Groups with only one report are
 marked `insufficient_history`.
 
+The full command-to-receipt operator map lives in
+`docs/slm/apple-m4-operator-envelope-v2.md`.
+
 ```bash
 bitnet mac ask \
   --model-id microsoft-bitnet-b1.58-2B-4T-i2s \

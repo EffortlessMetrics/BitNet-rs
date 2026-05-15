@@ -1,0 +1,27 @@
+timestamp = "2026-05-15T18:18:37Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-004"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-004-operator-envelope-v2"
+summary = "Started Apple M4 operator envelope v2."
+
+artifacts = [
+  "docs/slm/apple-m4-operator-envelope-v2.md",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "The envelope maps supported M4 commands to receipt requirements, gates, report families, and unsupported claim boundaries.",
+  "This is docs/tracking only and does not change runtime behavior.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim is added.",
+]
+
+[evidence]
+artifact = "docs/slm/apple-m4-operator-envelope-v2.md"
+claim_boundary = "operator envelope only; no runtime, model, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"

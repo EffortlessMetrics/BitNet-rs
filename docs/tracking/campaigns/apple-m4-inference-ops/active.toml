@@ -152,7 +152,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-INF-OPS-004"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-004-operator-envelope-v2"
 stackable = false
 review_mode = "codex_premerge"
@@ -161,7 +161,11 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-INF-OPS-003"]
 acceptance = "Publish operator envelope v2 mapping supported M4 commands to receipt requirements, gates, report families, and unsupported claim boundaries."
 commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign generate",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
 ]
 allowed_paths = [
   "docs/slm/**",
