@@ -306,6 +306,7 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("models"))
         .stdout(predicate::str::contains("status"))
         .stdout(predicate::str::contains("report-refresh"))
+        .stdout(predicate::str::contains("regression-dashboard"))
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
@@ -535,6 +536,74 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
         .assert()
         .success()
         .stdout(predicate::str::contains("apple_m4_report_refresh_manifest"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("regression-dashboard.json");
+    let markdown = dir.path().join("regression-dashboard.md");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let markdown_str = markdown.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression-dashboard",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+            "--markdown-out",
+            markdown_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 regression dashboard"))
+        .stdout(predicate::str::contains("dense SLM and BitNet evidence stay separate"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_regression_dashboard");
+    assert_eq!(receipt_json["operator_command"], "mac regression-dashboard");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["dashboard_contract"]["model_free"], true);
+    assert_eq!(receipt_json["dashboard_contract"]["matching_requires_same_model_id"], true);
+    assert_eq!(
+        receipt_json["dashboard_contract"]["matching_requires_same_tokenizer_authority"],
+        true
+    );
+    assert_eq!(receipt_json["claim_boundary"]["dashboard_only"], true);
+    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
+    let families =
+        receipt_json["families"].as_array().ok_or_else(|| std::io::Error::other("families"))?;
+    assert!(families.iter().any(|family| {
+        family["id"] == "dense_slm_benchmark_v2"
+            && family["evidence_family"] == "dense_slm"
+            && family["group_count"].as_u64().is_some_and(|count| count >= 3)
+            && family["claim_boundary"]["bitnet_evidence"] == false
+    }));
+    assert!(families.iter().any(|family| {
+        family["id"] == "bitnet_eval"
+            && family["evidence_family"] == "bitnet"
+            && family["group_count"].as_u64().is_some_and(|count| count >= 1)
+            && family["claim_boundary"]["dense_slm_evidence"] == false
+    }));
+    let markdown_body = std::fs::read_to_string(&markdown)?;
+    assert!(markdown_body.contains("Apple M4 Inference Regression Dashboard"));
+    assert!(markdown_body.contains("dense_slm_benchmark_v2"));
+    assert!(markdown_body.contains("bitnet_eval"));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_regression_dashboard"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
     Ok(())
 }

@@ -59,9 +59,11 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Test report-refresh manifest command
-        run: cargo test --locked -p bitnet-cli --test cli_arg_tests mac_report_refresh
+        run: |
+          cargo test --locked -p bitnet-cli --test cli_arg_tests mac_report_refresh
+          cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression_dashboard
 
-      - name: Generate model-free report-refresh manifest
+      - name: Generate model-free report-refresh and dashboard artifacts
         run: |
           set -euo pipefail
           mkdir -p "$OPS_TIER0_ARTIFACT_ROOT"
@@ -74,13 +76,23 @@ jobs:
             mac receipts-check "$OPS_TIER0_ARTIFACT_ROOT/report-refresh-manifest.json" \
             --json \
             > "$OPS_TIER0_ARTIFACT_ROOT/report-refresh-manifest.receipts-check.json"
+          cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+            mac regression-dashboard \
+            --json-out "$OPS_TIER0_ARTIFACT_ROOT/regression-dashboard.json" \
+            --markdown-out "$OPS_TIER0_ARTIFACT_ROOT/regression-dashboard.md" \
+            --json \
+            > "$OPS_TIER0_ARTIFACT_ROOT/regression-dashboard.stdout.json"
+          cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+            mac receipts-check "$OPS_TIER0_ARTIFACT_ROOT/regression-dashboard.json" \
+            --json \
+            > "$OPS_TIER0_ARTIFACT_ROOT/regression-dashboard.receipts-check.json"
 
       - name: Summarize Tier 0 boundary
         run: |
           {
             echo "## Apple M4 Inference Ops Tier 0"
             echo
-            echo "Generated and validated the model-free Apple M4 report-refresh manifest from committed receipts."
+            echo "Generated and validated the model-free Apple M4 report-refresh manifest and regression dashboard from committed receipts."
             echo
             echo "This workflow does not fetch models, run live M4 inference, run BitNet chat or serve, run long resident soaks, publish new timing, or claim broad Apple Silicon performance."
           } >> "$GITHUB_STEP_SUMMARY"
