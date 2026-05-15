@@ -1841,6 +1841,61 @@ fn f16_bits_to_f32(bits: u16) -> f32 {
     f32::from_bits(f32_bits)
 }
 
+fn f32_to_f16_bits_nearest_even(value: f32) -> u16 {
+    let bits = value.to_bits();
+    let sign = (bits >> 31) & 1;
+    let exp = ((bits >> 23) & 0xff) as i32;
+    let mant = bits & 0x7f_ffff;
+
+    if exp == 0 && mant == 0 {
+        return (sign << 15) as u16;
+    }
+    if exp == 0xff {
+        if mant == 0 {
+            return ((sign << 15) | 0x7c00) as u16;
+        }
+        return ((sign << 15) | 0x7c00 | (mant >> 13).max(1)) as u16;
+    }
+
+    let new_exp = exp - 127 + 15;
+    if new_exp >= 0x1f {
+        return ((sign << 15) | 0x7c00) as u16;
+    }
+
+    if new_exp <= 0 {
+        if new_exp < -10 {
+            return (sign << 15) as u16;
+        }
+        let full_mant = mant | 0x80_0000;
+        let shift = (1 - new_exp) as u32 + 13;
+        let half_mant = if shift >= 32 { 0 } else { full_mant >> shift };
+        let round_bit = if shift == 0 || shift > 32 { 0 } else { (full_mant >> (shift - 1)) & 1 };
+        let sticky_mask = if shift <= 1 {
+            0
+        } else if shift - 1 >= 32 {
+            u32::MAX
+        } else {
+            (1u32 << (shift - 1)) - 1
+        };
+        let rounded = round_nearest_even(half_mant, round_bit, (full_mant & sticky_mask) != 0);
+        return ((sign << 15) | rounded) as u16;
+    }
+
+    let half_mant = mant >> 13;
+    let round_bit = (mant >> 12) & 1;
+    let sticky = (mant & 0xfff) != 0;
+    let base = (sign << 15) | ((new_exp as u32) << 10) | half_mant;
+    round_nearest_even(base, round_bit, sticky) as u16
+}
+
+fn round_nearest_even(base: u32, round_bit: u32, sticky: bool) -> u32 {
+    if round_bit == 1 && (sticky || (base & 1) == 1) { base + 1 } else { base }
+}
+
+fn f16_roundtrip(value: f32) -> f32 {
+    f16_bits_to_f32(f32_to_f16_bits_nearest_even(value))
+}
+
 fn row_report(values: &[f32]) -> Value {
     let stats = vector_stats(values);
     json!({
@@ -2184,6 +2239,7 @@ fn compare_reference_to_rust(
         "attention_query_rope_ref_layout_delta": attention_query_rope_ref_layout_delta(reference_records, rust_records),
         "attention_score_reference_scalar_recompute": attention_score_reference_scalar_recompute(reference_records),
         "attention_score_reference_semantic_variants": attention_score_reference_semantic_variants(reference_records),
+        "attention_score_reference_numeric_variants": attention_score_reference_numeric_variants(reference_records),
         "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
         "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
@@ -3129,6 +3185,328 @@ fn attention_score_reference_semantic_variants(
         "group_size": group_size,
         "variant_count": variants.len(),
         "variants_tested": variants.iter().map(|variant| variant.id).collect::<Vec<_>>(),
+        "explanation_abs_threshold": 1.0e-4,
+        "explanation_rms_threshold": 1.0e-4,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "unexplained_head_count": unexplained_head_count,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
+        "best_variant_counts": best_variant_counts,
+        "all_heads_explained": !score_heads.is_empty()
+            && missing_input_count == 0
+            && unexplained_head_count == 0,
+        "rows": rows,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ReferenceScoreAccumPolicy {
+    F64,
+    F32,
+    F32MulAdd,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ReferenceScoreNumericVariantSpec {
+    id: &'static str,
+    query_f16_roundtrip: bool,
+    key_f16_roundtrip: bool,
+    accum_policy: ReferenceScoreAccumPolicy,
+}
+
+impl ReferenceScoreAccumPolicy {
+    fn label(self) -> &'static str {
+        match self {
+            ReferenceScoreAccumPolicy::F64 => "f64_sequential",
+            ReferenceScoreAccumPolicy::F32 => "f32_sequential",
+            ReferenceScoreAccumPolicy::F32MulAdd => "f32_mul_add",
+        }
+    }
+}
+
+fn reference_score_numeric_variant_specs() -> [ReferenceScoreNumericVariantSpec; 6] {
+    [
+        ReferenceScoreNumericVariantSpec {
+            id: "reference_score_numeric_f64_accum_q_f32_k_f32",
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F64,
+        },
+        ReferenceScoreNumericVariantSpec {
+            id: "reference_score_numeric_f32_accum_q_f32_k_f32",
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceScoreNumericVariantSpec {
+            id: "reference_score_numeric_f32_mul_add_q_f32_k_f32",
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32MulAdd,
+        },
+        ReferenceScoreNumericVariantSpec {
+            id: "reference_score_numeric_f32_accum_q_f16_k_f32",
+            query_f16_roundtrip: true,
+            key_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceScoreNumericVariantSpec {
+            id: "reference_score_numeric_f32_accum_q_f32_k_f16",
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: true,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceScoreNumericVariantSpec {
+            id: "reference_score_numeric_f32_accum_q_f16_k_f16",
+            query_f16_roundtrip: true,
+            key_f16_roundtrip: true,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+    ]
+}
+
+fn numeric_variant_value(value: f32, use_f16_roundtrip: bool) -> f32 {
+    if use_f16_roundtrip { f16_roundtrip(value) } else { value }
+}
+
+fn reference_score_row_from_query_key_numeric(
+    query: &ReferenceTraceRecord,
+    key: &ReferenceTraceRecord,
+    head: usize,
+    head_dim: usize,
+    token_count: usize,
+    variant: ReferenceScoreNumericVariantSpec,
+) -> Option<Vec<f32>> {
+    if head_dim == 0 || token_count == 0 {
+        return None;
+    }
+    let q_offset = head.checked_mul(head_dim)?;
+    if query.first_values.len() < q_offset + head_dim {
+        return None;
+    }
+    if key.first_values.len() < token_count.checked_mul(head_dim)? {
+        return None;
+    }
+
+    let mut scores = Vec::with_capacity(token_count);
+    for token in 0..token_count {
+        let score = match variant.accum_policy {
+            ReferenceScoreAccumPolicy::F64 => {
+                let mut sum = 0.0f64;
+                for dim in 0..head_dim {
+                    let q = numeric_variant_value(
+                        query.first_values[q_offset + dim],
+                        variant.query_f16_roundtrip,
+                    ) as f64;
+                    let k = numeric_variant_value(
+                        key.first_values[token * head_dim + dim],
+                        variant.key_f16_roundtrip,
+                    ) as f64;
+                    sum += q * k;
+                }
+                sum as f32
+            }
+            ReferenceScoreAccumPolicy::F32 => {
+                let mut sum = 0.0f32;
+                for dim in 0..head_dim {
+                    let q = numeric_variant_value(
+                        query.first_values[q_offset + dim],
+                        variant.query_f16_roundtrip,
+                    );
+                    let k = numeric_variant_value(
+                        key.first_values[token * head_dim + dim],
+                        variant.key_f16_roundtrip,
+                    );
+                    sum += q * k;
+                }
+                sum
+            }
+            ReferenceScoreAccumPolicy::F32MulAdd => {
+                let mut sum = 0.0f32;
+                for dim in 0..head_dim {
+                    let q = numeric_variant_value(
+                        query.first_values[q_offset + dim],
+                        variant.query_f16_roundtrip,
+                    );
+                    let k = numeric_variant_value(
+                        key.first_values[token * head_dim + dim],
+                        variant.key_f16_roundtrip,
+                    );
+                    sum = q.mul_add(k, sum);
+                }
+                sum
+            }
+        };
+        scores.push(score);
+    }
+    Some(scores)
+}
+
+fn attention_score_reference_numeric_variants(reference_records: &[ReferenceTraceRecord]) -> Value {
+    let query = reference_rope_query_record(reference_records);
+    let key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let score_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let variants = reference_score_numeric_variant_specs();
+
+    let (head_dim, head_count) = query.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+    let group_size = if head_count > 0 && !key_heads.is_empty() && head_count % key_heads.len() == 0
+    {
+        Some(head_count / key_heads.len())
+    } else {
+        None
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut unexplained_head_count = 0usize;
+    let mut best_variant_counts = BTreeMap::<String, usize>::new();
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+
+    for (&head, score) in &score_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let key = kv_head.and_then(|kv_head| key_heads.get(&kv_head).copied());
+        if let (Some(query), Some(key), Some(kv_head)) = (query, key, kv_head) {
+            let live_token_count = reference_key_token_count(key)
+                .unwrap_or(score.first_values.len())
+                .min(score.first_values.len());
+            let target_token_count = score.first_values.len();
+            let padded_token_count = target_token_count.saturating_sub(live_token_count);
+            let mut variant_rows = Vec::new();
+            let mut best_variant_id = "";
+            let mut best_delta = Value::Null;
+            let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+            let mut best_accum_policy = "";
+            let mut best_query_f16_roundtrip = false;
+            let mut best_key_f16_roundtrip = false;
+
+            for variant in variants {
+                if let Some(live_scores) = reference_score_row_from_query_key_numeric(
+                    query,
+                    key,
+                    head,
+                    head_dim,
+                    live_token_count,
+                    variant,
+                ) {
+                    let values = reference_score_variant_values(
+                        &live_scores,
+                        live_token_count,
+                        target_token_count,
+                        1.0,
+                        ReferenceScoreLengthPolicy::PaddedTailZeroed,
+                    );
+                    let delta = compare_vectors(&values, &score.first_values);
+                    let rms = delta_metric(&delta, "/rms_abs_delta");
+                    let max_abs = delta_metric(&delta, "/max_abs_delta");
+                    let count_mismatch =
+                        !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false);
+                    let rank = (rms, max_abs, count_mismatch);
+                    if rank < best_rank {
+                        best_rank = rank;
+                        best_variant_id = variant.id;
+                        best_delta = delta.clone();
+                        best_accum_policy = variant.accum_policy.label();
+                        best_query_f16_roundtrip = variant.query_f16_roundtrip;
+                        best_key_f16_roundtrip = variant.key_f16_roundtrip;
+                    }
+                    variant_rows.push(json!({
+                        "variant": variant.id,
+                        "head": head,
+                        "kv_head": kv_head,
+                        "token_count": values.len(),
+                        "live_token_count": live_token_count,
+                        "padded_token_count": padded_token_count,
+                        "accum_policy": variant.accum_policy.label(),
+                        "query_f16_roundtrip": variant.query_f16_roundtrip,
+                        "key_f16_roundtrip": variant.key_f16_roundtrip,
+                        "length_policy": "padded_tail_zeroed",
+                        "max_abs_delta": max_abs,
+                        "rms_delta": rms,
+                        "delta": delta,
+                    }));
+                }
+            }
+
+            if variant_rows.is_empty() {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "query_stage_present": true,
+                    "key_stage_present": true,
+                    "score_stage_present": true,
+                }));
+                continue;
+            }
+
+            let head_explained = reference_score_variant_explained(&best_delta);
+            if !head_explained {
+                unexplained_head_count += 1;
+            }
+            max_best_abs_delta =
+                max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+            max_best_rms_delta =
+                max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+            *best_variant_counts.entry(best_variant_id.to_string()).or_insert(0) += 1;
+            compared_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "compared",
+                "token_count": target_token_count,
+                "live_token_count": live_token_count,
+                "padded_token_count": padded_token_count,
+                "best_variant": best_variant_id,
+                "accum_policy": best_accum_policy,
+                "query_f16_roundtrip": best_query_f16_roundtrip,
+                "key_f16_roundtrip": best_key_f16_roundtrip,
+                "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+                "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+                "best_delta": best_delta,
+                "head_explained": head_explained,
+                "variants": variant_rows,
+            }));
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "query_stage_present": query.is_some(),
+                "key_stage_present": key.is_some(),
+                "score_stage_present": true,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "reference score numeric variants are diagnostic-only probes for GGML-like score dot numeric behavior; they keep the padded-tail-zeroed row shape fixed and vary Q/K F16 roundtrip plus f32/f64 accumulation without promoting reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
+        "query_stage_present": query.is_some(),
+        "query_stage": query.map(|record| record.stage.clone()),
+        "key_head_count": key_heads.len(),
+        "score_head_count": score_heads.len(),
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "group_size": group_size,
+        "variant_count": variants.len(),
+        "variants_tested": variants.iter().map(|variant| variant.id).collect::<Vec<_>>(),
+        "length_policy": "padded_tail_zeroed",
         "explanation_abs_threshold": 1.0e-4,
         "explanation_rms_threshold": 1.0e-4,
         "compared_count": compared_count,
@@ -6059,6 +6437,7 @@ mod tests {
         let query_delta = report.pointer("/attention_query_rope_ref_layout_delta").unwrap();
         let reference = report.pointer("/attention_score_reference_scalar_recompute").unwrap();
         let variants = report.pointer("/attention_score_reference_semantic_variants").unwrap();
+        let numeric = report.pointer("/attention_score_reference_numeric_variants").unwrap();
         let rust = report.pointer("/attention_score_rust_scalar_recompute").unwrap();
 
         assert_eq!(query_delta.pointer("/claim_allowed"), Some(&json!(false)));
@@ -6074,6 +6453,9 @@ mod tests {
             Some(&json!("reference_score_recompute_unscaled"))
         );
         assert_eq!(variants.pointer("/rows/0/head_explained"), Some(&json!(true)));
+        assert_eq!(numeric.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(numeric.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(numeric.pointer("/variant_count"), Some(&json!(6)));
         assert_eq!(rust.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(rust.pointer("/compared_count"), Some(&json!(2)));
         assert_eq!(rust.pointer("/max_abs_delta"), Some(&json!(0.0)));
@@ -6126,6 +6508,61 @@ mod tests {
             variants.pointer("/variants_tested/5"),
             Some(&json!("reference_score_recompute_with_mask_applied"))
         );
+    }
+
+    #[test]
+    fn reference_score_numeric_variants_pin_qk_f16_roundtrip_policy() {
+        let query = ReferenceTraceRecord {
+            shape: vec![4, 1, 1, 1],
+            nelements: 4,
+            first_values: vec![1.0003, -2.0007, 3.1259, -4.2509],
+            ..test_reference_trace_record("Qcur", vec![1.0003, -2.0007, 3.1259, -4.2509])
+        };
+        let key = ReferenceTraceRecord {
+            shape: vec![4, 2, 1, 1],
+            nelements: 8,
+            first_values: vec![5.0009, -6.0004, 7.1257, -8.2508, -1.3333, 2.6667, -3.9991, 4.5006],
+            ..test_reference_trace_record(
+                "k_kv_head0_live",
+                vec![5.0009, -6.0004, 7.1257, -8.2508, -1.3333, 2.6667, -3.9991, 4.5006],
+            )
+        };
+        let variant = ReferenceScoreNumericVariantSpec {
+            id: "test_qk_f16",
+            query_f16_roundtrip: true,
+            key_f16_roundtrip: true,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        };
+        let mut target =
+            reference_score_row_from_query_key_numeric(&query, &key, 0, 4, 2, variant).unwrap();
+        target.extend([0.0, 0.0]);
+
+        let reference_records = vec![
+            query,
+            key,
+            ReferenceTraceRecord {
+                shape: vec![4, 1, 1, 1],
+                full_shape: vec![4, 1, 1, 1],
+                nelements: 4,
+                first_values: target,
+                ..test_reference_trace_record("kq_head0", vec![])
+            },
+        ];
+        let report = compare_reference_to_rust(&reference_records, &BTreeMap::new(), &[]);
+        let numeric = report.pointer("/attention_score_reference_numeric_variants").unwrap();
+
+        assert_eq!(numeric.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(numeric.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(numeric.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(numeric.pointer("/unexplained_head_count"), Some(&json!(0)));
+        assert_eq!(
+            numeric.pointer("/rows/0/best_variant"),
+            Some(&json!("reference_score_numeric_f32_accum_q_f16_k_f16"))
+        );
+        assert_eq!(numeric.pointer("/rows/0/query_f16_roundtrip"), Some(&json!(true)));
+        assert_eq!(numeric.pointer("/rows/0/key_f16_roundtrip"), Some(&json!(true)));
+        assert_eq!(numeric.pointer("/rows/0/accum_policy"), Some(&json!("f32_sequential")));
+        assert_eq!(numeric.pointer("/rows/0/best_delta/max_abs_delta"), Some(&json!(0.0)));
     }
 
     #[test]
