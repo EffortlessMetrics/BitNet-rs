@@ -1543,7 +1543,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-014"
-status = "ready"
+status = "merged"
+pr = 4900
+merge_sha = "4faa85e2f999f1fb90112d733a71efdc2bf32e33"
 branch = "codex/slm-cpu-014-dense-avx2-hot-path"
 stackable = false
 review_mode = "codex_premerge"
@@ -1582,6 +1584,48 @@ may_claim = [
 ]
 must_not_claim = [
   "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-015"
+status = "ready"
+branch = "codex/slm-cpu-015-thread-thermal-envelope"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-014"]
+acceptance = "Add bounded i5-8250U Qwen3-0.6B Q8_0 thread and timing envelope evidence after SLM-CPU-014 by running or documenting strict warm-session measurements for 1, 2, 4, and 8 CPU threads where available. The slice must preserve generated IDs, strict GGUF tokenizer authority, selected CPU backend, and fallback=false, record warm/cold, prompt/corpus, thread count, timing, and any thermal/power fields as measured or explicitly unavailable, and keep claims bounded to the recorded host/model/corpus/backend. It must not claim sustained 8250U throughput beyond recorded thermal boundaries, Q4/Q5 quant expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Thread and timing evidence is bounded to the recorded Qwen3 Q8_0 strict CPU warm-session artifacts.",
+  "A recommended thread-count default may be proposed only when supported by recorded evidence.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven without warm/cold and thermal boundaries.",
   "Q4/Q5 quant expansion is in scope.",
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
