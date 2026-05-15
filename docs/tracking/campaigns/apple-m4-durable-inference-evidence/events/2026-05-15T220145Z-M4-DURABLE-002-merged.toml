@@ -1,0 +1,12 @@
+timestamp = "2026-05-15T22:01:45Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-002"
+event = "merged"
+pr = 4988
+merge_sha = "2c8fb2b9b58a6304cc7a977fa59e1e63f1c7aa77"
+actor = "codex"
+
+notes = [
+  "Closed M4-DURABLE-002 after PR #4988 merged the 2026-05-15T1845Z Apple M4 dense SLM benchmark v2 refresh.",
+  "The merged refresh records all supported dense M4 model IDs across the nine-profile set including `resident_100`, with receipts validated and strict old-baseline regression blocked by the expected `profiles_required mismatch`.",
+]
