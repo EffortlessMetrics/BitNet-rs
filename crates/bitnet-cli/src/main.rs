@@ -215,17 +215,30 @@ fn greedy_effective_argmax(
     best
 }
 
-fn selected_logit_values(logits: &[f32], token_ids: &[u32]) -> Vec<serde_json::Value> {
+fn logit_receipt_value(
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+    token_id: u32,
+    logit: Option<f32>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "token_id": token_id,
+        "token_piece": tokenizer.token_to_piece(token_id),
+        "present": logit.is_some(),
+        "logit": logit,
+    })
+}
+
+fn selected_logit_values(
+    logits: &[f32],
+    token_ids: &[u32],
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> Vec<serde_json::Value> {
     token_ids
         .iter()
         .copied()
         .map(|token_id| {
             let logit = usize::try_from(token_id).ok().and_then(|idx| logits.get(idx).copied());
-            serde_json::json!({
-                "token_id": token_id,
-                "present": logit.is_some(),
-                "logit": logit,
-            })
+            logit_receipt_value(tokenizer, token_id, logit)
         })
         .collect()
 }
@@ -331,12 +344,15 @@ mod proof_summary_tests {
     #[test]
     fn selected_logit_values_include_outside_topk_probe_ids() {
         let logits = [0.25, -1.5, 3.0];
-        let selected = selected_logit_values(&logits, &[2, 42]);
+        let tokenizer = bitnet_tokenizers::MockTokenizer::new();
+        let selected = selected_logit_values(&logits, &[2, 42], &tokenizer);
 
         assert_eq!(selected[0]["token_id"], serde_json::json!(2));
+        assert_eq!(selected[0]["token_piece"], serde_json::json!("\u{2}"));
         assert_eq!(selected[0]["present"], serde_json::json!(true));
         assert_eq!(selected[0]["logit"], serde_json::json!(3.0));
         assert_eq!(selected[1]["token_id"], serde_json::json!(42));
+        assert_eq!(selected[1]["token_piece"], serde_json::json!("*"));
         assert_eq!(selected[1]["present"], serde_json::json!(false));
         assert_eq!(selected[1]["logit"], serde_json::Value::Null);
     }
@@ -2228,13 +2244,10 @@ async fn run_simple_generation(
                 top_logits: top_logits
                     .iter()
                     .map(|&(token_id, logit)| {
-                        serde_json::json!({
-                            "token_id": token_id,
-                            "logit": logit
-                        })
+                        logit_receipt_value(tokenizer.as_ref(), token_id, Some(logit))
                     })
                     .collect(),
-                selected_logits: selected_logit_values(&logits_vec, &logit_id),
+                selected_logits: selected_logit_values(&logits_vec, &logit_id, tokenizer.as_ref()),
                 chosen_id: None, // Will set after sampling
             };
             logits_dump.push(step);
