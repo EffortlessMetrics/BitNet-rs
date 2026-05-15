@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_qwen3_constrained_answer_calibration",
+  "claim": "qwen3_no_think_first_token_seed_calibration",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "prompt_template": "qwen",
+  "qwen_no_think": true,
+  "prompt_text": "2+2=",
+  "inputs": {
+    "bitnet_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-bitnet-rs-first-token.json",
+    "reference_compare": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-reference-compare.json",
+    "reference_validation": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-no-think-2plus2eq-reference-validation.json",
+    "reference_capture_method": "temporary non-interactive public Candle quantized_qwen3 harness"
+  },
+  "outcome": {
+    "prompt_ids_match": true,
+    "reference_backend": "candle-transformers-0.10.2",
+    "reference_kernel": "quantized_qwen3",
+    "bitnet_backend": "cpu-rust",
+    "bitnet_kernel": "dense-qwen-cpu-reference",
+    "loader_mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "fallback_used": false,
+    "reference_chosen_id": 17,
+    "bitnet_chosen_id": 17,
+    "reference_text": "2",
+    "bitnet_text": "2",
+    "validation_passed": true,
+    "comparison_passed": false,
+    "first_divergence": "logits_or_shared_transformer_math"
+  },
+  "conclusion": "The shorter `2+2=` no-thinking prompt is also unsuitable as a first-token constrained-answer seed for Qwen3-0.6B Q8_0: both the Candle reference and bitnet-rs choose token 17 / '2', not token 19 / '4'. This records prompt-policy calibration and keeps SLM-CPU-009 blocked until a known-good prompt policy or scoring method is selected.",
+  "next_required_evidence": [
+    "Either find a known-good Qwen3 prompt policy where the reference emits the expected constrained answer first token.",
+    "Or change the corpus gate to score multi-token constrained answers against a known-good reference instead of requiring first-token token 19 / '4'."
+  ],
+  "must_not_claim": [
+    "Qwen3 constrained-answer correctness is proven.",
+    "Qwen3 tiny answer corpus is green.",
+    "Strict first-step logits parity is proven.",
+    "Multi-token stability is proven.",
+    "Warm-session usability is proven.",
+    "Sustained 8250U throughput is proven.",
+    "Q4/Q5 quant expansion is in scope.",
+    "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+    "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+    "BitNet QK256/I2_S kernels are modified."
+  ]
+}
