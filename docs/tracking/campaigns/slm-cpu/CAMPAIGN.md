@@ -62,7 +62,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-010 | merged | Bounded deterministic multi-token decode stability evidence merged in #4851. |
 | SLM-CPU-011 | merged | Bounded strict i5-8250U Qwen3 warm-session receipts landed in #4858. |
 | SLM-CPU-012 | merged | Bounded Qwen3 Q8_0 warm-session allocation/KV/layout cleanup landed in #4876; generated IDs remain the behavior oracle. |
-| SLM-CPU-013 | ready | Next bounded item: Q8_0 dense CPU dequant/GEMV hot-path cleanup with strict receipt and generated-ID preservation. |
+| SLM-CPU-013 | merged | Bounded Qwen3 Q8_0 dense linear no-bias hot-path cleanup landed in #4891; generated IDs and strict provenance remain the behavior oracle. |
+| SLM-CPU-014 | ready | Next bounded item: dense AVX2/FMA-safe GEMV, RMSNorm, RoPE, or adjacent allocation-free decode cleanup with generated-ID preservation. |
 
 ## Review Policy
 
