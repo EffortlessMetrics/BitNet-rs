@@ -281,7 +281,7 @@ impl SecurityValidator {
             // With no allowlist configured, keep relative model names usable but
             // reject absolute paths so a request cannot point at arbitrary host files.
             let path = std::path::Path::new(model_path);
-            if path.is_absolute() {
+            if path.is_absolute() || model_path.starts_with('/') || model_path.starts_with('\\') {
                 return Err(ValidationError::InvalidFieldValue(
                     "Absolute paths are not allowed when allowed_model_directories is empty"
                         .to_string(),

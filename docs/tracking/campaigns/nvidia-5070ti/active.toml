@@ -2608,8 +2608,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-002"
-status = "proposed"
+status = "pr_open"
 branch = "server/dense-qwen-strict-smoke-receipt"
+pr = 4854
+head_sha = "749a648fa9eb17258c4d7350900870b1cab2ec0e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
