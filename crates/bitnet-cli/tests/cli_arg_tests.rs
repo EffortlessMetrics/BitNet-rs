@@ -4817,9 +4817,11 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract()
 #[test]
 fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema()
 -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir().expect("tempdir");
+    let dir = tempfile::tempdir()?;
     let out = dir.path().join("apple-m4-bitnet-eval.json");
     let corpus = workspace_path("ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
 
     bitnet()
         .args([
@@ -4830,15 +4832,14 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
             "--model",
             "missing.gguf",
             "--corpus",
-            corpus.to_str().unwrap(),
+            corpus_str.as_str(),
             "--json-out",
-            out.to_str().unwrap(),
+            out_str.as_str(),
         ])
         .assert()
         .success();
 
-    let receipt: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["case_count"], 100);
