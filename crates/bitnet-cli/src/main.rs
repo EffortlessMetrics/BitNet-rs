@@ -12872,24 +12872,31 @@ mod tests {
     }
 
     #[test]
-    fn m3_air_apple_labels_preserve_machine_boundary_without_m4_aliasing() {
+    fn m3_air_apple_labels_preserve_machine_boundary_without_m4_aliasing() -> Result<(), String> {
         for label in ["apple-m3-air-metal", "apple-m3-air-mpsgraph", "apple-m3-air-cpu-neon"] {
             assert!(is_apple_backend_label(label), "{label} should be an Apple backend label");
             assert_eq!(apple_machine_id_for_backend(label), Some("apple-m3-macbook-air"));
             assert_ne!(apple_machine_id_for_backend(label), Some("apple-m4-mac-mini"));
         }
 
-        let metal_err =
-            resolve_run_backend_identity("apple-m3-air-metal", true).unwrap_err().to_string();
+        let metal_err = match resolve_run_backend_identity("apple-m3-air-metal", true) {
+            Ok(identity) => {
+                return Err(format!("strict M3 Air Metal should be unavailable, got {identity:?}"));
+            }
+            Err(err) => err.to_string(),
+        };
         assert!(metal_err.contains("apple-m3-air-metal"), "got: {metal_err}");
         assert!(metal_err.contains("M3 MacBook Air native Metal"), "got: {metal_err}");
         assert!(metal_err.contains("not M4 Mac mini evidence"), "got: {metal_err}");
 
         let mpsgraph_identity = resolve_run_backend_identity("apple-m3-air-mpsgraph", false)
-            .expect("non-strict M3 Air MPSGraph should produce visible fallback");
+            .map_err(|err| err.to_string())?;
         assert_eq!(mpsgraph_identity.requested_backend, "apple-m3-air-mpsgraph");
         assert!(mpsgraph_identity.fallback_used);
-        let fallback_reason = mpsgraph_identity.fallback_reason.unwrap();
+        let fallback_reason = mpsgraph_identity
+            .fallback_reason
+            .as_deref()
+            .ok_or_else(|| "M3 Air MPSGraph fallback reason was missing".to_string())?;
         assert!(
             fallback_reason.contains("graph/reference identity lane"),
             "got: {fallback_reason}"
@@ -12899,6 +12906,7 @@ mod tests {
             "got: {fallback_reason}"
         );
         assert!(fallback_reason.contains("not M4 Mac mini evidence"), "got: {fallback_reason}");
+        Ok(())
     }
 
     #[test]

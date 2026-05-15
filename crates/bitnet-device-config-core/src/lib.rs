@@ -174,14 +174,14 @@ mod tests {
             "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap(),
             DeviceConfig::AppleM4CpuNeon
         );
-        assert_eq!(
-            "apple-m3-air-metal".parse::<DeviceConfig>().unwrap(),
-            DeviceConfig::AppleM3AirMetal
-        );
-        assert_eq!(
-            "apple-m3-air-mpsgraph".parse::<DeviceConfig>().unwrap(),
-            DeviceConfig::AppleM3AirMpsGraph
-        );
+        assert!(matches!(
+            "apple-m3-air-metal".parse::<DeviceConfig>(),
+            Ok(DeviceConfig::AppleM3AirMetal)
+        ));
+        assert!(matches!(
+            "apple-m3-air-mpsgraph".parse::<DeviceConfig>(),
+            Ok(DeviceConfig::AppleM3AirMpsGraph)
+        ));
         assert!(matches!(
             "apple-m3-air-cpu-neon".parse::<DeviceConfig>(),
             Ok(DeviceConfig::AppleM3AirCpuNeon)
@@ -204,12 +204,12 @@ mod tests {
         let mpsgraph = "mpsgraph".parse::<DeviceConfig>().unwrap();
         let apple_mpsgraph = "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap();
         let apple_cpu = "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap();
-        let apple_m3_air_metal = "apple-m3-air-metal".parse::<DeviceConfig>().unwrap();
-        let apple_m3_air_mpsgraph = "apple-m3-air-mpsgraph".parse::<DeviceConfig>().unwrap();
         assert!(matches!(
             "apple-m3-air-cpu-neon".parse::<DeviceConfig>(),
             Ok(DeviceConfig::AppleM3AirCpuNeon)
         ));
+        let apple_m3_air_metal = DeviceConfig::AppleM3AirMetal;
+        let apple_m3_air_mpsgraph = DeviceConfig::AppleM3AirMpsGraph;
         let apple_m3_air_cpu = DeviceConfig::AppleM3AirCpuNeon;
 
         assert_eq!(metal.backend_label(), "metal");
