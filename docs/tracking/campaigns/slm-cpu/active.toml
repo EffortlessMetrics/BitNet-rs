@@ -1592,8 +1592,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-015"
-status = "pr_open"
+status = "merged"
 pr = 4911
+merge_sha = "d139ae72bc749eb6a6f06bea7c90248316f59465"
 branch = "codex/slm-cpu-015-thread-thermal-envelope"
 stackable = false
 review_mode = "codex_premerge"
