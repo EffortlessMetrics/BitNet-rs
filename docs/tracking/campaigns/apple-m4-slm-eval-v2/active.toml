@@ -1,6 +1,6 @@
 id = "apple-m4-slm-eval-v2"
 title = "Apple M4 dense SLM eval v2"
-status = "active"
+status = "complete"
 
 objective = "Move the Apple M4 dense SLM lane from bounded 10-case proof into broader, reproducible quality and benchmark reporting with a 100-500 case deterministic corpus, task-family pass rates, full latency/throughput profiles, and regression dashboards without broad model-quality or Apple Silicon benchmark claims."
 
@@ -195,7 +195,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL2-005"
-status = "in_progress"
+status = "merged"
+pr = 4886
 branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-005-regression-dashboard"
 stackable = false
 review_mode = "codex_premerge"

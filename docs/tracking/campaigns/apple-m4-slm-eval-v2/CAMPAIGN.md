@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-slm-eval-v2`
 
-Status: active
+Status: complete
 
 ## Objective
 
@@ -55,7 +55,7 @@ MacBook behavior, or broad Apple Silicon performance.
 | M4-SLM-EVAL2-002 | merged | PR #4792 added stop-token/template/scoring failure taxonomy for v2 reports. |
 | M4-SLM-EVAL2-003 | merged | PR #4834 published supported dense M4 v2 task-family pass-rate reports. |
 | M4-SLM-EVAL2-004 | merged | PR #4879 published supported dense M4 benchmark v2 receipts with p50/p90/p99 timing, throughput, and memory fields. |
-| M4-SLM-EVAL2-005 | in progress | Wire v2 eval/benchmark reports into advisory or nightly regression dashboards. |
+| M4-SLM-EVAL2-005 | merged | PR #4886 wired v2 eval and benchmark reports into model-free regression dashboard checks. |
 
 ## Review Policy
 
