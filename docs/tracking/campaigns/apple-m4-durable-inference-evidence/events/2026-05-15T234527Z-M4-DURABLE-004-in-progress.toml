@@ -1,0 +1,11 @@
+timestamp = "2026-05-15T23:45:27Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the durable M4 dashboard-history item after M4-DURABLE-002 and M4-DURABLE-003 merged.",
+  "Scope is report-refresh and regression-dashboard regeneration from committed receipts only.",
+  "No live model run, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon claim is in scope.",
+]
