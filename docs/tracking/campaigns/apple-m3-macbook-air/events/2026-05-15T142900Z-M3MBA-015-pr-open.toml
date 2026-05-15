@@ -1,0 +1,27 @@
+timestamp = "2026-05-15T14:29:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-015"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4929
+branch = "codex/apple-m3-macbook-air/M3MBA-015-device-labels"
+head_sha = "8543a61bbb41493406f0420cf67ff04cc657ae1c"
+
+summary = "Opened #4929 for M3 Air device-model label completion."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4929",
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-cli-config-core/src/lib.rs",
+  "crates/bitnet-device-probe/src/apple_metal.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+
+notes = [
+  "The PR adds explicit M3 Air Metal and MPSGraph identities without enabling runtime inference claims.",
+  "The Apple Metal probe can now preserve Apple M3 Metal visibility as apple-m3-air-metal without selecting apple-m4-metal.",
+  "The PR keeps M3 Air CPU/NEON, M3 Air Metal, and M3 Air MPSGraph distinct from M4 Mac mini evidence.",
+]

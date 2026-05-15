@@ -11772,7 +11772,12 @@ fn apple_machine_receipt_json(
 fn is_apple_backend_label(label: &str) -> bool {
     matches!(
         label.trim().to_ascii_lowercase().as_str(),
-        "apple-m4-metal" | "apple-m4-mpsgraph" | "apple-m4-cpu-neon" | "apple-m3-air-cpu-neon"
+        "apple-m4-metal"
+            | "apple-m4-mpsgraph"
+            | "apple-m4-cpu-neon"
+            | "apple-m3-air-metal"
+            | "apple-m3-air-mpsgraph"
+            | "apple-m3-air-cpu-neon"
     )
 }
 
@@ -11786,7 +11791,9 @@ fn is_supported_apple_cpu_neon_backend(label: &str) -> bool {
 fn apple_machine_id_for_backend(label: &str) -> Option<&'static str> {
     match label.trim().to_ascii_lowercase().as_str() {
         "apple-m4-metal" | "apple-m4-mpsgraph" | "apple-m4-cpu-neon" => Some("apple-m4-mac-mini"),
-        "apple-m3-air-cpu-neon" => Some("apple-m3-macbook-air"),
+        "apple-m3-air-metal" | "apple-m3-air-mpsgraph" | "apple-m3-air-cpu-neon" => {
+            Some("apple-m3-macbook-air")
+        }
         _ => None,
     }
 }
@@ -11808,6 +11815,12 @@ fn apple_backend_failure_note(requested_backend_label: &str) -> Option<&'static 
         ),
         "apple-m4-cpu-neon" => Some(
             "apple-m4-cpu-neon is the Apple ARM64 CPU/NEON fallback and parity lane; it is not Metal acceleration, and scalar fallback must be visible in receipts.",
+        ),
+        "apple-m3-air-metal" => Some(
+            "apple-m3-air-metal is the Apple M3 MacBook Air native Metal identity lane; it is not M4 Mac mini evidence, MPSGraph model inference, Neural Engine execution, or CPU fallback proof.",
+        ),
+        "apple-m3-air-mpsgraph" => Some(
+            "apple-m3-air-mpsgraph is the Apple M3 MacBook Air graph/reference identity lane; it is not native Metal kernel proof, M4 Mac mini evidence, or Neural Engine execution.",
         ),
         "apple-m3-air-cpu-neon" => Some(
             "apple-m3-air-cpu-neon is the Apple M3 MacBook Air CPU/NEON lane; it is not M4 Mac mini evidence, Metal acceleration, Neural Engine execution, or MPSGraph model inference.",
@@ -12856,6 +12869,44 @@ mod tests {
             "got: {fallback_reason}"
         );
         assert!(fallback_reason.contains("not Neural Engine proof"), "got: {fallback_reason}");
+    }
+
+    #[test]
+    fn m3_air_apple_labels_preserve_machine_boundary_without_m4_aliasing() -> Result<(), String> {
+        for label in ["apple-m3-air-metal", "apple-m3-air-mpsgraph", "apple-m3-air-cpu-neon"] {
+            assert!(is_apple_backend_label(label), "{label} should be an Apple backend label");
+            assert_eq!(apple_machine_id_for_backend(label), Some("apple-m3-macbook-air"));
+            assert_ne!(apple_machine_id_for_backend(label), Some("apple-m4-mac-mini"));
+        }
+
+        let metal_err = match resolve_run_backend_identity("apple-m3-air-metal", true) {
+            Ok(identity) => {
+                return Err(format!("strict M3 Air Metal should be unavailable, got {identity:?}"));
+            }
+            Err(err) => err.to_string(),
+        };
+        assert!(metal_err.contains("apple-m3-air-metal"), "got: {metal_err}");
+        assert!(metal_err.contains("M3 MacBook Air native Metal"), "got: {metal_err}");
+        assert!(metal_err.contains("not M4 Mac mini evidence"), "got: {metal_err}");
+
+        let mpsgraph_identity = resolve_run_backend_identity("apple-m3-air-mpsgraph", false)
+            .map_err(|err| err.to_string())?;
+        assert_eq!(mpsgraph_identity.requested_backend, "apple-m3-air-mpsgraph");
+        assert!(mpsgraph_identity.fallback_used);
+        let fallback_reason = mpsgraph_identity
+            .fallback_reason
+            .as_deref()
+            .ok_or_else(|| "M3 Air MPSGraph fallback reason was missing".to_string())?;
+        assert!(
+            fallback_reason.contains("graph/reference identity lane"),
+            "got: {fallback_reason}"
+        );
+        assert!(
+            fallback_reason.contains("not native Metal kernel proof"),
+            "got: {fallback_reason}"
+        );
+        assert!(fallback_reason.contains("not M4 Mac mini evidence"), "got: {fallback_reason}");
+        Ok(())
     }
 
     #[test]

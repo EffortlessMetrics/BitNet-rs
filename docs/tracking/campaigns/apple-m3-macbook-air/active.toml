@@ -276,6 +276,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M3MBA-015"
+status = "pr_open"
+branch = "codex/apple-m3-macbook-air/M3MBA-015-device-labels"
+pr = 4929
+head_sha = "8543a61bbb41493406f0420cf67ff04cc657ae1c"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-014"]
+acceptance = "Extend the shared device/backend model with explicit apple-m3-air-metal and apple-m3-air-mpsgraph identities so M3 Air Metal and graph/reference requests cannot be mislabeled as generic Metal, MPSGraph, or M4 proof evidence; keep execution strict/unavailable until a later receipt-backed runtime item lands."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-common --no-default-features backend_selection",
+  "cargo test --locked -p bitnet-device-config-core --no-default-features",
+  "cargo test --locked -p bitnet-cli-config-core --no-default-features",
+  "cargo test --locked -p bitnet-device-probe --no-default-features apple_metal",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m3",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-device-config-core/**",
+  "crates/bitnet-cli-config-core/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-cli/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The repo device model preserves M3 Air Metal, M3 Air MPSGraph, and M3 Air CPU/NEON identities as distinct labels.",
+  "M3 Air Metal and MPSGraph labels are strict request identities and do not silently become CPU, generic Metal, or M4 evidence.",
+]
+must_not_claim = [
+  "M3 Air Metal inference works.",
+  "M3 Air MPSGraph model inference works.",
+  "M3 Air labels are M4 Mac mini labels.",
+  "Any model inference was run.",
+]
+
+[[work_item]]
 id = "M3MBA-004A"
 status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
