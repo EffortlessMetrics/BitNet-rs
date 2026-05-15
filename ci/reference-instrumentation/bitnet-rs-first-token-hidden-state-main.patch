@@ -1,0 +1,179 @@
+# Upstream-Issue: not-applicable; BitNet-rs target-local diagnostic instrumentation only
+# Reason: Emit first-token final hidden state from llama-cli generation when stock reference generation exposes logits but not hidden-state embeddings
+# Status: under-review
+# Created: 2026-05-15
+# Review-By: 2026-06-15
+# Author: BitNet-rs maintainers
+
+diff --git a/examples/main/main.cpp b/examples/main/main.cpp
+index fb10c20c..3c381c18 100644
+--- a/examples/main/main.cpp
++++ b/examples/main/main.cpp
+@@ -6,11 +6,15 @@
+ #include "llama.h"
+ 
+ #include <cassert>
++#include <cmath>
+ #include <cstdio>
++#include <cstdlib>
+ #include <cstring>
+ #include <ctime>
+ #include <fstream>
++#include <iomanip>
+ #include <iostream>
++#include <limits>
+ #include <sstream>
+ #include <string>
+ #include <vector>
+@@ -62,6 +66,99 @@ static bool file_is_empty(const std::string & path) {
+     return f.tellg() == 0;
+ }
+ 
++static void bitnet_rs_write_json_number(std::ostream & out, double value) {
++    if (std::isfinite(value)) {
++        out << std::setprecision(9) << value;
++    } else {
++        out << "null";
++    }
++}
++
++static void bitnet_rs_dump_first_token_hidden_state(
++    llama_context * ctx,
++    const llama_model * model,
++    const std::vector<llama_token> & prompt_tokens,
++    const char * path
++) {
++    if (path == nullptr || path[0] == '\0') {
++        return;
++    }
++
++    const int n_embd = llama_n_embd(model);
++    if (n_embd <= 0) {
++        return;
++    }
++    const float * hidden = llama_get_embeddings_ith(ctx, -1);
++    if (hidden == nullptr) {
++        return;
++    }
++
++    double sum = 0.0;
++    double sq_sum = 0.0;
++    double min_value = std::numeric_limits<double>::infinity();
++    double max_value = -std::numeric_limits<double>::infinity();
++    for (int i = 0; i < n_embd; ++i) {
++        const double value = hidden[i];
++        sum += value;
++        sq_sum += value * value;
++        min_value = value < min_value ? value : min_value;
++        max_value = value > max_value ? value : max_value;
++    }
++    const double mean = n_embd > 0 ? sum / n_embd : std::numeric_limits<double>::quiet_NaN();
++    const double rms = n_embd > 0 ? std::sqrt(sq_sum / n_embd) : std::numeric_limits<double>::quiet_NaN();
++
++    std::ofstream out(path, std::ios::out | std::ios::trunc);
++    if (!out.is_open()) {
++        return;
++    }
++
++    out << "{"
++        << "\"receipt_type\":\"bitnet_reference_first_token_hidden_state\","
++        << "\"diagnostic_only\":true,"
++        << "\"claim_allowed\":false,"
++        << "\"source\":\"BITNET_RS_REFERENCE_FIRST_TOKEN_HIDDEN_STATE\","
++        << "\"prompt_token_count\":" << prompt_tokens.size() << ","
++        << "\"n_embd\":" << n_embd << ","
++        << "\"hidden_state\":{"
++        << "\"present\":true,"
++        << "\"value_count\":" << n_embd << ","
++        << "\"mean\":";
++    bitnet_rs_write_json_number(out, mean);
++    out << ",\"rms\":";
++    bitnet_rs_write_json_number(out, rms);
++    out << ",\"min\":";
++    bitnet_rs_write_json_number(out, min_value);
++    out << ",\"max\":";
++    bitnet_rs_write_json_number(out, max_value);
++    out << ",\"first_values\":[";
++    const int sample_count = n_embd < 16 ? n_embd : 16;
++    for (int i = 0; i < sample_count; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        bitnet_rs_write_json_number(out, hidden[i]);
++    }
++    out << "],\"values\":[";
++    for (int i = 0; i < n_embd; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        bitnet_rs_write_json_number(out, hidden[i]);
++    }
++    out << "]},\"not_claims\":["
++        << "\"reference_parity_promotion\","
++        << "\"a770_semantic_quality_proven\","
++        << "\"selected_attention_residency\","
++        << "\"resident_kv_decode\","
++        << "\"attention_scores_residency\","
++        << "\"softmax_residency\","
++        << "\"attention_value_mix_residency\","
++        << "\"full_support_op_residency\","
++        << "\"full_device_residency\","
++        << "\"completion\""
++        << "]}";
++}
++
+ static void write_logfile(
+     const llama_context * ctx, const common_params & params, const llama_model * model,
+     const std::vector<llama_token> & input_tokens, const std::string & output,
+@@ -515,6 +624,8 @@ int main(int argc, char ** argv) {
+     display = params.display_prompt;
+ 
+     std::vector<llama_token> embd;
++    const char * bitnet_rs_first_token_hidden_state_path = std::getenv("BITNET_RS_REFERENCE_FIRST_TOKEN_HIDDEN_STATE");
++    bool bitnet_rs_first_token_hidden_state_dumped = false;
+ 
+     // tokenized antiprompts
+     std::vector<std::vector<llama_token>> antiprompt_ids;
+@@ -679,6 +790,11 @@ int main(int argc, char ** argv) {
+                 LOG_DBG("saved session to %s\n", path_session.c_str());
+             }
+ 
++            if (!bitnet_rs_first_token_hidden_state_dumped) {
++                bitnet_rs_dump_first_token_hidden_state(ctx, model, embd_inp, bitnet_rs_first_token_hidden_state_path);
++                bitnet_rs_first_token_hidden_state_dumped = true;
++            }
++
+             const llama_token id = common_sampler_sample(smpl, ctx, -1);
+ 
+             common_sampler_accept(smpl, id, /* accept_grammar= */ true);
+diff --git a/src/llama.cpp b/src/llama.cpp
+index 66f4791e..aa339f08 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -17364,7 +17364,8 @@ static size_t llama_output_reserve(llama_context & lctx, size_t n_outputs) {
+ 
+     // TODO: use a per-batch flag for logits presence instead
+     const bool has_logits = !cparams.embeddings;
+-    const bool has_embd   =  cparams.embeddings && (cparams.pooling_type == LLAMA_POOLING_TYPE_NONE);
++    const bool bitnet_rs_capture_hidden = getenv("BITNET_RS_REFERENCE_FIRST_TOKEN_HIDDEN_STATE") != nullptr;
++    const bool has_embd   = (cparams.embeddings || bitnet_rs_capture_hidden) && (cparams.pooling_type == LLAMA_POOLING_TYPE_NONE);
+ 
+     const size_t logits_size = has_logits ? n_vocab*n_outputs_max : 0;
+     const size_t embd_size   = has_embd   ?  n_embd*n_outputs_max : 0;
+@@ -17504,6 +17505,7 @@ static int llama_decode_internal(
+     const int64_t n_vocab = hparams.n_vocab;
+ 
+     uint32_t n_outputs = 0;
++    const bool bitnet_rs_capture_hidden = getenv("BITNET_RS_REFERENCE_FIRST_TOKEN_HIDDEN_STATE") != nullptr;
+     uint32_t n_outputs_prev = 0;
+ 
+     const auto n_ubatch = cparams.n_ubatch;
+@@ -17633,7 +17635,7 @@ static int llama_decode_internal(
+                 }
+             }
+             GGML_ASSERT(embd != nullptr && "missing embeddings tensor");
+-        } else {
++        } else if (!bitnet_rs_capture_hidden) {
+             embd = nullptr; // do not extract embeddings when not needed
+             GGML_ASSERT(strcmp(res->name, "result_output") == 0 && "missing result_output tensor");
+         }

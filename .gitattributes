@@ -1,2 +1,5 @@
 # Enforce LF line endings for shell scripts
 *.sh text eol=lf
+
+# Stored reference-instrumentation patches need unified-diff blank context lines.
+ci/reference-instrumentation/*.patch whitespace=-blank-at-eol

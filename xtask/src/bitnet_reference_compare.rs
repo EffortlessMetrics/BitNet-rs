@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -468,7 +469,8 @@ fn top_logits(value: &Value) -> Option<Vec<TopLogit>> {
 }
 
 fn hidden_state(value: &Value) -> Option<HiddenStateStats> {
-    for pointer in ["/logits_dump/0/hidden_state", "/hidden_state"] {
+    for pointer in ["/logits_dump/0/hidden_state", "/hidden_state", "/sidecar/receipt/hidden_state"]
+    {
         if let Some(stats) = hidden_state_stats(value.pointer(pointer)) {
             return Some(stats);
         }
@@ -490,8 +492,19 @@ fn hidden_state_stats(value: Option<&Value>) -> Option<HiddenStateStats> {
         vector_sha256_f32_le: value
             .pointer("/vector_sha256_f32_le")
             .and_then(Value::as_str)
-            .map(ToOwned::to_owned),
+            .map(ToOwned::to_owned)
+            .or_else(|| vector_sha256_f32_le_from_values(value.pointer("/values"))),
     })
+}
+
+fn vector_sha256_f32_le_from_values(value: Option<&Value>) -> Option<String> {
+    let values = value?.as_array()?;
+    let mut hasher = Sha256::new();
+    for value in values {
+        let value = value.as_f64()? as f32;
+        hasher.update(value.to_le_bytes());
+    }
+    Some(format!("{:x}", hasher.finalize()))
 }
 
 fn top_logits_array(value: Option<&Value>) -> Option<Vec<TopLogit>> {
@@ -1551,6 +1564,27 @@ mod tests {
         assert_eq!(stats.mean, Some(-0.002));
         assert_eq!(stats.rms, Some(0.055));
         assert_eq!(stats.vector_sha256_f32_le.as_deref(), Some("abc123"));
+
+        let sidecar_value = json!({
+            "sidecar": {
+                "receipt": {
+                    "hidden_state": {
+                        "present": true,
+                        "value_count": 2560,
+                        "mean": -0.004,
+                        "rms": 0.061,
+                        "min": -0.6,
+                        "max": 0.8,
+                        "values": [1.0, -2.0]
+                    }
+                }
+            }
+        });
+        let sidecar_stats = hidden_state(&sidecar_value).expect("sidecar hidden state stats");
+        assert_eq!(sidecar_stats.value_count, Some(2560));
+        assert_eq!(sidecar_stats.mean, Some(-0.004));
+        assert_eq!(sidecar_stats.rms, Some(0.061));
+        assert!(sidecar_stats.vector_sha256_f32_le.is_some());
 
         let left = HiddenStateStats {
             value_count: Some(2560),
