@@ -166,6 +166,7 @@ struct ReferenceTraceRecord {
     shape: Vec<i64>,
     nelements: u64,
     rms: Option<f64>,
+    first_values: Vec<f32>,
     values_available: bool,
 }
 
@@ -178,6 +179,8 @@ struct RustTraceRecord {
     blake3: String,
     rms: f64,
     num_elements: usize,
+    #[serde(default)]
+    first_values: Vec<f32>,
     seq: Option<usize>,
     layer: Option<isize>,
     stage: Option<String>,
@@ -1190,6 +1193,7 @@ fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
                 shape,
                 nelements: record.pointer("/nelements").and_then(Value::as_u64).unwrap_or(0),
                 rms: record.pointer("/stats/rms").and_then(Value::as_f64),
+                first_values: f32_array_at(record, "/first_values"),
                 values_available: record
                     .pointer("/values_available")
                     .and_then(Value::as_bool)
@@ -1213,6 +1217,13 @@ fn reference_prompt_tokens(trace: &Value) -> Vec<u64> {
         .pointer("/ubatch_tokens")
         .and_then(Value::as_array)
         .map(|tokens| tokens.iter().filter_map(Value::as_u64).collect())
+        .unwrap_or_default()
+}
+
+fn f32_array_at(root: &Value, pointer: &str) -> Vec<f32> {
+    root.pointer(pointer)
+        .and_then(Value::as_array)
+        .map(|values| values.iter().filter_map(Value::as_f64).map(|v| v as f32).collect())
         .unwrap_or_default()
 }
 
@@ -1690,6 +1701,7 @@ fn compare_reference_to_rust(
 
         let mut status = "missing";
         let mut rms_abs_delta = None::<f64>;
+        let mut first_values_delta = Value::Null;
         let mut material_mismatch = reference.is_none() || rust.is_none();
         let scope_mismatch = trace_scope_mismatch(reference, rust);
         let has_scope_mismatch = scope_mismatch.is_some();
@@ -1703,6 +1715,13 @@ fn compare_reference_to_rust(
                 material_mismatch = false;
                 status = "scope_mismatch";
             } else {
+                if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
+                    first_values_delta = compare_prefix(
+                        &reference.first_values,
+                        &rust.first_values,
+                        reference.first_values.len().min(rust.first_values.len()),
+                    );
+                }
                 material_mismatch = !element_count_match || !dtype_match || rms_material;
                 status = if material_mismatch { "material_mismatch" } else { "summary_match" };
             }
@@ -1722,6 +1741,7 @@ fn compare_reference_to_rust(
             "reference": reference.map(reference_record_summary),
             "rust": rust.map(rust_record_summary),
             "rms_abs_delta": rms_abs_delta,
+            "first_values_delta": first_values_delta,
             "scope_mismatch": has_scope_mismatch,
             "scope": scope_mismatch,
             "material_mismatch": material_mismatch,
@@ -1808,6 +1828,7 @@ fn reference_record_summary(record: &ReferenceTraceRecord) -> Value {
         "dtype": record.dtype,
         "nelements": record.nelements,
         "rms": record.rms,
+        "first_values": record.first_values,
         "values_available": record.values_available,
     })
 }
@@ -1822,6 +1843,7 @@ fn rust_record_summary(record: &RustTraceRecord) -> Value {
         "dtype": record.dtype,
         "num_elements": record.num_elements,
         "rms": record.rms,
+        "first_values": record.first_values,
     })
 }
 
@@ -2608,6 +2630,7 @@ mod tests {
             "blake3": "abc",
             "rms": rms,
             "num_elements": shape.iter().product::<usize>(),
+            "first_values": [rms as f32, 0.0],
             "seq": 0,
             "layer": 0,
             "stage": stage,
@@ -2850,6 +2873,7 @@ mod tests {
                         "dtype": "f32",
                         "shape": [2, 2, 1, 1],
                         "nelements": 4,
+                        "first_values": [1.0, 0.0],
                         "values_available": true,
                         "stats": {"rms": 1.0}
                     },
@@ -2871,6 +2895,7 @@ mod tests {
                         "dtype": "f32",
                         "shape": [2, 2, 1, 1],
                         "nelements": 4,
+                        "first_values": [2.0, 0.0],
                         "values_available": true,
                         "stats": {"rms": 2.0}
                     }
@@ -2908,6 +2933,10 @@ mod tests {
             report.pointer("/cpu/first_material_mismatch/reference/graph_sources/0/name"),
             Some(&json!("inp_embd"))
         );
+        assert_eq!(
+            report.pointer("/cpu/first_material_mismatch/first_values_delta/max_abs_delta"),
+            Some(&json!(1.0))
+        );
         assert!(report.pointer("/decision/current_blocked_reasons").unwrap().is_array());
     }
 
@@ -2930,6 +2959,7 @@ mod tests {
             nelements: 2,
             rms: Some(1.0),
             values_available: true,
+            first_values: vec![1.0, 2.0],
         };
         let mut rust_records = BTreeMap::new();
         rust_records.insert(
@@ -2941,6 +2971,7 @@ mod tests {
                 blake3: "abc".to_string(),
                 rms: 1.0,
                 num_elements: 2,
+                first_values: vec![1.0, 2.0],
                 seq: Some(0),
                 layer: Some(-1),
                 stage: Some("embeddings".to_string()),

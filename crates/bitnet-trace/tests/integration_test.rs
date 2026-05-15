@@ -29,6 +29,7 @@ fn test_dump_trace_integration() {
         assert_eq!(record.shape, vec![2, 2]);
         assert_eq!(record.dtype, "F32");
         assert_eq!(record.num_elements, 4);
+        assert_eq!(record.first_values, data);
 
         // RMS = sqrt((1^2 + 2^2 + 3^2 + 4^2) / 4) = sqrt(7.5)
         let expected_rms = (30.0f64 / 4.0).sqrt();

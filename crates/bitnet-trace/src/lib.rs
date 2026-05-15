@@ -22,7 +22,8 @@
 //!   "dtype": "F32",
 //!   "blake3": "abc123...",
 //!   "rms": 0.9982,
-//!   "num_elements": 2560
+//!   "num_elements": 2560,
+//!   "first_values": [0.1, -0.2]
 //! }
 //! ```
 //!
@@ -60,6 +61,11 @@ pub struct TraceRecord {
     pub rms: f64,
     /// Total number of elements
     pub num_elements: usize,
+    /// Prefix sample of tensor values for diagnostic first-divergence reports.
+    ///
+    /// This is intentionally small and not a replacement for full tensor dumps.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub first_values: Vec<f32>,
     /// Token position (0 = prefill, 1+ = decode)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub seq: Option<usize>,
@@ -149,6 +155,7 @@ pub fn dump_trace(
         blake3: blake3_hex,
         rms,
         num_elements,
+        first_values: data.iter().take(16).copied().collect(),
         seq,
         layer,
         stage: stage.map(|s| s.to_string()),
@@ -285,6 +292,7 @@ mod tests {
             blake3: "abc123".to_string(),
             rms: 0.9982,
             num_elements: 2560,
+            first_values: Vec::new(),
             seq: None,
             layer: None,
             stage: None,
@@ -314,6 +322,7 @@ mod tests {
             blake3: "abc123".to_string(),
             rms: 1.5,
             num_elements: 4,
+            first_values: Vec::new(),
             seq: None,
             layer: None,
             stage: None,
@@ -345,6 +354,7 @@ mod tests {
             blake3: "abc123".to_string(),
             rms: 1.5,
             num_elements: 4,
+            first_values: Vec::new(),
             seq: Some(0),
             layer: Some(-1),
             stage: Some("embeddings".to_string()),

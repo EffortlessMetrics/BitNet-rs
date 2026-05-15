@@ -15,6 +15,7 @@ fn record(name: &str, shape: Vec<usize>, rms: f64) -> TraceRecord {
         blake3: "deadbeef".to_string(),
         rms,
         num_elements: 1,
+        first_values: Vec::new(),
         seq: None,
         layer: None,
         stage: None,
