@@ -45,6 +45,73 @@ function Test-IsWindows {
     return [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
 }
 
+function Get-VisualStudioBuildToolsPath {
+    if (-not (Test-IsWindows)) {
+        return $null
+    }
+
+    $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (-not (Test-Path $VsWhere)) {
+        return $null
+    }
+
+    $VsPath = & $VsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if ($VsPath) {
+        return $VsPath.Trim()
+    }
+    return $null
+}
+
+function Find-WindowsClangTool {
+    param([Parameter(Mandatory = $true)][string]$Name)
+
+    $Command = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($Command) {
+        return $Command.Source
+    }
+
+    $Executable = if ($Name.EndsWith(".exe")) { $Name } else { "$Name.exe" }
+    $Candidates = @()
+
+    if ($env:ProgramFiles) {
+        $Candidates += (Join-Path $env:ProgramFiles "LLVM\bin\$Executable")
+    }
+
+    $VsPath = Get-VisualStudioBuildToolsPath
+    if ($VsPath) {
+        $Candidates += (Join-Path $VsPath "VC\Tools\Llvm\x64\bin\$Executable")
+        $Candidates += (Join-Path $VsPath "VC\Tools\Llvm\bin\$Executable")
+    }
+
+    if (${env:ProgramFiles(x86)}) {
+        $BuildTools = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\2022\BuildTools"
+        $Candidates += (Join-Path $BuildTools "VC\Tools\Llvm\x64\bin\$Executable")
+        $Candidates += (Join-Path $BuildTools "VC\Tools\Llvm\bin\$Executable")
+    }
+
+    foreach ($Candidate in ($Candidates | Select-Object -Unique)) {
+        if (Test-Path $Candidate) {
+            return $Candidate
+        }
+    }
+
+    return $null
+}
+
+function Add-ToolDirectoryToPath {
+    param([string]$ToolPath)
+
+    if (-not $ToolPath) {
+        return
+    }
+
+    $ToolDir = Split-Path $ToolPath -Parent
+    $PathParts = $env:PATH -split ';'
+    if ($PathParts -notcontains $ToolDir) {
+        $env:PATH = "$ToolDir;$env:PATH"
+    }
+}
+
 function Show-Usage {
     @"
 Usage: .\fetch_bitnet_cpp.ps1 [OPTIONS]
@@ -88,17 +155,21 @@ function Test-Dependencies {
 
     if (Test-IsWindows) {
         # Upstream BitNet.cpp uses the Windows ClangCL toolset.
-        if (-not (Get-Command clang -ErrorAction SilentlyContinue)) {
+        $script:BitNetReferenceClang = Find-WindowsClangTool "clang"
+        $script:BitNetReferenceClangxx = Find-WindowsClangTool "clang++"
+        Add-ToolDirectoryToPath $script:BitNetReferenceClang
+        Add-ToolDirectoryToPath $script:BitNetReferenceClangxx
+
+        if (-not $script:BitNetReferenceClang) {
             $MissingDeps += "clang"
         }
 
-        if (-not (Get-Command clang++ -ErrorAction SilentlyContinue)) {
+        if (-not $script:BitNetReferenceClangxx) {
             $MissingDeps += "clang++"
         }
 
         # Check for Visual Studio or Build Tools.
-        $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-        if (-not (Test-Path $VsWhere)) {
+        if (-not (Get-VisualStudioBuildToolsPath)) {
             $MissingDeps += "Visual Studio Build Tools"
         }
     }
@@ -190,12 +261,15 @@ function Invoke-Build {
 
         try {
             # Find Visual Studio
-            $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-            $VsPath = & $VsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            $VsPath = Get-VisualStudioBuildToolsPath
 
             if (-not $VsPath) {
                 throw "Visual Studio with C++ tools not found"
             }
+            $ClangPath = if ($script:BitNetReferenceClang) { $script:BitNetReferenceClang } else { Find-WindowsClangTool "clang" }
+            $ClangxxPath = if ($script:BitNetReferenceClangxx) { $script:BitNetReferenceClangxx } else { Find-WindowsClangTool "clang++" }
+            Add-ToolDirectoryToPath $ClangPath
+            Add-ToolDirectoryToPath $ClangxxPath
 
             $CMakeArgs = @(
                 "..",
@@ -209,8 +283,8 @@ function Invoke-Build {
                 $CMakeArgs += @(
                     "-T",
                     "ClangCL",
-                    "-DCMAKE_C_COMPILER=clang",
-                    "-DCMAKE_CXX_COMPILER=clang++"
+                    "-DCMAKE_C_COMPILER=$ClangPath",
+                    "-DCMAKE_CXX_COMPILER=$ClangxxPath"
                 )
             }
 

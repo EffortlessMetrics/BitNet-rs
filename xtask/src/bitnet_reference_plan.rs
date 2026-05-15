@@ -337,9 +337,9 @@ fn executable_names() -> &'static [&'static str] {
 fn reference_setup_prerequisites() -> Value {
     let git = command_probe("git");
     let cmake = command_probe("cmake");
-    let clang = command_probe("clang");
-    let clangxx = command_probe("clang++");
     let vs_build_tools = visual_studio_build_tools_probe();
+    let clang = reference_compiler_probe("clang", &vs_build_tools);
+    let clangxx = reference_compiler_probe("clang++", &vs_build_tools);
     let windows = cfg!(windows);
 
     let mut missing = Vec::new();
@@ -379,16 +379,92 @@ fn reference_setup_prerequisites() -> Value {
 }
 
 fn command_probe(name: &str) -> Value {
+    command_probe_with_candidates(name, &[])
+}
+
+fn reference_compiler_probe(name: &str, vs_build_tools: &Value) -> Value {
+    let candidates = if cfg!(windows) {
+        windows_clang_candidate_paths(name, vs_build_tools)
+    } else {
+        Vec::new()
+    };
+    command_probe_with_candidates(name, &candidates)
+}
+
+fn command_probe_with_candidates(name: &str, candidates: &[PathBuf]) -> Value {
     match which::which(name) {
         Ok(path) => json!({
             "present": true,
             "path": path_to_string(&path),
+            "source": "path",
         }),
-        Err(_) => json!({
-            "present": false,
-            "path": Value::Null,
-        }),
+        Err(_) => {
+            for path in candidates {
+                if path.is_file() {
+                    return json!({
+                        "present": true,
+                        "path": path_to_string(path),
+                        "source": "known_windows_toolchain_path",
+                    });
+                }
+            }
+            json!({
+                "present": false,
+                "path": Value::Null,
+                "source": Value::Null,
+            })
+        }
     }
+}
+
+fn windows_clang_candidate_paths(name: &str, vs_build_tools: &Value) -> Vec<PathBuf> {
+    let executable = windows_tool_executable_name(name);
+    let mut candidates = Vec::new();
+
+    if let Some(program_files) = std::env::var_os("ProgramFiles") {
+        candidates.push(PathBuf::from(program_files).join("LLVM").join("bin").join(&executable));
+    }
+
+    if let Some(vs_path) = str_at(vs_build_tools, "/path") {
+        push_vs_llvm_candidates(&mut candidates, Path::new(vs_path), &executable);
+    }
+
+    if let Some(program_files_x86) = std::env::var_os("ProgramFiles(x86)") {
+        let build_tools = PathBuf::from(program_files_x86)
+            .join("Microsoft Visual Studio")
+            .join("2022")
+            .join("BuildTools");
+        push_vs_llvm_candidates(&mut candidates, &build_tools, &executable);
+    }
+
+    dedupe_paths(candidates)
+}
+
+fn windows_tool_executable_name(name: &str) -> String {
+    if name.to_ascii_lowercase().ends_with(".exe") {
+        name.to_string()
+    } else {
+        format!("{name}.exe")
+    }
+}
+
+fn push_vs_llvm_candidates(candidates: &mut Vec<PathBuf>, vs_path: &Path, executable: &str) {
+    candidates.push(
+        vs_path.join("VC").join("Tools").join("Llvm").join("x64").join("bin").join(executable),
+    );
+    candidates.push(vs_path.join("VC").join("Tools").join("Llvm").join("bin").join(executable));
+}
+
+fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut seen = HashSet::new();
+    let mut deduped = Vec::new();
+    for path in paths {
+        let key = path_to_string(&path).to_ascii_lowercase();
+        if seen.insert(key) {
+            deduped.push(path);
+        }
+    }
+    deduped
 }
 
 fn visual_studio_build_tools_probe() -> Value {
@@ -639,5 +715,42 @@ mod tests {
         let report = reference_setup_prerequisites();
         assert!(report.pointer("/ready").and_then(Value::as_bool).is_some());
         assert!(report.pointer("/missing").and_then(Value::as_array).is_some());
+    }
+
+    #[test]
+    fn command_probe_reports_known_candidate_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let tool = dir.path().join(windows_tool_executable_name("definitely-not-on-path"));
+        fs::write(&tool, b"").unwrap();
+
+        let report = command_probe_with_candidates("definitely-not-on-path", &[tool.clone()]);
+
+        assert_eq!(report.pointer("/present").and_then(Value::as_bool), Some(true));
+        assert_eq!(
+            report.pointer("/path").and_then(Value::as_str),
+            Some(path_to_string(&tool).as_str())
+        );
+        assert_eq!(
+            report.pointer("/source").and_then(Value::as_str),
+            Some("known_windows_toolchain_path")
+        );
+    }
+
+    #[test]
+    fn windows_clang_candidates_include_vs_llvm_bins() {
+        let vs_build_tools = json!({
+            "present": true,
+            "path": "C:/BuildTools",
+        });
+        let candidates = windows_clang_candidate_paths("clang++", &vs_build_tools);
+        let candidate_strings =
+            candidates.iter().map(|path| path_to_string(path)).collect::<Vec<_>>();
+
+        assert!(
+            candidate_strings.iter().any(|path| path
+                .ends_with("C:/BuildTools\\VC\\Tools\\Llvm\\x64\\bin\\clang++.exe")
+                || path.ends_with("C:/BuildTools/VC/Tools/Llvm/x64/bin/clang++.exe"))
+        );
+        assert_eq!(candidate_strings.iter().collect::<HashSet<_>>().len(), candidate_strings.len());
     }
 }
