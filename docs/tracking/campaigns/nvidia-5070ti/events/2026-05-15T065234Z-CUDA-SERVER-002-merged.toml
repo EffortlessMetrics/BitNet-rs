@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T06:52:34Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-002"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "server/dense-qwen-strict-smoke-receipt"
+pr = 4854
+head_sha = "749a648fa9eb17258c4d7350900870b1cab2ec0e"
+merge_sha = "ce1773bf63db67b73cc48d82f9f748601a507e18"
+summary = "Merged PR #4854 with the bounded dense Qwen strict RTX 5070 Ti server-smoke receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4854",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json",
+  "docs/reports/CUDA_SERVER_002_DENSE_QWEN_STRICT_SMOKE.md",
+]
+
+notes = [
+  "The merged receipt proves only a bounded server-smoke response for the exact Qwen2.5 0.5B Q8_0 RTX 5070 Ti profile.",
+  "server_ready remains false in model coverage until a later readiness gate promotes an exact profile.",
+  "speedup_claim, full_cuda_residency_claimed, broad chat quality, and BitNet packed I2_S/QK256 proof remain false.",
+]
