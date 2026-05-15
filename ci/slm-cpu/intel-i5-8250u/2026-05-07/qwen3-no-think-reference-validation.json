@@ -1,0 +1,330 @@
+{
+  "artifact_kind": "slm_reference_divergence_validation",
+  "claim": "slm_reference_divergence_diagnostic",
+  "comparison": {
+    "bitnet_rs": {
+      "backend": "cpu-rust",
+      "checkpoints": {
+        "count": 0,
+        "stages": []
+      },
+      "chosen_id": 17,
+      "fallback_used": false,
+      "generated_ids": [
+        17
+      ],
+      "kernel": "dense-qwen-cpu-reference",
+      "loader_mode": "real_gguf",
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1172,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198,
+        151667,
+        271,
+        151668,
+        271
+      ],
+      "runtime_api": "cpu",
+      "text": "2",
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "topk_step0": [
+        [
+          17,
+          38.65631103515625
+        ],
+        [
+          16,
+          22.0096378326416
+        ],
+        [
+          18,
+          21.515546798706055
+        ],
+        [
+          15,
+          21.24085998535156
+        ],
+        [
+          19,
+          21.145898818969727
+        ],
+        [
+          3,
+          20.496938705444336
+        ],
+        [
+          23,
+          20.08220863342285
+        ],
+        [
+          16141,
+          20.057872772216797
+        ],
+        [
+          785,
+          19.724388122558594
+        ],
+        [
+          20,
+          19.01630973815918
+        ]
+      ]
+    },
+    "checkpoints": null,
+    "first_divergence": {
+      "bitnet_rs": [
+        [
+          17,
+          38.65631103515625
+        ],
+        [
+          16,
+          22.0096378326416
+        ],
+        [
+          18,
+          21.515546798706055
+        ],
+        [
+          15,
+          21.24085998535156
+        ],
+        [
+          19,
+          21.145898818969727
+        ],
+        [
+          3,
+          20.496938705444336
+        ],
+        [
+          23,
+          20.08220863342285
+        ],
+        [
+          16141,
+          20.057872772216797
+        ],
+        [
+          785,
+          19.724388122558594
+        ],
+        [
+          20,
+          19.01630973815918
+        ]
+      ],
+      "classification": "logits_or_shared_transformer_math",
+      "index": 0,
+      "phase": "logits",
+      "reference": [
+        [
+          17,
+          38.49230194091797
+        ],
+        [
+          16,
+          21.79613494873047
+        ],
+        [
+          18,
+          21.109954833984375
+        ],
+        [
+          15,
+          21.104549407958984
+        ],
+        [
+          19,
+          20.86982154846191
+        ],
+        [
+          3,
+          20.458438873291016
+        ],
+        [
+          23,
+          20.009517669677734
+        ],
+        [
+          16141,
+          19.866209030151367
+        ],
+        [
+          785,
+          19.662765502929688
+        ],
+        [
+          21,
+          18.87376594543457
+        ]
+      ]
+    },
+    "passed": false,
+    "reference": {
+      "backend": "candle-transformers-0.10.2",
+      "checkpoints": {
+        "count": 0,
+        "stages": []
+      },
+      "chosen_id": 17,
+      "fallback_used": null,
+      "generated_ids": [
+        17
+      ],
+      "kernel": "quantized_qwen3",
+      "loader_mode": null,
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1172,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198,
+        151667,
+        271,
+        151668,
+        271
+      ],
+      "runtime_api": null,
+      "text": "2",
+      "tokenizer_source": null,
+      "tokenizer_strict": null,
+      "topk_step0": [
+        [
+          17,
+          38.49230194091797
+        ],
+        [
+          16,
+          21.79613494873047
+        ],
+        [
+          18,
+          21.109954833984375
+        ],
+        [
+          15,
+          21.104549407958984
+        ],
+        [
+          19,
+          20.86982154846191
+        ],
+        [
+          3,
+          20.458438873291016
+        ],
+        [
+          23,
+          20.009517669677734
+        ],
+        [
+          16141,
+          19.866209030151367
+        ],
+        [
+          785,
+          19.662765502929688
+        ],
+        [
+          21,
+          18.87376594543457
+        ]
+      ]
+    }
+  },
+  "inputs": {
+    "artifact_path": "target\\slm-cpu\\qwen3-no-think-reference-compare.json"
+  },
+  "may_claim": [
+    "The artifact is machine-checkable against an external reference run.",
+    "First divergence evidence can separate tokenizer, prompt-template, decode, logits, and text-decoding issues.",
+    "For checkpoint artifacts, bounded internal tensor summaries can localize shared transformer math drift before final logits.",
+    "For BitNet CPU artifacts, strict loader, tokenizer, backend, kernel, and fallback evidence was checked."
+  ],
+  "model": {
+    "family": "qwen3",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+  },
+  "must_not_claim": [
+    "BitNet-rs can run the external reference engine.",
+    "General chat quality is proven.",
+    "Sustained CPU throughput is proven.",
+    "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved."
+  ],
+  "prompt": {
+    "bos": false,
+    "bytes": null,
+    "template": {
+      "family": "qwen",
+      "qwen_no_think": true,
+      "source": "bitnet-rs-rendered-prompt"
+    },
+    "text": "What is 2+2? Answer with only the number."
+  },
+  "proof_stage": "external_reference_compared",
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-15T01:21:17.935833100+00:00",
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
