@@ -7,6 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use bitnet_prompt_templates::TemplateType;
+
 const REQUIRED_NOT_CLAIMS: &[&str] = &[
     "prompt_suite_quality_claim",
     "benchmark_speed_claim",
@@ -126,9 +128,11 @@ struct RenderedCase {
     max_new_tokens: u32,
     temperature: f64,
     slot_bindings: BTreeMap<String, String>,
+    raw_prompt_sha256: String,
     rendered_prompt_sha256: String,
     prompt_token_ids_sha256: Option<String>,
     prompt_token_count: Option<usize>,
+    pair_raw_prompt_sha256: Option<String>,
     pair_rendered_prompt_sha256: Option<String>,
     pair_token_ids_sha256: Option<String>,
     pair_prompt_token_count: Option<usize>,
@@ -163,6 +167,26 @@ fn read_suite(path: &Path) -> Result<PromptSuite> {
 
 fn build_verify_report(suite_path: &Path, suite: &PromptSuite) -> PromptSuiteVerifyReport {
     let mut failures = Vec::new();
+    if let Ok(template_type) = suite.template.parse::<TemplateType>() {
+        if suite.add_bos != template_type.should_add_bos() {
+            failures.push(format!(
+                "suite add_bos={} does not match template {} policy {}",
+                suite.add_bos,
+                suite.template,
+                template_type.should_add_bos()
+            ));
+        }
+        if suite.parse_special != template_type.parse_special() {
+            failures.push(format!(
+                "suite parse_special={} does not match template {} policy {}",
+                suite.parse_special,
+                suite.template,
+                template_type.parse_special()
+            ));
+        }
+    } else {
+        failures.push(format!("invalid prompt template {}", suite.template));
+    }
     if suite.case.is_empty() {
         failures.push("suite has no cases".to_string());
     }
@@ -311,11 +335,21 @@ fn build_render_report(
     model_contract: Option<&Path>,
     tokenizer: Option<(String, Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>)>,
 ) -> Result<PromptSuiteRenderReport> {
+    let template_type: TemplateType = suite
+        .template
+        .parse()
+        .with_context(|| format!("parsing prompt-suite template {}", suite.template))?;
     let tokenizer_path = tokenizer.as_ref().map(|(path, _)| path.clone());
     let tokenizer_ref = tokenizer.as_ref().map(|(_, tokenizer)| tokenizer.as_ref());
     let mut cases = Vec::new();
     for case in &suite.case {
-        cases.push(render_case(case, tokenizer_ref, suite.add_bos, suite.parse_special)?);
+        cases.push(render_case(
+            case,
+            template_type,
+            tokenizer_ref,
+            suite.add_bos,
+            suite.parse_special,
+        )?);
     }
 
     Ok(PromptSuiteRenderReport {
@@ -337,15 +371,18 @@ fn build_render_report(
 
 fn render_case(
     case: &PromptCase,
+    template_type: TemplateType,
     tokenizer: Option<&(dyn bitnet_tokenizers::Tokenizer + Send + Sync)>,
     add_bos: bool,
     parse_special: bool,
 ) -> Result<RenderedCase> {
     let slot_bindings = bind_slots(case.seed, &case.name_slots);
-    let rendered = apply_slots(&case.prompt, &slot_bindings);
+    let raw_prompt = apply_slots(&case.prompt, &slot_bindings);
+    let rendered = template_type.apply(&raw_prompt, None);
     let (prompt_token_ids_sha256, prompt_token_count) =
         tokenize_hash(tokenizer, &rendered, add_bos, parse_special)?;
-    let pair_rendered = case.pair_prompt.as_ref().map(|prompt| apply_slots(prompt, &slot_bindings));
+    let pair_raw = case.pair_prompt.as_ref().map(|prompt| apply_slots(prompt, &slot_bindings));
+    let pair_rendered = pair_raw.as_ref().map(|prompt| template_type.apply(prompt, None));
     let (pair_token_ids_sha256, pair_prompt_token_count) = if let Some(pair) = &pair_rendered {
         tokenize_hash(tokenizer, pair, add_bos, parse_special)?
     } else {
@@ -360,9 +397,11 @@ fn render_case(
         max_new_tokens: case.max_new_tokens,
         temperature: case.temperature,
         slot_bindings,
+        raw_prompt_sha256: sha256_text(&raw_prompt),
         rendered_prompt_sha256: sha256_text(&rendered),
         prompt_token_ids_sha256,
         prompt_token_count,
+        pair_raw_prompt_sha256: pair_raw.as_deref().map(sha256_text),
         pair_rendered_prompt_sha256: pair_rendered.as_deref().map(sha256_text),
         pair_token_ids_sha256,
         pair_prompt_token_count,
@@ -487,6 +526,8 @@ mod tests {
 schema_version = 1
 suite_id = "test-suite"
 template = "llama3-chat"
+add_bos = false
+parse_special = true
 required_categories = ["short_explanation"]
 manual_review_allowed_for_claims = false
 
@@ -547,6 +588,15 @@ name_slots = [
     }
 
     #[test]
+    fn verify_rejects_template_policy_mismatch() {
+        let raw = minimal_suite(&valid_case("policy")).replace("add_bos = false", "add_bos = true");
+        let suite: PromptSuite = toml::from_str(&raw).unwrap();
+        let report = build_verify_report(Path::new("suite.toml"), &suite);
+        assert!(!report.passed);
+        assert!(report.failures.iter().any(|failure| failure.contains("add_bos=true")));
+    }
+
+    #[test]
     fn render_binds_seeded_slots_and_hashes_prompt() {
         let raw = minimal_suite(&valid_case("render"));
         let suite: PromptSuite = toml::from_str(&raw).unwrap();
@@ -554,6 +604,11 @@ name_slots = [
         assert_eq!(report.case_count, 1);
         let case = &report.cases[0];
         assert!(case.slot_bindings.contains_key("name"));
+        let raw_prompt = apply_slots(&suite.case[0].prompt, &case.slot_bindings);
+        let rendered_prompt = TemplateType::Llama3Chat.apply(&raw_prompt, None);
+        assert_eq!(case.raw_prompt_sha256, sha256_text(&raw_prompt));
+        assert_eq!(case.rendered_prompt_sha256, sha256_text(&rendered_prompt));
+        assert!(rendered_prompt.starts_with("<|begin_of_text|><|start_header_id|>user"));
         assert_eq!(case.rendered_prompt_sha256.len(), 64);
         assert!(case.prompt_token_ids_sha256.is_none());
     }
