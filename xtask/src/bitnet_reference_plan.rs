@@ -297,6 +297,12 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 "purpose": "bounded prompt-matched Rust CPU/A770 receipts for first-token, top-logit, and diagnostic selected-logit comparison"
             },
             "reference_text_tokenization": reference_text_probe.report,
+            "rust_receipt_command_policy": {
+                "cargo_profile": "release",
+                "reason": "real-model CPU diagnostics are too slow in debug and can leave stale non-matching receipts",
+                "diagnostic_only": true,
+                "claimable": false
+            },
             "cpu_first_token_logit_argv": rust_cli_first_token_logit_argv(
                 "cpu",
                 &model_path,
@@ -681,6 +687,7 @@ fn rust_cli_argv(
         "cargo".to_string(),
         "run".to_string(),
         "--locked".to_string(),
+        "--release".to_string(),
         "-p".to_string(),
         "bitnet-cli".to_string(),
         "--no-default-features".to_string(),
@@ -981,6 +988,8 @@ mod tests {
         );
         assert!(cpu.windows(2).any(|args| args == ["--features", "cpu"]));
         assert!(a770.windows(2).any(|args| args == ["--features", "opencl"]));
+        assert!(cpu.iter().any(|arg| arg == "--release"));
+        assert!(a770.iter().any(|arg| arg == "--release"));
         assert!(a770.windows(2).any(|args| args == ["--device", "intel-arc-a770-opencl"]));
         assert!(
             cpu.windows(2)
@@ -1100,6 +1109,7 @@ mod tests {
             &[17, 10, 17239],
         );
 
+        assert!(argv.iter().any(|arg| arg == "--release"));
         assert!(argv.windows(2).any(|args| args == ["--max-new-tokens", "1"]));
         assert!(argv.windows(2).any(|args| args == ["--dump-logit-steps", "1"]));
         assert!(argv.windows(2).any(|args| args == ["--logits-topk", "10"]));
