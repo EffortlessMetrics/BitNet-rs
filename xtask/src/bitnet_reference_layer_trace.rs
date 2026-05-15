@@ -52,6 +52,7 @@ const REFERENCE_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("query_projection", "cb(Qcur, \"Qcur\", il)"),
     ("key_projection", "cb(Kcur, \"Kcur\", il)"),
     ("value_projection", "cb(Vcur, \"Vcur\", il)"),
+    ("attention_value_mix_insertion_point", "cur = llm_build_kv(ctx0, lctx, kv_self, gf"),
     ("attention_subnorm", "cb(cur, \"attn_sub_norm\", il)"),
     ("attention_output", "cb(cur, \"attn_o_out\", il)"),
     ("attention_residual", "cb(ffn_inp, \"ffn_inp\", il)"),
@@ -67,7 +68,7 @@ const REFERENCE_REQUIRED_ANCHORS: &[(&str, &str)] = &[
 const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("trace_feature_gate", "#[cfg(feature = \"trace\")]"),
     ("trace_layer0_helper", "fn trace_layer0_tensor"),
-    ("input_embedding", "t0/embeddings"),
+    ("input_embedding", "trace_tensor_token_axis_record(\"embeddings\""),
     ("attention_norm", "attn_norm"),
     ("query_projection", "attention_q"),
     ("key_projection", "attention_k"),
@@ -1949,6 +1950,7 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("Qcur", "attention_q"),
         ("Kcur", "attention_k"),
         ("Vcur", "attention_v"),
+        ("attn_value_mix", "attention_value_mix"),
         ("attn_sub_norm", "post_attention_subnorm"),
         ("attn_o_out", "post_o_proj"),
         ("ffn_inp", "post_attention_residual"),
@@ -2204,6 +2206,7 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
             {"reference": "Qcur", "rust": "attention_q", "scope": "layer0"},
             {"reference": "Kcur", "rust": "attention_k", "scope": "layer0"},
             {"reference": "Vcur", "rust": "attention_v", "scope": "layer0"},
+            {"reference": "attn_value_mix", "rust": "attention_value_mix", "scope": "layer0"},
             {"reference": "attn_sub_norm", "rust": "post_attention_subnorm", "scope": "layer0"},
             {"reference": "attn_o_out", "rust": "post_o_proj", "scope": "layer0"},
             {"reference": "ffn_inp", "rust": "post_attention_residual", "scope": "layer0"},
@@ -3318,6 +3321,65 @@ mod tests {
         );
         assert_eq!(report.pointer("/first_scope_mismatch/scope/rust_seq"), Some(&json!(0)));
         assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+    }
+
+    #[test]
+    fn compare_maps_reference_attention_value_mix_to_rust_trace() {
+        let reference = ReferenceTraceRecord {
+            name: "attn_value_mix-0".to_string(),
+            stage: "attn_value_mix".to_string(),
+            graph_index: Some(42),
+            layer: Some(0),
+            graph_op: Some("MUL_MAT".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![2, 2, 1, 1],
+            sample_offset: None,
+            token_axis: None,
+            dtype: "f32".to_string(),
+            shape: vec![2, 2, 1, 1],
+            nelements: 4,
+            rms: Some(3.0),
+            values_available: true,
+            first_values: vec![1.0, 2.0, 3.0, 4.0],
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_value_mix".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_value_mix".to_string(),
+                shape: vec![2, 2],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 2.5,
+                num_elements: 4,
+                first_values: vec![1.0, 2.5, 3.0, 4.0],
+                seq: Some(0),
+                layer: Some(0),
+                stage: Some("attention_value_mix".to_string()),
+            },
+        );
+
+        let report = compare_reference_to_rust(
+            &[reference],
+            &rust_records,
+            &[("attn_value_mix", "attention_value_mix")],
+        );
+
+        assert_eq!(
+            report.pointer("/first_material_mismatch/reference_stage"),
+            Some(&json!("attn_value_mix"))
+        );
+        assert_eq!(
+            report.pointer("/first_material_mismatch/rust_stage"),
+            Some(&json!("attention_value_mix"))
+        );
+        assert_eq!(
+            report.pointer("/first_material_mismatch/first_values_delta/max_abs_delta"),
+            Some(&json!(0.5))
+        );
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(0)));
     }
 
     #[test]
