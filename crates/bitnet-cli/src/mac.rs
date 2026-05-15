@@ -33,6 +33,7 @@ const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
 const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
+const MAC_BENCHMARK_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-eval-v2/mac-benchmark.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
@@ -57,6 +58,16 @@ const BITNET_WARM_PROMPTS: &[&str] = &[
     "Name the capital of France. Answer with one word.",
     "Answer with a single digit: 2+2=",
 ];
+const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
+    "short_prompt_16_out",
+    "short_prompt_64_out",
+    "long_prompt_16_out",
+    "long_prompt_128_out",
+    "context_1k",
+    "context_4k",
+    "resident_25",
+    "resident_50",
+];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 enum MacValidateProfileSet {
@@ -74,6 +85,49 @@ enum MacSmokeModelFamily {
     DenseSlm,
     /// Run the explicit BitNet one-shot ask smoke path.
     Bitnet,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, ValueEnum)]
+enum MacBenchmarkProfile {
+    /// Short prompts with a 16-token output budget.
+    #[value(name = "short_prompt_16_out")]
+    ShortPrompt16Out,
+    /// Short prompts with a 64-token output budget.
+    #[value(name = "short_prompt_64_out")]
+    ShortPrompt64Out,
+    /// Long prompts with a 16-token output budget.
+    #[value(name = "long_prompt_16_out")]
+    LongPrompt16Out,
+    /// Long prompts with a 128-token output budget.
+    #[value(name = "long_prompt_128_out")]
+    LongPrompt128Out,
+    /// Synthetic context prompt targeting roughly 1k input tokens.
+    #[value(name = "context_1k")]
+    Context1k,
+    /// Synthetic context prompt targeting roughly 4k input tokens.
+    #[value(name = "context_4k")]
+    Context4k,
+    /// Resident 25-prompt warm-session profile.
+    #[value(name = "resident_25")]
+    Resident25,
+    /// Resident 50-prompt warm-session profile.
+    #[value(name = "resident_50")]
+    Resident50,
+}
+
+impl MacBenchmarkProfile {
+    fn id(self) -> &'static str {
+        match self {
+            Self::ShortPrompt16Out => "short_prompt_16_out",
+            Self::ShortPrompt64Out => "short_prompt_64_out",
+            Self::LongPrompt16Out => "long_prompt_16_out",
+            Self::LongPrompt128Out => "long_prompt_128_out",
+            Self::Context1k => "context_1k",
+            Self::Context4k => "context_4k",
+            Self::Resident25 => "resident_25",
+            Self::Resident50 => "resident_50",
+        }
+    }
 }
 
 /// Run Apple M4 local operator flows with strict receipts.
@@ -495,6 +549,41 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Run release-mode dense SLM benchmark profiles for v2 M4 receipts.
+    Benchmark {
+        /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Benchmark profile to run. Repeat to build the v2 profile matrix.
+        #[arg(long, value_enum, required = true)]
+        profile: Vec<MacBenchmarkProfile>,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Include scoped hot-loop allocation counter deltas in profile receipts.
+        #[arg(long, default_value_t = false)]
+        allocation_audit: bool,
+
+        /// Emit operator progress lines to stderr while benchmark profiles run.
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress benchmark status/progress lines; receipt artifacts are still written.
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
+
+        /// Output aggregate v2 benchmark receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_BENCHMARK_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing.
     BitnetProof {
         /// Accepted BitNet GGUF path. This command never downloads model artifacts.
@@ -836,6 +925,31 @@ impl MacCommand {
                 })
                 .await
             }
+            MacAction::Benchmark {
+                model_id,
+                cache_dir,
+                profile,
+                threads,
+                allocation_audit,
+                progress,
+                quiet,
+                json_out,
+            } => {
+                let requested_backend =
+                    ensure_supported_mac_benchmark_device(explicit_device_label)?;
+                run_benchmark(MacBenchmarkRun {
+                    model_id: &model_id,
+                    cache_dir,
+                    requested_backend,
+                    profiles: profile,
+                    threads,
+                    allocation_audit,
+                    progress,
+                    quiet,
+                    json_out,
+                })
+                .await
+            }
             MacAction::BitnetProof {
                 model,
                 tokenizer_authority,
@@ -999,6 +1113,20 @@ fn ensure_supported_mac_validate_device(
             "mac validate routes supported Apple CPU/NEON validation through --device {APPLE_M4_CPU_NEON} or --device {APPLE_M3_AIR_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
         ),
     }
+}
+
+fn ensure_supported_mac_benchmark_device(
+    explicit_device_label: Option<&str>,
+) -> Result<&'static str> {
+    let Some(label) = explicit_device_label else {
+        return Ok(APPLE_M4_CPU_NEON);
+    };
+    if label == APPLE_M4_CPU_NEON {
+        return Ok(APPLE_M4_CPU_NEON);
+    }
+    anyhow::bail!(
+        "mac benchmark routes the dense SLM benchmark path through --device {APPLE_M4_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, Neural Engine execution, and hidden CPU fallback are not supported by this benchmark wrapper."
+    )
 }
 
 fn ensure_supported_mac_serve_device(explicit_device_label: Option<&str>) -> Result<()> {
@@ -4370,6 +4498,618 @@ async fn run_performance_profiles(
     .await
 }
 
+struct MacBenchmarkRun<'a> {
+    model_id: &'a str,
+    cache_dir: Option<PathBuf>,
+    requested_backend: &'static str,
+    profiles: Vec<MacBenchmarkProfile>,
+    threads: usize,
+    allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
+    json_out: PathBuf,
+}
+
+struct BenchmarkProfileSpec {
+    profile: MacBenchmarkProfile,
+    max_new_tokens: usize,
+    prompts: Vec<String>,
+    target_context_tokens: Option<usize>,
+    scenario: &'static str,
+}
+
+#[derive(Default)]
+struct BenchmarkMetricSamples {
+    cold_load_ms: Vec<f64>,
+    tokenizer_load_ms: Vec<f64>,
+    prompt_tokenize_ms: Vec<f64>,
+    prefill_ms: Vec<f64>,
+    time_to_first_token_ms: Vec<f64>,
+    input_tokens_per_second: Vec<f64>,
+    output_tokens_per_second: Vec<f64>,
+    decode_tokens_per_second: Vec<f64>,
+    total_wall_ms: Vec<f64>,
+    peak_memory_mb: Vec<f64>,
+    memory_drift_mb: Vec<f64>,
+}
+
+impl BenchmarkMetricSamples {
+    fn extend_from_profile(&mut self, profile: &serde_json::Value) {
+        self.cold_load_ms.extend(benchmark_stat_samples(&profile["timing"]["cold_load_ms"]));
+        self.tokenizer_load_ms
+            .extend(benchmark_stat_samples(&profile["timing"]["tokenizer_load_ms"]));
+        self.prompt_tokenize_ms
+            .extend(benchmark_stat_samples(&profile["timing"]["prompt_tokenize_ms"]));
+        self.prefill_ms.extend(benchmark_stat_samples(&profile["timing"]["prefill_ms"]));
+        self.time_to_first_token_ms
+            .extend(benchmark_stat_samples(&profile["timing"]["time_to_first_token_ms"]));
+        self.input_tokens_per_second
+            .extend(benchmark_stat_samples(&profile["throughput"]["input_tokens_per_second"]));
+        self.output_tokens_per_second
+            .extend(benchmark_stat_samples(&profile["throughput"]["output_tokens_per_second"]));
+        self.decode_tokens_per_second
+            .extend(benchmark_stat_samples(&profile["throughput"]["decode_tokens_per_second"]));
+        self.total_wall_ms.extend(benchmark_stat_samples(&profile["timing"]["total_wall_ms"]));
+        self.peak_memory_mb.extend(benchmark_stat_samples(&profile["memory"]["peak_memory_mb"]));
+        self.memory_drift_mb.extend(benchmark_stat_samples(&profile["memory"]["memory_drift_mb"]));
+    }
+
+    fn speed_json(&self) -> serde_json::Value {
+        benchmark_flat_metric_json(&[
+            ("cold_load_ms", &self.cold_load_ms),
+            ("tokenizer_load_ms", &self.tokenizer_load_ms),
+            ("prompt_tokenize_ms", &self.prompt_tokenize_ms),
+            ("prefill_ms", &self.prefill_ms),
+            ("ttft_ms", &self.time_to_first_token_ms),
+            ("input_tok_s", &self.input_tokens_per_second),
+            ("output_tok_s", &self.output_tokens_per_second),
+            ("decode_tok_s", &self.decode_tokens_per_second),
+            ("total_wall_ms", &self.total_wall_ms),
+        ])
+    }
+
+    fn memory_json(&self) -> serde_json::Value {
+        let mut memory = benchmark_flat_metric_json(&[
+            ("peak_memory_mb", &self.peak_memory_mb),
+            ("memory_drift_mb", &self.memory_drift_mb),
+        ]);
+        if let Some(object) = memory.as_object_mut() {
+            object.insert(
+                "source".to_string(),
+                serde_json::json!("getrusage.ru_maxrss process peak delta"),
+            );
+        }
+        memory
+    }
+}
+
+async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
+    if cfg!(debug_assertions) {
+        anyhow::bail!(
+            "mac benchmark must be run from a release build; use `cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet` and then `target/release/bitnet mac benchmark ...`"
+        );
+    }
+    let MacBenchmarkRun {
+        model_id,
+        cache_dir,
+        requested_backend,
+        profiles,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+    } = request;
+    let profiles = dedupe_benchmark_profiles(profiles)?;
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let receipt_dir =
+        json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
+            format!(
+                "{}-profiles",
+                json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("mac-benchmark")
+            ),
+        );
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
+
+    let benchmark_start_peak_mb = peak_memory_mb();
+    let mut summaries = Vec::with_capacity(profiles.len());
+    let mut all_samples = BenchmarkMetricSamples::default();
+    for profile in profiles {
+        let spec = benchmark_profile_spec(profile);
+        let profile_id = spec.profile.id();
+        let receipt_path = receipt_dir.join(format!("{profile_id}.json"));
+        if progress && !quiet {
+            eprintln!("mac benchmark: running {profile_id}");
+        }
+        let profile_start_peak_mb = peak_memory_mb();
+        crate::run_slm_warm_session(
+            requested_backend,
+            model.path.clone(),
+            "auto".to_string(),
+            None,
+            None,
+            1,
+            spec.prompts.clone(),
+            spec.max_new_tokens,
+            0.0,
+            1,
+            1.0,
+            1.1,
+            None,
+            true,
+            true,
+            true,
+            true,
+            threads,
+            QWEN_PROMPT_TEMPLATE.to_string(),
+            None,
+            vec!["<|im_end|>".to_string()],
+            Vec::new(),
+            true,
+            false,
+            allocation_audit,
+            crate::SlmWarmSessionOutput::new(false, progress, quiet)
+                .with_model_sha256_override(Some(model.sha256.clone())),
+            1,
+            1,
+            receipt_path.clone(),
+        )
+        .await?;
+        annotate_and_validate_mac_receipt(&receipt_path, &model, "mac benchmark")?;
+        let receipt = read_json_receipt(&receipt_path)?;
+        let summary =
+            benchmark_profile_summary(&spec, &receipt_path, &receipt, profile_start_peak_mb)?;
+        all_samples.extend_from_profile(&summary);
+        summaries.push(summary);
+    }
+
+    let profile_ids =
+        summaries.iter().filter_map(|profile| profile["profile_id"].as_str()).collect::<Vec<_>>();
+    let profile_ids_display = profile_ids.join(", ");
+    let generated_tokens_total = summaries
+        .iter()
+        .map(|profile| profile["generated_tokens"].as_u64().unwrap_or_default())
+        .sum::<u64>();
+    let prompt_count_total = summaries
+        .iter()
+        .map(|profile| profile["prompt_count"].as_u64().unwrap_or_default())
+        .sum::<u64>();
+    let memory_end_peak_mb = peak_memory_mb();
+    let mut memory = all_samples.memory_json();
+    if let Some(object) = memory.as_object_mut() {
+        object
+            .insert("start_peak_memory_mb".to_string(), optional_f64_json(benchmark_start_peak_mb));
+        object.insert("end_peak_memory_mb".to_string(), optional_f64_json(memory_end_peak_mb));
+        object.insert(
+            "process_peak_drift_mb".to_string(),
+            optional_f64_json(memory_delta_mb(benchmark_start_peak_mb, memory_end_peak_mb)),
+        );
+    }
+
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_benchmark_v2",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "slm-benchmark-v2",
+        "profiles_required": profile_ids,
+        "profiles": summaries,
+        "prompt_count": prompt_count_total,
+        "generated_tokens": generated_tokens_total,
+        "speed": all_samples.speed_json(),
+        "memory": memory,
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model_cache": {
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        },
+        "benchmark_contract": {
+            "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+            "profile_execution_model": "one resident warm-session run per named profile",
+            "profiles_loaded_independently": true,
+            "profile_set_model_loads": summaries.len(),
+            "cold_load_separated": true,
+            "model_tokenizer_reuse_visible_per_profile": true,
+            "percentiles": ["p50", "p90", "p99"],
+            "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+            "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+            "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+            "memory_drift_definition": "per-profile ru_maxrss process peak delta; monotonic peak, not live RSS",
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "evidence": {
+            "profile_receipts": summaries
+                .iter()
+                .filter_map(|profile| profile["receipt_path"].as_str())
+                .collect::<Vec<_>>(),
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_command": "mac benchmark"
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "timing_profile": true,
+            "bounded_benchmark_profiles_only": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false,
+    });
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    println!(
+        "Mac benchmark v2 summary written to {} (profiles: {})",
+        json_out.display(),
+        profile_ids_display
+    );
+    Ok(())
+}
+
+fn dedupe_benchmark_profiles(
+    profiles: Vec<MacBenchmarkProfile>,
+) -> Result<Vec<MacBenchmarkProfile>> {
+    if profiles.is_empty() {
+        anyhow::bail!("mac benchmark requires at least one --profile");
+    }
+    let mut deduped = Vec::with_capacity(profiles.len());
+    for profile in profiles {
+        if !deduped.contains(&profile) {
+            deduped.push(profile);
+        }
+    }
+    Ok(deduped)
+}
+
+fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec {
+    match profile {
+        MacBenchmarkProfile::ShortPrompt16Out => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: short_benchmark_prompts(),
+            target_context_tokens: None,
+            scenario: "short_prompt",
+        },
+        MacBenchmarkProfile::ShortPrompt64Out => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 64,
+            prompts: short_benchmark_prompts(),
+            target_context_tokens: None,
+            scenario: "short_prompt",
+        },
+        MacBenchmarkProfile::LongPrompt16Out => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: long_benchmark_prompts(),
+            target_context_tokens: None,
+            scenario: "long_prompt",
+        },
+        MacBenchmarkProfile::LongPrompt128Out => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 128,
+            prompts: long_benchmark_prompts(),
+            target_context_tokens: None,
+            scenario: "long_prompt",
+        },
+        MacBenchmarkProfile::Context1k => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: context_benchmark_prompts(1_000, 3),
+            target_context_tokens: Some(1_000),
+            scenario: "synthetic_context",
+        },
+        MacBenchmarkProfile::Context4k => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: context_benchmark_prompts(4_000, 3),
+            target_context_tokens: Some(4_000),
+            scenario: "synthetic_context",
+        },
+        MacBenchmarkProfile::Resident25 => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: resident_benchmark_prompts(25),
+            target_context_tokens: None,
+            scenario: "resident_session",
+        },
+        MacBenchmarkProfile::Resident50 => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: resident_benchmark_prompts(50),
+            target_context_tokens: None,
+            scenario: "resident_session",
+        },
+    }
+}
+
+fn short_benchmark_prompts() -> Vec<String> {
+    [
+        "What is 7+5? Answer with the number only.",
+        "Name the capital of France. Answer with one word.",
+        "Write one short sentence about Rust.",
+        "Classify this sentiment as positive or negative: the tool is reliable.",
+        "Rewrite in five words or fewer: local inference keeps private prompts on the machine.",
+    ]
+    .iter()
+    .map(|prompt| (*prompt).to_string())
+    .collect()
+}
+
+fn long_benchmark_prompts() -> Vec<String> {
+    [
+        "A field operator is preparing an offline laptop for a week of local document triage. The machine has limited disk space, stable power, and no network access after departure. The operator needs short deterministic answers, clear failure messages, and receipts that identify the exact model and tokenizer. Summarize the operational priority in one sentence.",
+        "A finance team is comparing two internal notes. The first note says revenue is recognized when the service is delivered. The second note says cash collection may happen later and should not by itself decide revenue timing. Explain the accounting idea in plain language.",
+        "A developer is checking whether a local model runner should make broad platform claims from one receipt. The runner recorded a model hash, tokenizer source, backend, fallback flag, token IDs, timing, and memory. State the safe claim boundary.",
+        "A support engineer found that a prompt sometimes returns fenced JSON and sometimes plain JSON. The scoring harness requires a strict schema and records both raw generated text and normalized text. Explain what should be tracked before changing the scoring rule.",
+        "A small local service exposes health, readiness, and completion routes. It is intended for local apps on loopback, not production hosting. Describe the most important receipt fields for each completion request.",
+    ]
+    .iter()
+    .map(|prompt| (*prompt).to_string())
+    .collect()
+}
+
+fn context_benchmark_prompts(target_context_tokens: usize, count: usize) -> Vec<String> {
+    (0..count).map(|variant| synthetic_context_prompt(target_context_tokens, variant)).collect()
+}
+
+fn synthetic_context_prompt(target_context_tokens: usize, variant: usize) -> String {
+    let target_words = target_context_tokens.saturating_mul(4) / 3;
+    let mut prompt = String::from(
+        "Use the synthetic operations log below. Answer the final question briefly.\n\n",
+    );
+    let mut words = prompt.split_whitespace().count();
+    let mut index = 0usize;
+    while words < target_words {
+        let line = format!(
+            "Record {index:04}: team alpha handled queue {}, team beta verified checksum {}, and ticket M4-{} stayed inside the local CPU receipt boundary.\n",
+            (index + variant) % 17,
+            (index * 13 + variant) % 97,
+            (index + variant) % 31
+        );
+        words += line.split_whitespace().count();
+        prompt.push_str(&line);
+        index += 1;
+    }
+    prompt.push_str("\nQuestion: which boundary should the operator preserve? Answer briefly.");
+    prompt
+}
+
+fn resident_benchmark_prompts(count: usize) -> Vec<String> {
+    let base = [
+        "Answer with a single digit: 2+2=",
+        "Name the capital of France. Answer with one word.",
+        "Write one short sentence about local inference.",
+        "Classify as yes or no: receipts should record fallback status.",
+        "Give two words that describe deterministic scoring.",
+    ];
+    (0..count).map(|index| format!("{} [turn {}]", base[index % base.len()], index + 1)).collect()
+}
+
+fn benchmark_profile_summary(
+    spec: &BenchmarkProfileSpec,
+    path: &Path,
+    receipt: &serde_json::Value,
+    profile_start_peak_mb: Option<f64>,
+) -> Result<serde_json::Value> {
+    let profile_id = spec.profile.id();
+    let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
+    let quality_passed = receipt["quality_summary"]["passed"].as_bool().unwrap_or(false);
+    if prompt_count == 0 || !quality_passed {
+        anyhow::bail!(
+            "benchmark profile {profile_id} did not produce a passing warm-session receipt"
+        );
+    }
+    let prompt_receipts =
+        receipt["session"]["per_prompt_receipts"].as_array().ok_or_else(|| {
+            anyhow!("benchmark profile {profile_id} is missing per-prompt receipt paths")
+        })?;
+    if prompt_receipts.len() != prompt_count as usize {
+        anyhow::bail!("benchmark profile {profile_id} prompt receipt count mismatch");
+    }
+
+    let mut prompt_tokens = Vec::with_capacity(prompt_receipts.len());
+    let mut generated_tokens = Vec::with_capacity(prompt_receipts.len());
+    let mut tokenization_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut prefill_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut ttft_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut decode_total_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut sampling_ms_per_token = Vec::with_capacity(prompt_receipts.len());
+    let mut total_wall_ms = Vec::with_capacity(prompt_receipts.len());
+    let mut input_tok_s = Vec::with_capacity(prompt_receipts.len());
+    let mut output_tok_s = Vec::with_capacity(prompt_receipts.len());
+    let mut decode_tok_s = Vec::with_capacity(prompt_receipts.len());
+    let mut generated_total = 0u64;
+    for prompt_receipt in prompt_receipts {
+        let prompt_path = PathBuf::from(prompt_receipt.as_str().ok_or_else(|| {
+            anyhow!("benchmark profile {profile_id} has non-string prompt receipt path")
+        })?);
+        let prompt = read_json_receipt(&prompt_path)?;
+        let prompt_token_count = required_json_f64(&prompt["tokens"]["prompt"], "tokens.prompt")?;
+        let generated_token_count =
+            required_json_f64(&prompt["tokens"]["generated"], "tokens.generated")?;
+        let tokenize = required_json_f64(&prompt["timing"]["tokenize_ms"], "timing.tokenize_ms")?;
+        let prefill = required_json_f64(&prompt["timing"]["prefill_ms"], "timing.prefill_ms")?;
+        let ttft = required_json_f64(
+            &prompt["timing"]["time_to_first_token_ms"],
+            "timing.time_to_first_token_ms",
+        )?;
+        let decode =
+            required_json_f64(&prompt["timing"]["decode_total_ms"], "timing.decode_total_ms")?;
+        let total = required_json_f64(&prompt["timing"]["total_ms"], "timing.total_ms")?;
+        prompt_tokens.push(prompt_token_count);
+        generated_tokens.push(generated_token_count);
+        tokenization_ms.push(tokenize);
+        prefill_ms.push(prefill);
+        ttft_ms.push(ttft);
+        decode_total_ms.push(decode);
+        if let Some(sample_ms) = prompt["timing"]["sampling_ms_per_token"].as_f64() {
+            sampling_ms_per_token.push(sample_ms);
+        }
+        total_wall_ms.push(total);
+        push_positive_rate(&mut input_tok_s, prompt_token_count, tokenize + prefill);
+        push_positive_rate(&mut output_tok_s, generated_token_count, total);
+        push_positive_rate(&mut decode_tok_s, generated_token_count, decode);
+        generated_total += generated_token_count as u64;
+    }
+
+    let profile_end_peak_mb = peak_memory_mb();
+    let memory_drift_mb = memory_delta_mb(profile_start_peak_mb, profile_end_peak_mb);
+    Ok(serde_json::json!({
+        "profile_id": profile_id,
+        "receipt_path": path.display().to_string(),
+        "scenario": spec.scenario,
+        "requested_max_new_tokens": spec.max_new_tokens,
+        "prompt_count": prompt_count,
+        "target_context_tokens": spec.target_context_tokens,
+        "generated_tokens": generated_total,
+        "quality_passed": quality_passed,
+        "model_loaded_once": receipt["session"]["model_loaded_once"].as_bool().unwrap_or(false),
+        "tokenizer_loaded_once": receipt["session"]["tokenizer_loaded_once"].as_bool().unwrap_or(false),
+        "reuse_scope": receipt["session"]["reuse_scope"].clone(),
+        "prompt_tokens": benchmark_stat_json(&prompt_tokens),
+        "output_tokens": benchmark_stat_json(&generated_tokens),
+        "timing": {
+            "cold_load_ms": benchmark_stat_json(&[required_json_f64(&receipt["timing"]["model_load_ms"], "timing.model_load_ms")?]),
+            "tokenizer_load_ms": benchmark_stat_json(&[required_json_f64(&receipt["timing"]["tokenizer_load_ms"], "timing.tokenizer_load_ms")?]),
+            "prompt_tokenize_ms": benchmark_stat_json(&tokenization_ms),
+            "prefill_ms": benchmark_stat_json(&prefill_ms),
+            "time_to_first_token_ms": benchmark_stat_json(&ttft_ms),
+            "decode_total_ms": benchmark_stat_json(&decode_total_ms),
+            "sampling_ms_per_token": benchmark_stat_json(&sampling_ms_per_token),
+            "total_wall_ms": benchmark_stat_json(&total_wall_ms),
+        },
+        "throughput": {
+            "input_tokens_per_second": benchmark_stat_json(&input_tok_s),
+            "output_tokens_per_second": benchmark_stat_json(&output_tok_s),
+            "decode_tokens_per_second": benchmark_stat_json(&decode_tok_s),
+        },
+        "memory": {
+            "peak_memory_mb": benchmark_stat_json(&optional_sample(profile_end_peak_mb)),
+            "memory_drift_mb": benchmark_stat_json(&optional_sample(memory_drift_mb)),
+            "source": "getrusage.ru_maxrss process peak delta",
+        },
+        "claim_boundary": {
+            "scope": "this profile, model, backend, and machine receipt only",
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "allocation_audit": receipt["allocation_audit"].clone(),
+    }))
+}
+
+fn push_positive_rate(out: &mut Vec<f64>, numerator: f64, denominator_ms: f64) {
+    if numerator > 0.0 && denominator_ms > 0.0 {
+        out.push(round3(numerator * 1000.0 / denominator_ms));
+    }
+}
+
+fn required_json_f64(value: &serde_json::Value, label: &str) -> Result<f64> {
+    let Some(number) = value.as_f64() else {
+        anyhow::bail!("benchmark receipt is missing numeric {label}");
+    };
+    Ok(number)
+}
+
+fn optional_sample(value: Option<f64>) -> Vec<f64> {
+    value.into_iter().collect()
+}
+
+fn optional_f64_json(value: Option<f64>) -> serde_json::Value {
+    value.map(serde_json::Value::from).unwrap_or(serde_json::Value::Null)
+}
+
+fn memory_delta_mb(start: Option<f64>, end: Option<f64>) -> Option<f64> {
+    Some(round3((end? - start?).max(0.0)))
+}
+
+fn benchmark_flat_metric_json(metrics: &[(&str, &[f64])]) -> serde_json::Value {
+    let mut object = serde_json::Map::new();
+    for (name, samples) in metrics {
+        let stats = benchmark_stats(samples);
+        object.insert(format!("{name}_p50"), optional_f64_json(stats.p50));
+        object.insert(format!("{name}_p90"), optional_f64_json(stats.p90));
+        object.insert(format!("{name}_p99"), optional_f64_json(stats.p99));
+    }
+    serde_json::Value::Object(object)
+}
+
+fn benchmark_stat_json(samples: &[f64]) -> serde_json::Value {
+    let stats = benchmark_stats(samples);
+    serde_json::json!({
+        "count": stats.count,
+        "p50": optional_f64_json(stats.p50),
+        "p90": optional_f64_json(stats.p90),
+        "p99": optional_f64_json(stats.p99),
+        "min": optional_f64_json(stats.min),
+        "max": optional_f64_json(stats.max),
+        "samples": samples.iter().map(|sample| round3(*sample)).collect::<Vec<_>>(),
+    })
+}
+
+fn benchmark_stat_samples(value: &serde_json::Value) -> Vec<f64> {
+    value["samples"]
+        .as_array()
+        .map(|samples| samples.iter().filter_map(|sample| sample.as_f64()).collect())
+        .unwrap_or_default()
+}
+
+struct BenchmarkStats {
+    count: usize,
+    p50: Option<f64>,
+    p90: Option<f64>,
+    p99: Option<f64>,
+    min: Option<f64>,
+    max: Option<f64>,
+}
+
+fn benchmark_stats(samples: &[f64]) -> BenchmarkStats {
+    let mut sorted = samples.iter().copied().filter(|value| value.is_finite()).collect::<Vec<_>>();
+    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
+    if sorted.is_empty() {
+        return BenchmarkStats { count: 0, p50: None, p90: None, p99: None, min: None, max: None };
+    }
+    BenchmarkStats {
+        count: sorted.len(),
+        p50: Some(round3(percentile_nearest_rank(&sorted, 50.0))),
+        p90: Some(round3(percentile_nearest_rank(&sorted, 90.0))),
+        p99: Some(round3(percentile_nearest_rank(&sorted, 99.0))),
+        min: sorted.first().map(|value| round3(*value)),
+        max: sorted.last().map(|value| round3(*value)),
+    }
+}
+
+fn percentile_nearest_rank(sorted: &[f64], percentile: f64) -> f64 {
+    let rank = ((percentile / 100.0) * sorted.len() as f64).ceil() as usize;
+    let index = rank.saturating_sub(1).min(sorted.len().saturating_sub(1));
+    sorted[index]
+}
+
 struct WarmProfileSetSpec {
     name: &'static str,
     artifact_kind: &'static str,
@@ -6027,6 +6767,8 @@ fn validate_mac_receipt_value(
         )?
     } else if artifact_kind == "apple_m4_slm_eval_summary" {
         validate_slm_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
+        validate_slm_benchmark_v2_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_mac_ask_failure" {
         validate_bitnet_mac_ask_failure_receipt(path, receipt)?
     } else {
@@ -6270,6 +7012,223 @@ fn validate_slm_eval_summary_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
 
     Ok((Some(cases_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_slm_benchmark_v2_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_slm_benchmark_v2")?;
+    require_exact_string_at(path, receipt, &["profile_set"], "slm-benchmark-v2")?;
+    require_bool_at(path, receipt, &["build", "release_mode"], true)?;
+
+    require_non_empty_string_at(path, receipt, &["model_cache", "id"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "sha256"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "architecture"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "quantization"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "tokenizer_pre"])?;
+
+    let profiles = receipt["profiles"].as_array().ok_or_else(|| {
+        anyhow!("{} SLM benchmark v2 summary is missing profiles", path.display())
+    })?;
+    if profiles.is_empty() {
+        anyhow::bail!(
+            "{} SLM benchmark v2 summary must include at least one profile",
+            path.display()
+        );
+    }
+
+    for field in [
+        "cold_load_ms",
+        "tokenizer_load_ms",
+        "prompt_tokenize_ms",
+        "prefill_ms",
+        "ttft_ms",
+        "input_tok_s",
+        "output_tok_s",
+        "decode_tok_s",
+        "total_wall_ms",
+    ] {
+        validate_benchmark_percentiles(path, receipt, &["speed"], field, true)?;
+    }
+    validate_benchmark_percentiles(path, receipt, &["memory"], "peak_memory_mb", true)?;
+    validate_benchmark_percentiles(path, receipt, &["memory"], "memory_drift_mb", false)?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+
+    require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
+    require_non_empty_string_array_at(path, receipt, &["evidence", "profile_receipts"])?;
+    require_exact_string_at(path, receipt, &["evidence", "operator_command"], "mac benchmark")?;
+
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "bounded_benchmark_profiles_only"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+
+    let mut prompt_count_total = 0u64;
+    let mut generated_tokens_total = 0u64;
+    let mut seen_profiles = std::collections::BTreeSet::new();
+    for profile in profiles {
+        let profile_id = require_non_empty_string_at(path, profile, &["profile_id"])?;
+        if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
+            anyhow::bail!(
+                "{} SLM benchmark v2 profile_id {profile_id:?} is not part of the v2 profile contract",
+                path.display()
+            );
+        }
+        if !seen_profiles.insert(profile_id.to_string()) {
+            anyhow::bail!(
+                "{} SLM benchmark v2 profile {profile_id:?} is duplicated",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, profile, &["receipt_path"])?;
+        let prompt_count = require_u64_at(path, profile, &["prompt_count"], true)?;
+        let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], true)?;
+        require_bool_at(path, profile, &["quality_passed"], true)?;
+        require_bool_at(path, profile, &["model_loaded_once"], true)?;
+        require_bool_at(path, profile, &["tokenizer_loaded_once"], true)?;
+        require_exact_string_at(path, profile, &["reuse_scope"], "resident_session")?;
+
+        validate_benchmark_stat_object(path, profile, &["prompt_tokens"], true)?;
+        validate_benchmark_stat_object(path, profile, &["output_tokens"], true)?;
+        for field in [
+            "cold_load_ms",
+            "tokenizer_load_ms",
+            "prompt_tokenize_ms",
+            "prefill_ms",
+            "time_to_first_token_ms",
+            "decode_total_ms",
+            "sampling_ms_per_token",
+            "total_wall_ms",
+        ] {
+            validate_benchmark_stat_object(path, profile, &["timing", field], true)?;
+        }
+        for field in
+            ["input_tokens_per_second", "output_tokens_per_second", "decode_tokens_per_second"]
+        {
+            validate_benchmark_stat_object(path, profile, &["throughput", field], true)?;
+        }
+        validate_benchmark_stat_object(path, profile, &["memory", "peak_memory_mb"], true)?;
+        validate_benchmark_stat_object(path, profile, &["memory", "memory_drift_mb"], false)?;
+        require_non_empty_string_at(path, profile, &["memory", "source"])?;
+
+        prompt_count_total += prompt_count;
+        generated_tokens_total += generated_tokens;
+    }
+
+    if receipt["prompt_count"].as_u64() != Some(prompt_count_total) {
+        anyhow::bail!(
+            "{} SLM benchmark v2 prompt_count must equal the sum of profile prompt counts",
+            path.display()
+        );
+    }
+    if receipt["generated_tokens"].as_u64() != Some(generated_tokens_total) {
+        anyhow::bail!(
+            "{} SLM benchmark v2 generated_tokens must equal the sum of profile generated tokens",
+            path.display()
+        );
+    }
+
+    Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_benchmark_percentiles(
+    path: &Path,
+    receipt: &serde_json::Value,
+    base: &[&str],
+    metric: &str,
+    positive: bool,
+) -> Result<()> {
+    let p50_key = format!("{metric}_p50");
+    let p90_key = format!("{metric}_p90");
+    let p99_key = format!("{metric}_p99");
+    let mut p50_path = base.to_vec();
+    p50_path.push(p50_key.as_str());
+    let mut p90_path = base.to_vec();
+    p90_path.push(p90_key.as_str());
+    let mut p99_path = base.to_vec();
+    p99_path.push(p99_key.as_str());
+    let p50 = if positive {
+        require_positive_number_at(path, receipt, &p50_path)?
+    } else {
+        require_number_at(path, receipt, &p50_path, true)?
+    };
+    let p90 = if positive {
+        require_positive_number_at(path, receipt, &p90_path)?
+    } else {
+        require_number_at(path, receipt, &p90_path, true)?
+    };
+    let p99 = if positive {
+        require_positive_number_at(path, receipt, &p99_path)?
+    } else {
+        require_number_at(path, receipt, &p99_path, true)?
+    };
+    if p90 < p50 || p99 < p90 {
+        anyhow::bail!(
+            "{} SLM benchmark v2 metric {metric} must have p50 <= p90 <= p99",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_benchmark_stat_object(
+    path: &Path,
+    receipt: &serde_json::Value,
+    segments: &[&str],
+    positive: bool,
+) -> Result<()> {
+    let value = json_value_at(receipt, segments);
+    if !value.is_object() {
+        anyhow::bail!(
+            "{} SLM benchmark v2 {} must be a stats object",
+            path.display(),
+            json_path_label(segments)
+        );
+    }
+    require_u64_at(path, receipt, &[segments, &["count"]].concat(), true)?;
+    let p50 = if positive {
+        require_positive_number_at(path, receipt, &[segments, &["p50"]].concat())?
+    } else {
+        require_number_at(path, receipt, &[segments, &["p50"]].concat(), true)?
+    };
+    let p90 = if positive {
+        require_positive_number_at(path, receipt, &[segments, &["p90"]].concat())?
+    } else {
+        require_number_at(path, receipt, &[segments, &["p90"]].concat(), true)?
+    };
+    let p99 = if positive {
+        require_positive_number_at(path, receipt, &[segments, &["p99"]].concat())?
+    } else {
+        require_number_at(path, receipt, &[segments, &["p99"]].concat(), true)?
+    };
+    if p90 < p50 || p99 < p90 {
+        anyhow::bail!(
+            "{} SLM benchmark v2 {} must have p50 <= p90 <= p99",
+            path.display(),
+            json_path_label(segments)
+        );
+    }
+    Ok(())
 }
 
 fn validate_profile_set_receipt(

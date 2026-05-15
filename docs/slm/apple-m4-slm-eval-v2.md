@@ -159,6 +159,28 @@ peak_memory_mb
 memory_drift_mb
 ```
 
+The operator command is:
+
+```bash
+target/release/bitnet mac benchmark \
+  --model-id <model-id> \
+  --device apple-m4-cpu-neon \
+  --profile short_prompt_16_out \
+  --profile short_prompt_64_out \
+  --profile long_prompt_16_out \
+  --profile long_prompt_128_out \
+  --profile context_1k \
+  --profile context_4k \
+  --profile resident_25 \
+  --profile resident_50 \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-benchmark-v2/<model-id>/summary.json
+```
+
+The receipt kind is `apple_m4_slm_benchmark_v2`. Each profile is one
+resident warm-session run with model/tokenizer reuse visible inside that
+profile. The memory drift field is based on `getrusage.ru_maxrss`, so it is a
+process peak delta and not a live RSS measurement.
+
 ## Claim Boundary
 
 This lane may claim only bounded, recorded dense SLM evidence for the M4 Mac

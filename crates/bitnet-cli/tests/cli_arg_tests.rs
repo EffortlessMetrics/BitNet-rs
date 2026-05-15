@@ -790,7 +790,7 @@ fn mac_smoke_bitnet_missing_cache_writes_failure_receipt() -> Result<(), Box<dyn
     let answer_receipt = dir.path().join("mac-smoke-answer.json");
     let cache_str = cache.to_string_lossy().into_owned();
     let json_out_str = json_out.to_string_lossy().into_owned();
-    let tokenizer = workspace_path("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
     let tokenizer_str = tokenizer.to_string_lossy().into_owned();
 
     bitnet()
@@ -2065,6 +2065,90 @@ fn mac_receipts_check_accepts_performance_profile_summary() {
 }
 
 #[test]
+fn mac_benchmark_requires_release_build() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "short_prompt_16_out"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-benchmark-v2.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_slm_benchmark_v2",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "profile_set": "slm-benchmark-v2",
+            "profiles_required": ["short_prompt_16_out"],
+            "build": {
+                "profile": "release",
+                "release_mode": true
+            },
+            "model_cache": {
+                "id": "qwen2.5-0.5b-instruct-q8_0",
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "architecture": "qwen2",
+                "quantization": "Q8_0",
+                "tokenizer_pre": "qwen2"
+            },
+            "profiles": [
+                benchmark_profile_v2_json("short_prompt_16_out")
+            ],
+            "prompt_count": 3,
+            "generated_tokens": 48,
+            "speed": benchmark_speed_v2_json(),
+            "memory": {
+                "peak_memory_mb_p50": 3900.0,
+                "peak_memory_mb_p90": 3950.0,
+                "peak_memory_mb_p99": 3975.0,
+                "memory_drift_mb_p50": 0.0,
+                "memory_drift_mb_p90": 12.0,
+                "memory_drift_mb_p99": 24.0,
+                "source": "getrusage.ru_maxrss process peak delta"
+            },
+            "evidence": {
+                "profile_receipts": ["ci/hardware/apple-m4-mac-mini/2026-05-14/slm-benchmark-v2/qwen/summary-profiles/short_prompt_16_out.json"],
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark"
+            },
+            "mac_claim_boundary": {
+                "dense_slm_only": true,
+                "bounded_benchmark_profiles_only": true,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "macbook_evidence": false
+            },
+            "speedup_claim": false
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
+        .stdout(predicate::str::contains("\"prompt_count\": 3"));
+}
+
+#[test]
 fn mac_receipts_check_rejects_performance_profile_missing_warm_128() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("bad-performance-profiles.json");
@@ -2840,6 +2924,87 @@ fn performance_profile_json(
             "ranked_hotspots": [
                 {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
             ]
+        }
+    })
+}
+
+fn benchmark_stat_v2_json(p50: f64, p90: f64, p99: f64) -> serde_json::Value {
+    serde_json::json!({
+        "count": 3,
+        "p50": p50,
+        "p90": p90,
+        "p99": p99,
+        "min": p50,
+        "max": p99,
+        "samples": [p50, p90, p99]
+    })
+}
+
+fn benchmark_speed_v2_json() -> serde_json::Value {
+    serde_json::json!({
+        "cold_load_ms_p50": 3200.0,
+        "cold_load_ms_p90": 3300.0,
+        "cold_load_ms_p99": 3400.0,
+        "tokenizer_load_ms_p50": 45.0,
+        "tokenizer_load_ms_p90": 50.0,
+        "tokenizer_load_ms_p99": 55.0,
+        "prompt_tokenize_ms_p50": 4.0,
+        "prompt_tokenize_ms_p90": 5.0,
+        "prompt_tokenize_ms_p99": 6.0,
+        "prefill_ms_p50": 650.0,
+        "prefill_ms_p90": 720.0,
+        "prefill_ms_p99": 800.0,
+        "ttft_ms_p50": 1800.0,
+        "ttft_ms_p90": 2100.0,
+        "ttft_ms_p99": 2300.0,
+        "input_tok_s_p50": 118.0,
+        "input_tok_s_p90": 130.0,
+        "input_tok_s_p99": 140.0,
+        "output_tok_s_p50": 15.2,
+        "output_tok_s_p90": 16.0,
+        "output_tok_s_p99": 16.8,
+        "decode_tok_s_p50": 15.5,
+        "decode_tok_s_p90": 16.2,
+        "decode_tok_s_p99": 17.0,
+        "total_wall_ms_p50": 5200.0,
+        "total_wall_ms_p90": 5600.0,
+        "total_wall_ms_p99": 5900.0
+    })
+}
+
+fn benchmark_profile_v2_json(profile_id: &str) -> serde_json::Value {
+    serde_json::json!({
+        "profile_id": profile_id,
+        "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-benchmark-v2/qwen/summary-profiles/short_prompt_16_out.json",
+        "scenario": "short_prompt",
+        "requested_max_new_tokens": 16,
+        "prompt_count": 3,
+        "generated_tokens": 48,
+        "quality_passed": true,
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "reuse_scope": "resident_session",
+        "prompt_tokens": benchmark_stat_v2_json(24.0, 32.0, 40.0),
+        "output_tokens": benchmark_stat_v2_json(16.0, 16.0, 16.0),
+        "timing": {
+            "cold_load_ms": benchmark_stat_v2_json(3200.0, 3300.0, 3400.0),
+            "tokenizer_load_ms": benchmark_stat_v2_json(45.0, 50.0, 55.0),
+            "prompt_tokenize_ms": benchmark_stat_v2_json(4.0, 5.0, 6.0),
+            "prefill_ms": benchmark_stat_v2_json(650.0, 720.0, 800.0),
+            "time_to_first_token_ms": benchmark_stat_v2_json(1800.0, 2100.0, 2300.0),
+            "decode_total_ms": benchmark_stat_v2_json(900.0, 1000.0, 1100.0),
+            "sampling_ms_per_token": benchmark_stat_v2_json(0.2, 0.3, 0.4),
+            "total_wall_ms": benchmark_stat_v2_json(5200.0, 5600.0, 5900.0)
+        },
+        "throughput": {
+            "input_tokens_per_second": benchmark_stat_v2_json(118.0, 130.0, 140.0),
+            "output_tokens_per_second": benchmark_stat_v2_json(15.2, 16.0, 16.8),
+            "decode_tokens_per_second": benchmark_stat_v2_json(15.5, 16.2, 17.0)
+        },
+        "memory": {
+            "peak_memory_mb": benchmark_stat_v2_json(3900.0, 3950.0, 3975.0),
+            "memory_drift_mb": benchmark_stat_v2_json(0.0, 12.0, 24.0),
+            "source": "getrusage.ru_maxrss process peak delta"
         }
     })
 }
