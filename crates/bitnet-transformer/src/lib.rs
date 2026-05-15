@@ -1294,47 +1294,41 @@ impl TransformerModel {
             vb.pp("final_norm"),
         )?;
 
-        // Try to load lm_head, but it's optional (can be tied to embeddings)
-        // Try to create the linear layer, catching errors if weights don't exist
-        let (lm_head, lm_head_weight, lm_head_transposed) = match linear_with_optional_bias(
-            hidden_size,
-            vocab_size,
-            vb.pp("lm_head"),
-        ) {
-            Ok(layer) => {
-                // Also get the weight tensor directly for transposed handling
-                // Note: weight dimensions might be transposed
-                let weight = vb
-                    .get((vocab_size, hidden_size), "lm_head.weight")
-                    .or_else(|_| vb.get((hidden_size, vocab_size), "lm_head.weight"))
-                    .ok();
-
-                // Read transpose flag for lm_head
-                let transposed = match vb.get((1,), "lm_head.transposed") {
-                    Ok(t) => {
-                        let vals = t.to_vec1::<f32>()?;
-                        vals.first().copied().unwrap_or(0.0) > 0.5
-                    }
-                    Err(_) => false, // If flag doesn't exist, assume not transposed
-                };
-
-                if transposed {
-                    tracing::info!(
-                        "LM head is transposed [hidden, vocab] - will handle efficiently at runtime"
-                    );
-                }
-                (Some(layer), weight, transposed)
+        // Try to load lm_head, but it's optional (can be tied to embeddings).
+        // A transposed lm_head flag means the stored weight is [hidden, vocab].
+        // That shape is not loadable as a standard Candle Linear [vocab, hidden],
+        // so handle it as a direct matmul weight instead of falling through to
+        // tied embeddings.
+        let lm_head_transposed_flag = match vb.get((1,), "lm_head.transposed") {
+            Ok(t) => {
+                let vals = t.to_vec1::<f32>()?;
+                vals.first().copied().unwrap_or(0.0) > 0.5
             }
-            Err(_) => {
-                tracing::info!("lm_head.weight not found, will use tied weights");
-                (None, None, false)
+            Err(_) => false,
+        };
+
+        let (lm_head, lm_head_weight, lm_head_transposed) = if lm_head_transposed_flag {
+            tracing::info!("LM head is transposed [hidden, vocab] - using direct matmul weight");
+            let weight = vb.get((hidden_size, vocab_size), "lm_head.weight")?;
+            (None, Some(weight), true)
+        } else {
+            match linear_with_optional_bias(hidden_size, vocab_size, vb.pp("lm_head")) {
+                Ok(layer) => {
+                    let weight = vb.get((vocab_size, hidden_size), "lm_head.weight").ok();
+                    (Some(layer), weight, false)
+                }
+                Err(_) => {
+                    tracing::info!("lm_head.weight not found, will use tied weights");
+                    (None, None, false)
+                }
             }
         };
 
         // PATCH 2: Optimize tied weights by pre-transposing embeddings once at load
         // NOTE: embed_tokens.embeddings() ALWAYS returns [V,H] (Candle's internal format)
         // regardless of how they were stored in GGUF. We need [H,V] for tied weights.
-        let (embed_transposed, embed_tied_weight) = if lm_head.is_none() {
+        let (embed_transposed, embed_tied_weight) = if lm_head.is_none() && lm_head_weight.is_none()
+        {
             // No dedicated lm_head, we'll use tied weights - pre-transpose for efficiency
             let embed_weight = embed_tokens.embeddings();
             tracing::info!(
@@ -1587,7 +1581,15 @@ impl TransformerModel {
                 // [B, H] - last token only
                 let (b, _h) = (hidden.dims()[0], hidden.dims()[1]);
 
-                let logits = if let Some(ref lm_head) = self.lm_head {
+                let logits = if self.lm_head_transposed {
+                    if let Some(ref weight) = self.lm_head_weight {
+                        hidden.matmul(weight)?
+                    } else {
+                        return Err(BitNetError::Validation(
+                            "lm_head.transposed is set but lm_head.weight is missing".into(),
+                        ));
+                    }
+                } else if let Some(ref lm_head) = self.lm_head {
                     // Use dedicated LM head if available
                     let logits = lm_head.forward(hidden)?; // [B, V]
                     logits.reshape(&[b, vocab_size])?
@@ -1677,28 +1679,23 @@ impl TransformerModel {
                 // [B, T, H] - all timesteps
                 let (b, t, h) = (hidden.dims()[0], hidden.dims()[1], hidden.dims()[2]);
 
-                if let Some(ref lm_head) = self.lm_head {
-                    // Use dedicated LM head if available
-                    if self.lm_head_transposed {
-                        if let Some(ref weight) = self.lm_head_weight {
-                            // LM head weight is stored as [hidden, vocab]
-                            // Flatten to 2D so Candle matmul is happy
-                            let hidden_2d = hidden.reshape(&[b * t, h])?;
-                            let logits_2d = hidden_2d.matmul(weight)?;
-                            Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-                        } else {
-                            // Fallback to standard forward if we couldn't get weight directly
-                            let hidden_2d = hidden.reshape(&[b * t, h])?;
-                            let logits_2d = lm_head.forward(&hidden_2d)?;
-                            Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-                        }
-                    } else {
-                        // Standard path: LM head weight is [vocab, hidden]
-                        // Flatten to 2D for proper matmul
+                if self.lm_head_transposed {
+                    if let Some(ref weight) = self.lm_head_weight {
                         let hidden_2d = hidden.reshape(&[b * t, h])?;
-                        let logits_2d = lm_head.forward(&hidden_2d)?;
+                        let logits_2d = hidden_2d.matmul(weight)?;
                         Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    } else {
+                        Err(BitNetError::Validation(
+                            "lm_head.transposed is set but lm_head.weight is missing".into(),
+                        ))
                     }
+                } else if let Some(ref lm_head) = self.lm_head {
+                    // Use dedicated LM head if available
+                    // Standard path: LM head weight is [vocab, hidden]
+                    // Flatten to 2D for proper matmul
+                    let hidden_2d = hidden.reshape(&[b * t, h])?;
+                    let logits_2d = lm_head.forward(&hidden_2d)?;
+                    Ok(logits_2d.reshape(&[b, t, vocab_size])?)
                 } else {
                     // Tied weights: use embedding matrix
                     static LOGGED: std::sync::Once = std::sync::Once::new();
@@ -1955,6 +1952,72 @@ mod tests {
             values[0].iter().all(|value| *value > 0.0),
             "RMSNorm should preserve positive sign instead of mean-centering: {values:?}"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn transposed_lm_head_uses_dedicated_output_weight() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let vocab_size = 4;
+        let hidden_size = 2;
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config.model.num_layers = 0;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::zeros((vocab_size, hidden_size), DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.weight".to_string(),
+            Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "lm_head.weight".to_string(),
+            Tensor::from_slice(
+                &[
+                    1.0f32, 0.0, 0.0, 0.0, // hidden dim 0 -> token 0
+                    0.0, 1.0, 0.0, 0.0, // hidden dim 1 -> token 1
+                ],
+                (hidden_size, vocab_size),
+                &device,
+            )?,
+        );
+        tensors.insert(
+            "lm_head.transposed".to_string(),
+            Tensor::from_slice(&[1.0f32], (1,), &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors_and_qk256_backend(
+            config,
+            vb,
+            HashMap::new(),
+            Qk256DispatchBackend::Cpu,
+        )?;
+
+        assert!(
+            model.lm_head_transposed,
+            "transposed lm_head flag must survive model construction"
+        );
+        assert!(
+            model.lm_head_weight.is_some(),
+            "transposed lm_head must keep its dedicated output weight"
+        );
+        assert!(
+            model.embed_tied_weight.is_none(),
+            "dedicated transposed lm_head must not fall back to tied embeddings"
+        );
+
+        let hidden = Tensor::from_slice(&[2.0f32, 3.0], (1, hidden_size), &device)?;
+        let logits = model.logits(&hidden)?;
+        let values = logits.to_vec2::<f32>()?;
+        assert_eq!(values, vec![vec![2.0, 3.0, 0.0, 0.0]]);
 
         Ok(())
     }
