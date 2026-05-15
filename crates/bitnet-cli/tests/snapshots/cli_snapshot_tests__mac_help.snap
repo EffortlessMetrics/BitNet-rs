@@ -10,6 +10,7 @@ Usage: bitnet mac [OPTIONS] <COMMAND>
 Commands:
   models            List Apple M4 model states, cache status, and selection guidance
   status            Summarize Apple M4 dense SLM, BitNet, disk/cache, receipt, and command readiness
+  report-refresh    Generate a model-free advisory/nightly Apple M4 report refresh manifest
   check             Check the cached Apple M4 SLM model artifact and routing boundary
   ask               Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
   smoke             Run a compact Apple M4 model-family health smoke with cache and receipt checks

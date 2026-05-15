@@ -37,7 +37,7 @@ advisory, scheduled, or release-only.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-INF-OPS-001 | merged | PR #4960 added `bitnet mac status` with an `apple_m4_inference_status` receipt covering dense SLM, BitNet, disk/cache, report inventory, commands, and claim boundaries. |
-| M4-INF-OPS-002 | proposed | Add advisory/nightly report refresh manifest generation for committed M4 dense SLM and BitNet report families. |
+| M4-INF-OPS-002 | in_progress | Add advisory/nightly report refresh manifest generation for committed M4 dense SLM and BitNet report families. |
 | M4-INF-OPS-003 | proposed | Add compact regression dashboard artifacts across dense SLM and BitNet reports while keeping evidence families separate. |
 | M4-INF-OPS-004 | proposed | Publish operator envelope v2 mapping commands to receipts, gates, and unsupported claims. |
 

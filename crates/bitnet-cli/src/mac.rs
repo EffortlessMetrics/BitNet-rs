@@ -25,6 +25,9 @@ const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-status.json";
+const MAC_REPORT_REFRESH_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-ops/report-refresh-manifest.json";
+const APPLE_M4_REPORT_ROOT: &str = "ci/hardware/apple-m4-mac-mini";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
     "target/apple-m4-bitnet-eval-and-benchmark/bitnet-benchmark/summary.json";
@@ -176,6 +179,21 @@ enum MacAction {
         /// Output strict Mac status receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_STATUS_DEFAULT_RECEIPT)]
         json_out: PathBuf,
+    },
+
+    /// Generate a model-free advisory/nightly Apple M4 report refresh manifest.
+    ReportRefresh {
+        /// Committed Apple M4 report root to inventory.
+        #[arg(long, value_name = "PATH", default_value = APPLE_M4_REPORT_ROOT)]
+        root: PathBuf,
+
+        /// Output strict report-refresh manifest receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_REPORT_REFRESH_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
     },
 
     /// Check the cached Apple M4 SLM model artifact and routing boundary.
@@ -809,6 +827,10 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac status")?;
                 run_status(cache_dir, json_out, json)
             }
+            MacAction::ReportRefresh { root, json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac report-refresh")?;
+                run_report_refresh_manifest(root, json_out, json)
+            }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
                 run_check(&model_id, cache_dir, json)
@@ -1203,6 +1225,7 @@ fn apple_m4_inference_status_receipt(
     let commands = serde_json::json!({
         "models": "bitnet mac models",
         "status": "bitnet mac status",
+        "report_refresh": "bitnet mac report-refresh",
         "fetch_default": format!("bitnet model fetch {default_model_id}"),
         "verify_default": format!("bitnet model verify {default_model_id}"),
         "ask_default": "bitnet mac ask \"What is 2+2?\"",
@@ -1318,7 +1341,7 @@ fn print_mac_status_summary(receipt: &serde_json::Value, json_out: &Path) {
 }
 
 fn apple_m4_report_inventory_json() -> serde_json::Value {
-    let root = Path::new("ci/hardware/apple-m4-mac-mini");
+    let root = Path::new(APPLE_M4_REPORT_ROOT);
     serde_json::json!({
         "root": root,
         "dense_slm_eval_v2": latest_matching_report(root, "slm-eval-v2", "summary.json"),
@@ -1330,10 +1353,14 @@ fn apple_m4_report_inventory_json() -> serde_json::Value {
 }
 
 fn latest_matching_report(root: &Path, segment: &str, filename: &str) -> Option<String> {
+    matching_reports(root, segment, filename).pop().map(|path| path.to_string_lossy().to_string())
+}
+
+fn matching_reports(root: &Path, segment: &str, filename: &str) -> Vec<PathBuf> {
     let mut matches = Vec::new();
     collect_matching_reports(root, segment, filename, &mut matches);
     matches.sort();
-    matches.pop().map(|path| path.to_string_lossy().to_string())
+    matches
 }
 
 fn collect_matching_reports(root: &Path, segment: &str, filename: &str, out: &mut Vec<PathBuf>) {
@@ -1350,6 +1377,337 @@ fn collect_matching_reports(root: &Path, segment: &str, filename: &str, out: &mu
             out.push(path);
         }
     }
+}
+
+fn run_report_refresh_manifest(root: PathBuf, json_out: PathBuf, json: bool) -> Result<()> {
+    let receipt = apple_m4_report_refresh_manifest_receipt(&root, &json_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_report_refresh_manifest_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> serde_json::Value {
+    let families = apple_m4_report_refresh_families(root);
+    let report_count =
+        families.iter().filter_map(|family| family["report_count"].as_u64()).sum::<u64>();
+    let complete =
+        families.iter().all(|family| family["report_count"].as_u64().unwrap_or_default() > 0);
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_report_refresh_manifest",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac report-refresh",
+        "status": if complete { "ok" } else { "missing_reports" },
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "committed report refresh manifest",
+        },
+        "report_root": root,
+        "family_count": families.len(),
+        "report_count": report_count,
+        "refresh_modes": {
+            "advisory_manifest": true,
+            "nightly_manifest": true,
+            "release_manifest": true,
+            "generic_pr_ci_model_free": true,
+            "generic_pr_ci_live_model_run": false,
+            "model_downloads": false,
+            "long_resident_soaks": false,
+        },
+        "families": families,
+        "validation": {
+            "manifest_command": "bitnet mac report-refresh --json",
+            "manifest_receipt_check": "bitnet mac receipts-check target/apple-m4-inference-ops/report-refresh-manifest.json --json",
+            "report_receipt_check": "bitnet mac receipts-check <report.json> --json",
+            "regression_check": "bitnet mac regression <current-report.json> --baseline <baseline-report.json>",
+        },
+        "claim_boundary": {
+            "manifest_only": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
+    [
+        (
+            "dense_slm_eval_v2",
+            "dense_slm",
+            "slm-eval-v2",
+            "summary.json",
+            "apple_m4_slm_eval_summary",
+            "Seeded dense SLM quality reports.",
+            "local/advisory/nightly: regenerate v2 dense eval reports with the seeded corpus, then validate committed summaries.",
+        ),
+        (
+            "dense_slm_benchmark_v2",
+            "dense_slm",
+            "slm-benchmark-v2",
+            "summary.json",
+            "apple_m4_slm_benchmark_v2",
+            "Dense SLM TTFT, throughput, memory, and resident-session benchmark reports.",
+            "local/advisory/nightly: regenerate v2 dense benchmark summaries in release mode, then validate committed summaries.",
+        ),
+        (
+            "bitnet_eval",
+            "bitnet",
+            "bitnet-eval",
+            "answer-corpus.json",
+            "bitnet_apple_m4_local_answer_corpus",
+            "BitNet seeded quality and reference-vs-Rust reports.",
+            "local/advisory/nightly: regenerate the BitNet answer corpus with the accepted GGUF/tokenizer, then validate the committed corpus receipt.",
+        ),
+        (
+            "bitnet_benchmark",
+            "bitnet",
+            "bitnet-benchmark",
+            "summary.json",
+            "bitnet_apple_m4_benchmark_v1",
+            "BitNet one-shot ask and fixed-warm benchmark reports.",
+            "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm benchmark summaries, then validate the committed benchmark receipt.",
+        ),
+        (
+            "bitnet_variable_warm",
+            "bitnet",
+            "bitnet-productization",
+            "variable-warm-session.json",
+            "bitnet_apple_m4_warm_session",
+            "BitNet variable-prompt warm-session productization receipts.",
+            "local/advisory/nightly: rerun the variable warm-session proof before any BitNet chat or serve gate changes.",
+        ),
+    ]
+    .into_iter()
+    .map(
+        |(
+            id,
+            evidence_family,
+            path_segment,
+            summary_filename,
+            expected_artifact_kind,
+            description,
+            refresh_command_template,
+        )| {
+            apple_m4_report_refresh_family_json(
+                root,
+                id,
+                evidence_family,
+                path_segment,
+                summary_filename,
+                expected_artifact_kind,
+                description,
+                refresh_command_template,
+            )
+        },
+    )
+    .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apple_m4_report_refresh_family_json(
+    root: &Path,
+    id: &str,
+    evidence_family: &str,
+    path_segment: &str,
+    summary_filename: &str,
+    expected_artifact_kind: &str,
+    description: &str,
+    refresh_command_template: &str,
+) -> serde_json::Value {
+    let report_paths = matching_reports(root, path_segment, summary_filename);
+    let reports = report_paths
+        .iter()
+        .map(|path| apple_m4_report_refresh_report_json(root, path, expected_artifact_kind))
+        .collect::<Vec<_>>();
+    let mut dates = std::collections::BTreeSet::new();
+    let mut model_ids = std::collections::BTreeSet::new();
+    let mut artifact_kinds = std::collections::BTreeSet::new();
+    let mut fallback_free_count = 0_u64;
+    let mut strict_cpu_neon_count = 0_u64;
+    for report in &reports {
+        if let Some(date) = report["date"].as_str() {
+            dates.insert(date.to_string());
+        }
+        if let Some(model_id) = report["model_id"].as_str() {
+            model_ids.insert(model_id.to_string());
+        }
+        if let Some(artifact_kind) = report["artifact_kind"].as_str() {
+            artifact_kinds.insert(artifact_kind.to_string());
+        }
+        if report["fallback_used"].as_bool() == Some(false) {
+            fallback_free_count = fallback_free_count.saturating_add(1);
+        }
+        if report["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON) {
+            strict_cpu_neon_count = strict_cpu_neon_count.saturating_add(1);
+        }
+    }
+    serde_json::json!({
+        "id": id,
+        "evidence_family": evidence_family,
+        "description": description,
+        "path_segment": path_segment,
+        "summary_filename": summary_filename,
+        "expected_artifact_kind": expected_artifact_kind,
+        "refresh_tiers": ["advisory", "nightly", "release"],
+        "generic_pr_ci": {
+            "validate_committed_reports_only": true,
+            "live_model_run": false,
+            "model_downloads": false,
+        },
+        "refresh_command_template": refresh_command_template,
+        "validation_commands": [
+            "bitnet mac receipts-check <report.json> --json",
+            "bitnet mac regression <current-report.json> --baseline <baseline-report.json>",
+        ],
+        "report_count": reports.len(),
+        "latest_report": report_paths.last().map(|path| path.to_string_lossy().to_string()),
+        "dates": dates.into_iter().collect::<Vec<_>>(),
+        "model_ids": model_ids.into_iter().collect::<Vec<_>>(),
+        "artifact_kinds": artifact_kinds.into_iter().collect::<Vec<_>>(),
+        "fallback_free_count": fallback_free_count,
+        "strict_cpu_neon_count": strict_cpu_neon_count,
+        "reports": reports,
+        "claim_boundary": {
+            "dense_slm_evidence": evidence_family == "dense_slm",
+            "bitnet_evidence": evidence_family == "bitnet",
+            "evidence_families_mixed": false,
+            "generic_pr_ci_live_model_run": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_report_refresh_report_json(
+    root: &Path,
+    path: &Path,
+    expected_artifact_kind: &str,
+) -> serde_json::Value {
+    let parsed = std::fs::read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+    let date = apple_m4_report_date(root, path);
+    match parsed {
+        Some(receipt) => serde_json::json!({
+            "path": path,
+            "date": date,
+            "parse_status": "ok",
+            "artifact_kind": receipt["artifact_kind"].as_str(),
+            "expected_artifact_kind": expected_artifact_kind,
+            "artifact_kind_matches": receipt["artifact_kind"].as_str() == Some(expected_artifact_kind),
+            "model_id": apple_m4_report_model_id(&receipt),
+            "selected_backend": receipt_string(&receipt, "selected_backend"),
+            "runtime_api": receipt_string(&receipt, "runtime_api"),
+            "fallback_used": receipt_bool(&receipt, "fallback_used"),
+            "prompt_count": apple_m4_report_prompt_count(&receipt),
+            "generated_tokens": apple_m4_report_generated_tokens(&receipt),
+        }),
+        None => serde_json::json!({
+            "path": path,
+            "date": date,
+            "parse_status": "unreadable",
+            "artifact_kind": serde_json::Value::Null,
+            "expected_artifact_kind": expected_artifact_kind,
+            "artifact_kind_matches": false,
+            "model_id": serde_json::Value::Null,
+            "selected_backend": serde_json::Value::Null,
+            "runtime_api": serde_json::Value::Null,
+            "fallback_used": serde_json::Value::Null,
+            "prompt_count": serde_json::Value::Null,
+            "generated_tokens": serde_json::Value::Null,
+        }),
+    }
+}
+
+fn apple_m4_report_date(root: &Path, path: &Path) -> Option<String> {
+    path.strip_prefix(root)
+        .ok()
+        .and_then(|relative| relative.components().next())
+        .and_then(|component| component.as_os_str().to_str())
+        .map(ToOwned::to_owned)
+}
+
+fn apple_m4_report_model_id(receipt: &serde_json::Value) -> Option<String> {
+    for segments in [
+        &["model_id"][..],
+        &["model", "id"][..],
+        &["model_cache", "id"][..],
+        &["model", "model_id"][..],
+    ] {
+        if let Some(model_id) = json_value_at(receipt, segments).as_str() {
+            return Some(model_id.to_string());
+        }
+    }
+    if receipt["model"]["family"].as_str() == Some("bitnet")
+        && receipt["model"]["sha256"].as_str() == Some(BITNET_M4_EXPECTED_MODEL_SHA256)
+    {
+        return Some(BITNET_M4_MODEL_ID.to_string());
+    }
+    None
+}
+
+fn apple_m4_report_prompt_count(receipt: &serde_json::Value) -> Option<u64> {
+    receipt["prompt_count"].as_u64().or_else(|| {
+        receipt["corpus"]["case_count"]
+            .as_u64()
+            .or_else(|| receipt["quality_summary"]["total"].as_u64())
+    })
+}
+
+fn apple_m4_report_generated_tokens(receipt: &serde_json::Value) -> Option<u64> {
+    receipt["generated_tokens"]
+        .as_u64()
+        .or_else(|| receipt["evidence"]["generated_tokens_total"].as_u64())
+}
+
+fn print_report_refresh_manifest_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Apple M4 report refresh manifest: {}",
+        receipt["status"].as_str().unwrap_or("unknown")
+    );
+    println!("Report root: {}", receipt["report_root"].as_str().unwrap_or(APPLE_M4_REPORT_ROOT));
+    println!(
+        "Families: {}, reports: {}",
+        receipt["family_count"].as_u64().unwrap_or(0),
+        receipt["report_count"].as_u64().unwrap_or(0)
+    );
+    if let Some(families) = receipt["families"].as_array() {
+        for family in families {
+            println!(
+                "- {}: reports={}, latest={}",
+                family["id"].as_str().unwrap_or("<unknown>"),
+                family["report_count"].as_u64().unwrap_or(0),
+                family["latest_report"].as_str().unwrap_or("<missing>")
+            );
+        }
+    }
+    println!("Receipt: {}", json_out.display());
+    println!(
+        "Claim boundary: manifest only; no live model run, no model downloads, dense SLM and BitNet evidence stay separate."
+    );
 }
 
 struct MacChatPrompts {
@@ -9985,6 +10343,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_chat_gate_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_inference_status" {
         validate_apple_m4_inference_status_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_report_refresh_manifest" {
+        validate_apple_m4_report_refresh_manifest_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -10403,6 +10763,7 @@ fn validate_apple_m4_inference_status_receipt(
     for field in [
         "models",
         "status",
+        "report_refresh",
         "ask_default",
         "chat_dense",
         "serve_dense",
@@ -10414,6 +10775,170 @@ fn validate_apple_m4_inference_status_receipt(
         require_non_empty_string_at(path, receipt, &["commands", field])?;
     }
     require_non_empty_string_at(path, receipt, &["report_inventory", "root"])?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_report_refresh_manifest_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_report_refresh_manifest")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac report-refresh")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_non_empty_string_at(path, receipt, &["report_root"])?;
+    require_bool_at(path, receipt, &["refresh_modes", "advisory_manifest"], true)?;
+    require_bool_at(path, receipt, &["refresh_modes", "nightly_manifest"], true)?;
+    require_bool_at(path, receipt, &["refresh_modes", "release_manifest"], true)?;
+    require_bool_at(path, receipt, &["refresh_modes", "generic_pr_ci_model_free"], true)?;
+    require_bool_at(path, receipt, &["refresh_modes", "generic_pr_ci_live_model_run"], false)?;
+    require_bool_at(path, receipt, &["refresh_modes", "model_downloads"], false)?;
+    require_bool_at(path, receipt, &["refresh_modes", "long_resident_soaks"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "manifest_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    for field in
+        ["manifest_command", "manifest_receipt_check", "report_receipt_check", "regression_check"]
+    {
+        require_non_empty_string_at(path, receipt, &["validation", field])?;
+    }
+
+    let families = receipt["families"].as_array().ok_or_else(|| {
+        anyhow!("{} report refresh manifest is missing families array", path.display())
+    })?;
+    if families.len() < 5 {
+        anyhow::bail!(
+            "{} report refresh manifest must cover dense SLM and BitNet report families",
+            path.display()
+        );
+    }
+    let family_count = require_u64_at(path, receipt, &["family_count"], true)?;
+    if family_count != families.len() as u64 {
+        anyhow::bail!(
+            "{} report refresh manifest family_count must equal families length",
+            path.display()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut total_reports = 0_u64;
+    for family in families {
+        let id = require_non_empty_string_at(path, family, &["id"])?;
+        seen.insert(id.to_string());
+        let evidence_family = require_non_empty_string_at(path, family, &["evidence_family"])?;
+        if evidence_family != "dense_slm" && evidence_family != "bitnet" {
+            anyhow::bail!(
+                "{} report refresh manifest family {id} has unsupported evidence_family {evidence_family:?}",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, family, &["path_segment"])?;
+        require_non_empty_string_at(path, family, &["summary_filename"])?;
+        let expected_artifact_kind =
+            require_non_empty_string_at(path, family, &["expected_artifact_kind"])?;
+        require_non_empty_string_at(path, family, &["refresh_command_template"])?;
+        require_non_empty_string_array_at(path, family, &["refresh_tiers"])?;
+        require_non_empty_string_array_at(path, family, &["validation_commands"])?;
+        require_bool_at(path, family, &["generic_pr_ci", "validate_committed_reports_only"], true)?;
+        require_bool_at(path, family, &["generic_pr_ci", "live_model_run"], false)?;
+        require_bool_at(path, family, &["generic_pr_ci", "model_downloads"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "evidence_families_mixed"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "generic_pr_ci_live_model_run"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "broad_model_quality_claim"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "broad_performance_claim"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "speedup_claim"], false)?;
+        require_bool_at(
+            path,
+            family,
+            &["claim_boundary", "dense_slm_evidence"],
+            evidence_family == "dense_slm",
+        )?;
+        require_bool_at(
+            path,
+            family,
+            &["claim_boundary", "bitnet_evidence"],
+            evidence_family == "bitnet",
+        )?;
+
+        let report_count = require_u64_at(path, family, &["report_count"], true)?;
+        total_reports = total_reports.saturating_add(report_count);
+        require_non_empty_string_at(path, family, &["latest_report"])?;
+        let reports = family["reports"].as_array().ok_or_else(|| {
+            anyhow!(
+                "{} report refresh manifest family {id} is missing reports array",
+                path.display()
+            )
+        })?;
+        if reports.len() as u64 != report_count {
+            anyhow::bail!(
+                "{} report refresh manifest family {id} report_count does not match reports length",
+                path.display()
+            );
+        }
+        let fallback_free_count = require_u64_at(path, family, &["fallback_free_count"], true)?;
+        let strict_cpu_neon_count = require_u64_at(path, family, &["strict_cpu_neon_count"], true)?;
+        if fallback_free_count != report_count || strict_cpu_neon_count != report_count {
+            anyhow::bail!(
+                "{} report refresh manifest family {id} must be fallback-free and strict apple-m4-cpu-neon for every committed report",
+                path.display()
+            );
+        }
+        for report in reports {
+            require_non_empty_string_at(path, report, &["path"])?;
+            require_non_empty_string_at(path, report, &["date"])?;
+            require_exact_string_at(path, report, &["parse_status"], "ok")?;
+            require_exact_string_at(path, report, &["artifact_kind"], expected_artifact_kind)?;
+            require_exact_string_at(
+                path,
+                report,
+                &["expected_artifact_kind"],
+                expected_artifact_kind,
+            )?;
+            require_bool_at(path, report, &["artifact_kind_matches"], true)?;
+            require_non_empty_string_at(path, report, &["selected_backend"])?;
+            require_exact_string_at(path, report, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+            require_exact_string_at(path, report, &["runtime_api"], "cpu")?;
+            require_bool_at(path, report, &["fallback_used"], false)?;
+        }
+    }
+    for required in [
+        "dense_slm_eval_v2",
+        "dense_slm_benchmark_v2",
+        "bitnet_eval",
+        "bitnet_benchmark",
+        "bitnet_variable_warm",
+    ] {
+        if !seen.contains(required) {
+            anyhow::bail!(
+                "{} report refresh manifest is missing required family {required}",
+                path.display()
+            );
+        }
+    }
+    let receipt_report_count = require_u64_at(path, receipt, &["report_count"], true)?;
+    if receipt_report_count != total_reports {
+        anyhow::bail!(
+            "{} report refresh manifest report_count must equal family report totals",
+            path.display()
+        );
+    }
     Ok((Some(0), Some(0)))
 }
 

@@ -69,7 +69,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-INF-OPS-002"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-002-report-refresh"
 stackable = false
 review_mode = "codex_premerge"
@@ -78,7 +78,16 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-INF-OPS-001"]
 acceptance = "Add advisory/nightly report refresh manifest generation for committed M4 dense SLM and BitNet report families without running live models in generic PR CI."
 commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_report_refresh",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_help_documents_operator_wrappers",
+  "cargo test --locked -p bitnet-cli --test cli_snapshot_tests mac_help",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- mac report-refresh --json-out target/apple-m4-inference-ops/report-refresh-manifest.json --json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- mac receipts-check target/apple-m4-inference-ops/report-refresh-manifest.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-ops",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
 ]
 allowed_paths = [
   ".github/workflows/**",
