@@ -278,6 +278,20 @@ The committed aggregate warm receipt is:
 ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json
 ```
 
+The committed operator-prompt warm receipt is:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json
+```
+
+It records five operator prompts, ten generated tokens, generated text in
+`prompts[].text`, generated token IDs in `prompts[].generated_token_ids`,
+`bitnet_warm_prompt_source.source=operator_prompts`, repeated-prompt
+determinism passed, `fallback_used=false`, `model_loaded_once=true`,
+`tokenizer_loaded_once=true`, `total_session_ms=206419.425`, and resident
+memory around 2.0 GiB for this bounded run. Treat this as variable warm-session
+evidence only; BitNet chat and serve remain disabled.
+
 Use `regression` for receipt-only drift checks against matching M4 dense SLM
 envelopes:
 
