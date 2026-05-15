@@ -1,0 +1,14 @@
+timestamp = "2026-05-15T21:17:46Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-006"
+event = "merged"
+pr = 4985
+head_sha = "143d9f320a9c90819cecb201bc849826423ab12b"
+merge_sha = "22108dbf9593db391cd4526f826c4514e3b65036"
+actor = "codex"
+
+notes = [
+  "Merged PR #4985, recording Qwen3 0.6B warm-session strict RTX 5070 Ti CUDA proof.",
+  "The merged receipt records three deterministic greedy turns, 24 generated tokens, CPU/CUDA generated-token equality, top-k equality, fallback_used=false, one model/tokenizer/context load, upload-once weights, and reused runtime buffers.",
+  "Speedup, server readiness, full CUDA residency, broad dense GGUF readiness, ask/chat product UX, and BitNet packed I2_S/QK256 proof remain false.",
+]
