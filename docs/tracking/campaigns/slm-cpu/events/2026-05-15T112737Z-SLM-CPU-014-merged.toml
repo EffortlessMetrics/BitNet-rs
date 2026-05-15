@@ -1,0 +1,16 @@
+timestamp = "2026-05-15T11:27:37Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-014"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4900
+merge_sha = "4faa85e2f999f1fb90112d733a71efdc2bf32e33"
+branch = "codex/slm-cpu-014-dense-avx2-hot-path"
+
+summary = "Record bounded dense output-head no-bias allocation cleanup on the strict i5-8250U CPU path."
+notes = [
+  "Merged #4900 and advanced SLM-CPU-015 as the next ready bounded thread and thermal/timing envelope item.",
+  "Recovered dense lm_head/output.weight paths now use Candle no-bias Linear instead of materialized zero bias while preserving output-head regression behavior.",
+]
