@@ -39,6 +39,7 @@ use walkdir::WalkDir;
 mod bench_receipt;
 mod bitnet_reference_all_logits;
 mod bitnet_reference_compare;
+mod bitnet_reference_instrumentation;
 mod bitnet_reference_plan;
 mod bitnet_reference_run;
 mod bitnet_reference_server_run;
@@ -1328,6 +1329,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
 }
 
 fn real_main() -> Result<()> {
+    if bitnet_reference_instrumentation::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
     if bitnet_reference_all_logits::maybe_dispatch_from_env()? {
         return Ok(());
     }

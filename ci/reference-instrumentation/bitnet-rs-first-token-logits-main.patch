@@ -1,0 +1,193 @@
+# Upstream-Issue: not-applicable; BitNet-rs target-local diagnostic instrumentation only
+# Reason: Emit first-token raw logits from llama-cli when stock llama-perplexity cannot provide matched first-token logits
+# Status: under-review
+# Created: 2026-05-15
+# Review-By: 2026-06-15
+# Author: BitNet-rs maintainers
+
+diff --git a/examples/main/main.cpp b/examples/main/main.cpp
+index fb10c20c..5608262d 100644
+--- a/examples/main/main.cpp
++++ b/examples/main/main.cpp
+@@ -5,12 +5,17 @@
+ #include "sampling.h"
+ #include "llama.h"
+ 
++#include <algorithm>
+ #include <cassert>
++#include <cmath>
+ #include <cstdio>
++#include <cstdlib>
+ #include <cstring>
+ #include <ctime>
+ #include <fstream>
++#include <iomanip>
+ #include <iostream>
++#include <limits>
+ #include <sstream>
+ #include <string>
+ #include <vector>
+@@ -62,6 +67,141 @@ static bool file_is_empty(const std::string & path) {
+     return f.tellg() == 0;
+ }
+ 
++static std::string bitnet_rs_json_escape(const std::string & value) {
++    std::ostringstream out;
++    for (unsigned char ch : value) {
++        switch (ch) {
++            case '"':  out << "\\\""; break;
++            case '\\': out << "\\\\"; break;
++            case '\b': out << "\\b"; break;
++            case '\f': out << "\\f"; break;
++            case '\n': out << "\\n"; break;
++            case '\r': out << "\\r"; break;
++            case '\t': out << "\\t"; break;
++            default:
++                if (ch < 0x20) {
++                    out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << (int) ch
++                        << std::dec << std::setfill(' ');
++                } else {
++                    out << ch;
++                }
++                break;
++        }
++    }
++    return out.str();
++}
++
++static void bitnet_rs_write_json_number(std::ostream & out, double value) {
++    if (std::isfinite(value)) {
++        out << std::setprecision(9) << value;
++    } else {
++        out << "null";
++    }
++}
++
++static void bitnet_rs_write_logit_row(
++    std::ostream & out,
++    llama_context * ctx,
++    const float * logits,
++    int n_vocab,
++    llama_token token,
++    double softmax_max,
++    double softmax_sum,
++    bool first
++) {
++    if (!first) {
++        out << ",";
++    }
++    const double logit = token >= 0 && token < n_vocab ? logits[token] : std::numeric_limits<double>::quiet_NaN();
++    const double probability = token >= 0 && token < n_vocab && softmax_sum > 0.0
++        ? std::exp(logit - softmax_max) / softmax_sum
++        : std::numeric_limits<double>::quiet_NaN();
++    size_t rank = 1;
++    if (token >= 0 && token < n_vocab) {
++        for (int i = 0; i < n_vocab; ++i) {
++            if (logits[i] > logits[token]) {
++                rank++;
++            }
++        }
++    }
++    out << "{\"token_id\":" << token
++        << ",\"token_piece\":\"" << bitnet_rs_json_escape(common_token_to_piece(ctx, token)) << "\""
++        << ",\"logit\":";
++    bitnet_rs_write_json_number(out, logit);
++    out << ",\"softmax_probability\":";
++    bitnet_rs_write_json_number(out, probability);
++    out << ",\"softmax_rank\":" << rank << "}";
++}
++
++static void bitnet_rs_dump_first_token_logits(
++    llama_context * ctx,
++    const llama_model * model,
++    const std::vector<llama_token> & prompt_tokens,
++    const char * path
++) {
++    if (path == nullptr || path[0] == '\0') {
++        return;
++    }
++    const float * logits = llama_get_logits_ith(ctx, -1);
++    if (logits == nullptr) {
++        return;
++    }
++    const int n_vocab = llama_n_vocab(model);
++    if (n_vocab <= 0) {
++        return;
++    }
++
++    double max_logit = logits[0];
++    for (int i = 1; i < n_vocab; ++i) {
++        max_logit = std::max(max_logit, (double) logits[i]);
++    }
++    double softmax_sum = 0.0;
++    for (int i = 0; i < n_vocab; ++i) {
++        softmax_sum += std::exp((double) logits[i] - max_logit);
++    }
++
++    std::vector<int> top_tokens;
++    top_tokens.reserve(n_vocab);
++    for (int i = 0; i < n_vocab; ++i) {
++        top_tokens.push_back(i);
++    }
++    const int top_k = std::min(16, n_vocab);
++    std::partial_sort(
++        top_tokens.begin(),
++        top_tokens.begin() + top_k,
++        top_tokens.end(),
++        [logits](int left, int right) {
++            return logits[left] > logits[right];
++        });
++
++    std::ofstream out(path, std::ios::out | std::ios::trunc);
++    if (!out.is_open()) {
++        return;
++    }
++    out << "{"
++        << "\"receipt_type\":\"bitnet_reference_first_token_logits\","
++        << "\"diagnostic_only\":true,"
++        << "\"claim_allowed\":false,"
++        << "\"source\":\"BITNET_RS_REFERENCE_FIRST_TOKEN_LOGITS\","
++        << "\"prompt_token_count\":" << prompt_tokens.size() << ","
++        << "\"n_vocab\":" << n_vocab << ",";
++    out << "\"probe_logits\":[";
++    const llama_token probe_tokens[] = {17, 58428};
++    for (size_t i = 0; i < 2; ++i) {
++        bitnet_rs_write_logit_row(out, ctx, logits, n_vocab, probe_tokens[i], max_logit, softmax_sum, i == 0);
++    }
++    out << "],\"top_logits\":[";
++    for (int i = 0; i < top_k; ++i) {
++        bitnet_rs_write_logit_row(out, ctx, logits, n_vocab, top_tokens[i], max_logit, softmax_sum, i == 0);
++    }
++    out << "],\"not_claims\":["
++        << "\"reference_parity_promotion\","
++        << "\"a770_semantic_quality_proven\","
++        << "\"selected_attention_residency\","
++        << "\"full_device_residency\""
++        << "]}";
++}
++
+ static void write_logfile(
+     const llama_context * ctx, const common_params & params, const llama_model * model,
+     const std::vector<llama_token> & input_tokens, const std::string & output,
+@@ -515,6 +655,8 @@ int main(int argc, char ** argv) {
+     display = params.display_prompt;
+ 
+     std::vector<llama_token> embd;
++    const char * bitnet_rs_first_token_logits_path = std::getenv("BITNET_RS_REFERENCE_FIRST_TOKEN_LOGITS");
++    bool bitnet_rs_first_token_logits_dumped = false;
+ 
+     // tokenized antiprompts
+     std::vector<std::vector<llama_token>> antiprompt_ids;
+@@ -679,6 +821,11 @@ int main(int argc, char ** argv) {
+                 LOG_DBG("saved session to %s\n", path_session.c_str());
+             }
+ 
++            if (!bitnet_rs_first_token_logits_dumped) {
++                bitnet_rs_dump_first_token_logits(ctx, model, embd_inp, bitnet_rs_first_token_logits_path);
++                bitnet_rs_first_token_logits_dumped = true;
++            }
++
+             const llama_token id = common_sampler_sample(smpl, ctx, -1);
+ 
+             common_sampler_accept(smpl, id, /* accept_grammar= */ true);
+
