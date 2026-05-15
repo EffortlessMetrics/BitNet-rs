@@ -1527,6 +1527,21 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_validates() {
 }
 
 #[test]
+fn dense_gguf_qwen_warm_session_accepts_qwen3_06b_model_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["model"]["id"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model"]["file"] = json!("Qwen3-0.6B-Q8_0.gguf");
+    receipt["model"]["architecture"] = json!("qwen3");
+    receipt["model"]["sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["parity"]["fixture_id"] = json!("qwen3-0.6b-instruct-q8_0-warm-session-greedy");
+
+    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
+}
+
+#[test]
 fn dense_gguf_qwen_warm_session_rejects_short_decode_only_receipt() {
     let receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
 

@@ -1,0 +1,13 @@
+timestamp = "2026-05-15T20:52:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-006"
+event = "pr_open"
+pr = 4985
+head_sha = "2c776bfd3285077348e1df5d3ca5505425cefb17"
+actor = "codex"
+
+notes = [
+  "Opened PR #4985 for the Qwen3 0.6B warm-session strict RTX 5070 Ti CUDA proof.",
+  "The PR records a bounded three-turn, 24-token greedy warm-session receipt for the pinned Qwen3 0.6B Q8_0 artifact.",
+  "The PR keeps Qwen3 ask/chat product UX, speedup, server readiness, full-residency, broad dense GGUF readiness, and BitNet QK256 claims false.",
+]
