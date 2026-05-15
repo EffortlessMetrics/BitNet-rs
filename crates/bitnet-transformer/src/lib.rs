@@ -9,19 +9,65 @@ use candle_nn::{LayerNorm, Linear, VarBuilder};
 fn trace_tensor_record(
     name: &str,
     tensor: &Tensor,
+    seq: usize,
     layer: Option<isize>,
     stage: &str,
 ) -> Result<()> {
-    bitnet_trace::dump_trace(name, tensor, Some(0), layer, Some(stage)).map_err(BitNetError::from)
+    if trace_target_seq().is_some_and(|target| target != seq) {
+        return Ok(());
+    }
+    bitnet_trace::dump_trace(name, tensor, Some(seq), layer, Some(stage)).map_err(BitNetError::from)
 }
 
 #[cfg(feature = "trace")]
-fn trace_layer0_tensor(layer_idx: usize, stage: &str, tensor: &Tensor) -> Result<()> {
+fn trace_tensor_token_axis_record(
+    suffix: &str,
+    tensor: &Tensor,
+    base_seq: usize,
+    token_axis: usize,
+    layer: Option<isize>,
+    stage: &str,
+) -> Result<()> {
+    let target = trace_target_seq();
+    if let Some(target_seq) = target {
+        let Some(&seq_len) = tensor.dims().get(token_axis) else {
+            return Ok(());
+        };
+        let Some(local_seq) = target_seq.checked_sub(base_seq) else {
+            return Ok(());
+        };
+        if local_seq >= seq_len {
+            return Ok(());
+        }
+        let sliced = tensor.narrow(token_axis, local_seq, 1)?;
+        let name = format!("t{target_seq}/{suffix}");
+        bitnet_trace::dump_trace(&name, &sliced, Some(target_seq), layer, Some(stage))
+            .map_err(BitNetError::from)
+    } else {
+        let name = format!("t{base_seq}/{suffix}");
+        bitnet_trace::dump_trace(&name, tensor, Some(base_seq), layer, Some(stage))
+            .map_err(BitNetError::from)
+    }
+}
+
+#[cfg(feature = "trace")]
+fn trace_layer0_tensor(
+    layer_idx: usize,
+    base_seq: usize,
+    token_axis: usize,
+    stage: &str,
+    tensor: &Tensor,
+) -> Result<()> {
     if layer_idx == 0 {
-        let trace_name = format!("t0/blk0/{stage}");
-        trace_tensor_record(&trace_name, tensor, Some(0), stage)?;
+        let suffix = format!("blk0/{stage}");
+        trace_tensor_token_axis_record(&suffix, tensor, base_seq, token_axis, Some(0), stage)?;
     }
     Ok(())
+}
+
+#[cfg(feature = "trace")]
+fn trace_target_seq() -> Option<usize> {
+    std::env::var("BITNET_TRACE_TARGET_SEQ").ok()?.parse().ok()
 }
 
 /// Debug helper for tensor statistics (only runs if DEBUG_ATTN env var is set)
@@ -373,6 +419,7 @@ impl MultiHeadAttention {
         x: &Tensor,
         kv_cache: Option<&mut LayerKVCache>,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
+        _trace_base_seq: usize,
     ) -> Result<Tensor> {
         let (batch_size, seq_len, _) = x.dims3()?;
 
@@ -387,9 +434,9 @@ impl MultiHeadAttention {
 
         #[cfg(feature = "trace")]
         {
-            trace_layer0_tensor(self.layer_idx, "attention_q", &q_proj_out)?;
-            trace_layer0_tensor(self.layer_idx, "attention_k", &k_proj_out)?;
-            trace_layer0_tensor(self.layer_idx, "attention_v", &v_proj_out)?;
+            trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "attention_q", &q_proj_out)?;
+            trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "attention_k", &k_proj_out)?;
+            trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "attention_v", &v_proj_out)?;
         }
 
         // Probe A3: Q/K/V projection RMS (layer 0, step 0 only)
@@ -421,15 +468,15 @@ impl MultiHeadAttention {
         // Tracepoint 3: Q projection output (layer-specific)
         #[cfg(feature = "trace")]
         {
-            let trace_name = format!("t0/blk{}/q_proj", self.layer_idx);
-            bitnet_trace::dump_trace(
-                &trace_name,
+            let trace_suffix = format!("blk{}/q_proj", self.layer_idx);
+            trace_tensor_token_axis_record(
+                &trace_suffix,
                 &q_proj_out,
-                Some(0),
+                _trace_base_seq,
+                1,
                 Some(self.layer_idx as isize),
-                Some("q_proj"),
-            )
-            .map_err(BitNetError::from)?;
+                "q_proj",
+            )?;
         }
 
         let q = q_proj_out
@@ -613,15 +660,15 @@ impl MultiHeadAttention {
         // Tracepoint 4: Attention scores post-softmax (layer-specific)
         #[cfg(feature = "trace")]
         {
-            let trace_name = format!("t0/blk{}/attn_scores_softmax", self.layer_idx);
-            bitnet_trace::dump_trace(
-                &trace_name,
+            let trace_suffix = format!("blk{}/attn_scores_softmax", self.layer_idx);
+            trace_tensor_token_axis_record(
+                &trace_suffix,
                 &attn_weights,
-                Some(0),
+                _trace_base_seq,
+                2,
                 Some(self.layer_idx as isize),
-                Some("attn_scores_softmax"),
-            )
-            .map_err(BitNetError::from)?;
+                "attn_scores_softmax",
+            )?;
         }
 
         // Debug attention weights and row sums
@@ -635,7 +682,13 @@ impl MultiHeadAttention {
 
         let attn_value_mix = attn_weights.matmul(&v_expanded)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "attention_value_mix", &attn_value_mix)?;
+        trace_layer0_tensor(
+            self.layer_idx,
+            _trace_base_seq,
+            2,
+            "attention_value_mix",
+            &attn_value_mix,
+        )?;
 
         // Reshape and project output
         let attn_output = attn_value_mix.transpose(1, 2)?.reshape(&[
@@ -648,11 +701,17 @@ impl MultiHeadAttention {
             None => attn_output,
         };
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_attention_subnorm", &attn_output)?;
+        trace_layer0_tensor(
+            self.layer_idx,
+            _trace_base_seq,
+            1,
+            "post_attention_subnorm",
+            &attn_output,
+        )?;
 
         let output = self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_o_proj", &output)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_o_proj", &output)?;
         Ok(output)
     }
 
@@ -773,10 +832,11 @@ impl FeedForward {
         &self,
         x: &Tensor,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
+        _trace_base_seq: usize,
     ) -> Result<Tensor> {
         let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_ffn_gate_proj", &gate)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_gate_proj", &gate)?;
 
         // MLP gating diagnostics (point 3 of user's plan)
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
@@ -787,7 +847,7 @@ impl FeedForward {
 
         let gate = feed_forward_activation(self.activation_type, &gate)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_ffn_gate_activation", &gate)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_gate_activation", &gate)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(activation_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -801,7 +861,7 @@ impl FeedForward {
 
         let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_ffn_up_proj", &up)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_up_proj", &up)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -811,14 +871,14 @@ impl FeedForward {
 
         let hidden = gate.mul(&up)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_swiglu", &hidden)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_swiglu", &hidden)?;
 
         let hidden = match &self.sub_layernorm {
             Some(norm) => norm.forward(&hidden)?,
             None => hidden,
         };
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_ffn_subnorm", &hidden)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_subnorm", &hidden)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -832,7 +892,7 @@ impl FeedForward {
 
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.layer_idx, "post_down_proj", &output)?;
+        trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_down_proj", &output)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -934,6 +994,8 @@ impl TransformerBlock {
         kv_cache: Option<&mut LayerKVCache>,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
+        let _trace_base_seq = kv_cache.as_ref().map(|cache| cache.seq_len).unwrap_or(0);
+
         // Debug input activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
@@ -994,15 +1056,15 @@ impl TransformerBlock {
         // Tracepoint 2: Attention norm output (layer-specific)
         #[cfg(feature = "trace")]
         {
-            let trace_name = format!("t0/blk{}/attn_norm", self.attention.layer_idx);
-            bitnet_trace::dump_trace(
-                &trace_name,
+            let trace_suffix = format!("blk{}/attn_norm", self.attention.layer_idx);
+            trace_tensor_token_axis_record(
+                &trace_suffix,
                 &x,
-                Some(0),
+                _trace_base_seq,
+                1,
                 Some(self.attention.layer_idx as isize),
-                Some("attn_norm"),
-            )
-            .map_err(BitNetError::from)?;
+                "attn_norm",
+            )?;
         }
 
         // Check norm output
@@ -1023,10 +1085,16 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.attention.forward(&x, kv_cache, raw_tensors)?;
+        let x = self.attention.forward(&x, kv_cache, raw_tensors, _trace_base_seq)?;
         let x = (x + residual)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.attention.layer_idx, "post_attention_residual", &x)?;
+        trace_layer0_tensor(
+            self.attention.layer_idx,
+            _trace_base_seq,
+            1,
+            "post_attention_residual",
+            &x,
+        )?;
 
         // Debug post-attention activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -1037,7 +1105,7 @@ impl TransformerBlock {
         // Pre-norm FFN
         let residual = &x;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.attention.layer_idx, "pre_ffn_norm", &x)?;
+        trace_layer0_tensor(self.attention.layer_idx, _trace_base_seq, 1, "pre_ffn_norm", &x)?;
 
         // RMSNorm diagnostics (Layer 0 only) - FFN norm
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1061,7 +1129,7 @@ impl TransformerBlock {
 
         let x = self.ffn_norm.forward(&x)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.attention.layer_idx, "post_ffn_norm", &x)?;
+        trace_layer0_tensor(self.attention.layer_idx, _trace_base_seq, 1, "post_ffn_norm", &x)?;
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1081,10 +1149,10 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.feed_forward.forward(&x, raw_tensors)?;
+        let x = self.feed_forward.forward(&x, raw_tensors, _trace_base_seq)?;
         let x = (x + residual)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.attention.layer_idx, "post_layer", &x)?;
+        trace_layer0_tensor(self.attention.layer_idx, _trace_base_seq, 1, "post_layer", &x)?;
 
         // Debug post-FFN activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -1436,16 +1504,7 @@ impl TransformerModel {
         // Tracepoint 1: Embeddings output (after embed, before layers)
         #[cfg(feature = "trace")]
         {
-            use bitnet_trace::dump_trace;
-            // Extract first token's embedding for tracing [B, 1, H]
-            let first_token_emb = hidden.narrow(1, 0, 1)?;
-            let _ = dump_trace(
-                "embeddings",
-                &first_token_emb,
-                Some(0),            // seq=0 (prefill step)
-                Some(-1),           // layer=-1 (pre-layer operation)
-                Some("embeddings"), // stage name
-            );
+            trace_tensor_token_axis_record("embeddings", &hidden, 0, 1, Some(-1), "embeddings")?;
         }
 
         // Create per-layer KV cache so that rotary/absolute positional
@@ -1465,14 +1524,14 @@ impl TransformerModel {
             // Tracepoint: All layers output for this position
             #[cfg(feature = "trace")]
             {
-                use bitnet_trace::dump_trace;
-                let _ = dump_trace(
-                    &format!("t{}_all_layers_out", t),
+                let trace_name = format!("t{t}/all_layers_out");
+                trace_tensor_record(
+                    &trace_name,
                     &step_hidden,
-                    Some(t),                // seq=t (current position)
-                    Some(-2),               // layer=-2 (post-all-layers)
-                    Some("all_layers_out"), // stage name
-                );
+                    t,
+                    Some(-2),         // layer=-2 (post-all-layers)
+                    "all_layers_out", // stage name
+                )?;
             }
 
             // Project to vocabulary logits for this step.
@@ -1481,14 +1540,14 @@ impl TransformerModel {
             // Trace logits for this position
             #[cfg(feature = "trace")]
             {
-                use bitnet_trace::dump_trace;
-                let _ = dump_trace(
-                    &format!("t{}_logits", t),
+                let trace_name = format!("t{t}/logits");
+                trace_tensor_record(
+                    &trace_name,
                     &step_logits,
-                    Some(t),        // seq=t (current position)
-                    Some(-1),       // layer=-1 (post-layers stage)
-                    Some("logits"), // stage name
-                );
+                    t,
+                    Some(-1), // layer=-1 (post-layers stage)
+                    "logits", // stage name
+                )?;
             }
 
             logits_steps.push(step_logits);
@@ -1510,16 +1569,7 @@ impl TransformerModel {
         // Tracepoint 5: Final logits (first token only)
         #[cfg(feature = "trace")]
         {
-            // Extract first token's logits for tracing [B, 1, V]
-            let first_token_logits = logits.narrow(1, 0, 1)?;
-            bitnet_trace::dump_trace(
-                "t0/logits",
-                &first_token_logits,
-                Some(0),
-                Some(-1),
-                Some("logits"),
-            )
-            .map_err(BitNetError::from)?;
+            trace_tensor_token_axis_record("logits", &logits, 0, 1, Some(-1), "logits")?;
         }
 
         Ok(logits)
@@ -1531,15 +1581,23 @@ impl TransformerModel {
     /// Caller should pass owned tensor or use `.clone()` explicitly if needed.
     pub fn forward(&self, hidden: Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
         let mut x = hidden; // Take ownership - no clone needed!
+        let _trace_base_seq = kv_cache
+            .as_ref()
+            .and_then(|cache| cache.layers.first().map(|layer| layer.seq_len))
+            .unwrap_or(0);
 
         // Tracepoint 1: Embeddings (incremental path - single token)
         // This captures the embedding for the current token being processed
         #[cfg(feature = "trace")]
         {
-            // For incremental path, hidden is already [B, H] (single token)
-            // Trace it directly without narrowing (unlike forward_full which has [B, T, H])
-            bitnet_trace::dump_trace("t0/embeddings", &x, Some(0), Some(-1), Some("embeddings"))
-                .map_err(BitNetError::from)?;
+            trace_tensor_token_axis_record(
+                "embeddings",
+                &x,
+                _trace_base_seq,
+                1,
+                Some(-1),
+                "embeddings",
+            )?;
         }
 
         // Debug input activation norm
@@ -1563,7 +1621,14 @@ impl TransformerModel {
 
         let normalized = self.norm.forward(&x)?;
         #[cfg(feature = "trace")]
-        trace_tensor_record("t0/final_norm", &normalized, Some(-1), "final_norm")?;
+        trace_tensor_token_axis_record(
+            "final_norm",
+            &normalized,
+            _trace_base_seq,
+            1,
+            Some(-1),
+            "final_norm",
+        )?;
         if std::env::var("DEBUG_ATTN").is_ok()
             && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
@@ -1661,16 +1726,9 @@ impl TransformerModel {
                 // This captures the final logits for the current token [B, V]
                 #[cfg(feature = "trace")]
                 {
-                    // For incremental path, logits are [B, V] (single token)
-                    // Trace directly without narrowing (unlike forward_full which has [B, T, V])
-                    bitnet_trace::dump_trace(
-                        "t0/logits",
-                        &logits,
-                        Some(0),
-                        Some(-1),
-                        Some("logits"),
-                    )
-                    .map_err(BitNetError::from)?;
+                    let trace_seq = trace_target_seq().unwrap_or(0);
+                    let trace_name = format!("t{trace_seq}/logits");
+                    trace_tensor_record(&trace_name, &logits, trace_seq, Some(-1), "logits")?;
                 }
 
                 Ok(logits)

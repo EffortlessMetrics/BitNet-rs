@@ -799,13 +799,22 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
     let plan_read_success = plan_result.is_ok();
     let plan = plan_result.unwrap_or(Value::Null);
 
-    let cpu_argv = if plan_read_success { rust_command_argv(&plan, "cpu_argv").ok() } else { None };
-    let a770_argv =
-        if plan_read_success { rust_command_argv(&plan, "a770_argv").ok() } else { None };
+    let (cpu_argv, cpu_command_key) = if plan_read_success {
+        preferred_rust_trace_argv(&plan, "cpu_first_token_logit_argv", "cpu_argv")
+    } else {
+        (None, None)
+    };
+    let (a770_argv, a770_command_key) = if plan_read_success {
+        preferred_rust_trace_argv(&plan, "a770_first_token_logit_argv", "a770_argv")
+    } else {
+        (None, None)
+    };
     let (cpu_argv, cpu_trace_feature_injected) =
         cpu_argv.map(|argv| ensure_trace_feature(&argv)).unzip();
     let (a770_argv, a770_trace_feature_injected) =
         a770_argv.map(|argv| ensure_trace_feature(&argv)).unzip();
+    let trace_target_seq =
+        if plan_read_success { rust_trace_target_seq_from_plan(&plan) } else { None };
 
     let mut blocked_reasons = Vec::<String>::new();
     if !plan_path.is_file() {
@@ -840,14 +849,24 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
 
     let can_run_cpu = blocked_reasons.is_empty();
     let cpu = if can_run_cpu {
-        run_rust_trace_capture("cpu", cpu_argv.as_deref().unwrap_or(&[]), &cpu_trace_dir)?
+        run_rust_trace_capture(
+            "cpu",
+            cpu_argv.as_deref().unwrap_or(&[]),
+            &cpu_trace_dir,
+            trace_target_seq,
+        )?
     } else {
         skipped_rust_trace_capture("cpu", cpu_argv.as_deref(), &cpu_trace_dir)
     };
 
     let can_run_a770 = blocked_reasons.is_empty() && !args.skip_a770;
     let a770 = if can_run_a770 {
-        run_rust_trace_capture("strict_a770", a770_argv.as_deref().unwrap_or(&[]), &a770_trace_dir)?
+        run_rust_trace_capture(
+            "strict_a770",
+            a770_argv.as_deref().unwrap_or(&[]),
+            &a770_trace_dir,
+            trace_target_seq,
+        )?
     } else {
         if args.skip_a770 {
             blocked_reasons.push("strict_a770_trace_capture_skipped".to_string());
@@ -892,6 +911,10 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "plan_json_valid": plan_read_success,
             "cpu_command_present": cpu_argv.is_some(),
             "a770_command_present": a770_argv.is_some(),
+            "cpu_command_key": cpu_command_key,
+            "a770_command_key": a770_command_key,
+            "trace_target_seq": trace_target_seq,
+            "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
             "cpu_trace_feature_injected": cpu_trace_feature_injected.unwrap_or(false),
             "a770_trace_feature_injected": a770_trace_feature_injected.unwrap_or(false),
             "cpu_trace_dir_prepare": cpu_prepare,
@@ -1895,6 +1918,26 @@ fn rust_command_argv(plan: &Value, key: &str) -> Result<Vec<String>> {
         .collect()
 }
 
+fn preferred_rust_trace_argv(
+    plan: &Value,
+    preferred_key: &'static str,
+    fallback_key: &'static str,
+) -> (Option<Vec<String>>, Option<&'static str>) {
+    if let Ok(argv) = rust_command_argv(plan, preferred_key) {
+        return (Some(argv), Some(preferred_key));
+    }
+    match rust_command_argv(plan, fallback_key) {
+        Ok(argv) => (Some(argv), Some(fallback_key)),
+        Err(_) => (None, None),
+    }
+}
+
+fn rust_trace_target_seq_from_plan(plan: &Value) -> Option<usize> {
+    let token_count =
+        plan.pointer("/prompt_identity/prompt_token_count").and_then(Value::as_u64)?;
+    usize::try_from(token_count.checked_sub(1)?).ok()
+}
+
 fn ensure_trace_feature(argv: &[String]) -> (Vec<String>, bool) {
     let mut argv = argv.to_vec();
     let Some(features_index) = argv.iter().position(|arg| arg == "--features") else {
@@ -2082,7 +2125,12 @@ fn run_reference_with_sidecar(argv: &[String], sidecar: &Path) -> Result<Command
     run_command(&mut command)
 }
 
-fn run_rust_trace_capture(label: &str, argv: &[String], trace_dir: &Path) -> Result<Value> {
+fn run_rust_trace_capture(
+    label: &str,
+    argv: &[String],
+    trace_dir: &Path,
+    trace_target_seq: Option<usize>,
+) -> Result<Value> {
     let executable = argv.first().context("empty Rust trace command")?;
     let mut command = Command::new(executable);
     command
@@ -2091,12 +2139,17 @@ fn run_rust_trace_capture(label: &str, argv: &[String], trace_dir: &Path) -> Res
         .env("BITNET_DETERMINISTIC", "1")
         .env("BITNET_SEED", "0")
         .stdin(Stdio::null());
+    if let Some(trace_target_seq) = trace_target_seq {
+        command.env("BITNET_TRACE_TARGET_SEQ", trace_target_seq.to_string());
+    }
     let capture = run_command(&mut command)?;
     let trace = summarize_rust_trace_dir(trace_dir);
     Ok(json!({
         "label": label,
         "attempted": true,
         "trace_dir": path_to_string(trace_dir),
+        "trace_target_seq": trace_target_seq,
+        "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
         "argv": argv,
         "command": capture_json(Some(&capture)),
         "trace": trace,
@@ -2673,6 +2726,37 @@ mod tests {
 
         assert!(!injected);
         assert_eq!(updated, argv);
+    }
+
+    #[test]
+    fn rust_trace_capture_prefers_first_token_command_and_targets_last_prompt_token() {
+        let plan = json!({
+            "prompt_identity": {
+                "prompt_token_count": 18
+            },
+            "rust_commands": {
+                "cpu_argv": ["cargo", "run", "--features", "cpu"],
+                "cpu_first_token_logit_argv": ["cargo", "run", "--features", "cpu", "--", "--max-new-tokens", "1"]
+            }
+        });
+
+        let (argv, key) =
+            preferred_rust_trace_argv(&plan, "cpu_first_token_logit_argv", "cpu_argv");
+
+        assert_eq!(key, Some("cpu_first_token_logit_argv"));
+        assert_eq!(
+            argv.unwrap(),
+            vec![
+                "cargo".to_string(),
+                "run".to_string(),
+                "--features".to_string(),
+                "cpu".to_string(),
+                "--".to_string(),
+                "--max-new-tokens".to_string(),
+                "1".to_string()
+            ]
+        );
+        assert_eq!(rust_trace_target_seq_from_plan(&plan), Some(17));
     }
 
     #[test]
