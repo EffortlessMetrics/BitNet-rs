@@ -1,6 +1,6 @@
 schema = 1
 artifact_kind = "model_coverage_matrix"
-updated = "2026-05-11"
+updated = "2026-05-15"
 work_item = "MODEL-COVERAGE-005"
 claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
 
@@ -305,13 +305,14 @@ claim_boundary = "Q4_K_M is useful storage/reference coverage and Apple M4 metad
 id = "dense_qwen3_06b_q8_candidate"
 model_class = "dense_slm"
 family = "qwen3"
-artifact_kind = "gguf_q8_0_candidate"
+artifact_kind = "gguf_q8_0_contract"
+contract_id = "qwen3_0_6b_q8_0"
 capability_id = "qwen3-0.6b-instruct-q8_0"
-status = "registered_candidate"
-current_tier = "registered"
+status = "artifact_contract_recorded"
+current_tier = "structurally_valid"
 verifier_surface = "bitnet model verify qwen3-0.6b-instruct-q8_0"
-tokenizer_authority = "pending_qwen3_contract"
-prompt_authority = "pending_qwen3_chat_template_contract"
+tokenizer_authority = "gguf_metadata_present_contract_only"
+prompt_authority = "qwen3_chatml_required_not_answer_ready"
 cpu_reference = "candidate_reference_required"
 accelerator_routes = []
 required_receipts = [
@@ -322,18 +323,19 @@ required_receipts = [
   "model_boundary_fixtures",
 ]
 forbidden_claims = [
+  "cpu_answer_ready",
   "cuda_answer_ready",
   "dense_regular_llm_cuda_proof",
   "bitnet_packed_i2s_qk256_proof",
   "speedup",
   "server_ready",
 ]
-next_proof = "Qwen3 artifact contract, tokenizer/prompt authority, CPU sanity, dense all-layer plan, and model-boundary fixtures."
-claim_boundary = "Qwen3 0.6B is registered as a future dense SLM coverage row and does not inherit Qwen2.5 CUDA answer receipts."
+next_proof = "Qwen3 CPU answer sanity or a precise blocker receipt using the exact artifact contract, then dense all-layer plan and model-boundary fixtures."
+claim_boundary = "Qwen3 0.6B Q8_0 has an exact artifact contract and structural metadata only. It does not inherit Qwen2.5 CUDA answer receipts and has no CPU answer, CUDA, speed, server, or BitNet QK256 claim."
 
   [entry.claims]
   registered = true
-  structurally_valid = false
+  structurally_valid = true
   reference_good = false
   cpu_answer_ready = false
   accelerator_answer_ready = false
