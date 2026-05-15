@@ -179,10 +179,14 @@ pub struct ServerSharedEngineReceipt {
     pub receipt_kind: String,
     pub request_id: String,
     pub runtime_path: String,
+    pub runtime_api: String,
     pub requested_model: String,
     pub active_model_id: String,
     pub active_model_path: String,
+    pub model_coverage_row: Option<String>,
+    pub model_coverage_tier: Option<String>,
     pub selected_backend: String,
+    pub requested_backend: String,
     pub selected_route: String,
     pub prompt_template: String,
     pub tokenizer_authority: String,
@@ -190,13 +194,27 @@ pub struct ServerSharedEngineReceipt {
     pub fallback_used: bool,
     pub simulated_inference: bool,
     pub streaming: bool,
+    pub generated_text_non_empty: bool,
     pub prompt_tokens: usize,
     pub completion_tokens: usize,
     pub total_ms: u64,
+    pub quality_gate: ServerSharedEngineQualityGate,
+    pub server_smoke_response_claimed: bool,
+    pub server_ready_claimed: bool,
     pub speedup_claim: bool,
     pub full_cuda_residency_claimed: bool,
     pub dense_regular_llm_cuda_inference_claimed: bool,
     pub bitnet_packed_i2s_qk256_proof: bool,
+}
+
+/// Bounded quality gate attached to a server shared-engine receipt.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineQualityGate {
+    pub gate: String,
+    pub passed: bool,
+    pub generated_text_non_empty: bool,
+    pub utf8_valid: bool,
+    pub broad_chat_quality_claimed: bool,
 }
 
 /// Model loading request
@@ -818,6 +836,7 @@ async fn chat_completions_handler(
         &state.config.server.default_device,
         &prompt_template,
         &usage,
+        &generated,
         total_ms,
     );
     let response = ChatCompletionResponse {
@@ -896,30 +915,116 @@ fn build_server_shared_engine_receipt(
     configured_device: &DeviceConfig,
     prompt_template: &str,
     usage: &ChatCompletionUsage,
+    generated_text: &str,
     total_ms: u64,
 ) -> ServerSharedEngineReceipt {
+    let selected_backend = selected_backend_label(configured_device, active_model);
+    let route = server_receipt_route(configured_device, request, active_model);
+    let coverage = server_receipt_model_coverage(&route, request, active_model);
+    let generated_text_non_empty = !generated_text.trim().is_empty();
+    let server_smoke_response_claimed = generated_text_non_empty
+        && selected_backend == "nvidia-rtx-5070-ti-cuda"
+        && route == "dense_regular_llm_cuda";
+
     ServerSharedEngineReceipt {
         receipt_kind: "server_shared_engine_chat_completion".to_string(),
         request_id: request_id.to_string(),
         runtime_path: "shared_local_inference_engine".to_string(),
+        runtime_api: runtime_api_label(configured_device, active_model),
         requested_model: request.model.clone(),
         active_model_id: active_model.model_id.clone(),
         active_model_path: active_model.model_path.clone(),
-        selected_backend: selected_backend_label(configured_device, active_model),
-        selected_route: "shared_validated_local_inference_engine".to_string(),
+        model_coverage_row: coverage.as_ref().map(|coverage| coverage.row.to_string()),
+        model_coverage_tier: coverage.as_ref().map(|coverage| coverage.tier.to_string()),
+        requested_backend: configured_device.backend_label(),
+        selected_backend,
+        selected_route: route,
         prompt_template: prompt_template.to_string(),
         tokenizer_authority: "active_model_tokenizer".to_string(),
         prompt_authority: "server_chat_template".to_string(),
         fallback_used: false,
         simulated_inference: false,
         streaming: request.stream.unwrap_or(false),
+        generated_text_non_empty,
         prompt_tokens: usage.prompt_tokens,
         completion_tokens: usage.completion_tokens,
         total_ms,
+        quality_gate: ServerSharedEngineQualityGate {
+            gate: "server_non_empty_utf8_response".to_string(),
+            passed: generated_text_non_empty,
+            generated_text_non_empty,
+            utf8_valid: true,
+            broad_chat_quality_claimed: false,
+        },
+        server_smoke_response_claimed,
+        server_ready_claimed: false,
         speedup_claim: false,
         full_cuda_residency_claimed: false,
-        dense_regular_llm_cuda_inference_claimed: false,
+        dense_regular_llm_cuda_inference_claimed: server_smoke_response_claimed,
         bitnet_packed_i2s_qk256_proof: false,
+    }
+}
+
+struct ServerReceiptModelCoverage {
+    row: &'static str,
+    tier: &'static str,
+}
+
+fn server_receipt_route(
+    configured_device: &DeviceConfig,
+    request: &ChatCompletionRequest,
+    active_model: &model_manager::ModelMetadata,
+) -> String {
+    if matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
+        && is_dense_qwen25_q8_model(request, active_model)
+    {
+        "dense_regular_llm_cuda".to_string()
+    } else {
+        "shared_validated_local_inference_engine".to_string()
+    }
+}
+
+fn server_receipt_model_coverage(
+    route: &str,
+    request: &ChatCompletionRequest,
+    active_model: &model_manager::ModelMetadata,
+) -> Option<ServerReceiptModelCoverage> {
+    if route == "dense_regular_llm_cuda" && is_dense_qwen25_q8_model(request, active_model) {
+        return Some(ServerReceiptModelCoverage {
+            row: "dense_qwen25_05b_q8_cuda",
+            tier: "product_cli_ready",
+        });
+    }
+    None
+}
+
+fn is_dense_qwen25_q8_model(
+    request: &ChatCompletionRequest,
+    active_model: &model_manager::ModelMetadata,
+) -> bool {
+    let mut text = String::new();
+    text.push_str(&request.model);
+    text.push(' ');
+    text.push_str(&active_model.model_id);
+    text.push(' ');
+    text.push_str(&active_model.model_path);
+    text.push(' ');
+    text.push_str(&active_model.quantization_type);
+    let normalized = text.to_ascii_lowercase();
+
+    (normalized.contains("qwen2.5") || normalized.contains("qwen25"))
+        && normalized.contains("0.5")
+        && (normalized.contains("q8_0") || normalized.contains("q8"))
+}
+
+fn runtime_api_label(
+    configured_device: &DeviceConfig,
+    active_model: &model_manager::ModelMetadata,
+) -> String {
+    if selected_backend_label(configured_device, active_model).contains("cuda") {
+        "cuda".to_string()
+    } else {
+        active_model.device.clone()
     }
 }
 
@@ -1529,19 +1634,29 @@ mod tests {
             &DeviceConfig::Gpu(0),
             "chatml",
             &usage,
+            "4",
             25,
         );
 
         assert_eq!(receipt.receipt_kind, "server_shared_engine_chat_completion");
         assert_eq!(receipt.runtime_path, "shared_local_inference_engine");
+        assert_eq!(receipt.runtime_api, "Cuda(0)");
         assert_eq!(receipt.selected_route, "shared_validated_local_inference_engine");
+        assert_eq!(receipt.requested_backend, "gpu");
         assert_eq!(receipt.selected_backend, "Cuda(0)");
+        assert!(receipt.model_coverage_row.is_none());
         assert!(!receipt.fallback_used);
         assert!(!receipt.simulated_inference);
         assert!(!receipt.streaming);
+        assert!(receipt.generated_text_non_empty);
+        assert!(receipt.quality_gate.passed);
+        assert!(receipt.quality_gate.utf8_valid);
+        assert!(!receipt.quality_gate.broad_chat_quality_claimed);
         assert_eq!(receipt.prompt_tokens, 12);
         assert_eq!(receipt.completion_tokens, 4);
         assert_eq!(receipt.total_ms, 25);
+        assert!(!receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
         assert!(!receipt.speedup_claim);
         assert!(!receipt.full_cuda_residency_claimed);
         assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
@@ -1583,14 +1698,23 @@ mod tests {
             &DeviceConfig::NvidiaRtx5070TiCuda,
             "chatml",
             &usage,
+            "Working capital is current assets minus current liabilities.",
             25,
         );
 
         assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
-        assert_eq!(receipt.selected_route, "shared_validated_local_inference_engine");
+        assert_eq!(receipt.runtime_api, "cuda");
+        assert_eq!(receipt.requested_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.selected_route, "dense_regular_llm_cuda");
+        assert_eq!(receipt.model_coverage_row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(receipt.model_coverage_tier.as_deref(), Some("product_cli_ready"));
         assert!(!receipt.fallback_used);
+        assert!(receipt.generated_text_non_empty);
+        assert!(receipt.quality_gate.passed);
+        assert!(receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
         assert!(!receipt.speedup_claim);
-        assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(receipt.dense_regular_llm_cuda_inference_claimed);
         assert!(!receipt.bitnet_packed_i2s_qk256_proof);
     }
 }

@@ -317,7 +317,8 @@ fn backend_explanation(receipt: &Value) -> BackendExplanation {
 
 fn execution_plan_explanation(receipt: &Value) -> ExecutionPlanExplanation {
     ExecutionPlanExplanation {
-        selected_route: string_at(receipt, &["execution_plan", "selected_route"]),
+        selected_route: string_at(receipt, &["execution_plan", "selected_route"])
+            .or_else(|| string_at(receipt, &["selected_route"])),
         model_family: string_at(receipt, &["execution_plan", "model_family"]),
         quantization: string_at(receipt, &["execution_plan", "quantization"]),
         strict_cuda_ready: bool_at(receipt, &["execution_plan", "strict_cuda_ready"]),
@@ -333,6 +334,7 @@ fn quality_explanation(receipt: &Value) -> QualityExplanation {
     QualityExplanation {
         answer_quality_passed: bool_at(receipt, &["answer_quality", "passed"])
             .or_else(|| bool_at(receipt, &["quality", "passed"]))
+            .or_else(|| bool_at(receipt, &["quality_gate", "passed"]))
             .or_else(|| bool_at(receipt, &["quality", "garbage_filter_passed"]))
             .or_else(|| bool_at(receipt, &["benchmark", "quality_passed"])),
         benchmark_quality_passed: bool_at(receipt, &["benchmark", "quality_passed"]),
@@ -1489,6 +1491,60 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("not BitNet packed I2_S/QK256 proof"))
         );
+    }
+
+    #[test]
+    fn receipts_explain_links_server_smoke_receipt_to_dense_qwen_coverage() {
+        let receipt = json!({
+            "receipt_kind": "server_shared_engine_chat_completion",
+            "runtime_path": "shared_local_inference_engine",
+            "runtime_api": "cuda",
+            "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+            "active_model_id": "model-1",
+            "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+            "model_coverage_tier": "product_cli_ready",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "fallback_used": false,
+            "simulated_inference": false,
+            "generated_text_non_empty": true,
+            "quality_gate": {
+                "gate": "server_non_empty_utf8_response",
+                "passed": true,
+                "generated_text_non_empty": true,
+                "utf8_valid": true,
+                "broad_chat_quality_claimed": false
+            },
+            "server_smoke_response_claimed": true,
+            "server_ready_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false,
+            "dense_regular_llm_cuda_inference_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false
+        });
+
+        let explanation = explain_receipt(Path::new("server-smoke.json"), &receipt);
+
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(
+            explanation.backend.requested_backend.as_deref(),
+            Some("nvidia-rtx-5070-ti-cuda")
+        );
+        assert_eq!(
+            explanation.backend.selected_backend.as_deref(),
+            Some("nvidia-rtx-5070-ti-cuda")
+        );
+        assert_eq!(explanation.backend.runtime_api.as_deref(), Some("cuda"));
+        assert_eq!(explanation.backend.fallback_used, Some(false));
+        assert_eq!(explanation.quality.answer_quality_passed, Some(true));
+        assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
+        assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
+        assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
     }
 
     #[test]
