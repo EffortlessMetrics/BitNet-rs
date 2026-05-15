@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T12:43:36Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-003"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "model/cuda-qwen3-0_6b-all-layer-plan"
+pr = 4903
+head_sha = "30b8929ebefccdfc7274573aa30af11fcabbb2f4"
+merge_sha = "23bdbb8af760a2653c153006499724c73722b9ed"
+summary = "Marked CUDA-MODEL-003 merged after PR #4903 added the Qwen3 0.6B CUDA all-layer route-plan receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4903",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-cuda-all-layer-plan.json",
+]
+
+notes = [
+  "The merged PR records 28 transformer layers, 392 CUDA-routable transformer-block ops, zero unsupported transformer-block ops, and fallback_used=false for the all-layer route-plan scope.",
+  "The model-boundary gap for the tied LM head remains explicit and does not block transformer-block route coverage.",
+  "Qwen3 one-token CUDA execution, short decode, warm session, speedup, server readiness, full CUDA residency, and BitNet QK256 proof remain false.",
+  "CUDA-MODEL-004 remains the next Qwen3 CUDA step and must add the first strict one-token proof before any short-decode or warm-session CUDA claim starts.",
+]
