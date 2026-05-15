@@ -160,6 +160,86 @@ pub fn code_to_f32(code: u8) -> f32 {
     LUT[code as usize]
 }
 
+/// Reference-compatible nearest integer rule used by GGML activation quantization.
+///
+/// This mirrors the `nearest_int` bit trick used by the BitNet reference path
+/// before clamping to the signed i8 activation range.
+#[inline]
+pub fn nearest_int_reference(fval: f32) -> i32 {
+    assert!(
+        fval.abs() <= 4_194_303.0,
+        "nearest_int_reference expects |fval| <= 4194303, got {fval}"
+    );
+    let val = fval + 12_582_912.0;
+    let bits = val.to_bits() as i32;
+    (bits & 0x007f_ffff) - 0x0040_0000
+}
+
+/// Reference activation row quantization for GGML `I2_S` matmul.
+#[derive(Clone, Debug, PartialEq)]
+pub struct I2SActivationQuant {
+    pub values: Vec<i8>,
+    pub scale: f32,
+    pub sum: i32,
+}
+
+/// Quantize one dense activation row using the reference `quantize_row_i8_s` rule.
+///
+/// The returned `scale` is the reference activation scale `s = 127 / max_abs`.
+/// The matmul correction uses `(integer_dot - act_sum) / act_scale`.
+pub fn quantize_row_i8_s_reference(x: &[f32]) -> I2SActivationQuant {
+    let mut max_abs = 0.00001f32;
+    for &value in x {
+        max_abs = max_abs.max(value.abs());
+    }
+
+    let scale = 127.0 / max_abs;
+    let mut values = Vec::with_capacity(x.len());
+    let mut sum = 0i32;
+    for &value in x {
+        let q = nearest_int_reference(value * scale).clamp(-128, 127) as i8;
+        sum += i32::from(q);
+        values.push(q);
+    }
+
+    I2SActivationQuant { values, scale, sum }
+}
+
+/// Reference-compatible `I2_S` QK256 row GEMV with activation quantization.
+///
+/// This is a proof/oracle helper for the reference contract:
+/// `(integer_dot - act_sum) / act_scale * trailer_scale`.
+/// It is intentionally separate from the current runtime dispatch path.
+#[inline]
+pub fn gemv_qk256_row_activation_quantized_reference(
+    qs_row: &[u8],
+    x: &[f32],
+    cols: usize,
+    trailer_scale: f32,
+) -> f32 {
+    let expected_bytes = qk256_row_stride_bytes(cols)
+        .expect("QK256: row stride overflow should be impossible for in-memory row");
+
+    debug_assert_eq!(
+        qs_row.len(),
+        expected_bytes,
+        "I2S_QK256: row bytes mismatch: got {}, expected {} for {} cols",
+        qs_row.len(),
+        expected_bytes,
+        cols
+    );
+    debug_assert!(x.len() >= cols, "I2S_QK256: x too short: {} < {}", x.len(), cols);
+
+    let activation = quantize_row_i8_s_reference(&x[..cols]);
+    let mut integer_dot = 0i32;
+    for (col, &q) in activation.values.iter().enumerate().take(cols) {
+        let raw_code = i32::from(packed_code_at(qs_row, col));
+        integer_dot += raw_code * i32::from(q);
+    }
+
+    ((integer_dot - activation.sum) as f32) / activation.scale * trailer_scale
+}
+
 /// Extract one logical QK256 code from a Microsoft BitNet-packed row.
 ///
 /// Microsoft's `quantize_i2_s` groups each 128 logical values into 32 bytes.
@@ -619,6 +699,75 @@ mod tests {
         assert_eq!(code_to_f32(1), 0.0);
         assert_eq!(code_to_f32(2), 1.0);
         assert_eq!(code_to_f32(3), 2.0);
+    }
+
+    #[test]
+    fn nearest_int_reference_matches_ggml_rounding_edges() {
+        assert_eq!(nearest_int_reference(0.0), 0);
+        assert_eq!(nearest_int_reference(0.49), 0);
+        assert_eq!(nearest_int_reference(0.5), 0);
+        assert_eq!(nearest_int_reference(0.51), 1);
+        assert_eq!(nearest_int_reference(1.49), 1);
+        assert_eq!(nearest_int_reference(1.5), 2);
+        assert_eq!(nearest_int_reference(-0.49), 0);
+        assert_eq!(nearest_int_reference(-0.5), 0);
+        assert_eq!(nearest_int_reference(-0.51), -1);
+        assert_eq!(nearest_int_reference(-1.5), -2);
+    }
+
+    #[test]
+    fn quantize_row_i8_s_reference_tracks_scale_values_and_sum() {
+        let quantized = quantize_row_i8_s_reference(&[-1.0, 0.0, 0.5, 1.0]);
+
+        assert_eq!(quantized.scale, 127.0);
+        assert_eq!(quantized.values, vec![-127, 0, 64, 127]);
+        assert_eq!(quantized.sum, 64);
+    }
+
+    #[test]
+    fn quantize_row_i8_s_reference_handles_zero_rows() {
+        let quantized = quantize_row_i8_s_reference(&[0.0, 0.0, 0.0]);
+
+        assert_eq!(quantized.scale, 12_700_000.0);
+        assert_eq!(quantized.values, vec![0, 0, 0]);
+        assert_eq!(quantized.sum, 0);
+    }
+
+    #[test]
+    fn activation_quantized_gemv_differs_from_dense_direct_path() {
+        let cols = QK256_BLOCK;
+        let trailer_scale = 0.375f32;
+        let codes: Vec<u8> = (0..cols).map(|i| (i % 4) as u8).collect();
+        let qs_row = pack_codes_for_cols(&codes, cols);
+        let x: Vec<f32> = (0..cols).map(|i| ((i % 13) as f32 - 6.0) / 7.0).collect();
+
+        let dense_direct = gemv_qk256_row(&qs_row, &x, cols) * trailer_scale;
+        let reference =
+            gemv_qk256_row_activation_quantized_reference(&qs_row, &x, cols, trailer_scale);
+
+        assert!(
+            (reference - dense_direct).abs() > 1e-4,
+            "reference activation quantization should expose a real contract delta"
+        );
+    }
+
+    #[test]
+    fn activation_quantized_gemv_uses_code3_as_effective_plus_two() {
+        let cols = QK256_BLOCK;
+        let trailer_scale = 0.5f32;
+        let x: Vec<f32> = (0..cols).map(|i| ((i % 9) as f32 - 4.0) / 3.0).collect();
+        let code2_row = pack_codes_for_cols(&vec![2u8; cols], cols);
+        let code3_row = pack_codes_for_cols(&vec![3u8; cols], cols);
+
+        let code2 =
+            gemv_qk256_row_activation_quantized_reference(&code2_row, &x, cols, trailer_scale);
+        let code3 =
+            gemv_qk256_row_activation_quantized_reference(&code3_row, &x, cols, trailer_scale);
+
+        assert!(
+            (code3 - code2 * 2.0).abs() < 1e-5,
+            "corrected integer matmul should make code3 twice code2"
+        );
     }
 
     #[test]
