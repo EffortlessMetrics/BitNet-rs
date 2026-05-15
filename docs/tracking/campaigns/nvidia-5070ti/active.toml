@@ -2411,9 +2411,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-005"
-status = "pr_open"
+status = "merged"
 pr = 4971
-head_sha = "a888f2ac46c5f5bf9e84541b02d9f5cb2e5f61e2"
+head_sha = "b03a3e45b58589b4f2bac677baee51833f9e1e1d"
+merge_sha = "605df0c2e44210a6dc6098efe18728e203686592"
 branch = "model/cuda-qwen3-0_6b-short-decode"
 stackable = false
 review_mode = "codex_premerge"
