@@ -2367,10 +2367,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-004"
-status = "pr_open"
+status = "merged"
 branch = "model/cuda-qwen3-0_6b-one-token-proof"
 pr = 4940
-head_sha = "f41abde9d3dfd1798119c2165d09879b27cc2c04"
+head_sha = "8379ab58c9a81288a702790043f8e8139cb155e5"
+merge_sha = "098626112588f8877d0f0c53d8a2c5d88ddacb89"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
