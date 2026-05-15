@@ -24,6 +24,7 @@ const A770_BITNET_QK256_ROUTE_ID: &str = "a770.bitnet.i2s.qk256";
 const DEFAULT_REFERENCE_RUN_RECEIPT: &str = "target/a770-diagnostic/bitnet-reference-run.json";
 const REFERENCE_TEXT_END_MARKER: &str = " [end of text]";
 const REFERENCE_TEXT_PROBE_TOKEN_LIMIT: usize = 32;
+const REFERENCE_SELECTED_LOGIT_PROBE_LIMIT: usize = 64;
 
 struct PlanTokenizer {
     tokenizer: std::sync::Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
@@ -44,6 +45,7 @@ pub struct ReferencePlanArgs<'a> {
     pub max_new_tokens: usize,
     pub reference_exe: Option<&'a Path>,
     pub reference_run_receipt: Option<&'a Path>,
+    pub reference_server_receipt: Option<&'a Path>,
     pub reference_text: Option<&'a str>,
     pub cpp_root: Option<&'a Path>,
     pub output: Option<&'a Path>,
@@ -73,6 +75,7 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
     let mut max_new_tokens = 16usize;
     let mut reference_exe: Option<PathBuf> = None;
     let mut reference_run_receipt = PathBuf::from(DEFAULT_REFERENCE_RUN_RECEIPT);
+    let mut reference_server_receipt: Option<PathBuf> = None;
     let mut reference_text: Option<String> = None;
     let mut cpp_root: Option<PathBuf> = None;
     let mut output = PathBuf::from("target/a770-diagnostic/bitnet-reference-plan.json");
@@ -101,6 +104,9 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             }
             "--reference-exe" => reference_exe = Some(PathBuf::from(value()?)),
             "--reference-run-receipt" => reference_run_receipt = PathBuf::from(value()?),
+            "--reference-server-receipt" => {
+                reference_server_receipt = Some(PathBuf::from(value()?))
+            }
             "--reference-text" => reference_text = Some(value()?),
             "--cpp-root" => cpp_root = Some(PathBuf::from(value()?)),
             "--output" => output = PathBuf::from(value()?),
@@ -119,6 +125,7 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
         max_new_tokens,
         reference_exe: reference_exe.as_deref(),
         reference_run_receipt: Some(&reference_run_receipt),
+        reference_server_receipt: reference_server_receipt.as_deref(),
         reference_text: reference_text.as_deref(),
         cpp_root: cpp_root.as_deref(),
         output: Some(&output),
@@ -129,7 +136,7 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
 
 fn print_help() {
     println!(
-        "Emit a target-local BitNet C++ reference-readiness plan\n\nUsage: xtask.exe bitnet-reference-plan [OPTIONS]\n\nOptions:\n      --model-contract <PATH>      Model contract YAML file [default: docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml]\n      --model <PATH>               Override model path\n      --tokenizer <PATH>           Override tokenizer path\n      --prompt-template <NAME>     Prompt template [default: llama3-chat]\n      --system-prompt <TEXT>       Optional system prompt\n      --prompt <TEXT>              User prompt [default: What is 2+2?]\n      --max-new-tokens <N>         Max new tokens [default: 16]\n      --reference-exe <PATH>       Explicit C++ reference executable path\n      --reference-run-receipt <PATH> Optional reference-run receipt for diagnostic selected-logit probes [default: target/a770-diagnostic/bitnet-reference-run.json]\n      --reference-text <TEXT>      Explicit diagnostic reference text for selected-logit probes\n      --cpp-root <PATH>            C++ reference checkout/build root\n      --output <PATH>              Output plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --format <human|json>        Output format [default: human]\n  -h, --help                       Print help"
+        "Emit a target-local BitNet C++ reference-readiness plan\n\nUsage: xtask.exe bitnet-reference-plan [OPTIONS]\n\nOptions:\n      --model-contract <PATH>      Model contract YAML file [default: docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml]\n      --model <PATH>               Override model path\n      --tokenizer <PATH>           Override tokenizer path\n      --prompt-template <NAME>     Prompt template [default: llama3-chat]\n      --system-prompt <TEXT>       Optional system prompt\n      --prompt <TEXT>              User prompt [default: What is 2+2?]\n      --max-new-tokens <N>         Max new tokens [default: 16]\n      --reference-exe <PATH>       Explicit C++ reference executable path\n      --reference-run-receipt <PATH> Optional reference-run receipt for diagnostic selected-logit probes [default: target/a770-diagnostic/bitnet-reference-run.json]\n      --reference-server-receipt <PATH> Optional reference-server receipt with diagnostic probability-token probes\n      --reference-text <TEXT>      Explicit diagnostic reference text for selected-logit probes\n      --cpp-root <PATH>            C++ reference checkout/build root\n      --output <PATH>              Output plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --format <human|json>        Output format [default: human]\n  -h, --help                       Print help"
     );
 }
 
@@ -171,6 +178,11 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
         args.reference_run_receipt,
         plan_tokenizer.tokenizer.as_ref(),
     )?;
+    let reference_server_probe = reference_server_probe(args.reference_server_receipt)?;
+    let selected_logit_probe_ids = merge_selected_logit_probe_ids(
+        &reference_text_probe.logit_ids,
+        &reference_server_probe.logit_ids,
+    );
 
     let candidates = reference_candidates(args.reference_exe, args.cpp_root);
     let selected = candidates.iter().find(|candidate| candidate.exists);
@@ -292,11 +304,21 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 "max_new_tokens": 1,
                 "dump_logit_steps": 1,
                 "logits_topk": 10,
-                "selected_logit_probe_ids": reference_text_probe.logit_ids.clone(),
+                "selected_logit_probe_ids": selected_logit_probe_ids.clone(),
+                "selected_logit_probe_ids_sha256": if selected_logit_probe_ids.is_empty() {
+                    Value::Null
+                } else {
+                    Value::String(sha256_token_ids(&selected_logit_probe_ids)?)
+                },
+                "probe_sources": {
+                    "reference_text_tokenization": !reference_text_probe.logit_ids.is_empty(),
+                    "reference_server_probability_tokenization": !reference_server_probe.logit_ids.is_empty(),
+                },
                 "assert_greedy": true,
                 "purpose": "bounded prompt-matched Rust CPU/A770 receipts for first-token, top-logit, and diagnostic selected-logit comparison"
             },
             "reference_text_tokenization": reference_text_probe.report,
+            "reference_server_probability_tokenization": reference_server_probe.report,
             "rust_receipt_command_policy": {
                 "cargo_profile": "release",
                 "reason": "real-model CPU diagnostics are too slow in debug and can leave stale non-matching receipts",
@@ -313,7 +335,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 "target/a770-diagnostic/reference-plan-cpu-first-token.json",
                 Some(args.model_contract),
                 None,
-                &reference_text_probe.logit_ids
+                &selected_logit_probe_ids
             ),
             "a770_first_token_logit_argv": rust_cli_first_token_logit_argv(
                 "intel-arc-a770-opencl",
@@ -325,7 +347,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 "target/a770-diagnostic/reference-plan-a770-first-token.json",
                 Some(args.model_contract),
                 Some(A770_BITNET_QK256_ROUTE_ID),
-                &reference_text_probe.logit_ids
+                &selected_logit_probe_ids
             ),
         },
         "decision": {
@@ -781,6 +803,12 @@ struct ReferenceTextProbe {
     logit_ids: Vec<u32>,
 }
 
+#[derive(Debug)]
+struct ReferenceServerProbe {
+    report: Value,
+    logit_ids: Vec<u32>,
+}
+
 fn reference_text_probe(
     explicit_text: Option<&str>,
     receipt_path: Option<&Path>,
@@ -860,6 +888,114 @@ fn reference_text_probe(
     })
 }
 
+fn reference_server_probe(receipt_path: Option<&Path>) -> Result<ReferenceServerProbe> {
+    let Some(path) = receipt_path else {
+        return Ok(ReferenceServerProbe {
+            report: json!({
+                "diagnostic_only": true,
+                "claimable": false,
+                "source": "not_configured",
+                "source_path": Value::Null,
+                "source_exists": Value::Null,
+                "tokenization_ready": false,
+                "selected_logit_probe_ids": [],
+                "not_claims": [
+                    "reference_server_probability_tokenization_proves_reference_generated_token_ids",
+                    "reference_server_probability_tokenization_proves_reference_top_logits",
+                    "reference_server_probability_tokenization_promotes_reference_parity",
+                    "reference_server_probability_tokenization_promotes_a770_semantic_quality"
+                ]
+            }),
+            logit_ids: Vec::new(),
+        });
+    };
+
+    let source_path = path_to_string(path);
+    if !path.exists() {
+        return Ok(ReferenceServerProbe {
+            report: json!({
+                "diagnostic_only": true,
+                "claimable": false,
+                "source": "reference_server_receipt",
+                "source_path": source_path,
+                "source_exists": false,
+                "tokenization_ready": false,
+                "selected_logit_probe_ids": [],
+                "blocked_reasons": ["reference_server_receipt_missing"],
+                "not_claims": [
+                    "reference_server_probability_tokenization_proves_reference_generated_token_ids",
+                    "reference_server_probability_tokenization_proves_reference_top_logits",
+                    "reference_server_probability_tokenization_promotes_reference_parity",
+                    "reference_server_probability_tokenization_promotes_a770_semantic_quality"
+                ]
+            }),
+            logit_ids: Vec::new(),
+        });
+    }
+
+    let receipt = read_json(path)?;
+    let raw_ids =
+        array_u32(&receipt, "/reference_probability_tokenization/selected_logit_probe_ids");
+    let logit_ids = unique_limited_token_ids(&raw_ids, REFERENCE_SELECTED_LOGIT_PROBE_LIMIT);
+    Ok(ReferenceServerProbe {
+        report: json!({
+            "diagnostic_only": true,
+            "claimable": false,
+            "source": "reference_server_receipt",
+            "source_path": source_path,
+            "source_exists": true,
+            "tokenization_ready": !logit_ids.is_empty(),
+            "source_receipt_type": str_at(&receipt, "/receipt_type").unwrap_or(""),
+            "source_tokenization_ready": receipt
+                .pointer("/reference_probability_tokenization/tokenization_ready")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            "source_policy": receipt
+                .pointer("/reference_probability_tokenization/policy")
+                .cloned()
+                .unwrap_or(Value::Null),
+            "source_not_claims": receipt
+                .pointer("/reference_probability_tokenization/not_claims")
+                .cloned()
+                .unwrap_or(Value::Null),
+            "selected_logit_probe_ids": logit_ids.clone(),
+            "selected_logit_probe_ids_sha256": if logit_ids.is_empty() {
+                Value::Null
+            } else {
+                Value::String(sha256_token_ids(&logit_ids)?)
+            },
+            "tokenization_policy": {
+                "deduplicate_preserving_order": true,
+                "token_id_limit": REFERENCE_SELECTED_LOGIT_PROBE_LIMIT,
+                "purpose": "consume reference-server probability-string tokenization only as Rust selected-logit probe candidates"
+            },
+            "not_claims": [
+                "reference_server_probability_tokenization_proves_reference_generated_token_ids",
+                "reference_server_probability_tokenization_proves_reference_top_logits",
+                "reference_server_probability_tokenization_promotes_reference_parity",
+                "reference_server_probability_tokenization_promotes_a770_semantic_quality"
+            ]
+        }),
+        logit_ids,
+    })
+}
+
+fn merge_selected_logit_probe_ids(
+    reference_text_ids: &[u32],
+    reference_server_ids: &[u32],
+) -> Vec<u32> {
+    let mut merged = Vec::new();
+    for id in reference_text_ids.iter().chain(reference_server_ids.iter()) {
+        if !merged.contains(id) {
+            merged.push(*id);
+        }
+        if merged.len() == REFERENCE_SELECTED_LOGIT_PROBE_LIMIT {
+            break;
+        }
+    }
+    merged
+}
+
 fn normalize_reference_text_for_probe(text: &str) -> (String, Vec<String>) {
     let mut normalized = text.trim().to_string();
     let mut notes = Vec::new();
@@ -908,6 +1044,16 @@ fn array_strings(value: &Value, pointer: &str) -> Vec<String> {
         .pointer(pointer)
         .and_then(Value::as_array)
         .map(|items| items.iter().filter_map(Value::as_str).map(ToOwned::to_owned).collect())
+        .unwrap_or_default()
+}
+
+fn array_u32(value: &Value, pointer: &str) -> Vec<u32> {
+    value
+        .pointer(pointer)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items.iter().filter_map(Value::as_u64).filter_map(|id| u32::try_from(id).ok()).collect()
+        })
         .unwrap_or_default()
 }
 
@@ -1136,5 +1282,50 @@ mod tests {
         let ids = unique_limited_token_ids(&[17, 10, 17, 17239, 220, 19, 13], 4);
 
         assert_eq!(ids, vec![17, 10, 17239, 220]);
+    }
+
+    #[test]
+    fn reference_server_probe_reads_probability_tokenization_without_promoting_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        let receipt_path = dir.path().join("server.json");
+        fs::write(
+            &receipt_path,
+            serde_json::to_vec_pretty(&json!({
+                "receipt_type": "bitnet_reference_server_run",
+                "reference_probability_tokenization": {
+                    "tokenization_ready": true,
+                    "policy": "diagnostic probability-string probe",
+                    "selected_logit_probe_ids": [17, 791, 17, 644],
+                    "not_claims": [
+                        "reference_probability_tokenization_proves_reference_generated_token_ids"
+                    ]
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let probe = reference_server_probe(Some(&receipt_path)).unwrap();
+
+        assert_eq!(probe.logit_ids, vec![17, 791, 644]);
+        assert_eq!(probe.report["diagnostic_only"], true);
+        assert_eq!(probe.report["claimable"], false);
+        assert_eq!(probe.report["tokenization_ready"], true);
+        assert_eq!(probe.report["source_receipt_type"], json!("bitnet_reference_server_run"));
+        assert_eq!(probe.report["source_tokenization_ready"], true);
+        let not_claims = probe.report["not_claims"].as_array().unwrap();
+        assert!(not_claims.contains(&json!(
+            "reference_server_probability_tokenization_proves_reference_generated_token_ids"
+        )));
+        assert!(not_claims.contains(&json!(
+            "reference_server_probability_tokenization_proves_reference_top_logits"
+        )));
+    }
+
+    #[test]
+    fn selected_logit_probe_merge_keeps_text_ids_before_server_ids() {
+        let merged = merge_selected_logit_probe_ids(&[17, 10, 17], &[17, 791, 644]);
+
+        assert_eq!(merged, vec![17, 10, 791, 644]);
     }
 }
