@@ -9842,12 +9842,13 @@ fn slm_cpu_warm_session_disk_context_json(path: &std::path::Path) -> serde_json:
 #[cfg(feature = "full-cli")]
 fn slm_cpu_warm_session_absolute_disk_path(path: &std::path::Path) -> std::path::PathBuf {
     if let Ok(absolute_path) = path.canonicalize() {
-        return absolute_path;
+        return slm_cpu_warm_session_normalize_windows_verbatim_path(absolute_path);
     }
 
     if let Some(parent) = path.parent()
         && let Ok(parent) = parent.canonicalize()
     {
+        let parent = slm_cpu_warm_session_normalize_windows_verbatim_path(parent);
         if let Some(file_name) = path.file_name() {
             return parent.join(file_name);
         }
@@ -9855,6 +9856,20 @@ fn slm_cpu_warm_session_absolute_disk_path(path: &std::path::Path) -> std::path:
     }
 
     path.to_path_buf()
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_cpu_warm_session_normalize_windows_verbatim_path(
+    path: std::path::PathBuf,
+) -> std::path::PathBuf {
+    let display = path.to_string_lossy();
+    if let Some(rest) = display.strip_prefix("\\\\?\\UNC\\") {
+        return std::path::PathBuf::from(format!("\\\\{rest}"));
+    }
+    if let Some(rest) = display.strip_prefix("\\\\?\\") {
+        return std::path::PathBuf::from(rest);
+    }
+    path
 }
 
 fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) -> Result<String> {
@@ -12153,6 +12168,16 @@ mod tests {
 
         assert!(resolved.is_absolute(), "resolved path should be absolute: {resolved:?}");
         assert!(resolved.ends_with("__bitnet_missing_warm_session_receipt.json"));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn slm_warm_session_disk_context_strips_windows_verbatim_prefix() {
+        let resolved = slm_cpu_warm_session_normalize_windows_verbatim_path(
+            std::path::PathBuf::from(r"\\?\C:\Code\Rust\BitNet-rs\receipt.json"),
+        );
+
+        assert_eq!(resolved, std::path::PathBuf::from(r"C:\Code\Rust\BitNet-rs\receipt.json"));
     }
 
     #[test]
