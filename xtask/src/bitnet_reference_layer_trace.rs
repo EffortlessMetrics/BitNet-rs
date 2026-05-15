@@ -159,6 +159,9 @@ struct ReferenceTraceRecord {
     graph_sources: Value,
     view_source: Value,
     view_offset: Option<u64>,
+    full_shape: Vec<i64>,
+    sample_offset: Option<u64>,
+    token_axis: Option<i64>,
     dtype: String,
     shape: Vec<i64>,
     nelements: u64,
@@ -175,7 +178,6 @@ struct RustTraceRecord {
     blake3: String,
     rms: f64,
     num_elements: usize,
-    #[allow(dead_code)]
     seq: Option<usize>,
     layer: Option<isize>,
     stage: Option<String>,
@@ -710,11 +712,23 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
         .map(|records| compare_reference_to_rust(&reference_records, records, &stage_mapping));
 
     let mut blocked_reasons = Vec::<String>::new();
-    if cpu_comparison["first_material_mismatch"].is_null() {
+    let cpu_scope_mismatch_count =
+        cpu_comparison["scope_mismatch_count"].as_u64().unwrap_or_default();
+    if cpu_scope_mismatch_count > 0 {
+        blocked_reasons.push("rust_cpu_reference_layer_trace_scope_unaligned".to_string());
+    } else if cpu_comparison["first_material_mismatch"].is_null() {
         blocked_reasons
             .push("rust_cpu_reference_layer_trace_no_material_mismatch_found".to_string());
     } else {
         blocked_reasons.push("rust_cpu_reference_layer_trace_divergence_unresolved".to_string());
+    }
+    if a770_comparison
+        .as_ref()
+        .and_then(|comparison| comparison["scope_mismatch_count"].as_u64())
+        .unwrap_or_default()
+        > 0
+    {
+        blocked_reasons.push("strict_a770_reference_layer_trace_scope_unaligned".to_string());
     }
     if a770_trace_dir.is_none() {
         blocked_reasons.push("strict_a770_trace_dir_not_supplied".to_string());
@@ -749,6 +763,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                     "graph_sources": record.graph_sources,
                     "view_source": record.view_source,
                     "view_offset": record.view_offset,
+                    "full_shape": record.full_shape,
+                    "sample_offset": record.sample_offset,
+                    "token_axis": record.token_axis,
+                    "sampled_token_index": reference_sampled_token_index(record),
                     "shape": record.shape,
                     "dtype": record.dtype,
                     "nelements": record.nelements,
@@ -1058,6 +1076,16 @@ fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
                 .iter()
                 .map(|dim| dim.as_i64().context("reference shape dim is not integer"))
                 .collect::<Result<Vec<_>>>()?;
+            let full_shape = record
+                .pointer("/full_shape")
+                .and_then(Value::as_array)
+                .map(|dims| {
+                    dims.iter()
+                        .map(|dim| dim.as_i64().context("reference full_shape dim is not integer"))
+                        .collect::<Result<Vec<_>>>()
+                })
+                .transpose()?
+                .unwrap_or_else(|| shape.clone());
             Ok(ReferenceTraceRecord {
                 name: record
                     .pointer("/name")
@@ -1081,6 +1109,9 @@ fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
                     .unwrap_or_else(|| json!([])),
                 view_source: record.pointer("/view_source").cloned().unwrap_or(Value::Null),
                 view_offset: record.pointer("/view_offset").and_then(Value::as_u64),
+                full_shape,
+                sample_offset: record.pointer("/sample_offset").and_then(Value::as_u64),
+                token_axis: record.pointer("/token_axis").and_then(Value::as_i64),
                 dtype: record
                     .pointer("/dtype")
                     .and_then(Value::as_str)
@@ -1535,8 +1566,10 @@ fn compare_reference_to_rust(
     let mut first_material_mismatch = Value::Null;
     let mut compared_count = 0usize;
     let mut material_mismatch_count = 0usize;
+    let mut scope_mismatch_count = 0usize;
     let mut missing_reference_count = 0usize;
     let mut missing_rust_count = 0usize;
+    let mut first_scope_mismatch = Value::Null;
 
     for (reference_stage, rust_stage) in mapping {
         let candidates = reference_records
@@ -1563,14 +1596,24 @@ fn compare_reference_to_rust(
         let mut status = "missing";
         let mut rms_abs_delta = None::<f64>;
         let mut material_mismatch = reference.is_none() || rust.is_none();
+        let scope_mismatch = trace_scope_mismatch(reference, rust);
+        let has_scope_mismatch = scope_mismatch.is_some();
         if let (Some(reference), Some(rust)) = (reference, rust) {
             compared_count += 1;
             let element_count_match = reference.nelements == rust.num_elements as u64;
             let dtype_match = reference.dtype.eq_ignore_ascii_case(&rust.dtype);
             rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
             let rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
-            material_mismatch = !element_count_match || !dtype_match || rms_material;
-            status = if material_mismatch { "material_mismatch" } else { "summary_match" };
+            if has_scope_mismatch {
+                material_mismatch = false;
+                status = "scope_mismatch";
+            } else {
+                material_mismatch = !element_count_match || !dtype_match || rms_material;
+                status = if material_mismatch { "material_mismatch" } else { "summary_match" };
+            }
+        }
+        if has_scope_mismatch {
+            scope_mismatch_count += 1;
         }
         if material_mismatch {
             material_mismatch_count += 1;
@@ -1584,8 +1627,13 @@ fn compare_reference_to_rust(
             "reference": reference.map(reference_record_summary),
             "rust": rust.map(rust_record_summary),
             "rms_abs_delta": rms_abs_delta,
+            "scope_mismatch": has_scope_mismatch,
+            "scope": scope_mismatch,
             "material_mismatch": material_mismatch,
         });
+        if has_scope_mismatch && first_scope_mismatch.is_null() {
+            first_scope_mismatch = stage.clone();
+        }
         if material_mismatch && first_material_mismatch.is_null() {
             first_material_mismatch = stage.clone();
         }
@@ -1596,11 +1644,55 @@ fn compare_reference_to_rust(
         "trace_record_count": rust_records.len(),
         "compared_stage_count": compared_count,
         "material_mismatch_count": material_mismatch_count,
+        "scope_mismatch_count": scope_mismatch_count,
         "missing_reference_count": missing_reference_count,
         "missing_rust_count": missing_rust_count,
+        "first_scope_mismatch": first_scope_mismatch,
         "first_material_mismatch": first_material_mismatch,
         "stages": stages,
     })
+}
+
+fn trace_scope_mismatch(
+    reference: Option<&ReferenceTraceRecord>,
+    rust: Option<&RustTraceRecord>,
+) -> Option<Value> {
+    let reference = reference?;
+    let rust = rust?;
+    let reference_sampled_token_index = reference_sampled_token_index(reference)?;
+    let rust_seq = rust.seq.map(|seq| seq as u64);
+    if rust_seq == Some(reference_sampled_token_index) {
+        return None;
+    }
+    Some(json!({
+        "reason": "reference_sampled_prompt_token_does_not_match_rust_trace_seq",
+        "reference_sampled_token_index": reference_sampled_token_index,
+        "reference_sample_offset": reference.sample_offset,
+        "reference_token_axis": reference.token_axis,
+        "rust_seq": rust_seq,
+        "policy": "stage summaries with mismatched trace scope are diagnostic alignment blockers, not stable numeric divergence evidence",
+    }))
+}
+
+fn reference_sampled_token_index(record: &ReferenceTraceRecord) -> Option<u64> {
+    let axis = record.token_axis?;
+    if axis < 0 {
+        return None;
+    }
+    let axis = usize::try_from(axis).ok()?;
+    let shape = if record.full_shape.is_empty() { &record.shape } else { &record.full_shape };
+    if axis > shape.len() {
+        return None;
+    }
+    let offset = record.sample_offset?;
+    let stride = shape.iter().take(axis).try_fold(1u64, |acc, dim| {
+        let dim = u64::try_from(*dim).ok()?;
+        acc.checked_mul(dim)
+    })?;
+    if stride == 0 || offset % stride != 0 {
+        return None;
+    }
+    Some(offset / stride)
 }
 
 fn reference_record_summary(record: &ReferenceTraceRecord) -> Value {
@@ -1613,6 +1705,10 @@ fn reference_record_summary(record: &ReferenceTraceRecord) -> Value {
         "graph_sources": record.graph_sources,
         "view_source": record.view_source,
         "view_offset": record.view_offset,
+        "full_shape": record.full_shape,
+        "sample_offset": record.sample_offset,
+        "token_axis": record.token_axis,
+        "sampled_token_index": reference_sampled_token_index(record),
         "shape": record.shape,
         "dtype": record.dtype,
         "nelements": record.nelements,
@@ -1625,6 +1721,7 @@ fn rust_record_summary(record: &RustTraceRecord) -> Value {
     json!({
         "name": record.name,
         "stage": record.stage,
+        "seq": record.seq,
         "layer": record.layer,
         "shape": record.shape,
         "dtype": record.dtype,
@@ -2656,6 +2753,56 @@ mod tests {
             Some(&json!("inp_embd"))
         );
         assert!(report.pointer("/decision/current_blocked_reasons").unwrap().is_array());
+    }
+
+    #[test]
+    fn compare_reports_scope_mismatch_before_material_mismatch() {
+        let reference = ReferenceTraceRecord {
+            name: "inp_embd".to_string(),
+            stage: "inp_embd".to_string(),
+            graph_index: Some(0),
+            layer: Some(-1),
+            graph_op: Some("GET_ROWS".to_string()),
+            graph_sources: json!([]),
+            view_source: Value::Null,
+            view_offset: Some(0),
+            full_shape: vec![2, 2, 1, 1],
+            sample_offset: Some(2),
+            token_axis: Some(1),
+            dtype: "f32".to_string(),
+            shape: vec![2, 1, 1, 1],
+            nelements: 2,
+            rms: Some(1.0),
+            values_available: true,
+        };
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "embeddings".to_string(),
+            RustTraceRecord {
+                name: "t0/embeddings".to_string(),
+                shape: vec![1, 1, 2],
+                dtype: "F32".to_string(),
+                blake3: "abc".to_string(),
+                rms: 1.0,
+                num_elements: 2,
+                seq: Some(0),
+                layer: Some(-1),
+                stage: Some("embeddings".to_string()),
+            },
+        );
+
+        let report =
+            compare_reference_to_rust(&[reference], &rust_records, &[("inp_embd", "embeddings")]);
+
+        assert_eq!(report.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/first_scope_mismatch/status"), Some(&json!("scope_mismatch")));
+        assert_eq!(
+            report.pointer("/first_scope_mismatch/scope/reference_sampled_token_index"),
+            Some(&json!(1))
+        );
+        assert_eq!(report.pointer("/first_scope_mismatch/scope/rust_seq"), Some(&json!(0)));
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
     }
 
     #[test]
