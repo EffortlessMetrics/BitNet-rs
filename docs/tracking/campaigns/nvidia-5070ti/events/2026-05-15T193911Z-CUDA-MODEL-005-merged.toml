@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T19:39:11Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-005"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "model/cuda-qwen3-0_6b-short-decode"
+pr = 4971
+head_sha = "b03a3e45b58589b4f2bac677baee51833f9e1e1d"
+merge_sha = "605df0c2e44210a6dc6098efe18728e203686592"
+summary = "Marked CUDA-MODEL-005 merged after PR #4971 added the Qwen3 0.6B bounded short-decode strict RTX 5070 Ti CUDA proof."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4971",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-short-decode-cuda.json",
+  "docs/reports/CUDA_MODEL_005_QWEN3_06B_SHORT_DECODE.md",
+]
+
+notes = [
+  "The merged PR records the pinned Qwen3 0.6B Q8_0 artifact, selected_backend=nvidia-rtx-5070-ti-cuda, runtime_api=cuda, route=dense_regular_llm_cuda, fallback_used=false, 8 generated greedy tokens, generated-token equality, and top-k equality.",
+  "The receipt keeps Qwen3 warm-session, speedup, server readiness, full CUDA residency, broad dense GGUF readiness, and BitNet QK256 proof false.",
+  "CUDA-MODEL-006 remains the next Qwen3 CUDA step and must add bounded warm-session proof before any broader Qwen3 product claim starts.",
+]
