@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T14:24:46Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-016"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4922
+branch = "codex/slm-cpu-016-kaby-operator-profile"
+merge_sha = "7c3064db8ce56df92f0cf632a898b9febf2f3c66"
+
+summary = "Merged #4922 with SLM-CPU-016 warm-session host-context sampling."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4922",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/slm/SLM_CPU_QWEN3_WARM_SESSION.md",
+]
+
+notes = [
+  "The merged implementation records process memory and storage/free-space context for strict CPU warm-session receipts where host APIs expose it.",
+  "Receipt-path storage matching now resolves not-yet-created output files through their existing parent directory.",
+  "No sustained throughput, Q4/Q5 quant expansion, second model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim was made.",
+]

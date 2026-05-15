@@ -1636,8 +1636,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-016"
-status = "pr_open"
+status = "merged"
 pr = 4922
+merge_sha = "7c3064db8ce56df92f0cf632a898b9febf2f3c66"
 branch = "codex/slm-cpu-016-kaby-operator-profile"
 stackable = false
 review_mode = "codex_premerge"
