@@ -1,0 +1,48 @@
+timestamp = "2026-05-15T05:51:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-010"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4851
+merge_sha = "42e4d04ae78c372569315b7fbb7b1548b7f17326"
+branch = "codex/slm-cpu-010-multitoken-stability"
+
+summary = "Record bounded Qwen3 multi-token decode stability on the strict i5-8250U CPU path."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4851",
+  "ci/quality/slm-multitoken-stability.yaml",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-run1.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-run2.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-validation.json",
+  "docs/slm/SLM_CPU_QWEN3_MULTITOKEN_STABILITY.md",
+]
+
+notes = [
+  "The validation artifact records two strict CPU runs over bounded 4, 8, and 16 max_new_tokens cases.",
+  "Repeated prompt IDs and generated IDs match for all three cases with selected_backend=cpu-rust and fallback_used=false.",
+  "The receipt surface records prompt-prefill/decode-start KV metadata but does not yet expose per-token KV append/read positions.",
+  "This merge does not claim broad answer quality, warm-session usability, sustained throughput, Q4/Q5 quant expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
+
+validation = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci/quality/slm-multitoken-stability.yaml --model models/slm/Qwen3-0.6B-Q8_0.gguf --device cpu --json-out ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-run1.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci/quality/slm-multitoken-stability.yaml --model models/slm/Qwen3-0.6B-Q8_0.gguf --device cpu --json-out ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-multitoken-stability-run2.json",
+  "SLM-CPU-010 validation artifact self-check over repeated prompt/generated IDs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+
+must_not_claim = [
+  "Broad Qwen answer quality is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
