@@ -1231,7 +1231,7 @@ fn build_server_readiness_response(
         parameters: metadata.parameters,
         context_length: metadata.context_length,
     });
-    let selected_backend = active_model.as_ref().and_then(|_| selected_backend_label);
+    let selected_backend = active_model.as_ref().and(selected_backend_label);
 
     let batch_inference_ready = false;
     let simulated_inference_enabled = false;
