@@ -7,6 +7,9 @@
 //! # Usage
 //!
 //! Tracing is controlled via the `BITNET_TRACE_DIR` environment variable:
+//! `BITNET_TRACE_FIRST_VALUES_LIMIT` optionally controls how many prefix values
+//! are written for local divergence diagnostics. It defaults to 16 and is
+//! clamped to a bounded diagnostic maximum.
 //!
 //! ```bash
 //! export BITNET_TRACE_DIR=/tmp/bitnet-traces
@@ -45,6 +48,9 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+
+const DEFAULT_FIRST_VALUES_LIMIT: usize = 16;
+const MAX_FIRST_VALUES_LIMIT: usize = 65_536;
 
 /// Trace record containing tensor metadata and hash.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,7 +161,7 @@ pub fn dump_trace(
         blake3: blake3_hex,
         rms,
         num_elements,
-        first_values: data.iter().take(16).copied().collect(),
+        first_values: data.iter().take(trace_first_values_limit(num_elements)).copied().collect(),
         seq,
         layer,
         stage: stage.map(|s| s.to_string()),
@@ -171,6 +177,18 @@ pub fn dump_trace(
     })?;
 
     Ok(())
+}
+
+fn trace_first_values_limit(num_elements: usize) -> usize {
+    let env_value = env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok();
+    trace_first_values_limit_from_env(env_value.as_deref(), num_elements)
+}
+
+fn trace_first_values_limit_from_env(env_value: Option<&str>, num_elements: usize) -> usize {
+    let requested = env_value
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(DEFAULT_FIRST_VALUES_LIMIT);
+    requested.min(MAX_FIRST_VALUES_LIMIT).min(num_elements)
 }
 
 /// Sanitize filename by replacing path separators with underscores.
@@ -366,5 +384,24 @@ mod tests {
         assert!(json.contains("\"seq\":0"), "seq should be included when Some");
         assert!(json.contains("\"layer\":-1"), "layer should be included when Some");
         assert!(json.contains("\"stage\":\"embeddings\""), "stage should be included when Some");
+    }
+
+    #[test]
+    fn trace_first_values_limit_defaults_to_small_prefix() {
+        assert_eq!(trace_first_values_limit_from_env(None, 2560), 16);
+        assert_eq!(trace_first_values_limit_from_env(None, 4), 4);
+    }
+
+    #[test]
+    fn trace_first_values_limit_honors_valid_env_value() {
+        assert_eq!(trace_first_values_limit_from_env(Some("2560"), 4096), 2560);
+        assert_eq!(trace_first_values_limit_from_env(Some("0"), 4096), 0);
+    }
+
+    #[test]
+    fn trace_first_values_limit_clamps_invalid_or_excessive_values() {
+        assert_eq!(trace_first_values_limit_from_env(Some("not-a-number"), 4096), 16);
+        assert_eq!(trace_first_values_limit_from_env(Some("999999"), 100_000), 65_536);
+        assert_eq!(trace_first_values_limit_from_env(Some("999999"), 1024), 1024);
     }
 }

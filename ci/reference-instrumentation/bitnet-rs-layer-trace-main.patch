@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,494 @@ struct llama_context {
+@@ -3441,6 +3444,514 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -155,6 +155,26 @@ index 666fcc4d..23ee29ff 100644
 +        hash *= 1099511628211ULL;
 +    }
 +    return hash;
++}
++
++static size_t bitnet_rs_reference_layer_trace_first_values_limit(size_t sample_nelements) {
++    size_t limit = 16;
++    const char * env_limit = std::getenv("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT");
++    if (env_limit != nullptr && env_limit[0] != '\0') {
++        char * end = nullptr;
++        const unsigned long long parsed = std::strtoull(env_limit, &end, 10);
++        if (end != env_limit && end != nullptr && *end == '\0') {
++            limit = (size_t) parsed;
++        }
++    }
++    const size_t max_limit = 65536;
++    if (limit > max_limit) {
++        limit = max_limit;
++    }
++    if (limit > sample_nelements) {
++        limit = sample_nelements;
++    }
++    return limit;
 +}
 +
 +static void bitnet_rs_reference_layer_trace_write_tensor_provenance(
@@ -377,7 +397,7 @@ index 666fcc4d..23ee29ff 100644
 +
 +    out << ",\"first_values\":[";
 +    const size_t sample_count = values_available
-+        ? (sample_nelements < 16 ? (size_t) sample_nelements : 16)
++        ? bitnet_rs_reference_layer_trace_first_values_limit((size_t) sample_nelements)
 +        : 0;
 +    for (size_t i = 0; i < sample_count; ++i) {
 +        if (i > 0) {
@@ -524,7 +544,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -17655,8 +18146,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18166,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  
