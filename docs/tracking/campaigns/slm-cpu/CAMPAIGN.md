@@ -53,7 +53,13 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-008Y1 | merged | Reference checkpoint capture method merged in #4769; interactive llama.cpp output and top-k-only evidence do not satisfy checkpoint-pack acceptance. |
 | SLM-CPU-008Y | merged | Reference checkpoint artifact merged in #4778; validation localizes the first required-stage drift at `attention.q_proj` without claiming first-token parity or answer quality. |
 | SLM-CPU-008Z | merged | Qwen3 q_proj drift localization merged in #4789; the default-prompt first token matches the reference while checkpoint drift remains bounded to projection arithmetic evidence, without claiming no-thinking token-19 parity or answer quality. |
-| SLM-CPU-008AA | ready | Capture or ingest the exact no-thinking Qwen3 first-token reference/checkpoint artifact before corpus work; default-prompt `<think>` parity is not constrained-answer parity. |
+| SLM-CPU-008AA | merged | No-thinking first-token reference/checkpoint artifact merged in #4817; prompt-policy mismatch remains distinct from answer quality. |
+| SLM-CPU-008AB | merged | Constrained-answer target calibration merged in #4822; the original no-thinking math seed is unsuitable because the reference also chooses `2`. |
+| SLM-CPU-008AC | merged | Constrained-answer scoring policy merged in #4826; SLM-CPU-009 could begin from the selected bounded scoring policy. |
+| SLM-CPU-009A | merged | Qwen no-thinking corpus runner support merged in #4832. |
+| SLM-CPU-009B | merged | First full strict no-thinking tiny-corpus evidence merged in #4843; records 4/5 passing cases and preserves the math miss. |
+| SLM-CPU-009 | merged | Calibrated strict Qwen3 tiny corpus green artifact merged in #4846; records 5/5 passing constrained cases without claiming broad answer quality. |
+| SLM-CPU-010 | ready | Next bounded item: prove deterministic multi-token decode stability before warm-session or performance work. |
 
 ## Review Policy
 

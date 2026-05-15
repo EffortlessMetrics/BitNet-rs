@@ -1,0 +1,50 @@
+timestamp = "2026-05-15T05:17:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-009"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4846
+merge_sha = "92b1848370a0ac43c41091e7894a261d0c00395d"
+branch = "codex/slm-cpu-009-tiny-corpus-green"
+
+summary = "Record the calibrated Qwen3 tiny answer corpus as green."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4846",
+  "ci/quality/slm-answer-corpus.yaml",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-runs/say_four.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-runs/capital_france.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-runs/repeat_colors.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-runs/say_ok.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-runs/yes_no_water.json",
+  "docs/slm/SLM_CPU_QWEN3_CONSTRAINED_SCORING.md",
+]
+
+notes = [
+  "Replaced the unsuitable math_2_plus_2 green gate with calibrated say_four after sentence and worded math variants still generated 2.",
+  "The current strict i5-8250U Qwen3 no-thinking corpus artifact records 5/5 passing cases.",
+  "The preserved math_2_plus_2 per-case receipt remains evidence of a scoped-out arithmetic miss, not arithmetic reasoning proof.",
+]
+
+validation = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci/quality/slm-answer-corpus.yaml --model models/slm/Qwen3-0.6B-Q8_0.gguf --device cpu --json-out ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus.json",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+
+must_not_claim = [
+  "Arithmetic reasoning is proven.",
+  "Broad Qwen answer quality is proven.",
+  "Unbounded multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]

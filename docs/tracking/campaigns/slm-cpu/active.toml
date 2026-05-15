@@ -1313,7 +1313,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-009"
-status = "ready"
+status = "merged"
+pr = 4846
+merge_sha = "92b1848370a0ac43c41091e7894a261d0c00395d"
 branch = "codex/slm-cpu-009-tiny-corpus-green"
 stackable = false
 review_mode = "codex_premerge"
@@ -1349,6 +1351,50 @@ may_claim = [
 must_not_claim = [
   "Broad Qwen answer quality is proven.",
   "Unbounded multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-010"
+status = "ready"
+branch = "codex/slm-cpu-010-multitoken-stability"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-009"]
+acceptance = "Prove bounded Qwen3-0.6B Q8_0 multi-token decode stability on the strict i5-8250U CPU path after the calibrated tiny corpus is green. The slice must run fixed prompts at max_new_tokens 4, 8, and 16, record prompt IDs, generated IDs, decoded text, stop reason, KV-cache position metadata where available, selected backend/kernel, loader.mode=real_gguf, tokenizer.source=gguf_metadata, tokenizer.strict=true, deterministic repeated-run evidence, and fallback_used=false. It must not claim broad chat quality, warm-session usability, sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The selected bounded multi-token prompts are deterministic only when repeated-run generated IDs match under strict CPU receipts.",
+  "KV-cache and stop-reason metadata are visible for the bounded stability cases.",
+]
+must_not_claim = [
+  "Broad Qwen answer quality is proven.",
   "Warm-session usability is proven.",
   "Sustained 8250U throughput is proven.",
   "Q4/Q5 quant expansion is in scope.",
