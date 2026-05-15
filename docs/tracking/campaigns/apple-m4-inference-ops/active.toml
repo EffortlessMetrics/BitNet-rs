@@ -23,13 +23,15 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-INF-OPS-001"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-ops/M4-INF-OPS-001-mac-status"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 4960
+merge_sha = "a7779834fd768ad4ec146ec77a2e0052e8151cb0"
 acceptance = "Add `bitnet mac status` with an `apple_m4_inference_status` receipt covering dense SLM, BitNet, disk/cache, report inventory, commands, and explicit claim boundaries without running live inference."
 commands = [
   "cargo fmt --all -- --check",

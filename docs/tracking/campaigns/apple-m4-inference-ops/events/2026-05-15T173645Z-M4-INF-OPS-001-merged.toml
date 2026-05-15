@@ -1,0 +1,35 @@
+timestamp = "2026-05-15T17:36:45Z"
+campaign = "apple-m4-inference-ops"
+item = "M4-INF-OPS-001"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-inference-ops/M4-INF-OPS-001-mac-status"
+pr = 4960
+merge_sha = "a7779834fd768ad4ec146ec77a2e0052e8151cb0"
+summary = "Merged model-free Apple M4 inference status receipt."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-cli/tests/snapshots/cli_snapshot_tests__mac_help.snap",
+  "docs/slm/apple-m4-inference-ops.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-inference-ops/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-ops/CAMPAIGN.md",
+]
+
+notes = [
+  "PR #4960 added the `bitnet mac status` route and `apple_m4_inference_status` receipt.",
+  "The route summarizes dense SLM, BitNet, disk/cache, report inventory, operator commands, and claim boundaries without running live inference.",
+  "BitNet chat and serve remain disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim was added.",
+]
+
+[evidence]
+route = "bitnet mac status"
+artifact_kind = "apple_m4_inference_status"
+backend = "apple-m4-cpu-neon"
+fallback_used = false
+next_item = "M4-INF-OPS-002"
+claim_boundary = "status only; no live model run, BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, or broad Apple Silicon claim"
