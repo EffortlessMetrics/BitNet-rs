@@ -2247,7 +2247,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-001"
-status = "proposed"
+status = "pr_open"
 branch = "model/cuda-qwen3-0_6b-artifact-contract"
 stackable = false
 review_mode = "codex_premerge"

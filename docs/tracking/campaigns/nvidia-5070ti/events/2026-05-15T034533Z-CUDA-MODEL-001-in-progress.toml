@@ -1,0 +1,20 @@
+timestamp = "2026-05-15T03:45:33Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "model/cuda-qwen3-0_6b-artifact-contract"
+summary = "Started the Qwen3 0.6B artifact contract work after the RTX 5070 Ti user-status and quickstart surfaces landed."
+
+artifacts = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "ci/model-artifacts/dense-slm-model-contracts.toml",
+  "docs/reports/CUDA_MODEL_001_QWEN3_06B_ARTIFACT_CONTRACT.md",
+]
+
+notes = [
+  "This work records artifact identity and structural metadata only.",
+  "It must not claim Qwen3 CPU answer readiness, CUDA proof, speedup, server readiness, full CUDA residency, or BitNet QK256 proof.",
+]
