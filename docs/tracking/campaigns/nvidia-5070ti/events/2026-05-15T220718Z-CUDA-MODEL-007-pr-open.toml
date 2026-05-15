@@ -1,0 +1,13 @@
+timestamp = "2026-05-15T22:07:18Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-007"
+event = "pr_open"
+pr = 4996
+head_sha = "efea345b424d69f85bd1d16b9dcb66e35a4d6111"
+actor = "codex"
+
+notes = [
+  "Opened PR #4996 for the Qwen3 0.6B benchmark qualification review.",
+  "The PR consumes the current Qwen3 one-token, short-decode, and warm-session strict CUDA proof receipts.",
+  "The PR rejects speedup for every reviewed profile and keeps server readiness, full CUDA residency, broad dense GGUF readiness, and BitNet packed I2S/QK256 claims false.",
+]

@@ -2506,8 +2506,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-007"
-status = "in_progress"
+status = "pr_open"
 branch = "model/cuda-qwen3-benchmark-qualification"
+pr = 4996
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

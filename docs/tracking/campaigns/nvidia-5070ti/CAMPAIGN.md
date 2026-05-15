@@ -250,7 +250,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-MODEL-004 | merged | PR #4940 added the Qwen3 0.6B one-token strict CUDA proof after the all-layer plan landed, keeping short-decode, warm-session, speedup, server, full-residency, and BitNet QK256 claims false. |
 | CUDA-MODEL-005 | merged | PR #4971 added the Qwen3 0.6B bounded short-decode strict CUDA proof after one-token CUDA landed, keeping warm-session, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-006 | merged | PR #4985 recorded Qwen3 0.6B warm-session strict CUDA proof after short-decode CUDA landed, keeping ask/chat product UX, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
-| CUDA-MODEL-007 | in progress | Current work records a Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict CUDA proof receipts, rejects speedup for every reviewed profile, and keeps server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
+| CUDA-MODEL-007 | pr_open | PR #4996 records a Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict CUDA proof receipts, rejects speedup for every reviewed profile, and keeps server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-UX-008 | merged | PR #4724 added a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | merged | PR #4754 added the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |
