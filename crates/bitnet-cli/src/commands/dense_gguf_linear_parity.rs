@@ -727,7 +727,7 @@ impl DenseGgufSamplingPolicyCommand {
 /// Run the governed dense Qwen one-token strict CUDA proof.
 #[derive(Args, Debug, Clone)]
 pub struct DenseGgufQwenOneTokenStrictCudaCommand {
-    /// Verified Qwen2.5 0.5B Q8_0 GGUF model path.
+    /// Verified Qwen2.5 0.5B Q8_0 or Qwen3 0.6B Q8_0 GGUF model path.
     #[arg(long)]
     pub model: PathBuf,
 
@@ -1155,11 +1155,11 @@ pub struct DenseGgufQwenWarmSessionStrictCudaCommand {
     #[arg(long = "prompt", value_name = "TEXT")]
     pub prompts: Vec<String>,
 
-    /// Number of deterministic turns. CUDA-DENSE-046 is bounded to 2-4 turns.
+    /// Number of deterministic turns. Dense Qwen warm-session proof is bounded to 2-4 turns.
     #[arg(long, default_value_t = 3)]
     pub turns: usize,
 
-    /// Number of deterministic greedy tokens to generate per turn. CUDA-DENSE-046 is bounded to 5-16.
+    /// Number of deterministic greedy tokens to generate per turn. Dense Qwen warm-session proof is bounded to 5-16.
     #[arg(long, default_value_t = 8)]
     pub max_new_tokens: usize,
 
@@ -1229,16 +1229,18 @@ impl DenseGgufQwenWarmSessionStrictCudaCommand {
 
         let data = map_model(&self.model)?;
         let model_sha256 = sha256_bytes(&data);
-        if model_sha256 != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
-            bail!(
-                "CUDA-DENSE-046 is scoped to verified {QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE}; got sha256={model_sha256}"
-            );
-        }
+        let proof_model = dense_qwen_proof_model_for_sha256(&model_sha256).ok_or_else(|| {
+            anyhow!(
+                "dense Qwen warm-session strict CUDA proof is scoped to verified Qwen2.5 0.5B Q8_0 or Qwen3 0.6B Q8_0 artifacts; got sha256={model_sha256}"
+            )
+        })?;
         let model_file =
             self.model.file_name().and_then(|value| value.to_str()).unwrap_or_default();
-        if model_file != QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE {
+        if model_file != proof_model.file {
             bail!(
-                "CUDA-DENSE-046 is scoped to {QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE}; got {model_file}"
+                "{} warm-session proof is scoped to verified {}; got {model_file}",
+                proof_model.work_item,
+                proof_model.file
             );
         }
 
@@ -1246,21 +1248,32 @@ impl DenseGgufQwenWarmSessionStrictCudaCommand {
             format!("failed to parse dense GGUF model {}", self.model.display())
         })?;
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
-        if inspection.model_family != "qwen" || inspection.architecture != "qwen2" {
+        if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture
+        {
             bail!(
-                "CUDA-DENSE-046 requires qwen/qwen2 descriptor identity; got {}/{}",
+                "{} warm-session proof requires qwen/{} descriptor identity; got {}/{}",
+                proof_model.work_item,
+                proof_model.architecture,
                 inspection.model_family,
                 inspection.architecture
             );
         }
 
         let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        let warm_session_work_item = dense_qwen_warm_session_work_item(proof_model);
         if !probe.available {
-            bail!("CUDA-DENSE-046 requires CUDA probe success: {:?}", probe.failure_reason);
+            bail!(
+                "{} warm-session proof requires CUDA probe success: {:?}",
+                warm_session_work_item,
+                probe.failure_reason
+            );
         }
         let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
         if !is_rtx5070ti_device_name(device_name) {
-            bail!("CUDA-DENSE-046 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+            bail!(
+                "{} warm-session proof requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'",
+                warm_session_work_item
+            );
         }
 
         let _strict_mode = ScopedEnvVar::set("BITNET_STRICT_MODE", "1");
@@ -1275,6 +1288,7 @@ impl DenseGgufQwenWarmSessionStrictCudaCommand {
             &self.sampling_policy,
             &self.one_token_proof,
             &self.short_decode_proof,
+            proof_model,
         )?;
 
         let tokenizer_start = std::time::Instant::now();
@@ -1357,6 +1371,7 @@ impl DenseGgufQwenWarmSessionStrictCudaCommand {
         let receipt = dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             &inspection,
             &prerequisites,
+            proof_model,
             &probe,
             &self.model,
             &model_sha256,
@@ -3498,6 +3513,7 @@ impl DenseQwenWarmSessionPrerequisites {
         sampling_policy: &Path,
         one_token_proof: &Path,
         short_decode_proof: &Path,
+        proof_model: &DenseQwenProofModel,
     ) -> Result<Self> {
         let short_decode = DenseQwenShortDecodePrerequisites::load(
             all_layer_plan,
@@ -3505,12 +3521,13 @@ impl DenseQwenWarmSessionPrerequisites {
             kv_cache_policy,
             sampling_policy,
             one_token_proof,
-            &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL,
+            proof_model,
         )?;
-        let (_, short_decode_proof_sha256) =
-            read_and_validate_receipt(short_decode_proof, |receipt| {
-                validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(receipt)
-            })?;
+        let (_, short_decode_proof_sha256) = read_and_validate_receipt_for_qwen_model(
+            short_decode_proof,
+            |receipt| validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(receipt),
+            proof_model,
+        )?;
 
         Ok(Self { short_decode, short_decode_proof_sha256 })
     }
@@ -11474,6 +11491,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
 fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     prerequisites: &DenseQwenWarmSessionPrerequisites,
+    proof_model: &DenseQwenProofModel,
     probe: &bitnet_device_probe::NvidiaCudaProbe,
     model_path: &Path,
     model_sha256: &str,
@@ -11485,15 +11503,16 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     cuda: &DenseQwenWarmSessionRun,
     decoded_texts: &[String],
 ) -> Result<Value> {
-    if inspection.model_family != "qwen" || inspection.architecture != "qwen2" {
+    if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture {
         bail!(
-            "dense Qwen warm-session receipt requires qwen/qwen2 inspection, got {}/{}",
+            "dense Qwen warm-session receipt requires qwen/{} inspection, got {}/{}",
+            proof_model.architecture,
             inspection.model_family,
             inspection.architecture
         );
     }
-    if model_sha256 != QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256 {
-        bail!("dense Qwen warm-session receipt requires verified Qwen model SHA");
+    if model_sha256 != proof_model.sha256 {
+        bail!("dense Qwen warm-session receipt requires verified {} model SHA", proof_model.id);
     }
     let turns_count = cuda.turns.len();
     if !(2..=4).contains(&turns_count) {
@@ -11766,10 +11785,10 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
         "cuda": cuda_identity_json(Some(probe)),
         "model": {
             "model_family": "qwen",
-            "id": QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
-            "architecture": "qwen2",
+            "id": proof_model.id,
+            "architecture": proof_model.architecture,
             "artifact_kind": "dense_gguf",
-            "file": QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE,
+            "file": proof_model.file,
             "path": model_path.display().to_string(),
             "sha256": model_sha256,
         },
@@ -11977,7 +11996,7 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "reference_backend": "amd-9950x3d-cpu-avx512",
             "target_backend": HARDWARE_LANE,
             "kernel_id": "dense_qwen_warm_session_cuda_runtime",
-            "fixture_id": "qwen2.5-0.5b-instruct-q8_0-warm-session-greedy",
+            "fixture_id": format!("{}-warm-session-greedy", proof_model.id),
             "passed": true,
             "max_abs_error": top_k_max_abs_error,
             "mean_abs_error": top_k_mean_abs_error,
@@ -12019,11 +12038,19 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "full_cuda_residency_claimed": false
         },
         "notes": [
-            "CUDA-DENSE-046 proves a bounded deterministic multi-turn Qwen warm session through the dense regular-LLM CUDA route.",
+            format!("{} proves a bounded deterministic multi-turn Qwen warm session through the dense regular-LLM CUDA route.", dense_qwen_warm_session_work_item(proof_model)),
             "This receipt does not claim ask/chat UX, server readiness, speedup, persistent residency beyond this warm-session scope, full CUDA residency, or BitNet packed I2_S/QK256 proof."
         ],
         "error": null
     }))
+}
+
+fn dense_qwen_warm_session_work_item(proof_model: &DenseQwenProofModel) -> &'static str {
+    match proof_model.id {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-DENSE-046",
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-MODEL-006",
+        _ => proof_model.work_item,
+    }
 }
 
 fn dense_gguf_one_layer_cpu_reference_receipt_json(
