@@ -1,0 +1,46 @@
+timestamp = "2026-05-15T03:56:39Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-009A"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+pr = 4832
+merge_sha = "05a7bb16a94231e3dfd97e09bfbc161cf9683a85"
+branch = "codex/slm-cpu-009-qwen-no-think-corpus"
+
+summary = "Record the Qwen no-thinking answer-corpus support slice."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4832",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-say-ok.json",
+  "ci/quality/slm-answer-corpus.yaml",
+]
+
+notes = [
+  "The answer-corpus runner now carries qwen_no_think=true into child `bitnet run` invocations as `--no-think`.",
+  "Per-case receipts record the qwen_no_think prompt policy.",
+  "`ci/quality/slm-answer-corpus.yaml` constrains the `say_ok` seed to one generated token under the selected no-thinking policy.",
+  "`ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-answer-corpus-say-ok.json` records a strict i5-8250U CPU run where `Say exactly: OK` passes with generated token 3925 / `OK`, selected_backend=cpu-rust, tokenizer.source=gguf_metadata, and fallback_used=false.",
+  "This merge is a support slice for SLM-CPU-009 and does not claim the full tiny answer corpus is green.",
+]
+
+validation = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli qwen_no_think_defaults_to_false_and_can_be_set",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci/quality/slm-answer-corpus.yaml --model models/slm/Qwen3-0.6B-Q8_0.gguf --device cpu --case-id say_ok --dump-logit-steps 1 --json-out target/slm-cpu/qwen3-answer-corpus-say-ok.json",
+  "cargo run --locked -p xtask --no-default-features -- check-no-panic-family --report-dir target/bitnet/reports",
+  "git diff --check",
+]
+
+must_not_claim = [
+  "Qwen3 tiny answer corpus is green.",
+  "Broad Qwen answer quality is proven.",
+  "Unbounded multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
