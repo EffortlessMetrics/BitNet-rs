@@ -16,6 +16,10 @@ const DEFAULT_REFERENCE_PLAN: &str = "target/a770-diagnostic/bitnet-reference-pl
 const DEFAULT_SIDECAR: &str = "target/a770-diagnostic/reference-first-token-layer-trace.json";
 const DEFAULT_COMPARE_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-layer-trace-compare.json";
+const DEFAULT_RUST_CAPTURE_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json";
+const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
+const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -102,6 +106,17 @@ struct LayerTraceCompareArgs {
     reference: PathBuf,
     cpu_trace_dir: PathBuf,
     a770_trace_dir: Option<PathBuf>,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct LayerTraceRustCaptureArgs {
+    plan: PathBuf,
+    cpu_trace_dir: PathBuf,
+    a770_trace_dir: PathBuf,
+    skip_a770: bool,
+    overwrite: bool,
     output: Option<PathBuf>,
     format: String,
 }
@@ -212,6 +227,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-layer-trace-capture-rust") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_rust_capture_help();
+                return Ok(true);
+            }
+            let opts = parse_rust_capture_args(args)?;
+            let report = capture_rust_layer_traces(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -231,6 +264,12 @@ fn print_run_help() {
 fn print_compare_help() {
     println!(
         "Compare a BitNet reference layer trace receipt against Rust CPU/A770 trace directories\n\nUsage: xtask.exe bitnet-reference-layer-trace-compare [OPTIONS]\n\nOptions:\n      --reference <PATH>       Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output\n      --a770-trace-dir <PATH>  Optional strict A770 BITNET_TRACE_DIR output\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-compare.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+    );
+}
+
+fn print_rust_capture_help() {
+    println!(
+        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -327,6 +366,48 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
     }
     let cpu_trace_dir = cpu_trace_dir.context("--cpu-trace-dir is required")?;
     Ok(LayerTraceCompareArgs { reference, cpu_trace_dir, a770_trace_dir, output, format })
+}
+
+fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-layer-trace-capture-rust") {
+        bail!("parse_rust_capture_args called for unexpected command");
+    }
+    let mut plan = PathBuf::from(DEFAULT_REFERENCE_PLAN);
+    let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
+    let mut a770_trace_dir = PathBuf::from(DEFAULT_A770_TRACE_DIR);
+    let mut skip_a770 = false;
+    let mut overwrite = false;
+    let mut output = Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--plan" => plan = PathBuf::from(value()?),
+            "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
+            "--a770-trace-dir" => a770_trace_dir = PathBuf::from(value()?),
+            "--skip-a770" => skip_a770 = true,
+            "--overwrite" => overwrite = true,
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => bail!("unknown bitnet-reference-layer-trace-capture-rust option {other}"),
+        }
+    }
+    Ok(LayerTraceRustCaptureArgs {
+        plan,
+        cpu_trace_dir,
+        a770_trace_dir,
+        skip_a770,
+        overwrite,
+        output,
+        format,
+    })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -616,6 +697,125 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             "claim_allowed": false,
             "current_blocked_reasons": blocked_reasons,
             "next_action": "use the first material mismatch to choose the next Rust/reference divergence capture; do not change model math until the mismatching boundary is stable",
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
+fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> {
+    let plan_path = normalize_path(&args.plan)?;
+    let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let a770_trace_dir = normalize_path(&args.a770_trace_dir)?;
+    let plan_result = read_json(&plan_path);
+    let plan_read_success = plan_result.is_ok();
+    let plan = plan_result.unwrap_or(Value::Null);
+
+    let cpu_argv = if plan_read_success { rust_command_argv(&plan, "cpu_argv").ok() } else { None };
+    let a770_argv =
+        if plan_read_success { rust_command_argv(&plan, "a770_argv").ok() } else { None };
+    let (cpu_argv, cpu_trace_feature_injected) =
+        cpu_argv.map(|argv| ensure_trace_feature(&argv)).unzip();
+    let (a770_argv, a770_trace_feature_injected) =
+        a770_argv.map(|argv| ensure_trace_feature(&argv)).unzip();
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !plan_path.is_file() {
+        blocked_reasons.push("reference_plan_missing".to_string());
+    } else if !plan_read_success {
+        blocked_reasons.push("reference_plan_json_invalid".to_string());
+    }
+    if plan_read_success && cpu_argv.is_none() {
+        blocked_reasons.push("rust_cpu_trace_command_missing".to_string());
+    }
+    if plan_read_success && !args.skip_a770 && a770_argv.is_none() {
+        blocked_reasons.push("strict_a770_trace_command_missing".to_string());
+    }
+
+    let cpu_prepare = prepare_trace_dir(&cpu_trace_dir, args.overwrite)?;
+    if let Some(reason) = cpu_prepare.pointer("/blocked_reason").and_then(Value::as_str) {
+        blocked_reasons.push(format!("cpu_trace_dir_{reason}"));
+    }
+    let a770_prepare = if args.skip_a770 {
+        json!({
+            "trace_dir": path_to_string(&a770_trace_dir),
+            "skipped": true,
+            "reason": "skip_a770_requested",
+        })
+    } else {
+        let prepare = prepare_trace_dir(&a770_trace_dir, args.overwrite)?;
+        if let Some(reason) = prepare.pointer("/blocked_reason").and_then(Value::as_str) {
+            blocked_reasons.push(format!("strict_a770_trace_dir_{reason}"));
+        }
+        prepare
+    };
+
+    let can_run_cpu = blocked_reasons.is_empty();
+    let cpu = if can_run_cpu {
+        run_rust_trace_capture("cpu", cpu_argv.as_deref().unwrap_or(&[]), &cpu_trace_dir)?
+    } else {
+        skipped_rust_trace_capture("cpu", cpu_argv.as_deref(), &cpu_trace_dir)
+    };
+
+    let can_run_a770 = blocked_reasons.is_empty() && !args.skip_a770;
+    let a770 = if can_run_a770 {
+        run_rust_trace_capture("strict_a770", a770_argv.as_deref().unwrap_or(&[]), &a770_trace_dir)?
+    } else {
+        if args.skip_a770 {
+            blocked_reasons.push("strict_a770_trace_capture_skipped".to_string());
+        }
+        skipped_rust_trace_capture("strict_a770", a770_argv.as_deref(), &a770_trace_dir)
+    };
+
+    append_trace_capture_blockers("cpu", &cpu, &mut blocked_reasons);
+    if !args.skip_a770 {
+        append_trace_capture_blockers("strict_a770", &a770, &mut blocked_reasons);
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let cpu_records = cpu.pointer("/trace/record_count").and_then(Value::as_u64).unwrap_or(0);
+    let a770_records = a770.pointer("/trace/record_count").and_then(Value::as_u64).unwrap_or(0);
+    let rust_layer_traces_ready = cpu_records > 0 && (args.skip_a770 || a770_records > 0);
+    let compare_ready = cpu_records > 0 && !args.skip_a770 && a770_records > 0;
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_layer_trace_rust_capture",
+        "diagnostic": "bitnet_reference_layer_trace_rust_capture",
+        "producer": "cargo xtask bitnet-reference-layer-trace-capture-rust",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "promotion_allowed": false,
+        "claim_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "plan": path_to_string(&plan_path),
+            "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "a770_trace_dir": path_to_string(&a770_trace_dir),
+            "skip_a770": args.skip_a770,
+            "overwrite": args.overwrite,
+        },
+        "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
+        "prompt_identity": plan.pointer("/prompt_identity").cloned().unwrap_or(Value::Null),
+        "proof_identity": plan.pointer("/rust_commands/proof_identity").cloned().unwrap_or(Value::Null),
+        "preflight": {
+            "plan_exists": plan_path.is_file(),
+            "plan_json_valid": plan_read_success,
+            "cpu_command_present": cpu_argv.is_some(),
+            "a770_command_present": a770_argv.is_some(),
+            "cpu_trace_feature_injected": cpu_trace_feature_injected.unwrap_or(false),
+            "a770_trace_feature_injected": a770_trace_feature_injected.unwrap_or(false),
+            "cpu_trace_dir_prepare": cpu_prepare,
+            "a770_trace_dir_prepare": a770_prepare,
+        },
+        "cpu": cpu,
+        "a770": a770,
+        "decision": {
+            "rust_layer_traces_ready": rust_layer_traces_ready,
+            "compare_ready": compare_ready,
+            "claim_allowed": false,
+            "current_blocked_reasons": blocked_reasons,
+            "next_when_ready": "run bitnet-reference-layer-trace-compare with the reference run receipt plus the captured CPU and strict A770 trace directories",
         },
         "not_claims": CRITICAL_NOT_CLAIMS,
     }))
@@ -995,6 +1195,42 @@ fn reference_argv(plan: &Value) -> Result<Vec<String>> {
         .collect()
 }
 
+fn rust_command_argv(plan: &Value, key: &str) -> Result<Vec<String>> {
+    let pointer = format!("/rust_commands/{key}");
+    plan.pointer(&pointer)
+        .and_then(Value::as_array)
+        .with_context(|| format!("plan missing {pointer}"))?
+        .iter()
+        .map(|item| item.as_str().map(ToOwned::to_owned).context("rust argv item is not a string"))
+        .collect()
+}
+
+fn ensure_trace_feature(argv: &[String]) -> (Vec<String>, bool) {
+    let mut argv = argv.to_vec();
+    let Some(features_index) = argv.iter().position(|arg| arg == "--features") else {
+        argv.push("--features".to_string());
+        argv.push("trace".to_string());
+        return (argv, true);
+    };
+    let Some(features) = argv.get_mut(features_index + 1) else {
+        argv.push("trace".to_string());
+        return (argv, true);
+    };
+    let has_trace = features
+        .split([',', ' '])
+        .filter(|feature| !feature.trim().is_empty())
+        .any(|feature| feature.trim() == "trace");
+    if has_trace {
+        return (argv, false);
+    }
+    if features.trim().is_empty() {
+        *features = "trace".to_string();
+    } else {
+        features.push_str(",trace");
+    }
+    (argv, true)
+}
+
 fn apply_windows_reference_compatibility_fixes(reference_root: &Path) -> Result<Vec<Value>> {
     let mut applied = Vec::new();
     applied.push(replace_file_text(
@@ -1156,6 +1392,145 @@ fn run_reference_with_sidecar(argv: &[String], sidecar: &Path) -> Result<Command
     run_command(&mut command)
 }
 
+fn run_rust_trace_capture(label: &str, argv: &[String], trace_dir: &Path) -> Result<Value> {
+    let executable = argv.first().context("empty Rust trace command")?;
+    let mut command = Command::new(executable);
+    command
+        .args(&argv[1..])
+        .env("BITNET_TRACE_DIR", trace_dir)
+        .env("BITNET_DETERMINISTIC", "1")
+        .env("BITNET_SEED", "0")
+        .stdin(Stdio::null());
+    let capture = run_command(&mut command)?;
+    let trace = summarize_rust_trace_dir(trace_dir);
+    Ok(json!({
+        "label": label,
+        "attempted": true,
+        "trace_dir": path_to_string(trace_dir),
+        "argv": argv,
+        "command": capture_json(Some(&capture)),
+        "trace": trace,
+    }))
+}
+
+fn skipped_rust_trace_capture(label: &str, argv: Option<&[String]>, trace_dir: &Path) -> Value {
+    json!({
+        "label": label,
+        "attempted": false,
+        "trace_dir": path_to_string(trace_dir),
+        "argv": argv.unwrap_or(&[]),
+        "command": Value::Null,
+        "trace": summarize_rust_trace_dir(trace_dir),
+    })
+}
+
+fn append_trace_capture_blockers(prefix: &str, capture: &Value, blocked_reasons: &mut Vec<String>) {
+    if capture.pointer("/attempted").and_then(Value::as_bool) == Some(true)
+        && capture.pointer("/command/success").and_then(Value::as_bool) != Some(true)
+    {
+        blocked_reasons.push(format!("{prefix}_trace_command_failed"));
+    }
+    if capture.pointer("/trace/record_count").and_then(Value::as_u64).unwrap_or(0) == 0 {
+        blocked_reasons.push(format!("{prefix}_trace_dir_no_trace_files"));
+    }
+}
+
+fn prepare_trace_dir(dir: &Path, overwrite: bool) -> Result<Value> {
+    if dir.exists() && !dir.is_dir() {
+        return Ok(json!({
+            "trace_dir": path_to_string(dir),
+            "ready": false,
+            "blocked_reason": "path_is_not_directory",
+        }));
+    }
+    fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    let entries = fs::read_dir(dir)
+        .with_context(|| format!("reading {}", dir.display()))?
+        .collect::<Result<Vec<_>, _>>()
+        .with_context(|| format!("reading entries in {}", dir.display()))?;
+    let mut removed_trace_files = Vec::<String>::new();
+    let mut non_trace_entries = Vec::<String>::new();
+    for entry in entries {
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("trace") {
+            if overwrite {
+                fs::remove_file(&path).with_context(|| format!("removing {}", path.display()))?;
+                removed_trace_files.push(path_to_string(&path));
+            }
+        } else {
+            non_trace_entries.push(path_to_string(&path));
+        }
+    }
+    let trace_files_after = count_trace_files(dir)?;
+    let blocked_reason = if !non_trace_entries.is_empty() {
+        Some("contains_non_trace_entries")
+    } else if trace_files_after > 0 && !overwrite {
+        Some("contains_existing_trace_files")
+    } else {
+        None
+    };
+    Ok(json!({
+        "trace_dir": path_to_string(dir),
+        "ready": blocked_reason.is_none(),
+        "overwrite": overwrite,
+        "removed_trace_files": removed_trace_files,
+        "existing_trace_files_after_prepare": trace_files_after,
+        "non_trace_entries": non_trace_entries,
+        "blocked_reason": blocked_reason,
+    }))
+}
+
+fn summarize_rust_trace_dir(dir: &Path) -> Value {
+    if !dir.exists() {
+        return json!({
+            "exists": false,
+            "record_count": 0,
+            "stages": [],
+            "read_error": "trace_dir_missing",
+        });
+    }
+    match read_rust_trace_dir(dir) {
+        Ok(records) => json!({
+            "exists": true,
+            "record_count": records.len(),
+            "stages": records
+                .iter()
+                .map(|(stage, record)| json!({
+                    "stage": stage,
+                    "name": record.name,
+                    "layer": record.layer,
+                    "shape": record.shape,
+                    "dtype": record.dtype,
+                    "num_elements": record.num_elements,
+                    "rms": record.rms,
+                }))
+                .collect::<Vec<_>>(),
+            "read_error": Value::Null,
+        }),
+        Err(error) => json!({
+            "exists": dir.exists(),
+            "record_count": 0,
+            "stages": [],
+            "read_error": error.to_string(),
+        }),
+    }
+}
+
+fn count_trace_files(dir: &Path) -> Result<usize> {
+    if !dir.exists() {
+        return Ok(0);
+    }
+    let mut count = 0usize;
+    for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let entry = entry.with_context(|| format!("reading entry in {}", dir.display()))?;
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("trace") {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
 fn cleanup_reference_sources(
     reference_root: &Path,
     cpp_root: &Path,
@@ -1315,6 +1690,31 @@ fn emit_report(report: &Value, format: &str) -> Result<()> {
                 );
                 return Ok(());
             }
+            if receipt_type == "bitnet_reference_layer_trace_rust_capture" {
+                let ready = report
+                    .pointer("/decision/compare_ready")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let cpu_records =
+                    report.pointer("/cpu/trace/record_count").and_then(Value::as_u64).unwrap_or(0);
+                let a770_records =
+                    report.pointer("/a770/trace/record_count").and_then(Value::as_u64).unwrap_or(0);
+                let reasons = report
+                    .pointer("/decision/current_blocked_reasons")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                println!(
+                    "bitnet reference layer trace rust capture: diagnostic_only=true claim_allowed=false compare_ready={ready} cpu_records={cpu_records} a770_records={a770_records}"
+                );
+                if !reasons.is_empty() {
+                    println!("blocked_reasons:");
+                    for reason in reasons {
+                        println!("  - {}", reason.as_str().unwrap_or("<non-string>"));
+                    }
+                }
+                return Ok(());
+            }
             let ready = report
                 .pointer("/decision/source_anchors_ready_for_target_local_patch")
                 .and_then(Value::as_bool)
@@ -1369,6 +1769,31 @@ mod tests {
             "stage": stage,
         });
         fs::write(path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
+    }
+
+    fn write_rust_capture_plan(path: &Path) {
+        write_file(
+            path,
+            &serde_json::to_string_pretty(&json!({
+                "model": {
+                    "model_path": "model.gguf",
+                    "contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"
+                },
+                "prompt_identity": {
+                    "prompt_template": "llama3-chat",
+                    "prompt_token_ids_sha256": "abc"
+                },
+                "rust_commands": {
+                    "cpu_argv": ["definitely-not-run-when-trace-dir-is-stale"],
+                    "a770_argv": ["definitely-not-run-when-trace-dir-is-stale"],
+                    "proof_identity": {
+                        "model_contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+                        "a770_kernel_route": "a770.bitnet.i2s.qk256"
+                    }
+                }
+            }))
+            .unwrap(),
+        );
     }
 
     #[test]
@@ -1446,6 +1871,89 @@ mod tests {
         assert!(reasons.contains(&json!("reference_root_missing")));
         assert!(reasons.contains(&json!("reference_layer_trace_patch_missing")));
         assert!(reasons.contains(&json!("reference_plan_missing")));
+    }
+
+    #[test]
+    fn rust_capture_report_stays_diagnostic_when_plan_is_missing() {
+        let dir = tempdir().unwrap();
+        let report = capture_rust_layer_traces(&LayerTraceRustCaptureArgs {
+            plan: dir.path().join("missing-plan.json"),
+            cpu_trace_dir: dir.path().join("cpu"),
+            a770_trace_dir: dir.path().join("a770"),
+            skip_a770: false,
+            overwrite: false,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert!(reasons.contains(&json!("reference_plan_missing")));
+        assert_eq!(report.pointer("/decision/compare_ready"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn rust_capture_rejects_stale_trace_dirs_without_overwrite() {
+        let dir = tempdir().unwrap();
+        let plan = dir.path().join("plan.json");
+        let cpu = dir.path().join("cpu");
+        let a770 = dir.path().join("a770");
+        fs::create_dir_all(&cpu).unwrap();
+        fs::create_dir_all(&a770).unwrap();
+        write_rust_capture_plan(&plan);
+        write_rust_trace(&cpu, "embeddings", &[1, 2], 1.0);
+
+        let report = capture_rust_layer_traces(&LayerTraceRustCaptureArgs {
+            plan,
+            cpu_trace_dir: cpu,
+            a770_trace_dir: a770,
+            skip_a770: false,
+            overwrite: false,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert!(reasons.contains(&json!("cpu_trace_dir_contains_existing_trace_files")));
+        assert_eq!(report.pointer("/cpu/attempted"), Some(&json!(false)));
+        assert_eq!(report.pointer("/decision/compare_ready"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn rust_capture_injects_trace_feature_into_plan_argv() {
+        let argv = vec![
+            "cargo".to_string(),
+            "run".to_string(),
+            "--features".to_string(),
+            "opencl".to_string(),
+            "--".to_string(),
+            "run".to_string(),
+        ];
+
+        let (updated, injected) = ensure_trace_feature(&argv);
+
+        assert!(injected);
+        assert_eq!(updated[3], "opencl,trace");
+    }
+
+    #[test]
+    fn rust_capture_does_not_duplicate_trace_feature() {
+        let argv = vec![
+            "cargo".to_string(),
+            "run".to_string(),
+            "--features".to_string(),
+            "cpu,trace".to_string(),
+        ];
+
+        let (updated, injected) = ensure_trace_feature(&argv);
+
+        assert!(!injected);
+        assert_eq!(updated, argv);
     }
 
     #[test]
