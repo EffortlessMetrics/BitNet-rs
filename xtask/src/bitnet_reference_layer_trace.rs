@@ -18,8 +18,11 @@ const DEFAULT_COMPARE_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-layer-trace-compare.json";
 const DEFAULT_RUST_CAPTURE_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json";
+const DEFAULT_EMBEDDING_ROW_AUTHORITY_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-embedding-row-authority.json";
 const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
+const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -117,6 +120,14 @@ struct LayerTraceRustCaptureArgs {
     a770_trace_dir: PathBuf,
     skip_a770: bool,
     overwrite: bool,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct EmbeddingRowAuthorityArgs {
+    reference: PathBuf,
+    model: Option<PathBuf>,
     output: Option<PathBuf>,
     format: String,
 }
@@ -249,6 +260,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-embedding-row-authority") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_embedding_row_authority_help();
+                return Ok(true);
+            }
+            let opts = parse_embedding_row_authority_args(args)?;
+            let report = build_embedding_row_authority(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -274,6 +303,12 @@ fn print_compare_help() {
 fn print_rust_capture_help() {
     println!(
         "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+    );
+}
+
+fn print_embedding_row_authority_help() {
+    println!(
+        "Compare reference token_embd.weight rows against Rust-loaded embedding rows for the captured prompt tokens\n\nUsage: xtask.exe bitnet-reference-embedding-row-authority [OPTIONS]\n\nOptions:\n      --reference <PATH>  Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --model <PATH>      GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --output <PATH>     Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-embedding-row-authority.json]\n      --format <FORMAT>   Output format: human or json [default: human]\n  -h, --help              Print help"
     );
 }
 
@@ -412,6 +447,34 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
         output,
         format,
     })
+}
+
+fn parse_embedding_row_authority_args(args: &[String]) -> Result<EmbeddingRowAuthorityArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-embedding-row-authority") {
+        bail!("parse_embedding_row_authority_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut model = None::<PathBuf>;
+    let mut output = Some(PathBuf::from(DEFAULT_EMBEDDING_ROW_AUTHORITY_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--model" => model = Some(PathBuf::from(value()?)),
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => bail!("unknown bitnet-reference-embedding-row-authority option {other}"),
+        }
+    }
+    Ok(EmbeddingRowAuthorityArgs { reference, model, output, format })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -829,6 +892,151 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
     }))
 }
 
+fn build_embedding_row_authority(args: &EmbeddingRowAuthorityArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let reference_root = read_json(&reference_path)?;
+    let trace = reference_trace_receipt(&reference_root)?;
+    let model_path = args
+        .model
+        .clone()
+        .or_else(|| {
+            reference_root.pointer("/model/model_path").and_then(Value::as_str).map(PathBuf::from)
+        })
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
+    let model_path = normalize_path(&model_path)?;
+
+    let token_ids = reference_prompt_tokens(trace);
+    let sampled_output_token_id = trace.pointer("/sampled_output_token_id").and_then(Value::as_u64);
+    let sampled_output_token_index =
+        trace.pointer("/sampled_output_token_index").and_then(Value::as_i64);
+    let inp_embd = trace.pointer("/records").and_then(Value::as_array).and_then(|records| {
+        records
+            .iter()
+            .find(|record| record.pointer("/stage").and_then(Value::as_str) == Some("inp_embd"))
+    });
+    let expected_width = inp_embd
+        .and_then(|record| record.pointer("/nelements").and_then(Value::as_u64))
+        .unwrap_or(0) as usize;
+    let reference_first_values = inp_embd
+        .and_then(|record| record.pointer("/first_values").and_then(Value::as_array))
+        .map(|values| {
+            values.iter().filter_map(Value::as_f64).map(|value| value as f32).collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !reference_path.is_file() {
+        blocked_reasons.push("reference_layer_trace_receipt_missing".to_string());
+    }
+    if !model_path.is_file() {
+        blocked_reasons.push("model_gguf_missing".to_string());
+    }
+    if token_ids.is_empty() {
+        blocked_reasons.push("reference_trace_prompt_tokens_missing".to_string());
+    }
+    if expected_width == 0 {
+        blocked_reasons.push("reference_inp_embd_width_missing".to_string());
+    }
+
+    let mut model = json!({
+        "path": path_to_string(&model_path),
+        "exists": model_path.is_file(),
+    });
+    let mut tensor = Value::Null;
+    let mut rows = Vec::<Value>::new();
+
+    if model_path.is_file() && !token_ids.is_empty() && expected_width > 0 {
+        match build_embedding_row_authority_rows(
+            &model_path,
+            &token_ids,
+            sampled_output_token_index,
+            sampled_output_token_id,
+            expected_width,
+            &reference_first_values,
+        ) {
+            Ok((model_report, tensor_report, row_reports)) => {
+                model = model_report;
+                tensor = tensor_report;
+                rows = row_reports;
+            }
+            Err(err) => {
+                blocked_reasons.push(format!("embedding_row_authority_unavailable:{err}"));
+            }
+        }
+    }
+
+    let sampled_row = rows
+        .iter()
+        .find(|row| {
+            if let Some(index) = sampled_output_token_index {
+                row.pointer("/prompt_index").and_then(Value::as_i64) == Some(index)
+            } else {
+                sampled_output_token_id.is_some_and(|token_id| {
+                    row.pointer("/token_id").and_then(Value::as_u64) == Some(token_id)
+                })
+            }
+        })
+        .cloned();
+    let reference_row_matches_trace_sample = sampled_row.as_ref().is_some_and(|row| {
+        row_candidate_delta_le(row, "/reference_raw_vs_trace_first_values/max_abs_delta", 1.0e-3)
+    });
+    let rust_loaded_matches_reference_row = sampled_row.as_ref().is_some_and(|row| {
+        row_candidate_delta_le(row, "/reference_raw_vs_rust_loaded/max_abs_delta", 1.0e-3)
+    });
+
+    let authority_ready = blocked_reasons.is_empty() && sampled_row.is_some();
+    let next_action = if !authority_ready {
+        "make the reference trace, prompt token ids, and GGUF model path available"
+    } else if reference_row_matches_trace_sample && !rust_loaded_matches_reference_row {
+        "inspect Rust GGUF embedding normalization or transformer handoff before changing downstream math"
+    } else if rust_loaded_matches_reference_row && !reference_row_matches_trace_sample {
+        "repair reference trace value capture for early graph nodes; raw GGUF and Rust-loaded embedding rows agree, but sampled trace values do not match token_embd.weight"
+    } else if !reference_row_matches_trace_sample {
+        "inspect reference trace sampling or token_embd raw row interpretation before changing Rust model math"
+    } else {
+        "embedding row authority matches; move the first-divergence search past prompt embedding"
+    };
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_embedding_row_authority",
+        "diagnostic": "bitnet_reference_embedding_row_authority",
+        "producer": "cargo xtask bitnet-reference-embedding-row-authority",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "promotion_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "model": path_to_string(&model_path),
+        },
+        "reference_trace": {
+            "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
+            "warmup_skip_policy": trace.pointer("/warmup_skip_policy").cloned().unwrap_or(Value::Null),
+            "n_tokens": trace.pointer("/n_tokens").cloned().unwrap_or(Value::Null),
+            "n_outputs": trace.pointer("/n_outputs").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_index": sampled_output_token_index,
+            "sampled_output_token_id": sampled_output_token_id,
+            "prompt_token_count": token_ids.len(),
+            "prompt_token_ids": token_ids,
+            "inp_embd": inp_embd.map(reference_inp_embd_summary).unwrap_or(Value::Null),
+        },
+        "model": model,
+        "embedding_tensor": tensor,
+        "rows": rows,
+        "decision": {
+            "embedding_row_authority_ready": authority_ready,
+            "reference_row_matches_trace_sample": reference_row_matches_trace_sample,
+            "rust_loaded_matches_reference_row": rust_loaded_matches_reference_row,
+            "current_blocked_reasons": blocked_reasons,
+            "next_action": next_action,
+            "claim_allowed": false,
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
 fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
     let receipt = match root.pointer("/receipt_type").and_then(Value::as_str) {
         Some("bitnet_reference_layer_trace_run") => root
@@ -888,6 +1096,369 @@ fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
             })
         })
         .collect()
+}
+
+fn reference_trace_receipt(root: &Value) -> Result<&Value> {
+    match root.pointer("/receipt_type").and_then(Value::as_str) {
+        Some("bitnet_reference_layer_trace_run") => root
+            .pointer("/sidecar/receipt")
+            .context("layer trace run receipt missing /sidecar/receipt"),
+        _ => Ok(root),
+    }
+}
+
+fn reference_prompt_tokens(trace: &Value) -> Vec<u64> {
+    trace
+        .pointer("/ubatch_tokens")
+        .and_then(Value::as_array)
+        .map(|tokens| tokens.iter().filter_map(Value::as_u64).collect())
+        .unwrap_or_default()
+}
+
+fn reference_inp_embd_summary(record: &Value) -> Value {
+    json!({
+        "name": record.pointer("/name").cloned().unwrap_or(Value::Null),
+        "stage": record.pointer("/stage").cloned().unwrap_or(Value::Null),
+        "graph_index": record.pointer("/graph_index").cloned().unwrap_or(Value::Null),
+        "graph_op": record.pointer("/graph_op").cloned().unwrap_or(Value::Null),
+        "graph_sources": record.pointer("/graph_sources").cloned().unwrap_or_else(|| json!([])),
+        "shape": record.pointer("/shape").cloned().unwrap_or(Value::Null),
+        "full_shape": record.pointer("/full_shape").cloned().unwrap_or(Value::Null),
+        "nelements": record.pointer("/nelements").cloned().unwrap_or(Value::Null),
+        "sample_offset": record.pointer("/sample_offset").cloned().unwrap_or(Value::Null),
+        "token_axis": record.pointer("/token_axis").cloned().unwrap_or(Value::Null),
+        "stats": record.pointer("/stats").cloned().unwrap_or(Value::Null),
+        "first_values": record.pointer("/first_values").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn build_embedding_row_authority_rows(
+    model_path: &Path,
+    token_ids: &[u64],
+    sampled_output_token_index: Option<i64>,
+    sampled_output_token_id: Option<u64>,
+    expected_width: usize,
+    reference_first_values: &[f32],
+) -> Result<(Value, Value, Vec<Value>)> {
+    let mmap = bitnet_models::loader::MmapFile::open(model_path)
+        .map_err(|err| anyhow::anyhow!("opening GGUF model: {err}"))?;
+    let reader = bitnet_models::formats::gguf::GgufReader::new(mmap.as_slice())
+        .map_err(|err| anyhow::anyhow!("parsing GGUF model: {err}"))?;
+    let info = ["token_embd.weight", "tok_embeddings.weight", "model.embed_tokens.weight"]
+        .iter()
+        .find_map(|name| reader.get_tensor_info_by_name(name))
+        .context("token_embd.weight tensor not found in GGUF")?;
+    let raw_data = reader
+        .get_tensor_data_by_info(info)
+        .map_err(|err| anyhow::anyhow!("reading raw token_embd.weight data: {err}"))?;
+    let raw_layouts = embedding_raw_layouts(&info.shape, expected_width, token_ids);
+    if raw_layouts.is_empty() {
+        bail!("could not derive hidden-width token-row layout from GGUF token_embd.weight");
+    }
+
+    let load_result = bitnet_models::load_gguf_full(
+        model_path,
+        bitnet_common::Device::Cpu,
+        bitnet_models::GGUFLoaderConfig::default(),
+    )
+    .map_err(|err| anyhow::anyhow!("Rust GGUF load failed: {err}"))?;
+    let rust_embedding = ["token_embd.weight", "embed_tokens.weight", "tok_embeddings.weight"]
+        .iter()
+        .find_map(|name| load_result.tensors.get(*name).map(|tensor| (*name, tensor)))
+        .context("Rust-loaded embedding tensor missing")?;
+
+    let mut rows = Vec::new();
+    for (prompt_index, &token_id) in token_ids.iter().enumerate() {
+        let mut reference_candidates = Vec::new();
+        let is_sampled_output_token = sampled_output_token_index
+            .map(|index| index == prompt_index as i64)
+            .unwrap_or_else(|| Some(token_id) == sampled_output_token_id);
+        let rust_loaded = {
+            let tensor = rust_embedding.1;
+            let dims = tensor.shape().dims();
+            if dims.len() != 2 {
+                bail!("Rust-loaded embedding tensor must be 2D, got {dims:?}");
+            }
+            if dims[1] == expected_width && (token_id as usize) < dims[0] {
+                tensor
+                    .narrow(0, token_id as usize, 1)
+                    .map_err(|err| anyhow::anyhow!("narrow Rust embedding row: {err}"))?
+                    .flatten_all()
+                    .map_err(|err| anyhow::anyhow!("flatten Rust embedding row: {err}"))?
+                    .to_vec1::<f32>()
+                    .map_err(|err| anyhow::anyhow!("copy Rust embedding row to host: {err}"))?
+            } else if dims[0] == expected_width && (token_id as usize) < dims[1] {
+                tensor
+                    .narrow(1, token_id as usize, 1)
+                    .map_err(|err| anyhow::anyhow!("narrow Rust embedding column: {err}"))?
+                    .flatten_all()
+                    .map_err(|err| anyhow::anyhow!("flatten Rust embedding column: {err}"))?
+                    .to_vec1::<f32>()
+                    .map_err(|err| anyhow::anyhow!("copy Rust embedding column to host: {err}"))?
+            } else {
+                bail!(
+                    "could not select token {} with hidden width {} from Rust-loaded embedding shape {:?}",
+                    token_id,
+                    expected_width,
+                    dims
+                );
+            }
+        };
+        for layout in &raw_layouts {
+            let reference_raw =
+                decode_embedding_row(raw_data, info.tensor_type, layout, token_id as usize)?;
+            let trace_compare = if is_sampled_output_token && !reference_first_values.is_empty() {
+                compare_prefix(&reference_raw, reference_first_values, reference_first_values.len())
+            } else {
+                Value::Null
+            };
+            reference_candidates.push(json!({
+                "layout": layout,
+                "row": row_report(&reference_raw),
+                "reference_raw_vs_rust_loaded": compare_vectors(&reference_raw, &rust_loaded),
+                "reference_raw_vs_trace_first_values": trace_compare,
+            }));
+        }
+        rows.push(json!({
+            "prompt_index": prompt_index,
+            "token_id": token_id,
+            "is_sampled_output_token": is_sampled_output_token,
+            "reference_candidates": reference_candidates,
+            "rust_loaded": row_report(&rust_loaded),
+        }));
+    }
+
+    let model_report = json!({
+        "path": path_to_string(model_path),
+        "exists": true,
+        "loader_mode": load_result.loader_mode.as_str(),
+        "loader_config": "default_real_gguf_embedding_row_inspection",
+        "fallback_used": load_result.loader_mode.fallback_used(),
+        "config": {
+            "vocab_size": load_result.config.model.vocab_size,
+            "hidden_size": load_result.config.model.hidden_size,
+            "num_layers": load_result.config.model.num_layers,
+            "num_heads": load_result.config.model.num_heads,
+            "num_key_value_heads": load_result.config.model.num_key_value_heads,
+        },
+    });
+    let tensor_report = json!({
+        "gguf_name": info.name,
+        "gguf_dtype": format!("{:?}", info.tensor_type),
+        "gguf_shape": info.shape,
+        "gguf_size_bytes": info.size,
+        "reference_raw_layout_candidates": raw_layouts,
+        "rust_loaded_name": rust_embedding.0,
+        "rust_loaded_shape": rust_embedding.1.shape().dims(),
+    });
+
+    Ok((model_report, tensor_report, rows))
+}
+
+fn embedding_raw_layouts(shape: &[usize], expected_width: usize, token_ids: &[u64]) -> Vec<Value> {
+    if shape.len() != 2 || expected_width == 0 {
+        return Vec::new();
+    }
+    let mut layouts = Vec::new();
+    let max_token = token_ids.iter().copied().max().unwrap_or(0) as usize;
+    if shape[0] == expected_width && max_token < shape[1] {
+        layouts.push(json!({
+            "kind": "ggml_ne0_hidden_by_vocab_token_column",
+            "hidden": shape[0],
+            "vocab": shape[1],
+            "element_index_rule": "token_id * hidden + hidden_index",
+        }));
+        layouts.push(json!({
+            "kind": "row_major_hidden_by_vocab_transposed_token_row",
+            "hidden": shape[0],
+            "vocab": shape[1],
+            "element_index_rule": "hidden_index * vocab + token_id",
+        }));
+    }
+    if shape[1] == expected_width && max_token < shape[0] {
+        layouts.push(json!({
+            "kind": "vocab_by_hidden_token_row",
+            "hidden": shape[1],
+            "vocab": shape[0],
+            "element_index_rule": "token_id * hidden + hidden_index",
+        }));
+    }
+    layouts
+}
+
+fn row_candidate_delta_le(row: &Value, pointer_suffix: &str, threshold: f64) -> bool {
+    row.pointer("/reference_candidates").and_then(Value::as_array).is_some_and(|candidates| {
+        candidates.iter().any(|candidate| {
+            candidate
+                .pointer(pointer_suffix)
+                .and_then(Value::as_f64)
+                .is_some_and(|delta| delta <= threshold)
+        })
+    })
+}
+
+fn decode_embedding_row(
+    data: &[u8],
+    dtype: bitnet_models::formats::gguf::GgufTensorType,
+    layout: &Value,
+    token_id: usize,
+) -> Result<Vec<f32>> {
+    let hidden = layout
+        .pointer("/hidden")
+        .and_then(Value::as_u64)
+        .context("embedding layout missing hidden")? as usize;
+    let vocab = layout
+        .pointer("/vocab")
+        .and_then(Value::as_u64)
+        .context("embedding layout missing vocab")? as usize;
+    if token_id >= vocab {
+        bail!("token id {token_id} out of bounds for embedding vocab {vocab}");
+    }
+    let mut row = Vec::with_capacity(hidden);
+    for hidden_index in 0..hidden {
+        let index = match layout.pointer("/element_index_rule").and_then(Value::as_str) {
+            Some("token_id * hidden + hidden_index") => token_id
+                .checked_mul(hidden)
+                .and_then(|start| start.checked_add(hidden_index))
+                .context("embedding row offset overflow")?,
+            Some("hidden_index * vocab + token_id") => hidden_index
+                .checked_mul(vocab)
+                .and_then(|start| start.checked_add(token_id))
+                .context("embedding transposed row offset overflow")?,
+            other => bail!("unsupported embedding layout index rule: {other:?}"),
+        };
+        row.push(decode_gguf_scalar(data, dtype, index)?);
+    }
+    Ok(row)
+}
+
+fn decode_gguf_scalar(
+    data: &[u8],
+    dtype: bitnet_models::formats::gguf::GgufTensorType,
+    index: usize,
+) -> Result<f32> {
+    match dtype {
+        bitnet_models::formats::gguf::GgufTensorType::F32 => {
+            let offset = index.checked_mul(4).context("F32 offset overflow")?;
+            let bytes = data
+                .get(offset..offset + 4)
+                .with_context(|| format!("F32 scalar index {index} out of bounds"))?;
+            Ok(f32::from_le_bytes(bytes.try_into().unwrap()))
+        }
+        bitnet_models::formats::gguf::GgufTensorType::F16 => {
+            let offset = index.checked_mul(2).context("F16 offset overflow")?;
+            let bytes = data
+                .get(offset..offset + 2)
+                .with_context(|| format!("F16 scalar index {index} out of bounds"))?;
+            Ok(f16_bits_to_f32(u16::from_le_bytes(bytes.try_into().unwrap())))
+        }
+        other => bail!("unsupported embedding dtype for row authority report: {other:?}"),
+    }
+}
+
+fn f16_bits_to_f32(bits: u16) -> f32 {
+    let sign = ((bits & 0x8000) as u32) << 16;
+    let exp = (bits >> 10) & 0x1f;
+    let frac = (bits & 0x03ff) as u32;
+    let f32_bits = match exp {
+        0 => {
+            if frac == 0 {
+                sign
+            } else {
+                let mut mant = frac;
+                let mut e = -14i32;
+                while (mant & 0x0400) == 0 {
+                    mant <<= 1;
+                    e -= 1;
+                }
+                mant &= 0x03ff;
+                sign | (((e + 127) as u32) << 23) | (mant << 13)
+            }
+        }
+        0x1f => sign | 0x7f80_0000 | (frac << 13),
+        _ => {
+            let exp32 = (exp as i32 - 15 + 127) as u32;
+            sign | (exp32 << 23) | (frac << 13)
+        }
+    };
+    f32::from_bits(f32_bits)
+}
+
+fn row_report(values: &[f32]) -> Value {
+    let stats = vector_stats(values);
+    json!({
+        "count": values.len(),
+        "stats": stats,
+        "sha256": vector_sha256(values),
+        "first_values": values.iter().take(16).copied().collect::<Vec<_>>(),
+    })
+}
+
+fn vector_stats(values: &[f32]) -> Value {
+    if values.is_empty() {
+        return json!({
+            "mean": null,
+            "rms": null,
+            "min": null,
+            "max": null,
+        });
+    }
+    let mut sum = 0.0f64;
+    let mut sum_sq = 0.0f64;
+    let mut min = f32::INFINITY;
+    let mut max = f32::NEG_INFINITY;
+    for &value in values {
+        sum += value as f64;
+        sum_sq += (value as f64) * (value as f64);
+        min = min.min(value);
+        max = max.max(value);
+    }
+    json!({
+        "mean": sum / values.len() as f64,
+        "rms": (sum_sq / values.len() as f64).sqrt(),
+        "min": min,
+        "max": max,
+    })
+}
+
+fn vector_sha256(values: &[f32]) -> String {
+    let mut hasher = Sha256::new();
+    for value in values {
+        hasher.update(value.to_le_bytes());
+    }
+    format!("sha256:{:x}", hasher.finalize())
+}
+
+fn compare_prefix(left: &[f32], right: &[f32], len: usize) -> Value {
+    let n = len.min(left.len()).min(right.len());
+    compare_vectors(&left[..n], &right[..n])
+}
+
+fn compare_vectors(left: &[f32], right: &[f32]) -> Value {
+    let n = left.len().min(right.len());
+    let mut max_abs_delta = 0.0f64;
+    let mut sum_sq_delta = 0.0f64;
+    let mut first_mismatch_index = None::<usize>;
+    for i in 0..n {
+        let delta = (left[i] as f64 - right[i] as f64).abs();
+        if delta > max_abs_delta {
+            max_abs_delta = delta;
+        }
+        if delta > 1.0e-6 && first_mismatch_index.is_none() {
+            first_mismatch_index = Some(i);
+        }
+        sum_sq_delta += delta * delta;
+    }
+    json!({
+        "left_count": left.len(),
+        "right_count": right.len(),
+        "compared_count": n,
+        "count_match": left.len() == right.len(),
+        "max_abs_delta": max_abs_delta,
+        "rms_abs_delta": if n == 0 { 0.0 } else { (sum_sq_delta / n as f64).sqrt() },
+        "first_mismatch_index": first_mismatch_index,
+        "sha256_match": vector_sha256(left) == vector_sha256(right),
+    })
 }
 
 fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
@@ -1737,6 +2308,35 @@ fn emit_report(report: &Value, format: &str) -> Result<()> {
                 }
                 return Ok(());
             }
+            if receipt_type == "bitnet_reference_embedding_row_authority" {
+                let ready = report
+                    .pointer("/decision/embedding_row_authority_ready")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let ref_match = report
+                    .pointer("/decision/reference_row_matches_trace_sample")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let rust_match = report
+                    .pointer("/decision/rust_loaded_matches_reference_row")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let reasons = report
+                    .pointer("/decision/current_blocked_reasons")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                println!(
+                    "bitnet reference embedding row authority: diagnostic_only=true claim_allowed=false ready={ready} reference_trace_match={ref_match} rust_loaded_match={rust_match}"
+                );
+                if !reasons.is_empty() {
+                    println!("blocked_reasons:");
+                    for reason in reasons {
+                        println!("  - {}", reason.as_str().unwrap_or("<non-string>"));
+                    }
+                }
+                return Ok(());
+            }
             let ready = report
                 .pointer("/decision/source_anchors_ready_for_target_local_patch")
                 .and_then(Value::as_bool)
@@ -2056,5 +2656,89 @@ mod tests {
             Some(&json!("inp_embd"))
         );
         assert!(report.pointer("/decision/current_blocked_reasons").unwrap().is_array());
+    }
+
+    #[test]
+    fn reference_trace_receipt_supports_run_wrapper_prompt_tokens() {
+        let root = json!({
+            "receipt_type": "bitnet_reference_layer_trace_run",
+            "sidecar": {
+                "receipt": {
+                    "receipt_type": "bitnet_reference_layer_trace",
+                    "ubatch_tokens": [128000, 17, 271],
+                    "records": []
+                }
+            }
+        });
+        let trace = reference_trace_receipt(&root).unwrap();
+
+        assert_eq!(reference_prompt_tokens(trace), vec![128000, 17, 271]);
+    }
+
+    #[test]
+    fn embedding_row_decode_uses_hidden_by_vocab_token_column() {
+        let bits = [0x3c00u16, 0x4000, 0x4200, 0x4400, 0x4500, 0x4600];
+        let mut data = Vec::new();
+        for value in bits {
+            data.extend_from_slice(&value.to_le_bytes());
+        }
+        let layouts = embedding_raw_layouts(&[2, 3], 2, &[1]);
+        let layout = layouts
+            .iter()
+            .find(|layout| {
+                layout.pointer("/kind") == Some(&json!("ggml_ne0_hidden_by_vocab_token_column"))
+            })
+            .unwrap();
+        let row = decode_embedding_row(
+            &data,
+            bitnet_models::formats::gguf::GgufTensorType::F16,
+            &layout,
+            1,
+        )
+        .unwrap();
+
+        assert_eq!(layout.pointer("/kind"), Some(&json!("ggml_ne0_hidden_by_vocab_token_column")));
+        assert_eq!(row, vec![3.0, 4.0]);
+    }
+
+    #[test]
+    fn row_candidate_delta_scans_layout_candidates() {
+        let row = json!({
+            "reference_candidates": [
+                {
+                    "reference_raw_vs_rust_loaded": {
+                        "max_abs_delta": 4.0
+                    }
+                },
+                {
+                    "reference_raw_vs_rust_loaded": {
+                        "max_abs_delta": 0.0
+                    }
+                }
+            ]
+        });
+
+        assert!(row_candidate_delta_le(
+            &row,
+            "/reference_raw_vs_rust_loaded/max_abs_delta",
+            1.0e-3
+        ));
+        assert!(!row_candidate_delta_le(
+            &row,
+            "/reference_raw_vs_trace_first_values/max_abs_delta",
+            1.0e-3
+        ));
+    }
+
+    #[test]
+    fn vector_compare_reports_first_mismatch_and_hash_match() {
+        let same = compare_vectors(&[1.0, 2.0], &[1.0, 2.0]);
+        let different = compare_vectors(&[1.0, 2.0], &[1.0, 2.5]);
+
+        assert_eq!(same.pointer("/sha256_match"), Some(&json!(true)));
+        assert_eq!(same.pointer("/first_mismatch_index"), Some(&Value::Null));
+        assert_eq!(different.pointer("/sha256_match"), Some(&json!(false)));
+        assert_eq!(different.pointer("/first_mismatch_index"), Some(&json!(1)));
+        assert_eq!(different.pointer("/max_abs_delta"), Some(&json!(0.5)));
     }
 }
