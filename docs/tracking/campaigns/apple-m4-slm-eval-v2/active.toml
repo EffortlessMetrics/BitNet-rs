@@ -154,7 +154,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL2-004"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-004-benchmark-reports"
 stackable = false
 review_mode = "codex_premerge"
