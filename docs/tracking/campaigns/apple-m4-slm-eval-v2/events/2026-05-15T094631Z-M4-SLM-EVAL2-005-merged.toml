@@ -1,0 +1,24 @@
+timestamp = "2026-05-15T09:46:31Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-005"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-005-regression-dashboard"
+pr = 4886
+head_sha = "60f321b15c44cb36cc75e8fe7a7aa65131b87710"
+merge_sha = "6aecd5d25f70a086696251d0f07ee7ca1df62915"
+summary = "Marked M4-SLM-EVAL2-005 merged after v2 regression dashboard wiring landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4886",
+  ".github/workflows/apple-m4-slm-eval-tier0.yml",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "The merged PR adds apple_m4_slm_benchmark_v2 support to mac regression and extends dense SLM eval regression to scoring-summary and task-family fields.",
+  "Tier 0 now validates committed v2 reports and self-baseline regression checks under --fail-on-drift without fetching models or running live M4 inference.",
+  "The change is bounded to recorded dense M4 SLM reports and does not claim broad quality, broad Apple Silicon performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook behavior.",
+]
