@@ -1,0 +1,20 @@
+timestamp = "2026-05-15T21:53:06Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-007"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "model/cuda-qwen3-benchmark-qualification"
+summary = "Started Qwen3 0.6B benchmark qualification review after warm-session strict CUDA proof landed."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json",
+  "docs/reports/CUDA_MODEL_007_QWEN3_06B_BENCHMARK_QUALIFICATION.md",
+]
+
+notes = [
+  "The review consumes the current Qwen3 one-token, short-decode, and warm-session strict CUDA proof receipts.",
+  "The review must keep speedup_claim=false and benchmark_qualified_speedup=false unless later repeated comparator and profile-threshold evidence accepts a profile.",
+  "The review must keep server readiness, full CUDA residency, broad dense GGUF readiness, and BitNet packed I2S/QK256 claims false.",
+]

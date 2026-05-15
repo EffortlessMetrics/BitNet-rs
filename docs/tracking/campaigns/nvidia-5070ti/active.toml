@@ -2505,6 +2505,53 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-007"
+status = "in_progress"
+branch = "model/cuda-qwen3-benchmark-qualification"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-006"]
+acceptance = "Add a governed Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict CUDA proof receipts, preserving fallback_used=false evidence while rejecting speedup until repeated same-artifact comparator and profile-threshold evidence exists."
+commands = [
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-15\\qwen3-0_6b-benchmark-qualification.json",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features dense_gguf_qwen_benchmark_qualification",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "ci/model-artifacts/**",
+  ".github/workflows/**",
+  "README.md",
+]
+may_claim = [
+  "Qwen3 0.6B has a benchmark qualification review for the current one-token, short-decode, and warm-session strict RTX 5070 Ti CUDA proof receipts.",
+  "The Qwen3 benchmark qualification review rejected speedup for every reviewed profile.",
+]
+must_not_claim = [
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 server readiness exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
 id = "CUDA-UX-008"
 status = "merged"
 branch = "cli/cuda-model-support-dashboard"
