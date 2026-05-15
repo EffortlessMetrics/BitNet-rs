@@ -104,8 +104,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DURABLE-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-003-bitnet-refresh"
+pr = 5001
+head_sha = "ce7c7cedd8d35ed889e4c26d9b653e04e277062e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
