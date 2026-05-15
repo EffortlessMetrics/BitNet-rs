@@ -259,6 +259,35 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
                 Some(args.model_contract),
                 Some(A770_BITNET_QK256_ROUTE_ID)
             ),
+            "first_token_logit_policy": {
+                "max_new_tokens": 1,
+                "dump_logit_steps": 1,
+                "logits_topk": 10,
+                "assert_greedy": true,
+                "purpose": "bounded prompt-matched Rust CPU/A770 receipts for first-token and top-logit comparison"
+            },
+            "cpu_first_token_logit_argv": rust_cli_first_token_logit_argv(
+                "cpu",
+                &model_path,
+                &tokenizer_path,
+                args.prompt_template,
+                args.system_prompt,
+                args.prompt,
+                "target/a770-diagnostic/reference-plan-cpu-first-token.json",
+                Some(args.model_contract),
+                None
+            ),
+            "a770_first_token_logit_argv": rust_cli_first_token_logit_argv(
+                "intel-arc-a770-opencl",
+                &model_path,
+                &tokenizer_path,
+                args.prompt_template,
+                args.system_prompt,
+                args.prompt,
+                "target/a770-diagnostic/reference-plan-a770-first-token.json",
+                Some(args.model_contract),
+                Some(A770_BITNET_QK256_ROUTE_ID)
+            ),
         },
         "decision": {
             "reference_required_before_math_change": true,
@@ -611,6 +640,39 @@ fn rust_cli_argv(
     argv
 }
 
+fn rust_cli_first_token_logit_argv(
+    device: &str,
+    model: &str,
+    tokenizer: &str,
+    prompt_template: &str,
+    system_prompt: Option<&str>,
+    prompt: &str,
+    json_out: &str,
+    proof_model_contract: Option<&Path>,
+    proof_kernel_route: Option<&str>,
+) -> Vec<String> {
+    let mut argv = rust_cli_argv(
+        device,
+        model,
+        tokenizer,
+        prompt_template,
+        system_prompt,
+        prompt,
+        1,
+        json_out,
+        proof_model_contract,
+        proof_kernel_route,
+    );
+    argv.extend([
+        "--dump-logit-steps".to_string(),
+        "1".to_string(),
+        "--logits-topk".to_string(),
+        "10".to_string(),
+        "--assert-greedy".to_string(),
+    ]);
+    argv
+}
+
 fn read_yaml(path: &Path) -> Result<Value> {
     let raw = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     serde_yaml::from_str(&raw).with_context(|| format!("parsing {}", path.display()))
@@ -790,5 +852,30 @@ mod tests {
             })
         );
         assert!(argv.iter().any(|arg| arg == "--no-display-prompt"));
+    }
+
+    #[test]
+    fn first_token_logit_argv_is_bounded_and_dumps_top_logits() {
+        let contract = Path::new("docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml");
+        let argv = rust_cli_first_token_logit_argv(
+            "intel-arc-a770-opencl",
+            "m.gguf",
+            "tok.json",
+            "llama3-chat",
+            None,
+            "What is 2+2?",
+            "a770-first-token.json",
+            Some(contract),
+            Some(A770_BITNET_QK256_ROUTE_ID),
+        );
+
+        assert!(argv.windows(2).any(|args| args == ["--max-new-tokens", "1"]));
+        assert!(argv.windows(2).any(|args| args == ["--dump-logit-steps", "1"]));
+        assert!(argv.windows(2).any(|args| args == ["--logits-topk", "10"]));
+        assert!(argv.iter().any(|arg| arg == "--assert-greedy"));
+        assert!(
+            argv.windows(2)
+                .any(|args| args == ["--proof-kernel-route", A770_BITNET_QK256_ROUTE_ID])
+        );
     }
 }
