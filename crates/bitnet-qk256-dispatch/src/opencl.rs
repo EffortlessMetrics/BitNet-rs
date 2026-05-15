@@ -8,6 +8,7 @@ use opencl3::platform::get_platforms;
 use opencl3::program::Program;
 use opencl3::types::CL_BLOCKING;
 use std::ptr::null_mut;
+use std::sync::{Mutex, OnceLock};
 
 pub const QK256_OPENCL_KERNEL_NAME: &str = "qk256_gemm_no_scale";
 
@@ -62,7 +63,12 @@ pub fn gemm_qk256_opencl(
 ) -> Result<()> {
     validate_args(qs_data, input, output, input_rows, rows, cols, row_stride_bytes)?;
 
-    let runtime = OpenClQk256Runtime::new()?;
+    let runtime = qk256_runtime()?;
+    let runtime = runtime.lock().map_err(|_| {
+        BitNetError::Kernel(KernelError::ExecutionFailed {
+            reason: "QK256 OpenCL runtime cache lock was poisoned".to_string(),
+        })
+    })?;
     runtime.run(qs_data, input, output, input_rows, rows, cols, row_stride_bytes)
 }
 
@@ -132,6 +138,26 @@ struct OpenClQk256Runtime {
     context: Context,
     queue: CommandQueue,
     program: Program,
+}
+
+// SAFETY: OpenCL handles are reference-counted driver objects. The cached runtime
+// is only accessed through a Mutex, so the single command queue is not used
+// concurrently by Rust callers.
+unsafe impl Send for OpenClQk256Runtime {}
+
+static QK256_RUNTIME: OnceLock<Mutex<OpenClQk256Runtime>> = OnceLock::new();
+
+fn qk256_runtime() -> Result<&'static Mutex<OpenClQk256Runtime>> {
+    if let Some(runtime) = QK256_RUNTIME.get() {
+        return Ok(runtime);
+    }
+
+    let runtime = Mutex::new(OpenClQk256Runtime::new()?);
+    if QK256_RUNTIME.set(runtime).is_ok() {
+        Ok(QK256_RUNTIME.get().expect("QK256 runtime must be set after initialization"))
+    } else {
+        Ok(QK256_RUNTIME.get().expect("QK256 runtime must be set after racing initialization"))
+    }
 }
 
 impl OpenClQk256Runtime {

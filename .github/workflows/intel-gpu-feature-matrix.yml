@@ -7,12 +7,14 @@ on:
       - 'crates/bitnet-kernels/**'
       - 'crates/bitnet-common/**'
       - 'crates/bitnet-device-probe/**'
+      - 'crates/bitnet-qk256-dispatch/**'
       - '.github/workflows/intel-gpu-feature-matrix.yml'
   pull_request:
     paths:
       - 'crates/bitnet-kernels/**'
       - 'crates/bitnet-common/**'
       - 'crates/bitnet-device-probe/**'
+      - 'crates/bitnet-qk256-dispatch/**'
       - '.github/workflows/intel-gpu-feature-matrix.yml'
   workflow_dispatch:
 
@@ -110,11 +112,13 @@ jobs:
         run: |
           cargo check --locked -p bitnet-kernels --no-default-features --features cpu
           cargo check --locked -p bitnet-common --no-default-features --features cpu
+          cargo check --locked -p bitnet-qk256-dispatch --no-default-features --features cpu
 
       - name: Verify no OpenCL runtime needed at compile time
         run: |
           # Ensure we can build without OpenCL libraries installed
           cargo build --locked -p bitnet-kernels --no-default-features --features cpu 2>&1
+          cargo build --locked -p bitnet-qk256-dispatch --no-default-features --features cpu 2>&1
 
       - name: Verify device_features compiles without oneapi
         run: |
