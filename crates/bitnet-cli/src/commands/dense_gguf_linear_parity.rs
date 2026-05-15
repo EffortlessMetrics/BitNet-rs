@@ -13125,10 +13125,10 @@ mod tests {
     }
 
     #[test]
-    fn dense_gguf_all_layer_plan_receipt_allows_tied_lm_head_boundary_gap() {
+    fn dense_gguf_all_layer_plan_receipt_allows_tied_lm_head_boundary_gap() -> Result<()> {
         let data = build_two_layer_qwen_tied_lm_head_gguf();
-        let reader = GgufReader::new(&data).expect("parse tied-head qwen fixture");
-        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let reader = GgufReader::new(&data)?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
         assert!(!inspection.required_roles_present);
         assert!(!inspection.strict_descriptor_complete);
         assert!(inspection.missing_required_roles.contains(&DenseGgufTensorRole::Output));
@@ -13140,35 +13140,36 @@ mod tests {
             &"0".repeat(64),
             "target/bitnet/receipts/dense-gguf-all-layer-plan-tied-head.json",
             "2026-05-15T00:00:00Z",
-        )
-        .unwrap();
+        )?;
 
-        validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt).unwrap();
+        validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)?;
         assert_eq!(receipt["descriptor_coverage"]["required_roles_present"], false);
         assert_eq!(receipt["descriptor_coverage"]["strict_descriptor_complete"], false);
         assert_eq!(
             receipt["descriptor_coverage"]["transformer_block_required_roles_present"],
             true
         );
-        assert_eq!(
+        let missing_model_boundary_roles =
             receipt["descriptor_coverage"]["missing_model_boundary_roles"]
                 .as_array()
-                .unwrap()
-                .iter()
-                .any(|role| role == "output"),
-            true
-        );
-        let lm_head_gap = receipt["model_boundary_gaps"]["gaps"]
+                .ok_or_else(|| anyhow!("missing_model_boundary_roles must be an array"))?;
+        assert_eq!(missing_model_boundary_roles.iter().any(|role| role == "output"), true);
+        let boundary_gaps = receipt["model_boundary_gaps"]["gaps"]
             .as_array()
-            .unwrap()
+            .ok_or_else(|| anyhow!("model_boundary_gaps.gaps must be an array"))?;
+        let lm_head_gap = boundary_gaps
             .iter()
             .find(|gap| gap["gap"] == "lm_head_logits")
-            .expect("lm_head_logits boundary gap");
+            .ok_or_else(|| anyhow!("missing lm_head_logits boundary gap"))?;
         assert_eq!(lm_head_gap["source_tensor"], "token_embd.weight");
-        assert!(lm_head_gap["disposition"].as_str().unwrap().contains("tied"));
+        let disposition = lm_head_gap["disposition"]
+            .as_str()
+            .ok_or_else(|| anyhow!("lm_head_logits disposition must be a string"))?;
+        assert!(disposition.contains("tied"));
         assert_eq!(receipt["all_layer_plan"]["strict_cuda_ready"], true);
         assert_eq!(receipt["all_layer_plan"]["qwen_one_token_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        Ok(())
     }
 
     #[test]
