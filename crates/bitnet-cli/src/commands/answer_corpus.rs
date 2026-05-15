@@ -2349,7 +2349,7 @@ mod tests {
     #[test]
     fn slm_eval_scoring_supports_numeric_tolerance() {
         let scoring = AnswerScoring {
-            expected_number: Some(3.14),
+            expected_number: Some(std::f64::consts::PI),
             numeric_tolerance: Some(0.01),
             ..scoring("numeric_tolerance")
         };

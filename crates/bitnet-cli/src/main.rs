@@ -794,9 +794,13 @@ enum Commands {
         #[arg(long, default_value_t = 0)]
         threads: usize,
 
-        /// Prompt template: qwen2.5 is the validated Apple M4 SLM default
+        /// Prompt template: qwen is the validated Kaby/Qwen3 CPU default; qwen2.5 remains accepted
         #[arg(long, value_name = "TEMPLATE", default_value = "qwen2.5")]
         prompt_template: String,
+
+        /// Disable Qwen thinking mode by appending the Qwen no-thinking assistant suffix
+        #[arg(long = "no-think", visible_alias = "no-thinking", default_value_t = false)]
+        no_think: bool,
 
         /// System prompt for chat models
         #[arg(long, value_name = "TEXT")]
@@ -1599,6 +1603,7 @@ async fn async_main() -> Result<()> {
             deterministic,
             threads,
             prompt_template,
+            no_think,
             system_prompt,
             stop,
             stop_id,
@@ -1632,6 +1637,7 @@ async fn async_main() -> Result<()> {
                 deterministic,
                 threads,
                 prompt_template,
+                no_think,
                 system_prompt,
                 stop,
                 stop_id,
@@ -7956,6 +7962,7 @@ async fn run_slm_warm_session(
     deterministic: bool,
     threads: usize,
     prompt_template: String,
+    no_think: bool,
     system_prompt: Option<String>,
     stop: Vec<String>,
     stop_id: Vec<u32>,
@@ -8002,9 +8009,11 @@ async fn run_slm_warm_session(
         .as_ref()
         .and_then(|corpus| corpus.defaults.prompt_template.clone())
         .unwrap_or(prompt_template);
-    if !is_supported_apple_cpu_neon_backend(requested_backend_label) {
+    let no_think =
+        corpus.as_ref().and_then(|corpus| corpus.defaults.qwen_no_think).unwrap_or(no_think);
+    if !is_supported_slm_warm_session_backend(requested_backend_label) {
         anyhow::bail!(
-            "slm-warm-session is scoped to supported Apple CPU/NEON receipt labels: apple-m4-cpu-neon or apple-m3-air-cpu-neon; got {requested_backend_label}"
+            "slm-warm-session is scoped to supported CPU receipt labels: cpu, apple-m4-cpu-neon, or apple-m3-air-cpu-neon; got {requested_backend_label}"
         );
     }
     match model_format.as_str() {
@@ -8048,7 +8057,7 @@ async fn run_slm_warm_session(
     }
     if backend_identity.runtime_api != "cpu" {
         anyhow::bail!(
-            "slm-warm-session is CPU/NEON scoped; selected runtime_api={}",
+            "slm-warm-session is CPU scoped; selected runtime_api={}",
             backend_identity.runtime_api
         );
     }
@@ -8184,7 +8193,11 @@ async fn run_slm_warm_session(
         let prompt_alloc_start = AllocationAuditSnapshot::current();
         let prompt = &prompt_input.prompt;
         let prompt_start = std::time::Instant::now();
-        let formatted_prompt = template_type.apply(prompt, system_prompt.as_deref());
+        let formatted_prompt = apply_qwen_no_think_prompt_policy(
+            template_type,
+            template_type.apply(prompt, system_prompt.as_deref()),
+            no_think,
+        )?;
 
         let mut all_stop_sequences = stop.clone();
         for template_stop in template_type.default_stop_sequences() {
@@ -8562,6 +8575,10 @@ async fn run_slm_warm_session(
                 "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
                 "clear_failure_messages": true,
             },
+            "prompt_policy": {
+                "template": template_type.to_string(),
+                "qwen_no_think": no_think,
+            },
             "speedup_claim": false,
         });
         let prompt_receipt_construct_alloc =
@@ -8715,6 +8732,7 @@ async fn run_slm_warm_session(
             "deterministic": deterministic,
             "max_new_tokens": max_new_tokens,
             "prompt_template": prompt_template,
+            "qwen_no_think": no_think,
         },
         "model": {
             "repo": model_repo.as_str(),
@@ -8774,6 +8792,21 @@ async fn run_slm_warm_session(
             "arch": std::env::consts::ARCH,
             "features": &cpu_features,
             "threads": thread_count,
+        },
+        "memory": {
+            "resident_memory_bytes": serde_json::Value::Null,
+            "resident_memory_source": "not_sampled_in_slm_cpu_warm_session",
+            "available": false,
+        },
+        "thermal": {
+            "temperature_c": serde_json::Value::Null,
+            "source": "not_sampled_in_slm_cpu_warm_session",
+            "available": false,
+        },
+        "power": {
+            "mode": serde_json::Value::Null,
+            "source": "not_sampled_in_slm_cpu_warm_session",
+            "available": false,
         },
         "counts": {
             "n_kv": n_kv,
@@ -9306,6 +9339,8 @@ struct SlmWarmSessionCorpusDefaults {
     #[serde(default)]
     prompt_template: Option<String>,
     #[serde(default)]
+    qwen_no_think: Option<bool>,
+    #[serde(default)]
     max_new_tokens: Option<usize>,
     #[serde(default)]
     greedy: Option<bool>,
@@ -9361,9 +9396,12 @@ impl SlmWarmSessionCorpus {
         if corpus.schema != 1 {
             anyhow::bail!("unsupported warm-session corpus schema {}", corpus.schema);
         }
-        if corpus.artifact_kind != "apple_m4_slm_quality_corpus" {
+        if !matches!(
+            corpus.artifact_kind.as_str(),
+            "apple_m4_slm_quality_corpus" | "slm_cpu_warm_session_corpus"
+        ) {
             anyhow::bail!(
-                "unexpected warm-session corpus artifact_kind {}; expected apple_m4_slm_quality_corpus",
+                "unexpected warm-session corpus artifact_kind {}; expected apple_m4_slm_quality_corpus or slm_cpu_warm_session_corpus",
                 corpus.artifact_kind
             );
         }
@@ -9450,6 +9488,7 @@ fn slm_warm_session_corpus_receipt(
         },
         "defaults": {
             "prompt_template": corpus.defaults.prompt_template.as_deref(),
+            "qwen_no_think": corpus.defaults.qwen_no_think,
             "max_new_tokens": corpus.defaults.max_new_tokens,
             "greedy": corpus.defaults.greedy,
             "deterministic": corpus.defaults.deterministic,
@@ -11480,6 +11519,7 @@ fn allocation_audit_backend_supported(identity: &RunBackendIdentity) -> bool {
 #[cfg(feature = "full-cli")]
 fn slm_warm_session_artifact_kind(requested_backend: &str) -> &'static str {
     match requested_backend.trim().to_ascii_lowercase().as_str() {
+        "cpu" => "slm_cpu_warm_session",
         "apple-m3-air-cpu-neon" => "slm_apple_m3_air_warm_session",
         _ => "slm_apple_m4_warm_session",
     }
@@ -11488,9 +11528,15 @@ fn slm_warm_session_artifact_kind(requested_backend: &str) -> &'static str {
 #[cfg(feature = "full-cli")]
 fn slm_warm_session_prompt_artifact_kind(requested_backend: &str) -> &'static str {
     match requested_backend.trim().to_ascii_lowercase().as_str() {
+        "cpu" => "slm_cpu_warm_session_prompt",
         "apple-m3-air-cpu-neon" => "slm_apple_m3_air_warm_session_prompt",
         _ => "slm_apple_m4_warm_session_prompt",
     }
+}
+
+#[cfg(feature = "full-cli")]
+fn is_supported_slm_warm_session_backend(label: &str) -> bool {
+    label.trim().eq_ignore_ascii_case("cpu") || is_supported_apple_cpu_neon_backend(label)
 }
 
 fn apple_machine_receipt_json(
@@ -12241,9 +12287,7 @@ mod tests {
             Some("warn")
         );
         assert_eq!(
-            default_log_level_for_command(Some(&Commands::Chat(Box::new(
-                InferenceCommand::default()
-            )))),
+            default_log_level_for_command(Some(&Commands::Chat(Box::default()))),
             Some("warn")
         );
     }
@@ -13211,6 +13255,56 @@ mod tests {
             fallback_used: false,
             fallback_reason: None,
         }));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn slm_warm_session_accepts_cpu_backend_without_enabling_allocation_audit() {
+        assert!(is_supported_slm_warm_session_backend("cpu"));
+        assert!(is_supported_slm_warm_session_backend("apple-m4-cpu-neon"));
+        assert!(is_supported_slm_warm_session_backend("apple-m3-air-cpu-neon"));
+        assert!(!is_supported_slm_warm_session_backend("cuda"));
+
+        assert_eq!(slm_warm_session_artifact_kind("cpu"), "slm_cpu_warm_session");
+        assert_eq!(slm_warm_session_prompt_artifact_kind("cpu"), "slm_cpu_warm_session_prompt");
+        assert!(!allocation_audit_backend_supported(&RunBackendIdentity {
+            requested_backend: "cpu".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: false,
+            fallback_reason: None,
+        }));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn slm_warm_session_corpus_accepts_cpu_artifact_kind() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let path = std::env::temp_dir()
+            .join(format!("bitnet-slm-cpu-warm-session-corpus-{}.yaml", std::process::id()));
+        let yaml = r#"
+schema: 1
+artifact_kind: slm_cpu_warm_session_corpus
+name: qwen3-kaby-warm-session
+description: CPU warm-session smoke corpus.
+model:
+  repo: Qwen/Qwen3-0.6B-GGUF
+  file: Qwen3-0.6B-Q8_0.gguf
+defaults:
+  prompt_template: qwen
+  max_new_tokens: 4
+cases:
+  - id: math
+    question: "What is 2+2?"
+"#;
+        std::fs::write(&path, yaml)?;
+
+        let corpus = SlmWarmSessionCorpus::load(&path)?;
+        assert_eq!(corpus.artifact_kind, "slm_cpu_warm_session_corpus");
+        assert_eq!(corpus.defaults.prompt_template.as_deref(), Some("qwen"));
+
+        let _ = std::fs::remove_file(path);
+        Ok(())
     }
 
     #[test]
