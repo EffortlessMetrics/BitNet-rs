@@ -2183,6 +2183,7 @@ fn compare_reference_to_rust(
         "first_material_mismatch": first_material_mismatch,
         "attention_query_rope_ref_layout_delta": attention_query_rope_ref_layout_delta(reference_records, rust_records),
         "attention_score_reference_scalar_recompute": attention_score_reference_scalar_recompute(reference_records),
+        "attention_score_reference_semantic_variants": attention_score_reference_semantic_variants(reference_records),
         "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
         "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
@@ -2813,6 +2814,332 @@ fn attention_score_reference_scalar_recompute(reference_records: &[ReferenceTrac
         "max_abs_delta": max_abs_delta,
         "max_rms_delta": max_rms_delta,
         "all_compared": !score_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ReferenceScoreScalePolicy {
+    Unscaled,
+    HeadDimSqrtRecip,
+    LlmBuildKqScale,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ReferenceScoreLengthPolicy {
+    LiveKeyCountOnly,
+    PaddedTailZeroed,
+    MaskApplied,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ReferenceScoreVariantSpec {
+    id: &'static str,
+    scale_policy: ReferenceScoreScalePolicy,
+    length_policy: ReferenceScoreLengthPolicy,
+}
+
+impl ReferenceScoreScalePolicy {
+    fn label(self) -> &'static str {
+        match self {
+            ReferenceScoreScalePolicy::Unscaled => "unscaled",
+            ReferenceScoreScalePolicy::HeadDimSqrtRecip => "1_sqrt_head_dim",
+            ReferenceScoreScalePolicy::LlmBuildKqScale => "llm_build_kq_scale",
+        }
+    }
+
+    fn source(self) -> &'static str {
+        match self {
+            ReferenceScoreScalePolicy::Unscaled => "raw_q_dot_k",
+            ReferenceScoreScalePolicy::HeadDimSqrtRecip => "1.0/sqrt(head_dim)",
+            ReferenceScoreScalePolicy::LlmBuildKqScale => {
+                "llama.cpp llm_build_kqv fallback formula: hparams.f_attention_scale or 1.0/sqrt(head_dim)"
+            }
+        }
+    }
+
+    fn scale(self, head_dim: usize) -> f64 {
+        match self {
+            ReferenceScoreScalePolicy::Unscaled => 1.0,
+            ReferenceScoreScalePolicy::HeadDimSqrtRecip
+            | ReferenceScoreScalePolicy::LlmBuildKqScale => {
+                if head_dim == 0 {
+                    1.0
+                } else {
+                    1.0 / (head_dim as f64).sqrt()
+                }
+            }
+        }
+    }
+}
+
+impl ReferenceScoreLengthPolicy {
+    fn label(self) -> &'static str {
+        match self {
+            ReferenceScoreLengthPolicy::LiveKeyCountOnly => "live_key_count_only",
+            ReferenceScoreLengthPolicy::PaddedTailZeroed => "padded_tail_zeroed",
+            ReferenceScoreLengthPolicy::MaskApplied => "mask_applied",
+        }
+    }
+
+    fn mask_policy(self) -> &'static str {
+        match self {
+            ReferenceScoreLengthPolicy::LiveKeyCountOnly => "none_live_prefix_only",
+            ReferenceScoreLengthPolicy::PaddedTailZeroed => {
+                "padded_tail_zeroed_to_score_sample_len"
+            }
+            ReferenceScoreLengthPolicy::MaskApplied => {
+                "causal_or_padding_tail_masked_to_large_negative_sentinel"
+            }
+        }
+    }
+}
+
+fn reference_score_variant_specs() -> [ReferenceScoreVariantSpec; 6] {
+    [
+        ReferenceScoreVariantSpec {
+            id: "reference_score_recompute_unscaled",
+            scale_policy: ReferenceScoreScalePolicy::Unscaled,
+            length_policy: ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+        },
+        ReferenceScoreVariantSpec {
+            id: "reference_score_recompute_scaled_by_1_sqrt_head_dim",
+            scale_policy: ReferenceScoreScalePolicy::HeadDimSqrtRecip,
+            length_policy: ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+        },
+        ReferenceScoreVariantSpec {
+            id: "reference_score_recompute_scaled_by_llm_build_kv_scale",
+            scale_policy: ReferenceScoreScalePolicy::LlmBuildKqScale,
+            length_policy: ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+        },
+        ReferenceScoreVariantSpec {
+            id: "reference_score_recompute_with_live_key_count_only",
+            scale_policy: ReferenceScoreScalePolicy::Unscaled,
+            length_policy: ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+        },
+        ReferenceScoreVariantSpec {
+            id: "reference_score_recompute_with_padded_tail_zeroed",
+            scale_policy: ReferenceScoreScalePolicy::Unscaled,
+            length_policy: ReferenceScoreLengthPolicy::PaddedTailZeroed,
+        },
+        ReferenceScoreVariantSpec {
+            id: "reference_score_recompute_with_mask_applied",
+            scale_policy: ReferenceScoreScalePolicy::Unscaled,
+            length_policy: ReferenceScoreLengthPolicy::MaskApplied,
+        },
+    ]
+}
+
+fn reference_score_variant_values(
+    live_scores: &[f32],
+    live_token_count: usize,
+    target_token_count: usize,
+    scale: f64,
+    length_policy: ReferenceScoreLengthPolicy,
+) -> Vec<f32> {
+    const MASK_SENTINEL: f32 = -1.0e30;
+
+    let live_len = live_scores.len().min(live_token_count);
+    match length_policy {
+        ReferenceScoreLengthPolicy::LiveKeyCountOnly => {
+            live_scores.iter().take(live_len).map(|value| (*value as f64 * scale) as f32).collect()
+        }
+        ReferenceScoreLengthPolicy::PaddedTailZeroed | ReferenceScoreLengthPolicy::MaskApplied => {
+            let mut values = Vec::with_capacity(target_token_count);
+            for token in 0..target_token_count {
+                if token < live_len {
+                    values.push((live_scores[token] as f64 * scale) as f32);
+                } else if matches!(length_policy, ReferenceScoreLengthPolicy::MaskApplied) {
+                    values.push(MASK_SENTINEL);
+                } else {
+                    values.push(0.0);
+                }
+            }
+            values
+        }
+    }
+}
+
+fn delta_metric(delta: &Value, key: &str) -> f64 {
+    delta.pointer(key).and_then(Value::as_f64).unwrap_or(f64::INFINITY)
+}
+
+fn reference_score_variant_explained(delta: &Value) -> bool {
+    const ABS_THRESHOLD: f64 = 1.0e-4;
+    const RMS_THRESHOLD: f64 = 1.0e-4;
+
+    delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false)
+        && delta_metric(delta, "/max_abs_delta") <= ABS_THRESHOLD
+        && delta_metric(delta, "/rms_abs_delta") <= RMS_THRESHOLD
+}
+
+fn attention_score_reference_semantic_variants(
+    reference_records: &[ReferenceTraceRecord],
+) -> Value {
+    let query = reference_rope_query_record(reference_records);
+    let key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let score_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let variants = reference_score_variant_specs();
+
+    let (head_dim, head_count) = query.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+    let group_size = if head_count > 0 && !key_heads.is_empty() && head_count % key_heads.len() == 0
+    {
+        Some(head_count / key_heads.len())
+    } else {
+        None
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut unexplained_head_count = 0usize;
+    let mut best_variant_counts = BTreeMap::<String, usize>::new();
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+
+    for (&head, score) in &score_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let key = kv_head.and_then(|kv_head| key_heads.get(&kv_head).copied());
+        if let (Some(query), Some(key), Some(kv_head)) = (query, key, kv_head) {
+            let live_token_count = reference_key_token_count(key)
+                .unwrap_or(score.first_values.len())
+                .min(score.first_values.len());
+            let target_token_count = score.first_values.len();
+            let padded_token_count = target_token_count.saturating_sub(live_token_count);
+            if let Some(live_scores) =
+                reference_score_row_from_query_key(query, key, head, head_dim, live_token_count)
+            {
+                let mut variant_rows = Vec::new();
+                let mut best_variant_id = "";
+                let mut best_scale = 1.0f64;
+                let mut best_mask_policy = "";
+                let mut best_delta = Value::Null;
+                let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+
+                for variant in variants {
+                    let scale = variant.scale_policy.scale(head_dim);
+                    let values = reference_score_variant_values(
+                        &live_scores,
+                        live_token_count,
+                        target_token_count,
+                        scale,
+                        variant.length_policy,
+                    );
+                    let delta = compare_vectors(&values, &score.first_values);
+                    let rms = delta_metric(&delta, "/rms_abs_delta");
+                    let max_abs = delta_metric(&delta, "/max_abs_delta");
+                    let count_mismatch =
+                        !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false);
+                    let rank = (rms, max_abs, count_mismatch);
+                    if rank < best_rank {
+                        best_rank = rank;
+                        best_variant_id = variant.id;
+                        best_scale = scale;
+                        best_mask_policy = variant.length_policy.mask_policy();
+                        best_delta = delta.clone();
+                    }
+                    variant_rows.push(json!({
+                        "variant": variant.id,
+                        "head": head,
+                        "kv_head": kv_head,
+                        "token_count": values.len(),
+                        "live_token_count": live_token_count,
+                        "padded_token_count": padded_token_count,
+                        "scale": scale,
+                        "scale_policy": variant.scale_policy.label(),
+                        "scale_source": variant.scale_policy.source(),
+                        "mask_policy": variant.length_policy.mask_policy(),
+                        "length_policy": variant.length_policy.label(),
+                        "max_abs_delta": max_abs,
+                        "rms_delta": rms,
+                        "delta": delta,
+                    }));
+                }
+
+                let head_explained = reference_score_variant_explained(&best_delta);
+                if !head_explained {
+                    unexplained_head_count += 1;
+                }
+                max_best_abs_delta =
+                    max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+                max_best_rms_delta =
+                    max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+                *best_variant_counts.entry(best_variant_id.to_string()).or_insert(0) += 1;
+                compared_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "compared",
+                    "token_count": target_token_count,
+                    "live_token_count": live_token_count,
+                    "padded_token_count": padded_token_count,
+                    "scale": best_scale,
+                    "mask_policy": best_mask_policy,
+                    "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+                    "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+                    "best_variant": best_variant_id,
+                    "best_delta": best_delta,
+                    "head_explained": head_explained,
+                    "variants": variant_rows,
+                }));
+            } else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "query_stage_present": true,
+                    "key_stage_present": true,
+                    "score_stage_present": true,
+                }));
+            }
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "query_stage_present": query.is_some(),
+                "key_stage_present": key.is_some(),
+                "score_stage_present": true,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "reference score semantic variants are diagnostic-only scale, mask, live-token, and padded-tail probes for reproducing reference kq_head rows; they do not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
+        "query_stage_present": query.is_some(),
+        "query_stage": query.map(|record| record.stage.clone()),
+        "key_head_count": key_heads.len(),
+        "score_head_count": score_heads.len(),
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "group_size": group_size,
+        "variant_count": variants.len(),
+        "variants_tested": variants.iter().map(|variant| variant.id).collect::<Vec<_>>(),
+        "explanation_abs_threshold": 1.0e-4,
+        "explanation_rms_threshold": 1.0e-4,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "unexplained_head_count": unexplained_head_count,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
+        "best_variant_counts": best_variant_counts,
+        "all_heads_explained": !score_heads.is_empty()
+            && missing_input_count == 0
+            && unexplained_head_count == 0,
         "rows": rows,
     })
 }
@@ -5731,6 +6058,7 @@ mod tests {
         let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
         let query_delta = report.pointer("/attention_query_rope_ref_layout_delta").unwrap();
         let reference = report.pointer("/attention_score_reference_scalar_recompute").unwrap();
+        let variants = report.pointer("/attention_score_reference_semantic_variants").unwrap();
         let rust = report.pointer("/attention_score_rust_scalar_recompute").unwrap();
 
         assert_eq!(query_delta.pointer("/claim_allowed"), Some(&json!(false)));
@@ -5738,9 +6066,66 @@ mod tests {
         assert_eq!(reference.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(reference.pointer("/compared_count"), Some(&json!(2)));
         assert_eq!(reference.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(variants.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(variants.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(variants.pointer("/variant_count"), Some(&json!(6)));
+        assert_eq!(
+            variants.pointer("/rows/0/best_variant"),
+            Some(&json!("reference_score_recompute_unscaled"))
+        );
+        assert_eq!(variants.pointer("/rows/0/head_explained"), Some(&json!(true)));
         assert_eq!(rust.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(rust.pointer("/compared_count"), Some(&json!(2)));
         assert_eq!(rust.pointer("/max_abs_delta"), Some(&json!(0.0)));
+    }
+
+    #[test]
+    fn reference_score_semantic_variants_pin_padded_tail_zero_policy() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![1.0, 2.0],
+                ..test_reference_trace_record("Qcur", vec![1.0, 2.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![5.0, 6.0, 7.0, 8.0],
+                ..test_reference_trace_record("k_kv_head0_live", vec![5.0, 6.0, 7.0, 8.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![4, 1, 1, 1],
+                full_shape: vec![4, 1, 1, 1],
+                nelements: 4,
+                first_values: vec![17.0, 23.0, 0.0, 0.0],
+                ..test_reference_trace_record("kq_head0", vec![17.0, 23.0, 0.0, 0.0])
+            },
+        ];
+        let report = compare_reference_to_rust(&reference_records, &BTreeMap::new(), &[]);
+        let variants = report.pointer("/attention_score_reference_semantic_variants").unwrap();
+
+        assert_eq!(variants.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(variants.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(variants.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(variants.pointer("/unexplained_head_count"), Some(&json!(0)));
+        assert_eq!(
+            variants.pointer("/rows/0/best_variant"),
+            Some(&json!("reference_score_recompute_with_padded_tail_zeroed"))
+        );
+        assert_eq!(variants.pointer("/rows/0/token_count"), Some(&json!(4)));
+        assert_eq!(variants.pointer("/rows/0/live_token_count"), Some(&json!(2)));
+        assert_eq!(variants.pointer("/rows/0/padded_token_count"), Some(&json!(2)));
+        assert_eq!(
+            variants.pointer("/rows/0/mask_policy"),
+            Some(&json!("padded_tail_zeroed_to_score_sample_len"))
+        );
+        assert_eq!(variants.pointer("/rows/0/best_delta/count_match"), Some(&json!(true)));
+        assert_eq!(variants.pointer("/rows/0/best_delta/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(
+            variants.pointer("/variants_tested/5"),
+            Some(&json!("reference_score_recompute_with_mask_applied"))
+        );
     }
 
     #[test]
