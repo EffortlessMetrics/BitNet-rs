@@ -54,7 +54,7 @@ broad BitNet quality, or broad Apple Silicon performance.
 | M4-BITNET-PROD-001 | merged | PR #4946 allowed `bitnet mac bitnet-warm` to run operator-supplied repeated prompts while keeping the fixed proof prompt default. |
 | M4-BITNET-PROD-002 | merged | PR #4950 recorded the 2026-05-15 bounded M4 variable warm-session receipt for five operator prompts with repeated-prompt determinism. |
 | M4-BITNET-PROD-003 | merged | PR #4954 added warm-session progress, timeout, partial-failure receipts, and repair guidance without enabling BitNet chat or serve. |
-| M4-BITNET-PROD-004 | proposed | Define and enforce the BitNet chat enablement gate before enabling chat. |
+| M4-BITNET-PROD-004 | in_progress | Define and enforce the BitNet chat enablement gate before enabling chat. |
 
 ## Review Policy
 

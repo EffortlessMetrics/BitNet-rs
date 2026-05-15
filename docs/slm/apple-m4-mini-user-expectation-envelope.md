@@ -41,6 +41,13 @@ diagnostic-only, candidate, rejected, or unknown model ID is passed to the dense
 Mac commands, the wrapper fails before cache repair guidance and points back to
 `bitnet mac models`.
 
+BitNet chat has an explicit disabled gate. `bitnet mac chat --model-family
+bitnet` fails before prompt collection until `bitnet mac bitnet-chat-gate`
+records variable warm-session determinism, timeout/failure evidence,
+streaming-semantics evidence, strict backend/fallback fields, and unchanged
+chat/serve-disabled claim boundaries. A gate receipt does not itself enable
+chat; enabling BitNet chat still requires a separate route PR with receipts.
+
 The first BitNet one-shot ask runtime receipt is:
 
 ```text
@@ -279,6 +286,19 @@ and the unchanged chat/serve/Metal-disabled claim boundary.
 
 The operator-prompt route is still a warm-session proof surface, not BitNet
 chat, BitNet serve, broad BitNet quality, or broad performance evidence.
+
+Use the chat gate command to make missing BitNet chat evidence concrete:
+
+```bash
+bitnet mac bitnet-chat-gate \
+  --warm-receipt ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json \
+  --failure-receipt <bitnet_apple_m4_warm_session_failure.json> \
+  --streaming-receipt <bitnet_apple_m4_chat_streaming_semantics.json>
+```
+
+The receipt kind is `bitnet_apple_m4_chat_gate`. Missing timeout/failure or
+streaming evidence leaves it `status=blocked` with `chat_enabled=false` and
+`serve_enabled=false`.
 
 The committed aggregate warm receipt is:
 

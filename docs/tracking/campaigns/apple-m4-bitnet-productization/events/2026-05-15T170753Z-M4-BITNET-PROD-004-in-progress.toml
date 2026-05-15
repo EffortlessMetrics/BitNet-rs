@@ -1,0 +1,31 @@
+timestamp = "2026-05-15T17:07:53Z"
+campaign = "apple-m4-bitnet-productization"
+item = "M4-BITNET-PROD-004"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-bitnet-productization/M4-BITNET-PROD-004-chat-gate"
+summary = "Started the explicit BitNet chat enablement gate before any BitNet mac chat route is enabled."
+
+artifacts = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/slm/apple-m4-bitnet-proof-prep.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/active.toml",
+  "docs/tracking/campaigns/apple-m4-bitnet-productization/CAMPAIGN.md",
+]
+
+notes = [
+  "The gate must keep BitNet chat disabled until variable warm-session, determinism, timeout/failure, streaming semantics, and claim-boundary evidence are validated.",
+  "The implementation should make `bitnet mac chat --model-family bitnet` fail clearly instead of looking like an accidental dense-SLM cache failure.",
+  "BitNet serve remains disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim is allowed.",
+]
+
+[evidence]
+route = "bitnet mac chat --model-family bitnet"
+backend = "apple-m4-cpu-neon"
+chat_enabled = false
+serve_enabled = false
+claim_boundary = "chat gate only; no BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad BitNet quality, or broad Apple Silicon claim"

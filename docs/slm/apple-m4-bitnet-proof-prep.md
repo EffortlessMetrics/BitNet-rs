@@ -186,6 +186,30 @@ empty partial generation, failure stage/message/elapsed time, timeout boundary,
 repair guidance, and unchanged disabled chat/serve/Metal/QK256/Neural
 Engine/MPSGraph/MacBook/broad-claim boundaries.
 
+## BitNet Chat Gate
+
+`M4-BITNET-PROD-004` makes BitNet chat enablement explicit before any
+`bitnet mac chat --model-family bitnet` route can run. The route currently
+fails before prompt collection and points operators to the gate command:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac bitnet-chat-gate \
+  --warm-receipt ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json \
+  --failure-receipt <bitnet_apple_m4_warm_session_failure.json> \
+  --streaming-receipt <bitnet_apple_m4_chat_streaming_semantics.json> \
+  --json-out target/apple-m4-bitnet-productization/bitnet-chat-gate.json
+```
+
+The gate receipt is `bitnet_apple_m4_chat_gate`. It records the accepted
+Microsoft I2_S model SHA, external tokenizer SHA and authority,
+`bitnetcpp-answer` prompt authority, strict `apple-m4-cpu-neon` backend,
+`fallback_used=false`, variable warm-session evidence, repeated-prompt
+determinism, timeout/failure evidence, streaming-semantics evidence, and
+unchanged disabled chat/serve/Metal/QK256/Neural Engine/MPSGraph/MacBook/
+broad-claim boundaries. Missing evidence keeps the receipt `status=blocked`.
+Even `status=ready_to_enable` would only authorize a separate route-enablement
+PR; it does not itself enable BitNet chat or serve.
+
 ## Accepted Artifact Input
 
 The `--accepted-artifact` receipt must come from the Apple BitNet artifact
