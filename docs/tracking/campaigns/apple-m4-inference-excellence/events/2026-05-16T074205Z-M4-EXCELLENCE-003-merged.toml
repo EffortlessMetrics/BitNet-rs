@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T07:42:05Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5078
+merge_sha = "56c54df2ed3a0637f94b62e4d33044e91b8f5d19"
+
+notes = [
+  "Merged PR #5078, recording the model-free M4 report-refresh and regression-dashboard trend validation.",
+  "The dashboard refresh reported five evidence families, 18 committed reports, nine comparison groups, and nine comparable groups.",
+  "M4-EXCELLENCE-003 is tracker-closed as dashboard-only trend validation for separated dense SLM and BitNet evidence families.",
+  "No live model run, model download, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
