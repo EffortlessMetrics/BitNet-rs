@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T02:25:15Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-SMOLLM2-001"
+event = "merged"
+pr = 5029
+head_sha = "43eadc606965180e95108b65aa558f9c79431c74"
+merge_sha = "2f59e5548c59c5efe9d725c13b1b6ce9980e6d2e"
+actor = "codex"
+
+notes = [
+  "Merged PR #5029, adding the exact SmolLM2 360M Instruct Q8_0 artifact contract and report.",
+  "The merged coverage row is structurally_valid artifact-contract state only.",
+  "CPU answer readiness, strict CUDA execution, product CLI readiness, speedup, server readiness, full CUDA residency, broad dense GGUF support, proof inheritance from Qwen2.5/Qwen3/Apple M4, and BitNet packed I2_S/QK256 proof remain false.",
+]
