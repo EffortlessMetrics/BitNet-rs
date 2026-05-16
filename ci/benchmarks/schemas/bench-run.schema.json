@@ -65,9 +65,10 @@
     },
     "kernel_route": {
       "type": "object",
-      "required": ["route_verified", "device_slug", "selected_backend", "kernel_variants"],
+      "required": ["route_verified", "route_claimable", "device_slug", "selected_backend", "kernel_variants"],
       "properties": {
         "route_verified": { "type": "boolean" },
+        "route_claimable": { "type": "boolean" },
         "device_slug": { "type": "string", "minLength": 1 },
         "selected_backend": { "type": "string", "minLength": 1 },
         "kernel_variants": { "type": "array", "items": { "type": "object" } }
