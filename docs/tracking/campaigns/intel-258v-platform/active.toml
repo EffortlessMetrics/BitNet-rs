@@ -3619,10 +3619,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-004"
-status = "pr_open"
+status = "merged"
 pr = 5100
 branch = "codex/lunar-lake/LNL258V-QUAL-004-qwen-corpus-v2-diagnosis"
-head_sha = "3bde5a51c9ebc500c757ccf75490af28bdbb7aae"
+head_sha = "5781130cca172d9a57a2bdeceacb28d3ec8e8951"
+merge_sha = "708a3f20a7dbced99f64ca4d15b4e7434a33aa41"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
