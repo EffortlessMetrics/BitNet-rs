@@ -226,6 +226,38 @@ pub enum LunarLakeAction {
         strict: bool,
     },
 
+    /// Diagnose bounded dense Qwen CPU corpus-v2 profile blockers without running inference.
+    QualityDiagnose {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Dense Qwen CPU corpus-v2 execution receipt to diagnose.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
+        cpu_corpus_v2: PathBuf,
+
+        /// Optional route-profile comparison receipt to attach route blockers.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: Option<PathBuf>,
+
+        /// Output JSON diagnosis receipt to file.
+        #[arg(
+            long,
+            default_value = "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json"
+        )]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the diagnosis cannot safely classify the committed corpus receipt.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
     /// Ask through the evidence-backed Lunar Lake default route.
     Ask {
         /// Artifact root containing the 258V receipts to index.
@@ -607,6 +639,98 @@ pub struct ProfileQualityEvidence {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct QwenCpuCorpusV2Diagnosis {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub cpu_corpus_v2_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_profile_comparison_receipt: Option<String>,
+    pub route_id: String,
+    pub model_family: Option<String>,
+    pub model_architecture: Option<String>,
+    pub quantization: Option<String>,
+    pub requested_backend: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub quality_summary: CorpusV2QualitySummary,
+    pub profile_diagnoses: Vec<CorpusV2ProfileDiagnosis>,
+    pub failed_cases: Vec<CorpusV2FailedCaseDiagnosis>,
+    pub route_blocked: bool,
+    pub blocker_summary: Vec<String>,
+    pub recommended_next_actions: Vec<String>,
+    pub diagnosis_ready: bool,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CorpusV2DiagnosisClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2QualitySummary {
+    pub total: u64,
+    pub passed: u64,
+    pub failed: u64,
+    pub timeout: u64,
+    pub not_run: u64,
+    pub failed_profiles: Vec<String>,
+    pub failed_categories: Vec<String>,
+    pub failure_classes: BTreeMap<String, u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2ProfileDiagnosis {
+    pub profile_id: String,
+    pub total: u64,
+    pub passed: u64,
+    pub failed: u64,
+    pub blocked: bool,
+    pub failed_case_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_profile_status: Option<String>,
+    pub route_blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2FailedCaseDiagnosis {
+    pub id: String,
+    pub profile: String,
+    pub category: String,
+    pub task_family: Option<String>,
+    pub status: String,
+    pub gate_kind: Option<String>,
+    pub scoring_kind: Option<String>,
+    pub failed_rules: Vec<String>,
+    pub failure_taxonomy: Vec<String>,
+    pub missing_required_keywords: Vec<String>,
+    pub forbidden_tokens_observed: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_normalized: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_normalized: Option<String>,
+    pub answer_preview: String,
+    pub generated_tokens: Option<u64>,
+    pub prompt_tokens: Option<u64>,
+    pub run_receipt_path: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub classification: String,
+    pub recommended_fix: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2DiagnosisClaimBoundary {
+    pub diagnostic_only: bool,
+    pub new_inference_executed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub route_promotion_changed: bool,
+    pub arc_or_npu_execution_claim: bool,
+    pub bitnet_qk256_i2s_behavior_changed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProfileTimingSummary {
     pub timing_scope: String,
     pub source_receipts: Vec<String>,
@@ -746,6 +870,33 @@ impl LunarLakeCommand {
                 if *strict && !receipt.profile_comparison_ready {
                     bail!(
                         "Lunar Lake route profile comparison failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::QualityDiagnose {
+                artifact_root,
+                cpu_corpus_v2,
+                route_profile_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
+                    artifact_root,
+                    cpu_corpus_v2,
+                    route_profile_comparison.as_deref(),
+                    created_utc,
+                )?;
+                write_or_print_qwen_cpu_corpus_v2_diagnosis(&receipt, Some(json_out))?;
+                if *strict && !receipt.diagnosis_ready {
+                    bail!(
+                        "Lunar Lake dense Qwen CPU corpus-v2 diagnosis failed: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -1665,6 +1816,122 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     })
 }
 
+pub fn build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
+    root: &Path,
+    cpu_corpus_v2: &Path,
+    route_profile_comparison: Option<&Path>,
+    created_utc: String,
+) -> Result<QwenCpuCorpusV2Diagnosis> {
+    let cpu_corpus_v2_path = resolve_receipt_path(root, cpu_corpus_v2);
+    let corpus: Value = read_json_receipt(&cpu_corpus_v2_path)?;
+    let route_profile_comparison_path =
+        route_profile_comparison.map(|path| resolve_receipt_path(root, path));
+    let route_profile_comparison_json = route_profile_comparison_path
+        .as_ref()
+        .filter(|path| path.exists())
+        .map(|path| read_json_receipt::<Value>(path))
+        .transpose()?;
+    let route_profile_statuses = cpu_route_profile_statuses(route_profile_comparison_json.as_ref());
+
+    let mut gaps = Vec::new();
+    if string_at(&corpus, "artifact_kind").as_deref() != Some("slm_cpu_answer_corpus") {
+        gaps.push(
+            "CPU corpus-v2 receipt must have artifact_kind=slm_cpu_answer_corpus".to_string(),
+        );
+    }
+    if string_at(&corpus, "selected_backend").as_deref() != Some("cpu-rust") {
+        gaps.push("CPU corpus-v2 receipt must select backend cpu-rust".to_string());
+    }
+    if string_at(&corpus, "runtime_api").as_deref() != Some("cpu") {
+        gaps.push("CPU corpus-v2 receipt must record runtime_api=cpu".to_string());
+    }
+    let fallback_used = fallback_used(&corpus);
+    if fallback_used != Some(false) {
+        gaps.push("CPU corpus-v2 receipt must record fallback_used=false".to_string());
+    }
+    if bool_at_any(&corpus, &["speedup_claim", "claim_boundary.broad_performance_claimed"])
+        == Some(true)
+    {
+        gaps.push(
+            "CPU corpus-v2 diagnosis refuses speedup or broad performance claims".to_string(),
+        );
+    }
+    if bool_at_any(
+        &corpus,
+        &[
+            "claim_boundary.neural_engine_claimed",
+            "claim_boundary.full_metal_inference_claimed",
+            "claim_boundary.qk256_apple_claimed",
+        ],
+    ) == Some(true)
+    {
+        gaps.push("CPU corpus-v2 diagnosis refuses accelerator or BitNet QK256 claims".to_string());
+    }
+
+    let cases = corpus.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    if cases.is_empty() {
+        gaps.push("CPU corpus-v2 receipt has no cases".to_string());
+    }
+
+    let failed_cases = cases
+        .iter()
+        .filter(|case| !case_passed(case))
+        .map(diagnose_corpus_v2_failed_case)
+        .collect::<Vec<_>>();
+
+    let profile_diagnoses =
+        diagnose_corpus_v2_profiles(&corpus, &failed_cases, &route_profile_statuses);
+    let quality_summary = summarize_corpus_v2_quality(&corpus, &failed_cases);
+    let route_blocked = quality_summary.failed > 0 || fallback_used != Some(false);
+    let blocker_summary = corpus_v2_blocker_summary(&quality_summary, fallback_used);
+    let recommended_next_actions = corpus_v2_recommended_actions(&failed_cases, route_blocked);
+    let diagnosis_ready = gaps.is_empty();
+
+    Ok(QwenCpuCorpusV2Diagnosis {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_qwen_cpu_corpus_v2_diagnosis".to_string(),
+        proof_stage: "corpus_v2_failures_classified_no_inference".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        cpu_corpus_v2_receipt: path_string(&cpu_corpus_v2_path),
+        route_profile_comparison_receipt: route_profile_comparison_path
+            .as_ref()
+            .map(|path| path_string(path)),
+        route_id: DEFAULT_ASK_ROUTE.to_string(),
+        model_family: string_at(&corpus, "model_family")
+            .or_else(|| string_at(&corpus, "model.family")),
+        model_architecture: string_at(&corpus, "model_architecture")
+            .or_else(|| string_at(&corpus, "model.architecture")),
+        quantization: string_at(&corpus, "quantization")
+            .or_else(|| string_at(&corpus, "model.quant_format")),
+        requested_backend: string_at(&corpus, "requested_backend")
+            .or_else(|| string_at(&corpus, "backend.requested_backend")),
+        selected_backend: string_at(&corpus, "selected_backend")
+            .or_else(|| string_at(&corpus, "backend.selected_backend")),
+        runtime_api: string_at(&corpus, "runtime_api")
+            .or_else(|| string_at(&corpus, "backend.runtime_api")),
+        fallback_used,
+        quality_summary,
+        profile_diagnoses,
+        failed_cases,
+        route_blocked,
+        blocker_summary,
+        recommended_next_actions,
+        diagnosis_ready,
+        gaps,
+        claim_boundary: CorpusV2DiagnosisClaimBoundary {
+            diagnostic_only: true,
+            new_inference_executed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            route_promotion_changed: false,
+            arc_or_npu_execution_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+        },
+    })
+}
+
 pub fn load_operator_ask_route(
     root: &Path,
     operator_receipt: &Path,
@@ -2002,6 +2269,25 @@ fn write_or_print_route_profile_comparison(
     Ok(())
 }
 
+fn write_or_print_qwen_cpu_corpus_v2_diagnosis(
+    receipt: &QwenCpuCorpusV2Diagnosis,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake Qwen CPU corpus-v2 diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
 fn read_json_receipt<T: DeserializeOwned>(path: &Path) -> Result<T> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("failed to parse {}", path.display()))
@@ -2177,6 +2463,303 @@ fn insert_profile_summary(
             notes,
         });
     }
+}
+
+#[derive(Debug, Clone, Default)]
+struct CpuRouteProfileStatus {
+    profile_status: Option<String>,
+    promotion_decision: Option<String>,
+    blockers: Vec<String>,
+}
+
+fn cpu_route_profile_statuses(
+    route_profile_comparison: Option<&Value>,
+) -> BTreeMap<String, CpuRouteProfileStatus> {
+    let mut statuses = BTreeMap::new();
+    let Some(profiles) =
+        route_profile_comparison.and_then(|value| value.get("profiles")).and_then(Value::as_array)
+    else {
+        return statuses;
+    };
+    for profile in profiles {
+        let Some(profile_id) = string_at(profile, "profile_id") else {
+            continue;
+        };
+        let route = profile.get("route_evidence").and_then(Value::as_array).and_then(|routes| {
+            routes
+                .iter()
+                .find(|route| string_at(route, "route_id").as_deref() == Some(DEFAULT_ASK_ROUTE))
+        });
+        let Some(route) = route else {
+            continue;
+        };
+        statuses.insert(
+            profile_id,
+            CpuRouteProfileStatus {
+                profile_status: string_at(profile, "profile_status"),
+                promotion_decision: string_at(profile, "promotion_decision"),
+                blockers: string_array_at(route, "blockers"),
+            },
+        );
+    }
+    statuses
+}
+
+fn summarize_corpus_v2_quality(
+    corpus: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+) -> CorpusV2QualitySummary {
+    let quality = value_at(corpus, "quality_summary");
+    let failed_profiles = failed_cases
+        .iter()
+        .map(|case| case.profile.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let failed_categories = failed_cases
+        .iter()
+        .map(|case| case.category.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let mut failure_classes = BTreeMap::<String, u64>::new();
+    for case in failed_cases {
+        *failure_classes.entry(case.classification.clone()).or_default() += 1;
+    }
+
+    CorpusV2QualitySummary {
+        total: quality.and_then(|value| u64_at(value, "total")).unwrap_or(0),
+        passed: quality.and_then(|value| u64_at(value, "passed")).unwrap_or(0),
+        failed: quality
+            .and_then(|value| u64_at(value, "failed"))
+            .unwrap_or(failed_cases.len() as u64),
+        timeout: quality.and_then(|value| u64_at(value, "timeout")).unwrap_or(0),
+        not_run: quality.and_then(|value| u64_at(value, "not_run")).unwrap_or(0),
+        failed_profiles,
+        failed_categories,
+        failure_classes,
+    }
+}
+
+fn diagnose_corpus_v2_profiles(
+    corpus: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+    route_profile_statuses: &BTreeMap<String, CpuRouteProfileStatus>,
+) -> Vec<CorpusV2ProfileDiagnosis> {
+    let mut profile_ids = BTreeSet::<String>::new();
+    if let Some(summary) = value_at(corpus, "profile_summary").and_then(Value::as_object) {
+        profile_ids.extend(summary.keys().cloned());
+    }
+    profile_ids.extend(failed_cases.iter().map(|case| case.profile.clone()));
+    profile_ids.extend(route_profile_statuses.keys().cloned());
+
+    profile_ids
+        .into_iter()
+        .map(|profile_id| {
+            let summary = value_at(corpus, "profile_summary")
+                .and_then(|value| value.get(&profile_id))
+                .unwrap_or(&Value::Null);
+            let failed_case_ids = failed_cases
+                .iter()
+                .filter(|case| case.profile == profile_id)
+                .map(|case| case.id.clone())
+                .collect::<Vec<_>>();
+            let route_status = route_profile_statuses.get(&profile_id);
+            let mut route_blockers =
+                route_status.map(|status| status.blockers.clone()).unwrap_or_default();
+            if let Some(decision) =
+                route_status.and_then(|status| status.promotion_decision.clone())
+            {
+                route_blockers.push(decision);
+            }
+            route_blockers.sort();
+            route_blockers.dedup();
+
+            let failed = u64_at(summary, "failed").unwrap_or(failed_case_ids.len() as u64);
+            CorpusV2ProfileDiagnosis {
+                profile_id,
+                total: u64_at(summary, "total").unwrap_or(0),
+                passed: u64_at(summary, "passed").unwrap_or(0),
+                failed,
+                blocked: failed > 0 || !route_blockers.is_empty(),
+                failed_case_ids,
+                route_profile_status: route_status.and_then(|status| status.profile_status.clone()),
+                route_blockers,
+            }
+        })
+        .collect()
+}
+
+fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
+    let scoring = value_at(case, "quality.scoring");
+    let details = scoring.and_then(|value| value.get("details"));
+    let missing_required_keywords = details
+        .map(|value| string_array_at(value, "required_keywords_missing"))
+        .unwrap_or_default();
+    let forbidden_tokens_observed = details
+        .map(|value| string_array_at(value, "forbidden_tokens_observed"))
+        .unwrap_or_default();
+    let answer = string_at(case, "answer").unwrap_or_default();
+    let failed_rules = string_array_at(case, "quality.failed_rules");
+    let scoring_passed = scoring.and_then(|value| value.get("passed")).and_then(Value::as_bool);
+    let gate_kind = string_at(case, "quality.gate_kind");
+    let generated_tokens =
+        u64_at(case, "quality.generated_tokens").or_else(|| u64_at(case, "tokens.generated"));
+    let classification = classify_corpus_v2_failure(
+        &answer,
+        gate_kind.as_deref(),
+        scoring_passed,
+        &failed_rules,
+        &missing_required_keywords,
+        generated_tokens,
+    );
+    let recommended_fix =
+        recommended_corpus_v2_case_fix(&classification, gate_kind.as_deref(), scoring_passed);
+
+    CorpusV2FailedCaseDiagnosis {
+        id: string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string()),
+        profile: string_at(case, "profile").unwrap_or_else(|| "unknown_profile".to_string()),
+        category: string_at(case, "category").unwrap_or_else(|| "unknown_category".to_string()),
+        task_family: string_at(case, "task_family"),
+        status: string_at(case, "status").unwrap_or_else(|| "quality_failed".to_string()),
+        gate_kind,
+        scoring_kind: scoring.and_then(|value| string_at(value, "kind")),
+        failed_rules,
+        failure_taxonomy: string_array_at(case, "quality.failure_taxonomy"),
+        missing_required_keywords,
+        forbidden_tokens_observed,
+        expected_normalized: details.and_then(|value| string_at(value, "expected_normalized")),
+        observed_normalized: details.and_then(|value| string_at(value, "observed_normalized")),
+        answer_preview: answer_preview(&answer),
+        generated_tokens,
+        prompt_tokens: u64_at(case, "tokens.prompt"),
+        run_receipt_path: string_at(case, "run_receipt_path").map(|path| path.replace('\\', "/")),
+        fallback_used: bool_at_any(case, &["fallback_used", "backend.fallback_used"]),
+        classification,
+        recommended_fix,
+    }
+}
+
+fn classify_corpus_v2_failure(
+    answer: &str,
+    gate_kind: Option<&str>,
+    scoring_passed: Option<bool>,
+    failed_rules: &[String],
+    missing_required_keywords: &[String],
+    generated_tokens: Option<u64>,
+) -> String {
+    let trimmed = answer.trim_start();
+    if trimmed.starts_with(':')
+        && matches!(gate_kind, Some("starts_with_any"))
+        && failed_rules.iter().any(|rule| rule.contains("normalized_match"))
+    {
+        return "assistant_prefix_gate_mismatch".to_string();
+    }
+    if trimmed.starts_with(':') && scoring_passed == Some(true) {
+        return "gate_stricter_than_scoring_after_prefix".to_string();
+    }
+    if !missing_required_keywords.is_empty()
+        && generated_tokens.is_some_and(|tokens| tokens <= 8)
+        && (trimmed.ends_with('+') || trimmed.split_whitespace().count() < 6)
+    {
+        return "generation_budget_or_truncation".to_string();
+    }
+    if !missing_required_keywords.is_empty() {
+        return "answer_content_missing_required_terms".to_string();
+    }
+    if failed_rules.iter().any(|rule| rule.starts_with("gate_")) {
+        return "answer_gate_mismatch".to_string();
+    }
+    "answer_content_failed".to_string()
+}
+
+fn recommended_corpus_v2_case_fix(
+    classification: &str,
+    gate_kind: Option<&str>,
+    scoring_passed: Option<bool>,
+) -> String {
+    match classification {
+        "assistant_prefix_gate_mismatch" => {
+            "Normalize or suppress leading assistant-role punctuation before exact starts-with/normalized-match gates, then rerun the same case without changing route promotion.".to_string()
+        }
+        "gate_stricter_than_scoring_after_prefix" => {
+            "Review the gate versus scoring contract: scoring passed, but the bounded gate failed after role-prefix punctuation or wording drift.".to_string()
+        }
+        "generation_budget_or_truncation" => {
+            "Rerun this bounded case with either a tighter prompt or a slightly larger max_new_tokens budget; classify as output-budget drift before changing route policy.".to_string()
+        }
+        "answer_content_missing_required_terms" => {
+            "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow.".to_string()
+        }
+        _ if gate_kind == Some("readable") && scoring_passed == Some(false) => {
+            "Readable output was produced but missed required route-policy terms; tune the prompt or expected keywords before route promotion.".to_string()
+        }
+        _ => "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised.".to_string(),
+    }
+}
+
+fn corpus_v2_blocker_summary(
+    quality: &CorpusV2QualitySummary,
+    fallback_used: Option<bool>,
+) -> Vec<String> {
+    let mut blockers = Vec::new();
+    if fallback_used != Some(false) {
+        blockers
+            .push("fallback_used is not false in the dense Qwen CPU corpus-v2 receipt".to_string());
+    }
+    if quality.failed > 0 {
+        blockers.push(format!(
+            "{} of {} corpus-v2 cases failed across profiles [{}]",
+            quality.failed,
+            quality.total,
+            quality.failed_profiles.join(", ")
+        ));
+    }
+    for (classification, count) in &quality.failure_classes {
+        blockers.push(format!("{count} failed case(s) classified as {classification}"));
+    }
+    blockers
+}
+
+fn corpus_v2_recommended_actions(
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+    route_blocked: bool,
+) -> Vec<String> {
+    let mut actions = Vec::new();
+    if route_blocked {
+        actions.push(
+            "Keep dense_slm_default_cpu blocked for affected corpus-v2 profiles until failed cases rerun cleanly."
+                .to_string(),
+        );
+    }
+    let classes =
+        failed_cases.iter().map(|case| case.classification.as_str()).collect::<BTreeSet<_>>();
+    if classes.contains("assistant_prefix_gate_mismatch") {
+        actions.push(
+            "Fix or normalize leading assistant-prefix punctuation for exact yes/no and one-word gates."
+                .to_string(),
+        );
+    }
+    if classes.contains("generation_budget_or_truncation") {
+        actions.push(
+            "Check short-answer max_new_tokens budgets before treating truncated math output as model incapability."
+                .to_string(),
+        );
+    }
+    if classes.contains("answer_content_missing_required_terms") {
+        actions.push(
+            "Review prompt wording and required-keyword gates for answer-content misses, then rerun corpus v2."
+                .to_string(),
+        );
+    }
+    if actions.is_empty() {
+        actions.push(
+            "No corpus-v2 failures were found; keep regression v2 as the guardrail.".to_string(),
+        );
+    }
+    actions
 }
 
 fn promote_route(
@@ -2977,6 +3560,13 @@ fn string_at(json: &Value, path: &str) -> Option<String> {
     value_at(json, path).and_then(Value::as_str).map(ToString::to_string)
 }
 
+fn string_array_at(json: &Value, path: &str) -> Vec<String> {
+    value_at(json, path)
+        .and_then(Value::as_array)
+        .map(|values| values.iter().filter_map(Value::as_str).map(ToString::to_string).collect())
+        .unwrap_or_default()
+}
+
 fn bool_at_any(json: &Value, paths: &[&str]) -> Option<bool> {
     paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_bool))
 }
@@ -3003,6 +3593,15 @@ fn value_at<'a>(json: &'a Value, dotted_path: &str) -> Option<&'a Value> {
 
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn answer_preview(answer: &str) -> String {
+    const MAX_PREVIEW_CHARS: usize = 240;
+    let mut preview = answer.chars().take(MAX_PREVIEW_CHARS).collect::<String>();
+    if answer.chars().count() > MAX_PREVIEW_CHARS {
+        preview.push_str("...");
+    }
+    preview
 }
 
 #[cfg(test)]
@@ -3706,6 +4305,140 @@ mod tests {
             "{:?}",
             strict_regression_v2_gaps(&bundle)
         );
+        Ok(())
+    }
+
+    #[test]
+    fn quality_diagnosis_classifies_qwen_cpu_corpus_v2_blockers() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "requested_backend": "cpu",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "model_family": "qwen",
+                "model_architecture": "qwen2",
+                "quantization": "Q8_0",
+                "speedup_claim": false,
+                "quality_summary": {"total": 3, "passed": 1, "failed": 2, "timeout": 0, "not_run": 0},
+                "profile_summary": {
+                    "regression_tiny": {"total": 2, "passed": 1, "failed": 1},
+                    "ask_short": {"total": 1, "passed": 0, "failed": 1}
+                },
+                "cases": [
+                    {
+                        "id": "math_2_plus_2_brief",
+                        "profile": "regression_tiny",
+                        "category": "math",
+                        "status": "passed",
+                        "answer": "4",
+                        "quality": {"passed": true}
+                    },
+                    {
+                        "id": "arithmetic_add_7_8",
+                        "profile": "regression_tiny",
+                        "category": "math",
+                        "status": "quality_failed",
+                        "answer": "\nThe result of 7 + ",
+                        "tokens": {"prompt": 40, "generated": 8},
+                        "quality": {
+                            "passed": false,
+                            "gate_kind": "contains_any",
+                            "generated_tokens": 8,
+                            "failed_rules": ["gate_contains_any", "scoring_required_keywords"],
+                            "failure_taxonomy": ["answer_content"],
+                            "scoring": {
+                                "kind": "required_forbidden_tokens",
+                                "passed": false,
+                                "details": {
+                                    "required_keywords_missing": ["15"],
+                                    "forbidden_tokens_observed": []
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "yes_no_clear_sky",
+                        "profile": "ask_short",
+                        "category": "yes_no",
+                        "status": "quality_failed",
+                        "answer": ": Yes. The sky is usually blue",
+                        "backend": {"fallback_used": false},
+                        "tokens": {"prompt": 43, "generated": 8},
+                        "quality": {
+                            "passed": false,
+                            "gate_kind": "starts_with_any",
+                            "generated_tokens": 8,
+                            "failed_rules": ["gate_starts_with_any", "scoring_normalized_match"],
+                            "failure_taxonomy": ["answer_content"],
+                            "scoring": {
+                                "kind": "normalized_match",
+                                "passed": false,
+                                "details": {
+                                    "expected_normalized": "yes",
+                                    "observed_normalized": ": yes. the sky is usually blue"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            ROUTE_PROFILE_COMPARISON,
+            json!({
+                "profiles": [
+                    {
+                        "profile_id": "regression_tiny",
+                        "profile_status": "promoted_route_blocked",
+                        "promotion_decision": "dense_slm_default_cpu is listed as promoted but blocked",
+                        "route_evidence": [
+                            {
+                                "route_id": DEFAULT_ASK_ROUTE,
+                                "blockers": ["corpus_v2 profile regression_tiny has 1 quality failures"]
+                            }
+                        ]
+                    },
+                    {
+                        "profile_id": "ask_short",
+                        "profile_status": "promoted_route_blocked",
+                        "route_evidence": [
+                            {
+                                "route_id": DEFAULT_ASK_ROUTE,
+                                "blockers": ["corpus_v2 profile ask_short has 1 quality failures"]
+                            }
+                        ]
+                    }
+                ]
+            }),
+        )?;
+
+        let receipt = build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
+            temp.path(),
+            Path::new(DENSE_CPU_CORPUS_V2),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "2026-05-16T09:30:00Z".to_string(),
+        )?;
+
+        assert!(receipt.diagnosis_ready, "{:?}", receipt.gaps);
+        assert!(receipt.route_blocked);
+        assert_eq!(receipt.quality_summary.failed, 2);
+        assert_eq!(receipt.failed_cases.len(), 2);
+        assert!(
+            receipt.quality_summary.failure_classes.contains_key("generation_budget_or_truncation")
+        );
+        assert!(
+            receipt.quality_summary.failure_classes.contains_key("assistant_prefix_gate_mismatch")
+        );
+        assert!(receipt.profile_diagnoses.iter().any(|profile| profile.profile_id == "ask_short"
+            && profile.route_profile_status.as_deref() == Some("promoted_route_blocked")));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
         Ok(())
     }
 

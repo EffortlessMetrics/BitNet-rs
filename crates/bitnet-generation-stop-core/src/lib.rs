@@ -159,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn stop_reason_serde_round_trip() {
+    fn stop_reason_serde_round_trip() -> serde_json::Result<()> {
         let reasons = [
             StopReason::MaxTokens,
             StopReason::EosToken,
@@ -167,18 +167,18 @@ mod tests {
             StopReason::StopString("END".to_string()),
         ];
         for r in &reasons {
-            let json = serde_json::to_string(r).expect("serialize stop reason");
-            let restored: StopReason =
-                serde_json::from_str(&json).expect("deserialize stop reason");
+            let json = serde_json::to_string(r)?;
+            let restored: StopReason = serde_json::from_str(&json)?;
             assert_eq!(*r, restored);
         }
+        Ok(())
     }
 
     proptest::proptest! {
         #[test]
         fn no_stop_without_triggers(id in 1000u32..2000, generated_len in 1usize..50) {
             let criteria = make_criteria(&[9999], &[], 100, Some(9998));
-            let generated: Vec<u32> = (0..u32::try_from(generated_len).unwrap()).collect();
+            let generated: Vec<u32> = (0..generated_len).map(|idx| idx as u32).collect();
             let result = check_stop(&criteria, id, &generated, "no-stop-string-here");
             proptest::prop_assert!(result.is_none());
         }
@@ -243,16 +243,17 @@ mod tests {
     }
 
     #[test]
-    fn stop_reason_serde_round_trip() {
+    fn stop_reason_serde_round_trip_declared_variants() -> serde_json::Result<()> {
         for reason in [
             StopReason::MaxTokens,
             StopReason::EosToken,
             StopReason::StopTokenId(42),
             StopReason::StopString("end".to_string()),
         ] {
-            let json = serde_json::to_string(&reason).expect("serialize");
-            let parsed: StopReason = serde_json::from_str(&json).expect("deserialize");
+            let json = serde_json::to_string(&reason)?;
+            let parsed: StopReason = serde_json::from_str(&json)?;
             assert_eq!(parsed, reason);
         }
+        Ok(())
     }
 }

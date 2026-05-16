@@ -92,6 +92,16 @@ Dense SLM accuracy work expands the deterministic corpus in two stages:
 500 mechanical cases
 ```
 
+`M4-ACCURACY-001` is an evidence closeout for the 100-case stage, not a second
+corpus expansion. The dense SLM eval-v2 corpus already contains 120
+deterministic mechanically scored cases from seed `777331`, with coverage across
+arithmetic, fixed-table QA, JSON/schema output, closed-label classification,
+synthetic extraction, ordering/sorting, copy/edit/rewrite, constrained summary,
+and instruction-following required/forbidden-token families. The earlier
+`M4-SLM-EVAL2-001` item added that corpus; `M4-ACCURACY-000` adds the
+machine-readable corpus/scorer contract needed before interpreting it inside the
+excellence campaign.
+
 Scoring stays mechanical:
 
 ```text

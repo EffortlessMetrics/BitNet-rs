@@ -237,13 +237,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-001-dense-100"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-000"]
+pr = 5112
+merge_sha = "5514215c2f317d232d82f8483633e436eb3b8ba5"
 acceptance = "Expand the seeded dense SLM mechanical eval corpus to 100 deterministic cases across arithmetic, table QA, JSON/schema, extraction, sorting, rewrite, classification, summary-keyword, and instruction-following families without required LLM judging."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",

@@ -603,6 +603,54 @@ receiver_fingerprint = 'assert_eq!(std::fs::read(&path).expect("read v2"), b"v2"
 [[baseline]]
 path = "crates/bitnet-atomic-file-core/src/lib.rs"
 family = "expect"
+snippet = 'assert_eq!(std::fs::read(&path).expect("read"), b"new");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'assert_eq!(std::fs::read(&path).expect("read"), b"new");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'atomic_write(&path, &payload).expect("write");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'atomic_write(&path, &payload).expect("write");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'atomic_write(&path, b"").expect("write empty");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'atomic_write(&path, b"").expect("write empty");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'atomic_write(&path, b"new").expect("overwrite");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'atomic_write(&path, b"new").expect("overwrite");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
 snippet = 'atomic_write(&path, b"v1").expect("first write");'
 count = 1
 
@@ -627,14 +675,62 @@ receiver_fingerprint = 'atomic_write(&path, b"v2").expect("second write");'
 [[baseline]]
 path = "crates/bitnet-atomic-file-core/src/lib.rs"
 family = "expect"
-snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
+snippet = 'atomic_write(&path, b"{}").expect("write");'
 count = 1
 
 [baseline.selector]
 kind = "method_call"
 container = ""
 callee = "expect"
+receiver_fingerprint = 'atomic_write(&path, b"{}").expect("write");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'let data = std::fs::read(&path).expect("read");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let data = std::fs::read(&path).expect("read");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
+count = 6
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
 receiver_fingerprint = 'let dir = tempfile::tempdir().expect("tempdir");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'let read_back = std::fs::read(&path).expect("read");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let read_back = std::fs::read(&path).expect("read");'
+
+[[baseline]]
+path = "crates/bitnet-atomic-file-core/src/lib.rs"
+family = "expect"
+snippet = 'std::fs::write(&path, b"old").expect("seed");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'std::fs::write(&path, b"old").expect("seed");'
 
 [[baseline]]
 path = "crates/bitnet-bdd-grid-core/tests/bdd_grid_core_edge_cases.rs"
@@ -1921,6 +2017,150 @@ callee = "unwrap"
 receiver_fingerprint = 'writeln!(f, "{}", r.to_json()).unwrap();'
 
 [[baseline]]
+path = "crates/bitnet-build-info-core/src/lib.rs"
+family = "expect"
+snippet = 'let json: serde_json::Value = serde_json::to_value(&metadata).expect("serialize");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let json: serde_json::Value = serde_json::to_value(&metadata).expect("serialize");'
+
+[[baseline]]
+path = "crates/bitnet-build-info-core/src/lib.rs"
+family = "expect"
+snippet = 'let obj = json.as_object().expect("object");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let obj = json.as_object().expect("object");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = '.expect("build");'
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("build");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'ConfigBuilder::from_file(&path).expect("from_file").build().expect("build");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'ConfigBuilder::from_file(&path).expect("from_file").build().expect("build");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'config.validate().expect("default config validates");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'config.validate().expect("default config validates");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'let config = CliConfig::load_from_file(&path).expect("missing file is non-fatal");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let config = CliConfig::load_from_file(&path).expect("missing file is non-fatal");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
+count = 4
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let dir = tempfile::tempdir().expect("tempdir");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'let loaded = CliConfig::load_from_file(&path).expect("load");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let loaded = CliConfig::load_from_file(&path).expect("load");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'let path = CliConfig::default_config_path().expect("config dir");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let path = CliConfig::default_config_path().expect("config dir");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'original.save_to_file(&path).expect("save");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'original.save_to_file(&path).expect("save");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'std::fs::write(&path, "this is = not = toml").expect("write");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'std::fs::write(&path, "this is = not = toml").expect("write");'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "expect"
+snippet = 'written.save_to_file(&path).expect("save");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'written.save_to_file(&path).expect("save");'
+
+[[baseline]]
 path = "crates/bitnet-cli-config-core/src/lib.rs"
 family = "panic_macro"
 snippet = 'config.validate().unwrap_or_else(|err| panic!("{device} should validate: {err}"));'
@@ -1931,6 +2171,30 @@ kind = "macro_call"
 container = ""
 callee = "panic"
 receiver_fingerprint = 'config.validate().unwrap_or_else(|err| panic!("{device} should validate: {err}"));'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "panic_macro"
+snippet = 'config.validate().unwrap_or_else(|e| panic!("{fmt} should validate: {e}"));'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'config.validate().unwrap_or_else(|e| panic!("{fmt} should validate: {e}"));'
+
+[[baseline]]
+path = "crates/bitnet-cli-config-core/src/lib.rs"
+family = "panic_macro"
+snippet = 'config.validate().unwrap_or_else(|e| panic!("{level} should validate: {e}"));'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'config.validate().unwrap_or_else(|e| panic!("{level} should validate: {e}"));'
 
 [[baseline]]
 path = "crates/bitnet-cli-config-core/src/lib.rs"
@@ -14534,6 +14798,78 @@ receiver_fingerprint = "let rust_config = rust_config.unwrap();"
 
 [[baseline]]
 path = "crates/bitnet-generation-events-core/src/lib.rs"
+family = "expect"
+snippet = 'let json = serde_json::to_string(&original).expect("serialize");'
+count = 3
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let json = serde_json::to_string(&original).expect("serialize");'
+
+[[baseline]]
+path = "crates/bitnet-generation-events-core/src/lib.rs"
+family = "expect"
+snippet = 'let parsed: StreamEvent = serde_json::from_str(&json).expect("deserialize");'
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let parsed: StreamEvent = serde_json::from_str(&json).expect("deserialize");'
+
+[[baseline]]
+path = "crates/bitnet-generation-events-core/src/lib.rs"
+family = "expect"
+snippet = 'let parsed: TokenEvent = serde_json::from_str(&json).expect("deserialize");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let parsed: TokenEvent = serde_json::from_str(&json).expect("deserialize");'
+
+[[baseline]]
+path = "crates/bitnet-generation-events-core/src/lib.rs"
+family = "panic_macro"
+snippet = 'StreamEvent::Done { .. } => panic!("expected Token after round-trip"),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'StreamEvent::Done { .. } => panic!("expected Token after round-trip"),'
+
+[[baseline]]
+path = "crates/bitnet-generation-events-core/src/lib.rs"
+family = "panic_macro"
+snippet = 'StreamEvent::Done { .. } => panic!("expected Token event"),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'StreamEvent::Done { .. } => panic!("expected Token event"),'
+
+[[baseline]]
+path = "crates/bitnet-generation-events-core/src/lib.rs"
+family = "panic_macro"
+snippet = 'StreamEvent::Token { .. } => panic!("expected Done after round-trip"),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'StreamEvent::Token { .. } => panic!("expected Done after round-trip"),'
+
+[[baseline]]
+path = "crates/bitnet-generation-events-core/src/lib.rs"
 family = "panic_macro"
 snippet = 'StreamEvent::Token { .. } => panic!("expected Done event"),'
 count = 1
@@ -14583,6 +14919,18 @@ receiver_fingerprint = "let json = serde_json::to_string(&ev).unwrap();"
 [[baseline]]
 path = "crates/bitnet-generation-stop-core/src/lib.rs"
 family = "expect"
+snippet = 'let json = serde_json::to_string(&reason).expect("serialize");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let json = serde_json::to_string(&reason).expect("serialize");'
+
+[[baseline]]
+path = "crates/bitnet-generation-stop-core/src/lib.rs"
+family = "expect"
 snippet = 'let json = serde_json::to_string(r).expect("serialize stop reason");'
 count = 1
 
@@ -14591,6 +14939,18 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'let json = serde_json::to_string(r).expect("serialize stop reason");'
+
+[[baseline]]
+path = "crates/bitnet-generation-stop-core/src/lib.rs"
+family = "expect"
+snippet = 'let parsed: StopReason = serde_json::from_str(&json).expect("deserialize");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let parsed: StopReason = serde_json::from_str(&json).expect("deserialize");'
 
 [[baseline]]
 path = "crates/bitnet-generation-stop-core/src/lib.rs"
