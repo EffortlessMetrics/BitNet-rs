@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T11:16:51Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-001"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-001-dense-100"
+pr = 5112
+merge_sha = "5514215c2f317d232d82f8483633e436eb3b8ba5"
+summary = "Merged dense 100-case corpus evidence record."
+
+notes = [
+  "PR #5112 recorded that the existing dense SLM eval-v2 corpus already satisfies the 100-case mechanical corpus requirement.",
+  "This closeout does not add live model runs, model downloads, BitNet behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claims.",
+]
