@@ -1,0 +1,18 @@
+timestamp = "2026-05-16T10:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-004"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-004-qwen-corpus-v2-diagnosis"
+summary = "Started LNL258V-QUAL-004 to classify dense Qwen CPU corpus-v2 blockers without running new inference."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+]
+
+notes = [
+  "The item reads the committed dense Qwen CPU corpus-v2 receipt plus route-profile comparison and classifies failed cases by profile/category/failure class.",
+  "The item preserves no-new-inference, no-broad-quality, no-speedup, no-route-promotion, no-Arc/NPU-execution, and no BitNet QK256/I2_S behavior-change boundaries.",
+]
