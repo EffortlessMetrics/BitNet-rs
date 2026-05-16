@@ -76,6 +76,29 @@ fn trace_layer0_tensor(
 }
 
 #[cfg(feature = "trace")]
+fn trace_layer_history_ref_layout(
+    layer_idx: usize,
+    base_seq: usize,
+    stage: &str,
+    tensor: &Tensor,
+) -> Result<()> {
+    if layer_idx != trace_target_layer() {
+        return Ok(());
+    }
+    let dims = tensor.dims();
+    if dims.len() != 3 || dims[0] != 1 {
+        return Ok(());
+    }
+    let seq_len = dims[1];
+    let hidden = dims[2];
+    let history = tensor.reshape(&[seq_len, hidden])?.transpose(0, 1)?.to_dtype(DType::F32)?;
+    let trace_seq = trace_target_seq().unwrap_or(base_seq);
+    let trace_name = format!("t{trace_seq}/blk{layer_idx}/{stage}_history_ref_layout");
+    let trace_stage = format!("{stage}_history_ref_layout");
+    trace_tensor_record(&trace_name, &history, trace_seq, Some(layer_idx as isize), &trace_stage)
+}
+
+#[cfg(feature = "trace")]
 fn trace_target_layer() -> usize {
     std::env::var("BITNET_TRACE_LAYER").ok().and_then(|value| value.parse().ok()).unwrap_or(0)
 }
@@ -1346,6 +1369,8 @@ impl FeedForward {
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_down_proj", &output)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(self.layer_idx, _trace_base_seq, "post_down_proj", &output)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -1486,27 +1511,12 @@ impl TransformerBlock {
         }
 
         #[cfg(feature = "trace")]
-        if self.attention.layer_idx == trace_target_layer() {
-            let dims = x.dims();
-            if dims.len() == 3 && dims[0] == 1 {
-                let seq_len = dims[1];
-                let hidden = dims[2];
-                let history =
-                    x.reshape(&[seq_len, hidden])?.transpose(0, 1)?.to_dtype(DType::F32)?;
-                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
-                let trace_name = format!(
-                    "t{trace_seq}/blk{}/attention_norm_input_history_ref_layout",
-                    self.attention.layer_idx
-                );
-                trace_tensor_record(
-                    &trace_name,
-                    &history,
-                    trace_seq,
-                    Some(self.attention.layer_idx as isize),
-                    "attention_norm_input_history_ref_layout",
-                )?;
-            }
-        }
+        trace_layer_history_ref_layout(
+            self.attention.layer_idx,
+            _trace_base_seq,
+            "attention_norm_input",
+            x,
+        )?;
 
         let x = norm_forward(&self.attention_norm, x, self.norm_eps, self.norm_type)?;
 
@@ -1547,27 +1557,12 @@ impl TransformerBlock {
             )?;
         }
         #[cfg(feature = "trace")]
-        if self.attention.layer_idx == trace_target_layer() {
-            let dims = x.dims();
-            if dims.len() == 3 && dims[0] == 1 {
-                let seq_len = dims[1];
-                let hidden = dims[2];
-                let history =
-                    x.reshape(&[seq_len, hidden])?.transpose(0, 1)?.to_dtype(DType::F32)?;
-                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
-                let trace_name = format!(
-                    "t{trace_seq}/blk{}/attention_v_input_history_ref_layout",
-                    self.attention.layer_idx
-                );
-                trace_tensor_record(
-                    &trace_name,
-                    &history,
-                    trace_seq,
-                    Some(self.attention.layer_idx as isize),
-                    "attention_v_input_history_ref_layout",
-                )?;
-            }
-        }
+        trace_layer_history_ref_layout(
+            self.attention.layer_idx,
+            _trace_base_seq,
+            "attention_v_input",
+            &x,
+        )?;
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1594,6 +1589,13 @@ impl TransformerBlock {
             self.attention.layer_idx,
             _trace_base_seq,
             1,
+            "post_attention_residual",
+            &x,
+        )?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.attention.layer_idx,
+            _trace_base_seq,
             "post_attention_residual",
             &x,
         )?;
@@ -1632,6 +1634,13 @@ impl TransformerBlock {
         let x = norm_forward(&self.ffn_norm, &x, self.norm_eps, self.norm_type)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.attention.layer_idx, _trace_base_seq, 1, "post_ffn_norm", &x)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.attention.layer_idx,
+            _trace_base_seq,
+            "post_ffn_norm",
+            &x,
+        )?;
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1665,6 +1674,13 @@ impl TransformerBlock {
                 "post_layer",
             )?;
         }
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.attention.layer_idx,
+            _trace_base_seq,
+            "post_layer",
+            &x,
+        )?;
 
         // Debug post-FFN activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {

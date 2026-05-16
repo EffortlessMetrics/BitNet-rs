@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1095 @@ struct llama_context {
+@@ -3441,6 +3444,1114 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -603,14 +603,33 @@ index 666fcc4d..23ee29ff 100644
 +    int bitnet_rs_history_layer = -1;
 +    const int bitnet_rs_requested_history_layer = bitnet_rs_reference_layer_trace_requested_layer();
 +    const char * bitnet_rs_history_stage = bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer);
++    const bool bitnet_rs_history_is_requested_layer = bitnet_rs_history_layer == bitnet_rs_requested_history_layer;
 +    const bool bitnet_rs_history_is_attn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_norm") == 0;
 +    const bool bitnet_rs_history_is_attn_norm_input = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer;
 +    const bool bitnet_rs_history_is_vcur = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "Vcur") == 0;
-+    if ((bitnet_rs_history_is_attn_norm || bitnet_rs_history_is_attn_norm_input || bitnet_rs_history_is_vcur) && (bitnet_rs_history_is_attn_norm_input || bitnet_rs_history_layer == bitnet_rs_requested_history_layer) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens) {
++    const bool bitnet_rs_history_is_ffn_inp = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_inp") == 0;
++    const bool bitnet_rs_history_is_ffn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_norm") == 0;
++    const bool bitnet_rs_history_is_ffn_down = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_down") == 0;
++    const bool bitnet_rs_history_is_l_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_is_requested_layer;
++    const bool bitnet_rs_history_is_layer_boundary =
++        bitnet_rs_history_is_attn_norm
++        || bitnet_rs_history_is_vcur
++        || bitnet_rs_history_is_ffn_inp
++        || bitnet_rs_history_is_ffn_norm
++        || bitnet_rs_history_is_ffn_down
++        || bitnet_rs_history_is_l_out;
++    if ((bitnet_rs_history_is_attn_norm_input || (bitnet_rs_history_is_requested_layer && bitnet_rs_history_is_layer_boundary)) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens) {
 +        const int bitnet_rs_effective_history_layer = bitnet_rs_history_is_attn_norm_input ? bitnet_rs_requested_history_layer : bitnet_rs_history_layer;
 +        std::ostringstream history_record_name;
-+        history_record_name << (bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout-" : (bitnet_rs_history_is_attn_norm_input ? "attn_norm_input_history_ref_layout-" : "vcur_history_ref_layout-")) << bitnet_rs_effective_history_layer;
-+        const char * history_stage_name = bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout" : (bitnet_rs_history_is_attn_norm_input ? "attn_norm_input_history_ref_layout" : "vcur_history_ref_layout");
++        const char * history_stage_name =
++            bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout" :
++            (bitnet_rs_history_is_attn_norm_input ? "attn_norm_input_history_ref_layout" :
++            (bitnet_rs_history_is_vcur ? "vcur_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_inp ? "ffn_inp_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_norm ? "ffn_norm_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_down ? "ffn_down_history_ref_layout" :
++            "l_out_history_ref_layout")))));
++        history_record_name << history_stage_name << "-" << bitnet_rs_effective_history_layer;
 +        const int64_t hidden = tensor->ne[0];
 +        const int64_t token_count = (int64_t) n_tokens;
 +        const int64_t history_nelements = hidden * token_count;
