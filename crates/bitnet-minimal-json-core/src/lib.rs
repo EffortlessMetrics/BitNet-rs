@@ -145,4 +145,116 @@ mod tests {
         assert!(MinimalJson::parse("not json").is_err());
         assert!(MinimalJson::parse("[1,2]").is_err());
     }
+
+    #[test]
+    fn rejects_unbalanced_braces() {
+        assert!(MinimalJson::parse("{").is_err());
+        assert!(MinimalJson::parse("}").is_err());
+        assert!(MinimalJson::parse(r#"{"k":"v""#).is_err());
+    }
+
+    #[test]
+    fn parses_empty_object() {
+        let j = MinimalJson::parse("{}").unwrap();
+        assert_eq!(j.get_str("anything"), None);
+    }
+
+    #[test]
+    fn ignores_surrounding_whitespace() {
+        let j = MinimalJson::parse("   { \"k\" : \"v\" }   ").unwrap();
+        assert_eq!(j.get_str("k"), Some("v".to_string()));
+    }
+
+    #[test]
+    fn parses_multiple_fields() {
+        let j = MinimalJson::parse(r#"{"a":1,"b":2,"c":3}"#).unwrap();
+        assert_eq!(j.get_u32("a"), Some(1));
+        assert_eq!(j.get_u32("b"), Some(2));
+        assert_eq!(j.get_u32("c"), Some(3));
+    }
+
+    #[test]
+    fn strings_with_commas_are_not_split() {
+        let j = MinimalJson::parse(r#"{"k":"a,b,c","n":7}"#).unwrap();
+        assert_eq!(j.get_str("k"), Some("a,b,c".to_string()));
+        assert_eq!(j.get_u32("n"), Some(7));
+    }
+
+    #[test]
+    fn mixed_nested_arrays_and_objects_preserved() {
+        let j = MinimalJson::parse(r#"{"x":[{"a":1},{"b":2}],"y":3}"#).unwrap();
+        assert_eq!(j.get_str("x"), Some("[{\"a\":1},{\"b\":2}]".to_string()));
+        assert_eq!(j.get_u32("y"), Some(3));
+    }
+
+    #[test]
+    fn get_u32_returns_none_for_non_numeric() {
+        let j = MinimalJson::parse(r#"{"k":"oops"}"#).unwrap();
+        assert_eq!(j.get_u32("k"), None);
+    }
+
+    #[test]
+    fn get_u32_returns_none_for_negative_or_float() {
+        let j = MinimalJson::parse(r#"{"neg":-1,"flt":1.5}"#).unwrap();
+        assert_eq!(j.get_u32("neg"), None);
+        assert_eq!(j.get_u32("flt"), None);
+    }
+
+    #[test]
+    fn get_f32_returns_none_for_non_numeric() {
+        let j = MinimalJson::parse(r#"{"k":"nope"}"#).unwrap();
+        assert_eq!(j.get_f32("k"), None);
+    }
+
+    #[test]
+    fn get_bool_returns_none_for_non_boolean() {
+        let j = MinimalJson::parse(r#"{"a":1,"b":"true","c":"yes"}"#).unwrap();
+        // Numeric value: not a boolean string.
+        assert_eq!(j.get_bool("a"), None);
+        // Quoted "true" becomes the string `true` after stripping, which still matches.
+        assert_eq!(j.get_bool("b"), Some(true));
+        // Non-true/false string returns None.
+        assert_eq!(j.get_bool("c"), None);
+    }
+
+    #[test]
+    fn getters_return_none_for_missing_keys() {
+        let j = MinimalJson::parse("{}").unwrap();
+        assert_eq!(j.get_u32("x"), None);
+        assert_eq!(j.get_f32("x"), None);
+        assert_eq!(j.get_bool("x"), None);
+    }
+
+    #[test]
+    fn empty_string_value_is_parsed() {
+        let j = MinimalJson::parse(r#"{"k":""}"#).unwrap();
+        assert_eq!(j.get_str("k"), Some(String::new()));
+    }
+
+    #[test]
+    fn fields_without_colon_are_skipped() {
+        // The parser silently skips entries that have no `:` separator.
+        let j = MinimalJson::parse(r#"{"bad","good":1}"#).unwrap();
+        assert_eq!(j.get_str("bad"), None);
+        assert_eq!(j.get_u32("good"), Some(1));
+    }
+
+    #[test]
+    fn duplicate_keys_take_last_value() {
+        // HashMap insert semantics: the later occurrence wins.
+        let j = MinimalJson::parse(r#"{"k":"first","k":"second"}"#).unwrap();
+        assert_eq!(j.get_str("k"), Some("second".to_string()));
+    }
+
+    #[test]
+    fn boolean_false_is_recognised() {
+        let j = MinimalJson::parse(r#"{"b":false}"#).unwrap();
+        assert_eq!(j.get_bool("b"), Some(false));
+    }
+
+    #[test]
+    fn whitespace_only_inner_object_is_empty() {
+        let j = MinimalJson::parse("{   }").unwrap();
+        assert_eq!(j.get_str("anything"), None);
+    }
 }
