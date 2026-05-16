@@ -93,13 +93,18 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-ACCURACY-003 | merged | Fix stop-token, template, normalization, and scoring misses found by the larger corpus. |
 | M4-ACCURACY-004 | merged | Publish dense pass rates by deterministic task family and supported model identity. |
 | M4-ACCURACY-005 | proposed | Add mechanical failure taxonomy for regression triage. |
+| M4-ACCURACY-006 | proposed | Run full 500-case dense SLM eval-v2 receipts for every supported M4 dense model identity. |
+| M4-ACCURACY-007 | proposed | Add a second matching 500-case dense eval-v2 refresh for trend history. |
 | M4-CANARY-001 | proposed | Add dense SLM and BitNet golden-token trace canaries. |
 | M4-DENSE-REF-001 | proposed | Add a dense reference-vs-Rust control for supported Qwen identities. |
+| M4-DENSE-CHAT-001 | proposed | Prove dense CLI ask/chat conformance with per-turn receipts. |
 | M4-BENCH-001 | proposed | Ensure benchmark receipts include the full timing and memory metric contract. |
 | M4-BENCH-004 | proposed | Add benchmark environment preflight fields and invalid-comparison reasons. |
 | M4-BENCH-002 | proposed | Publish p50/p90/p99 and min/max summaries for the supported dense benchmark matrix. |
 | M4-BENCH-005 | proposed | Publish repeatability and variance envelopes for dense and BitNet timing families. |
+| M4-BENCH-006 | proposed | Publish explicit BitNet one-shot and warm variance receipts. |
 | M4-BENCH-003 | proposed | Wire benchmark summaries into matching-identity regression comparisons. |
+| M4-BITNET-REG-001 | proposed | Add direct BitNet warm-session regression support. |
 | M4-BITNET-EX-001 | proposed | Add a BitNet-specific 100-case deterministic corpus. |
 | M4-BITNET-EX-002 | proposed | Compare reference-runner and Rust M4 BitNet answers under the accepted identity. |
 | M4-BITNET-EX-003 | proposed | Publish the BitNet one-shot benchmark envelope. |
@@ -107,10 +112,13 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BITNET-EX-005 | proposed | Harden BitNet progress, timeout, partial-failure, and repair UX. |
 | M4-BITNET-EX-006 | proposed | Enable BitNet chat only after warm, timeout, determinism, and streaming gates pass. |
 | M4-BITNET-EX-007 | proposed | Enable BitNet serve only after chat and service receipts pass. |
+| M4-BITNET-EX-008 | proposed | Publish BitNet task-family and failure-taxonomy reports. |
+| M4-BITNET-EX-009 | proposed | Add matching BitNet eval history and a larger-corpus decision. |
 | M4-OPS-UX-001 | proposed | Add an operator-facing M4 evidence summary. |
 | M4-OPS-UX-002 | proposed | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
 | M4-OPS-UX-003 | proposed | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
 | M4-OPS-SLO-001 | proposed | Translate receipts into local operator envelope classes. |
+| M4-CONTEXT-001 | proposed | Add long-context guardrails against recorded dense SLM and BitNet evidence envelopes. |
 | M4-REPRO-001 | proposed | Define the reusable M4 run-identity contract for all evidence families. |
 | M4-REPRO-002 | proposed | Publish supported-model artifact provenance and cache verification manifests. |
 | M4-REPRO-003 | proposed | Record prompt-template, stop-sequence, and generation-parameter identity. |
@@ -122,6 +130,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-SERVE-EX-001 | proposed | Refresh dense SLM local-server conformance receipts. |
 | M4-SERVE-EX-002 | proposed | Prove dense and BitNet streaming/failure semantics after BitNet serve is gated. |
 | M4-SERVE-EX-003 | proposed | Document and test local-server safety defaults for appliance operation. |
+| M4-SERVE-EX-004 | proposed | Add bounded server queue, backpressure, and resident-state evidence. |
 | M4-CI-001 | proposed | Codify PR, advisory, scheduled, release, and retention evidence lanes. |
 | M4-RELEASE-001 | proposed | Publish the M4 inference release go/no-go matrix. |
 | M4-METAL-EX-001 | proposed | Choose one named future Metal phase and document parity/receipt requirements. |

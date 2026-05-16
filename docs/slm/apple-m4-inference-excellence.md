@@ -130,6 +130,15 @@ current evidence publication for the matching-history refresh; it is not a
 fresh runtime run and does not convert the 500-case static corpus into 500-case
 runtime pass rates.
 
+The remaining dense accuracy gap is to run the full 500-case corpus on the M4
+for every supported dense model identity, then repeat it once under matching
+identity before using the 500-case reports as trend-ready evidence:
+
+```text
+M4-ACCURACY-006  full 500-case dense SLM eval-v2 receipts
+M4-ACCURACY-007  second matching 500-case dense eval-v2 refresh
+```
+
 Scoring stays mechanical:
 
 ```text
@@ -186,6 +195,11 @@ outlier handling
 threshold derivation
 ```
 
+`M4-BENCH-006` keeps BitNet timing variance explicit instead of relying on the
+shared benchmark envelope alone. It records one-shot and warm-session run
+counts, sample counts, timeout-stage accounting, variance bands, outlier
+handling, and advisory-vs-failure thresholds for the accepted BitNet artifact.
+
 ## Drift Thresholds
 
 `M4-EXCELLENCE-004` publishes the current family-specific drift policy in the
@@ -219,7 +233,7 @@ One boundary remains explicit: BitNet variable warm has matching-history
 dashboard evidence and receipt validation, but direct `bitnet mac regression`
 does not yet accept `bitnet_apple_m4_warm_session` as a baseline kind. Warm
 session thresholds remain a documented readiness boundary until direct
-warm-regression support lands in a later item.
+warm-regression support lands in `M4-BITNET-REG-001`.
 
 ## Reproducibility
 
@@ -262,6 +276,9 @@ reference-vs-Rust comparison
 one-shot benchmark envelope
 variable warm 25/50/100
 progress and timeout UX
+task-family pass rates
+failure taxonomy
+matching-history eval refresh
 chat gate
 serve gate
 ```
@@ -282,9 +299,15 @@ interrupted generation
 client cancellation
 interrupted receipt write
 process restart
+long-context guardrails
 scheduled trend retention
 stale-identity aging
 ```
+
+CLI proof is route-specific. Dense SLM ask/chat conformance needs bounded
+multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
+token IDs, backend, fallback state, and model/tokenizer identity before the CLI
+surface is treated as excellent.
 
 Service proof is separate from CLI proof. Dense SLM serve and later BitNet
 serve need receipts for:
@@ -299,6 +322,8 @@ invalid request
 missing cache
 per-request receipt export
 local-only safety defaults
+queue limits and backpressure
+resident model reuse
 ```
 
 Local service claims stay bounded: local appliance operation, not production
