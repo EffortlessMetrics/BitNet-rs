@@ -3830,6 +3830,7 @@ fn compare_reference_to_rust(
         "attention_score_reference_semantic_variants": attention_score_reference_semantic_variants(reference_records),
         "attention_score_reference_numeric_variants": attention_score_reference_numeric_variants(reference_records),
         "attention_score_input_attribution": attention_score_input_attribution(reference_records, rust_records),
+        "attention_key_score_input_delta": attention_key_score_input_delta(reference_records, rust_records),
         "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
         "attention_probability_reference_softmax_variants": attention_probability_reference_softmax_variants(reference_records),
@@ -6926,6 +6927,125 @@ fn key_cache_dim_major_first_values(record: &ReferenceTraceRecord) -> Option<Vec
         }
     }
     Some(dim_major)
+}
+
+fn attention_key_score_input_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let group_size = if reference_heads.is_empty()
+        || rust_heads.is_empty()
+        || !rust_heads.len().is_multiple_of(reference_heads.len())
+    {
+        None
+    } else {
+        Some(rust_heads.len() / reference_heads.len())
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, rust) in &rust_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let reference = kv_head.and_then(|kv_head| reference_heads.get(&kv_head).copied());
+        let mut blocked_reasons = Vec::<String>::new();
+        let mut delta = Value::Null;
+        let mut status = "missing_input";
+        let mut dim_count = rust.shape.first().copied().unwrap_or(0);
+        let mut token_count = rust.shape.get(1).copied().unwrap_or(0);
+        let mut required_sample_count = dim_count.saturating_mul(token_count);
+        let mut reference_sample_count = reference.map(|record| record.first_values.len());
+        let rust_sample_count = rust.first_values.len();
+
+        if let Some(reference) = reference {
+            dim_count = usize::try_from(*reference.shape.first().unwrap_or(&0)).unwrap_or(0);
+            token_count = usize::try_from(*reference.shape.get(1).unwrap_or(&0)).unwrap_or(0);
+            required_sample_count = dim_count.saturating_mul(token_count);
+            reference_sample_count = Some(reference.first_values.len());
+            let reference_dim_major = key_cache_dim_major_first_values(reference);
+
+            if dim_count == 0 || token_count == 0 {
+                blocked_reasons.push("reference_k_kv_head_shape_unusable".to_string());
+            }
+            if reference_dim_major.is_none() {
+                blocked_reasons.push("reference_k_kv_head_sample_incomplete".to_string());
+            }
+            if rust.first_values.len() < required_sample_count {
+                blocked_reasons.push("rust_attention_k_score_input_sample_incomplete".to_string());
+            }
+            if let Some(reference_dim_major) = reference_dim_major
+                && rust.first_values.len() >= required_sample_count
+                && required_sample_count > 0
+            {
+                delta = dim_major_token_value_delta(
+                    &reference_dim_major,
+                    &rust.first_values,
+                    dim_count,
+                    token_count,
+                );
+                max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+                max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+                compared_head_count += 1;
+                status = "compared";
+            }
+        } else {
+            blocked_reasons.push("reference_k_kv_head_missing".to_string());
+        }
+
+        if status == "missing_input" {
+            missing_head_count += 1;
+        }
+        rows.push(json!({
+            "head": head,
+            "kv_head": kv_head,
+            "status": status,
+            "reference_stage_present": reference.is_some(),
+            "rust_stage_present": true,
+            "dim_count": dim_count,
+            "token_count": token_count,
+            "required_sample_count": required_sample_count,
+            "reference_sample_count": reference_sample_count,
+            "rust_sample_count": rust_sample_count,
+            "blocked_reasons": blocked_reasons,
+            "delta": delta,
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "key score-input delta is diagnostic-only evidence for whether raw attention score drift follows Rust K score inputs; it reinterprets reference k_kv_head token-major samples as dim-major and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
+        "reference_stage_prefix": "k_kv_head",
+        "reference_reinterpretation": "token_major_to_dim_major",
+        "rust_stage_prefix": "attention_k_score_input_head",
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "group_size": group_size,
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !rust_heads.is_empty() && missing_head_count == 0,
+        "rows": rows,
+    })
 }
 
 fn attention_value_cache_kv_head_best_matches(
@@ -10648,6 +10768,109 @@ mod tests {
         assert_eq!(prob.pointer("/rust_stage_prefix"), Some(&json!("attn_scores_softmax_head")));
         assert_eq!(prob.pointer("/identity_best_count"), Some(&json!(2)));
         assert_eq!(prob.pointer("/all_identity_best"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn compare_reports_attention_key_score_input_delta() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            // Reference k_kv_head records are token-major; the report compares
+            // them after reinterpreting to dim-major token-minor score layout.
+            first_values: vec![1.0, 10.0, 2.0, 20.0, 3.0, 30.0],
+            ..test_reference_trace_record("k_kv_head0_live", vec![1.0, 10.0, 2.0, 20.0, 3.0, 30.0])
+        }];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![1.0, 2.25, 3.0, 10.0, 20.0, 30.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![1.0, 2.25, 3.0, 10.0, 20.0, 30.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_k_score_input_head1_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![1.0, 2.0, 3.0, 10.0, 20.5, 30.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head1_live_ref_layout",
+                    vec![1.0, 2.0, 3.0, 10.0, 20.5, 30.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let delta = report.pointer("/attention_key_score_input_delta").unwrap();
+
+        assert_eq!(delta.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(delta.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(delta.pointer("/reference_stage_prefix"), Some(&json!("k_kv_head")));
+        assert_eq!(
+            delta.pointer("/reference_reinterpretation"),
+            Some(&json!("token_major_to_dim_major"))
+        );
+        assert_eq!(
+            delta.pointer("/rust_stage_prefix"),
+            Some(&json!("attention_k_score_input_head"))
+        );
+        assert_eq!(delta.pointer("/group_size"), Some(&json!(2)));
+        assert_eq!(delta.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(delta.pointer("/missing_head_count"), Some(&json!(0)));
+        assert_eq!(delta.pointer("/all_compared"), Some(&json!(true)));
+        assert_eq!(delta.pointer("/rows/0/head"), Some(&json!(0)));
+        assert_eq!(delta.pointer("/rows/0/kv_head"), Some(&json!(0)));
+        assert_eq!(delta.pointer("/rows/0/status"), Some(&json!("compared")));
+        assert_eq!(delta.pointer("/rows/0/delta/layout"), Some(&json!("dim_major_token_minor")));
+        assert_eq!(delta.pointer("/rows/0/delta/first_mismatch_layout/dim"), Some(&json!(0)));
+        assert_eq!(delta.pointer("/rows/0/delta/first_mismatch_layout/token"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/rows/0/delta/token_mismatch_counts/0/token"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/rows/0/delta/max_abs_delta"), Some(&json!(0.25)));
+        assert_eq!(delta.pointer("/rows/1/delta/max_abs_delta"), Some(&json!(0.5)));
+    }
+
+    #[test]
+    fn attention_key_score_input_delta_reports_sample_blockers() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![1.0, 10.0, 2.0],
+            ..test_reference_trace_record("k_kv_head0_live", vec![1.0, 10.0, 2.0])
+        }];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![1.0, 2.0, 3.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![1.0, 2.0, 3.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let delta = report.pointer("/attention_key_score_input_delta").unwrap();
+
+        assert_eq!(delta.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(delta.pointer("/compared_head_count"), Some(&json!(0)));
+        assert_eq!(delta.pointer("/missing_head_count"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/rows/0/status"), Some(&json!("missing_input")));
+        assert_eq!(delta.pointer("/rows/0/required_sample_count"), Some(&json!(6)));
+        assert_eq!(delta.pointer("/rows/0/reference_sample_count"), Some(&json!(3)));
+        assert_eq!(delta.pointer("/rows/0/rust_sample_count"), Some(&json!(3)));
+        assert!(delta.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| reasons.contains(&json!("reference_k_kv_head_sample_incomplete"))
+                && reasons.contains(&json!("rust_attention_k_score_input_sample_incomplete"))
+        ));
     }
 
     #[test]
