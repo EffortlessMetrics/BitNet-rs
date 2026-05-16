@@ -6747,6 +6747,8 @@ fn compare_reference_to_rust_with_records_with_model(
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
     });
+    report["attention_key_rope_numeric_variant_replay"] =
+        attention_key_rope_numeric_variant_replay(reference_records, rust_records);
     report["attention_key_score_input_history_delta"] =
         attention_key_score_input_history_delta(reference_records, rust_records);
     report["attention_score_key_history_effect"] =
@@ -16683,6 +16685,336 @@ fn attention_key_current_projection_rope_boundary(
     })
 }
 
+#[derive(Debug, Clone, Copy)]
+enum RopeNumericArithmetic {
+    F32TableF32Arithmetic,
+    F64TableCastF32Arithmetic,
+    F64TableF64Arithmetic,
+}
+
+impl RopeNumericArithmetic {
+    fn label(self) -> &'static str {
+        match self {
+            RopeNumericArithmetic::F32TableF32Arithmetic => "f32_table_f32_arithmetic",
+            RopeNumericArithmetic::F64TableCastF32Arithmetic => "f64_table_cast_f32_arithmetic",
+            RopeNumericArithmetic::F64TableF64Arithmetic => "f64_table_f64_arithmetic",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RopeNumericVariantSpec {
+    id: &'static str,
+    base: f64,
+    base_source: &'static str,
+    arithmetic: RopeNumericArithmetic,
+}
+
+const ROPE_NUMERIC_VARIANTS: &[RopeNumericVariantSpec] = &[
+    RopeNumericVariantSpec {
+        id: "bitnet_500000_f32_table_f32_arithmetic",
+        base: 500_000.0,
+        base_source: "bitnet.rope.freq_base",
+        arithmetic: RopeNumericArithmetic::F32TableF32Arithmetic,
+    },
+    RopeNumericVariantSpec {
+        id: "bitnet_500000_f64_table_cast_f32_arithmetic",
+        base: 500_000.0,
+        base_source: "bitnet.rope.freq_base",
+        arithmetic: RopeNumericArithmetic::F64TableCastF32Arithmetic,
+    },
+    RopeNumericVariantSpec {
+        id: "bitnet_500000_f64_table_f64_arithmetic",
+        base: 500_000.0,
+        base_source: "bitnet.rope.freq_base",
+        arithmetic: RopeNumericArithmetic::F64TableF64Arithmetic,
+    },
+    RopeNumericVariantSpec {
+        id: "llama_default_10000_f32_table_f32_arithmetic",
+        base: 10_000.0,
+        base_source: "llama_default",
+        arithmetic: RopeNumericArithmetic::F32TableF32Arithmetic,
+    },
+    RopeNumericVariantSpec {
+        id: "llama_default_10000_f64_table_cast_f32_arithmetic",
+        base: 10_000.0,
+        base_source: "llama_default",
+        arithmetic: RopeNumericArithmetic::F64TableCastF32Arithmetic,
+    },
+    RopeNumericVariantSpec {
+        id: "llama_default_10000_f64_table_f64_arithmetic",
+        base: 10_000.0,
+        base_source: "llama_default",
+        arithmetic: RopeNumericArithmetic::F64TableF64Arithmetic,
+    },
+];
+
+fn attention_key_rope_numeric_variant_replay(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_projection = reference_key_projection_record(reference_records);
+    let reference_rope = reference_rope_key_record(reference_records);
+    let rust_before_store_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_before_cache_store_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let selected_token = reference_rope
+        .and_then(reference_sampled_token_index)
+        .or_else(|| reference_projection.and_then(reference_sampled_token_index));
+    let (head_dim, kv_head_count) =
+        reference_rope.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut max_best_reference_abs_delta = 0.0f64;
+    let mut max_best_rust_abs_delta = 0.0f64;
+    let mut reference_best_counts = BTreeMap::<String, usize>::new();
+    let mut rust_best_counts = BTreeMap::<String, usize>::new();
+
+    for kv_head in 0..kv_head_count {
+        let reference_post_rope =
+            reference_rope.and_then(|record| reference_rope_key_head(record, kv_head, head_dim));
+        let projection_head = reference_projection
+            .and_then(|record| reference_projection_key_head(record, kv_head, head_dim));
+        let rust_head = rust_before_store_heads.get(&kv_head).copied();
+
+        let mut blocked_reasons = Vec::<String>::new();
+        if reference_projection.is_none() {
+            blocked_reasons.push("reference_k_projection_stage_missing".to_string());
+        }
+        if projection_head.is_none() {
+            blocked_reasons.push("reference_k_projection_head_missing".to_string());
+        }
+        if reference_rope.is_none() {
+            blocked_reasons.push("reference_rope_kcur_stage_missing".to_string());
+        }
+        if reference_post_rope.is_none() {
+            blocked_reasons.push("reference_rope_kcur_head_missing".to_string());
+        }
+        if rust_head.is_none() {
+            blocked_reasons.push("rust_attention_k_before_cache_store_head_missing".to_string());
+        }
+        if selected_token.is_none() {
+            blocked_reasons.push("sampled_token_unavailable".to_string());
+        }
+
+        let mut variant_rows = Vec::new();
+        let mut best_reference_variant = Value::Null;
+        let mut best_rust_variant = Value::Null;
+        let mut best_reference_metric = None::<(usize, f64)>;
+        let mut best_rust_metric = None::<(usize, f64)>;
+        let mut status = "missing_input";
+
+        if let (Some(projection_head), Some(reference_post_rope), Some(rust_head), Some(token)) =
+            (projection_head.as_ref(), reference_post_rope.as_ref(), rust_head, selected_token)
+        {
+            match usize::try_from(token).ok().and_then(|token| {
+                rust_dim_major_token(rust_head, token).ok().map(|values| (token, values))
+            }) {
+                Some((token, rust_post_rope)) => {
+                    for variant in ROPE_NUMERIC_VARIANTS {
+                        let replay = apply_rope_split_head(
+                            projection_head,
+                            token,
+                            head_dim,
+                            variant.base,
+                            variant.arithmetic,
+                        );
+                        if let Some(replay) = replay {
+                            let reference_delta = compare_vectors(&replay, reference_post_rope);
+                            let reference_f16_delta =
+                                f16_bucket_delta(&replay, reference_post_rope);
+                            let rust_delta = compare_vectors(&replay, &rust_post_rope);
+                            let rust_f16_delta = f16_bucket_delta(&replay, &rust_post_rope);
+                            let reference_metric = variant_bucket_metric(&reference_f16_delta);
+                            let rust_metric = variant_bucket_metric(&rust_f16_delta);
+
+                            if best_reference_metric.is_none_or(|best| reference_metric < best) {
+                                best_reference_metric = Some(reference_metric);
+                                best_reference_variant = rope_variant_summary(
+                                    variant,
+                                    &reference_delta,
+                                    &reference_f16_delta,
+                                );
+                            }
+                            if best_rust_metric.is_none_or(|best| rust_metric < best) {
+                                best_rust_metric = Some(rust_metric);
+                                best_rust_variant =
+                                    rope_variant_summary(variant, &rust_delta, &rust_f16_delta);
+                            }
+
+                            variant_rows.push(json!({
+                                "variant_id": variant.id,
+                                "base": variant.base,
+                                "base_source": variant.base_source,
+                                "arithmetic": variant.arithmetic.label(),
+                                "reference_delta": reference_delta,
+                                "reference_f16_bucket_delta": reference_f16_delta,
+                                "rust_delta": rust_delta,
+                                "rust_f16_bucket_delta": rust_f16_delta,
+                            }));
+                        } else {
+                            variant_rows.push(json!({
+                                "variant_id": variant.id,
+                                "base": variant.base,
+                                "base_source": variant.base_source,
+                                "arithmetic": variant.arithmetic.label(),
+                                "status": "missing_input",
+                                "blocked_reasons": ["invalid_rope_head_shape"],
+                            }));
+                        }
+                    }
+
+                    if let Some(id) =
+                        best_reference_variant.pointer("/variant_id").and_then(Value::as_str)
+                    {
+                        *reference_best_counts.entry(id.to_string()).or_insert(0) += 1;
+                    }
+                    if let Some(id) =
+                        best_rust_variant.pointer("/variant_id").and_then(Value::as_str)
+                    {
+                        *rust_best_counts.entry(id.to_string()).or_insert(0) += 1;
+                    }
+                    max_best_reference_abs_delta = max_best_reference_abs_delta
+                        .max(delta_metric(&best_reference_variant, "/max_abs_delta"));
+                    max_best_rust_abs_delta = max_best_rust_abs_delta
+                        .max(delta_metric(&best_rust_variant, "/max_abs_delta"));
+                    compared_head_count += 1;
+                    status = "compared";
+                }
+                None => {
+                    blocked_reasons
+                        .push("rust_attention_k_before_cache_store_token_missing".to_string());
+                }
+            }
+        }
+
+        if status == "missing_input" {
+            missing_head_count += 1;
+        }
+        rows.push(json!({
+            "kv_head": kv_head,
+            "status": status,
+            "blocked_reasons": blocked_reasons,
+            "best_reference_variant": best_reference_variant,
+            "best_rust_variant": best_rust_variant,
+            "variants": variant_rows,
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "RoPE numeric variant replay is diagnostic-only evidence for whether current-token K bucket drift is explained by RoPE base/table/arithmetic precision; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, resident KV, selected attention, full residency, performance, or any support claim",
+        "reference_projection_stage": "Kcur_pre_rope",
+        "reference_rope_stage": "Kcur_post_rope",
+        "rust_rope_stage_prefix": "attention_k_before_cache_store_kv_head",
+        "selected_token": selected_token,
+        "reference_projection_present": reference_projection.is_some(),
+        "reference_rope_present": reference_rope.is_some(),
+        "rust_rope_head_count": rust_before_store_heads.len(),
+        "reference_rope_head_count": kv_head_count,
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "variant_count": ROPE_NUMERIC_VARIANTS.len(),
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "all_compared": kv_head_count > 0 && missing_head_count == 0,
+        "reference_best_counts": reference_best_counts,
+        "rust_best_counts": rust_best_counts,
+        "max_best_reference_abs_delta": max_best_reference_abs_delta,
+        "max_best_rust_abs_delta": max_best_rust_abs_delta,
+        "rows": rows,
+    })
+}
+
+fn reference_projection_key_head(
+    record: &ReferenceTraceRecord,
+    kv_head: usize,
+    head_dim: usize,
+) -> Option<Vec<f32>> {
+    if head_dim == 0 {
+        return None;
+    }
+    let start = kv_head.checked_mul(head_dim)?;
+    let end = start.checked_add(head_dim)?;
+    if record.first_values.len() < end {
+        return None;
+    }
+    Some(record.first_values[start..end].to_vec())
+}
+
+fn apply_rope_split_head(
+    values: &[f32],
+    token: usize,
+    head_dim: usize,
+    base: f64,
+    arithmetic: RopeNumericArithmetic,
+) -> Option<Vec<f32>> {
+    if head_dim == 0 || !head_dim.is_multiple_of(2) || values.len() < head_dim {
+        return None;
+    }
+    let half_dim = head_dim / 2;
+    let mut output = vec![0.0f32; head_dim];
+    for i in 0..half_dim {
+        let x0 = values[i];
+        let x1 = values[i + half_dim];
+        let exponent = (2.0 * i as f64) / head_dim as f64;
+        match arithmetic {
+            RopeNumericArithmetic::F32TableF32Arithmetic => {
+                let inv_freq = 1.0f32 / (base as f32).powf(exponent as f32);
+                let angle = token as f32 * inv_freq;
+                let sin = angle.sin();
+                let cos = angle.cos();
+                output[i] = x0 * cos - x1 * sin;
+                output[i + half_dim] = x0 * sin + x1 * cos;
+            }
+            RopeNumericArithmetic::F64TableCastF32Arithmetic => {
+                let inv_freq = 1.0f64 / base.powf(exponent);
+                let angle = token as f64 * inv_freq;
+                let sin = angle.sin() as f32;
+                let cos = angle.cos() as f32;
+                output[i] = x0 * cos - x1 * sin;
+                output[i + half_dim] = x0 * sin + x1 * cos;
+            }
+            RopeNumericArithmetic::F64TableF64Arithmetic => {
+                let inv_freq = 1.0f64 / base.powf(exponent);
+                let angle = token as f64 * inv_freq;
+                let sin = angle.sin();
+                let cos = angle.cos();
+                output[i] = ((x0 as f64 * cos) - (x1 as f64 * sin)) as f32;
+                output[i + half_dim] = ((x0 as f64 * sin) + (x1 as f64 * cos)) as f32;
+            }
+        }
+    }
+    Some(output)
+}
+
+fn variant_bucket_metric(f16_delta: &Value) -> (usize, f64) {
+    (f16_bucket_mismatch_count(f16_delta), delta_metric(f16_delta, "/max_abs_delta"))
+}
+
+fn rope_variant_summary(
+    variant: &RopeNumericVariantSpec,
+    delta: &Value,
+    f16_delta: &Value,
+) -> Value {
+    json!({
+        "variant_id": variant.id,
+        "base": variant.base,
+        "base_source": variant.base_source,
+        "arithmetic": variant.arithmetic.label(),
+        "max_abs_delta": delta_metric(delta, "/max_abs_delta"),
+        "rms_abs_delta": delta_metric(delta, "/rms_abs_delta"),
+        "f16_bucket_mismatch_count": f16_bucket_mismatch_count(f16_delta),
+    })
+}
+
 fn reference_key_projection_record(
     reference_records: &[ReferenceTraceRecord],
 ) -> Option<&ReferenceTraceRecord> {
@@ -25369,6 +25701,128 @@ mod tests {
         assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(2)));
         assert_eq!(boundary.pointer("/all_compared"), Some(&json!(false)));
         assert!(boundary.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| reasons.contains(&json!("rust_attention_k_before_cache_store_head_missing"))
+        ));
+    }
+
+    #[test]
+    fn compare_reports_key_rope_numeric_variant_replay() {
+        let token = 17usize;
+        let head_dim = 4usize;
+        let token_count = 20usize;
+        let projection_head0 = vec![0.25, -0.5, 1.25, -0.75];
+        let projection_head1 = vec![-0.125, 0.375, 0.625, -1.5];
+        let reference_head0 = apply_rope_split_head(
+            &projection_head0,
+            token,
+            head_dim,
+            10_000.0,
+            RopeNumericArithmetic::F64TableF64Arithmetic,
+        )
+        .unwrap();
+        let reference_head1 = apply_rope_split_head(
+            &projection_head1,
+            token,
+            head_dim,
+            10_000.0,
+            RopeNumericArithmetic::F64TableF64Arithmetic,
+        )
+        .unwrap();
+
+        let mut reference_projection = test_reference_trace_record(
+            "Kcur",
+            [projection_head0.clone(), projection_head1.clone()].concat(),
+        );
+        reference_projection.shape = vec![8, 1, 1, 1];
+        reference_projection.full_shape = vec![8, token_count as i64, 1, 1];
+        reference_projection.nelements = 8;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some((8 * token) as u64);
+
+        let mut reference_rope = test_reference_trace_record(
+            "Kcur",
+            [reference_head0.clone(), reference_head1.clone()].concat(),
+        );
+        reference_rope.shape = vec![head_dim as i64, 2, 1, 1];
+        reference_rope.full_shape = vec![head_dim as i64, 2, token_count as i64, 1];
+        reference_rope.nelements = 8;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some((head_dim * 2 * token) as u64);
+
+        let mut rust_head0_values = vec![0.0; head_dim * token_count];
+        let mut rust_head1_values = vec![0.0; head_dim * token_count];
+        for dim in 0..head_dim {
+            rust_head0_values[dim * token_count + token] = reference_head0[dim];
+            rust_head1_values[dim * token_count + token] = reference_head1[dim];
+        }
+        let mut rust_head0 = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head0_ref_layout",
+            rust_head0_values,
+        );
+        rust_head0.shape = vec![head_dim, token_count];
+        let mut rust_head1 = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head1_ref_layout",
+            rust_head1_values,
+        );
+        rust_head1.shape = vec![head_dim, token_count];
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let mut rust_records = BTreeMap::new();
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head0_ref_layout".to_string(), rust_head0);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head1_ref_layout".to_string(), rust_head1);
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let replay = report.pointer("/attention_key_rope_numeric_variant_replay").unwrap();
+
+        assert_eq!(replay.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(replay.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(replay.pointer("/selected_token"), Some(&json!(17)));
+        assert_eq!(replay.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(replay.pointer("/missing_head_count"), Some(&json!(0)));
+        assert_eq!(replay.pointer("/variant_count"), Some(&json!(6)));
+        assert_eq!(
+            replay.pointer("/rows/0/best_reference_variant/variant_id"),
+            Some(&json!("llama_default_10000_f64_table_f64_arithmetic"))
+        );
+        assert_eq!(
+            replay.pointer("/rows/0/best_reference_variant/f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            replay.pointer("/reference_best_counts/llama_default_10000_f64_table_f64_arithmetic"),
+            Some(&json!(2))
+        );
+    }
+
+    #[test]
+    fn compare_reports_key_rope_numeric_variant_replay_missing_stages_as_diagnostic() {
+        let mut reference_projection =
+            test_reference_trace_record("Kcur", vec![1.0, 2.0, 3.0, 4.0]);
+        reference_projection.shape = vec![4, 1, 1, 1];
+        reference_projection.full_shape = vec![4, 3, 1, 1];
+        reference_projection.nelements = 4;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some(8);
+
+        let mut reference_rope = test_reference_trace_record("Kcur", vec![10.0, 20.0, 30.0, 40.0]);
+        reference_rope.shape = vec![2, 2, 1, 1];
+        reference_rope.full_shape = vec![2, 2, 3, 1];
+        reference_rope.nelements = 4;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some(8);
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let rust_records = BTreeMap::new();
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let replay = report.pointer("/attention_key_rope_numeric_variant_replay").unwrap();
+
+        assert_eq!(replay.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(replay.pointer("/compared_head_count"), Some(&json!(0)));
+        assert_eq!(replay.pointer("/missing_head_count"), Some(&json!(2)));
+        assert!(replay.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
             |reasons| reasons.contains(&json!("rust_attention_k_before_cache_store_head_missing"))
         ));
     }
