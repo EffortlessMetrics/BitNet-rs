@@ -5411,6 +5411,68 @@ fn f16_bucket_delta(left: &[f32], right: &[f32]) -> Value {
     })
 }
 
+fn f16_bucket_delta_dim_major(
+    left: &[f32],
+    right: &[f32],
+    dim_count: usize,
+    token_count: usize,
+) -> Value {
+    let mut delta = f16_bucket_delta(left, right);
+    let compared_count = left.len().min(right.len()).min(dim_count.saturating_mul(token_count));
+    let mut token_mismatch_counts = vec![0usize; token_count];
+    let mut first_layout_mismatch = Value::Null;
+
+    for index in 0..compared_count {
+        let left_bits = f32_to_f16_bits_nearest_even(left[index]);
+        let right_bits = f32_to_f16_bits_nearest_even(right[index]);
+        if left_bits != right_bits {
+            let dim = index / token_count;
+            let token = index % token_count;
+            if let Some(count) = token_mismatch_counts.get_mut(token) {
+                *count += 1;
+            }
+            if first_layout_mismatch.is_null() {
+                first_layout_mismatch = json!({
+                    "index": index,
+                    "dim": dim,
+                    "token": token,
+                    "left": left[index],
+                    "right": right[index],
+                    "left_f16_bits": format!("0x{left_bits:04x}"),
+                    "right_f16_bits": format!("0x{right_bits:04x}"),
+                    "left_f16_value": f16_bits_to_f32(left_bits),
+                    "right_f16_value": f16_bits_to_f32(right_bits),
+                });
+            }
+        }
+    }
+
+    let token_rows = token_mismatch_counts
+        .iter()
+        .enumerate()
+        .filter_map(|(token, count)| {
+            if *count == 0 {
+                None
+            } else {
+                Some(json!({
+                    "token": token,
+                    "f16_bucket_mismatch_count": count,
+                }))
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("dim_major_token_minor"));
+        object.insert("dim_count".to_string(), json!(dim_count));
+        object.insert("token_count".to_string(), json!(token_count));
+        object.insert("first_f16_bucket_mismatch_layout".to_string(), first_layout_mismatch);
+        object.insert("token_mismatch_counts".to_string(), json!(token_rows));
+    }
+
+    delta
+}
+
 fn attention_value_cache_f16_amplification(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
@@ -5450,7 +5512,19 @@ fn attention_value_cache_f16_amplification(
 
     for (&head, reference) in &reference_cache_heads {
         if let Some(rust) = rust_cache_heads.get(&head) {
-            let delta = f16_bucket_delta(&reference.first_values, &rust.first_values);
+            let dim_count = reference.shape.first().and_then(|dim| usize::try_from(*dim).ok());
+            let token_count = reference.shape.get(1).and_then(|dim| usize::try_from(*dim).ok());
+            let delta = match (dim_count, token_count) {
+                (Some(dim_count), Some(token_count)) if dim_count > 0 && token_count > 0 => {
+                    f16_bucket_delta_dim_major(
+                        &reference.first_values,
+                        &rust.first_values,
+                        dim_count,
+                        token_count,
+                    )
+                }
+                _ => f16_bucket_delta(&reference.first_values, &rust.first_values),
+            };
             let bucket_mismatch_count =
                 delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0)
                     as usize;
@@ -8646,8 +8720,24 @@ mod tests {
                 first_values: vec![1.0, 2.0],
                 ..test_reference_trace_record("Vcur", vec![1.0, 2.0])
             },
-            test_reference_trace_record("v_cache_rust_layout_head0_live", vec![1.0, 2.0]),
-            test_reference_trace_record("v_cache_rust_layout_head1_live", vec![3.0, 4.0]),
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head0_live",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![3.0, 4.0, 5.0, 6.0],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head1_live",
+                    vec![3.0, 4.0, 5.0, 6.0],
+                )
+            },
         ];
         let mut rust_records = BTreeMap::new();
         rust_records.insert(
@@ -8661,17 +8751,27 @@ mod tests {
         );
         rust_records.insert(
             "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout".to_string(),
-            test_rust_trace_record(
-                "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout",
-                vec![1.0, 2.0],
-            ),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
         );
         rust_records.insert(
             "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout".to_string(),
-            test_rust_trace_record(
-                "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout",
-                vec![3.0, 4.5],
-            ),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![3.0, 4.0, 5.0, 6.5],
+                ..test_rust_trace_record(
+                    "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout",
+                    vec![3.0, 4.0, 5.0, 6.5],
+                )
+            },
         );
 
         let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
@@ -8688,6 +8788,18 @@ mod tests {
         assert_eq!(amplification.pointer("/max_head_f16_bucket_mismatch_count"), Some(&json!(1)));
         assert_eq!(
             amplification.pointer("/rows/1/delta/first_f16_bucket_mismatch/index"),
+            Some(&json!(3))
+        );
+        assert_eq!(
+            amplification.pointer("/rows/1/delta/first_f16_bucket_mismatch_layout/dim"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            amplification.pointer("/rows/1/delta/first_f16_bucket_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            amplification.pointer("/rows/1/delta/token_mismatch_counts/0/token"),
             Some(&json!(1))
         );
     }
