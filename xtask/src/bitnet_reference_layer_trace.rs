@@ -5136,6 +5136,8 @@ fn compare_reference_to_rust_with_records(
         layer_attention_norm_input_source_delta(reference_records, rust_record_list, 1);
     report["layer_0_history_boundary_delta"] =
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
+    report["layer_0_ffn_history_drift"] =
+        layer_ffn_history_drift(reference_records, rust_record_list, 0);
     report["layer_0_attention_output_history_boundary_delta"] =
         layer_attention_output_history_boundary_delta(reference_records, rust_record_list, 0);
     report["attention_score_raw_history_delta"] =
@@ -5494,6 +5496,205 @@ fn layer_history_boundary_delta(
         "material_mismatch_count": material_mismatch_count,
         "first_material_boundary": first_material_boundary,
         "rows": rows,
+    })
+}
+
+fn layer_ffn_history_drift(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Value {
+    const HISTORY_STAGES: &[(&str, &str, &str)] = &[
+        (
+            "ffn_inp_history_ref_layout",
+            "post_attention_residual_history_ref_layout",
+            "ffn_input_history",
+        ),
+        (
+            "ffn_norm_history_ref_layout",
+            "post_ffn_norm_history_ref_layout",
+            "ffn_norm_output_history",
+        ),
+        (
+            "ffn_out_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_swiglu_output_history",
+        ),
+        (
+            "ffn_sub_norm_history_ref_layout",
+            "post_ffn_subnorm_history_ref_layout",
+            "ffn_subnorm_output_history",
+        ),
+        (
+            "ffn_down_history_ref_layout",
+            "post_down_proj_history_ref_layout",
+            "ffn_down_projection_history",
+        ),
+        ("l_out_history_ref_layout", "post_layer_history_ref_layout", "layer_output_history"),
+    ];
+    const CURRENT_STAGES: &[(&str, &str, &str)] = &[
+        ("ffn_inp", "post_attention_residual", "ffn_input_current"),
+        ("ffn_norm", "post_ffn_norm", "ffn_norm_output_current"),
+        ("ffn_out", "post_swiglu", "ffn_swiglu_output_current"),
+        ("ffn_sub_norm", "post_ffn_subnorm", "ffn_subnorm_output_current"),
+        ("ffn_down", "post_down_proj", "ffn_down_projection_current"),
+        ("l_out", "post_layer", "layer_output_current"),
+    ];
+
+    let mut history_rows = Vec::<Value>::new();
+    let mut current_rows = Vec::<Value>::new();
+    let mut missing_history_stage_count = 0usize;
+    let mut missing_current_stage_count = 0usize;
+    let mut material_history_stage_count = 0usize;
+    let mut material_current_stage_count = 0usize;
+    let mut first_material_history_stage = Value::Null;
+    let mut max_history_delta = 0.0f64;
+    let mut max_current_delta = 0.0f64;
+
+    for (reference_stage, rust_stage, boundary) in HISTORY_STAGES {
+        let reference =
+            find_reference_trace_record(reference_records, reference_stage, Some(layer));
+        let rust = find_rust_trace_record(rust_records, rust_stage, Some(layer));
+        if reference.is_none() || rust.is_none() {
+            missing_history_stage_count += 1;
+        }
+        let delta = reference
+            .zip(rust)
+            .map(|(reference, rust)| dim_major_history_record_delta(reference, rust));
+        let material_mismatch = delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+        if let Some(delta) = &delta {
+            max_history_delta = max_history_delta.max(delta_metric(delta, "/max_abs_delta"));
+        }
+        if material_mismatch {
+            material_history_stage_count += 1;
+        }
+
+        let row = json!({
+            "layer": layer,
+            "boundary": boundary,
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "reference_present": reference.is_some(),
+            "rust_present": rust.is_some(),
+            "reference": reference.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "delta": delta.unwrap_or(Value::Null),
+            "material_mismatch": material_mismatch,
+        });
+        if material_mismatch && first_material_history_stage.is_null() {
+            first_material_history_stage = row.clone();
+        }
+        history_rows.push(row);
+    }
+
+    for (reference_stage, rust_stage, boundary) in CURRENT_STAGES {
+        let reference =
+            find_reference_trace_record(reference_records, reference_stage, Some(layer));
+        let rust = find_rust_trace_record(rust_records, rust_stage, Some(layer));
+        if reference.is_none() || rust.is_none() {
+            missing_current_stage_count += 1;
+        }
+        let delta = reference.zip(rust).map(|(reference, rust)| {
+            compare_prefix(
+                &reference.first_values,
+                &rust.first_values,
+                reference.first_values.len().min(rust.first_values.len()),
+            )
+        });
+        let material_mismatch = delta.as_ref().is_some_and(|delta| {
+            delta_metric(delta, "/max_abs_delta") > 1.0e-4
+                || delta
+                    .pointer("/count_match")
+                    .and_then(Value::as_bool)
+                    .is_some_and(|count_match| !count_match)
+        });
+        if let Some(delta) = &delta {
+            max_current_delta = max_current_delta.max(delta_metric(delta, "/max_abs_delta"));
+        }
+        if material_mismatch {
+            material_current_stage_count += 1;
+        }
+
+        current_rows.push(json!({
+            "layer": layer,
+            "boundary": boundary,
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "reference_present": reference.is_some(),
+            "rust_present": rust.is_some(),
+            "reference": reference.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "first_values_delta": delta.unwrap_or(Value::Null),
+            "material_mismatch": material_mismatch,
+        }));
+    }
+
+    let full_prefix_only = material_history_stage_count > 0 && material_current_stage_count == 0;
+    let mut blocked_reasons = Vec::<String>::new();
+    if missing_history_stage_count > 0 {
+        blocked_reasons.push("layer_ffn_history_stage_missing".to_string());
+    }
+    if missing_current_stage_count > 0 {
+        blocked_reasons.push("layer_ffn_current_stage_missing".to_string());
+    }
+    if material_history_stage_count > 0 {
+        blocked_reasons.push("layer_ffn_history_delta_present".to_string());
+    }
+    if material_current_stage_count > 0 {
+        blocked_reasons.push("layer_ffn_current_token_delta_present".to_string());
+    }
+    if full_prefix_only {
+        blocked_reasons
+            .push("layer_ffn_drift_is_full_prefix_history_not_sampled_current_token".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if missing_history_stage_count > 0 || missing_current_stage_count > 0 {
+        "capture missing layer FFN history/current stages before interpreting FFN drift"
+    } else if full_prefix_only {
+        "localize the earlier full-prefix history tokens that enter layer FFN while sampled-current-token FFN remains below the material threshold"
+    } else if material_current_stage_count > 0 {
+        "localize the sampled-current-token FFN operation drift before interpreting full-prefix history amplification"
+    } else if material_history_stage_count > 0 {
+        "localize full-prefix FFN history drift and its projection amplification"
+    } else {
+        "layer FFN history is not the active material drift"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer FFN history drift is diagnostic-only evidence for separating full-prefix FFN history drift from sampled-current-token FFN operation drift; it does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "history": {
+            "compared_count": HISTORY_STAGES.len().saturating_sub(missing_history_stage_count),
+            "missing_stage_count": missing_history_stage_count,
+            "material_stage_count": material_history_stage_count,
+            "max_abs_delta": max_history_delta,
+            "first_material_stage": first_material_history_stage,
+            "rows": history_rows,
+        },
+        "current_token": {
+            "compared_count": CURRENT_STAGES.len().saturating_sub(missing_current_stage_count),
+            "missing_stage_count": missing_current_stage_count,
+            "material_stage_count": material_current_stage_count,
+            "max_abs_delta": max_current_delta,
+            "rows": current_rows,
+        },
+        "interpretation": {
+            "full_prefix_history_material": material_history_stage_count > 0,
+            "sampled_current_token_material": material_current_stage_count > 0,
+            "full_prefix_only": full_prefix_only,
+            "history_to_current_max_abs_ratio": if max_current_delta > 0.0 {
+                Some(max_history_delta / max_current_delta)
+            } else {
+                None
+            },
+            "current_blocked_reasons": blocked_reasons,
+            "next_action": next_action,
+        },
     })
 }
 
@@ -14028,6 +14229,84 @@ mod tests {
             row.pointer("/boundary") == Some(&json!("ffn_subnorm_output_history"))
                 && row.pointer("/status") == Some(&json!("summary_match"))
         }));
+    }
+
+    #[test]
+    fn compare_reports_layer0_ffn_history_drift_as_full_prefix_only() {
+        let mut reference_history =
+            test_reference_trace_record("ffn_norm_history_ref_layout", vec![1.0, 1.1, 2.0, 2.1]);
+        reference_history.shape = vec![2, 2, 1, 1];
+        reference_history.nelements = 4;
+        reference_history.layer = Some(0);
+        let mut rust_history =
+            test_rust_trace_record("post_ffn_norm_history_ref_layout", vec![1.0, 1.6, 2.0, 2.1]);
+        rust_history.name = "t1/blk0/post_ffn_norm_history_ref_layout".to_string();
+        rust_history.shape = vec![2, 2];
+        rust_history.num_elements = 4;
+        rust_history.layer = Some(0);
+
+        let mut reference_current = test_reference_trace_record("ffn_norm", vec![3.0, 4.0]);
+        reference_current.name = "ffn_norm-0".to_string();
+        reference_current.layer = Some(0);
+        let mut rust_current = test_rust_trace_record("post_ffn_norm", vec![3.0, 4.0]);
+        rust_current.name = "t1/blk0/post_ffn_norm".to_string();
+        rust_current.layer = Some(0);
+
+        let reference_records = vec![reference_history, reference_current];
+        let rust_records = vec![rust_history, rust_current];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let drift = report.pointer("/layer_0_ffn_history_drift").unwrap();
+        let reasons = drift
+            .pointer("/interpretation/current_blocked_reasons")
+            .and_then(Value::as_array)
+            .unwrap();
+
+        assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            drift.pointer("/history/first_material_stage/boundary"),
+            Some(&json!("ffn_norm_output_history"))
+        );
+        assert_eq!(drift.pointer("/history/material_stage_count"), Some(&json!(1)));
+        assert_eq!(drift.pointer("/current_token/material_stage_count"), Some(&json!(0)));
+        assert_eq!(drift.pointer("/interpretation/full_prefix_only"), Some(&json!(true)));
+        assert!(reasons.contains(&json!("layer_ffn_history_delta_present")));
+        assert!(
+            reasons.contains(&json!(
+                "layer_ffn_drift_is_full_prefix_history_not_sampled_current_token"
+            ))
+        );
+    }
+
+    #[test]
+    fn compare_reports_layer0_ffn_history_drift_missing_stages_as_diagnostic() {
+        let report = compare_reference_to_rust_with_records(&[], &BTreeMap::new(), &[], &[]);
+        let drift = report.pointer("/layer_0_ffn_history_drift").unwrap();
+        let reasons = drift
+            .pointer("/interpretation/current_blocked_reasons")
+            .and_then(Value::as_array)
+            .unwrap();
+
+        assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(drift.pointer("/history/missing_stage_count"), Some(&json!(6)));
+        assert_eq!(drift.pointer("/current_token/missing_stage_count"), Some(&json!(6)));
+        assert!(reasons.contains(&json!("layer_ffn_history_stage_missing")));
+        assert!(reasons.contains(&json!("layer_ffn_current_stage_missing")));
+        assert!(
+            drift
+                .pointer("/interpretation/next_action")
+                .and_then(Value::as_str)
+                .unwrap()
+                .contains("capture missing layer FFN")
+        );
     }
 
     #[test]
