@@ -198,13 +198,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-000"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-000-corpus-scorer-contract"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5099
 acceptance = "Freeze the dense SLM and BitNet corpus/scorer version contract before large-corpus expansion: corpus IDs, seed generation rules, expected-output provenance, normalization rules, scoring schema, scorer self-tests, and version fields in receipts."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
