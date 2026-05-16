@@ -124,17 +124,19 @@ Rollback: remove the decode/session receipt and demote status rows.
 ## Next Candidate
 
 The next candidate is SmolLM2 360M. Step A has landed as an exact artifact
-contract, and SLM-CPU-017 attempted step B on the 9950X3D. That strict CPU
-preflight reached model-load policy and failed closed at
-`blk.0.ffn_norm.weight` before tokenizer, prompt rendering, or generation.
+contract. Step B has advanced through strict CPU preflight, governed
+normalization policy, exact metadata-scoped normalization validation, and a
+strict CPU retry that reaches tokenizer loading, prompt rendering, and
+one-token generation with `fallback_used=false`.
 
-Do not start SmolLM2 CUDA planning until the SLM CPU lane implements exact
-metadata-scoped SmolLM2 normalization validation after the governed SLM-CPU-018
-policy audit and then produces CPU answer-sanity evidence. The current SmolLM2
-state can only claim structurally valid artifact metadata plus a committed
-strict CPU preflight blocker; it cannot claim CPU answer readiness, CUDA route,
-product CLI, benchmark, speed, server, full-residency, broad dense GGUF, or
-BitNet QK256 proof.
+Do not start SmolLM2 CUDA planning yet. The strict CPU retry selected `The`
+for the math prompt, and SLM-CPU-021 records this as a wrong-first-token
+blocker rather than CPU answer readiness. The next SmolLM2 proof must be a
+reference-compatible first-token/top-k or checkpoint comparator. The current
+SmolLM2 state can only claim structurally valid artifact metadata plus the
+committed strict CPU blocker/diagnosis chain; it cannot claim CPU answer
+readiness, CUDA route, product CLI, benchmark, speed, server, full-residency,
+broad dense GGUF, or BitNet QK256 proof.
 
 After SmolLM2 360M clears step B, repeat the same A through G sequence for
 Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine

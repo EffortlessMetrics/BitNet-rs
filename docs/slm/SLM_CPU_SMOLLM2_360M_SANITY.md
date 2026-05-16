@@ -117,12 +117,46 @@ Retry evidence:
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json
 ```
 
+## Wrong-First-Token Diagnosis
+
+`SLM-CPU-021` records the next blocker without promoting the model. The
+committed evidence now says:
+
+```text
+reference runner = bounded coherent output under raw SmolLM2 ChatML
+Rust strict CPU = reaches generation with fallback_used=false
+Rust selected token = 504 / "The"
+expected answer = "4"
+quality gate = failed
+```
+
+This is not enough to claim that prompt formatting alone is the fault, because
+earlier committed diagnostic evidence recorded a prompt/token-ID parity probe
+that still produced incoherent Rust output after the first reference token.
+It is also not enough to claim transformer math as the only fault, because the
+latest strict CPU retry does not include a same-prompt reference first-token,
+top-k, or checkpoint comparison.
+
+Machine-readable diagnosis:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json
+```
+
+The next proof must run the exact pinned artifact with a reference-compatible
+raw ChatML prompt and record Rust CPU versus reference first-token/top-k or
+checkpoint evidence. SmolLM2 CPU answer readiness and CUDA planning remain
+blocked until that comparator localizes or clears the wrong-first-token
+behavior.
+
 ## Claim Boundary
 
 This page may claim only that the pinned SmolLM2 360M artifact reached strict
 CPU model-load preflight on the 9950X3D box, and later reached strict one-token
-CPU generation after exact metadata-scoped normalization validation. It must not
-claim SmolLM2 CPU answer quality, broad dense SLM support, sustained throughput,
-CUDA, server readiness, OpenVINO, NPU, UHD 620, Qwen3.5 support, Q4/Q5
-expansion, BitNet QK256 behavior, or inherited proof from Qwen2.5, Qwen3, or
-Apple M4 evidence.
+CPU generation after exact metadata-scoped normalization validation. The
+wrong-first-token diagnosis may claim only that the current blocker is
+unresolved between prompt-policy and shared dense CPU math without a
+reference-compatible comparator. It must not claim SmolLM2 CPU answer quality,
+broad dense SLM support, sustained throughput, CUDA, server readiness,
+OpenVINO, NPU, UHD 620, Qwen3.5 support, Q4/Q5 expansion, BitNet QK256
+behavior, or inherited proof from Qwen2.5, Qwen3, or Apple M4 evidence.

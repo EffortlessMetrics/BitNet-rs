@@ -409,18 +409,19 @@ Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
 Campaign item: `CUDA-MODEL-SMOLLM2-002`
 Blocked by: CUDA-MODEL-SMOLLM2-001, SLM-CPU-017
-Blocks: SmolLM2 CPU sanity retry, dense all-layer planning, and CUDA route planning
+Blocks: SmolLM2 wrong-first-token diagnosis, dense all-layer planning, and CUDA route planning
 
 ### Goal
 
 Sync the CUDA productization and model coverage surfaces to the committed
-SLM-CPU-017 SmolLM2 strict CPU preflight blocker.
+SmolLM2 strict CPU blocker chain.
 
 ### Production delta
 
 Docs and model coverage only. The model row records that SmolLM2 360M reached
-strict CPU model-load preflight on the 9950X3D and failed closed at strict
-loader normalization policy before tokenizer, prompt rendering, or generation.
+strict CPU model-load preflight on the 9950X3D, passed exact metadata-scoped
+normalization validation in a later SLM CPU item, and then reached one-token
+generation with `fallback_used=false` but selected the wrong first token.
 
 ### Non-goals
 
@@ -431,11 +432,12 @@ dense GGUF claim, or BitNet QK256 proof.
 ### Acceptance
 
 - `ci/model-artifacts/model-coverage-matrix.toml` records the SmolLM2 row as
-  structurally valid with CPU sanity blocked by strict loader policy.
-- The row links the next proof to resolving the strict loader/model-family
-  normalization policy or recording a governed exception.
-- The NVIDIA campaign and CUDA productization plan point to the SLM-CPU-017
-  blocker receipt as the last real evidence.
+  structurally valid with CPU answer readiness blocked by wrong-first-token
+  diagnosis.
+- The row links the next proof to a reference-compatible first-token/top-k or
+  checkpoint comparator.
+- The NVIDIA campaign and CUDA productization plan point to the SLM CPU blocker
+  and diagnosis receipts as the last real evidence.
 - The SmolLM2 ladder does not start CUDA planning until CPU sanity is
   unblocked.
 
@@ -450,14 +452,17 @@ cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070t
 
 ```text
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json
 ```
 
 ### Claim boundary
 
 This work can only claim that the SmolLM2 artifact contract exists and that a
-strict CPU preflight blocker is recorded. It cannot claim CPU answer readiness,
-CUDA execution, product CLI readiness, speed, server readiness, full residency,
-broad dense GGUF support, or BitNet QK256 proof.
+strict CPU quality blocker is recorded through wrong-first-token diagnosis. It
+cannot claim CPU answer readiness, CUDA execution, product CLI readiness,
+speed, server readiness, full residency, broad dense GGUF support, or BitNet
+QK256 proof.
 
 ### Rollback
 
