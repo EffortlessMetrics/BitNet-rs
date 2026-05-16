@@ -16,6 +16,9 @@ bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
 serde.workspace = true
 
+[dev-dependencies]
+serde_json.workspace = true
+
 [features]
 default = []
 cpu = ["bitnet-common/cpu"]
