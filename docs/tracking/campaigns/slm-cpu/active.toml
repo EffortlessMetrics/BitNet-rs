@@ -1984,3 +1984,55 @@ must_not_claim = [
   "CUDA planning or CUDA execution is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
+
+[[work_item]]
+id = "SLM-CPU-020"
+status = "in_progress"
+branch = "model/slm-cpu-020-smollm2-cpu-sanity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-019"]
+acceptance = "Retry strict SmolLM2 360M Q8_0 CPU sanity after exact metadata-scoped normalization validation. The slice must keep the generic llama normalization guard fail-closed, preserve exact SmolLM2 artifact and metadata scope, record tokenizer/prompt/generation reachability or the next blocker with fallback_used=false, and keep CPU answer readiness false unless the bounded quality gate passes."
+commands = [
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu --lib test_ln_gamma_validator_envelope",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu --lib smollm2_norm_policy_requires_exact_metadata_scope",
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "ci/slm-cpu/**",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "SmolLM2 360M exact metadata-scoped normalization validation reaches strict CPU tokenizer, prompt rendering, and one-token generation after merge.",
+  "The strict CPU retry is fallback-free and records a quality blocker when the math prompt generates the wrong first token.",
+  "Generic llama strict LayerNorm/RMSNorm gamma validation remains fail-closed.",
+]
+must_not_claim = [
+  "SmolLM2 CPU answer readiness is proven.",
+  "SmolLM2 broad answer quality is proven.",
+  "SmolLM2 all-layer CUDA planning can start.",
+  "SmolLM2 CUDA execution exists.",
+  "Sustained 8250U or 9950X3D throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]

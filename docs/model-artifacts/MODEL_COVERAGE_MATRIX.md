@@ -64,7 +64,7 @@ CUDA proof.
 |---|---|---|---|
 | `dense_qwen25_05b_q8_cuda` | Qwen2.5 0.5B Q8_0 GGUF | `product_cli_ready` | Current dense CUDA SLM answer lane, not globally speed-qualified. |
 | `dense_qwen3_06b_q8_candidate` | Qwen3 0.6B Q8_0 GGUF candidate | `accelerator_answer_ready` | Accelerator-ready dense SLM candidate with its own artifact, CPU sanity, all-layer plan, one-token, short-decode, warm-session, and benchmark-review receipts; product CLI, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims remain false. |
-| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `structurally_valid` | Exact artifact contract plus strict CPU preflight blocker, normalization-policy audit, and exact metadata-scoped validation; CPU sanity retry remains pending with no CUDA, speedup, or server claim. |
+| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `structurally_valid` | Exact artifact contract plus strict CPU preflight blocker, normalization-policy audit, exact metadata-scoped validation, and strict CPU retry evidence. The retry reaches one-token generation but fails the math quality gate, so CPU answer readiness, CUDA, speedup, and server claims remain false. |
 | `dense_smollm2_17b_candidate` | SmolLM2 1.7B GGUF candidate | `registered` | Larger low-footprint pressure row; no answer or CUDA claim. |
 | `dense_llama32_1b_candidate` | Llama 3.2 1B GGUF candidate | `registered` | Llama-family tokenizer/model-shape control; does not inherit Qwen proof. |
 | `dense_llama32_3b_candidate` | Llama 3.2 3B GGUF candidate | `registered` | Larger Llama-family small-LLM pressure row; needs its own proof ladder. |

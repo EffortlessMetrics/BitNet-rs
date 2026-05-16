@@ -360,12 +360,12 @@ family = "smollm2"
 artifact_kind = "gguf_q8_0_contract"
 contract_id = "smollm2_360m_instruct_q8_0"
 capability_id = "smollm2-360m-instruct"
-status = "cpu_sanity_blocked"
+status = "cpu_sanity_retry_quality_blocked"
 current_tier = "structurally_valid"
 verifier_surface = "bitnet model verify smollm2-360m-instruct"
 tokenizer_authority = "gguf_metadata_present_contract_only"
 prompt_authority = "smollm2_chatml_present_contract_only"
-cpu_reference = "strict_cpu_sanity_retry_pending_after_exact_norm_validation"
+cpu_reference = "strict_cpu_generation_reached_quality_failed"
 accelerator_routes = []
 required_receipts = [
   "artifact_verify",
@@ -373,6 +373,7 @@ required_receipts = [
   "strict_cpu_preflight_blocker",
   "normalization_policy_audit",
   "normalization_validation_implementation",
+  "strict_cpu_sanity_retry_quality_blocker",
   "cpu_reference_sanity",
   "all_layer_plan",
   "model_boundary_fixtures",
@@ -384,8 +385,8 @@ forbidden_claims = [
   "speedup",
   "server_ready",
 ]
-next_proof = "Retry strict CPU sanity for the pinned SmolLM2 artifact after exact metadata-scoped normalization validation, before dense all-layer planning, model-boundary fixtures, or any strict CUDA one-token receipt."
-claim_boundary = "SmolLM2 360M Instruct Q8_0 has an exact artifact contract, structural metadata, a strict CPU preflight blocker receipt, a governed normalization-policy audit, and exact metadata-scoped normalization validation. CPU sanity has not been retried here, so it has no CPU answer, CUDA route, speedup, server, full-residency, broad dense GGUF, or BitNet QK256 claim."
+next_proof = "Diagnose the SmolLM2 wrong-first-token strict CPU quality blocker before dense all-layer planning, model-boundary fixtures, or any strict CUDA one-token receipt."
+claim_boundary = "SmolLM2 360M Instruct Q8_0 has an exact artifact contract, structural metadata, a strict CPU preflight blocker receipt, a governed normalization-policy audit, exact metadata-scoped normalization validation, and a strict CPU sanity retry that reached tokenizer, prompt rendering, and one-token generation with fallback_used=false. The retry generated `The` for the math prompt, so it has no CPU answer readiness, CUDA route, speedup, server, full-residency, broad dense GGUF, or BitNet QK256 claim."
 
   [entry.claims]
   registered = true

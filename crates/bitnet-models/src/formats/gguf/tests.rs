@@ -1141,8 +1141,37 @@ fn test_ln_gamma_validator_envelope() -> anyhow::Result<()> {
         assert_eq!(record.correction_type, "smollm2_norm_gamma_envelope_accept");
         assert_eq!(
             record.policy_fingerprint,
-            format!("slm-cpu-019:{}", super::loader::SMOLLM2_360M_CONTRACT_ID)
+            format!("slm-cpu-020:{}", super::loader::SMOLLM2_360M_CONTRACT_ID)
         );
+    }
+
+    // Test 8: exact SmolLM2 policy accepts its layer-varying attention-norm envelope visibly.
+    {
+        let _guard = EnvGuard::new("BITNET_STRICT_MODE");
+        _guard.set("1");
+        let data = vec![0.15; super::loader::SMOLLM2_360M_HIDDEN_SIZE];
+        let smollm2_tensor = Tensor::from_vec(
+            data,
+            &[super::loader::SMOLLM2_360M_HIDDEN_SIZE],
+            &candle_core::Device::Cpu,
+        )?;
+
+        let generic_result = GgufLoader::check_ln_gamma_stats_with_policy(
+            "blk.0.attn_norm.weight",
+            &smollm2_tensor,
+            super::loader::NormValidationPolicy::Generic,
+        );
+        assert!(generic_result.is_err(), "Generic policy must remain fail-closed");
+
+        let record = GgufLoader::check_ln_gamma_stats_with_policy(
+            "blk.0.attn_norm.weight",
+            &smollm2_tensor,
+            super::loader::NormValidationPolicy::SmolLm2_360MInstructQ8,
+        )?
+        .ok_or_else(|| {
+            anyhow::anyhow!("SmolLM2 attention norm acceptance should be receipt-visible")
+        })?;
+        assert_eq!(record.correction_type, "smollm2_norm_gamma_envelope_accept");
     }
     Ok(())
 }
