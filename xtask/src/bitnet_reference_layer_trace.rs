@@ -4893,6 +4893,7 @@ fn attention_query_rope_ref_layout_delta(
 
 fn attention_score_reference_scalar_recompute(reference_records: &[ReferenceTraceRecord]) -> Value {
     let query = reference_rope_query_record(reference_records);
+    let query_sample_status = reference_query_sample_status(query);
     let key_heads = reference_records
         .iter()
         .filter_map(|record| {
@@ -4977,6 +4978,11 @@ fn attention_score_reference_scalar_recompute(reference_records: &[ReferenceTrac
         "policy": "reference scalar score recompute is diagnostic arithmetic evidence only; it recomputes sampled raw attention rows from reference Qcur and reference K-cache samples and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
         "query_stage_present": query.is_some(),
         "query_stage": query.map(|record| record.stage.clone()),
+        "query_first_values_count": query_sample_status.first_values_count,
+        "query_required_values_count": query_sample_status.required_values_count,
+        "query_missing_values_count": query_sample_status.missing_values_count,
+        "query_sample_complete": query_sample_status.sample_complete,
+        "query_sample_blocked_reason": query_sample_status.blocked_reason,
         "key_head_count": key_heads.len(),
         "score_head_count": score_heads.len(),
         "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
@@ -5150,6 +5156,7 @@ fn attention_score_reference_semantic_variants(
     reference_records: &[ReferenceTraceRecord],
 ) -> Value {
     let query = reference_rope_query_record(reference_records);
+    let query_sample_status = reference_query_sample_status(query);
     let key_heads = reference_records
         .iter()
         .filter_map(|record| {
@@ -5295,6 +5302,11 @@ fn attention_score_reference_semantic_variants(
         "policy": "reference score semantic variants are diagnostic-only scale, mask, live-token, and padded-tail probes for reproducing reference kq_head rows; they do not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
         "query_stage_present": query.is_some(),
         "query_stage": query.map(|record| record.stage.clone()),
+        "query_first_values_count": query_sample_status.first_values_count,
+        "query_required_values_count": query_sample_status.required_values_count,
+        "query_missing_values_count": query_sample_status.missing_values_count,
+        "query_sample_complete": query_sample_status.sample_complete,
+        "query_sample_blocked_reason": query_sample_status.blocked_reason,
         "key_head_count": key_heads.len(),
         "score_head_count": score_heads.len(),
         "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
@@ -5462,6 +5474,7 @@ fn reference_score_row_from_query_key_numeric(
 
 fn attention_score_reference_numeric_variants(reference_records: &[ReferenceTraceRecord]) -> Value {
     let query = reference_rope_query_record(reference_records);
+    let query_sample_status = reference_query_sample_status(query);
     let key_heads = reference_records
         .iter()
         .filter_map(|record| {
@@ -5616,6 +5629,11 @@ fn attention_score_reference_numeric_variants(reference_records: &[ReferenceTrac
         "policy": "reference score numeric variants are diagnostic-only probes for GGML-like score dot numeric behavior; they keep the padded-tail-zeroed row shape fixed and vary Q/K F16 roundtrip plus f32/f64 accumulation without promoting reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
         "query_stage_present": query.is_some(),
         "query_stage": query.map(|record| record.stage.clone()),
+        "query_first_values_count": query_sample_status.first_values_count,
+        "query_required_values_count": query_sample_status.required_values_count,
+        "query_missing_values_count": query_sample_status.missing_values_count,
+        "query_sample_complete": query_sample_status.sample_complete,
+        "query_sample_blocked_reason": query_sample_status.blocked_reason,
         "key_head_count": key_heads.len(),
         "score_head_count": score_heads.len(),
         "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
@@ -6849,6 +6867,59 @@ fn rust_query_head_dim_count(record: &RustTraceRecord) -> Option<(usize, usize)>
             }
         }
         _ => None,
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ReferenceQuerySampleStatus {
+    first_values_count: usize,
+    required_values_count: Value,
+    missing_values_count: Value,
+    sample_complete: bool,
+    blocked_reason: Value,
+}
+
+fn reference_query_sample_status(
+    record: Option<&ReferenceTraceRecord>,
+) -> ReferenceQuerySampleStatus {
+    let Some(record) = record else {
+        return ReferenceQuerySampleStatus {
+            first_values_count: 0,
+            required_values_count: Value::Null,
+            missing_values_count: Value::Null,
+            sample_complete: false,
+            blocked_reason: json!("reference_qcur_missing"),
+        };
+    };
+    let first_values_count = record.first_values.len();
+    let required_values_count = record
+        .shape
+        .first()
+        .and_then(|head_dim| usize::try_from(*head_dim).ok())
+        .zip(record.shape.get(1).and_then(|head_count| usize::try_from(*head_count).ok()))
+        .and_then(|(head_dim, head_count)| head_dim.checked_mul(head_count))
+        .filter(|count| *count > 0);
+    let Some(required_values_count) = required_values_count else {
+        return ReferenceQuerySampleStatus {
+            first_values_count,
+            required_values_count: Value::Null,
+            missing_values_count: Value::Null,
+            sample_complete: false,
+            blocked_reason: json!("reference_qcur_shape_unusable"),
+        };
+    };
+    let missing_values_count = required_values_count.saturating_sub(first_values_count);
+    let sample_complete = missing_values_count == 0;
+    ReferenceQuerySampleStatus {
+        first_values_count,
+        required_values_count: json!(required_values_count),
+        missing_values_count: json!(missing_values_count),
+        sample_complete,
+        blocked_reason: if sample_complete {
+            Value::Null
+        } else {
+            json!("reference_qcur_first_values_truncated")
+        },
     }
 }
 
@@ -12098,6 +12169,52 @@ mod tests {
             variants.pointer("/variants_tested/5"),
             Some(&json!("reference_score_recompute_with_mask_applied"))
         );
+    }
+
+    #[test]
+    fn reference_score_reports_mark_truncated_qcur_sample() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![128, 20, 1, 1],
+                full_shape: vec![128, 20, 18, 1],
+                nelements: 2560,
+                first_values: vec![0.0; 16],
+                ..test_reference_trace_record("Qcur", vec![0.0; 16])
+            },
+            ReferenceTraceRecord {
+                shape: vec![128, 2, 1, 1],
+                nelements: 256,
+                first_values: vec![0.0; 256],
+                ..test_reference_trace_record("k_kv_head0_live", vec![0.0; 256])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![0.0, 0.0],
+                ..test_reference_trace_record("kq_head0", vec![0.0, 0.0])
+            },
+        ];
+        let report = compare_reference_to_rust(&reference_records, &BTreeMap::new(), &[]);
+        for section in [
+            "attention_score_reference_scalar_recompute",
+            "attention_score_reference_semantic_variants",
+            "attention_score_reference_numeric_variants",
+        ] {
+            let section = report.pointer(&format!("/{section}")).unwrap();
+            assert_eq!(section.pointer("/claim_allowed"), Some(&json!(false)));
+            assert_eq!(section.pointer("/query_stage_present"), Some(&json!(true)));
+            assert_eq!(section.pointer("/query_first_values_count"), Some(&json!(16)));
+            assert_eq!(section.pointer("/query_required_values_count"), Some(&json!(2560)));
+            assert_eq!(section.pointer("/query_missing_values_count"), Some(&json!(2544)));
+            assert_eq!(section.pointer("/query_sample_complete"), Some(&json!(false)));
+            assert_eq!(
+                section.pointer("/query_sample_blocked_reason"),
+                Some(&json!("reference_qcur_first_values_truncated"))
+            );
+            assert_eq!(section.pointer("/compared_count"), Some(&json!(0)));
+            assert_eq!(section.pointer("/missing_input_count"), Some(&json!(1)));
+            assert_eq!(section.pointer("/rows/0/status"), Some(&json!("missing_input")));
+        }
     }
 
     #[test]
