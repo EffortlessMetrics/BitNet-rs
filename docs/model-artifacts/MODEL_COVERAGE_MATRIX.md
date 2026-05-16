@@ -64,7 +64,7 @@ not inherit Qwen2.5 CUDA proof or claim dense CUDA execution.
 |---|---|---|---|
 | `dense_qwen25_05b_q8_cuda` | Qwen2.5 0.5B Q8_0 GGUF | `product_cli_ready` | Current dense CUDA SLM answer lane, not globally speed-qualified. |
 | `dense_qwen3_06b_q8_candidate` | Qwen3 0.6B Q8_0 GGUF candidate | `registered` | Future Qwen-family coverage row; needs its own artifact, authority, CPU sanity, and CUDA receipts. |
-| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `registered` | Low-footprint dense SLM control; no CPU answer, CUDA route, speedup, or server claim. |
+| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `structurally_valid` | Exact artifact contract plus strict CPU preflight blocker and normalization-policy audit; no CPU answer, CUDA route, speedup, or server claim. |
 | `dense_smollm2_17b_candidate` | SmolLM2 1.7B GGUF candidate | `registered` | Larger low-footprint pressure row; no answer or CUDA claim. |
 | `dense_llama32_1b_candidate` | Llama 3.2 1B GGUF candidate | `registered` | Llama-family tokenizer/model-shape control; does not inherit Qwen proof. |
 | `dense_llama32_3b_candidate` | Llama 3.2 3B GGUF candidate | `registered` | Larger Llama-family small-LLM pressure row; needs its own proof ladder. |
