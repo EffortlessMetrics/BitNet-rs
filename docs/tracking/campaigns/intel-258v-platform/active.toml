@@ -3757,10 +3757,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-006"
-status = "pr_open"
+status = "merged"
 pr = 5149
 branch = "codex/lunar-lake/LNL258V-QUAL-006-corpus-contract"
 head_sha = "10c62900829fbf09263f165eacb9a3e58f4160f4"
+merge_sha = "a5c8f048161c9f5a02ef1da095d9ae9810a103e1"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
