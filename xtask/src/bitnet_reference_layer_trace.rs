@@ -3273,12 +3273,28 @@ impl RmsNormAccumulation {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RmsNormOutputRounding {
+    F32,
+    F16Roundtrip,
+}
+
+impl RmsNormOutputRounding {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::F32 => "f32",
+            Self::F16Roundtrip => "f16_roundtrip",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct RmsNormReplayVariant {
     id: String,
     eps: f32,
     eps_source: String,
     accumulation: RmsNormAccumulation,
+    output_rounding: RmsNormOutputRounding,
 }
 
 fn build_attn_norm_current_replay_body(
@@ -3703,7 +3719,7 @@ fn best_rmsnorm_candidate_delta(
 ) -> Result<Value> {
     let mut best = None::<(f64, Value)>;
     for variant in variants {
-        let output = replay_rmsnorm(input, weight, variant.eps, variant.accumulation)?;
+        let output = replay_rmsnorm_variant(input, weight, variant)?;
         let delta = compare_vectors(&output, target);
         let max_abs_delta = delta_metric(&delta, "/max_abs_delta");
         let row = json!({
@@ -3711,6 +3727,7 @@ fn best_rmsnorm_candidate_delta(
             "eps": variant.eps,
             "eps_source": variant.eps_source,
             "accumulation": variant.accumulation.as_str(),
+            "output_rounding": variant.output_rounding.as_str(),
             "max_abs_delta": max_abs_delta,
             "rms_abs_delta": delta_metric(&delta, "/rms_abs_delta"),
         });
@@ -3830,12 +3847,21 @@ fn rmsnorm_replay_variants(model_eps: f32, model_eps_source: &str) -> Vec<RmsNor
     for (eps, eps_source) in candidates {
         for accumulation in [RmsNormAccumulation::F32Sequential, RmsNormAccumulation::F64Sequential]
         {
-            variants.push(RmsNormReplayVariant {
-                id: format!("{}_{}", sanitize_variant_label(&eps_source), accumulation.as_str()),
-                eps,
-                eps_source: eps_source.clone(),
-                accumulation,
-            });
+            for output_rounding in [RmsNormOutputRounding::F32, RmsNormOutputRounding::F16Roundtrip]
+            {
+                variants.push(RmsNormReplayVariant {
+                    id: format!(
+                        "{}_{}_{}",
+                        sanitize_variant_label(&eps_source),
+                        accumulation.as_str(),
+                        output_rounding.as_str()
+                    ),
+                    eps,
+                    eps_source: eps_source.clone(),
+                    accumulation,
+                    output_rounding,
+                });
+            }
         }
     }
     variants
@@ -3863,7 +3889,7 @@ fn rmsnorm_replay_section(
     let mut best_rust = None::<(f64, Value)>;
 
     for variant in variants {
-        let output = replay_rmsnorm(input, weight, variant.eps, variant.accumulation)?;
+        let output = replay_rmsnorm_variant(input, weight, variant)?;
         let vs_reference_target = reference_target.map(|target| compare_vectors(&output, target));
         let vs_rust_target = rust_target.map(|target| compare_vectors(&output, target));
         let row = json!({
@@ -3871,6 +3897,7 @@ fn rmsnorm_replay_section(
             "eps": variant.eps,
             "eps_source": variant.eps_source,
             "accumulation": variant.accumulation.as_str(),
+            "output_rounding": variant.output_rounding.as_str(),
             "output": row_report(&output),
             "vs_reference_target": vs_reference_target.clone().unwrap_or(Value::Null),
             "vs_rust_target": vs_rust_target.clone().unwrap_or(Value::Null),
@@ -3903,6 +3930,10 @@ fn rmsnorm_replay_section(
         "input": row_report(input),
         "variant_count": rows.len(),
         "variants": rows,
+        "target_fit": {
+            "reference_target": reference_target.map(|target| rmsnorm_target_fit(input, weight, target)).unwrap_or(Value::Null),
+            "rust_target": rust_target.map(|target| rmsnorm_target_fit(input, weight, target)).unwrap_or(Value::Null),
+        },
         "best_vs_reference_target": best_reference.map(|(_, value)| value).unwrap_or(Value::Null),
         "best_vs_rust_target": best_rust.map(|(_, value)| value).unwrap_or(Value::Null),
     }))
@@ -3914,12 +3945,27 @@ fn rmsnorm_best_variant_summary(row: &Value, max_abs_delta: f64, comparison_key:
         "eps": row.pointer("/eps").cloned().unwrap_or(Value::Null),
         "eps_source": row.pointer("/eps_source").cloned().unwrap_or(Value::Null),
         "accumulation": row.pointer("/accumulation").cloned().unwrap_or(Value::Null),
+        "output_rounding": row.pointer("/output_rounding").cloned().unwrap_or(Value::Null),
         "max_abs_delta": max_abs_delta,
         "rms_abs_delta": row
             .pointer(&format!("/{comparison_key}/rms_abs_delta"))
             .cloned()
             .unwrap_or(Value::Null),
     })
+}
+
+fn replay_rmsnorm_variant(
+    input: &[f32],
+    weight: &[f32],
+    variant: &RmsNormReplayVariant,
+) -> Result<Vec<f32>> {
+    let mut output = replay_rmsnorm(input, weight, variant.eps, variant.accumulation)?;
+    if variant.output_rounding == RmsNormOutputRounding::F16Roundtrip {
+        for value in &mut output {
+            *value = f16_roundtrip(*value);
+        }
+    }
+    Ok(output)
 }
 
 fn replay_rmsnorm(
@@ -3951,6 +3997,100 @@ fn replay_rmsnorm(
         }
     };
     Ok(input.iter().zip(weight).map(|(&x, &gamma)| (x / denom) * gamma).collect())
+}
+
+fn rmsnorm_target_fit(input: &[f32], weight: &[f32], target: &[f32]) -> Value {
+    if input.len() != weight.len() || input.len() != target.len() || input.is_empty() {
+        return json!({
+            "available": false,
+            "reason": "shape_mismatch_or_empty",
+            "input_len": input.len(),
+            "weight_len": weight.len(),
+            "target_len": target.len(),
+        });
+    }
+
+    let mean_sq_f32 = {
+        let mut sum_sq = 0.0f32;
+        for &value in input {
+            sum_sq += value * value;
+        }
+        (sum_sq / input.len() as f32) as f64
+    };
+    let mean_sq_f64 = {
+        let mut sum_sq = 0.0f64;
+        for &value in input {
+            sum_sq += (value as f64) * (value as f64);
+        }
+        sum_sq / input.len() as f64
+    };
+
+    let mut denominators = Vec::<f64>::new();
+    let mut skipped = 0usize;
+    for ((&x, &gamma), &y) in input.iter().zip(weight).zip(target) {
+        let numerator = (x as f64) * (gamma as f64);
+        if y == 0.0 || !y.is_finite() || !numerator.is_finite() {
+            skipped += 1;
+            continue;
+        }
+        denominators.push(numerator / y as f64);
+    }
+    if denominators.is_empty() {
+        return json!({
+            "available": false,
+            "reason": "no_finite_nonzero_target_coordinates",
+            "input_len": input.len(),
+            "weight_len": weight.len(),
+            "target_len": target.len(),
+            "skipped_coordinates": skipped,
+        });
+    }
+
+    let denom_stats = scalar_stats(&denominators);
+    let denom_mean = denom_stats.pointer("/mean").and_then(Value::as_f64).unwrap_or(0.0);
+    let effective_eps_f32_mean_sq = denom_mean * denom_mean - mean_sq_f32;
+    let effective_eps_f64_mean_sq = denom_mean * denom_mean - mean_sq_f64;
+    json!({
+        "available": true,
+        "policy": "diagnostic inference of the shared RMSNorm denominator from y = x * weight / denom; this is not claim evidence",
+        "coordinate_count": denominators.len(),
+        "skipped_coordinates": skipped,
+        "mean_sq_f32_sequential": mean_sq_f32,
+        "mean_sq_f64_sequential": mean_sq_f64,
+        "denominator": denom_stats,
+        "effective_eps_from_mean_denominator": {
+            "using_f32_sequential_mean_sq": effective_eps_f32_mean_sq,
+            "using_f64_sequential_mean_sq": effective_eps_f64_mean_sq,
+        },
+    })
+}
+
+fn scalar_stats(values: &[f64]) -> Value {
+    if values.is_empty() {
+        return Value::Null;
+    }
+    let mut min = f64::INFINITY;
+    let mut max = f64::NEG_INFINITY;
+    let mut sum = 0.0f64;
+    for &value in values {
+        min = min.min(value);
+        max = max.max(value);
+        sum += value;
+    }
+    let mean = sum / values.len() as f64;
+    let mut sum_sq_delta = 0.0f64;
+    for &value in values {
+        let delta = value - mean;
+        sum_sq_delta += delta * delta;
+    }
+    json!({
+        "count": values.len(),
+        "min": min,
+        "max": max,
+        "mean": mean,
+        "range": max - min,
+        "rms_delta_from_mean": (sum_sq_delta / values.len() as f64).sqrt(),
+    })
 }
 
 fn attn_norm_current_replay_scope(
@@ -21396,12 +21536,14 @@ mod tests {
                 eps: 1.0,
                 eps_source: "test_bad".to_string(),
                 accumulation: RmsNormAccumulation::F64Sequential,
+                output_rounding: RmsNormOutputRounding::F32,
             },
             RmsNormReplayVariant {
                 id: "exact_eps".to_string(),
                 eps: 0.0,
                 eps_source: "test_exact".to_string(),
                 accumulation: RmsNormAccumulation::F64Sequential,
+                output_rounding: RmsNormOutputRounding::F32,
             },
         ];
         let target =
@@ -21411,6 +21553,50 @@ mod tests {
                 .unwrap();
 
         assert_eq!(section.pointer("/best_vs_reference_target/id"), Some(&json!("exact_eps")));
+        assert_eq!(
+            section.pointer("/best_vs_reference_target/output_rounding"),
+            Some(&json!("f32"))
+        );
+        assert_eq!(section.pointer("/best_vs_reference_target/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(section.pointer("/target_fit/reference_target/available"), Some(&json!(true)));
+        assert_eq!(
+            section.pointer("/target_fit/reference_target/coordinate_count"),
+            Some(&json!(2))
+        );
+    }
+
+    #[test]
+    fn rmsnorm_replay_section_reports_output_rounding_variant() {
+        let input = vec![3.0f32, 4.0];
+        let weight = vec![1.0f32, 1.0];
+        let raw_target =
+            replay_rmsnorm(&input, &weight, 0.0, RmsNormAccumulation::F64Sequential).unwrap();
+        let f16_target = raw_target.iter().copied().map(f16_roundtrip).collect::<Vec<_>>();
+        let variants = vec![
+            RmsNormReplayVariant {
+                id: "raw".to_string(),
+                eps: 0.0,
+                eps_source: "fixed_0".to_string(),
+                accumulation: RmsNormAccumulation::F64Sequential,
+                output_rounding: RmsNormOutputRounding::F32,
+            },
+            RmsNormReplayVariant {
+                id: "rounded".to_string(),
+                eps: 0.0,
+                eps_source: "fixed_0".to_string(),
+                accumulation: RmsNormAccumulation::F64Sequential,
+                output_rounding: RmsNormOutputRounding::F16Roundtrip,
+            },
+        ];
+        let section =
+            rmsnorm_replay_section("unit", &input, &weight, &variants, Some(&f16_target), None)
+                .unwrap();
+
+        assert_eq!(section.pointer("/best_vs_reference_target/id"), Some(&json!("rounded")));
+        assert_eq!(
+            section.pointer("/best_vs_reference_target/output_rounding"),
+            Some(&json!("f16_roundtrip"))
+        );
         assert_eq!(section.pointer("/best_vs_reference_target/max_abs_delta"), Some(&json!(0.0)));
     }
 
@@ -22117,18 +22303,21 @@ mod tests {
                 eps: 1.0,
                 eps_source: "fixed_1".to_string(),
                 accumulation: RmsNormAccumulation::F64Sequential,
+                output_rounding: RmsNormOutputRounding::F32,
             },
             RmsNormReplayVariant {
                 id: "right_eps".to_string(),
                 eps: 0.0,
                 eps_source: "fixed_0".to_string(),
                 accumulation: RmsNormAccumulation::F64Sequential,
+                output_rounding: RmsNormOutputRounding::F32,
             },
         ];
 
         let best = best_rmsnorm_candidate_delta(&input, &weight, &target, &variants).unwrap();
 
         assert_eq!(best.pointer("/id"), Some(&json!("right_eps")));
+        assert_eq!(best.pointer("/output_rounding"), Some(&json!("f32")));
         assert_eq!(best.pointer("/max_abs_delta"), Some(&json!(0.0)));
     }
 
