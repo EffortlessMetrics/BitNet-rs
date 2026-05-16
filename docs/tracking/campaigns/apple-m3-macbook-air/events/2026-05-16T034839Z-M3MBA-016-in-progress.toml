@@ -1,0 +1,19 @@
+timestamp = "2026-05-16T03:48:39Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-016"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-016-backend-visibility-preflight"
+summary = "Started the M3 Air backend visibility preflight contract."
+artifacts = [
+  "crates/bitnet-device-probe/src/apple_receipts.rs",
+  "crates/bitnet-device-probe/src/lib.rs",
+  "crates/bitnet-device-probe/tests/apple_backend_receipts.rs",
+  "docs/reports/apple-silicon-macbook-m3-air-backend-preflight.md",
+]
+notes = [
+  "The implementation records explicit apple-m3-air-metal and apple-m3-air-mpsgraph visibility receipts without model downloads, model loads, inference, speedups, Neural Engine claims, or full Metal/MPSGraph inference claims.",
+  "Generic metal/mpsgraph aliases remain invalid for apple-m3-macbook-air visibility preflight receipts.",
+]

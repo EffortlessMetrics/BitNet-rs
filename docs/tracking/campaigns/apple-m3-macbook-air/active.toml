@@ -331,8 +331,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-016"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m3-macbook-air/M3MBA-016-backend-visibility-preflight"
+pr = 5043
+head_sha = "01a354344cf2066826f8cef0f6f4c663e7ae552d"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
