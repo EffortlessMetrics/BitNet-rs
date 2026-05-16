@@ -7,6 +7,7 @@ to = "pr_open"
 actor = "codex"
 pr = 5060
 branch = "codex/slm-cpu-017a-qwen25-second-model-sanity"
+head_sha = "8fe46653923e98645136af010ab4027e851adabd"
 
 summary = "Opened #5060 with bounded Qwen2.5-0.5B Q8_0 positive second-model sanity evidence after the SLM-CPU-017 SmolLM2 blocker slice."
 
