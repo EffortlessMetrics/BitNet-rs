@@ -1,0 +1,541 @@
+{
+  "artifact_kind": "slm_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust"
+  },
+  "backend_lane": "dense_slm_cpu",
+  "cases": [
+    {
+      "answer": "\n2+2 equals 4.",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "category": "math",
+      "execution_plan": null,
+      "id": "math_2_plus_2_brief",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 12077,
+        "decode_first_ms": 12077,
+        "total_ms": 15187
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 198,
+          "logits_vector_length": 151936,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 23.761192321777344,
+              "token_id": 198
+            },
+            {
+              "logit": 16.088518142700195,
+              "token_id": 271
+            },
+            {
+              "logit": 14.388957023620604,
+              "token_id": 715
+            },
+            {
+              "logit": 13.543569564819336,
+              "token_id": 576
+            },
+            {
+              "logit": 13.521766662597656,
+              "token_id": 2303
+            }
+          ]
+        }
+      ],
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": 151936,
+        "observed_logits_vector_length": 151936,
+        "observed_logits_vector_length_source": "run_receipt_logits_dump"
+      },
+      "model": {
+        "architecture": "qwen2",
+        "family": "qwen",
+        "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "tie_word_embeddings": false,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 38
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": false,
+        "rendered_sha256": "b961868779bafb2031363ff50341023c271a6e7a7d1a56cf56e6d9eb9f803306",
+        "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant",
+        "template_family": "qwen2.5"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 38,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 38,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen2.5",
+      "quality": {
+        "distinct_generated_tokens": 7,
+        "failed_rules": [],
+        "failure_taxonomy": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": {
+          "details": {
+            "forbidden_tokens_observed": [],
+            "kind": "required_forbidden_tokens",
+            "required_keywords_missing": []
+          },
+          "failed_rules": [],
+          "failure_taxonomy": [],
+          "kind": "required_forbidden_tokens",
+          "normalized_answer": "2+2 equals 4.",
+          "passed": true
+        }
+      },
+      "question": "What is 2+2? Answer briefly.",
+      "reference_comparison": {
+        "comparison": {
+          "comparable_fields": [],
+          "generated_token_ids_match": null,
+          "mismatched_fields": [],
+          "missing_fields": [
+            "reference.text",
+            "reference.generated_token_ids"
+          ],
+          "status": "reference_not_supplied",
+          "text_match": null
+        },
+        "enabled": false,
+        "reference": {
+          "generated_token_ids": null,
+          "receipt": null,
+          "runner": null,
+          "source": null,
+          "text": null
+        },
+        "rust": {
+          "fallback_used": false,
+          "generated_token_ids": [
+            198,
+            17,
+            10,
+            17,
+            16819,
+            220,
+            19,
+            13
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust",
+          "status": "available",
+          "text": "\n2+2 equals 4."
+        },
+        "schema": "bitnet_reference_vs_rust_v1"
+      },
+      "run_receipt_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-16\\qwen25-second-model-sanity-runs\\math_2_plus_2_brief.json",
+      "seed_material": null,
+      "status": "passed",
+      "task_family": "math",
+      "throughput": {
+        "decoded_tokens": 8,
+        "tokens_per_second": 0.5267663132942648
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 2.252,
+        "decode_total_ms": 4143.55,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 1035.455,
+        "first_token_ms": 12077,
+        "host_to_device_bytes": null,
+        "model_load_ms": 35948.48,
+        "prefill_ms": 11039.25,
+        "sampling_ms_per_token": 6.893,
+        "tokenize_ms": 848.93,
+        "tokenizer_load_ms": 948.55
+      },
+      "token_ids": {
+        "generated": [
+          198,
+          17,
+          10,
+          17,
+          16819,
+          220,
+          19,
+          13
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          21806,
+          26753,
+          13,
+          151645,
+          198,
+          151644,
+          77091
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 8,
+        "generated_ids": [
+          198,
+          17,
+          10,
+          17,
+          16819,
+          220,
+          19,
+          13
+        ],
+        "ids": [
+          198,
+          17,
+          10,
+          17,
+          16819,
+          220,
+          19,
+          13
+        ],
+        "prompt": 38,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          21806,
+          26753,
+          13,
+          151645,
+          198,
+          151644,
+          77091
+        ],
+        "total": 46
+      }
+    }
+  ],
+  "claim_boundary": {
+    "answer_ready_artifact_available": false,
+    "backend_quality_gate_passed": true,
+    "bounded_slm_answer_smoke_passed": true,
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "coherent_output_observed": false,
+    "cuda_answer_corpus": false,
+    "dense_slm_clean_provenance": true,
+    "diagnostic_only_until_answer_ready_artifact": false,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": true,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 1,
+    "description": "Minimal i5-8250U second dense SLM sanity corpus for Qwen2.5 Q8_0.",
+    "name": "kaby-second-model-qwen25-sanity-v1",
+    "path": "ci\\quality\\slm-second-model-sanity-corpus.yaml",
+    "selected_case_count": 1,
+    "selected_case_ids": [
+      "math_2_plus_2_brief"
+    ]
+  },
+  "execution_plan": null,
+  "fallback_used": false,
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": 1,
+    "logits_topk": 5,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 240,
+    "requested_cpu_kernel": null,
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "answer_ready": null,
+    "answer_ready_artifact_available": false,
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "loader_mode": "real_gguf",
+    "path": "target\\slm-cpu-017\\cache\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quant_format": "Q8_0",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "tokenizer": "gguf_metadata",
+    "tokenizer_authority": "qwen2",
+    "tokenizer_path": null
+  },
+  "model_architecture": "qwen2",
+  "model_family": "qwen",
+  "prompt_template": "qwen2.5",
+  "prompt_template_policy": {
+    "family": "qwen2.5"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 1,
+    "timeout": 0,
+    "total": 1
+  },
+  "quantization": "Q8_0",
+  "receipt_quality": {
+    "case_receipt_checker": "answer_receipt_failed_rules",
+    "checked": true,
+    "checked_rules": [
+      "generated_text_recorded",
+      "prompt_token_count_recorded",
+      "generated_token_count_recorded",
+      "total_token_count_recorded",
+      "prompt_token_ids_recorded",
+      "generated_token_ids_recorded",
+      "prompt_token_count_matches_ids",
+      "generated_token_count_matches_ids",
+      "total_token_count_matches",
+      "model_repo_recorded",
+      "model_file_recorded",
+      "model_sha256_recorded",
+      "model_family_recorded",
+      "model_architecture_recorded",
+      "tokenizer_source_recorded",
+      "tokenizer_strict",
+      "tokenizer_pretokenizer_authority_recorded",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_false",
+      "speedup_claim_false",
+      "loader_real_gguf",
+      "selected_kernel_recorded",
+      "selected_kernel_production",
+      "timing_model_load_ms_recorded",
+      "timing_tokenizer_load_ms_recorded",
+      "timing_tokenize_ms_recorded",
+      "timing_prefill_ms_recorded",
+      "timing_first_token_ms_recorded",
+      "timing_decode_total_ms_recorded",
+      "latency_total_ms_recorded"
+    ],
+    "required_case_fields": [
+      "text",
+      "tokens.prompt",
+      "tokens.generated",
+      "tokens.total",
+      "tokens.prompt_ids",
+      "tokens.generated_ids",
+      "model.repo",
+      "model.file",
+      "model.sha256",
+      "model.family",
+      "model.architecture",
+      "tokenizer.source",
+      "tokenizer.strict",
+      "tokenizer.pretokenizer_authority",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_used",
+      "loader.mode",
+      "kernel.kernel_id",
+      "timing.model_load_ms",
+      "timing.tokenizer_load_ms",
+      "timing.tokenize_ms",
+      "timing.prefill_ms",
+      "timing.first_token_ms",
+      "timing.decode_total_ms",
+      "latency.total_ms"
+    ]
+  },
+  "reference_comparison": {
+    "claim_boundary": {
+      "broad_apple_silicon_claimed": false,
+      "chat_enabled": false,
+      "dense_slm_evidence_used": false,
+      "full_metal_inference_claimed": false,
+      "mpsgraph_claimed": false,
+      "neural_engine_claimed": false,
+      "performance_claimed": false,
+      "qk256_apple_claimed": false,
+      "runtime_accuracy_claimed": false,
+      "serve_enabled": false
+    },
+    "enabled": false,
+    "reference_runner_required": false,
+    "rust_runner": {
+      "fallback_used": false,
+      "prompt_template": "qwen2.5",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "tokenizer_authority": null
+    },
+    "schema": "bitnet_reference_vs_rust_v1",
+    "summary": {
+      "comparable_cases": 0,
+      "generated_token_id_matches": 0,
+      "matched": 0,
+      "mismatched": 0,
+      "mismatched_fields": {},
+      "not_run": 0,
+      "partially_compared": 0,
+      "reference_not_supplied": 1,
+      "reference_supplied": 0,
+      "status_counts": {
+        "reference_not_supplied": 1
+      },
+      "text_matches": 0,
+      "total": 1
+    }
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "scoring_summary": {
+    "enabled": true,
+    "failed": 0,
+    "failure_taxonomy": {},
+    "kinds": [
+      "required_forbidden_tokens"
+    ],
+    "not_run": 0,
+    "passed": 1,
+    "total": 1
+  },
+  "selected_backend": "cpu-rust",
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+  "speedup_claim": false,
+  "task_family_summary": {
+    "math": {
+      "failed": 0,
+      "failure_taxonomy": {},
+      "not_run": 0,
+      "other_statuses": {},
+      "passed": 1,
+      "scoring": {
+        "enabled": true,
+        "failed": 0,
+        "kinds": [
+          "required_forbidden_tokens"
+        ],
+        "not_run": 0,
+        "passed": 1,
+        "total": 1
+      },
+      "timeout": 0,
+      "total": 1
+    }
+  },
+  "timestamp": "2026-05-16T05:35:59.650217300+00:00",
+  "tokenizer": {
+    "authority": null,
+    "path": null,
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "tokenizer_source": "gguf_metadata"
+}
