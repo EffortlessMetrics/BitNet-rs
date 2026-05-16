@@ -3554,6 +3554,16 @@ fn build_ffn_norm_prefix_replay_body(
         )?,
         None => Value::Null,
     };
+    let runtime_arithmetic_boundary = ffn_norm_runtime_arithmetic_boundary(
+        reference_core_token.as_deref(),
+        &weight.values,
+        &reference_target_token,
+        rust_target_token.as_deref(),
+        reference_input_vs_rust.as_ref(),
+        &reference_input_replay,
+        &reference_core_replay,
+        &rust_input_replay,
+    );
     let scope = ffn_norm_prefix_replay_scope(
         layer,
         token,
@@ -3590,9 +3600,120 @@ fn build_ffn_norm_prefix_replay_body(
         "reference_core_replay": reference_core_replay,
         "reference_core_weight_application": reference_core_weight_application,
         "rust_input_replay": rust_input_replay,
+        "runtime_arithmetic_boundary": runtime_arithmetic_boundary,
     });
 
     Ok((weight.model_report, weight.weight_report, replay))
+}
+
+fn ffn_norm_runtime_arithmetic_boundary(
+    reference_core_token: Option<&[f32]>,
+    weight: &[f32],
+    reference_target_token: &[f32],
+    rust_target_token: Option<&[f32]>,
+    reference_input_vs_rust: Option<&Value>,
+    reference_input_replay: &Value,
+    reference_core_replay: &Value,
+    rust_input_replay: &Value,
+) -> Value {
+    let mut blocked_reasons = Vec::<String>::new();
+    let mut reference_core_weighted_vs_reference = Value::Null;
+    let mut reference_core_weighted_vs_rust = Value::Null;
+    let mut reference_core_weight_explains_reference_target = false;
+    let mut rust_runtime_differs_from_reference_core_weight = false;
+    let reference_rust_input_bit_exact = reference_input_vs_rust
+        .and_then(|delta| delta.pointer("/sha256_match"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let reference_rust_input_max_delta =
+        reference_input_vs_rust.map(|delta| delta_metric(delta, "/max_abs_delta"));
+    let reference_rust_input_subthreshold_delta_present =
+        reference_rust_input_max_delta.is_some_and(|delta| delta > 0.0 && delta <= 1.0e-6);
+
+    match reference_core_token {
+        Some(core) if core.len() == weight.len() => {
+            let weighted =
+                core.iter().zip(weight).map(|(&value, &gamma)| value * gamma).collect::<Vec<_>>();
+            reference_core_weighted_vs_reference =
+                compare_vectors(&weighted, reference_target_token);
+            reference_core_weight_explains_reference_target =
+                delta_metric(&reference_core_weighted_vs_reference, "/max_abs_delta") <= 1.0e-6;
+
+            if let Some(rust_target) = rust_target_token {
+                reference_core_weighted_vs_rust = compare_vectors(&weighted, rust_target);
+                rust_runtime_differs_from_reference_core_weight =
+                    delta_metric(&reference_core_weighted_vs_rust, "/max_abs_delta") > 1.0e-6;
+            } else {
+                blocked_reasons.push("rust_post_ffn_norm_target_missing".to_string());
+            }
+        }
+        Some(core) => blocked_reasons.push(format!(
+            "reference_ffn_norm_core_weight_shape_mismatch:core{}_weight{}",
+            core.len(),
+            weight.len()
+        )),
+        None => blocked_reasons.push("reference_ffn_norm_core_history_missing".to_string()),
+    }
+
+    let rust_scalar_best =
+        rust_input_replay.pointer("/best_vs_rust_target").cloned().unwrap_or(Value::Null);
+    let rust_scalar_replay_explains_rust_runtime =
+        delta_metric(&rust_scalar_best, "/max_abs_delta") <= 1.0e-6;
+    if !rust_scalar_replay_explains_rust_runtime {
+        blocked_reasons.push("rust_scalar_replay_does_not_explain_rust_runtime".to_string());
+    }
+    if !reference_core_weight_explains_reference_target {
+        blocked_reasons.push("reference_core_weight_does_not_explain_reference_target".to_string());
+    }
+    if rust_runtime_differs_from_reference_core_weight {
+        blocked_reasons.push("rust_runtime_differs_from_reference_core_weight".to_string());
+    }
+    if !reference_rust_input_bit_exact {
+        blocked_reasons.push("reference_rust_ffn_norm_input_not_bit_exact".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    json!({
+        "policy": "diagnostic-only boundary between GGML FFN norm core-weight output and Rust runtime FFN norm arithmetic; this does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "claim_allowed": false,
+        "diagnostic_only": true,
+        "reference_core_weighted_vs_reference_target": reference_core_weighted_vs_reference,
+        "reference_core_weighted_vs_rust_runtime_target": reference_core_weighted_vs_rust,
+        "reference_scalar_replay_best_vs_reference_target": reference_input_replay
+            .pointer("/best_vs_reference_target")
+            .cloned()
+            .unwrap_or(Value::Null),
+        "reference_input_vs_rust_input": reference_input_vs_rust.cloned().unwrap_or(Value::Null),
+        "reference_core_replay_best_vs_core_target": reference_core_replay
+            .pointer("/best_vs_reference_target")
+            .cloned()
+            .unwrap_or(Value::Null),
+        "rust_scalar_replay_best_vs_rust_runtime_target": rust_scalar_best,
+        "denominators": {
+            "reference_scalar_target_fit": reference_input_replay
+                .pointer("/target_fit/reference_target/denominator")
+                .cloned()
+                .unwrap_or(Value::Null),
+            "reference_core_target_fit": reference_core_replay
+                .pointer("/target_fit/reference_target/denominator")
+                .cloned()
+                .unwrap_or(Value::Null),
+            "rust_runtime_target_fit": rust_input_replay
+                .pointer("/target_fit/rust_target/denominator")
+                .cloned()
+                .unwrap_or(Value::Null),
+        },
+        "classification": {
+            "reference_core_weight_explains_reference_target": reference_core_weight_explains_reference_target,
+            "reference_rust_input_bit_exact": reference_rust_input_bit_exact,
+            "reference_rust_input_max_delta": reference_rust_input_max_delta,
+            "reference_rust_input_subthreshold_delta_present": reference_rust_input_subthreshold_delta_present,
+            "rust_scalar_replay_explains_rust_runtime": rust_scalar_replay_explains_rust_runtime,
+            "rust_runtime_differs_from_reference_core_weight": rust_runtime_differs_from_reference_core_weight,
+            "current_blocked_reasons": blocked_reasons,
+        },
+    })
 }
 
 fn build_final_norm_replay_body(
@@ -22317,6 +22438,87 @@ mod tests {
             ]
         );
         assert!(!reasons.contains(&"rmsnorm_replay_does_not_match_reference_ffn_norm".to_string()));
+    }
+
+    #[test]
+    fn ffn_norm_runtime_arithmetic_boundary_reports_core_weight_vs_rust_runtime() {
+        let reference_core = vec![1.0f32, 2.0];
+        let weight = vec![2.0f32, 3.0];
+        let reference_target = vec![2.0f32, 6.0];
+        let rust_target = vec![2.0f32, 6.00001];
+        let input_delta = json!({
+            "max_abs_delta": 9.5367431640625e-7,
+            "sha256_match": false,
+        });
+        let reference_input_replay = json!({
+            "best_vs_reference_target": {"max_abs_delta": 0.0},
+            "target_fit": {
+                "reference_target": {
+                    "denominator": {"mean": 1.0, "range": 0.0}
+                }
+            }
+        });
+        let reference_core_replay = json!({
+            "best_vs_reference_target": {"max_abs_delta": 0.0},
+            "target_fit": {
+                "reference_target": {
+                    "denominator": {"mean": 1.0, "range": 0.0}
+                }
+            }
+        });
+        let rust_input_replay = json!({
+            "best_vs_rust_target": {"max_abs_delta": 0.0},
+            "target_fit": {
+                "rust_target": {
+                    "denominator": {"mean": 0.99999, "range": 0.0}
+                }
+            }
+        });
+
+        let boundary = ffn_norm_runtime_arithmetic_boundary(
+            Some(&reference_core),
+            &weight,
+            &reference_target,
+            Some(&rust_target),
+            Some(&input_delta),
+            &reference_input_replay,
+            &reference_core_replay,
+            &rust_input_replay,
+        );
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(
+            boundary.pointer("/classification/reference_core_weight_explains_reference_target"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            boundary.pointer("/classification/rust_scalar_replay_explains_rust_runtime"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            boundary.pointer("/classification/reference_rust_input_bit_exact"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            boundary.pointer("/classification/reference_rust_input_subthreshold_delta_present"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            boundary.pointer("/classification/rust_runtime_differs_from_reference_core_weight"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            boundary.pointer("/classification/current_blocked_reasons"),
+            Some(&json!([
+                "reference_rust_ffn_norm_input_not_bit_exact",
+                "rust_runtime_differs_from_reference_core_weight"
+            ]))
+        );
+        assert_eq!(
+            boundary.pointer("/denominators/reference_core_target_fit/mean"),
+            Some(&json!(1.0))
+        );
     }
 
     #[test]
