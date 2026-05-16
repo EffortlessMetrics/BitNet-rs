@@ -2971,6 +2971,14 @@ fn attention_value_mix_input_attribution(
             "rust_probability",
             "rust_f16_roundtrip_value_cache",
         ),
+        "candidate_best_summary": attention_value_mix_input_candidate_best_summary(
+            &reference_probability_heads,
+            &rust_probability_heads,
+            &reference_value_cache_heads,
+            &rust_value_cache_heads,
+            &reference_value_mix_heads,
+            group_size,
+        ),
     })
 }
 
@@ -3087,6 +3095,174 @@ fn attention_value_mix_input_attribution_section(
         "missing_input_count": missing_input_count,
         "max_abs_delta": max_abs_delta,
         "max_rms_delta": max_rms_delta,
+        "all_compared": !reference_value_mix_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ValueMixInputCandidate<'a> {
+    id: &'static str,
+    probability_source: &'static str,
+    value_cache_source: &'static str,
+    probability_heads: &'a BTreeMap<usize, ScalarTraceTensor>,
+    value_cache_heads: &'a BTreeMap<usize, ScalarTraceTensor>,
+}
+
+fn value_mix_candidate_delta(
+    probability: &ScalarTraceTensor,
+    value_cache: &ScalarTraceTensor,
+    target: &ScalarTraceTensor,
+) -> Option<Value> {
+    let value_dim = target.num_elements;
+    if value_dim == 0 {
+        return None;
+    }
+    let token_count =
+        value_cache.shape.get(1).copied().or_else(|| Some(value_cache.num_elements / value_dim))?;
+    let value_sample_count = value_dim.checked_mul(token_count)?;
+    if token_count == 0
+        || probability.first_values.len() < token_count
+        || value_cache.first_values.len() < value_sample_count
+        || target.first_values.len() < value_dim
+    {
+        return None;
+    }
+
+    let mut recomputed = Vec::<f32>::with_capacity(value_dim);
+    for dim in 0..value_dim {
+        let mut sum = 0.0f64;
+        for token in 0..token_count {
+            let probability = probability.first_values[token] as f64;
+            let value = value_cache.first_values[dim * token_count + token] as f64;
+            sum += probability * value;
+        }
+        recomputed.push(sum as f32);
+    }
+    Some(compare_prefix(&recomputed, &target.first_values, value_dim))
+}
+
+fn value_mix_candidate_rank(delta: &Value) -> (f64, f64, bool) {
+    (
+        delta_metric(delta, "/rms_abs_delta"),
+        delta_metric(delta, "/max_abs_delta"),
+        !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false),
+    )
+}
+
+fn attention_value_mix_input_candidate_best_summary(
+    reference_probability_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    rust_probability_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    reference_value_cache_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    rust_value_cache_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    reference_value_mix_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    group_size: Option<usize>,
+) -> Value {
+    let candidates = [
+        ValueMixInputCandidate {
+            id: "reference_probability_reference_value_cache",
+            probability_source: "reference_probability",
+            value_cache_source: "reference_value_cache",
+            probability_heads: reference_probability_heads,
+            value_cache_heads: reference_value_cache_heads,
+        },
+        ValueMixInputCandidate {
+            id: "reference_probability_rust_value_cache",
+            probability_source: "reference_probability",
+            value_cache_source: "rust_f16_roundtrip_value_cache",
+            probability_heads: reference_probability_heads,
+            value_cache_heads: rust_value_cache_heads,
+        },
+        ValueMixInputCandidate {
+            id: "rust_probability_reference_value_cache",
+            probability_source: "rust_probability",
+            value_cache_source: "reference_value_cache",
+            probability_heads: rust_probability_heads,
+            value_cache_heads: reference_value_cache_heads,
+        },
+        ValueMixInputCandidate {
+            id: "rust_probability_rust_value_cache",
+            probability_source: "rust_probability",
+            value_cache_source: "rust_f16_roundtrip_value_cache",
+            probability_heads: rust_probability_heads,
+            value_cache_heads: rust_value_cache_heads,
+        },
+    ];
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut best_candidate_counts = BTreeMap::<String, usize>::new();
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+
+    for (&head, target) in reference_value_mix_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let mut candidate_rows = Vec::new();
+        let mut best_id = None::<&str>;
+        let mut best_delta = Value::Null;
+        let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+
+        for candidate in candidates {
+            let probability = candidate.probability_heads.get(&head);
+            let value_cache = kv_head.and_then(|kv_head| candidate.value_cache_heads.get(&kv_head));
+            if let (Some(probability), Some(value_cache)) = (probability, value_cache)
+                && let Some(delta) = value_mix_candidate_delta(probability, value_cache, target)
+            {
+                let rank = value_mix_candidate_rank(&delta);
+                if rank < best_rank {
+                    best_rank = rank;
+                    best_id = Some(candidate.id);
+                    best_delta = delta.clone();
+                }
+                candidate_rows.push(json!({
+                    "candidate": candidate.id,
+                    "probability_source": candidate.probability_source,
+                    "value_cache_source": candidate.value_cache_source,
+                    "max_abs_delta": delta_metric(&delta, "/max_abs_delta"),
+                    "rms_delta": delta_metric(&delta, "/rms_abs_delta"),
+                    "delta": delta,
+                }));
+            }
+        }
+
+        if let Some(best_id) = best_id {
+            compared_count += 1;
+            *best_candidate_counts.entry(best_id.to_string()).or_insert(0) += 1;
+            max_best_abs_delta =
+                max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+            max_best_rms_delta =
+                max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "compared",
+                "best_candidate": best_id,
+                "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+                "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+                "candidate_count": candidate_rows.len(),
+                "candidates": candidate_rows,
+            }));
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "candidate_count": 0,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "value-mix input candidate ranking is diagnostic-only evidence for whether reference value-mix residuals follow probability inputs, value-cache inputs, or both; it does not promote reference parity, A770 semantic quality, value mix residency, selected attention, resident KV, or any support claim",
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "best_candidate_counts": best_candidate_counts,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
         "all_compared": !reference_value_mix_heads.is_empty() && missing_input_count == 0,
         "rows": rows,
     })
@@ -7926,6 +8102,7 @@ mod tests {
             report.pointer("/rust_probability_reference_value_cache_vs_reference").unwrap();
         let rust_prob_rust_value =
             report.pointer("/rust_probability_rust_value_cache_vs_reference").unwrap();
+        let candidate_best = report.pointer("/candidate_best_summary").unwrap();
 
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
@@ -7936,6 +8113,20 @@ mod tests {
         assert_eq!(rust_prob_reference_value.pointer("/max_abs_delta"), Some(&json!(1.0)));
         assert_eq!(rust_prob_rust_value.pointer("/compared_count"), Some(&json!(1)));
         assert_eq!(rust_prob_rust_value.pointer("/max_abs_delta"), Some(&json!(1.0)));
+        assert_eq!(candidate_best.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(candidate_best.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(candidate_best.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(
+            candidate_best
+                .pointer("/best_candidate_counts/reference_probability_reference_value_cache"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            candidate_best.pointer("/rows/0/best_candidate"),
+            Some(&json!("reference_probability_reference_value_cache"))
+        );
+        assert_eq!(candidate_best.pointer("/rows/0/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(candidate_best.pointer("/rows/0/candidate_count"), Some(&json!(4)));
 
         let compare_report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
         assert_eq!(
