@@ -4334,10 +4334,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-REG-004-benchmark-regression"
 pr = 5200
-head_sha = "618945e45a0108c2b17e7cb17702ca33a75683f4"
+merge_sha = "77593fcc47765f8e271365be65abb839adca6123"
+head_sha = "55eb50bd3f2e3d6fc676c88717136f625867cffd"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
