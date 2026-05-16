@@ -7903,6 +7903,14 @@ fn layer_prefix_value_mix_history_attribution(
     let mut rust_self_recompute_material_count = 0usize;
     let mut max_rust_self_recompute_abs_delta = 0.0f64;
     let mut max_rust_self_recompute_rms_delta = 0.0f64;
+    let mut probability_source_delta_compared_count = 0usize;
+    let mut probability_source_delta_missing_count = 0usize;
+    let mut probability_source_delta_material_count = 0usize;
+    let mut value_cache_source_delta_compared_count = 0usize;
+    let mut value_cache_source_delta_missing_count = 0usize;
+    let mut value_cache_source_delta_material_count = 0usize;
+    let mut max_probability_source_abs_delta = 0.0f64;
+    let mut max_value_cache_source_abs_delta = 0.0f64;
 
     for (token, labels) in targets {
         let mut head_rows = Vec::new();
@@ -7910,9 +7918,14 @@ fn layer_prefix_value_mix_history_attribution(
         let mut token_missing_input_count = 0usize;
         let mut token_material_target_delta_count = 0usize;
         let mut token_rust_self_recompute_material_count = 0usize;
+        let mut token_probability_source_material_count = 0usize;
+        let mut token_value_cache_source_material_count = 0usize;
 
         for (&head, target) in &reference_value_mix_heads {
             let kv_head = group_size.map(|group_size| head / group_size);
+            let reference_probability = reference_probability_heads.get(&head);
+            let reference_value_cache =
+                kv_head.and_then(|head| reference_value_cache_heads.get(&head));
             let rust_target = rust_value_mix_heads.get(&head);
             let rust_probability = rust_probability_heads.get(&head);
             let rust_value_cache = rust_value_cache_heads.get(&head);
@@ -7950,6 +7963,45 @@ fn layer_prefix_value_mix_history_attribution(
                     max_rust_self_recompute_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
                 max_rust_self_recompute_rms_delta =
                     max_rust_self_recompute_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
+            }
+            let probability_source_delta =
+                reference_probability.zip(rust_probability).and_then(|(reference, rust)| {
+                    probability_history_token_delta(reference, rust, token)
+                });
+            let probability_source_material =
+                probability_source_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+            if probability_source_delta.is_some() {
+                probability_source_delta_compared_count += 1;
+            } else {
+                probability_source_delta_missing_count += 1;
+            }
+            if probability_source_material {
+                probability_source_delta_material_count += 1;
+                token_probability_source_material_count += 1;
+            }
+            if let Some(delta) = &probability_source_delta {
+                max_probability_source_abs_delta =
+                    max_probability_source_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
+            }
+
+            let value_cache_source_delta =
+                reference_value_cache.zip(rust_value_cache).and_then(|(reference, rust)| {
+                    scalar_tensor_dim_major_prefix_delta(reference, rust, token)
+                });
+            let value_cache_source_material =
+                value_cache_source_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+            if value_cache_source_delta.is_some() {
+                value_cache_source_delta_compared_count += 1;
+            } else {
+                value_cache_source_delta_missing_count += 1;
+            }
+            if value_cache_source_material {
+                value_cache_source_delta_material_count += 1;
+                token_value_cache_source_material_count += 1;
+            }
+            if let Some(delta) = &value_cache_source_delta {
+                max_value_cache_source_abs_delta =
+                    max_value_cache_source_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
             }
 
             let mut candidate_rows = Vec::new();
@@ -8011,6 +8063,10 @@ fn layer_prefix_value_mix_history_attribution(
                     "rust_self_recompute_material_mismatch": rust_self_material,
                     "rust_probability_history_present": rust_probability.is_some(),
                     "rust_expanded_value_cache_history_present": rust_value_cache.is_some(),
+                    "probability_source_delta": probability_source_delta.unwrap_or(Value::Null),
+                    "probability_source_material_mismatch": probability_source_material,
+                    "value_cache_source_delta": value_cache_source_delta.unwrap_or(Value::Null),
+                    "value_cache_source_material_mismatch": value_cache_source_material,
                     "best_candidate": best_id,
                     "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
                     "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
@@ -8029,6 +8085,10 @@ fn layer_prefix_value_mix_history_attribution(
                     "target_material_mismatch": target_material,
                     "rust_self_recompute_delta": rust_self_delta.unwrap_or(Value::Null),
                     "rust_self_recompute_material_mismatch": rust_self_material,
+                    "probability_source_delta": probability_source_delta.unwrap_or(Value::Null),
+                    "probability_source_material_mismatch": probability_source_material,
+                    "value_cache_source_delta": value_cache_source_delta.unwrap_or(Value::Null),
+                    "value_cache_source_material_mismatch": value_cache_source_material,
                     "candidate_count": 0,
                     "reference_probability_history_present": reference_probability_heads.contains_key(&head),
                     "rust_probability_history_present": rust_probability_heads.contains_key(&head),
@@ -8048,6 +8108,8 @@ fn layer_prefix_value_mix_history_attribution(
             "missing_input_count": token_missing_input_count,
             "material_target_delta_count": token_material_target_delta_count,
             "rust_self_recompute_material_count": token_rust_self_recompute_material_count,
+            "probability_source_material_count": token_probability_source_material_count,
+            "value_cache_source_material_count": token_value_cache_source_material_count,
             "rows": head_rows,
         }));
     }
@@ -8068,6 +8130,15 @@ fn layer_prefix_value_mix_history_attribution(
     if rust_self_recompute_material_count > 0 {
         blocked_reasons.push("prefix_value_mix_rust_self_recompute_delta_present".to_string());
     }
+    if probability_source_delta_missing_count > 0 || value_cache_source_delta_missing_count > 0 {
+        blocked_reasons.push("prefix_value_mix_source_delta_missing".to_string());
+    }
+    if probability_source_delta_material_count > 0 {
+        blocked_reasons.push("prefix_value_mix_probability_source_delta_present".to_string());
+    }
+    if value_cache_source_delta_material_count > 0 {
+        blocked_reasons.push("prefix_value_mix_value_cache_source_delta_present".to_string());
+    }
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
@@ -8079,6 +8150,10 @@ fn layer_prefix_value_mix_history_attribution(
         "capture missing Rust probability/cache/value-mix history samples before interpreting Rust self-recompute"
     } else if rust_self_recompute_material_count > 0 {
         "localize Rust value-mix history arithmetic or trace serialization because Rust inputs do not reconstruct Rust value-mix history targets"
+    } else if probability_source_delta_material_count > 0
+        || value_cache_source_delta_material_count > 0
+    {
+        "use token-scoped source deltas to choose the next probability-history or value-cache-history diagnostic"
     } else if material_target_delta_count > 0 {
         "Rust self-recompute is clean; compare Rust probability and expanded value-cache histories against reference sources for the drifting prefix tokens"
     } else {
@@ -8115,6 +8190,14 @@ fn layer_prefix_value_mix_history_attribution(
         "rust_self_recompute_material_count": rust_self_recompute_material_count,
         "max_rust_self_recompute_abs_delta": max_rust_self_recompute_abs_delta,
         "max_rust_self_recompute_rms_delta": max_rust_self_recompute_rms_delta,
+        "probability_source_delta_compared_count": probability_source_delta_compared_count,
+        "probability_source_delta_missing_count": probability_source_delta_missing_count,
+        "probability_source_delta_material_count": probability_source_delta_material_count,
+        "value_cache_source_delta_compared_count": value_cache_source_delta_compared_count,
+        "value_cache_source_delta_missing_count": value_cache_source_delta_missing_count,
+        "value_cache_source_delta_material_count": value_cache_source_delta_material_count,
+        "max_probability_source_abs_delta": max_probability_source_abs_delta,
+        "max_value_cache_source_abs_delta": max_value_cache_source_abs_delta,
         "rows": token_rows,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -9401,6 +9484,93 @@ fn scalar_tensor_token_delta(
     if let Some(object) = delta.as_object_mut() {
         object.insert("layout".to_string(), json!("dim_major_token_minor"));
         object.insert("token".to_string(), json!(token));
+        object.insert("reference_dim_count".to_string(), json!(reference_dim_count));
+        object.insert("reference_token_count".to_string(), json!(reference_token_count));
+        object.insert("rust_dim_count".to_string(), json!(rust_dim_count));
+        object.insert("rust_token_count".to_string(), json!(rust_token_count));
+    }
+    Some(delta)
+}
+
+fn probability_history_token_delta(
+    reference: &ScalarTraceTensor,
+    rust: &ScalarTraceTensor,
+    query_token: usize,
+) -> Option<Value> {
+    let (reference_key_count, reference_query_count) = scalar_tensor_dim_token_shape(reference)?;
+    let (rust_key_count, rust_query_count) = scalar_tensor_dim_token_shape(rust)?;
+    let key_count = reference_key_count.min(rust_key_count).min(query_token.saturating_add(1));
+    if query_token >= reference_query_count || query_token >= rust_query_count || key_count == 0 {
+        return None;
+    }
+    let reference_sample_count = reference_key_count.checked_mul(reference_query_count)?;
+    let rust_sample_count = rust_key_count.checked_mul(rust_query_count)?;
+    if reference.first_values.len() < reference_sample_count
+        || rust.first_values.len() < rust_sample_count
+    {
+        return None;
+    }
+
+    let mut reference_values = Vec::<f32>::with_capacity(key_count);
+    let mut rust_values = Vec::<f32>::with_capacity(key_count);
+    for key in 0..key_count {
+        reference_values.push(reference.first_values[key * reference_query_count + query_token]);
+        rust_values.push(rust.first_values[key * rust_query_count + query_token]);
+    }
+    let mut delta = compare_vectors(&reference_values, &rust_values);
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("key_major_query_token_minor_live_prefix"));
+        object.insert("query_token".to_string(), json!(query_token));
+        object.insert("live_key_count".to_string(), json!(key_count));
+        object.insert("reference_key_count".to_string(), json!(reference_key_count));
+        object.insert("reference_query_count".to_string(), json!(reference_query_count));
+        object.insert("rust_key_count".to_string(), json!(rust_key_count));
+        object.insert("rust_query_count".to_string(), json!(rust_query_count));
+    }
+    Some(delta)
+}
+
+fn scalar_tensor_dim_major_prefix_delta(
+    reference: &ScalarTraceTensor,
+    rust: &ScalarTraceTensor,
+    query_token: usize,
+) -> Option<Value> {
+    let (reference_dim_count, reference_token_count) = scalar_tensor_dim_token_shape(reference)?;
+    let (rust_dim_count, rust_token_count) = scalar_tensor_dim_token_shape(rust)?;
+    let dim_count = reference_dim_count.min(rust_dim_count);
+    let token_count =
+        reference_token_count.min(rust_token_count).min(query_token.saturating_add(1));
+    if dim_count == 0 || token_count == 0 {
+        return None;
+    }
+    let reference_sample_count = reference_dim_count.checked_mul(reference_token_count)?;
+    let rust_sample_count = rust_dim_count.checked_mul(rust_token_count)?;
+    if reference.first_values.len() < reference_sample_count
+        || rust.first_values.len() < rust_sample_count
+    {
+        return None;
+    }
+
+    let reference_values = dim_major_rect_values(
+        &reference.first_values,
+        reference_dim_count,
+        reference_token_count,
+        dim_count,
+        token_count,
+    );
+    let rust_values = dim_major_rect_values(
+        &rust.first_values,
+        rust_dim_count,
+        rust_token_count,
+        dim_count,
+        token_count,
+    );
+    let mut delta =
+        dim_major_token_value_delta(&reference_values, &rust_values, dim_count, token_count);
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("dim_major_token_minor_live_prefix"));
+        object.insert("query_token".to_string(), json!(query_token));
+        object.insert("live_token_count".to_string(), json!(token_count));
         object.insert("reference_dim_count".to_string(), json!(reference_dim_count));
         object.insert("reference_token_count".to_string(), json!(reference_token_count));
         object.insert("rust_dim_count".to_string(), json!(rust_dim_count));
@@ -19328,6 +19498,22 @@ mod tests {
         assert_eq!(attribution.pointer("/rust_self_recompute_compared_count"), Some(&json!(2)));
         assert_eq!(attribution.pointer("/rust_self_recompute_missing_count"), Some(&json!(0)));
         assert_eq!(attribution.pointer("/rust_self_recompute_material_count"), Some(&json!(0)));
+        assert_eq!(
+            attribution.pointer("/probability_source_delta_compared_count"),
+            Some(&json!(2))
+        );
+        assert_eq!(
+            attribution.pointer("/probability_source_delta_material_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            attribution.pointer("/value_cache_source_delta_compared_count"),
+            Some(&json!(2))
+        );
+        assert_eq!(
+            attribution.pointer("/value_cache_source_delta_material_count"),
+            Some(&json!(2))
+        );
         assert_eq!(attribution.pointer("/rows/0/token"), Some(&json!(0)));
         assert_eq!(attribution.pointer("/rows/1/token"), Some(&json!(1)));
         assert!(token0_labels.contains(&json!("earliest_earlier_prefix_token")));
@@ -19350,6 +19536,14 @@ mod tests {
             Some(&json!(0.0))
         );
         assert_eq!(
+            attribution.pointer("/rows/0/rows/0/probability_source_material_mismatch"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/value_cache_source_material_mismatch"),
+            Some(&json!(true))
+        );
+        assert_eq!(
             attribution.pointer("/rows/0/rows/0/best_candidate"),
             Some(&json!("reference_probability_history_reference_value_cache_history"))
         );
@@ -19365,8 +19559,54 @@ mod tests {
             Some(4)
         );
         assert!(reasons.contains(&json!("prefix_value_mix_target_delta_present")));
+        assert!(reasons.contains(&json!("prefix_value_mix_value_cache_source_delta_present")));
         assert!(!reasons.contains(&json!("prefix_value_mix_input_missing")));
         assert!(!reasons.contains(&json!("prefix_value_mix_rust_self_recompute_delta_present")));
+        assert!(!reasons.contains(&json!("prefix_value_mix_probability_source_delta_present")));
+    }
+
+    #[test]
+    fn prefix_source_deltas_ignore_future_cache_and_probability_entries() {
+        let reference_cache = ScalarTraceTensor {
+            first_values: vec![1.0, 2.0, 30.0, 4.0, 5.0, 60.0],
+            shape: vec![2, 3],
+            num_elements: 6,
+        };
+        let rust_cache = ScalarTraceTensor {
+            first_values: vec![1.0, 2.0, 31.0, 4.0, 5.0, 61.0],
+            shape: vec![2, 3],
+            num_elements: 6,
+        };
+        let token0_cache_delta =
+            scalar_tensor_dim_major_prefix_delta(&reference_cache, &rust_cache, 0).unwrap();
+        let token2_cache_delta =
+            scalar_tensor_dim_major_prefix_delta(&reference_cache, &rust_cache, 2).unwrap();
+
+        assert_eq!(token0_cache_delta.pointer("/live_token_count"), Some(&json!(1)));
+        assert_eq!(token0_cache_delta.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert!(token0_cache_delta.pointer("/first_mismatch_layout").unwrap().is_null());
+        assert_eq!(token2_cache_delta.pointer("/live_token_count"), Some(&json!(3)));
+        assert_eq!(token2_cache_delta.pointer("/first_mismatch_layout/token"), Some(&json!(2)));
+
+        let reference_probability = ScalarTraceTensor {
+            first_values: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+            shape: vec![3, 3],
+            num_elements: 9,
+        };
+        let rust_probability = ScalarTraceTensor {
+            first_values: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 70.0, 8.0, 90.0],
+            shape: vec![3, 3],
+            num_elements: 9,
+        };
+        let token0_probability_delta =
+            probability_history_token_delta(&reference_probability, &rust_probability, 0).unwrap();
+        let token2_probability_delta =
+            probability_history_token_delta(&reference_probability, &rust_probability, 2).unwrap();
+
+        assert_eq!(token0_probability_delta.pointer("/live_key_count"), Some(&json!(1)));
+        assert_eq!(token0_probability_delta.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(token2_probability_delta.pointer("/live_key_count"), Some(&json!(3)));
+        assert_eq!(token2_probability_delta.pointer("/max_abs_delta"), Some(&json!(81.0)));
     }
 
     #[test]
