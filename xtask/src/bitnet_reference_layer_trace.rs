@@ -2065,6 +2065,10 @@ fn build_value_projection_history_replay(args: &ValueProjectionHistoryReplayArgs
             .pointer("/current_token_replay/current_replay_vs_history_replay_token/max_abs_delta")
             .and_then(Value::as_f64)
             .is_some_and(|delta| delta <= 1.0e-3);
+    let current_token_history_consistency_applicable = replay
+        .pointer("/current_token_replay/consistency_applicable")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
 
     let current_blocked_reasons = if blocked_reasons.is_empty() {
         classify_value_projection_history_replay(
@@ -2072,6 +2076,7 @@ fn build_value_projection_history_replay(args: &ValueProjectionHistoryReplayArgs
             rust_replay_matches_runtime,
             rust_replay_bucket_mismatches_reference,
             input_history_materially_same,
+            current_token_history_consistency_applicable,
             current_token_history_consistent,
         )
     } else {
@@ -2118,6 +2123,7 @@ fn build_value_projection_history_replay(args: &ValueProjectionHistoryReplayArgs
             "rust_history_replay_matches_rust_trace": rust_replay_matches_runtime,
             "rust_history_replay_reference_f16_bucket_mismatch_count": rust_replay_bucket_mismatches_reference,
             "input_history_materially_same": input_history_materially_same,
+            "current_token_history_consistency_applicable": current_token_history_consistency_applicable,
             "current_token_history_consistent": current_token_history_consistent,
             "current_blocked_reasons": current_blocked_reasons,
             "next_action": next_action,
@@ -4043,13 +4049,30 @@ fn current_value_projection_token_replay(
         slice_dim_major_token(reference_replay_history, output_dim, token_count, token).ok();
     let current_replay =
         current_input.as_ref().and_then(|input| project_qk256_loaded_row(projection, input).ok());
+    let consistency_applicable = current_input.is_some()
+        && current_target.is_some()
+        && current_replay.is_some()
+        && history_input_token.is_some()
+        && history_replay_token.is_some();
+    let status = if consistency_applicable {
+        "compared"
+    } else if current_input.is_none() || current_target.is_none() {
+        "missing_current_trace"
+    } else if current_replay.is_none() {
+        "current_replay_unavailable"
+    } else {
+        "missing_history_token"
+    };
 
     json!({
         "diagnostic_only": true,
         "claim_allowed": false,
         "token": token,
+        "status": status,
+        "consistency_applicable": consistency_applicable,
         "current_input_present": current_input.is_some(),
         "current_target_present": current_target.is_some(),
+        "current_replay_present": current_replay.is_some(),
         "history_input_token_present": history_input_token.is_some(),
         "history_replay_token_present": history_replay_token.is_some(),
         "current_input_vs_history_token": current_input.as_ref().zip(history_input_token.as_ref()).map(|(left, right)| compare_vectors(left, right)).unwrap_or(Value::Null),
@@ -4063,13 +4086,14 @@ fn classify_value_projection_history_replay(
     rust_replay_matches_runtime: bool,
     rust_replay_bucket_mismatches_reference: u64,
     input_history_materially_same: bool,
+    current_token_history_consistency_applicable: bool,
     current_token_history_consistent: bool,
 ) -> Vec<String> {
     if !reference_replay_matches {
         vec!["reference_history_replay_does_not_match_reference_vcur".to_string()]
     } else if !rust_replay_matches_runtime {
         vec!["rust_history_replay_does_not_match_rust_runtime_v_output".to_string()]
-    } else if !current_token_history_consistent {
+    } else if current_token_history_consistency_applicable && !current_token_history_consistent {
         vec!["current_token_same_input_differs_from_history_replay".to_string()]
     } else if rust_replay_bucket_mismatches_reference > 0 && input_history_materially_same {
         vec!["tiny_input_history_delta_amplified_by_qk256_activation_quantization".to_string()]
@@ -16535,7 +16559,7 @@ mod tests {
 
     #[test]
     fn value_projection_history_replay_classifies_input_amplification() {
-        let reasons = classify_value_projection_history_replay(true, true, 10, true, true);
+        let reasons = classify_value_projection_history_replay(true, true, 10, true, true, true);
         assert_eq!(
             reasons,
             vec!["tiny_input_history_delta_amplified_by_qk256_activation_quantization"]
@@ -16547,8 +16571,21 @@ mod tests {
     }
 
     #[test]
+    fn value_projection_history_replay_ignores_missing_current_token_consistency() {
+        let reasons = classify_value_projection_history_replay(true, true, 10, false, false, false);
+        assert_eq!(
+            reasons,
+            vec!["rust_input_history_delta_explains_value_projection_bucket_drift"]
+        );
+        assert_eq!(
+            value_projection_history_replay_next_action(&reasons),
+            "localize the upstream attention-norm history delta that feeds the value projection"
+        );
+    }
+
+    #[test]
     fn value_projection_history_replay_detects_projection_semantic_mismatch() {
-        let reasons = classify_value_projection_history_replay(false, true, 0, true, true);
+        let reasons = classify_value_projection_history_replay(false, true, 0, true, true, true);
         assert_eq!(reasons, vec!["reference_history_replay_does_not_match_reference_vcur"]);
         assert_eq!(
             value_projection_history_replay_next_action(&reasons),
