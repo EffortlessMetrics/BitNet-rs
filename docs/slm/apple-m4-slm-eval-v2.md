@@ -185,6 +185,48 @@ The strict scores and task-family pass counts match the 2026-05-14 eval-v2
 baseline. The timing warnings are preserved as advisory regression evidence,
 not hidden or converted into a speed claim.
 
+## Task-Family Pass-Rate Publication
+
+`M4-ACCURACY-004` publishes a machine-readable task-family pass-rate rollup for
+the committed 2026-05-16T0240Z dense SLM eval-v2 refresh:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/task-family-pass-rates.json
+```
+
+The rollup is derived from the three sibling `summary.json` receipts. It
+preserves each supported model identity, GGUF SHA256, tokenizer authority,
+requested and selected backend, runtime API, prompt template, `fallback_used`,
+source answer-corpus receipt, scoring summary, quality summary, task-family
+counts, and claim boundary. It is not a fresh runtime run, not a 500-case
+pass-rate refresh, and not a broad dense-model benchmark.
+
+| Model | Source cases | Backend | Fallback | Tokenizer authority | Prompt template |
+|---|---:|---|---|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | 120 | `apple-m4-cpu-neon` | `false` | `gguf_metadata` / `qwen2` | `qwen2.5` |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 120 | `apple-m4-cpu-neon` | `false` | `gguf_metadata` / `qwen2` | `qwen2.5` |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 120 | `apple-m4-cpu-neon` | `false` | `gguf_metadata` / `qwen2` | `qwen2.5` |
+
+Task-family strict pass rates from that rollup:
+
+| Family | Qwen 0.5B Q8_0 | Qwen 0.5B Q4_K_M | Qwen 1.5B Q4_K_M |
+|---|---:|---:|---:|
+| `arithmetic_exact` | 19 / 20 | 19 / 20 | 20 / 20 |
+| `numeric_tolerance` | 0 / 10 | 0 / 10 | 0 / 10 |
+| `fixed_table_qa` | 2 / 12 | 0 / 12 | 2 / 12 |
+| `format_constrained_json` | 0 / 10 | 0 / 10 | 0 / 10 |
+| `closed_label_classification` | 2 / 12 | 6 / 12 | 0 / 12 |
+| `synthetic_extraction` | 12 / 12 | 12 / 12 | 8 / 12 |
+| `ordering_sorting` | 0 / 12 | 0 / 12 | 0 / 12 |
+| `copy_edit_rewrite` | 8 / 12 | 9 / 12 | 11 / 12 |
+| `constrained_summary` | 9 / 10 | 10 / 10 | 9 / 10 |
+| `instruction_following_required_forbidden` | 10 / 10 | 10 / 10 | 9 / 10 |
+
+The 500-case static corpus created by `M4-ACCURACY-002` and the scorer repairs
+from `M4-ACCURACY-003` remain separate from this rollup. A fresh 500-case
+runtime pass-rate refresh must be recorded as its own evidence item before the
+larger corpus has runtime pass rates.
+
 ## Benchmark Contract
 
 The v2 benchmark profile set should include:
