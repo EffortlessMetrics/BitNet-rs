@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T23:16:39Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-007"
+event = "pr_open"
+from = "proposed"
+to = "pr_open"
+actor = "codex"
+pr = 5235
+branch = "codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic"
+head_sha = "fdcadee0f0c5d0e98c36deb487163ecb0b124300"
+summary = "Opened M3MBA-007 to record the 3B TL diagnostic preflight blocker."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5235",
+  "ci/hardware/apple-silicon-macbook/2026-05-16/m3-air/1bitllm-3b-tl-diagnostic-preflight.json",
+  "docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md",
+  "https://huggingface.co/1bitLLM/bitnet_b1_58-3B/tree/main",
+]
+notes = [
+  "No model binary was committed.",
+  "No inference was run.",
+  "The PR records that the official repository contains safetensors shards and tokenizer/config files, but no .gguf file for the M3MBA-007 TL1/TL2 BitNet.cpp command shape.",
+  "The PR records that the local storage state would fall below the lane's hard free-space floor if the safetensors shards were downloaded without cleanup or an approved conversion plan.",
+]
