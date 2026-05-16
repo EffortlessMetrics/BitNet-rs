@@ -27,7 +27,7 @@ Each model uses the same sequence:
 | F. Short decode / warm session | decode and session receipts | scoped answer proof |
 | G. Benchmark qualification | profile-specific decision | exact accepted profiles only |
 
-## Work items: CUDA-MODEL-001 through CUDA-MODEL-005
+## Work items: CUDA-MODEL-001 through CUDA-MODEL-008
 
 Qwen3 0.6B was the first candidate because it is closest to the existing
 Qwen2.5 dense infrastructure. It has now advanced through artifact contract,
@@ -110,16 +110,53 @@ Acceptance:
 
 Rollback: remove the one-token receipt and keep CUDA answer readiness false.
 
-### CUDA-MODEL-005: Short Decode And Warm Session
+### CUDA-MODEL-005: Short Decode
 
 Acceptance:
 
 - deterministic short-decode receipt;
-- warm-session receipt when model/session reuse is claimed;
+- valid UTF-8 decoded text;
+- CPU/CUDA generated-token equality or explicit first-divergence evidence;
 - quality gate result present;
 - speedup false unless benchmark-qualified.
 
-Rollback: remove the decode/session receipt and demote status rows.
+Rollback: remove the short-decode receipt and keep warm-session/product status
+unpromoted.
+
+### CUDA-MODEL-006: Warm Session
+
+Acceptance:
+
+- model, tokenizer, and CUDA context loaded once when claimed;
+- runtime buffers and weights reused where intended;
+- per-turn receipt evidence or a session summary;
+- speedup, server readiness, and full residency remain false unless later
+  receipts prove those exact claims.
+
+Rollback: remove the warm-session receipt and demote status rows that depended
+on it.
+
+### CUDA-MODEL-007: Benchmark Review
+
+Acceptance:
+
+- one-token, short-decode, and warm-session receipts are reviewed together;
+- each reviewed profile accepts or rejects speedup explicitly;
+- global speedup, server readiness, full residency, and BitNet QK256 proof stay
+  false.
+
+Rollback: remove the benchmark review receipt or demote the benchmark status
+row; do not edit execution receipts by hand.
+
+### CUDA-MODEL-008: Earned Status Sync
+
+Acceptance:
+
+- the Qwen3 model coverage and model-status row reflect the exact earned tier;
+- product CLI, speedup, server, full-residency, broad dense GGUF, and BitNet
+  QK256 claims remain false.
+
+Rollback: restore the previous Qwen3 candidate wording and claim booleans.
 
 ## Next Candidate
 

@@ -21,14 +21,16 @@ promotion tied to receipts.
 | 11 | CUDA-MODEL-002 | `model(cuda): add Qwen3 CPU answer sanity` | CPU receipts |
 | 12 | CUDA-MODEL-003 | `model(cuda): add Qwen3 CUDA all-layer plan` | all-layer plan |
 | 13 | CUDA-MODEL-004 | `model(cuda): add Qwen3 one-token CUDA proof` | CUDA receipt path |
-| 14 | CUDA-MODEL-005 | `model(cuda): add Qwen3 short-decode and warm-session proof` | CUDA receipt path |
-| 15 | CUDA-UX-008 | `cli(cuda): model support dashboard` | CLI/status surface |
-| 16 | CUDA-UX-010 | `docs(cuda): 9950X3D+5070Ti CUDA quickstart` | tutorial |
-| 17 | CUDA-SERVER-001 | `server(cuda): strict CUDA server smoke` | server path |
-| 18 | CUDA-SERVER-002 | `server(cuda): commit dense Qwen strict smoke receipt` | server receipt path |
-| 19 | CUDA-MODEL-008 | `model(cuda): sync Qwen3 earned status row` | model coverage and status |
-| 20 | CUDA-MODEL-SMOLLM2-001 | `model(cuda): add SmolLM2 360M artifact contract` | model artifact docs |
-| 21 | CUDA-MODEL-SMOLLM2-002 | `docs(cuda): sync SmolLM2 CPU blocker state` | model coverage and plan docs |
+| 14 | CUDA-MODEL-005 | `model(cuda): add Qwen3 short-decode CUDA proof` | CUDA receipt path |
+| 15 | CUDA-MODEL-006 | `model(cuda): add Qwen3 warm-session CUDA proof` | CUDA receipt path |
+| 16 | CUDA-MODEL-007 | `model(cuda): add Qwen3 benchmark qualification review` | benchmark receipts |
+| 17 | CUDA-MODEL-008 | `model(cuda): sync Qwen3 earned status row` | model coverage and status |
+| 18 | CUDA-UX-008 | `cli(cuda): model support dashboard` | CLI/status surface |
+| 19 | CUDA-UX-010 | `docs(cuda): 9950X3D+5070Ti CUDA quickstart` | tutorial |
+| 20 | CUDA-SERVER-001 | `server(cuda): strict CUDA server smoke` | server path |
+| 21 | CUDA-SERVER-002 | `server(cuda): commit dense Qwen strict smoke receipt` | server receipt path |
+| 22 | CUDA-MODEL-SMOLLM2-001 | `model(cuda): add SmolLM2 360M artifact contract` | model artifact docs |
+| 23 | CUDA-MODEL-SMOLLM2-002 | `docs(cuda): sync SmolLM2 CPU blocker state` | model coverage and plan docs |
 
 ## Shared Links
 
