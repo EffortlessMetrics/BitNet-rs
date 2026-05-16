@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1201 @@ struct llama_context {
+@@ -3441,6 +3444,1204 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -867,7 +867,7 @@ index 666fcc4d..23ee29ff 100644
 +                bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) head_offset + i]);
 +            }
 +            out << "]}";
-+            if (strcmp(value_mix_stage, "kqv") == 0) {
++            if (strcmp(value_mix_stage, "kq_soft_max_ext") == 0 || strcmp(value_mix_stage, "kqv") == 0) {
 +                const int64_t token_count = std::min<int64_t>((int64_t) n_tokens, tensor->ne[1]);
 +                const int64_t history_nelements = tensor->ne[0] * token_count;
 +                std::vector<float> history_values;
@@ -895,10 +895,13 @@ index 666fcc4d..23ee29ff 100644
 +                    const uint64_t history_hash = bitnet_rs_reference_layer_trace_hash(history_values);
 +                    const double history_mean = history_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : history_sum / (double) history_nelements;
 +                    const double history_rms = history_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(history_sq_sum / (double) history_nelements);
++                    const char * history_head_stage_prefix = strcmp(value_mix_stage, "kq_soft_max_ext") == 0
++                        ? "kq_soft_max_ext_head"
++                        : "kqv_head";
 +                    std::ostringstream history_name;
-+                    history_name << "kqv_head" << head << "_history_ref_layout-" << bitnet_rs_reference_layer_trace_layer(name);
++                    history_name << history_head_stage_prefix << head << "_history_ref_layout-" << bitnet_rs_reference_layer_trace_layer(name);
 +                    std::ostringstream history_stage;
-+                    history_stage << "kqv_head" << head << "_history_ref_layout";
++                    history_stage << history_head_stage_prefix << head << "_history_ref_layout";
 +                    out << ",{";
 +                    out << "\"graph_index\":" << graph_index;
 +                    out << ",\"name\":";
@@ -1231,7 +1234,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +16539,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -15460,6 +16542,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
@@ -1239,7 +1242,7 @@ index 666fcc4d..23ee29ff 100644
              
                  cur = llm_build_norm(ctx0, cur, hparams,
                          model.layers[il].attn_sub_norm, NULL,
-@@ -17655,8 +18735,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18738,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  

@@ -1040,6 +1040,23 @@ impl MultiHeadAttention {
                     Some(self.layer_idx as isize),
                     &stage,
                 )?;
+
+                let history =
+                    head.reshape(&[seq_len, t_k])?.transpose(0, 1)?.to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let history_name = format!(
+                    "t{trace_seq}/blk{}/attn_scores_softmax_head{head_idx}_history_ref_layout",
+                    self.layer_idx
+                );
+                let history_stage =
+                    format!("attn_scores_softmax_head{head_idx}_history_ref_layout");
+                trace_tensor_record(
+                    &history_name,
+                    &history,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &history_stage,
+                )?;
             }
         }
 
