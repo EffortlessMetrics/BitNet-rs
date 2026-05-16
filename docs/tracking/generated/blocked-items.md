@@ -58,7 +58,7 @@
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | M4-SLM-REG-004 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-002 | M4-DURABLE-001 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-003 | M4-DURABLE-001 | merged |
-| apple-m4-durable-inference-evidence | M4-DURABLE-004 | M4-DURABLE-002, M4-DURABLE-003 | pr_open |
+| apple-m4-durable-inference-evidence | M4-DURABLE-004 | M4-DURABLE-002, M4-DURABLE-003 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-005 | M4-DURABLE-004 | proposed |
 | apple-m4-inference-ops | M4-INF-OPS-002 | M4-INF-OPS-001 | merged |
 | apple-m4-inference-ops | M4-INF-OPS-003 | M4-INF-OPS-002 | merged |
