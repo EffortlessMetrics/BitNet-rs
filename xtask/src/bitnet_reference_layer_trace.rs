@@ -5172,11 +5172,18 @@ fn compare_reference_to_rust_with_records(
         layer_full_prefix_token_drift(reference_records, rust_record_list, 0);
     let layer_0_current_history_consistency =
         layer_current_history_consistency(reference_records, rust_record_list, 0);
-    report["layer_0_prefix_drift_frontier"] = layer_prefix_drift_frontier(
+    let layer_0_prefix_drift_frontier = layer_prefix_drift_frontier(
         &layer_0_full_prefix_token_drift,
         &layer_0_current_history_consistency,
         0,
     );
+    report["layer_0_prefix_token_stage_deltas"] = layer_prefix_token_stage_deltas(
+        reference_records,
+        rust_record_list,
+        &layer_0_prefix_drift_frontier,
+        0,
+    );
+    report["layer_0_prefix_drift_frontier"] = layer_0_prefix_drift_frontier;
     report["layer_0_full_prefix_token_drift"] = layer_0_full_prefix_token_drift;
     report["layer_0_current_history_consistency"] = layer_0_current_history_consistency;
     report["layer_0_attention_output_history_boundary_delta"] =
@@ -6054,6 +6061,251 @@ fn layer_prefix_drift_frontier(
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
     })
+}
+
+fn layer_prefix_token_stage_deltas(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    frontier: &Value,
+    layer: usize,
+) -> Value {
+    const HISTORY_STAGES: &[(&str, &str, &str)] = &[
+        (
+            "attn_value_mix_history_ref_layout",
+            "attention_value_mix_merged_history_ref_layout",
+            "attention_value_mix_history",
+        ),
+        (
+            "attn_o_out_history_ref_layout",
+            "post_o_proj_history_ref_layout",
+            "attention_output_projection_history",
+        ),
+        (
+            "ffn_inp_history_ref_layout",
+            "post_attention_residual_history_ref_layout",
+            "ffn_input_history",
+        ),
+        (
+            "ffn_norm_history_ref_layout",
+            "post_ffn_norm_history_ref_layout",
+            "ffn_norm_output_history",
+        ),
+        (
+            "ffn_out_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_swiglu_output_history",
+        ),
+        (
+            "ffn_sub_norm_history_ref_layout",
+            "post_ffn_subnorm_history_ref_layout",
+            "ffn_subnorm_output_history",
+        ),
+        (
+            "ffn_down_history_ref_layout",
+            "post_down_proj_history_ref_layout",
+            "ffn_down_projection_history",
+        ),
+        ("l_out_history_ref_layout", "post_layer_history_ref_layout", "layer_output_history"),
+    ];
+
+    let targets = prefix_stage_targets(frontier);
+    let mut target_rows = Vec::<Value>::new();
+    let mut missing_stage_count = 0usize;
+    let mut delta_unavailable_count = 0usize;
+    let mut material_target_count = 0usize;
+
+    for (token, labels) in targets {
+        let mut rows = Vec::<Value>::new();
+        let mut compared_stage_count = 0usize;
+        let mut token_missing_stage_count = 0usize;
+        let mut token_delta_unavailable_count = 0usize;
+        let mut material_stage_count = 0usize;
+        let mut first_material_stage = Value::Null;
+        let mut max_delta_stage = Value::Null;
+        let mut max_abs_delta = 0.0f64;
+
+        for (reference_stage, rust_stage, boundary) in HISTORY_STAGES {
+            let reference =
+                find_reference_trace_record(reference_records, reference_stage, Some(layer));
+            let rust = find_rust_trace_record(rust_records, rust_stage, Some(layer));
+            if reference.is_none() || rust.is_none() {
+                token_missing_stage_count += 1;
+            }
+            let delta = reference.zip(rust).and_then(|(reference, rust)| {
+                dim_major_record_token_delta(reference, rust, token).ok()
+            });
+            let delta_unavailable = reference.is_some() && rust.is_some() && delta.is_none();
+            if delta.is_some() {
+                compared_stage_count += 1;
+            }
+            if delta_unavailable {
+                token_delta_unavailable_count += 1;
+            }
+            let material_mismatch = delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+            if material_mismatch {
+                material_stage_count += 1;
+            }
+            let row_max_abs_delta =
+                delta.as_ref().map(|delta| delta_metric(delta, "/max_abs_delta")).unwrap_or(0.0);
+
+            let row = json!({
+                "layer": layer,
+                "token": token,
+                "boundary": boundary,
+                "reference_stage": reference_stage,
+                "rust_stage": rust_stage,
+                "reference_present": reference.is_some(),
+                "rust_present": rust.is_some(),
+                "delta": delta.unwrap_or(Value::Null),
+                "delta_unavailable": delta_unavailable,
+                "material_mismatch": material_mismatch,
+            });
+            if material_mismatch && first_material_stage.is_null() {
+                first_material_stage = row.clone();
+            }
+            if material_mismatch && (max_delta_stage.is_null() || row_max_abs_delta > max_abs_delta)
+            {
+                max_abs_delta = row_max_abs_delta;
+                max_delta_stage = row.clone();
+            }
+            rows.push(row);
+        }
+
+        missing_stage_count += token_missing_stage_count;
+        delta_unavailable_count += token_delta_unavailable_count;
+        if material_stage_count > 0 {
+            material_target_count += 1;
+        }
+
+        target_rows.push(json!({
+            "layer": layer,
+            "token": token,
+            "labels": labels,
+            "relative_position": prefix_token_relative_position(frontier, token),
+            "compared_stage_count": compared_stage_count,
+            "missing_stage_count": token_missing_stage_count,
+            "delta_unavailable_count": token_delta_unavailable_count,
+            "material_stage_count": material_stage_count,
+            "first_material_stage": first_material_stage,
+            "max_delta_stage": max_delta_stage,
+            "rows": rows,
+        }));
+    }
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if target_rows.is_empty() {
+        blocked_reasons.push("prefix_token_stage_target_missing".to_string());
+    }
+    if missing_stage_count > 0 {
+        blocked_reasons.push("prefix_token_stage_missing".to_string());
+    }
+    if delta_unavailable_count > 0 {
+        blocked_reasons.push("prefix_token_stage_delta_unavailable".to_string());
+    }
+    if material_target_count > 0 {
+        blocked_reasons.push("prefix_token_stage_delta_present".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if target_rows.is_empty() {
+        "capture prefix frontier token rows before localizing per-token stage deltas"
+    } else if missing_stage_count > 0 || delta_unavailable_count > 0 {
+        "capture missing prefix token stage samples before interpreting per-token drift"
+    } else if material_target_count > 0 {
+        "trace the earliest material prefix-token stage boundary in reference and Rust"
+    } else {
+        "prefix token stage deltas are clean for the selected frontier tokens"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer prefix token stage deltas are diagnostic-only evidence for localizing which boundary first diverges for selected prefix tokens; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "source_frontier": {
+            "active_frontier": frontier.pointer("/active_frontier").cloned().unwrap_or(Value::Null),
+            "selected_current_token": frontier.pointer("/selected_current_token").cloned().unwrap_or(Value::Null),
+            "current_history_consistency_clean": frontier.pointer("/current_history_consistency_clean").cloned().unwrap_or(Value::Null),
+        },
+        "target_token_count": target_rows.len(),
+        "missing_stage_count": missing_stage_count,
+        "delta_unavailable_count": delta_unavailable_count,
+        "material_target_count": material_target_count,
+        "target_rows": target_rows,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
+fn prefix_stage_targets(frontier: &Value) -> Vec<(usize, Vec<String>)> {
+    let mut targets = BTreeMap::<usize, Vec<String>>::new();
+    for (label, pointer) in [
+        ("earliest_earlier_prefix_token", "/earliest_earlier_prefix_token/token"),
+        ("max_earlier_prefix_token", "/max_earlier_prefix_token/token"),
+        ("sampled_current_token", "/sampled_current_token_row/token"),
+    ] {
+        let Some(token) = frontier
+            .pointer(pointer)
+            .and_then(Value::as_u64)
+            .and_then(|token| usize::try_from(token).ok())
+        else {
+            continue;
+        };
+        targets.entry(token).or_default().push(label.to_string());
+    }
+    targets.into_iter().collect()
+}
+
+fn prefix_token_relative_position(frontier: &Value, token: usize) -> Value {
+    for pointer in [
+        "/earliest_earlier_prefix_token",
+        "/max_earlier_prefix_token",
+        "/sampled_current_token_row",
+    ] {
+        let Some(row) = frontier.pointer(pointer) else {
+            continue;
+        };
+        if row
+            .pointer("/token")
+            .and_then(Value::as_u64)
+            .and_then(|value| usize::try_from(value).ok())
+            == Some(token)
+        {
+            return row.pointer("/relative_position").cloned().unwrap_or(Value::Null);
+        }
+    }
+    Value::Null
+}
+
+fn dim_major_record_token_delta(
+    reference: &ReferenceTraceRecord,
+    rust: &RustTraceRecord,
+    token: usize,
+) -> Result<Value> {
+    let reference_dim_count = dim_major_dim_count(reference)?;
+    let reference_token_count = dim_major_token_count(reference)?;
+    let (rust_dim_count, rust_token_count) =
+        rust_dim_major_shape_counts(rust).context("rust history shape is not dim-major")?;
+    let reference_token = slice_dim_major_token(
+        &reference.first_values,
+        reference_dim_count,
+        reference_token_count,
+        token,
+    )?;
+    let rust_token =
+        slice_dim_major_token(&rust.first_values, rust_dim_count, rust_token_count, token)?;
+    let mut delta = compare_vectors(&reference_token, &rust_token);
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("dim_major_token_minor"));
+        object.insert("token".to_string(), json!(token));
+        object.insert("reference_dim_count".to_string(), json!(reference_dim_count));
+        object.insert("reference_token_count".to_string(), json!(reference_token_count));
+        object.insert("rust_dim_count".to_string(), json!(rust_dim_count));
+        object.insert("rust_token_count".to_string(), json!(rust_token_count));
+    }
+    Ok(delta)
 }
 
 fn layer_current_token(
@@ -15255,6 +15507,33 @@ mod tests {
         assert!(reasons.contains(&json!("earlier_prefix_token_frontier_present")));
         assert!(reasons.contains(&json!("sampled_current_token_history_drift_present")));
         assert!(!reasons.contains(&json!("current_history_consistency_not_clean")));
+
+        let stage_deltas = report.pointer("/layer_0_prefix_token_stage_deltas").unwrap();
+        let token0_labels =
+            stage_deltas.pointer("/target_rows/0/labels").and_then(Value::as_array).unwrap();
+        let token2_labels =
+            stage_deltas.pointer("/target_rows/1/labels").and_then(Value::as_array).unwrap();
+        let stage_reasons =
+            stage_deltas.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(stage_deltas.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(stage_deltas.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            stage_deltas.pointer("/source_frontier/active_frontier"),
+            Some(&json!("earliest_earlier_prefix_token"))
+        );
+        assert_eq!(stage_deltas.pointer("/target_token_count"), Some(&json!(2)));
+        assert_eq!(stage_deltas.pointer("/material_target_count"), Some(&json!(2)));
+        assert_eq!(stage_deltas.pointer("/target_rows/0/token"), Some(&json!(0)));
+        assert_eq!(
+            stage_deltas.pointer("/target_rows/0/first_material_stage/boundary"),
+            Some(&json!("ffn_input_history"))
+        );
+        assert_eq!(stage_deltas.pointer("/target_rows/1/token"), Some(&json!(2)));
+        assert!(token0_labels.contains(&json!("earliest_earlier_prefix_token")));
+        assert!(token0_labels.contains(&json!("max_earlier_prefix_token")));
+        assert!(token2_labels.contains(&json!("sampled_current_token")));
+        assert!(stage_reasons.contains(&json!("prefix_token_stage_delta_present")));
     }
 
     #[test]
