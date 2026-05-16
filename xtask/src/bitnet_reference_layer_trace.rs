@@ -3831,6 +3831,7 @@ fn compare_reference_to_rust(
         "attention_score_reference_numeric_variants": attention_score_reference_numeric_variants(reference_records),
         "attention_score_input_attribution": attention_score_input_attribution(reference_records, rust_records),
         "attention_key_score_input_delta": attention_key_score_input_delta(reference_records, rust_records),
+        "attention_key_current_projection_rope_boundary": attention_key_current_projection_rope_boundary(reference_records, rust_records),
         "attention_key_cache_store_readback_boundary": attention_key_cache_store_readback_boundary(reference_records, rust_records),
         "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
@@ -7047,6 +7048,166 @@ fn attention_key_score_input_delta(
         "all_compared": !rust_heads.is_empty() && missing_head_count == 0,
         "rows": rows,
     })
+}
+
+fn attention_key_current_projection_rope_boundary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_projection = reference_key_projection_record(reference_records);
+    let reference_rope = reference_rope_key_record(reference_records);
+    let rust_projection =
+        rust_records.get("attention_k").filter(|record| !record.first_values.is_empty());
+    let rust_before_store_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_before_cache_store_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let selected_token = reference_rope
+        .and_then(reference_sampled_token_index)
+        .or_else(|| reference_projection.and_then(reference_sampled_token_index));
+    let projection_delta = reference_projection
+        .zip(rust_projection)
+        .map(|(reference, rust)| compare_vectors(&reference.first_values, &rust.first_values))
+        .unwrap_or(Value::Null);
+
+    let (head_dim, kv_head_count) =
+        reference_rope.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for kv_head in 0..kv_head_count {
+        let reference_head =
+            reference_rope.and_then(|record| reference_rope_key_head(record, kv_head, head_dim));
+        let rust_head = rust_before_store_heads.get(&kv_head).copied();
+        let mut blocked_reasons = Vec::<String>::new();
+        let mut delta = Value::Null;
+        let mut status = "missing_input";
+
+        if reference_head.is_none() {
+            blocked_reasons.push("reference_rope_kcur_head_missing".to_string());
+        }
+        if rust_head.is_none() {
+            blocked_reasons.push("rust_attention_k_before_cache_store_head_missing".to_string());
+        }
+        if selected_token.is_none() {
+            blocked_reasons.push("sampled_token_unavailable".to_string());
+        }
+
+        if let (Some(reference_head), Some(rust_head), Some(selected_token)) =
+            (reference_head.as_ref(), rust_head, selected_token)
+        {
+            match usize::try_from(selected_token)
+                .ok()
+                .and_then(|token| rust_dim_major_token(rust_head, token).ok())
+            {
+                Some(rust_current_token) => {
+                    delta = compare_vectors(reference_head, &rust_current_token);
+                    max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+                    max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+                    compared_head_count += 1;
+                    status = "compared";
+                }
+                None => {
+                    blocked_reasons
+                        .push("rust_attention_k_before_cache_store_token_missing".to_string());
+                }
+            }
+        }
+
+        if status == "missing_input" {
+            missing_head_count += 1;
+        }
+        rows.push(json!({
+            "kv_head": kv_head,
+            "status": status,
+            "reference_stage_present": reference_rope.is_some(),
+            "rust_stage_present": rust_head.is_some(),
+            "selected_token": selected_token,
+            "delta": delta,
+            "blocked_reasons": blocked_reasons,
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "current-token key projection/RoPE boundary comparison is diagnostic-only evidence for whether sampled-token K drift appears before cache history; it does not promote reference parity, A770 semantic quality, attention score residency, resident KV, selected attention, full residency, performance, or any support claim",
+        "reference_projection_stage": "Kcur_pre_rope",
+        "reference_rope_stage": "Kcur_post_rope",
+        "rust_projection_stage": "attention_k",
+        "rust_rope_stage_prefix": "attention_k_before_cache_store_kv_head",
+        "selected_token": selected_token,
+        "reference_projection_present": reference_projection.is_some(),
+        "reference_rope_present": reference_rope.is_some(),
+        "rust_projection_present": rust_projection.is_some(),
+        "rust_rope_head_count": rust_before_store_heads.len(),
+        "reference_rope_head_count": kv_head_count,
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "projection_delta": projection_delta,
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": kv_head_count > 0 && missing_head_count == 0,
+        "rows": rows,
+    })
+}
+
+fn reference_key_projection_record(
+    reference_records: &[ReferenceTraceRecord],
+) -> Option<&ReferenceTraceRecord> {
+    reference_records
+        .iter()
+        .find(|record| {
+            record.stage == "Kcur"
+                && record.values_available
+                && record.shape.len() >= 2
+                && record.shape[0] > 1
+                && record.shape[1] <= 1
+                && !record.first_values.is_empty()
+        })
+        .or_else(|| {
+            reference_records.iter().find(|record| {
+                record.stage == "Kcur" && record.values_available && !record.first_values.is_empty()
+            })
+        })
+}
+
+fn reference_rope_key_record(
+    reference_records: &[ReferenceTraceRecord],
+) -> Option<&ReferenceTraceRecord> {
+    reference_records.iter().find(|record| {
+        record.stage == "Kcur"
+            && record.values_available
+            && record.shape.len() >= 2
+            && record.shape[0] > 1
+            && record.shape[1] > 1
+            && record.first_values.len() == record.nelements as usize
+    })
+}
+
+fn reference_rope_key_head(
+    record: &ReferenceTraceRecord,
+    kv_head: usize,
+    head_dim: usize,
+) -> Option<Vec<f32>> {
+    if head_dim == 0 {
+        return None;
+    }
+    let start = kv_head.checked_mul(head_dim)?;
+    let end = start.checked_add(head_dim)?;
+    if record.first_values.len() < end {
+        return None;
+    }
+    Some(record.first_values[start..end].to_vec())
 }
 
 fn attention_key_cache_store_readback_boundary(
@@ -11071,6 +11232,94 @@ mod tests {
         assert!(delta.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
             |reasons| reasons.contains(&json!("reference_k_kv_head_sample_incomplete"))
                 && reasons.contains(&json!("rust_attention_k_score_input_sample_incomplete"))
+        ));
+    }
+
+    #[test]
+    fn compare_reports_key_current_projection_rope_boundary() {
+        let mut reference_projection =
+            test_reference_trace_record("Kcur", vec![1.0, 2.0, 3.0, 4.0]);
+        reference_projection.shape = vec![4, 1, 1, 1];
+        reference_projection.full_shape = vec![4, 3, 1, 1];
+        reference_projection.nelements = 4;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some(8);
+
+        let mut reference_rope = test_reference_trace_record("Kcur", vec![10.0, 20.0, 30.0, 40.0]);
+        reference_rope.shape = vec![2, 2, 1, 1];
+        reference_rope.full_shape = vec![2, 2, 3, 1];
+        reference_rope.nelements = 4;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some(8);
+
+        let mut rust_projection = test_rust_trace_record("attention_k", vec![1.0, 2.0, 3.0, 4.0]);
+        rust_projection.shape = vec![1, 1, 4];
+        let mut rust_head0 = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head0_ref_layout",
+            vec![0.0, 0.0, 10.0, 0.0, 0.0, 20.0],
+        );
+        rust_head0.shape = vec![2, 3];
+        let mut rust_head1 = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head1_ref_layout",
+            vec![0.0, 0.0, 30.0, 0.0, 0.0, 40.0],
+        );
+        rust_head1.shape = vec![2, 3];
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert("attention_k".to_string(), rust_projection);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head0_ref_layout".to_string(), rust_head0);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head1_ref_layout".to_string(), rust_head1);
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_key_current_projection_rope_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/selected_token"), Some(&json!(2)));
+        assert_eq!(boundary.pointer("/projection_delta/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/all_compared"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/rows/0/delta/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(boundary.pointer("/rows/1/delta/max_abs_delta"), Some(&json!(0.0)));
+    }
+
+    #[test]
+    fn compare_reports_key_current_projection_rope_boundary_missing_stages_as_diagnostic() {
+        let mut reference_projection =
+            test_reference_trace_record("Kcur", vec![1.0, 2.0, 3.0, 4.0]);
+        reference_projection.shape = vec![4, 1, 1, 1];
+        reference_projection.full_shape = vec![4, 3, 1, 1];
+        reference_projection.nelements = 4;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some(8);
+
+        let mut reference_rope = test_reference_trace_record("Kcur", vec![10.0, 20.0, 30.0, 40.0]);
+        reference_rope.shape = vec![2, 2, 1, 1];
+        reference_rope.full_shape = vec![2, 2, 3, 1];
+        reference_rope.nelements = 4;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some(8);
+
+        let mut rust_projection = test_rust_trace_record("attention_k", vec![1.0, 2.0, 3.0, 4.0]);
+        rust_projection.shape = vec![1, 1, 4];
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert("attention_k".to_string(), rust_projection);
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_key_current_projection_rope_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(2)));
+        assert_eq!(boundary.pointer("/all_compared"), Some(&json!(false)));
+        assert!(boundary.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| reasons.contains(&json!("rust_attention_k_before_cache_store_head_missing"))
         ));
     }
 
