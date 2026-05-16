@@ -7898,16 +7898,24 @@ fn layer_prefix_value_mix_history_attribution(
     let mut best_candidate_counts = BTreeMap::<String, usize>::new();
     let mut max_best_abs_delta = 0.0f64;
     let mut max_best_rms_delta = 0.0f64;
+    let mut rust_self_recompute_compared_count = 0usize;
+    let mut rust_self_recompute_missing_count = 0usize;
+    let mut rust_self_recompute_material_count = 0usize;
+    let mut max_rust_self_recompute_abs_delta = 0.0f64;
+    let mut max_rust_self_recompute_rms_delta = 0.0f64;
 
     for (token, labels) in targets {
         let mut head_rows = Vec::new();
         let mut token_compared_head_count = 0usize;
         let mut token_missing_input_count = 0usize;
         let mut token_material_target_delta_count = 0usize;
+        let mut token_rust_self_recompute_material_count = 0usize;
 
         for (&head, target) in &reference_value_mix_heads {
             let kv_head = group_size.map(|group_size| head / group_size);
             let rust_target = rust_value_mix_heads.get(&head);
+            let rust_probability = rust_probability_heads.get(&head);
+            let rust_value_cache = rust_value_cache_heads.get(&head);
             let target_delta = rust_target
                 .and_then(|rust_target| scalar_tensor_token_delta(target, rust_target, token));
             let target_material =
@@ -7915,6 +7923,33 @@ fn layer_prefix_value_mix_history_attribution(
             if target_material {
                 material_target_delta_count += 1;
                 token_material_target_delta_count += 1;
+            }
+            let rust_self_delta = rust_probability.zip(rust_value_cache).zip(rust_target).and_then(
+                |((probability, value_cache), rust_target)| {
+                    value_mix_history_candidate_token_delta(
+                        probability,
+                        value_cache,
+                        rust_target,
+                        token,
+                    )
+                },
+            );
+            let rust_self_material =
+                rust_self_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+            if rust_self_delta.is_some() {
+                rust_self_recompute_compared_count += 1;
+            } else {
+                rust_self_recompute_missing_count += 1;
+            }
+            if rust_self_material {
+                rust_self_recompute_material_count += 1;
+                token_rust_self_recompute_material_count += 1;
+            }
+            if let Some(delta) = &rust_self_delta {
+                max_rust_self_recompute_abs_delta =
+                    max_rust_self_recompute_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
+                max_rust_self_recompute_rms_delta =
+                    max_rust_self_recompute_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
             }
 
             let mut candidate_rows = Vec::new();
@@ -7972,6 +8007,10 @@ fn layer_prefix_value_mix_history_attribution(
                     "rust_value_mix_head_history_present": rust_target.is_some(),
                     "target_delta": target_delta.unwrap_or(Value::Null),
                     "target_material_mismatch": target_material,
+                    "rust_self_recompute_delta": rust_self_delta.unwrap_or(Value::Null),
+                    "rust_self_recompute_material_mismatch": rust_self_material,
+                    "rust_probability_history_present": rust_probability.is_some(),
+                    "rust_expanded_value_cache_history_present": rust_value_cache.is_some(),
                     "best_candidate": best_id,
                     "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
                     "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
@@ -7988,6 +8027,8 @@ fn layer_prefix_value_mix_history_attribution(
                     "rust_value_mix_head_history_present": rust_target.is_some(),
                     "target_delta": target_delta.unwrap_or(Value::Null),
                     "target_material_mismatch": target_material,
+                    "rust_self_recompute_delta": rust_self_delta.unwrap_or(Value::Null),
+                    "rust_self_recompute_material_mismatch": rust_self_material,
                     "candidate_count": 0,
                     "reference_probability_history_present": reference_probability_heads.contains_key(&head),
                     "rust_probability_history_present": rust_probability_heads.contains_key(&head),
@@ -8006,6 +8047,7 @@ fn layer_prefix_value_mix_history_attribution(
             "compared_head_count": token_compared_head_count,
             "missing_input_count": token_missing_input_count,
             "material_target_delta_count": token_material_target_delta_count,
+            "rust_self_recompute_material_count": token_rust_self_recompute_material_count,
             "rows": head_rows,
         }));
     }
@@ -8020,6 +8062,12 @@ fn layer_prefix_value_mix_history_attribution(
     if material_target_delta_count > 0 {
         blocked_reasons.push("prefix_value_mix_target_delta_present".to_string());
     }
+    if rust_self_recompute_missing_count > 0 {
+        blocked_reasons.push("prefix_value_mix_rust_self_recompute_missing".to_string());
+    }
+    if rust_self_recompute_material_count > 0 {
+        blocked_reasons.push("prefix_value_mix_rust_self_recompute_delta_present".to_string());
+    }
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
@@ -8027,8 +8075,12 @@ fn layer_prefix_value_mix_history_attribution(
         "capture prefix frontier targets before attributing value-mix history drift"
     } else if missing_input_count > 0 {
         "capture missing probability/value-cache/value-mix history samples for prefix frontier tokens"
+    } else if rust_self_recompute_missing_count > 0 {
+        "capture missing Rust probability/cache/value-mix history samples before interpreting Rust self-recompute"
+    } else if rust_self_recompute_material_count > 0 {
+        "localize Rust value-mix history arithmetic or trace serialization because Rust inputs do not reconstruct Rust value-mix history targets"
     } else if material_target_delta_count > 0 {
-        "use token-scoped source candidates to decide whether prefix value-mix drift follows probability history, value-cache history, or both"
+        "Rust self-recompute is clean; compare Rust probability and expanded value-cache histories against reference sources for the drifting prefix tokens"
     } else {
         "prefix value-mix history attribution does not show material target drift"
     };
@@ -8058,6 +8110,11 @@ fn layer_prefix_value_mix_history_attribution(
         "best_candidate_counts": best_candidate_counts,
         "max_best_abs_delta": max_best_abs_delta,
         "max_best_rms_delta": max_best_rms_delta,
+        "rust_self_recompute_compared_count": rust_self_recompute_compared_count,
+        "rust_self_recompute_missing_count": rust_self_recompute_missing_count,
+        "rust_self_recompute_material_count": rust_self_recompute_material_count,
+        "max_rust_self_recompute_abs_delta": max_rust_self_recompute_abs_delta,
+        "max_rust_self_recompute_rms_delta": max_rust_self_recompute_rms_delta,
         "rows": token_rows,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -19197,7 +19254,7 @@ mod tests {
 
         let mut rust_probability = test_rust_trace_record(
             "attn_scores_softmax_head0_history_ref_layout",
-            vec![0.0, 0.0, 1.0, 1.0],
+            vec![1.0, 0.0, 0.0, 1.0],
         );
         rust_probability.name = "t1/blk0/attn_scores_softmax_head0_history_ref_layout".to_string();
         rust_probability.stage = Some("attn_scores_softmax_head0_history_ref_layout".to_string());
@@ -19268,6 +19325,9 @@ mod tests {
         assert_eq!(attribution.pointer("/compared_head_count"), Some(&json!(2)));
         assert_eq!(attribution.pointer("/missing_input_count"), Some(&json!(0)));
         assert_eq!(attribution.pointer("/material_target_delta_count"), Some(&json!(1)));
+        assert_eq!(attribution.pointer("/rust_self_recompute_compared_count"), Some(&json!(2)));
+        assert_eq!(attribution.pointer("/rust_self_recompute_missing_count"), Some(&json!(0)));
+        assert_eq!(attribution.pointer("/rust_self_recompute_material_count"), Some(&json!(0)));
         assert_eq!(attribution.pointer("/rows/0/token"), Some(&json!(0)));
         assert_eq!(attribution.pointer("/rows/1/token"), Some(&json!(1)));
         assert!(token0_labels.contains(&json!("earliest_earlier_prefix_token")));
@@ -19280,6 +19340,14 @@ mod tests {
         assert_eq!(
             attribution.pointer("/rows/1/rows/0/target_material_mismatch"),
             Some(&json!(false))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/rust_self_recompute_material_mismatch"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/rust_self_recompute_delta/max_abs_delta"),
+            Some(&json!(0.0))
         );
         assert_eq!(
             attribution.pointer("/rows/0/rows/0/best_candidate"),
@@ -19298,6 +19366,7 @@ mod tests {
         );
         assert!(reasons.contains(&json!("prefix_value_mix_target_delta_present")));
         assert!(!reasons.contains(&json!("prefix_value_mix_input_missing")));
+        assert!(!reasons.contains(&json!("prefix_value_mix_rust_self_recompute_delta_present")));
     }
 
     #[test]
