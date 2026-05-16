@@ -22,10 +22,13 @@ const DEFAULT_EMBEDDING_ROW_AUTHORITY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-embedding-row-authority.json";
 const DEFAULT_ATTN_OUTPUT_SAME_INPUT_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-attn-output-same-input-parity.json";
+const DEFAULT_VALUE_PROJECTION_SAME_INPUT_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-value-projection-same-input-parity.json";
 const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 const DEFAULT_ATTN_OUTPUT_WEIGHT: &str = "blk.0.attn_output.weight";
+const DEFAULT_VALUE_PROJECTION_WEIGHT: &str = "blk.0.attn_v.weight";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -158,6 +161,15 @@ struct EmbeddingRowAuthorityArgs {
 
 #[derive(Debug)]
 struct AttnOutputSameInputArgs {
+    reference: PathBuf,
+    model: Option<PathBuf>,
+    weight: String,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct ValueProjectionSameInputArgs {
     reference: PathBuf,
     model: Option<PathBuf>,
     weight: String,
@@ -334,6 +346,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-value-projection-same-input-parity") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_value_projection_same_input_help();
+                return Ok(true);
+            }
+            let opts = parse_value_projection_same_input_args(args)?;
+            let report = build_value_projection_same_input_parity(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -371,6 +401,12 @@ fn print_embedding_row_authority_help() {
 fn print_attn_output_same_input_help() {
     println!(
         "Project the reference attn_sub_norm vector through Rust-loaded blk.0.attn_output.weight and compare with reference attn_o_out\n\nUsage: xtask.exe bitnet-reference-attn-output-same-input-parity [OPTIONS]\n\nOptions:\n      --reference <PATH>  Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --model <PATH>      GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>     GGUF QK256 attention output weight [default: blk.0.attn_output.weight]\n      --output <PATH>     Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-attn-output-same-input-parity.json]\n      --format <FORMAT>   Output format: human or json [default: human]\n  -h, --help              Print help"
+    );
+}
+
+fn print_value_projection_same_input_help() {
+    println!(
+        "Project the reference attn_norm vector through Rust-loaded blk.0.attn_v.weight and compare with reference Vcur\n\nUsage: xtask.exe bitnet-reference-value-projection-same-input-parity [OPTIONS]\n\nOptions:\n      --reference <PATH>  Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --model <PATH>      GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>     GGUF QK256 value projection weight [default: blk.0.attn_v.weight]\n      --output <PATH>     Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-value-projection-same-input-parity.json]\n      --format <FORMAT>   Output format: human or json [default: human]\n  -h, --help              Print help"
     );
 }
 
@@ -567,6 +603,40 @@ fn parse_attn_output_same_input_args(args: &[String]) -> Result<AttnOutputSameIn
         }
     }
     Ok(AttnOutputSameInputArgs { reference, model, weight, output, format })
+}
+
+fn parse_value_projection_same_input_args(args: &[String]) -> Result<ValueProjectionSameInputArgs> {
+    if args.get(1).map(String::as_str)
+        != Some("bitnet-reference-value-projection-same-input-parity")
+    {
+        bail!("parse_value_projection_same_input_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut model = None::<PathBuf>;
+    let mut weight = DEFAULT_VALUE_PROJECTION_WEIGHT.to_string();
+    let mut output = Some(PathBuf::from(DEFAULT_VALUE_PROJECTION_SAME_INPUT_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--model" => model = Some(PathBuf::from(value()?)),
+            "--weight" => weight = value()?,
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => {
+                bail!("unknown bitnet-reference-value-projection-same-input-parity option {other}")
+            }
+        }
+    }
+    Ok(ValueProjectionSameInputArgs { reference, model, weight, output, format })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -1273,7 +1343,12 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
     if blocked_reasons.is_empty() {
         let input = input.expect("checked above");
         let target = target.expect("checked above");
-        match project_attn_output_same_input(&model_path, &args.weight, &input.first_values) {
+        match project_qk256_same_input(
+            &model_path,
+            &args.weight,
+            &input.first_values,
+            Some(target.first_values.len()),
+        ) {
             Ok((model_report, weight_report, output)) => {
                 model = model_report;
                 weight = weight_report;
@@ -1366,10 +1441,161 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
     }))
 }
 
-fn project_attn_output_same_input(
+fn build_value_projection_same_input_parity(args: &ValueProjectionSameInputArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let reference_root = read_json(&reference_path)?;
+    let reference_records = read_reference_records(&reference_root)?;
+    let trace = reference_trace_receipt(&reference_root)?;
+    let model_path = args
+        .model
+        .clone()
+        .or_else(|| {
+            reference_root.pointer("/model/model_path").and_then(Value::as_str).map(PathBuf::from)
+        })
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
+    let model_path = normalize_path(&model_path)?;
+
+    let input = reference_records
+        .iter()
+        .find(|record| record.stage == "attn_norm" && record.layer == Some(0));
+    let target =
+        reference_records.iter().find(|record| record.stage == "Vcur" && record.layer == Some(0));
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !reference_path.is_file() {
+        blocked_reasons.push("reference_layer_trace_receipt_missing".to_string());
+    }
+    if !model_path.is_file() {
+        blocked_reasons.push("model_gguf_missing".to_string());
+    }
+    if input.is_none() {
+        blocked_reasons.push("reference_attn_norm_layer0_missing".to_string());
+    }
+    if target.is_none() {
+        blocked_reasons.push("reference_vcur_layer0_missing".to_string());
+    }
+
+    let input_count = input.map(|record| record.first_values.len()).unwrap_or(0);
+    let target_count = target.map(|record| record.first_values.len()).unwrap_or(0);
+    if input_count == 0 {
+        blocked_reasons.push("reference_attn_norm_first_values_missing".to_string());
+    }
+    if target_count == 0 {
+        blocked_reasons.push("reference_vcur_first_values_missing".to_string());
+    }
+
+    let mut model = json!({
+        "path": path_to_string(&model_path),
+        "exists": model_path.is_file(),
+    });
+    let mut weight = json!({
+        "name": args.weight,
+    });
+    let mut projection = Value::Null;
+
+    if blocked_reasons.is_empty() {
+        let input = input.expect("checked above");
+        let target = target.expect("checked above");
+        match project_qk256_same_input(
+            &model_path,
+            &args.weight,
+            &input.first_values,
+            Some(target.first_values.len()),
+        ) {
+            Ok((model_report, weight_report, output)) => {
+                model = model_report;
+                weight = weight_report;
+                let comparison = compare_prefix(
+                    &output,
+                    &target.first_values,
+                    output.len().min(target.first_values.len()),
+                );
+                projection = json!({
+                    "kernel": "rust_qk256_activation_quantized_scaled_same_input_cpu_oracle",
+                    "input_stage": "attn_norm",
+                    "target_stage": "Vcur",
+                    "input": row_report(&input.first_values),
+                    "rust_same_input_output": row_report(&output),
+                    "reference_target": row_report(&target.first_values),
+                    "rust_same_input_vs_reference_target": comparison,
+                });
+            }
+            Err(err) => {
+                blocked_reasons
+                    .push(format!("value_projection_same_input_projection_unavailable:{err}"));
+            }
+        }
+    }
+
+    let same_input_projection_available =
+        projection.pointer("/rust_same_input_vs_reference_target").is_some();
+    let same_input_projection_matches_reference = projection
+        .pointer("/rust_same_input_vs_reference_target/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-3);
+    let current_blocked_reasons = if blocked_reasons.is_empty() {
+        if same_input_projection_matches_reference {
+            vec!["same_input_value_projection_match_does_not_explain_upstream_delta".to_string()]
+        } else {
+            vec!["same_input_value_projection_mismatch".to_string()]
+        }
+    } else {
+        blocked_reasons.clone()
+    };
+    let next_action = if !blocked_reasons.is_empty() {
+        "regenerate full-prefix reference layer traces and ensure the model path is available"
+    } else if same_input_projection_matches_reference {
+        "treat value projection math/layout as same-input compatible; localize the upstream attn_norm input delta"
+    } else {
+        "inspect Rust QK256 value-projection weight layout, scale, and activation quantization before changing cache or value-mix math"
+    };
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_value_projection_same_input_parity",
+        "diagnostic": "bitnet_reference_value_projection_same_input_parity",
+        "producer": "cargo xtask bitnet-reference-value-projection-same-input-parity",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "promotion_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "model": path_to_string(&model_path),
+            "weight": args.weight,
+        },
+        "reference_trace": {
+            "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
+            "warmup_skip_policy": trace.pointer("/warmup_skip_policy").cloned().unwrap_or(Value::Null),
+            "n_tokens": trace.pointer("/n_tokens").cloned().unwrap_or(Value::Null),
+            "n_outputs": trace.pointer("/n_outputs").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_index": trace.pointer("/sampled_output_token_index").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_id": trace.pointer("/sampled_output_token_id").cloned().unwrap_or(Value::Null),
+            "attn_norm": input.map(reference_record_summary).unwrap_or(Value::Null),
+            "Vcur": target.map(reference_record_summary).unwrap_or(Value::Null),
+        },
+        "model": model,
+        "weight": weight,
+        "projection": projection,
+        "decision": {
+            "same_input_projection_available": same_input_projection_available,
+            "same_input_projection_matches_reference": same_input_projection_matches_reference,
+            "input_first_values_count": input_count,
+            "target_first_values_count": target_count,
+            "current_blocked_reasons": current_blocked_reasons,
+            "next_action": next_action,
+            "claim_allowed": false,
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
+fn project_qk256_same_input(
     model_path: &Path,
     weight_name: &str,
     input: &[f32],
+    expected_output_len: Option<usize>,
 ) -> Result<(Value, Value, Vec<f32>)> {
     use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
     use bitnet_models::loader::MmapFile;
@@ -1388,19 +1614,13 @@ fn project_attn_output_same_input(
     if info.shape.len() != 2 {
         bail!("weight '{weight_name}' must be 2D, got shape {:?}", info.shape);
     }
-    let rows = info.shape[0];
-    let cols = info.shape[1];
-    if input.len() != cols {
-        bail!(
-            "reference attn_sub_norm input length {} does not match weight cols {}",
-            input.len(),
-            cols
-        );
-    }
-
     let data = reader
         .get_tensor_data_by_info(info)
         .map_err(|err| anyhow::anyhow!("reading raw data for '{weight_name}': {err}"))?;
+    let layout =
+        select_qk256_same_input_layout(&info.shape, input.len(), expected_output_len, data.len())?;
+    let rows = layout.rows;
+    let cols = layout.cols;
     let row_stride_bytes = cols.div_ceil(256) * 64;
     let logical_bytes =
         rows.checked_mul(row_stride_bytes).context("QK256 logical byte count overflow")?;
@@ -1437,6 +1657,8 @@ fn project_attn_output_same_input(
         "name": weight_name,
         "gguf_dtype": format!("{:?}", info.tensor_type),
         "gguf_shape": info.shape,
+        "gguf_shape_interpretation": layout.interpretation,
+        "expected_output_len": expected_output_len,
         "rows": rows,
         "cols": cols,
         "row_stride_bytes": row_stride_bytes,
@@ -1446,6 +1668,67 @@ fn project_attn_output_same_input(
         "trailer_scale": scale,
     });
     Ok((model_report, weight_report, output))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SameInputQk256Layout {
+    rows: usize,
+    cols: usize,
+    interpretation: &'static str,
+}
+
+fn select_qk256_same_input_layout(
+    gguf_shape: &[usize],
+    input_len: usize,
+    expected_output_len: Option<usize>,
+    available_bytes: usize,
+) -> Result<SameInputQk256Layout> {
+    if gguf_shape.len() != 2 {
+        bail!("QK256 same-input layout requires a 2D shape, got {gguf_shape:?}");
+    }
+
+    let candidates = [
+        SameInputQk256Layout {
+            rows: gguf_shape[0],
+            cols: gguf_shape[1],
+            interpretation: "gguf_shape_as_kernel_rows_cols",
+        },
+        SameInputQk256Layout {
+            rows: gguf_shape[1],
+            cols: gguf_shape[0],
+            interpretation: "gguf_shape_transposed_to_kernel_rows_cols",
+        },
+    ];
+    let mut matching = candidates
+        .into_iter()
+        .filter(|candidate| {
+            candidate.cols == input_len
+                && expected_output_len.is_none_or(|expected| candidate.rows == expected)
+                && qk256_logical_bytes(candidate.rows, candidate.cols)
+                    .is_some_and(|logical| logical <= available_bytes)
+        })
+        .collect::<Vec<_>>();
+
+    matching.dedup();
+    match matching.as_slice() {
+        [layout] => Ok(*layout),
+        [first, ..] if first.rows == first.cols => Ok(*first),
+        [] => bail!(
+            "reference same-input vector length {input_len} and expected output length {:?} do not match GGUF QK256 shape {:?} with {} available bytes",
+            expected_output_len,
+            gguf_shape,
+            available_bytes
+        ),
+        _ => bail!(
+            "ambiguous QK256 same-input layout for shape {:?}, input length {input_len}, expected output length {:?}",
+            gguf_shape,
+            expected_output_len
+        ),
+    }
+}
+
+fn qk256_logical_bytes(rows: usize, cols: usize) -> Option<usize> {
+    rows.checked_mul(cols.div_ceil(256).checked_mul(64)?)
 }
 
 fn read_reference_records(root: &Value) -> Result<Vec<ReferenceTraceRecord>> {
@@ -9646,6 +9929,75 @@ mod tests {
     }
 
     #[test]
+    fn value_projection_same_input_args_parse_defaults_and_overrides() {
+        let default_args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-value-projection-same-input-parity".to_string(),
+        ];
+        let defaults = parse_value_projection_same_input_args(&default_args).unwrap();
+        assert_eq!(defaults.reference, PathBuf::from(DEFAULT_RUN_OUTPUT));
+        assert_eq!(defaults.model, None);
+        assert_eq!(defaults.weight, DEFAULT_VALUE_PROJECTION_WEIGHT);
+        assert_eq!(
+            defaults.output,
+            Some(PathBuf::from(DEFAULT_VALUE_PROJECTION_SAME_INPUT_OUTPUT))
+        );
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-value-projection-same-input-parity".to_string(),
+            "--reference".to_string(),
+            "ref.json".to_string(),
+            "--model".to_string(),
+            "model.gguf".to_string(),
+            "--weight".to_string(),
+            "blk.1.attn_v.weight".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_value_projection_same_input_args(&args).unwrap();
+        assert_eq!(parsed.reference, PathBuf::from("ref.json"));
+        assert_eq!(parsed.model, Some(PathBuf::from("model.gguf")));
+        assert_eq!(parsed.weight, "blk.1.attn_v.weight");
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn qk256_same_input_layout_uses_as_is_shape_when_it_matches_runtime_contract() {
+        let layout =
+            select_qk256_same_input_layout(&[2560, 2560], 2560, Some(2560), 1_638_404).unwrap();
+
+        assert_eq!(layout.rows, 2560);
+        assert_eq!(layout.cols, 2560);
+        assert_eq!(layout.interpretation, "gguf_shape_as_kernel_rows_cols");
+    }
+
+    #[test]
+    fn qk256_same_input_layout_transposes_non_square_gguf_shape_for_value_projection() {
+        let layout =
+            select_qk256_same_input_layout(&[2560, 640], 2560, Some(640), 409_604).unwrap();
+
+        assert_eq!(layout.rows, 640);
+        assert_eq!(layout.cols, 2560);
+        assert_eq!(layout.interpretation, "gguf_shape_transposed_to_kernel_rows_cols");
+    }
+
+    #[test]
+    fn qk256_same_input_layout_rejects_mismatched_input_and_output_identity() {
+        let err = select_qk256_same_input_layout(&[2560, 640], 2560, Some(2560), 409_604)
+            .expect_err("mismatched output identity should fail");
+
+        assert!(
+            err.to_string().contains("do not match GGUF QK256 shape [2560, 640]"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
     fn attn_output_same_input_report_blocks_when_reference_prefix_missing() {
         let dir = tempdir().unwrap();
         let reference = dir.path().join("reference.json");
@@ -9707,6 +10059,71 @@ mod tests {
         );
         assert!(reasons.contains(&json!("model_gguf_missing")));
         assert!(reasons.contains(&json!("reference_attn_sub_norm_first_values_missing")));
+        assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn value_projection_same_input_report_blocks_when_reference_prefix_missing() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let model = dir.path().join("missing.gguf");
+        write_file(
+            &reference,
+            &serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "attn_norm-0",
+                        "stage": "attn_norm",
+                        "graph_index": 1,
+                        "layer": 0,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [],
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    },
+                    {
+                        "name": "Vcur-0",
+                        "stage": "Vcur",
+                        "graph_index": 2,
+                        "layer": 0,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [1.0, 2.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    }
+                ]
+            }))
+            .unwrap(),
+        );
+
+        let report = build_value_projection_same_input_parity(&ValueProjectionSameInputArgs {
+            reference,
+            model: Some(model),
+            weight: DEFAULT_VALUE_PROJECTION_WEIGHT.to_string(),
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(
+            report.pointer("/receipt_type"),
+            Some(&json!("bitnet_reference_value_projection_same_input_parity"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/decision/same_input_projection_available"),
+            Some(&json!(false))
+        );
+        assert!(reasons.contains(&json!("model_gguf_missing")));
+        assert!(reasons.contains(&json!("reference_attn_norm_first_values_missing")));
         assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
     }
 
