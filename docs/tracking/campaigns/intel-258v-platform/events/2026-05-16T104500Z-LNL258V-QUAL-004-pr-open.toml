@@ -1,0 +1,21 @@
+timestamp = "2026-05-16T10:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-004"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5100
+head_sha = "3bde5a51c9ebc500c757ccf75490af28bdbb7aae"
+branch = "codex/lunar-lake/LNL258V-QUAL-004-qwen-corpus-v2-diagnosis"
+summary = "Opened LNL258V-QUAL-004 to classify dense Qwen CPU corpus-v2 blockers."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5100",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+]
+
+notes = [
+  "PR #5100 adds a diagnostic-only corpus-v2 failure classification artifact for the dense Qwen CPU control route.",
+  "The PR does not run inference, claim broad quality or speedup, promote routes, claim Arc/NPU execution, or change BitNet QK256/I2_S behavior.",
+]
