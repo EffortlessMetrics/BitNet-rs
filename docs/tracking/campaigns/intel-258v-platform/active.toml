@@ -3422,8 +3422,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-002"
-status = "in_progress"
+status = "pr_open"
+pr = 5042
 branch = "codex/lunar-lake/LNL258V-QUAL-002-qwen-cpu-corpus-v2"
+head_sha = "f9fd7401a396f1d60f40be7d53ed2d5d08098d79"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
