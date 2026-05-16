@@ -67,6 +67,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-015 | merged | Bounded i5-8250U Qwen3 Q8_0 warm-session thread and timing envelope evidence landed in #4911; generated IDs and strict provenance remain the behavior oracle. |
 | SLM-CPU-016 | merged | Kaby Lake Qwen3 Q8_0 operator appliance profile host-context support merged in #4922; receipts now record process memory and storage/free-space where available while preserving explicit unavailable thermal/power fields. |
 | SLM-CPU-017 | merged | Bounded SmolLM2 360M Q8_0 strict CPU preflight blocker evidence landed in #5041; strict loading fails closed before tokenizer/prompt/generation, with no Q4/Q5, accelerator, server, Qwen3.5, throughput, or BitNet QK256 claim. |
+| SLM-CPU-017A | pr_open | #5060 records positive Qwen2.5-0.5B Q8_0 second-model sanity evidence on the strict i5-8250U CPU path; no broad quality, sustained throughput, Q4/Q5, accelerator, server, Qwen3.5, or BitNet QK256 claim. |
 
 ## Review Policy
 

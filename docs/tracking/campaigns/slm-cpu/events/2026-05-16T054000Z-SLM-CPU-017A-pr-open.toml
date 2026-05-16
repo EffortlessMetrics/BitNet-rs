@@ -1,0 +1,27 @@
+timestamp = "2026-05-16T05:40:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-017A"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 5060
+branch = "codex/slm-cpu-017a-qwen25-second-model-sanity"
+
+summary = "Opened #5060 with bounded Qwen2.5-0.5B Q8_0 positive second-model sanity evidence after the SLM-CPU-017 SmolLM2 blocker slice."
+
+artifacts = [
+  "ci/quality/slm-second-model-sanity-corpus.yaml",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-16/qwen25-model-verify.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-16/qwen25-second-model-sanity.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-16/qwen25-second-model-sanity-runs/math_2_plus_2_brief.json",
+  "docs/slm/SLM_CPU_SECOND_MODEL_SANITY.md",
+]
+
+notes = [
+  "SLM-CPU-017 is already merged with bounded SmolLM2 strict preflight blocker evidence; this follow-up records a positive second-model sanity receipt for qwen2.5-0.5b-instruct-q8_0.",
+  "The selected second model is qwen2.5-0.5b-instruct-q8_0 from the supported model cache, verified against SHA256 ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e.",
+  "The strict CPU answer-corpus run records prompt IDs, generated IDs, decoded text, first-step top-k logits, selected backend cpu-rust, dense-qwen-cpu-reference, real_gguf loader mode, gguf_metadata tokenizer source, and fallback_used=false.",
+  "This is a bounded second-model sanity receipt only; the Qwen3-0.6B Q8_0 appliance profile remains the Kaby Lake baseline.",
+  "No broad answer-quality, sustained-throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
