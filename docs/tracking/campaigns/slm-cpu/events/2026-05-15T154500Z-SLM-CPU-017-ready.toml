@@ -1,0 +1,22 @@
+timestamp = "2026-05-15T15:45:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-017"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-017-second-model-sanity"
+
+summary = "Added SLM-CPU-017 as the next Kaby Lake SLM generality item after the Qwen3 Q8_0 appliance profile."
+
+artifacts = [
+  "docs/tracking/campaigns/slm-cpu/active.toml",
+  "docs/tracking/campaigns/slm-cpu/CAMPAIGN.md",
+]
+
+notes = [
+  "SLM-CPU-016 plus the storage-context follow-up leaves the Qwen3-0.6B Q8_0 path as the bounded Kaby Lake proof-appliance baseline.",
+  "SLM-CPU-017 moves to a second small dense GGUF sanity check to prove the path is not only Qwen3-shaped.",
+  "The second model must be selected by exact artifact metadata, pinned SHA256, GGUF architecture, tokenizer authority, quant format, and tensor naming rather than model-name recognition.",
+  "No broad answer-quality, sustained-throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is in scope.",
+]
