@@ -130,6 +130,12 @@ current evidence publication for the matching-history refresh; it is not a
 fresh runtime run and does not convert the 500-case static corpus into 500-case
 runtime pass rates.
 
+`M4-ACCURACY-005` adds deterministic failure-category fields for regression
+triage: formatting, factual/table, extraction, refusal, timeout, schema, and
+normalization. These fields are emitted alongside strict `failed_rules` and
+legacy taxonomy labels; they are not an LLM judge and do not broaden dense SLM
+quality claims.
+
 The remaining dense accuracy gap is to run the full 500-case corpus on the M4
 for every supported dense model identity, then repeat it once under matching
 identity before using the 500-case reports as trend-ready evidence:

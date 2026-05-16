@@ -5568,6 +5568,23 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
     ] {
         assert!(scoring_kinds.contains(&kind), "missing scoring contract kind `{kind}`");
     }
+    let failure_categories: Vec<&str> = receipt["scoring_contract"]["supported_failure_categories"]
+        .as_array()
+        .ok_or("missing supported failure categories")?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for category in [
+        "formatting",
+        "factual_table",
+        "extraction",
+        "refusal",
+        "timeout",
+        "schema",
+        "normalization",
+    ] {
+        assert!(failure_categories.contains(&category), "missing failure category `{category}`");
+    }
     assert_eq!(receipt["model"]["id"], "qwen2.5-1.5b-instruct-q4_k_m");
     assert_eq!(receipt["model"]["repo"], "Qwen/Qwen2.5-1.5B-Instruct-GGUF");
     assert_eq!(receipt["model"]["revision"], "91cad51170dc346986eccefdc2dd33a9da36ead9");

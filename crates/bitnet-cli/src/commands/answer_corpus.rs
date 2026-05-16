@@ -90,6 +90,8 @@ const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
     "forbidden_tokens",
     "required_forbidden_tokens",
 ];
+const ANSWER_CORPUS_FAILURE_CATEGORIES: &[&str] =
+    &["formatting", "factual_table", "extraction", "refusal", "timeout", "schema", "normalization"];
 
 /// Run the fixed answer corpus through the existing `bitnet run` surface.
 #[derive(Args, Debug)]
@@ -409,6 +411,7 @@ impl AnswerCorpusCommand {
                 "failed": failed,
                 "timeout": timed_out,
                 "not_run": not_run,
+                "failure_categories": failure_category_summary(&rows),
             },
             "scoring_summary": scoring_summary(&rows),
             "scoring_contract": answer_corpus_scoring_contract_receipt(&corpus),
@@ -596,6 +599,14 @@ impl AnswerCorpusCommand {
         quality.failed_rules.extend(answer_receipt_failed_rules(&run_receipt, device));
         quality.passed = quality.failed_rules.is_empty();
         let status = if quality.passed { "passed" } else { "quality_failed" };
+        let failure_category_labels = failure_categories_for_case(
+            case.task_family(),
+            status,
+            &quality.failed_rules,
+            &quality.failure_taxonomy,
+            quality.scoring.as_ref().map(|scoring| scoring.kind.as_str()),
+        );
+        let failure_categories = failure_category_fields(&failure_category_labels);
 
         Ok(json!({
             "id": case.id,
@@ -656,6 +667,8 @@ impl AnswerCorpusCommand {
                 "scoring": scoring_result_json(quality.scoring.as_ref()),
                 "failed_rules": quality.failed_rules,
                 "failure_taxonomy": quality.failure_taxonomy,
+                "failure_category_labels": failure_category_labels,
+                "failure_categories": failure_categories,
             },
             "backend": {
                 "requested_backend": run_receipt["requested_backend"].clone(),
@@ -723,6 +736,8 @@ impl AnswerCorpusCommand {
                 "passed": false,
                 "failed_rules": ["not_run"],
                 "failure_taxonomy": [],
+                "failure_category_labels": [],
+                "failure_categories": failure_category_fields(&[]),
                 "scoring": scoring_not_run_json(case.scoring.as_ref()),
             },
             "backend": {
@@ -1058,6 +1073,7 @@ struct ScoringResult {
     normalized_answer: String,
     failed_rules: Vec<String>,
     failure_taxonomy: Vec<String>,
+    failure_categories: Vec<String>,
     details: Value,
 }
 
@@ -1304,6 +1320,7 @@ fn answer_corpus_scoring_contract_receipt(corpus: &AnswerCorpus) -> Value {
         "receipt_contract": contract.map(|contract| contract.receipt_contract.as_str()),
         "scorer_self_tests": contract.map(|contract| contract.scorer_self_tests.as_slice()),
         "supported_scoring_kinds": ANSWER_CORPUS_SCORING_KINDS,
+        "supported_failure_categories": ANSWER_CORPUS_FAILURE_CATEGORIES,
     })
 }
 
@@ -1593,12 +1610,15 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
     }
 
     let failure_taxonomy = scoring_failure_taxonomy(answer, scoring, &kind, &failed_rules);
+    let failure_categories =
+        failure_categories_for_case("", "", &failed_rules, &failure_taxonomy, Some(&kind));
 
     ScoringResult {
         kind,
         passed: failed_rules.is_empty(),
         normalized_answer,
         failure_taxonomy,
+        failure_categories,
         failed_rules,
         details: Value::Object(details),
     }
@@ -1612,6 +1632,8 @@ fn scoring_result_json(result: Option<&ScoringResult>) -> Value {
             "normalized_answer": &result.normalized_answer,
             "failed_rules": &result.failed_rules,
             "failure_taxonomy": &result.failure_taxonomy,
+            "failure_category_labels": &result.failure_categories,
+            "failure_categories": failure_category_fields(&result.failure_categories),
             "details": &result.details,
         })
     })
@@ -1631,6 +1653,8 @@ fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
             "required_keywords": &scoring.required_keywords,
             "forbidden_tokens": &scoring.forbidden_tokens,
             "failure_taxonomy": [],
+            "failure_category_labels": [],
+            "failure_categories": failure_category_fields(&[]),
         })
     })
 }
@@ -1642,6 +1666,7 @@ fn scoring_summary(rows: &[Value]) -> Value {
     let mut not_run = 0usize;
     let mut kinds = BTreeSet::new();
     let mut failure_taxonomy = BTreeMap::<String, usize>::new();
+    let mut failure_categories = BTreeMap::<String, usize>::new();
     for row in rows {
         let scoring = &row["quality"]["scoring"];
         let Some(kind) = scoring["kind"].as_str() else {
@@ -1659,6 +1684,33 @@ fn scoring_summary(rows: &[Value]) -> Value {
         {
             *failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
         }
+        let mut scoring_categories = failure_categories_from_value(scoring);
+        if scoring_categories.is_empty() {
+            let failed_rules = scoring["failed_rules"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            let taxonomy = scoring["failure_taxonomy"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            scoring_categories.extend(failure_categories_for_case(
+                "",
+                "",
+                &failed_rules,
+                &taxonomy,
+                Some(kind),
+            ));
+        }
+        for category in scoring_categories {
+            *failure_categories.entry(category).or_default() += 1;
+        }
     }
     json!({
         "enabled": total > 0,
@@ -1668,7 +1720,18 @@ fn scoring_summary(rows: &[Value]) -> Value {
         "not_run": not_run,
         "kinds": kinds.into_iter().collect::<Vec<_>>(),
         "failure_taxonomy": failure_taxonomy,
+        "failure_categories": failure_categories,
     })
+}
+
+fn failure_category_summary(rows: &[Value]) -> BTreeMap<String, usize> {
+    let mut counts = BTreeMap::<String, usize>::new();
+    for row in rows {
+        for category in row_failure_categories(row) {
+            *counts.entry(category.to_string()).or_default() += 1;
+        }
+    }
+    counts
 }
 
 fn task_family_summary(rows: &[Value]) -> Value {
@@ -1701,6 +1764,9 @@ fn task_family_summary(rows: &[Value]) -> Value {
 
         for taxonomy in row_failure_taxonomy(row) {
             *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
+        }
+        for category in row_failure_categories(row) {
+            *stats.failure_categories.entry(category.to_string()).or_default() += 1;
         }
     }
 
@@ -1740,6 +1806,9 @@ fn profile_summary(rows: &[Value]) -> Value {
         for taxonomy in row_failure_taxonomy(row) {
             *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
         }
+        for category in row_failure_categories(row) {
+            *stats.failure_categories.entry(category.to_string()).or_default() += 1;
+        }
     }
 
     Value::Object(
@@ -1765,6 +1834,51 @@ fn row_failure_taxonomy(row: &Value) -> BTreeSet<&str> {
     taxonomy
 }
 
+fn row_failure_categories(row: &Value) -> BTreeSet<String> {
+    let mut categories = BTreeSet::new();
+    categories.extend(failure_categories_from_value(&row["quality"]));
+    categories.extend(failure_categories_from_value(&row["quality"]["scoring"]));
+    if categories.is_empty() {
+        let failed_rules = row["quality"]["failed_rules"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        let taxonomy =
+            row_failure_taxonomy(row).into_iter().map(str::to_string).collect::<Vec<_>>();
+        let task_family =
+            row["task_family"].as_str().or_else(|| row["category"].as_str()).unwrap_or_default();
+        let status = row["status"].as_str().unwrap_or_default();
+        categories.extend(failure_categories_for_case(
+            task_family,
+            status,
+            &failed_rules,
+            &taxonomy,
+            None,
+        ));
+    }
+    categories
+}
+
+fn failure_categories_from_value(value: &Value) -> BTreeSet<String> {
+    let mut categories = BTreeSet::new();
+    if let Some(labels) = value["failure_category_labels"].as_array() {
+        for label in labels.iter().filter_map(Value::as_str) {
+            categories.insert(label.to_string());
+        }
+    }
+    if let Some(fields) = value["failure_categories"].as_object() {
+        for category in ANSWER_CORPUS_FAILURE_CATEGORIES {
+            if fields.get(*category).and_then(Value::as_bool) == Some(true) {
+                categories.insert((*category).to_string());
+            }
+        }
+    }
+    categories
+}
+
 #[derive(Default)]
 struct TaskFamilyStats {
     total: usize,
@@ -1779,6 +1893,7 @@ struct TaskFamilyStats {
     scoring_not_run: usize,
     scoring_kinds: BTreeSet<String>,
     failure_taxonomy: BTreeMap<String, usize>,
+    failure_categories: BTreeMap<String, usize>,
 }
 
 impl TaskFamilyStats {
@@ -1799,6 +1914,7 @@ impl TaskFamilyStats {
                 "kinds": self.scoring_kinds.into_iter().collect::<Vec<_>>(),
             },
             "failure_taxonomy": self.failure_taxonomy,
+            "failure_categories": self.failure_categories,
         })
     }
 }
@@ -2014,6 +2130,9 @@ fn quality_failure_taxonomy(
     if let Some(scoring) = scoring {
         taxonomy.extend(scoring.failure_taxonomy.iter().cloned());
     }
+    if !failed_rules.is_empty() && looks_like_refusal(answer) {
+        taxonomy.insert("refusal".to_string());
+    }
     taxonomy.into_iter().collect()
 }
 
@@ -2030,6 +2149,9 @@ fn scoring_failure_taxonomy(
     if contains_raw_special_token(answer) {
         taxonomy.insert("raw_special_token_tail".to_string());
         taxonomy.insert("template_or_stop".to_string());
+    }
+    if looks_like_refusal(answer) {
+        taxonomy.insert("refusal".to_string());
     }
     match kind {
         "exact_match" => {
@@ -2079,6 +2201,91 @@ fn scoring_failure_taxonomy(
         taxonomy.insert("answer_content".to_string());
     }
     taxonomy.into_iter().collect()
+}
+
+fn failure_categories_for_case(
+    task_family: &str,
+    status: &str,
+    failed_rules: &[String],
+    failure_taxonomy: &[String],
+    scoring_kind: Option<&str>,
+) -> Vec<String> {
+    let mut categories = BTreeSet::<String>::new();
+    let has_failure =
+        status == "timeout" || !failed_rules.is_empty() || !failure_taxonomy.is_empty();
+    if !has_failure {
+        return Vec::new();
+    }
+
+    let has_taxonomy = |label: &str| failure_taxonomy.iter().any(|value| value == label);
+    let has_rule = |rule: &str| failed_rules.iter().any(|value| value == rule);
+
+    if status == "timeout" || has_rule("timeout") || has_taxonomy("timeout") {
+        categories.insert("timeout".to_string());
+    }
+    if has_taxonomy("refusal") {
+        categories.insert("refusal".to_string());
+    }
+    if has_taxonomy("punctuation_casing_normalization") {
+        categories.insert("normalization".to_string());
+    }
+    if has_taxonomy("raw_special_token_tail")
+        || has_taxonomy("template_or_stop")
+        || has_taxonomy("fenced_json")
+        || has_taxonomy("format_only")
+        || has_rule("replacement_chars")
+        || has_rule("mostly_text")
+        || has_rule("printable_utf8")
+        || has_rule("raw_special_tokens")
+    {
+        categories.insert("formatting".to_string());
+    }
+    if scoring_kind == Some("json_schema")
+        || failed_rules.iter().any(|rule| {
+            rule == "json_parse"
+                || rule == "schema_missing_or_invalid"
+                || rule.starts_with("json_")
+                || rule.starts_with("scoring_json_")
+        })
+    {
+        categories.insert("schema".to_string());
+    }
+
+    let task_family = task_family.to_ascii_lowercase();
+    if task_family.contains("fixed_table") || task_family.contains("factual") {
+        categories.insert("factual_table".to_string());
+    }
+    if task_family.contains("extraction") {
+        categories.insert("extraction".to_string());
+    }
+
+    categories.into_iter().collect()
+}
+
+fn failure_category_fields(categories: &[String]) -> Value {
+    let set = categories.iter().map(String::as_str).collect::<BTreeSet<_>>();
+    Value::Object(
+        ANSWER_CORPUS_FAILURE_CATEGORIES
+            .iter()
+            .map(|category| ((*category).to_string(), Value::Bool(set.contains(*category))))
+            .collect::<Map<_, _>>(),
+    )
+}
+
+fn looks_like_refusal(answer: &str) -> bool {
+    let normalized = normalize_match_text(answer);
+    [
+        "i cannot",
+        "i can not",
+        "i can't",
+        "cannot answer",
+        "can't answer",
+        "unable to answer",
+        "not able to answer",
+        "sorry",
+    ]
+    .iter()
+    .any(|needle| normalized.contains(needle))
 }
 
 fn contains_fenced_json(answer: &str) -> bool {
@@ -2706,6 +2913,16 @@ struct ChildFailureRowInput<'a> {
 }
 
 fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
+    let failed_rules = vec![input.failed_rule.to_string()];
+    let failure_taxonomy = vec![input.failed_rule.to_string()];
+    let failure_category_labels = failure_categories_for_case(
+        input.case.task_family(),
+        input.status,
+        &failed_rules,
+        &failure_taxonomy,
+        input.case.scoring.as_ref().map(AnswerScoring::kind),
+    );
+    let failure_categories = failure_category_fields(&failure_category_labels);
     json!({
         "id": input.case.id,
         "task_family": input.case.task_family(),
@@ -2719,8 +2936,10 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
         "run_receipt_path": input.case_receipt.display().to_string(),
         "quality": {
             "passed": false,
-            "failed_rules": [input.failed_rule],
-            "failure_taxonomy": [input.failed_rule],
+            "failed_rules": failed_rules,
+            "failure_taxonomy": failure_taxonomy,
+            "failure_category_labels": failure_category_labels,
+            "failure_categories": failure_categories,
             "scoring": scoring_not_run_json(input.case.scoring.as_ref()),
         },
         "backend": {
@@ -3180,6 +3399,64 @@ mod tests {
     }
 
     #[test]
+    fn slm_eval_failure_categories_cover_mechanical_triage_fields() {
+        let exact =
+            AnswerScoring { expected_normalized: Some("15".to_string()), ..scoring("exact_match") };
+        let punctuation_only = evaluate_scoring("15.", &exact);
+        assert!(!punctuation_only.passed);
+        assert!(punctuation_only.failure_categories.contains(&"normalization".to_string()));
+
+        let schema = AnswerScoring {
+            schema: Some(json!({
+                "type": "object",
+                "required": ["status"],
+                "additionalProperties": false,
+                "properties": {
+                    "status": { "const": "ready", "type": "string" }
+                }
+            })),
+            ..scoring("json_schema")
+        };
+        let schema_result = evaluate_scoring(r#"{"status":"ready","extra":true}"#, &schema);
+        assert!(schema_result.failure_categories.contains(&"schema".to_string()));
+        assert!(schema_result.failure_categories.contains(&"formatting".to_string()));
+
+        let refused = evaluate_quality(
+            "Sorry, I cannot answer that.",
+            &AnswerGate { expected: Some("Paris".to_string()), ..gate("exact_trimmed") },
+            None,
+            Some(&[1, 2, 3]),
+            None,
+            None,
+        );
+        let refusal_categories = failure_categories_for_case(
+            "fixed_table_qa",
+            "quality_failed",
+            &refused.failed_rules,
+            &refused.failure_taxonomy,
+            None,
+        );
+        assert!(refusal_categories.contains(&"refusal".to_string()));
+        assert!(refusal_categories.contains(&"factual_table".to_string()));
+
+        let timeout_rule = vec!["timeout".to_string()];
+        let timeout_categories = failure_categories_for_case(
+            "synthetic_extraction",
+            "timeout",
+            &timeout_rule,
+            &timeout_rule,
+            Some("exact_match"),
+        );
+        assert!(timeout_categories.contains(&"timeout".to_string()));
+        assert!(timeout_categories.contains(&"extraction".to_string()));
+
+        let fields = failure_category_fields(&timeout_categories);
+        assert_eq!(fields["timeout"], true);
+        assert_eq!(fields["extraction"], true);
+        assert_eq!(fields["schema"], false);
+    }
+
+    #[test]
     fn slm_eval_scoring_supports_numeric_tolerance() {
         let scoring = AnswerScoring {
             expected_number: Some(std::f64::consts::PI),
@@ -3270,6 +3547,9 @@ mod tests {
         assert_eq!(summary["failure_taxonomy"]["punctuation_casing_normalization"], 1);
         assert_eq!(summary["failure_taxonomy"]["fenced_json"], 1);
         assert_eq!(summary["failure_taxonomy"]["format_only"], 1);
+        assert_eq!(summary["failure_categories"]["normalization"], 1);
+        assert_eq!(summary["failure_categories"]["schema"], 1);
+        assert_eq!(summary["failure_categories"]["formatting"], 1);
     }
 
     #[test]
@@ -3336,6 +3616,8 @@ mod tests {
                 "status": "timeout",
                 "quality": {
                     "failure_taxonomy": ["timeout"],
+                    "failure_category_labels": ["timeout"],
+                    "failure_categories": { "timeout": true },
                     "scoring": {
                         "kind": "exact_match",
                         "passed": null,
@@ -3348,10 +3630,14 @@ mod tests {
                 "status": "quality_failed",
                 "quality": {
                     "failure_taxonomy": ["format_only"],
+                    "failure_category_labels": ["formatting", "schema"],
+                    "failure_categories": { "formatting": true, "schema": true },
                     "scoring": {
                         "kind": "json_schema",
                         "passed": false,
-                        "failure_taxonomy": ["fenced_json"]
+                        "failure_taxonomy": ["fenced_json"],
+                        "failure_category_labels": ["formatting", "schema"],
+                        "failure_categories": { "formatting": true, "schema": true }
                     }
                 }
             }),
@@ -3378,6 +3664,8 @@ mod tests {
         assert_eq!(summary["format_constrained_json"]["failed"], 1);
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["fenced_json"], 1);
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["format_only"], 1);
+        assert_eq!(summary["format_constrained_json"]["failure_categories"]["formatting"], 1);
+        assert_eq!(summary["format_constrained_json"]["failure_categories"]["schema"], 1);
         assert_eq!(summary["numeric_tolerance"]["failed"], 1);
         assert_eq!(summary["numeric_tolerance"]["failure_taxonomy"]["answer_content"], 1);
     }
