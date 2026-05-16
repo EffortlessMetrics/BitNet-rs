@@ -5136,6 +5136,8 @@ fn compare_reference_to_rust_with_records(
         layer_attention_output_history_boundary_delta(reference_records, rust_record_list, 0);
     report["attention_score_raw_history_delta"] =
         attention_score_raw_history_delta(reference_records, rust_records);
+    report["attention_score_raw_history_live_tail_delta"] =
+        attention_score_raw_history_live_tail_delta(reference_records, rust_records);
     report["attention_probability_history_delta"] =
         attention_probability_history_delta(reference_records, rust_records);
     report["attention_value_mix_head_history_delta"] =
@@ -5605,6 +5607,50 @@ fn dim_major_history_record_delta(
         }
         _ => compare_vectors(&reference.first_values, &rust.first_values),
     }
+}
+
+fn rust_dim_major_shape_counts(record: &RustTraceRecord) -> Option<(usize, usize)> {
+    Some((
+        record.shape.first().copied().filter(|dim| *dim > 0)?,
+        record.shape.get(1).copied().filter(|dim| *dim > 0)?,
+    ))
+}
+
+fn dim_major_rect_values(
+    values: &[f32],
+    source_dim_count: usize,
+    source_token_count: usize,
+    dim_count: usize,
+    token_count: usize,
+) -> Vec<f32> {
+    let mut out = Vec::with_capacity(dim_count.saturating_mul(token_count));
+    for dim in 0..dim_count.min(source_dim_count) {
+        for token in 0..token_count.min(source_token_count) {
+            let index = dim * source_token_count + token;
+            if let Some(value) = values.get(index) {
+                out.push(*value);
+            }
+        }
+    }
+    out
+}
+
+fn dim_major_tail_values(
+    values: &[f32],
+    source_dim_count: usize,
+    source_token_count: usize,
+    start_dim: usize,
+) -> Vec<f32> {
+    let mut out = Vec::new();
+    for dim in start_dim.min(source_dim_count)..source_dim_count {
+        for token in 0..source_token_count {
+            let index = dim * source_token_count + token;
+            if let Some(value) = values.get(index) {
+                out.push(*value);
+            }
+        }
+    }
+    out
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -9318,6 +9364,203 @@ fn attention_score_raw_history_delta(
         "Raw attention score full-history deltas are diagnostic-only evidence for locating score-history drift before softmax; they do not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
         "key_token_major_query_token_minor",
     )
+}
+
+fn attention_score_raw_history_live_tail_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if !record.stage.ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if !record.stage.as_deref().unwrap_or("").ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_rust_head_count = 0usize;
+    let mut live_material_mismatch_count = 0usize;
+    let mut reference_padded_tail_nonzero_head_count = 0usize;
+    let mut first_live_material_head = Value::Null;
+    let mut first_reference_padded_tail_nonzero_head = Value::Null;
+    let mut max_live_abs_delta = 0.0f64;
+    let mut max_live_rms_delta = 0.0f64;
+    let mut max_reference_padded_tail_abs = 0.0f64;
+
+    for (&head, reference) in &reference_heads {
+        let rust = rust_heads.get(&head).copied();
+        if rust.is_none() {
+            missing_rust_head_count += 1;
+        }
+
+        let mut status = if rust.is_some() { "live_summary_match" } else { "missing_rust_head" };
+        let mut live_delta = Value::Null;
+        let mut live_material_mismatch = false;
+        let mut row_scope = Value::Null;
+        let mut tail = Value::Null;
+
+        if let Some(rust) = rust {
+            compared_head_count += 1;
+            match (
+                dim_major_dim_count(reference),
+                dim_major_token_count(reference),
+                rust_dim_major_shape_counts(rust),
+            ) {
+                (
+                    Ok(reference_dim_count),
+                    Ok(reference_token_count),
+                    Some((rust_dim_count, rust_token_count)),
+                ) => {
+                    let live_dim_count = reference_dim_count.min(rust_dim_count);
+                    let live_token_count = reference_token_count.min(rust_token_count);
+                    let reference_live_values = dim_major_rect_values(
+                        &reference.first_values,
+                        reference_dim_count,
+                        reference_token_count,
+                        live_dim_count,
+                        live_token_count,
+                    );
+                    let rust_live_values = dim_major_rect_values(
+                        &rust.first_values,
+                        rust_dim_count,
+                        rust_token_count,
+                        live_dim_count,
+                        live_token_count,
+                    );
+                    live_delta = dim_major_token_value_delta(
+                        &reference_live_values,
+                        &rust_live_values,
+                        live_dim_count,
+                        live_token_count,
+                    );
+                    live_material_mismatch = delta_has_material_numeric_delta(&live_delta);
+                    max_live_abs_delta =
+                        max_live_abs_delta.max(delta_metric(&live_delta, "/max_abs_delta"));
+                    max_live_rms_delta =
+                        max_live_rms_delta.max(delta_metric(&live_delta, "/rms_abs_delta"));
+
+                    let reference_tail_values = dim_major_tail_values(
+                        &reference.first_values,
+                        reference_dim_count,
+                        reference_token_count,
+                        live_dim_count,
+                    );
+                    let reference_padded_tail_nonzero_count =
+                        reference_tail_values.iter().filter(|value| value.abs() > 0.0).count();
+                    let reference_padded_tail_max_abs = reference_tail_values
+                        .iter()
+                        .map(|value| value.abs() as f64)
+                        .fold(0.0f64, f64::max);
+                    max_reference_padded_tail_abs =
+                        max_reference_padded_tail_abs.max(reference_padded_tail_max_abs);
+
+                    if live_material_mismatch {
+                        status = "live_material_mismatch";
+                        live_material_mismatch_count += 1;
+                    } else if reference_padded_tail_nonzero_count > 0 {
+                        status = "reference_padded_tail_nonzero";
+                    }
+                    if reference_padded_tail_nonzero_count > 0 {
+                        reference_padded_tail_nonzero_head_count += 1;
+                    }
+
+                    let count_scope = if reference_dim_count > rust_dim_count {
+                        "reference_padded_tail_omitted_by_rust"
+                    } else if reference_dim_count < rust_dim_count {
+                        "rust_has_extra_score_slots"
+                    } else if reference_token_count != rust_token_count {
+                        "token_count_mismatch"
+                    } else {
+                        "same_live_shape"
+                    };
+
+                    row_scope = json!({
+                        "reference_dim_count": reference_dim_count,
+                        "reference_token_count": reference_token_count,
+                        "rust_dim_count": rust_dim_count,
+                        "rust_token_count": rust_token_count,
+                        "live_dim_count": live_dim_count,
+                        "live_token_count": live_token_count,
+                        "count_scope": count_scope,
+                    });
+                    tail = json!({
+                        "reference_padded_tail_count": reference_tail_values.len(),
+                        "reference_padded_tail_nonzero_count": reference_padded_tail_nonzero_count,
+                        "reference_padded_tail_max_abs": reference_padded_tail_max_abs,
+                        "reference_padded_tail_all_zero": reference_padded_tail_nonzero_count == 0,
+                    });
+                }
+                _ => {
+                    status = "shape_unavailable";
+                    row_scope = json!({
+                        "reference_shape": reference.shape,
+                        "rust_shape": rust.shape,
+                    });
+                }
+            }
+        }
+
+        let row = json!({
+            "head": head,
+            "status": status,
+            "reference_stage": format!("kq_head{head}_history_ref_layout"),
+            "rust_stage": format!("attention_scores_raw_head{head}_history_ref_layout"),
+            "reference": reference_record_summary(reference),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "scope": row_scope,
+            "live_delta": live_delta,
+            "reference_padded_tail": tail,
+            "live_material_mismatch": live_material_mismatch,
+        });
+        if live_material_mismatch && first_live_material_head.is_null() {
+            first_live_material_head = row.clone();
+        }
+        if row
+            .pointer("/reference_padded_tail/reference_padded_tail_nonzero_count")
+            .and_then(Value::as_u64)
+            .is_some_and(|count| count > 0)
+            && first_reference_padded_tail_nonzero_head.is_null()
+        {
+            first_reference_padded_tail_nonzero_head = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Raw attention score full-history live/tail deltas separate live-token score drift from reference padded-tail scope; they do not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "reference_stage_prefix": "kq_head",
+        "rust_stage_prefix": "attention_scores_raw_head",
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_rust_head_count": missing_rust_head_count,
+        "live_material_mismatch_count": live_material_mismatch_count,
+        "reference_padded_tail_nonzero_head_count": reference_padded_tail_nonzero_head_count,
+        "max_live_abs_delta": max_live_abs_delta,
+        "max_live_rms_delta": max_live_rms_delta,
+        "max_reference_padded_tail_abs": max_reference_padded_tail_abs,
+        "first_live_material_head": first_live_material_head,
+        "first_reference_padded_tail_nonzero_head": first_reference_padded_tail_nonzero_head,
+        "rows": rows,
+    })
 }
 
 fn attention_probability_history_delta(
@@ -15441,6 +15684,83 @@ mod tests {
             Some(&json!(1))
         );
         assert_eq!(history.pointer("/rows/0/status"), Some(&json!("summary_match")));
+    }
+
+    #[test]
+    fn compare_reports_attention_score_raw_history_live_tail_delta() {
+        let mut reference_head0 = test_reference_trace_record(
+            "kq_head0_history_ref_layout",
+            vec![1.0, 2.0, 3.0, 4.0, 0.0, 0.0],
+        );
+        reference_head0.shape = vec![3, 2, 1, 1];
+        reference_head0.nelements = 6;
+        reference_head0.layer = Some(0);
+        let mut reference_head1 = test_reference_trace_record(
+            "kq_head1_history_ref_layout",
+            vec![5.0, 6.0, 7.0, 8.0, 9.0, 0.0],
+        );
+        reference_head1.shape = vec![3, 2, 1, 1];
+        reference_head1.nelements = 6;
+        reference_head1.layer = Some(0);
+        let reference_records = vec![reference_head0, reference_head1];
+
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                layer: Some(0),
+                name: "t1/blk0/attention_scores_raw_head0_history_ref_layout".to_string(),
+                first_values: vec![1.0, 2.5, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head0_history_ref_layout",
+                    vec![1.0, 2.5, 3.0, 4.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head1_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                layer: Some(0),
+                name: "t1/blk0/attention_scores_raw_head1_history_ref_layout".to_string(),
+                first_values: vec![5.0, 6.0, 7.0, 8.0],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head1_history_ref_layout",
+                    vec![5.0, 6.0, 7.0, 8.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let history = report.pointer("/attention_score_raw_history_live_tail_delta").unwrap();
+
+        assert_eq!(history.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(history.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(history.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(history.pointer("/live_material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(history.pointer("/reference_padded_tail_nonzero_head_count"), Some(&json!(1)));
+        assert_eq!(history.pointer("/first_live_material_head/head"), Some(&json!(0)));
+        assert_eq!(
+            history.pointer("/first_live_material_head/live_delta/first_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            history.pointer("/first_live_material_head/scope/count_scope"),
+            Some(&json!("reference_padded_tail_omitted_by_rust"))
+        );
+        assert_eq!(
+            history.pointer(
+                "/first_reference_padded_tail_nonzero_head/reference_padded_tail/reference_padded_tail_nonzero_count"
+            ),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            history.pointer("/rows/0/reference_padded_tail/reference_padded_tail_all_zero"),
+            Some(&json!(true))
+        );
     }
 
     #[test]
