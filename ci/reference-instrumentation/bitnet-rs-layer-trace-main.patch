@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1204 @@ struct llama_context {
+@@ -3441,6 +3444,1205 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -605,7 +605,8 @@ index 666fcc4d..23ee29ff 100644
 +    const char * bitnet_rs_history_stage = bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer);
 +    const bool bitnet_rs_history_is_requested_layer = bitnet_rs_history_layer == bitnet_rs_requested_history_layer;
 +    const bool bitnet_rs_history_is_attn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_norm") == 0;
-+    const bool bitnet_rs_history_is_attn_norm_input = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer;
++    const bool bitnet_rs_history_is_layer0_attn_norm_input = strcmp(name, "inp_embd") == 0 && bitnet_rs_requested_history_layer == 0;
++    const bool bitnet_rs_history_is_attn_norm_input = bitnet_rs_history_is_layer0_attn_norm_input || (bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer);
 +    const bool bitnet_rs_history_is_vcur = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "Vcur") == 0;
 +    const bool bitnet_rs_history_is_attn_value_mix = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_value_mix") == 0;
 +    const bool bitnet_rs_history_is_attn_sub_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_sub_norm") == 0;

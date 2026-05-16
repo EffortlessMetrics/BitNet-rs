@@ -12794,6 +12794,12 @@ mod tests {
         assert!(patch.contains(
             "strcmp(bitnet_rs_history_stage, \"l_out\") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer"
         ));
+        assert!(patch.contains("bitnet_rs_history_is_layer0_attn_norm_input"));
+        assert!(
+            patch.contains(
+                "strcmp(name, \"inp_embd\") == 0 && bitnet_rs_requested_history_layer == 0"
+            )
+        );
         assert!(!patch.contains(
             "const bool bitnet_rs_history_is_attn_norm = strcmp(name, \"attn_norm-0\") == 0"
         ));
