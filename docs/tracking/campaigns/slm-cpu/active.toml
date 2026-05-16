@@ -597,10 +597,14 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
   "ci/slm-cpu/**",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
   "docs/slm/**",
+  "docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md",
   "docs/tracking/campaigns/slm-cpu/**",
   "docs/tracking/generated/**",
+  "plans/cuda-5070ti-productization/**",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/**",
@@ -1825,5 +1829,50 @@ must_not_claim = [
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-018"
+status = "ready"
+branch = "docs/slm-cpu-018-smollm2-normalization-policy"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-017"]
+acceptance = "Record the governed SmolLM2 360M normalization-policy decision after the SLM-CPU-017 strict CPU preflight blocker. The item must preserve the generic llama strict LayerNorm/RMSNorm gamma guard as fail-closed, define the exact metadata required before any SmolLM2-family exception can be implemented, and commit a machine-readable policy audit. It must not change loader behavior, retry CPU answer sanity, start CUDA planning, or claim CPU answer readiness, throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, broad dense GGUF support, or BitNet QK256 behavior."
+commands = [
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The SmolLM2 360M strict CPU preflight blocker has a governed normalization-policy audit after merge.",
+  "The next SmolLM2 proof must implement exact metadata-scoped loader validation before CPU sanity can be retried.",
+]
+must_not_claim = [
+  "SmolLM2 strict CPU loading is fixed.",
+  "SmolLM2 CPU answer readiness is proven.",
+  "SmolLM2 broad answer quality is proven.",
+  "Sustained 8250U or 9950X3D throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "CUDA planning or CUDA execution is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]

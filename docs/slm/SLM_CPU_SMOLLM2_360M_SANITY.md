@@ -105,8 +105,8 @@ false claim booleans.
 This same-box 9950X3D preflight does not replace the Kaby Lake i5-8250U Qwen3
 Q8_0 appliance profile. The Qwen3 profile remains the established SLM CPU
 baseline. SmolLM2 remains a second-model candidate blocked before CPU answer
-sanity until the strict loader/model-family policy for SmolLM2 normalization
-weights is resolved or a governed per-family exception is recorded.
+sanity until exact metadata-scoped SmolLM2 normalization validation is
+implemented and strict CPU sanity is retried.
 
 ## Claim Boundary
 
