@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T00:52:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-008"
+event = "merged"
+pr = 5007
+head_sha = "1185556444aa569016361ca73d8b16710ddc1fab"
+merge_sha = "c093870e1ec429615f8a02e783f699fa4ababff7"
+actor = "codex"
+
+notes = [
+  "Merged PR #5007, syncing Qwen3 0.6B model coverage and CUDA model-status output to the exact accelerator-ready candidate tier earned by CUDA-MODEL-001 through CUDA-MODEL-007.",
+  "The merged status row records dense_regular_llm_cuda one-token, short-decode, warm-session, and benchmark-review evidence while keeping product CLI readiness false.",
+  "Speedup, server readiness, full CUDA residency, broad dense GGUF readiness, Qwen2.5 proof inheritance, and BitNet packed I2_S/QK256 proof remain false.",
+]
