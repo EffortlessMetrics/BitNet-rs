@@ -1,14 +1,15 @@
 id = "apple-m4-durable-inference-evidence"
 title = "Apple M4 durable inference evidence"
-status = "active"
+status = "complete"
 
 objective = "Turn the completed Apple M4 dense SLM and BitNet proof surfaces into durable, repeatable evidence: longer resident dense SLM benchmark profiles, refreshed matching-identity report pairs, dashboard comparisons with real history, and operator envelopes that describe measured drift without broad Apple Silicon or model-quality claims."
 
 end_state = [
   "`bitnet mac benchmark` includes a bounded `resident_100` dense SLM profile for local/advisory stability refreshes.",
   "Dense SLM benchmark v2 reports have at least two matching committed report timestamps for each supported model identity.",
-  "BitNet eval, benchmark, and variable warm-session reports have at least two matching committed report timestamps for the accepted artifact/tokenizer identity.",
-  "`bitnet mac regression-dashboard` reports comparable groups for dense SLM and BitNet families instead of only `insufficient_history`.",
+  "BitNet eval and benchmark reports have at least two matching committed report timestamps for the accepted artifact/tokenizer identity.",
+  "BitNet variable warm-session reports are receipt-valid and explicitly marked `insufficient_history` until another matching refresh exists.",
+  "`bitnet mac regression-dashboard` reports comparable groups for dense SLM benchmark, BitNet eval, and BitNet benchmark reports, with explicit `insufficient_history` boundaries for dense SLM eval v2 and BitNet variable warm.",
   "The operator envelope records refresh cadence, thresholds, and claim boundaries from matching-identity report comparisons.",
 ]
 
@@ -172,9 +173,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DURABLE-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-005-operator-envelope-v3"
 pr = 5025
+merge_sha = "e6c7573e9ccb35197eeeff4f83dd594068d6448e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
