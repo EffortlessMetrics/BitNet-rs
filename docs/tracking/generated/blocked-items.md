@@ -285,7 +285,7 @@
 | intel-258v-platform | LNL258V-OP-002 | LNL258V-OP-001, LNL258V-REG-001, LNL258V-COMPARE-005, CPU-BITNET-REF-003, CPU-BITNET-PERF-003, CPU-BITNET-EMBD-001 | merged |
 | intel-258v-platform | LNL258V-OP-003 | LNL258V-OP-002, LNL258V-ASK-004, SLM-OV258V-006 | merged |
 | intel-258v-platform | LNL258V-OP-004 | LNL258V-ROUTE-003, LNL258V-OP-003 | merged |
-| intel-258v-platform | LNL258V-BENCH-001 | LNL258V-OP-004, LNL258V-ROUTE-003, LNL258V-QUAL-006 | in_progress |
+| intel-258v-platform | LNL258V-BENCH-001 | LNL258V-OP-004, LNL258V-ROUTE-003, LNL258V-QUAL-006 | pr_open |
 | intel-258v-platform | LNL258V-ASK-003 | LNL258V-ASK-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
