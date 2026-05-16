@@ -1350,6 +1350,25 @@ impl TransformerBlock {
                 "attn_norm",
             )?;
         }
+        #[cfg(feature = "trace")]
+        if self.attention.layer_idx == 0 {
+            let dims = x.dims();
+            if dims.len() == 3 && dims[0] == 1 {
+                let seq_len = dims[1];
+                let hidden = dims[2];
+                let history =
+                    x.reshape(&[seq_len, hidden])?.transpose(0, 1)?.to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!("t{trace_seq}/blk0/attention_v_input_history_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &history,
+                    trace_seq,
+                    Some(0),
+                    "attention_v_input_history_ref_layout",
+                )?;
+            }
+        }
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
