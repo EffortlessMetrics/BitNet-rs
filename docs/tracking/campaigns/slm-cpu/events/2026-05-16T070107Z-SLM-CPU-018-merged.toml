@@ -1,0 +1,27 @@
+timestamp = "2026-05-16T07:01:07Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-018"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5067
+branch = "docs/slm-cpu-018-smollm2-normalization-policy-linear"
+head_sha = "04de329278126312b13eca85d8d59a8ad8e43a9c"
+merge_sha = "1f9dd9cb1d0d76e40077ffd82e98715e15c7ce71"
+
+summary = "Merged #5067 with the governed SmolLM2 360M normalization-policy audit for SLM-CPU-018."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5067",
+  "docs/slm/SLM_CPU_SMOLLM2_NORMALIZATION_POLICY.md",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The PR records that generic llama strict LayerNorm/RMSNorm gamma validation remains fail-closed.",
+  "Any SmolLM2 loader exception must be exact-metadata and model-family scoped before CPU sanity is retried.",
+  "The PR did not change loader behavior, retry CPU answer sanity, or start CUDA planning.",
+  "No CPU answer, CUDA, speed, server, broad dense GGUF, or BitNet QK256 claim is made.",
+]

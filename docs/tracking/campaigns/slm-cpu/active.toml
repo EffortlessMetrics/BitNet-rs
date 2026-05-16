@@ -1883,8 +1883,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-018"
-status = "pr_open"
+status = "merged"
 pr = 5067
+merge_sha = "1f9dd9cb1d0d76e40077ffd82e98715e15c7ce71"
 head_sha = "1198f6407fedee83db0c5a4ce62e543c7b858601"
 branch = "docs/slm-cpu-018-smollm2-normalization-policy-linear"
 stackable = false
