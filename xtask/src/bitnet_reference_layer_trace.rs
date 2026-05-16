@@ -9062,9 +9062,15 @@ fn layer_attention_norm_replay_for_value_projection_with_weight(
     let mut rust_replay_matches_rust_count = 0usize;
     let mut reference_rust_target_delta_count = 0usize;
     let mut output_f16_bucket_mismatch_count = 0usize;
+    let mut accumulation_probe_count = 0usize;
+    let mut reference_prefers_f64_count = 0usize;
+    let mut rust_prefers_f32_count = 0usize;
+    let mut accumulation_rule_split_count = 0usize;
+    let mut f32_f64_f16_bucket_mismatch_count = 0usize;
     let mut max_output_abs_delta = 0.0f64;
     let mut max_reference_replay_delta = 0.0f64;
     let mut max_rust_replay_delta = 0.0f64;
+    let mut max_f32_f64_abs_delta = 0.0f64;
     let mut first_material_row = Value::Null;
 
     for source_row in &source_rows {
@@ -9182,6 +9188,63 @@ fn layer_attention_norm_replay_for_value_projection_with_weight(
                 rust_replay_matches_rust_count += 1;
             }
         }
+        let accumulation_rule_probe = match (
+            loaded_weight,
+            reference_input_token.as_ref(),
+            rust_input_token.as_ref(),
+            reference_output_token.as_ref(),
+            rust_output_token.as_ref(),
+        ) {
+            (
+                Some(weight),
+                Some(reference_input_token),
+                Some(rust_input_token),
+                Some(reference_output_token),
+                Some(rust_output_token),
+            ) => {
+                match attention_norm_accumulation_rule_probe(
+                    weight,
+                    reference_input_token,
+                    rust_input_token,
+                    reference_output_token,
+                    rust_output_token,
+                ) {
+                    Ok(probe) => {
+                        accumulation_probe_count += 1;
+                        if probe
+                            .pointer("/reference_input/reference_prefers_f64")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(false)
+                        {
+                            reference_prefers_f64_count += 1;
+                        }
+                        if probe
+                            .pointer("/rust_input/rust_prefers_f32")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(false)
+                        {
+                            rust_prefers_f32_count += 1;
+                        }
+                        if probe.pointer("/rule_split").and_then(Value::as_bool).unwrap_or(false) {
+                            accumulation_rule_split_count += 1;
+                        }
+                        f32_f64_f16_bucket_mismatch_count += probe
+                            .pointer("/reference_input/f32_vs_f64_f16/f16_bucket_mismatch_count")
+                            .and_then(Value::as_u64)
+                            .and_then(|count| usize::try_from(count).ok())
+                            .unwrap_or(0);
+                        max_f32_f64_abs_delta = max_f32_f64_abs_delta
+                            .max(delta_metric(&probe, "/reference_input/f32_vs_f64/max_abs_delta"));
+                        probe
+                    }
+                    Err(err) => json!({
+                        "status": "accumulation_rule_probe_error",
+                        "error": err.to_string(),
+                    }),
+                }
+            }
+            _ => Value::Null,
+        };
 
         let row = json!({
             "query_token": source_row.query_token,
@@ -9197,6 +9260,7 @@ fn layer_attention_norm_replay_for_value_projection_with_weight(
             "attention_norm_input_clean_output_drift": !input_has_any_delta && output_has_any_delta,
             "reference_input_replay": reference_input_replay,
             "rust_input_replay": rust_input_replay,
+            "accumulation_rule_probe": accumulation_rule_probe,
             "reference_best_replay_delta": reference_best_delta,
             "rust_best_replay_delta": rust_best_delta,
             "replay_error": row_replay_error,
@@ -9256,6 +9320,13 @@ fn layer_attention_norm_replay_for_value_projection_with_weight(
     if replayed_source_count > rust_replay_matches_rust_count {
         blocked_reasons.push("rust_attention_norm_replay_delta_present".to_string());
     }
+    if accumulation_rule_split_count > 0 {
+        blocked_reasons.push("attention_norm_accumulation_rule_split_present".to_string());
+    }
+    if f32_f64_f16_bucket_mismatch_count > 0 {
+        blocked_reasons
+            .push("attention_norm_f32_f64_accumulation_crosses_f16_bucket_boundary".to_string());
+    }
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
@@ -9272,6 +9343,8 @@ fn layer_attention_norm_replay_for_value_projection_with_weight(
         "compare reference attention RMSNorm runtime arithmetic against the replay variants because replay does not reproduce reference output history"
     } else if replayed_source_count > rust_replay_matches_rust_count {
         "compare Rust attention RMSNorm runtime arithmetic against the replay variants because replay does not reproduce Rust output history"
+    } else if accumulation_rule_split_count > 0 {
+        "pin whether Rust should use f64 attention RMSNorm accumulation or whether the reference trace serializes a f64 result before changing runtime math"
     } else if input_clean_output_drift_count > 0 {
         "attention RMSNorm replay explains the source-token output drift; inspect runtime accumulation or serialization rule before changing model math"
     } else {
@@ -9307,16 +9380,83 @@ fn layer_attention_norm_replay_for_value_projection_with_weight(
         "input_clean_output_drift_count": input_clean_output_drift_count,
         "reference_rust_target_delta_count": reference_rust_target_delta_count,
         "output_f16_bucket_mismatch_count": output_f16_bucket_mismatch_count,
+        "accumulation_probe_count": accumulation_probe_count,
+        "reference_prefers_f64_count": reference_prefers_f64_count,
+        "rust_prefers_f32_count": rust_prefers_f32_count,
+        "accumulation_rule_split_count": accumulation_rule_split_count,
+        "f32_f64_f16_bucket_mismatch_count": f32_f64_f16_bucket_mismatch_count,
         "reference_replay_matches_reference_count": reference_replay_matches_reference_count,
         "rust_replay_matches_rust_count": rust_replay_matches_rust_count,
         "max_output_abs_delta": max_output_abs_delta,
         "max_reference_replay_delta": max_reference_replay_delta,
         "max_rust_replay_delta": max_rust_replay_delta,
+        "max_f32_f64_abs_delta": max_f32_f64_abs_delta,
         "first_material_row": first_material_row,
         "rows": rows,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
     })
+}
+
+fn attention_norm_accumulation_rule_probe(
+    weight: &LoadedRmsNormWeight,
+    reference_input: &[f32],
+    rust_input: &[f32],
+    reference_target: &[f32],
+    rust_target: &[f32],
+) -> Result<Value> {
+    let reference_f32 = replay_rmsnorm(
+        reference_input,
+        &weight.values,
+        weight.eps,
+        RmsNormAccumulation::F32Sequential,
+    )?;
+    let reference_f64 = replay_rmsnorm(
+        reference_input,
+        &weight.values,
+        weight.eps,
+        RmsNormAccumulation::F64Sequential,
+    )?;
+    let rust_f32 =
+        replay_rmsnorm(rust_input, &weight.values, weight.eps, RmsNormAccumulation::F32Sequential)?;
+    let rust_f64 =
+        replay_rmsnorm(rust_input, &weight.values, weight.eps, RmsNormAccumulation::F64Sequential)?;
+
+    let reference_f32_vs_reference = compare_vectors(&reference_f32, reference_target);
+    let reference_f64_vs_reference = compare_vectors(&reference_f64, reference_target);
+    let rust_f32_vs_rust = compare_vectors(&rust_f32, rust_target);
+    let rust_f64_vs_rust = compare_vectors(&rust_f64, rust_target);
+    let reference_prefers_f64 = delta_metric(&reference_f64_vs_reference, "/max_abs_delta")
+        < delta_metric(&reference_f32_vs_reference, "/max_abs_delta");
+    let rust_prefers_f32 = delta_metric(&rust_f32_vs_rust, "/max_abs_delta")
+        < delta_metric(&rust_f64_vs_rust, "/max_abs_delta");
+
+    Ok(json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Attention RMSNorm accumulation-rule probe is diagnostic-only evidence for whether source-token output drift follows f32 versus f64 sequential accumulation; it does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "eps": weight.eps,
+        "eps_source": weight.eps_source,
+        "reference_input": {
+            "f32_output": row_report(&reference_f32),
+            "f64_output": row_report(&reference_f64),
+            "f32_vs_reference_target": reference_f32_vs_reference,
+            "f64_vs_reference_target": reference_f64_vs_reference,
+            "f32_vs_f64": compare_vectors(&reference_f32, &reference_f64),
+            "f32_vs_f64_f16": f16_bucket_delta(&reference_f32, &reference_f64),
+            "reference_prefers_f64": reference_prefers_f64,
+        },
+        "rust_input": {
+            "f32_output": row_report(&rust_f32),
+            "f64_output": row_report(&rust_f64),
+            "f32_vs_rust_target": rust_f32_vs_rust,
+            "f64_vs_rust_target": rust_f64_vs_rust,
+            "f32_vs_f64": compare_vectors(&rust_f32, &rust_f64),
+            "f32_vs_f64_f16": f16_bucket_delta(&rust_f32, &rust_f64),
+            "rust_prefers_f32": rust_prefers_f32,
+        },
+        "rule_split": reference_prefers_f64 && rust_prefers_f32,
+    }))
 }
 
 #[derive(Debug, Clone)]
@@ -21443,6 +21583,7 @@ mod tests {
         assert_eq!(replay.pointer("/replayed_source_count"), Some(&json!(1)));
         assert_eq!(replay.pointer("/input_clean_output_drift_count"), Some(&json!(1)));
         assert_eq!(replay.pointer("/output_f16_bucket_mismatch_count"), Some(&json!(1)));
+        assert_eq!(replay.pointer("/accumulation_probe_count"), Some(&json!(1)));
         assert_eq!(replay.pointer("/reference_replay_matches_reference_count"), Some(&json!(1)));
         assert_eq!(replay.pointer("/rust_replay_matches_rust_count"), Some(&json!(1)));
         assert_eq!(replay.pointer("/first_material_row/source_token"), Some(&json!(2)));
@@ -21450,6 +21591,10 @@ mod tests {
             replay
                 .pointer("/first_material_row/reference_input_replay/best_vs_reference_target/id"),
             Some(&json!("unit_test_eps_f32_sequential_f32"))
+        );
+        assert_eq!(
+            replay.pointer("/first_material_row/accumulation_rule_probe/diagnostic_only"),
+            Some(&json!(true))
         );
         let reasons = replay.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
         assert!(reasons.contains(&json!("attention_norm_output_history_delta_present")));
@@ -21481,6 +21626,47 @@ mod tests {
         assert!(reasons.contains(&json!("attention_norm_weight_unavailable_for_replay")));
         assert!(reasons.contains(&json!("reference_attention_norm_input_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_norm_output_history_missing")));
+    }
+
+    #[test]
+    fn attention_norm_accumulation_rule_probe_reports_f32_f64_split() {
+        let input = (0..128)
+            .map(|index| if index == 0 { 4096.0 } else { 1.0 + index as f32 * 0.0001 })
+            .collect::<Vec<_>>();
+        let weight = LoadedRmsNormWeight {
+            model_report: json!({"path": "unit-test.gguf", "exists": true}),
+            weight_report: json!({"name": "blk.0.attn_norm.weight", "element_count": 128}),
+            values: vec![1.0; 128],
+            eps: 0.0,
+            eps_source: "unit_test_eps".to_string(),
+        };
+        let reference_target =
+            replay_rmsnorm(&input, &weight.values, weight.eps, RmsNormAccumulation::F64Sequential)
+                .unwrap();
+        let rust_target =
+            replay_rmsnorm(&input, &weight.values, weight.eps, RmsNormAccumulation::F32Sequential)
+                .unwrap();
+
+        let probe = attention_norm_accumulation_rule_probe(
+            &weight,
+            &input,
+            &input,
+            &reference_target,
+            &rust_target,
+        )
+        .unwrap();
+
+        assert_eq!(probe.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(probe.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(probe.pointer("/reference_input/reference_prefers_f64"), Some(&json!(true)));
+        assert_eq!(probe.pointer("/rust_input/rust_prefers_f32"), Some(&json!(true)));
+        assert_eq!(probe.pointer("/rule_split"), Some(&json!(true)));
+        assert!(
+            probe
+                .pointer("/reference_input/f32_vs_f64/max_abs_delta")
+                .and_then(Value::as_f64)
+                .is_some_and(|delta| delta > 0.0)
+        );
     }
 
     #[test]
