@@ -1,0 +1,26 @@
+timestamp = "2026-05-16T14:46:07Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5124
+branch = "codex/lunar-lake/LNL258V-QUAL-005-qwen-gate-normalization"
+head_sha = "785c69467a26f8372dbf4e47b1f8a9436b26b22b"
+merge_sha = "2f54a87fe84ea428bac6e111c771bf2b8220e45a"
+summary = "Merged LNL258V-QUAL-005 to normalize dense Qwen corpus-v2 assistant-prefix gate/scoring evidence and refresh Lunar Lake quality/profile regression artifacts."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The refreshed Qwen CPU corpus-v2 receipt records 7 of 12 bounded cases passing with fallback_used=false and selected_backend=cpu-rust.",
+  "The remaining affected profiles stay blocked for answer-content, gate, or output-budget failures; no GPU/NPU route was promoted.",
+  "No broad dense SLM quality, speedup, Arc/NPU execution, or BitNet QK256/I2_S behavior-change claim is made.",
+]
