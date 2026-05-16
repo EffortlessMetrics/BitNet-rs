@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T17:16:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5160
+branch = "codex/lunar-lake/LNL258V-OP-004-ledger-auto-route"
+head_sha = "f3d781c26fc78e49659bf1d752cb5984f3782d01"
+merge_sha = "7b0d0ffe22818c2602ae1090724476d41ac7788c"
+summary = "Marked LNL258V-OP-004 merged after ledger-driven Lunar Lake auto ask routing landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5160",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-math-brief.json",
+]
+
+notes = [
+  "Lunar Lake ask can resolve --route auto or --device auto through the route-promotion ledger for a requested workload profile.",
+  "The ask_normal auto route selects dense_slm_default_cpu with fallback_used=false and records why GPU/NPU candidates were not selected.",
+  "No OpenVINO GPU/NPU promotion, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or BitNet QK256/I2_S behavior change is claimed.",
+]
