@@ -1069,7 +1069,6 @@ id = "SLM-CPU-017"
 status = "merged"
 pr = 5041
 branch = "codex/slm-cpu-017-second-model-sanity"
-head_sha = "072d67bc7f76423a2db6ffdfd632647c46299135"
 merge_sha = "8f05904886c6124d3355f360d0f79a7d5237a68b"
 stackable = false
 review_mode = "codex_premerge"
@@ -1107,6 +1106,55 @@ may_claim = [
 ]
 must_not_claim = [
   "Broad answer quality is proven for the second model.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-017A"
+status = "pr_open"
+pr = 5060
+branch = "codex/slm-cpu-017a-qwen25-second-model-sanity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-017"]
+acceptance = "Record a positive bounded second-model sanity receipt for qwen2.5-0.5b-instruct-q8_0 after SLM-CPU-017's SmolLM2 strict preflight blocker slice. The slice must verify the exact Qwen2.5 Q8_0 GGUF artifact by pinned SHA256, run the smallest strict CPU answer-corpus case supported by the current command surface, and record prompt IDs, generated IDs, decoded text, selected backend/kernel, loader mode, tokenizer source/strictness, logits boundary evidence, and fallback_used=false. It must preserve the Qwen3 Q8_0 appliance profile as the Kaby baseline and must not claim broad answer quality, sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir target\\slm-cpu-017\\cache --json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci\\quality\\slm-second-model-sanity-corpus.yaml --model target\\slm-cpu-017\\cache\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --model-id qwen2.5-0.5b-instruct-q8_0 --device cpu --threads 4 --case-id math_2_plus_2_brief --dump-logit-steps 1 --logits-topk 5 --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-16\\qwen25-second-model-sanity.json",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "qwen2.5-0.5b-instruct-q8_0 has bounded strict CPU second-model sanity evidence on the i5-8250U path.",
+  "The Qwen3-0.6B Q8_0 appliance profile remains the established Kaby Lake baseline.",
+]
+must_not_claim = [
+  "Broad answer quality is proven for Qwen2.5.",
   "Sustained 8250U throughput is proven.",
   "Q4/Q5 quant expansion is in scope.",
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
