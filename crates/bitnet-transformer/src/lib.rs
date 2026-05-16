@@ -112,6 +112,10 @@ fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
     Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
 }
 
+fn attention_score_key_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F32)?)
+}
+
 fn qk256_scale_for(
     raw_tensors: &std::collections::HashMap<String, Tensor>,
     qk256_key: &str,
@@ -702,7 +706,7 @@ impl MultiHeadAttention {
         }
 
         let q_for_scores = attention_f16_dot_input(&q)?;
-        let k_for_scores = attention_f16_dot_input(&k_expanded)?;
+        let k_for_scores = attention_score_key_input(&k_expanded)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
             trace_layer0_tensor(
@@ -2068,6 +2072,36 @@ mod tests {
         let values = output.flatten_all()?.to_vec1::<f32>()?;
 
         assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_key_input_preserves_f32_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_score_key_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0003, -2.0007, 3.1259, -4.2509]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_qk_inputs_match_reference_precision_contract() -> Result<()> {
+        let device = Device::Cpu;
+        let query =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+        let key = Tensor::from_slice(&[5.0003f32, 6.0007, -7.1259, 8.2509], (1, 1, 1, 4), &device)?;
+
+        let q_values = attention_f16_dot_input(&query)?.flatten_all()?.to_vec1::<f32>()?;
+        let k_values = attention_score_key_input(&key)?.flatten_all()?.to_vec1::<f32>()?;
+        let score = q_values.iter().zip(k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
+
+        assert_eq!(q_values, vec![1.0, -2.0, 3.125, -4.25]);
+        assert_eq!(k_values, vec![5.0003, 6.0007, -7.1259, 8.2509]);
+        assert_eq!(score, -64.33586);
         Ok(())
     }
 
