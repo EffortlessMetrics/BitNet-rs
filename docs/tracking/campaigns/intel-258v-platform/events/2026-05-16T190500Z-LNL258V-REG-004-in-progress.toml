@@ -1,0 +1,19 @@
+timestamp = "2026-05-16T19:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-004"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-REG-004-benchmark-regression"
+summary = "Started LNL258V-REG-004 to wire cold/warm benchmark qualification into strict Lunar Lake regression v2."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+]
+
+notes = [
+  "The work item makes strict regression index answer corpus v2, route-profile comparison, and cold/warm timing qualification evidence.",
+  "No new inference, route promotion, speedup, Arc/NPU acceleration, or BitNet QK256/I2_S behavior change is in scope.",
+]
