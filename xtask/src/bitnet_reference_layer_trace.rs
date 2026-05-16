@@ -155,6 +155,7 @@ struct LayerTraceRunArgs {
 struct LayerTraceCompareArgs {
     reference: PathBuf,
     cpu_trace_dir: PathBuf,
+    cpu_f64_trace_dir: Option<PathBuf>,
     a770_trace_dir: Option<PathBuf>,
     output: Option<PathBuf>,
     format: String,
@@ -549,7 +550,7 @@ fn print_run_help() {
 
 fn print_compare_help() {
     println!(
-        "Compare a BitNet reference layer trace receipt against Rust CPU/A770 trace directories\n\nUsage: xtask.exe bitnet-reference-layer-trace-compare [OPTIONS]\n\nOptions:\n      --reference <PATH>       Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output\n      --a770-trace-dir <PATH>  Optional strict A770 BITNET_TRACE_DIR output\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-compare.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Compare a BitNet reference layer trace receipt against Rust CPU/A770 trace directories\n\nUsage: xtask.exe bitnet-reference-layer-trace-compare [OPTIONS]\n\nOptions:\n      --reference <PATH>           Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>       Rust CPU BITNET_TRACE_DIR output\n      --cpu-f64-trace-dir <PATH>   Optional Rust CPU trace captured with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --a770-trace-dir <PATH>      Optional strict A770 BITNET_TRACE_DIR output\n      --output <PATH>              Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-compare.json]\n      --format <FORMAT>            Output format: human or json [default: human]\n  -h, --help                       Print help"
     );
 }
 
@@ -696,6 +697,7 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
     }
     let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
     let mut cpu_trace_dir = None::<PathBuf>;
+    let mut cpu_f64_trace_dir = None::<PathBuf>;
     let mut a770_trace_dir = None::<PathBuf>;
     let mut output = Some(PathBuf::from(DEFAULT_COMPARE_OUTPUT));
     let mut format = "human".to_string();
@@ -711,6 +713,7 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
         match key {
             "--reference" => reference = PathBuf::from(value()?),
             "--cpu-trace-dir" => cpu_trace_dir = Some(PathBuf::from(value()?)),
+            "--cpu-f64-trace-dir" => cpu_f64_trace_dir = Some(PathBuf::from(value()?)),
             "--a770-trace-dir" => a770_trace_dir = Some(PathBuf::from(value()?)),
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
@@ -718,7 +721,14 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
         }
     }
     let cpu_trace_dir = cpu_trace_dir.context("--cpu-trace-dir is required")?;
-    Ok(LayerTraceCompareArgs { reference, cpu_trace_dir, a770_trace_dir, output, format })
+    Ok(LayerTraceCompareArgs {
+        reference,
+        cpu_trace_dir,
+        cpu_f64_trace_dir,
+        a770_trace_dir,
+        output,
+        format,
+    })
 }
 
 fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs> {
@@ -1279,6 +1289,10 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
 fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> {
     let reference_path = normalize_path(&args.reference)?;
     let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let cpu_f64_trace_dir = match &args.cpu_f64_trace_dir {
+        Some(path) => Some(normalize_path(path)?),
+        None => None,
+    };
     let a770_trace_dir = match &args.a770_trace_dir {
         Some(path) => Some(normalize_path(path)?),
         None => None,
@@ -1294,6 +1308,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
     let model_path = normalize_path(&model_path)?;
     let cpu_record_list = read_rust_trace_records(&cpu_trace_dir)?;
     let cpu_records = rust_trace_stage_map(cpu_record_list.clone());
+    let cpu_f64_records = match &cpu_f64_trace_dir {
+        Some(dir) => Some(rust_trace_stage_map(read_rust_trace_records(dir)?)),
+        None => None,
+    };
     let (a770_record_list, a770_records) = match &a770_trace_dir {
         Some(dir) => {
             let records = read_rust_trace_records(dir)?;
@@ -1304,13 +1322,27 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
     };
 
     let stage_mapping = reference_stage_mapping();
-    let cpu_comparison = compare_reference_to_rust_with_records_with_model(
+    let mut cpu_comparison = compare_reference_to_rust_with_records_with_model(
         &reference_records,
         &cpu_records,
         &cpu_record_list,
         &stage_mapping,
         Some(&model_path),
     );
+    if let Some(cpu_f64_records) = &cpu_f64_records {
+        let frontier = cpu_comparison
+            .pointer("/layer_0_prefix_drift_frontier")
+            .cloned()
+            .unwrap_or(Value::Null);
+        cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] =
+            layer_attention_norm_f64_capture_for_value_projection(
+                &reference_records,
+                &cpu_records,
+                cpu_f64_records,
+                &frontier,
+                0,
+            );
+    }
     let a770_comparison =
         a770_records.as_ref().zip(a770_record_list.as_ref()).map(|(records, record_list)| {
             compare_reference_to_rust_with_records_with_model(
@@ -1360,6 +1392,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
         "inputs": {
             "reference": path_to_string(&reference_path),
             "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "cpu_f64_trace_dir": cpu_f64_trace_dir.as_ref().map(|path| path_to_string(path)),
             "a770_trace_dir": a770_trace_dir.as_ref().map(|path| path_to_string(path)),
             "model": path_to_string(&model_path),
         },
@@ -9555,6 +9588,229 @@ fn value_projection_output_bucket_source_rows(
         }
     }
     rows
+}
+
+fn layer_attention_norm_f64_capture_for_value_projection(
+    reference_records: &[ReferenceTraceRecord],
+    baseline_rust_records: &BTreeMap<String, RustTraceRecord>,
+    f64_rust_records: &BTreeMap<String, RustTraceRecord>,
+    frontier: &Value,
+    layer: usize,
+) -> Value {
+    let baseline_source_rows = value_projection_output_bucket_source_rows(
+        reference_records,
+        baseline_rust_records,
+        frontier,
+        layer,
+    );
+    let f64_source_rows = value_projection_output_bucket_source_rows(
+        reference_records,
+        f64_rust_records,
+        frontier,
+        layer,
+    );
+    let reference_layer = i64::try_from(layer).ok();
+    let rust_layer = isize::try_from(layer).ok();
+    let reference_output = reference_records
+        .iter()
+        .find(|record| {
+            record.layer == reference_layer && record.stage == "attn_norm_history_ref_layout"
+        })
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let baseline_output = baseline_rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| rust_layer.is_none_or(|layer| record.layer == Some(layer)))
+        .filter(|record| !record.first_values.is_empty());
+    let f64_output = f64_rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| rust_layer.is_none_or(|layer| record.layer == Some(layer)))
+        .filter(|record| !record.first_values.is_empty());
+
+    let mut rows = Vec::<Value>::new();
+    let mut missing_input_count = 0usize;
+    let mut compared_source_count = 0usize;
+    let mut baseline_output_delta_count = 0usize;
+    let mut f64_output_delta_count = 0usize;
+    let mut baseline_output_f16_bucket_mismatch_count = 0usize;
+    let mut f64_output_f16_bucket_mismatch_count = 0usize;
+    let mut cleared_source_count = 0usize;
+    let mut max_baseline_output_abs_delta = 0.0f64;
+    let mut max_f64_output_abs_delta = 0.0f64;
+    let mut first_uncleared_row = Value::Null;
+
+    for source_row in &baseline_source_rows {
+        let Some(source_token) = source_row.source_token else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "query_token": source_row.query_token,
+                "labels": source_row.labels,
+                "kv_head": source_row.kv_head,
+                "status": "value_projection_source_token_missing",
+            }));
+            continue;
+        };
+
+        let reference_output_token = reference_output
+            .and_then(|record| reference_dim_major_token(record, source_token).ok());
+        let baseline_output_token =
+            baseline_output.and_then(|record| rust_dim_major_token(record, source_token).ok());
+        let f64_output_token =
+            f64_output.and_then(|record| rust_dim_major_token(record, source_token).ok());
+
+        let baseline_delta = reference_output_token
+            .as_ref()
+            .zip(baseline_output_token.as_ref())
+            .map(|(reference, rust)| compare_vectors(reference, rust))
+            .unwrap_or(Value::Null);
+        let f64_delta = reference_output_token
+            .as_ref()
+            .zip(f64_output_token.as_ref())
+            .map(|(reference, rust)| compare_vectors(reference, rust))
+            .unwrap_or(Value::Null);
+        let baseline_f16_delta = reference_output_token
+            .as_ref()
+            .zip(baseline_output_token.as_ref())
+            .map(|(reference, rust)| f16_bucket_delta(reference, rust))
+            .unwrap_or(Value::Null);
+        let f64_f16_delta = reference_output_token
+            .as_ref()
+            .zip(f64_output_token.as_ref())
+            .map(|(reference, rust)| f16_bucket_delta(reference, rust))
+            .unwrap_or(Value::Null);
+
+        if reference_output_token.is_none()
+            || baseline_output_token.is_none()
+            || f64_output_token.is_none()
+        {
+            missing_input_count += 1;
+        } else {
+            compared_source_count += 1;
+        }
+
+        let baseline_has_delta = delta_has_any_numeric_delta(&baseline_delta);
+        let f64_has_delta = delta_has_any_numeric_delta(&f64_delta);
+        if baseline_has_delta {
+            baseline_output_delta_count += 1;
+        }
+        if f64_has_delta {
+            f64_output_delta_count += 1;
+        }
+        let baseline_f16_mismatches = f16_bucket_mismatch_count(&baseline_f16_delta);
+        let f64_f16_mismatches = f16_bucket_mismatch_count(&f64_f16_delta);
+        baseline_output_f16_bucket_mismatch_count += baseline_f16_mismatches;
+        f64_output_f16_bucket_mismatch_count += f64_f16_mismatches;
+        if baseline_f16_mismatches > 0 && f64_f16_mismatches == 0 {
+            cleared_source_count += 1;
+        }
+        max_baseline_output_abs_delta =
+            max_baseline_output_abs_delta.max(delta_metric(&baseline_delta, "/max_abs_delta"));
+        max_f64_output_abs_delta =
+            max_f64_output_abs_delta.max(delta_metric(&f64_delta, "/max_abs_delta"));
+
+        let row = json!({
+            "query_token": source_row.query_token,
+            "labels": source_row.labels,
+            "kv_head": source_row.kv_head,
+            "source_token": source_token,
+            "source_dim": source_row.source_dim,
+            "status": if f64_f16_mismatches > 0 {
+                "f64_capture_still_differs"
+            } else if f64_has_delta {
+                "f64_capture_clears_f16_bucket_with_residual_numeric_delta"
+            } else {
+                "f64_capture_clears_source_row"
+            },
+            "baseline_value_projection_output_f16_delta": source_row.output_delta,
+            "baseline_attention_norm_output_delta": baseline_delta,
+            "baseline_attention_norm_output_f16_delta": baseline_f16_delta,
+            "f64_attention_norm_output_delta": f64_delta,
+            "f64_attention_norm_output_f16_delta": f64_f16_delta,
+        });
+        if first_uncleared_row.is_null() && f64_f16_mismatches > 0 {
+            first_uncleared_row = row.clone();
+        }
+        rows.push(row);
+    }
+
+    let f64_capture_clears_attention_norm_output_bucket_drift = !baseline_source_rows.is_empty()
+        && compared_source_count == baseline_source_rows.len()
+        && baseline_output_delta_count > 0
+        && baseline_output_f16_bucket_mismatch_count > 0
+        && f64_output_f16_bucket_mismatch_count == 0;
+    let f64_capture_exactly_matches_reference = !baseline_source_rows.is_empty()
+        && compared_source_count == baseline_source_rows.len()
+        && f64_output_delta_count == 0;
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if baseline_source_rows.is_empty() {
+        blocked_reasons.push("baseline_value_projection_output_bucket_sources_missing".to_string());
+    }
+    if reference_output.is_none() {
+        blocked_reasons.push("reference_attention_norm_output_history_missing".to_string());
+    }
+    if baseline_output.is_none() {
+        blocked_reasons.push("baseline_attention_norm_output_history_missing".to_string());
+    }
+    if f64_output.is_none() {
+        blocked_reasons.push("f64_attention_norm_output_history_missing".to_string());
+    }
+    if missing_input_count > 0 {
+        blocked_reasons.push("f64_capture_source_inputs_missing".to_string());
+    }
+    if f64_output_delta_count > 0 {
+        blocked_reasons
+            .push("f64_attention_norm_output_history_residual_numeric_delta_present".to_string());
+    }
+    if f64_output_f16_bucket_mismatch_count > 0 {
+        blocked_reasons
+            .push("f64_attention_norm_output_history_crosses_f16_bucket_boundary".to_string());
+    }
+    if !f64_source_rows.is_empty() {
+        blocked_reasons
+            .push("f64_value_projection_output_bucket_sources_still_present".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if f64_capture_clears_attention_norm_output_bucket_drift {
+        "f64 diagnostic RMSNorm capture clears the baseline attention-norm F16 bucket drift; compare downstream first-token/layer traces before considering a production accumulation-rule change"
+    } else if f64_output_delta_count > 0 || f64_output_f16_bucket_mismatch_count > 0 {
+        "f64 diagnostic RMSNorm capture does not clear the source-token drift; continue localizing attention-norm serialization or downstream value-projection semantics"
+    } else {
+        "capture baseline and f64 attention-norm output histories with matching source coverage before interpreting the accumulation-rule hypothesis"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Attention RMSNorm f64 capture comparison is diagnostic-only evidence for whether BITNET_DIAG_RMSNORM_F64_ACCUM removes the baseline source-token output drift that feeds V projection; it does not promote runtime math changes, reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layer": layer,
+        "baseline_source": "cpu_trace_dir",
+        "f64_source": "cpu_f64_trace_dir",
+        "reference_output_stage": "attn_norm_history_ref_layout",
+        "baseline_output_stage": "attention_v_input_history_ref_layout",
+        "f64_output_stage": "attention_v_input_history_ref_layout",
+        "reference_output_present": reference_output.is_some(),
+        "baseline_output_present": baseline_output.is_some(),
+        "f64_output_present": f64_output.is_some(),
+        "baseline_source_row_count": baseline_source_rows.len(),
+        "f64_source_row_count_on_baseline_frontier": f64_source_rows.len(),
+        "compared_source_count": compared_source_count,
+        "missing_input_count": missing_input_count,
+        "baseline_output_delta_count": baseline_output_delta_count,
+        "f64_output_delta_count": f64_output_delta_count,
+        "baseline_output_f16_bucket_mismatch_count": baseline_output_f16_bucket_mismatch_count,
+        "f64_output_f16_bucket_mismatch_count": f64_output_f16_bucket_mismatch_count,
+        "cleared_source_count": cleared_source_count,
+        "max_baseline_output_abs_delta": max_baseline_output_abs_delta,
+        "max_f64_output_abs_delta": max_f64_output_abs_delta,
+        "f64_capture_clears_attention_norm_output_bucket_drift": f64_capture_clears_attention_norm_output_bucket_drift,
+        "f64_capture_exactly_matches_reference": f64_capture_exactly_matches_reference,
+        "first_uncleared_row": first_uncleared_row,
+        "rows": rows,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
 }
 
 fn prefix_token_relative_position(frontier: &Value, token: usize) -> Value {
@@ -19928,6 +20184,35 @@ mod tests {
     }
 
     #[test]
+    fn compare_args_parse_cpu_f64_trace_dir() {
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-layer-trace-compare".to_string(),
+            "--reference".to_string(),
+            "ref.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "cpu".to_string(),
+            "--cpu-f64-trace-dir".to_string(),
+            "cpu-f64".to_string(),
+            "--a770-trace-dir".to_string(),
+            "a770".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+
+        let parsed = parse_compare_args(&args).unwrap();
+
+        assert_eq!(parsed.reference, PathBuf::from("ref.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("cpu"));
+        assert_eq!(parsed.cpu_f64_trace_dir, Some(PathBuf::from("cpu-f64")));
+        assert_eq!(parsed.a770_trace_dir, Some(PathBuf::from("a770")));
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
     fn rust_capture_report_stays_diagnostic_when_plan_is_missing() {
         let dir = tempdir().unwrap();
         let report = capture_rust_layer_traces(&LayerTraceRustCaptureArgs {
@@ -20225,6 +20510,7 @@ mod tests {
         let report = compare_reference_layer_trace(&LayerTraceCompareArgs {
             reference,
             cpu_trace_dir: cpu,
+            cpu_f64_trace_dir: None,
             a770_trace_dir: None,
             output: None,
             format: "json".to_string(),
@@ -21626,6 +21912,116 @@ mod tests {
         assert!(reasons.contains(&json!("attention_norm_weight_unavailable_for_replay")));
         assert!(reasons.contains(&json!("reference_attention_norm_input_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_norm_output_history_missing")));
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_f64_capture_clears_value_projection_source_rows() {
+        let reference_output_values = vec![1.0, 2.0, -0.004735947, 4.0, 5.0, 6.0];
+        let baseline_output_values = vec![1.0, 2.0, -0.0047359443, 4.0, 5.0, 6.0];
+        let mut reference_output = test_reference_trace_record(
+            "attn_norm_history_ref_layout",
+            reference_output_values.clone(),
+        );
+        reference_output.shape = vec![2, 3, 1, 1];
+        reference_output.full_shape = vec![2, 3, 1, 1];
+        reference_output.nelements = 6;
+        let mut reference_projection = test_reference_trace_record(
+            "vcur_history_ref_layout",
+            vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+        );
+        reference_projection.shape = vec![2, 3, 1, 1];
+        reference_projection.full_shape = vec![2, 3, 1, 1];
+        reference_projection.nelements = 6;
+        let reference_records = vec![reference_output, reference_projection];
+
+        let mut baseline_records = BTreeMap::new();
+        baseline_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: baseline_output_values,
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![1.0, 2.0, -0.0047359443, 4.0, 5.0, 6.0],
+                )
+            },
+        );
+        baseline_records.insert(
+            "attention_v_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![10.0, 20.0, 31.0, 40.0, 50.0, 60.0],
+                ..test_rust_trace_record(
+                    "attention_v_before_cache_store_kv_head0_ref_layout",
+                    vec![10.0, 20.0, 31.0, 40.0, 50.0, 60.0],
+                )
+            },
+        );
+
+        let mut f64_records = BTreeMap::new();
+        f64_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: reference_output_values,
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![1.0, 2.0, -0.004735947, 4.0, 5.0, 6.0],
+                )
+            },
+        );
+        f64_records.insert(
+            "attention_v_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+                ..test_rust_trace_record(
+                    "attention_v_before_cache_store_kv_head0_ref_layout",
+                    vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+                )
+            },
+        );
+        let frontier = json!({
+            "active_frontier": "sampled_current_token",
+            "selected_current_token": 2,
+            "current_history_consistency_clean": true,
+            "sampled_current_token_row": {
+                "token": 2,
+                "relative_position": "sampled_current"
+            }
+        });
+
+        let report = layer_attention_norm_f64_capture_for_value_projection(
+            &reference_records,
+            &baseline_records,
+            &f64_records,
+            &frontier,
+            0,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/baseline_source_row_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/f64_source_row_count_on_baseline_frontier"), Some(&json!(0)));
+        assert_eq!(report.pointer("/baseline_output_delta_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/baseline_output_f16_bucket_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/f64_output_delta_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/f64_output_f16_bucket_mismatch_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/cleared_source_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/f64_capture_clears_attention_norm_output_bucket_drift"),
+            Some(&json!(true))
+        );
+        assert_eq!(report.pointer("/f64_capture_exactly_matches_reference"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rows/0/status"), Some(&json!("f64_capture_clears_source_row")));
+        assert_eq!(
+            report.pointer("/current_blocked_reasons").and_then(Value::as_array).map(Vec::len),
+            Some(0)
+        );
     }
 
     #[test]
