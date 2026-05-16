@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1213 @@ struct llama_context {
+@@ -3441,6 +3444,1218 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -94,6 +94,7 @@ index 666fcc4d..23ee29ff 100644
 +        {"attn_sub_norm", "attn_sub_norm"},
 +        {"attn_o_out", "attn_o_out"},
 +        {"ffn_inp", "ffn_inp"},
++        {"ffn_norm_core", "ffn_norm_core"},
 +        {"ffn_norm", "ffn_norm"},
 +        {"ffn_out", "ffn_out"},
 +        {"ffn_sub_norm", "ffn_sub_norm"},
@@ -156,6 +157,7 @@ index 666fcc4d..23ee29ff 100644
 +        "attn_sub_norm-0",
 +        "attn_o_out-0",
 +        "ffn_inp-0",
++        "ffn_norm_core-0",
 +        "ffn_norm-0",
 +        "ffn_out-0",
 +        "ffn_sub_norm-0",
@@ -612,6 +614,7 @@ index 666fcc4d..23ee29ff 100644
 +    const bool bitnet_rs_history_is_attn_sub_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_sub_norm") == 0;
 +    const bool bitnet_rs_history_is_attn_o_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_o_out") == 0;
 +    const bool bitnet_rs_history_is_ffn_inp = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_inp") == 0;
++    const bool bitnet_rs_history_is_ffn_norm_core = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_norm_core") == 0;
 +    const bool bitnet_rs_history_is_ffn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_norm") == 0;
 +    const bool bitnet_rs_history_is_ffn_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_out") == 0;
 +    const bool bitnet_rs_history_is_ffn_sub_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_sub_norm") == 0;
@@ -624,6 +627,7 @@ index 666fcc4d..23ee29ff 100644
 +        || bitnet_rs_history_is_attn_sub_norm
 +        || bitnet_rs_history_is_attn_o_out
 +        || bitnet_rs_history_is_ffn_inp
++        || bitnet_rs_history_is_ffn_norm_core
 +        || bitnet_rs_history_is_ffn_norm
 +        || bitnet_rs_history_is_ffn_out
 +        || bitnet_rs_history_is_ffn_sub_norm
@@ -640,11 +644,12 @@ index 666fcc4d..23ee29ff 100644
 +            (bitnet_rs_history_is_attn_sub_norm ? "attn_sub_norm_history_ref_layout" :
 +            (bitnet_rs_history_is_attn_o_out ? "attn_o_out_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_inp ? "ffn_inp_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_norm_core ? "ffn_norm_core_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_norm ? "ffn_norm_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_out ? "ffn_out_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_sub_norm ? "ffn_sub_norm_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_down ? "ffn_down_history_ref_layout" :
-+            "l_out_history_ref_layout"))))))))));
++            "l_out_history_ref_layout")))))))))));
 +        history_record_name << history_stage_name << "-" << bitnet_rs_effective_history_layer;
 +        const int64_t hidden = tensor->ne[0];
 +        const int64_t token_count = (int64_t) n_tokens;
@@ -1243,7 +1248,20 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +16550,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -9505,6 +10723,12 @@ static struct ggml_tensor * llm_build_norm(
+     }
+ 
+     if (mw || mb) {
++        if (mw != nullptr
++                && bitnet_rs_reference_layer_trace_enabled()
++                && il == bitnet_rs_reference_layer_trace_requested_layer()
++                && strstr(ggml_get_name(mw), ".ffn_norm.weight") != nullptr) {
++            cb(cur, "ffn_norm_core", il);
++        }
+         cb(cur, "norm", il);
+     }
+ 
+@@ -15460,6 +16681,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);

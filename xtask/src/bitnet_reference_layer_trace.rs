@@ -2650,6 +2650,12 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
     let reference_target =
         find_reference_trace_record(&reference_records, "ffn_norm_history_ref_layout", Some(layer))
             .filter(|record| record.values_available && !record.first_values.is_empty());
+    let reference_core = find_reference_trace_record(
+        &reference_records,
+        "ffn_norm_core_history_ref_layout",
+        Some(layer),
+    )
+    .filter(|record| record.values_available && !record.first_values.is_empty());
     let rust_input = rust_record_list
         .as_ref()
         .and_then(|records| {
@@ -2690,6 +2696,9 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
     if reference_target.is_none() {
         blocked_reasons.push(format!("reference_ffn_norm_history_layer{layer}_missing"));
     }
+    if reference_core.is_none() {
+        blocked_reasons.push(format!("reference_ffn_norm_core_history_layer{layer}_missing"));
+    }
     if rust_input.is_none() {
         blocked_reasons.push(format!("rust_post_attention_residual_history_layer{layer}_missing"));
     }
@@ -2718,6 +2727,7 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
             args.token,
             reference_input.expect("checked above"),
             reference_target.expect("checked above"),
+            reference_core,
             rust_input,
             rust_target,
         ) {
@@ -2796,6 +2806,7 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
             "sampled_output_token_index": trace.pointer("/sampled_output_token_index").cloned().unwrap_or(Value::Null),
             "sampled_output_token_id": trace.pointer("/sampled_output_token_id").cloned().unwrap_or(Value::Null),
             "ffn_input_history": reference_input.map(reference_record_summary).unwrap_or(Value::Null),
+            "ffn_norm_core_history": reference_core.map(reference_record_summary).unwrap_or(Value::Null),
             "ffn_norm_history": reference_target.map(reference_record_summary).unwrap_or(Value::Null),
         },
         "rust_trace": {
@@ -3458,11 +3469,14 @@ fn build_ffn_norm_prefix_replay_body(
     token: usize,
     reference_input: &ReferenceTraceRecord,
     reference_target: &ReferenceTraceRecord,
+    reference_core: Option<&ReferenceTraceRecord>,
     rust_input: Option<&RustTraceRecord>,
     rust_target: Option<&RustTraceRecord>,
 ) -> Result<(Value, Value, Value)> {
     let reference_input_token = reference_dim_major_token(reference_input, token)?;
     let reference_target_token = reference_dim_major_token(reference_target, token)?;
+    let reference_core_token =
+        reference_core.map(|record| reference_dim_major_token(record, token)).transpose()?;
     let rust_input_token =
         rust_input.map(|record| rust_dim_major_token(record, token)).transpose()?;
     let rust_target_token =
@@ -3480,6 +3494,7 @@ fn build_ffn_norm_prefix_replay_body(
     }
     let weight = load_rmsnorm_weight(model_path, weight_name, hidden)?;
     let variants = rmsnorm_replay_variants(weight.eps, &weight.eps_source);
+    let unit_weight = vec![1.0f32; hidden];
     let reference_input_vs_rust =
         rust_input_token.as_ref().map(|values| compare_vectors(&reference_input_token, values));
     let reference_target_vs_rust =
@@ -3494,6 +3509,35 @@ fn build_ffn_norm_prefix_replay_body(
         Some(&reference_target_token),
         rust_target_token.as_deref(),
     )?;
+    let reference_core_replay = match reference_core_token.as_ref() {
+        Some(values) => rmsnorm_replay_section(
+            "reference_ffn_input_history_token_core",
+            &reference_input_token,
+            &unit_weight,
+            &variants,
+            Some(values),
+            None,
+        )?,
+        None => Value::Null,
+    };
+    let reference_core_weight_application = match reference_core_token.as_ref() {
+        Some(values) => {
+            let weighted = values
+                .iter()
+                .zip(&weight.values)
+                .map(|(&value, &gamma)| value * gamma)
+                .collect::<Vec<_>>();
+            json!({
+                "source": "reference_ffn_norm_core_history_token",
+                "policy": "diagnostic-only replay of the GGML RMSNorm core output multiplied by the GGUF FFN norm weight; this does not promote reference parity or A770 claims",
+                "core": row_report(values),
+                "weighted": row_report(&weighted),
+                "weighted_vs_reference_target": compare_vectors(&weighted, &reference_target_token),
+                "weighted_vs_rust_target": rust_target_token.as_ref().map(|target| compare_vectors(&weighted, target)).unwrap_or(Value::Null),
+            })
+        }
+        None => Value::Null,
+    };
     let rust_input_replay = match rust_input_token.as_ref() {
         Some(values) => rmsnorm_replay_section(
             "rust_post_attention_residual_history_token",
@@ -3529,13 +3573,17 @@ fn build_ffn_norm_prefix_replay_body(
         },
         "targets": {
             "reference_stage": "ffn_norm_history_ref_layout",
+            "reference_core_stage": "ffn_norm_core_history_ref_layout",
             "rust_stage": "post_ffn_norm_history_ref_layout",
             "reference": row_report(&reference_target_token),
+            "reference_core": reference_core_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
             "rust": rust_target_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
             "reference_vs_rust": reference_target_vs_rust.unwrap_or(Value::Null),
             "reference_vs_rust_f16": reference_target_vs_rust_f16.unwrap_or(Value::Null),
         },
         "reference_input_replay": reference_input_replay,
+        "reference_core_replay": reference_core_replay,
+        "reference_core_weight_application": reference_core_weight_application,
         "rust_input_replay": rust_input_replay,
     });
 
@@ -4457,6 +4505,11 @@ fn classify_ffn_norm_prefix_replay(
 fn ffn_norm_prefix_replay_next_action(reasons: &[String]) -> &'static str {
     if reasons.iter().any(|reason| reason == "ffn_norm_prefix_trace_scope_mismatch") {
         "align reference and Rust layer/token prefix-history scope before interpreting FFN norm replay"
+    } else if reasons
+        .iter()
+        .any(|reason| reason.starts_with("reference_ffn_norm_core_history_layer"))
+    {
+        "rerun the reference layer trace with ffn_norm_core instrumentation to split GGML RMSNorm core from FFN norm weight multiply"
     } else if reasons
         .iter()
         .any(|reason| reason == "rmsnorm_replay_does_not_match_reference_ffn_norm")
@@ -15513,6 +15566,7 @@ mod tests {
         assert!(patch.contains("attn_sub_norm_history_ref_layout"));
         assert!(patch.contains("attn_o_out_history_ref_layout"));
         assert!(patch.contains("ffn_inp_history_ref_layout"));
+        assert!(patch.contains("ffn_norm_core_history_ref_layout"));
         assert!(patch.contains("ffn_norm_history_ref_layout"));
         assert!(patch.contains("ffn_out_history_ref_layout"));
         assert!(patch.contains("ffn_sub_norm_history_ref_layout"));
@@ -15525,6 +15579,8 @@ mod tests {
             "strcmp(bitnet_rs_history_stage, \"l_out\") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer"
         ));
         assert!(patch.contains("bitnet_rs_history_is_layer0_attn_norm_input"));
+        assert!(patch.contains("cb(cur, \"ffn_norm_core\", il)"));
+        assert!(patch.contains("strstr(ggml_get_name(mw), \".ffn_norm.weight\")"));
         assert!(
             patch.contains(
                 "strcmp(name, \"inp_embd\") == 0 && bitnet_rs_requested_history_layer == 0"
@@ -22203,9 +22259,16 @@ mod tests {
         assert_eq!(report.pointer("/inputs/selected_layer"), Some(&json!(1)));
         assert_eq!(report.pointer("/inputs/token"), Some(&json!(0)));
         assert!(reasons.contains(&json!("model_gguf_missing")));
+        assert!(reasons.contains(&json!("reference_ffn_norm_core_history_layer1_missing")));
         assert!(reasons.contains(&json!("rust_cpu_trace_dir_unavailable")));
         assert!(reasons.contains(&json!("rust_post_attention_residual_history_layer1_missing")));
         assert!(reasons.contains(&json!("rust_post_ffn_norm_history_layer1_missing")));
+        assert_eq!(
+            report.pointer("/decision/next_action"),
+            Some(&json!(
+                "rerun the reference layer trace with ffn_norm_core instrumentation to split GGML RMSNorm core from FFN norm weight multiply"
+            ))
+        );
         assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
     }
 
