@@ -10074,6 +10074,12 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_score_raw_history_live_tail_delta(reference_records, f64_rust_records);
     let probability_history =
         attention_probability_history_delta(reference_records, f64_rust_records);
+    let score_input_attribution =
+        attention_score_input_attribution(reference_records, f64_rust_records);
+    let key_score_input_delta =
+        attention_key_score_input_delta(reference_records, f64_rust_records);
+    let query_rope_delta =
+        attention_query_rope_ref_layout_delta(reference_records, f64_rust_records);
 
     let score_raw_history_material_count =
         value_u64(&score_raw_history, "/material_mismatch_count").unwrap_or(0);
@@ -10137,6 +10143,9 @@ fn layer_attention_norm_f64_probability_history_effect(
         "score_raw_history_delta": score_raw_history,
         "score_raw_history_live_tail_delta": score_raw_live_tail,
         "probability_history_delta": probability_history,
+        "score_input_attribution": score_input_attribution,
+        "key_score_input_delta": key_score_input_delta,
+        "query_rope_delta": query_rope_delta,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
     })
@@ -22700,6 +22709,18 @@ mod tests {
         assert_eq!(
             report.pointer("/f64/probability_history_effect/score_raw_history_material_count"),
             Some(&json!(0))
+        );
+        assert_eq!(
+            report.pointer("/f64/probability_history_effect/score_input_attribution/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            report.pointer("/f64/probability_history_effect/key_score_input_delta/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            report.pointer("/f64/probability_history_effect/query_rope_delta/claim_allowed"),
+            Some(&json!(false))
         );
         let reasons = report.pointer("/current_blocked_reasons").unwrap().as_array().unwrap();
         assert!(reasons.contains(&json!("f64_capture_residual_numeric_delta_present")));
