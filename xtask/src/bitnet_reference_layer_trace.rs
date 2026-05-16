@@ -3602,6 +3602,12 @@ fn build_ffn_norm_prefix_replay_body(
                 reference_records,
                 rust_records,
             )?,
+            "attention_residual_sensitivity": ffn_norm_attention_residual_sensitivity(
+                layer,
+                token,
+                reference_records,
+                rust_records,
+            )?,
         },
         "targets": {
             "reference_stage": "ffn_norm_history_ref_layout",
@@ -3776,6 +3782,138 @@ fn ffn_norm_input_token_attribution(
         "current_blocked_reasons": current_blocked_reasons,
         "rows": rows,
     })
+}
+
+fn ffn_norm_attention_residual_sensitivity(
+    layer: usize,
+    token: usize,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: Option<&[RustTraceRecord]>,
+) -> Result<Value> {
+    let reference_residual = find_reference_trace_record(
+        reference_records,
+        "attention_norm_input_history_ref_layout",
+        Some(layer),
+    );
+    let reference_attention = find_reference_trace_record(
+        reference_records,
+        "attn_o_out_history_ref_layout",
+        Some(layer),
+    );
+    let reference_target =
+        find_reference_trace_record(reference_records, "ffn_inp_history_ref_layout", Some(layer));
+    let rust_residual = rust_records.and_then(|records| {
+        find_rust_trace_record(records, "attention_norm_input_history_ref_layout", Some(layer))
+    });
+    let rust_attention = rust_records.and_then(|records| {
+        find_rust_trace_record(records, "post_o_proj_history_ref_layout", Some(layer))
+    });
+    let rust_target = rust_records.and_then(|records| {
+        find_rust_trace_record(records, "post_attention_residual_history_ref_layout", Some(layer))
+    });
+
+    let mut blocked_reasons = Vec::<String>::new();
+    let reference_residual_derivable = reference_attention.is_some() && reference_target.is_some();
+    if reference_residual.is_none() && !reference_residual_derivable {
+        blocked_reasons.push("reference_attention_residual_input_missing".to_string());
+    }
+    if reference_attention.is_none() {
+        blocked_reasons.push("reference_attention_output_history_missing".to_string());
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push("reference_attention_residual_target_missing".to_string());
+    }
+    if rust_residual.is_none() {
+        blocked_reasons.push("rust_attention_residual_input_missing".to_string());
+    }
+    if rust_attention.is_none() {
+        blocked_reasons.push("rust_attention_output_history_missing".to_string());
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push("rust_attention_residual_target_missing".to_string());
+    }
+    if !blocked_reasons.is_empty() {
+        return Ok(json!({
+            "available": false,
+            "claim_allowed": false,
+            "diagnostic_only": true,
+            "current_blocked_reasons": blocked_reasons,
+        }));
+    }
+
+    let reference_attention_token =
+        reference_dim_major_token(reference_attention.expect("checked above"), token)?;
+    let reference_target_token =
+        reference_dim_major_token(reference_target.expect("checked above"), token)?;
+    let (reference_residual_token, reference_residual_source) = match reference_residual {
+        Some(record) => {
+            (reference_dim_major_token(record, token)?, "attention_norm_input_history_ref_layout")
+        }
+        None => (
+            vector_sub(&reference_target_token, &reference_attention_token)
+                .context("derive reference attention residual input")?,
+            "derived_from_ffn_inp_minus_attn_o_out",
+        ),
+    };
+    let rust_residual_token = rust_dim_major_token(rust_residual.expect("checked above"), token)?;
+    let rust_attention_token = rust_dim_major_token(rust_attention.expect("checked above"), token)?;
+    let rust_target_token = rust_dim_major_token(rust_target.expect("checked above"), token)?;
+
+    let reference_sum = vector_add(&reference_residual_token, &reference_attention_token)
+        .context("reference attention residual add replay")?;
+    let rust_sum = vector_add(&rust_residual_token, &rust_attention_token)
+        .context("rust attention residual add replay")?;
+    let reference_sum_vs_reference_target =
+        compare_vectors(&reference_sum, &reference_target_token);
+    let rust_sum_vs_rust_target = compare_vectors(&rust_sum, &rust_target_token);
+    let reference_sum_vs_rust_sum = compare_vectors(&reference_sum, &rust_sum);
+    let reference_sum_vs_rust_target = compare_vectors(&reference_sum, &rust_target_token);
+    let rust_runtime_residual_add_separate_mismatch =
+        delta_metric(&rust_sum_vs_rust_target, "/max_abs_delta") > 1.0e-6;
+    let input_substitution_crosses_runtime_threshold =
+        delta_metric(&reference_sum_vs_rust_sum, "/max_abs_delta") > 1.0e-6;
+
+    Ok(json!({
+        "available": true,
+        "policy": "Selected-token attention residual sensitivity replays ffn_inp/post_attention_residual as attention_norm_input plus attention output. It is diagnostic-only evidence and does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention/value residency, full residency, performance, or completion",
+        "claim_allowed": false,
+        "diagnostic_only": true,
+        "layer": layer,
+        "token": token,
+        "reference_residual_stage": reference_residual_source,
+        "rust_residual_stage": "attention_norm_input_history_ref_layout",
+        "reference_attention_stage": "attn_o_out_history_ref_layout",
+        "rust_attention_stage": "post_o_proj_history_ref_layout",
+        "reference_target_stage": "ffn_inp_history_ref_layout",
+        "rust_target_stage": "post_attention_residual_history_ref_layout",
+        "reference_residual_vs_rust_residual": compare_vectors(&reference_residual_token, &rust_residual_token),
+        "reference_attention_vs_rust_attention": compare_vectors(&reference_attention_token, &rust_attention_token),
+        "reference_target_vs_rust_target": compare_vectors(&reference_target_token, &rust_target_token),
+        "reference_sum_vs_reference_target": reference_sum_vs_reference_target,
+        "rust_sum_vs_rust_target": rust_sum_vs_rust_target,
+        "reference_sum_vs_rust_sum": reference_sum_vs_rust_sum,
+        "reference_sum_vs_rust_target": reference_sum_vs_rust_target,
+        "classification": {
+            "reference_residual_add_explains_reference_target": delta_metric(&reference_sum_vs_reference_target, "/max_abs_delta") <= 1.0e-6,
+            "rust_residual_add_explains_rust_target": !rust_runtime_residual_add_separate_mismatch,
+            "input_substitution_crosses_runtime_threshold": input_substitution_crosses_runtime_threshold,
+            "rust_runtime_residual_add_separate_mismatch": rust_runtime_residual_add_separate_mismatch,
+        },
+    }))
+}
+
+fn vector_add(left: &[f32], right: &[f32]) -> Result<Vec<f32>> {
+    if left.len() != right.len() {
+        bail!("vector add shape mismatch: left {} right {}", left.len(), right.len());
+    }
+    Ok(left.iter().zip(right).map(|(&left, &right)| left + right).collect())
+}
+
+fn vector_sub(left: &[f32], right: &[f32]) -> Result<Vec<f32>> {
+    if left.len() != right.len() {
+        bail!("vector sub shape mismatch: left {} right {}", left.len(), right.len());
+    }
+    Ok(left.iter().zip(right).map(|(&left, &right)| left - right).collect())
 }
 
 fn ffn_norm_attention_output_projection_sensitivity(
@@ -22900,6 +23038,66 @@ mod tests {
         assert!(reasons.contains(&json!("reference_attention_output_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_subnorm_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_output_history_missing")));
+    }
+
+    #[test]
+    fn ffn_norm_attention_residual_sensitivity_replays_selected_token_add() {
+        fn reference_history(stage: &str, values: Vec<f32>) -> ReferenceTraceRecord {
+            let mut record = test_reference_trace_record(stage, values);
+            record.shape = vec![2, 2, 1, 1];
+            record.nelements = 4;
+            record
+        }
+        fn rust_history(stage: &str, values: Vec<f32>) -> RustTraceRecord {
+            let mut record = test_rust_trace_record(stage, values);
+            record.shape = vec![2, 2];
+            record.num_elements = 4;
+            record
+        }
+
+        let reference_records = vec![
+            reference_history("attn_o_out_history_ref_layout", vec![0.5, 5.0, 1.0, 10.0]),
+            reference_history("ffn_inp_history_ref_layout", vec![1.5, 15.0, 3.0, 30.0]),
+        ];
+        let rust_records = vec![
+            rust_history("attention_norm_input_history_ref_layout", vec![1.0, 10.0, 2.0, 20.0]),
+            rust_history("post_o_proj_history_ref_layout", vec![0.5000005, 5.0, 1.0, 10.0]),
+            rust_history(
+                "post_attention_residual_history_ref_layout",
+                vec![1.5000005, 15.0, 3.0, 30.0],
+            ),
+        ];
+
+        let report =
+            ffn_norm_attention_residual_sensitivity(0, 0, &reference_records, Some(&rust_records))
+                .unwrap();
+
+        assert_eq!(report.pointer("/available"), Some(&json!(true)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/reference_residual_stage"),
+            Some(&json!("derived_from_ffn_inp_minus_attn_o_out"))
+        );
+        assert_eq!(
+            report.pointer("/classification/reference_residual_add_explains_reference_target"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/classification/rust_residual_add_explains_rust_target"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/classification/input_substitution_crosses_runtime_threshold"),
+            Some(&json!(false))
+        );
+        assert!(
+            report
+                .pointer("/reference_sum_vs_rust_sum/max_abs_delta")
+                .and_then(Value::as_f64)
+                .unwrap()
+                <= 1.0e-6
+        );
     }
 
     #[test]
