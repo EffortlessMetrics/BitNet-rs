@@ -77,23 +77,27 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-002"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-002-bitnet-warm-refresh"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5066
 acceptance = "Run and commit a second BitNet variable warm-session refresh for the accepted artifact/tokenizer identity so the BitNet warm dashboard group can move from insufficient_history to comparable matching history while chat and serve remain disabled."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json",
-  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json --json",
+  "target/release/bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --prompt 'Answer with a single digit: 2+2=' --prompt 'Name the capital of France. Answer with one word.' --prompt 'Return exactly: ready' --prompt 'Answer with a single digit: 3+1=' --prompt 'Answer with a single digit: 2+2=' --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json --progress",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization --json",
+  "target/release/bitnet mac report-refresh --json-out target/apple-m4-inference-excellence/M4-EXCELLENCE-002-report-refresh.json --json",
+  "target/release/bitnet mac regression-dashboard --json-out target/apple-m4-inference-excellence/M4-EXCELLENCE-002-regression-dashboard.json --markdown-out target/apple-m4-inference-excellence/M4-EXCELLENCE-002-regression-dashboard.md --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
-  "ci/hardware/apple-m4-mac-mini/**/bitnet-warm/**",
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-productization/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",
   "docs/tracking/generated/**",
