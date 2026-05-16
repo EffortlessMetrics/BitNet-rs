@@ -399,6 +399,7 @@ impl AnswerCorpusCommand {
             },
             "scoring_summary": scoring_summary(&rows),
             "task_family_summary": task_family_summary(&rows),
+            "profile_summary": profile_summary(&rows),
             "reference_comparison": reference_comparison_summary(
                 &rows,
                 bitnet_answer_path,
@@ -586,6 +587,7 @@ impl AnswerCorpusCommand {
             "id": case.id,
             "task_family": case.task_family(),
             "category": case.category.as_deref().unwrap_or_else(|| case.task_family()),
+            "profile": case.profile(),
             "seed_material": case.seed_material,
             "question": case.question,
             "status": status,
@@ -698,6 +700,7 @@ impl AnswerCorpusCommand {
             "id": case.id,
             "task_family": case.task_family(),
             "category": case.category.as_deref().unwrap_or_else(|| case.task_family()),
+            "profile": case.profile(),
             "seed_material": case.seed_material,
             "question": case.question,
             "status": "not_run",
@@ -888,6 +891,8 @@ struct AnswerCase {
     #[serde(default)]
     category: Option<String>,
     #[serde(default)]
+    profile: Option<String>,
+    #[serde(default)]
     seed_material: Option<String>,
     question: String,
     max_new_tokens: Option<usize>,
@@ -904,6 +909,10 @@ struct AnswerCase {
 impl AnswerCase {
     fn task_family(&self) -> &str {
         self.category.as_deref().unwrap_or("uncategorized")
+    }
+
+    fn profile(&self) -> &str {
+        self.profile.as_deref().unwrap_or("unprofiled")
     }
 }
 
@@ -1505,6 +1514,44 @@ fn task_family_summary(rows: &[Value]) -> Value {
         families
             .into_iter()
             .map(|(family, stats)| (family, stats.into_json()))
+            .collect::<Map<_, _>>(),
+    )
+}
+
+fn profile_summary(rows: &[Value]) -> Value {
+    let mut profiles = BTreeMap::<String, TaskFamilyStats>::new();
+    for row in rows {
+        let profile = row["profile"].as_str().unwrap_or("unprofiled");
+        let stats = profiles.entry(profile.to_string()).or_default();
+        stats.total += 1;
+        match row["status"].as_str().unwrap_or("unknown") {
+            "passed" => stats.passed += 1,
+            "quality_failed" | "command_failed" => stats.failed += 1,
+            "timeout" => stats.timeout += 1,
+            "not_run" => stats.not_run += 1,
+            status => *stats.status_counts.entry(status.to_string()).or_default() += 1,
+        }
+
+        let scoring = &row["quality"]["scoring"];
+        if let Some(kind) = scoring["kind"].as_str() {
+            stats.scoring_total += 1;
+            stats.scoring_kinds.insert(kind.to_string());
+            match scoring["passed"].as_bool() {
+                Some(true) => stats.scoring_passed += 1,
+                Some(false) => stats.scoring_failed += 1,
+                None => stats.scoring_not_run += 1,
+            }
+        }
+
+        for taxonomy in row_failure_taxonomy(row) {
+            *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
+        }
+    }
+
+    Value::Object(
+        profiles
+            .into_iter()
+            .map(|(profile, stats)| (profile, stats.into_json()))
             .collect::<Map<_, _>>(),
     )
 }
@@ -2330,6 +2377,7 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
         "id": input.case.id,
         "task_family": input.case.task_family(),
         "category": input.case.category.as_deref().unwrap_or_else(|| input.case.task_family()),
+        "profile": input.case.profile(),
         "seed_material": input.case.seed_material,
         "question": input.case.question,
         "status": input.status,
@@ -2788,6 +2836,7 @@ mod tests {
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
             category: Some("arithmetic_exact".to_string()),
+            profile: Some("regression_tiny".to_string()),
             seed_material: Some("seed=912587 family=arithmetic".to_string()),
             question: "What is 2+2?".to_string(),
             max_new_tokens: Some(4),
@@ -2890,6 +2939,56 @@ mod tests {
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["format_only"], 1);
         assert_eq!(summary["numeric_tolerance"]["failed"], 1);
         assert_eq!(summary["numeric_tolerance"]["failure_taxonomy"]["answer_content"], 1);
+    }
+
+    #[test]
+    fn slm_answer_profile_summary_counts_profile_statuses() {
+        let rows = vec![
+            json!({
+                "profile": "regression_tiny",
+                "status": "passed",
+                "quality": {
+                    "failure_taxonomy": [],
+                    "scoring": {
+                        "kind": "required_keywords",
+                        "passed": true,
+                        "failure_taxonomy": []
+                    }
+                }
+            }),
+            json!({
+                "profile": "regression_tiny",
+                "status": "quality_failed",
+                "quality": {
+                    "failure_taxonomy": ["answer_content"],
+                    "scoring": {
+                        "kind": "required_keywords",
+                        "passed": false,
+                        "failure_taxonomy": ["answer_content"]
+                    }
+                }
+            }),
+            json!({
+                "profile": "ask_normal",
+                "status": "timeout",
+                "quality": {
+                    "failure_taxonomy": ["timeout"],
+                    "scoring": {
+                        "kind": "required_keywords",
+                        "passed": null,
+                        "failure_taxonomy": []
+                    }
+                }
+            }),
+        ];
+
+        let summary = profile_summary(&rows);
+        assert_eq!(summary["regression_tiny"]["total"], 2);
+        assert_eq!(summary["regression_tiny"]["passed"], 1);
+        assert_eq!(summary["regression_tiny"]["failed"], 1);
+        assert_eq!(summary["regression_tiny"]["failure_taxonomy"]["answer_content"], 1);
+        assert_eq!(summary["ask_normal"]["timeout"], 1);
+        assert_eq!(summary["ask_normal"]["scoring"]["not_run"], 1);
     }
 
     #[test]
@@ -3227,6 +3326,7 @@ cases:
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
             category: None,
+            profile: None,
             seed_material: None,
             question: "What is 2+2? Answer with only the number.".to_string(),
             max_new_tokens: Some(4),
@@ -3305,6 +3405,7 @@ cases:
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
             category: None,
+            profile: None,
             seed_material: None,
             question: "What is 2+2? Answer with only the number.".to_string(),
             max_new_tokens: Some(4),
