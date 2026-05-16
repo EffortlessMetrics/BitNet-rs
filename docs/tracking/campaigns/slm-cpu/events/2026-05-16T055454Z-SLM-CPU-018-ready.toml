@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T05:54:54Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-018"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+branch = "docs/slm-cpu-018-smollm2-normalization-policy"
+
+summary = "Added SLM-CPU-018 as the governed SmolLM2 normalization-policy audit after the SLM-CPU-017 strict CPU preflight blocker."
+
+artifacts = [
+  "docs/tracking/campaigns/slm-cpu/active.toml",
+  "docs/tracking/campaigns/slm-cpu/CAMPAIGN.md",
+  "docs/slm/SLM_CPU_SMOLLM2_NORMALIZATION_POLICY.md",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json",
+]
+
+notes = [
+  "SLM-CPU-017 proved the pinned SmolLM2 artifact fails closed at the strict loader LayerNorm gamma guard before tokenizer loading, prompt rendering, or generation.",
+  "SLM-CPU-018 records that generic llama strict validation must remain fail-closed.",
+  "Any SmolLM2 loader exception must be exact-metadata and model-family scoped before CPU sanity can be retried.",
+  "No loader behavior, CPU answer, CUDA, server, speed, broad dense GGUF, or BitNet QK256 claim is in scope.",
+]

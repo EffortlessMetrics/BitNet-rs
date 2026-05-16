@@ -128,9 +128,9 @@ contract, and SLM-CPU-017 attempted step B on the 9950X3D. That strict CPU
 preflight reached model-load policy and failed closed at
 `blk.0.ffn_norm.weight` before tokenizer, prompt rendering, or generation.
 
-Do not start SmolLM2 CUDA planning until the SLM CPU lane resolves the strict
-loader/model-family normalization policy or records a governed per-family
-exception and then produces CPU answer-sanity evidence. The current SmolLM2
+Do not start SmolLM2 CUDA planning until the SLM CPU lane implements exact
+metadata-scoped SmolLM2 normalization validation after the governed SLM-CPU-018
+policy audit and then produces CPU answer-sanity evidence. The current SmolLM2
 state can only claim structurally valid artifact metadata plus a committed
 strict CPU preflight blocker; it cannot claim CPU answer readiness, CUDA route,
 product CLI, benchmark, speed, server, full-residency, broad dense GGUF, or
