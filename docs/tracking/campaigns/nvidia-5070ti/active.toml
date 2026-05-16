@@ -2650,53 +2650,6 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "CUDA-MODEL-SMOLLM2-002"
-status = "pr_open"
-branch = "docs/cuda-smollm2-blocker-sync"
-pr = 5048
-head_sha = "187be2999159749188b643d6c6fa7eed1c558bfc"
-stackable = true
-review_mode = "codex_premerge"
-merge_policy = "automerge_when_green"
-human_gate = "on_blocker_only"
-blocked_by = ["CUDA-MODEL-SMOLLM2-001"]
-acceptance = "Sync SmolLM2 360M CUDA/model coverage and productization docs to the committed SLM-CPU-017 strict CPU preflight blocker, keeping CPU answer, CUDA, product CLI, speed, server, full-residency, broad dense GGUF, and BitNet QK256 claims false."
-commands = [
-  "git diff --check",
-  "python -c \"import tomllib, pathlib; data=tomllib.loads(pathlib.Path('ci/model-artifacts/model-coverage-matrix.toml').read_text()); row=next(e for e in data['entry'] if e['id']=='dense_smollm2_360m_candidate'); assert row['status']=='cpu_sanity_blocked'; assert row['current_tier']=='structurally_valid'; assert 'strict_cpu_preflight_blocker' in row['required_receipts']\"",
-  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
-  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
-]
-allowed_paths = [
-  "ci/model-artifacts/model-coverage-matrix.toml",
-  "docs/tracking/campaigns/nvidia-5070ti/**",
-  "docs/tracking/generated/**",
-  "plans/cuda-5070ti-productization/**",
-]
-forbidden_paths = [
-  "crates/**",
-  "ci/hardware/**",
-  "ci/slm-cpu/**",
-  ".github/workflows/**",
-  "README.md",
-]
-may_claim = [
-  "SmolLM2 360M has an exact artifact contract and a committed strict CPU preflight blocker receipt.",
-  "SmolLM2 360M CPU sanity is blocked by strict loader/model-family normalization policy before tokenizer, prompt rendering, or generation.",
-  "The next SmolLM2 proof is an SLM CPU loader-policy follow-up, not CUDA planning.",
-]
-must_not_claim = [
-  "SmolLM2 CPU answer readiness exists.",
-  "SmolLM2 CUDA execution exists.",
-  "SmolLM2 product CLI readiness exists.",
-  "SmolLM2 speedup exists.",
-  "SmolLM2 server readiness exists.",
-  "SmolLM2 full CUDA residency exists.",
-  "SmolLM2 proof inherits Qwen2.5 or Qwen3 evidence.",
-  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
-]
-
-[[work_item]]
 id = "CUDA-UX-008"
 status = "merged"
 branch = "cli/cuda-model-support-dashboard"
