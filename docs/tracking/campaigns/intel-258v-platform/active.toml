@@ -3487,6 +3487,71 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-QUAL-003"
+status = "pr_open"
+pr = 5055
+branch = "codex/lunar-lake/LNL258V-QUAL-003-openvino-corpus-v2"
+head_sha = "de3c817bbdd53d691ea4feb46768f4997a662a78"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-QUAL-002", "SLM-OV258V-006"]
+acceptance = "Run the bounded Lunar Lake answer corpus v2 on the OpenVINO CPU, GPU.0/Arc 140V, and NPU dense SLM candidate routes, emit committed per-device profile/category answer-gate evidence with top-level OpenVINO backend/runtime/device/fallback identity, keep all candidate routes unpromoted for later route-policy work, and preserve the no-broad-quality, no-speedup, no-Arc/NPU-acceleration, no-native-OpenCL/NPU, and no BitNet QK256/I2_S proof boundary."
+commands = [
+  ".venv/Scripts/python.exe -m py_compile scripts/openvino_genai_corpus_v2.py",
+  ".venv/Scripts/python.exe scripts/openvino_genai_corpus_v2.py --help",
+  ".venv/Scripts/python.exe scripts/openvino_genai_corpus_v2.py --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --devices CPU GPU.0 NPU --created-utc 2026-05-16T12:30:00Z --json-out ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  ".venv/Scripts/python.exe -m json.tool ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "scripts/openvino_genai_corpus_v2.py",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+]
+may_claim = [
+  "The Lunar Lake answer corpus v2 was executed on OpenVINO CPU, GPU.0/Arc 140V, and NPU dense SLM candidate routes.",
+  "The committed receipt records per-device profile/category quality status, prompt/token identity, generated text, OpenVINO GenAI timing, top-level backend/runtime/device/fallback identity, and profile summaries.",
+  "The run observed fallback_used=false for requested OpenVINO candidate routes when the LLMPipeline constructed and generated on those devices.",
+  "The run collects bounded candidate-route corpus v2 evidence for later route-promotion work.",
+]
+must_not_claim = [
+  "Broad dense SLM answer quality is proven.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU becomes the default route.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ASK-004"
 status = "merged"
 pr = 4712

@@ -5,7 +5,8 @@ This page is the operator-facing map for the
 closeout: dense benchmark, BitNet eval, and BitNet benchmark groups have
 matching-history comparisons, while dense SLM eval v2 and BitNet variable warm
 were intentionally kept as `insufficient_history` until another matching
-refresh lands.
+refresh landed. `M4-EXCELLENCE-001` records the second dense SLM eval-v2
+refresh; BitNet variable warm still needs its second matching refresh.
 
 The goal is not to prove that the M4 can run local inference. That is already
 done for the supported dense SLM path and narrowly done for the accepted BitNet
@@ -24,8 +25,11 @@ M4-EXCELLENCE-001  second dense SLM eval-v2 refresh
 M4-EXCELLENCE-002  second BitNet variable-warm refresh
 ```
 
-After those land, `M4-EXCELLENCE-003` refreshes the dashboard so operators can
-see comparable trend status instead of relying on one-off receipts.
+The dense refresh writes
+`ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/<model-id>/summary.json`
+for every supported dense M4 model identity. `M4-EXCELLENCE-003` refreshes the
+dashboard after the matching receipts land so operators can see comparable
+trend status instead of relying on one-off receipts.
 
 ## Accuracy Depth
 
