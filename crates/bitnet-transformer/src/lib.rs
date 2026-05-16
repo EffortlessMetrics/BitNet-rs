@@ -716,6 +716,19 @@ impl MultiHeadAttention {
                 "attention_q_rope_f16_roundtrip",
                 &q_for_scores,
             )?;
+            for head_idx in 0..self.n_heads {
+                let key_head = k_for_scores
+                    .narrow(1, head_idx, 1)?
+                    .reshape(&[t_k, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_k_score_input_head{head_idx}_live_ref_layout"
+                );
+                let stage = format!("attention_k_score_input_head{head_idx}_live_ref_layout");
+                trace_tensor_record(&trace_name, &key_head, trace_seq, Some(0), &stage)?;
+            }
         }
         let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
 
