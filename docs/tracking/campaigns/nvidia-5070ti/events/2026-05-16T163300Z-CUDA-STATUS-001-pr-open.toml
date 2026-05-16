@@ -9,6 +9,7 @@ actor = "codex"
 
 notes = [
   "Opened PR #5158 for CUDA-STATUS-001, a user-facing CUDA capability matrix status page.",
+  "Tagged the PR with `item:CUDA-STATUS-001` for campaign-doctor reconciliation.",
   "The page summarizes current model tiers, routes, speed/server states, next proofs, and BitNet versus dense SLM claim boundaries from existing proof sources.",
   "The PR does not change model coverage rows, receipts, runtime behavior, CUDA kernels, CI, README badges, crates.io, or docs.rs claims.",
 ]
