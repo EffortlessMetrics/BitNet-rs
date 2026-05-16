@@ -5134,6 +5134,8 @@ fn compare_reference_to_rust_with_records(
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_0_attention_output_history_boundary_delta"] =
         layer_attention_output_history_boundary_delta(reference_records, rust_record_list, 0);
+    report["attention_probability_history_delta"] =
+        attention_probability_history_delta(reference_records, rust_records);
     report["attention_value_mix_head_history_delta"] =
         attention_value_mix_head_history_delta(reference_records, rust_records);
     report["attention_value_mix_history_input_attribution"] =
@@ -9300,6 +9302,97 @@ fn attention_probability_head_lane_best_matches(
         "attn_scores_softmax_head",
         "softmax probability head-lane best matches are diagnostic mapping evidence only; they do not promote reference parity, A770 semantic quality, softmax residency, selected attention, or any support claim",
     )
+}
+
+fn attention_probability_history_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_stage_prefix = "kq_soft_max_ext_head";
+    let rust_stage_prefix = "attn_scores_softmax_head";
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if !record.stage.ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(&record.stage, reference_stage_prefix).map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if !record.stage.as_deref().unwrap_or("").ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(stage, rust_stage_prefix).map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_rust_head_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut first_material_head = Value::Null;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, reference) in &reference_heads {
+        let rust = rust_heads.get(&head).copied();
+        if rust.is_none() {
+            missing_rust_head_count += 1;
+        }
+
+        let mut status = if rust.is_some() { "summary_match" } else { "missing_rust_head" };
+        let mut delta = Value::Null;
+        let mut material_mismatch = false;
+        if let Some(rust) = rust {
+            compared_head_count += 1;
+            delta = dim_major_history_record_delta(reference, rust);
+            material_mismatch = delta_has_material_numeric_delta(&delta);
+            max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+            max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+            if material_mismatch {
+                status = "material_mismatch";
+                material_mismatch_count += 1;
+            }
+        }
+
+        let row = json!({
+            "head": head,
+            "status": status,
+            "reference_stage": format!("{reference_stage_prefix}{head}_history_ref_layout"),
+            "rust_stage": format!("{rust_stage_prefix}{head}_history_ref_layout"),
+            "reference": reference_record_summary(reference),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "delta": delta,
+            "material_mismatch": material_mismatch,
+        });
+        if material_mismatch && first_material_head.is_null() {
+            first_material_head = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Softmax probability full-history deltas are diagnostic-only evidence for locating probability-history drift feeding value-mix history; they do not promote reference parity, A770 semantic quality, softmax residency, selected attention, resident KV, full residency, performance, or completion",
+        "layout": "key_token_major_query_token_minor",
+        "reference_stage_prefix": reference_stage_prefix,
+        "rust_stage_prefix": rust_stage_prefix,
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_rust_head_count": missing_rust_head_count,
+        "material_mismatch_count": material_mismatch_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "first_material_head": first_material_head,
+        "rows": rows,
+    })
 }
 
 fn attention_key_cache_kv_head_best_matches(
@@ -15252,6 +15345,69 @@ mod tests {
         assert_eq!(prob.pointer("/rust_stage_prefix"), Some(&json!("attn_scores_softmax_head")));
         assert_eq!(prob.pointer("/identity_best_count"), Some(&json!(2)));
         assert_eq!(prob.pointer("/all_identity_best"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn compare_reports_attention_probability_history_delta() {
+        let mut reference_head0 = test_reference_trace_record(
+            "kq_soft_max_ext_head0_history_ref_layout",
+            vec![0.25, 0.75, 0.5, 0.5],
+        );
+        reference_head0.shape = vec![2, 2, 1, 1];
+        reference_head0.nelements = 4;
+        reference_head0.layer = Some(0);
+        let mut reference_head1 = test_reference_trace_record(
+            "kq_soft_max_ext_head1_history_ref_layout",
+            vec![0.9, 0.1, 0.4, 0.6],
+        );
+        reference_head1.shape = vec![2, 2, 1, 1];
+        reference_head1.nelements = 4;
+        reference_head1.layer = Some(0);
+        let reference_records = vec![reference_head0, reference_head1];
+
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attn_scores_softmax_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                layer: Some(0),
+                name: "t1/blk0/attn_scores_softmax_head0_history_ref_layout".to_string(),
+                first_values: vec![0.25, 0.75, 0.5, 0.5],
+                ..test_rust_trace_record(
+                    "attn_scores_softmax_head0_history_ref_layout",
+                    vec![0.25, 0.75, 0.5, 0.5],
+                )
+            },
+        );
+        rust_records.insert(
+            "attn_scores_softmax_head1_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                layer: Some(0),
+                name: "t1/blk0/attn_scores_softmax_head1_history_ref_layout".to_string(),
+                first_values: vec![0.9, 0.2, 0.4, 0.6],
+                ..test_rust_trace_record(
+                    "attn_scores_softmax_head1_history_ref_layout",
+                    vec![0.9, 0.2, 0.4, 0.6],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let history = report.pointer("/attention_probability_history_delta").unwrap();
+
+        assert_eq!(history.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(history.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(history.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(history.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(history.pointer("/first_material_head/head"), Some(&json!(1)));
+        assert_eq!(
+            history.pointer("/first_material_head/delta/first_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+        assert_eq!(history.pointer("/rows/0/status"), Some(&json!("summary_match")));
     }
 
     #[test]
