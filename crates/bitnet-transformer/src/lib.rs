@@ -5,6 +5,8 @@ use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rop
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 
+const DIAG_RMSNORM_F64_ACCUM_ENV: &str = "BITNET_DIAG_RMSNORM_F64_ACCUM";
+
 #[cfg(feature = "trace")]
 fn trace_tensor_record(
     name: &str,
@@ -222,6 +224,53 @@ fn optional_layer_norm_with_optional_bias(
     }
 }
 
+fn norm_forward(norm: &LayerNorm, x: &Tensor, eps: f64, norm_type: NormType) -> Result<Tensor> {
+    if norm_type == NormType::RmsNorm && diag_rmsnorm_f64_accum_enabled() {
+        return rmsnorm_f64_accum_forward(x, norm.weight(), eps);
+    }
+    norm.forward(x).map_err(BitNetError::from)
+}
+
+fn diag_rmsnorm_f64_accum_enabled() -> bool {
+    std::env::var(DIAG_RMSNORM_F64_ACCUM_ENV).as_deref() == Ok("1")
+}
+
+fn rmsnorm_f64_accum_forward(x: &Tensor, weight: &Tensor, eps: f64) -> Result<Tensor> {
+    let dims = x.dims().to_vec();
+    let hidden = dims.last().copied().ok_or_else(|| {
+        BitNetError::Validation(
+            "RMSNorm f64 diagnostic input must have at least one dimension".into(),
+        )
+    })?;
+    if hidden == 0 {
+        return Err(BitNetError::Validation(
+            "RMSNorm f64 diagnostic input has zero hidden dimension".into(),
+        ));
+    }
+    let values = x.flatten_all()?.to_vec1::<f32>()?;
+    if values.len() % hidden != 0 {
+        return Err(BitNetError::Validation(format!(
+            "RMSNorm f64 diagnostic input has {} values not divisible by hidden {hidden}",
+            values.len()
+        )));
+    }
+    let gamma = weight.flatten_all()?.to_vec1::<f32>()?;
+    if gamma.len() != hidden {
+        return Err(BitNetError::Validation(format!(
+            "RMSNorm f64 diagnostic weight has {} values, expected hidden {hidden}",
+            gamma.len()
+        )));
+    }
+
+    let mut output = Vec::with_capacity(values.len());
+    for row in values.chunks(hidden) {
+        let sum_sq = row.iter().map(|&value| (value as f64) * (value as f64)).sum::<f64>();
+        let denom = ((sum_sq / hidden as f64) + eps).sqrt() as f32;
+        output.extend(row.iter().zip(&gamma).map(|(&x, &g)| (x / denom) * g));
+    }
+    Tensor::from_vec(output, dims.as_slice(), x.device()).map_err(BitNetError::from)
+}
+
 fn feed_forward_activation(
     activation_type: ActivationType,
     gate: &Tensor,
@@ -329,6 +378,8 @@ pub struct MultiHeadAttention {
     v_proj: Linear,
     o_proj: Linear,
     sub_layernorm: Option<LayerNorm>,
+    norm_type: NormType,
+    norm_eps: f64,
     rope: Option<RotaryEmbedding>,
     layer_idx: usize, // Layer index for QK256 weight name generation
     qk256_backend: Qk256DispatchBackend,
@@ -416,6 +467,8 @@ impl MultiHeadAttention {
             v_proj,
             o_proj,
             sub_layernorm,
+            norm_type: config.model.norm_type,
+            norm_eps: eps,
             rope,
             layer_idx,
             qk256_backend,
@@ -981,7 +1034,7 @@ impl MultiHeadAttention {
             &attn_output,
         )?;
         let attn_output = match &self.sub_layernorm {
-            Some(norm) => norm.forward(&attn_output)?,
+            Some(norm) => norm_forward(norm, &attn_output, self.norm_eps, self.norm_type)?,
             None => attn_output,
         };
         #[cfg(feature = "trace")]
@@ -1073,6 +1126,8 @@ pub struct FeedForward {
     up_proj: Linear,
     down_proj: Linear,
     sub_layernorm: Option<LayerNorm>,
+    norm_type: NormType,
+    norm_eps: f64,
     activation_type: ActivationType,
     layer_idx: usize, // Layer index for QK256 weight name generation
     qk256_backend: Qk256DispatchBackend,
@@ -1087,6 +1142,7 @@ impl FeedForward {
     ) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let intermediate_size = config.model.intermediate_size;
+        let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
 
         Ok(Self {
             gate_proj: linear_with_optional_bias(
@@ -1102,10 +1158,12 @@ impl FeedForward {
             )?,
             sub_layernorm: optional_layer_norm_with_optional_bias(
                 intermediate_size,
-                config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5),
+                eps,
                 config.model.norm_type,
                 vb.pp("sub_layernorm"),
             )?,
+            norm_type: config.model.norm_type,
+            norm_eps: eps,
             activation_type: config.model.activation_type,
             layer_idx,
             qk256_backend,
@@ -1158,7 +1216,7 @@ impl FeedForward {
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_swiglu", &hidden)?;
 
         let hidden = match &self.sub_layernorm {
-            Some(norm) => norm.forward(&hidden)?,
+            Some(norm) => norm_forward(norm, &hidden, self.norm_eps, self.norm_type)?,
             None => hidden,
         };
         #[cfg(feature = "trace")]
@@ -1229,6 +1287,8 @@ pub struct TransformerBlock {
     feed_forward: FeedForward,
     attention_norm: LayerNorm,
     ffn_norm: LayerNorm,
+    norm_type: NormType,
+    norm_eps: f64,
 }
 
 impl TransformerBlock {
@@ -1269,6 +1329,8 @@ impl TransformerBlock {
                 config.model.norm_type,
                 vb.pp("post_attention_layernorm"),
             )?,
+            norm_type: config.model.norm_type,
+            norm_eps: eps,
         })
     }
 
@@ -1312,7 +1374,7 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.attention_norm.forward(x)?;
+        let x = norm_forward(&self.attention_norm, x, self.norm_eps, self.norm_type)?;
 
         // Probe A2: LayerNorm gamma RMS + LN output RMS (layer 0, step 0 only)
         if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.attention.layer_idx == 0
@@ -1430,7 +1492,7 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.ffn_norm.forward(&x)?;
+        let x = norm_forward(&self.ffn_norm, &x, self.norm_eps, self.norm_type)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.attention.layer_idx, _trace_base_seq, 1, "post_ffn_norm", &x)?;
 
@@ -1922,7 +1984,8 @@ impl TransformerModel {
             }
         }
 
-        let normalized = self.norm.forward(&x)?;
+        let eps = self.config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
+        let normalized = norm_forward(&self.norm, &x, eps, self.config.model.norm_type)?;
         #[cfg(feature = "trace")]
         trace_tensor_token_axis_record(
             "final_norm",
@@ -2204,6 +2267,73 @@ mod tests {
             "Candle RMSNorm CPU path should be no farther from f32 replay than f64 replay: f32={candle_vs_f32:.6e}, f64={candle_vs_f64:.6e}"
         );
 
+        Ok(())
+    }
+
+    #[test]
+    #[serial_test::serial(bitnet_env)]
+    fn test_diag_rmsnorm_f64_accum_env_matches_f64_replay() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let hidden_size = 4096;
+        let eps = 1e-5;
+        let input_data = std::iter::once(4096.0f32)
+            .chain(std::iter::repeat_n(1.0f32, hidden_size - 1))
+            .collect::<Vec<_>>();
+        let gamma_data = vec![1.0f32; hidden_size];
+        let input = Tensor::from_slice(&input_data, (1, 1, hidden_size), &device)?;
+        let mut tensors = HashMap::new();
+        tensors
+            .insert("weight".to_string(), Tensor::from_slice(&gamma_data, hidden_size, &device)?);
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let norm = layer_norm_with_optional_bias(hidden_size, eps, NormType::RmsNorm, vb)?;
+
+        let mut scope = bitnet_test_support::EnvScope::new();
+        scope.set(DIAG_RMSNORM_F64_ACCUM_ENV, "1");
+
+        let output = norm_forward(&norm, &input, eps, NormType::RmsNorm)?;
+        let output = output.flatten_all()?.to_vec1::<f32>()?;
+        let f32_replay = rmsnorm_manual_f32(&input_data, &gamma_data, eps as f32);
+        let f64_replay = rmsnorm_manual_f64(&input_data, &gamma_data, eps as f32);
+        let diag_vs_f64 = max_abs_delta(&output, &f64_replay);
+        let diag_vs_f32 = max_abs_delta(&output, &f32_replay);
+
+        assert!(
+            diag_vs_f64 <= 1.0e-8,
+            "diagnostic f64 RMSNorm mode should match f64 accumulation replay, got {diag_vs_f64:.6e}"
+        );
+        assert!(
+            diag_vs_f64 <= diag_vs_f32,
+            "diagnostic f64 RMSNorm mode should be no farther from f64 replay than f32 replay: f64={diag_vs_f64:.6e}, f32={diag_vs_f32:.6e}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial_test::serial(bitnet_env)]
+    fn test_diag_rmsnorm_f64_accum_env_does_not_change_layernorm() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let hidden_size = 4;
+        let eps = 1e-5;
+        let input = Tensor::from_slice(&[1.0f32, 2.0, 4.0, 8.0], (1, hidden_size), &device)?;
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let norm = layer_norm_with_optional_bias(hidden_size, eps, NormType::LayerNorm, vb)?;
+        let expected = norm.forward(&input)?.flatten_all()?.to_vec1::<f32>()?;
+
+        let mut scope = bitnet_test_support::EnvScope::new();
+        scope.set(DIAG_RMSNORM_F64_ACCUM_ENV, "1");
+
+        let actual = norm_forward(&norm, &input, eps, NormType::LayerNorm)?
+            .flatten_all()?
+            .to_vec1::<f32>()?;
+
+        assert_eq!(max_abs_delta(&actual, &expected), 0.0);
         Ok(())
     }
 
