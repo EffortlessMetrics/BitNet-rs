@@ -2042,9 +2042,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-022"
-status = "pr_open"
+status = "merged"
 pr = 5140
-head_sha = "fae5cafff90cb343bb903aebdd5b75a143b6dc5d"
+head_sha = "acee14ad135a88878a7c4af1440c1d0dc19d8b88"
+merge_sha = "f4bf3fd38c3d0e4f49d0f39999eabc9bd2a834d6"
 branch = "model/slm-cpu-022-smollm2-reference-comparator"
 stackable = false
 review_mode = "codex_premerge"
