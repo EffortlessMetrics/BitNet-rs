@@ -391,7 +391,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-005"
-status = "pr_open"
+status = "merged"
 pr = 5154
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-005-failure-taxonomy"
 stackable = false

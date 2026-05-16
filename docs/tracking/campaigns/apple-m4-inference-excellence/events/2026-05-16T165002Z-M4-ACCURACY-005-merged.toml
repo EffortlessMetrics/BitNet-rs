@@ -1,0 +1,15 @@
+timestamp = "2026-05-16T16:50:02Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-005"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5154
+merge_sha = "bf35658be9c0b2446a0fb86c486cd37b2a8eecd2"
+
+notes = [
+  "Merged PR #5154, adding mechanical dense SLM failure taxonomy categories for regression triage.",
+  "The receipt surface now reports supported failure categories and per-case/profile/task-family summaries for formatting, factual_table, extraction, refusal, timeout, schema, and normalization labels.",
+  "M4-ACCURACY-005 is tracker-closed as dense SLM scoring metadata only; no fresh runtime run, 500-case pass-rate refresh, BitNet proof, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
