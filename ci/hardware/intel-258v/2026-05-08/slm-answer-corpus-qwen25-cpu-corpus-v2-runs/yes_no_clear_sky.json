@@ -34,9 +34,9 @@
     "batch_size": 1,
     "fallback_reason": null,
     "fallback_used": false,
-    "generated_tokens": 8,
+    "generated_tokens": 3,
     "phase": "decode",
-    "prompt_tokens": 43,
+    "prompt_tokens": 48,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -68,9 +68,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 10147,
-    "decode_first_ms": 10147,
-    "total_ms": 12502
+    "cmd_to_first_ms": 11312,
+    "decode_first_ms": 11312,
+    "total_ms": 11968
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -265,83 +265,83 @@
     "claim_scope": "selected CPU backend phase timing only",
     "decode": {
       "embed_ms": {
-        "count": 8,
-        "max_ms": 0.048,
-        "mean_ms": 0.033,
-        "min_ms": 0.02,
-        "p50_ms": 0.03,
-        "p95_ms": 0.048,
-        "total_ms": 0.26
+        "count": 3,
+        "max_ms": 0.027,
+        "mean_ms": 0.023,
+        "min_ms": 0.021,
+        "p50_ms": 0.021,
+        "p95_ms": 0.027,
+        "total_ms": 0.069
       },
-      "first_token_decode_ms": 349.109,
+      "first_token_decode_ms": 334.26,
       "forward_ms": {
-        "count": 8,
-        "max_ms": 250.96,
-        "mean_ms": 238.479,
-        "min_ms": 233.482,
-        "p50_ms": 236.392,
-        "p95_ms": 250.96,
-        "total_ms": 1907.828
+        "count": 3,
+        "max_ms": 237.783,
+        "mean_ms": 235.841,
+        "min_ms": 233.542,
+        "p50_ms": 236.198,
+        "p95_ms": 237.783,
+        "total_ms": 707.524
       },
-      "generated_tokens": 8,
+      "generated_tokens": 3,
       "logits_ms": {
-        "count": 8,
-        "max_ms": 102.904,
-        "mean_ms": 88.994,
-        "min_ms": 83.067,
-        "p50_ms": 86.271,
-        "p95_ms": 102.904,
-        "total_ms": 711.949
+        "count": 3,
+        "max_ms": 85.54,
+        "mean_ms": 83.923,
+        "min_ms": 81.417,
+        "p50_ms": 84.811,
+        "p95_ms": 85.54,
+        "total_ms": 251.768
       },
       "per_token_ms": {
-        "count": 8,
-        "max_ms": 349.109,
-        "mean_ms": 337.83,
-        "min_ms": 330.671,
-        "p50_ms": 334.061,
-        "p95_ms": 349.109,
-        "total_ms": 2702.64
+        "count": 3,
+        "max_ms": 334.26,
+        "mean_ms": 329.674,
+        "min_ms": 324.151,
+        "p50_ms": 330.611,
+        "p95_ms": 334.26,
+        "total_ms": 989.022
       },
       "sample_ms": {
-        "count": 8,
-        "max_ms": 3.796,
-        "mean_ms": 3.183,
-        "min_ms": 2.583,
-        "p50_ms": 3.134,
-        "p95_ms": 3.796,
-        "total_ms": 25.461
+        "count": 3,
+        "max_ms": 3.031,
+        "mean_ms": 2.83,
+        "min_ms": 2.675,
+        "p50_ms": 2.785,
+        "p95_ms": 3.031,
+        "total_ms": 8.49
       },
       "steady_per_token_ms": {
-        "count": 7,
-        "max_ms": 348.683,
-        "mean_ms": 336.219,
-        "min_ms": 330.671,
-        "p50_ms": 334.061,
-        "p95_ms": 348.683,
-        "total_ms": 2353.531
+        "count": 2,
+        "max_ms": 330.611,
+        "mean_ms": 327.381,
+        "min_ms": 324.151,
+        "p50_ms": 324.151,
+        "p95_ms": 330.611,
+        "total_ms": 654.762
       },
-      "steady_state_tok_s": 2.974,
-      "steady_state_tokens": 7,
+      "steady_state_tok_s": 3.055,
+      "steady_state_tokens": 2,
       "token_decode_ms": {
-        "count": 8,
-        "max_ms": 0.099,
-        "mean_ms": 0.047,
-        "min_ms": 0.025,
-        "p50_ms": 0.032,
-        "p95_ms": 0.099,
-        "total_ms": 0.376
+        "count": 3,
+        "max_ms": 0.076,
+        "mean_ms": 0.053,
+        "min_ms": 0.033,
+        "p50_ms": 0.05,
+        "p95_ms": 0.076,
+        "total_ms": 0.159
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 14315.509,
+    "model_load_ms": 13460.541,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 9795.833,
+      "ms": 10977.968,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +351,27 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 42
+      "tokens": 47
     },
-    "prompt_tokenize_ms": 476.634,
+    "prompt_tokenize_ms": 510.243,
     "requested": false,
-    "tokenizer_load_ms": 634.021
+    "tokenizer_load_ms": 584.646
   },
-  "prompt": "Answer yes or no: is the sky usually blue on a clear day?",
+  "prompt": "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?",
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 43,
-    "prompt_token_ids_sha256": "6e78220dcbf099bc3b667822dd4ff4e177d7b3d3a9c3f07383375d5ab01a03ec",
-    "rendered_prompt_sha256": "e72d11f9945f6aab1a4b8c7bf407cfa9d0fd62588852795ae5806a3ebe3ac5c3",
+    "prompt_token_count": 48,
+    "prompt_token_ids_sha256": "b27f150d726ee16ff029cc1ba35d4da5d9c1072bccd9d2688d7c5298645c820c",
+    "rendered_prompt_sha256": "a0d3d36d08675f9d1d55ba3cce9a7fb7737ebc49a866020609dac38e4e8358b7",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "e72d11f9945f6aab1a4b8c7bf407cfa9d0fd62588852795ae5806a3ebe3ac5c3",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "a0d3d36d08675f9d1d55ba3cce9a7fb7737ebc49a866020609dac38e4e8358b7",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly one word, yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -427,14 +427,14 @@
       "sse2"
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
-    "decode_tokens": 8,
-    "decode_tps": 0.639897616381379,
+    "decode_tokens": 3,
+    "decode_tps": 0.25066844919786097,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 43,
+    "prompt_tokens": 48,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +445,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": ": Yes. The sky is usually blue",
+  "text": ": Yes<|im_end|>",
   "throughput": {
-    "decoded_tokens": 8,
-    "tokens_per_second": 0.639897616381379
+    "decoded_tokens": 3,
+    "tokens_per_second": 0.25066844919786097
   },
-  "timestamp": "2026-05-16T12:23:35.133457900+00:00",
+  "timestamp": "2026-05-16T15:20:19.078176300+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 2.974,
-    "decode_total_ms": 2702.64,
+    "decode_steady_state_tok_s": 3.055,
+    "decode_total_ms": 989.022,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 349.109,
-    "first_token_ms": 10147,
+    "first_token_decode_ms": 334.26,
+    "first_token_ms": 11312,
     "host_to_device_bytes": null,
-    "model_load_ms": 14315.509,
-    "prefill_ms": 9795.833,
-    "sampling_ms_per_token": 3.183,
-    "tokenize_ms": 476.634,
-    "tokenizer_load_ms": 634.021
+    "model_load_ms": 13460.541,
+    "prefill_ms": 10977.968,
+    "sampling_ms_per_token": 2.83,
+    "tokenize_ms": 510.243,
+    "tokenizer_load_ms": 584.646
   },
   "tokenizer": {
     "bos": 151643,
@@ -476,28 +476,18 @@
     "type": "gguf_metadata"
   },
   "tokens": {
-    "generated": 8,
+    "generated": 3,
     "generated_ids": [
       25,
       7414,
-      13,
-      576,
-      12884,
-      374,
-      5990,
-      6303
+      151645
     ],
     "ids": [
       25,
       7414,
-      13,
-      576,
-      12884,
-      374,
-      5990,
-      6303
+      151645
     ],
-    "prompt": 43,
+    "prompt": 48,
     "prompt_ids": [
       151644,
       8948,
@@ -523,7 +513,12 @@
       151644,
       872,
       198,
-      16141,
+      20841,
+      448,
+      6896,
+      825,
+      3409,
+      11,
       9834,
       476,
       902,
