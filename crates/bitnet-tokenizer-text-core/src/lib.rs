@@ -262,10 +262,8 @@ mod tests {
 
     #[test]
     fn normalizer_only_strip_accents_keeps_case() {
-        let n = TokenNormalizer::new(NormalizationFlags {
-            strip_accents: true,
-            ..Default::default()
-        });
+        let n =
+            TokenNormalizer::new(NormalizationFlags { strip_accents: true, ..Default::default() });
         assert_eq!(n.normalize("Café Déjà"), "Cafe Deja");
     }
 
