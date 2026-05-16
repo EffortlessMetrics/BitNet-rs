@@ -1066,10 +1066,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-017"
-status = "pr_open"
+status = "merged"
 pr = 5041
 branch = "codex/slm-cpu-017-second-model-sanity"
 head_sha = "072d67bc7f76423a2db6ffdfd632647c46299135"
+merge_sha = "8f05904886c6124d3355f360d0f79a7d5237a68b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
