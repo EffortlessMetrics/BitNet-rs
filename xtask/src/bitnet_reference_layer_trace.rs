@@ -2759,6 +2759,9 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
     let best_reference_delta = replay
         .pointer("/reference_input_replay/best_vs_reference_target/max_abs_delta")
         .and_then(Value::as_f64);
+    let reference_core_weight_delta = replay
+        .pointer("/reference_core_weight_application/weighted_vs_reference_target/max_abs_delta")
+        .and_then(Value::as_f64);
     let best_rust_delta = replay
         .pointer("/rust_input_replay/best_vs_rust_target/max_abs_delta")
         .and_then(Value::as_f64);
@@ -2768,6 +2771,7 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
             scope_mismatch,
             reference_input_matches_rust_input,
             best_reference_delta,
+            reference_core_weight_delta,
             best_rust_delta,
             reference_target_differs_from_rust_target,
             reference_target_f16_bucket_mismatch_count,
@@ -2823,6 +2827,7 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
             "reference_target_differs_from_rust_target": reference_target_differs_from_rust_target,
             "reference_target_f16_bucket_mismatch_count": reference_target_f16_bucket_mismatch_count,
             "best_reference_delta": best_reference_delta,
+            "reference_core_weight_delta": reference_core_weight_delta,
             "best_rust_delta": best_rust_delta,
             "selected_layer": layer,
             "token": args.token,
@@ -4466,6 +4471,7 @@ fn classify_ffn_norm_prefix_replay(
     scope_mismatch: bool,
     reference_input_matches_rust_input: bool,
     best_reference_delta: Option<f64>,
+    reference_core_weight_delta: Option<f64>,
     best_rust_delta: Option<f64>,
     reference_target_differs_from_rust_target: bool,
     reference_target_f16_bucket_mismatch_count: u64,
@@ -4477,11 +4483,15 @@ fn classify_ffn_norm_prefix_replay(
     if !reference_input_matches_rust_input {
         reasons.push("ffn_norm_prefix_input_delta_present".to_string());
     }
+    let reference_target_explained = best_reference_delta.is_some_and(|delta| delta <= 1.0e-6)
+        || reference_core_weight_delta.is_some_and(|delta| delta <= 1.0e-6);
     match best_reference_delta {
-        Some(delta) if delta > 1.0e-6 => {
+        Some(delta) if delta > 1.0e-6 && !reference_target_explained => {
             reasons.push("rmsnorm_replay_does_not_match_reference_ffn_norm".to_string());
         }
-        None => reasons.push("rmsnorm_reference_ffn_norm_replay_unavailable".to_string()),
+        None if !reference_target_explained => {
+            reasons.push("rmsnorm_reference_ffn_norm_replay_unavailable".to_string())
+        }
         _ => {}
     }
     match best_rust_delta {
@@ -4518,7 +4528,7 @@ fn ffn_norm_prefix_replay_next_action(reasons: &[String]) -> &'static str {
     } else if reasons.iter().any(|reason| reason == "ffn_norm_prefix_input_delta_present") {
         "localize upstream FFN input prefix drift before replaying FFN RMSNorm"
     } else if reasons.iter().any(|reason| reason == "reference_rust_ffn_norm_delta_present") {
-        "compare the selected FFN RMSNorm replay rule against Rust runtime arithmetic before changing model math"
+        "compare the reference FFN norm core-weight result against Rust runtime arithmetic before changing model math"
     } else {
         "FFN RMSNorm replay explains the prefix token; continue downstream FFN SwiGLU sensitivity"
     }
@@ -15579,8 +15589,11 @@ mod tests {
             "strcmp(bitnet_rs_history_stage, \"l_out\") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer"
         ));
         assert!(patch.contains("bitnet_rs_history_is_layer0_attn_norm_input"));
+        assert!(patch.contains("bitnet_rs_reference_layer_trace_is_requested_ffn_norm"));
         assert!(patch.contains("cb(cur, \"ffn_norm_core\", il)"));
+        assert!(patch.contains("} else {\n         cb(cur, \"norm\", il);"));
         assert!(patch.contains("strstr(ggml_get_name(mw), \".ffn_norm.weight\")"));
+        assert!(!patch.contains("bitnet_rs_reference_layer_trace_enabled"));
         assert!(
             patch.contains(
                 "strcmp(name, \"inp_embd\") == 0 && bitnet_rs_requested_history_layer == 0"
@@ -22274,13 +22287,36 @@ mod tests {
 
     #[test]
     fn ffn_norm_prefix_replay_classifies_clean_input_material_output() {
-        let reasons = classify_ffn_norm_prefix_replay(false, true, Some(0.0), Some(0.0), true, 0);
+        let reasons =
+            classify_ffn_norm_prefix_replay(false, true, Some(0.0), None, Some(0.0), true, 0);
 
         assert_eq!(reasons, vec!["reference_rust_ffn_norm_delta_present"]);
         assert_eq!(
             ffn_norm_prefix_replay_next_action(&reasons),
-            "compare the selected FFN RMSNorm replay rule against Rust runtime arithmetic before changing model math"
+            "compare the reference FFN norm core-weight result against Rust runtime arithmetic before changing model math"
         );
+    }
+
+    #[test]
+    fn ffn_norm_prefix_replay_accepts_reference_core_weight_explanation() {
+        let reasons = classify_ffn_norm_prefix_replay(
+            false,
+            true,
+            Some(1.9073486328125e-6),
+            Some(0.0),
+            Some(0.0),
+            true,
+            2,
+        );
+
+        assert_eq!(
+            reasons,
+            vec![
+                "ffn_norm_delta_crosses_f16_bucket_boundary",
+                "reference_rust_ffn_norm_delta_present"
+            ]
+        );
+        assert!(!reasons.contains(&"rmsnorm_replay_does_not_match_reference_ffn_norm".to_string()));
     }
 
     #[test]

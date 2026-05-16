@@ -1248,17 +1248,19 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -9505,6 +10723,12 @@ static struct ggml_tensor * llm_build_norm(
+@@ -9505,6 +10723,14 @@ static struct ggml_tensor * llm_build_norm(
      }
  
      if (mw || mb) {
-+        if (mw != nullptr
-+                && bitnet_rs_reference_layer_trace_enabled()
++        const bool bitnet_rs_reference_layer_trace_is_requested_ffn_norm =
++                mw != nullptr
 +                && il == bitnet_rs_reference_layer_trace_requested_layer()
-+                && strstr(ggml_get_name(mw), ".ffn_norm.weight") != nullptr) {
++                && strstr(ggml_get_name(mw), ".ffn_norm.weight") != nullptr;
++        if (bitnet_rs_reference_layer_trace_is_requested_ffn_norm) {
 +            cb(cur, "ffn_norm_core", il);
-+        }
++        } else {
          cb(cur, "norm", il);
++        }
      }
  
 @@ -15460,6 +16681,7 @@ struct ggml_cgraph * build_bitnet_158() {
