@@ -3850,6 +3850,7 @@ fn compare_reference_to_rust(
         "attention_norm_history_delta": attention_norm_history_delta(reference_records, rust_records),
         "attention_value_projection_input_history": attention_value_projection_input_history(reference_records, rust_records),
         "attention_value_projection_output_history": attention_value_projection_output_history(reference_records, rust_records),
+        "attention_value_projection_to_cache_layout_bridge": attention_value_projection_to_cache_layout_bridge(reference_records, rust_records),
         "attention_value_mix_reference_scalar_recompute": attention_value_mix_reference_scalar_recompute(reference_records),
         "attention_value_mix_reference_numeric_variants": attention_value_mix_reference_numeric_variants(reference_records),
         "attention_value_mix_rust_scalar_recompute": attention_value_mix_rust_scalar_recompute(rust_records),
@@ -4330,7 +4331,6 @@ fn attention_value_mix_reference_numeric_variants(
             }));
         }
     }
-
     json!({
         "diagnostic_only": true,
         "claim_allowed": false,
@@ -4851,7 +4851,6 @@ fn attention_value_mix_input_candidate_best_summary(
             }));
         }
     }
-
     json!({
         "diagnostic_only": true,
         "claim_allowed": false,
@@ -8390,7 +8389,6 @@ fn attention_value_projection_output_history(
             }
         }
     }
-
     json!({
         "diagnostic_only": true,
         "claim_allowed": false,
@@ -8410,6 +8408,219 @@ fn attention_value_projection_output_history(
         "current_blocked_reasons": blocked_reasons,
         "rows": rows,
     })
+}
+
+fn attention_value_projection_to_cache_layout_bridge(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_projection = reference_records
+        .iter()
+        .find(|record| record.stage == "vcur_history_ref_layout")
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let reference_cache_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "v_cache_rust_layout_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_before_store_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_v_before_cache_store_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::new();
+    let mut compared_projection_cache_count = 0usize;
+    let mut compared_projection_rust_count = 0usize;
+    let mut compared_cache_rust_count = 0usize;
+    let mut total_projection_cache_bucket_mismatch_count = 0usize;
+    let mut total_projection_rust_bucket_mismatch_count = 0usize;
+    let mut total_cache_rust_bucket_mismatch_count = 0usize;
+    let mut max_projection_cache_bucket_mismatch_count = 0usize;
+    let mut max_projection_rust_bucket_mismatch_count = 0usize;
+    let mut max_cache_rust_bucket_mismatch_count = 0usize;
+    let mut incomplete_projection_head_count = 0usize;
+    let mut expected_head_count = 0usize;
+    let mut blocked_reasons = Vec::<String>::new();
+
+    if reference_projection.is_none() {
+        blocked_reasons.push("reference_vcur_history_ref_layout_missing".to_string());
+    }
+    if reference_cache_heads.is_empty() {
+        blocked_reasons.push("reference_v_cache_rust_layout_heads_missing".to_string());
+    }
+    if rust_before_store_heads.is_empty() {
+        blocked_reasons.push("rust_attention_v_before_cache_store_heads_missing".to_string());
+    }
+
+    if let Some(reference_projection) = reference_projection {
+        let total_dim_count =
+            reference_projection.shape.first().and_then(|dim| usize::try_from(*dim).ok());
+        let token_count =
+            reference_projection.shape.get(1).and_then(|dim| usize::try_from(*dim).ok());
+        let head_dim = reference_cache_heads
+            .values()
+            .find_map(|record| record.shape.first().and_then(|dim| usize::try_from(*dim).ok()))
+            .or_else(|| {
+                rust_before_store_heads
+                    .values()
+                    .find_map(|record| record.shape.first().copied().filter(|dim| *dim > 0))
+            });
+
+        match (total_dim_count, token_count, head_dim) {
+            (Some(total_dim_count), Some(token_count), Some(head_dim))
+                if total_dim_count > 0 && token_count > 0 && head_dim > 0 =>
+            {
+                if !total_dim_count.is_multiple_of(head_dim) {
+                    blocked_reasons.push(format!(
+                        "reference_vcur_dim_count_not_divisible_by_head_dim:{total_dim_count}:{head_dim}"
+                    ));
+                } else {
+                    expected_head_count = total_dim_count / head_dim;
+                    for head in 0..expected_head_count {
+                        let projection_head = slice_dim_major_head(
+                            &reference_projection.first_values,
+                            head,
+                            head_dim,
+                            token_count,
+                        );
+                        let projection_head_required_count = head_dim.saturating_mul(token_count);
+                        let projection_head_complete =
+                            projection_head.len() == projection_head_required_count;
+                        let reference_cache = reference_cache_heads.get(&head).copied();
+                        let rust_before_store = rust_before_store_heads.get(&head);
+
+                        let projection_history_slice_vs_reference_cache_layout =
+                            projection_head_complete.then_some(reference_cache).flatten().map(
+                                |record| {
+                                    f16_bucket_delta_dim_major(
+                                        &projection_head,
+                                        &record.first_values,
+                                        head_dim,
+                                        token_count,
+                                    )
+                                },
+                            );
+                        let projection_history_slice_vs_rust_before_cache_store =
+                            projection_head_complete.then_some(rust_before_store).flatten().map(
+                                |record| {
+                                    f16_bucket_delta_dim_major(
+                                        &projection_head,
+                                        &record.first_values,
+                                        head_dim,
+                                        token_count,
+                                    )
+                                },
+                            );
+                        let reference_cache_layout_vs_rust_before_cache_store =
+                            reference_cache.zip(rust_before_store).map(|(reference, rust)| {
+                                f16_bucket_delta_dim_major(
+                                    &reference.first_values,
+                                    &rust.first_values,
+                                    head_dim,
+                                    token_count,
+                                )
+                            });
+
+                        if let Some(delta) = &projection_history_slice_vs_reference_cache_layout {
+                            let count = f16_bucket_mismatch_count(delta);
+                            total_projection_cache_bucket_mismatch_count += count;
+                            max_projection_cache_bucket_mismatch_count =
+                                max_projection_cache_bucket_mismatch_count.max(count);
+                            compared_projection_cache_count += 1;
+                        }
+                        if let Some(delta) = &projection_history_slice_vs_rust_before_cache_store {
+                            let count = f16_bucket_mismatch_count(delta);
+                            total_projection_rust_bucket_mismatch_count += count;
+                            max_projection_rust_bucket_mismatch_count =
+                                max_projection_rust_bucket_mismatch_count.max(count);
+                            compared_projection_rust_count += 1;
+                        }
+                        if let Some(delta) = &reference_cache_layout_vs_rust_before_cache_store {
+                            let count = f16_bucket_mismatch_count(delta);
+                            total_cache_rust_bucket_mismatch_count += count;
+                            max_cache_rust_bucket_mismatch_count =
+                                max_cache_rust_bucket_mismatch_count.max(count);
+                            compared_cache_rust_count += 1;
+                        }
+
+                        let mut missing = Vec::<&str>::new();
+                        if !projection_head_complete {
+                            incomplete_projection_head_count += 1;
+                            missing.push("reference_projection_history_head_sample_incomplete");
+                        }
+                        if reference_cache.is_none() {
+                            missing.push("reference_cache_layout_head");
+                        }
+                        if rust_before_store.is_none() {
+                            missing.push("rust_before_cache_store_head");
+                        }
+
+                        rows.push(json!({
+                            "kv_head": head,
+                            "status": if missing.is_empty() { "compared" } else { "missing_input" },
+                            "missing": missing,
+                            "projection_head_first_values_count": projection_head.len(),
+                            "projection_head_required_values_count": projection_head_required_count,
+                            "projection_history_slice_vs_reference_cache_layout":
+                                projection_history_slice_vs_reference_cache_layout.unwrap_or(Value::Null),
+                            "projection_history_slice_vs_rust_before_cache_store":
+                                projection_history_slice_vs_rust_before_cache_store.unwrap_or(Value::Null),
+                            "reference_cache_layout_vs_rust_before_cache_store":
+                                reference_cache_layout_vs_rust_before_cache_store.unwrap_or(Value::Null),
+                        }));
+                    }
+                }
+            }
+            (Some(_), Some(_), None) => {
+                blocked_reasons.push("value_projection_cache_bridge_head_dim_unusable".to_string());
+            }
+            _ => {
+                blocked_reasons.push("reference_vcur_history_shape_unusable".to_string());
+            }
+        }
+    }
+    if incomplete_projection_head_count > 0 {
+        blocked_reasons.push("reference_projection_history_head_samples_incomplete".to_string());
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "value-projection to cache-layout bridge is diagnostic-only evidence for whether the reference V projection history, reference V cache layout, and Rust before-cache-store history agree in the same head/token/dim scope; it does not promote reference parity, A770 semantic quality, resident KV, value mix residency, selected attention, or any support claim",
+        "reference_projection_stage": "vcur_history_ref_layout",
+        "reference_cache_stage_prefix": "v_cache_rust_layout_head",
+        "rust_before_cache_store_stage_prefix": "attention_v_before_cache_store_kv_head",
+        "reference_projection_present": reference_projection.is_some(),
+        "reference_cache_head_count": reference_cache_heads.len(),
+        "rust_before_cache_store_head_count": rust_before_store_heads.len(),
+        "expected_head_count": expected_head_count,
+        "compared_projection_cache_count": compared_projection_cache_count,
+        "compared_projection_rust_count": compared_projection_rust_count,
+        "compared_cache_rust_count": compared_cache_rust_count,
+        "total_projection_cache_f16_bucket_mismatch_count": total_projection_cache_bucket_mismatch_count,
+        "total_projection_rust_f16_bucket_mismatch_count": total_projection_rust_bucket_mismatch_count,
+        "total_cache_rust_f16_bucket_mismatch_count": total_cache_rust_bucket_mismatch_count,
+        "max_projection_cache_head_f16_bucket_mismatch_count": max_projection_cache_bucket_mismatch_count,
+        "max_projection_rust_head_f16_bucket_mismatch_count": max_projection_rust_bucket_mismatch_count,
+        "max_cache_rust_head_f16_bucket_mismatch_count": max_cache_rust_bucket_mismatch_count,
+        "incomplete_projection_head_count": incomplete_projection_head_count,
+        "all_compared": expected_head_count > 0
+            && compared_projection_cache_count == expected_head_count
+            && compared_projection_rust_count == expected_head_count
+            && compared_cache_rust_count == expected_head_count,
+        "current_blocked_reasons": blocked_reasons,
+        "rows": rows,
+    })
+}
+
+fn f16_bucket_mismatch_count(delta: &Value) -> usize {
+    delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0) as usize
 }
 
 fn slice_dim_major_head(
@@ -12616,6 +12827,201 @@ mod tests {
             boundary.pointer("/expanded_for_value_mix/compared_head_count"),
             Some(&json!(2))
         );
+    }
+
+    #[test]
+    fn compare_reports_value_projection_to_cache_layout_bridge_matches() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record("vcur_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head0_live",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_before_cache_store_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let bridge = report.pointer("/attention_value_projection_to_cache_layout_bridge").unwrap();
+
+        assert_eq!(bridge.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(bridge.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(bridge.pointer("/all_compared"), Some(&json!(true)));
+        assert_eq!(
+            bridge.pointer("/total_projection_cache_f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            bridge.pointer("/total_projection_rust_f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(bridge.pointer("/total_cache_rust_f16_bucket_mismatch_count"), Some(&json!(0)));
+    }
+
+    #[test]
+    fn compare_reports_value_projection_to_cache_layout_bridge_localizes_reference_cache_delta() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record("vcur_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.5],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head0_live",
+                    vec![1.0, 2.0, 3.0, 4.5],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_before_cache_store_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let bridge = report.pointer("/attention_value_projection_to_cache_layout_bridge").unwrap();
+
+        assert_eq!(bridge.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(bridge.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(bridge.pointer("/all_compared"), Some(&json!(true)));
+        assert_eq!(
+            bridge.pointer("/rows/0/projection_history_slice_vs_rust_before_cache_store/f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            bridge.pointer("/rows/0/projection_history_slice_vs_reference_cache_layout/f16_bucket_mismatch_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            bridge.pointer("/rows/0/reference_cache_layout_vs_rust_before_cache_store/f16_bucket_mismatch_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            bridge.pointer("/total_projection_cache_f16_bucket_mismatch_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            bridge.pointer("/total_projection_rust_f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(bridge.pointer("/total_cache_rust_f16_bucket_mismatch_count"), Some(&json!(1)));
+    }
+
+    #[test]
+    fn compare_reports_value_projection_to_cache_layout_bridge_incomplete_projection_sample() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0],
+                ..test_reference_trace_record("vcur_history_ref_layout", vec![1.0, 2.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head0_live",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_before_cache_store_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let bridge = report.pointer("/attention_value_projection_to_cache_layout_bridge").unwrap();
+        let missing = bridge.pointer("/rows/0/missing").and_then(Value::as_array).unwrap();
+        let reasons = bridge.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(bridge.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(bridge.pointer("/all_compared"), Some(&json!(false)));
+        assert_eq!(bridge.pointer("/incomplete_projection_head_count"), Some(&json!(1)));
+        assert!(reasons.contains(&json!("reference_projection_history_head_samples_incomplete")));
+        assert_eq!(bridge.pointer("/rows/0/projection_head_first_values_count"), Some(&json!(2)));
+        assert_eq!(
+            bridge.pointer("/rows/0/projection_head_required_values_count"),
+            Some(&json!(4))
+        );
+        assert!(missing.contains(&json!("reference_projection_history_head_sample_incomplete")));
+        assert_eq!(
+            bridge.pointer("/rows/0/projection_history_slice_vs_reference_cache_layout"),
+            Some(&Value::Null)
+        );
+        assert_eq!(
+            bridge.pointer("/rows/0/projection_history_slice_vs_rust_before_cache_store"),
+            Some(&Value::Null)
+        );
+        assert_eq!(
+            bridge.pointer("/rows/0/reference_cache_layout_vs_rust_before_cache_store/f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+    }
+
+    #[test]
+    fn compare_reports_value_projection_to_cache_layout_bridge_missing_inputs() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 2, 1, 1],
+            nelements: 4,
+            first_values: vec![1.0, 2.0, 3.0, 4.0],
+            ..test_reference_trace_record("vcur_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0])
+        }];
+        let rust_records = BTreeMap::new();
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let bridge = report.pointer("/attention_value_projection_to_cache_layout_bridge").unwrap();
+        let reasons = bridge.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(bridge.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(bridge.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(bridge.pointer("/all_compared"), Some(&json!(false)));
+        assert!(reasons.contains(&json!("reference_v_cache_rust_layout_heads_missing")));
+        assert!(reasons.contains(&json!("rust_attention_v_before_cache_store_heads_missing")));
     }
 
     #[test]
