@@ -1308,9 +1308,13 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
     let model_path = normalize_path(&model_path)?;
     let cpu_record_list = read_rust_trace_records(&cpu_trace_dir)?;
     let cpu_records = rust_trace_stage_map(cpu_record_list.clone());
-    let cpu_f64_records = match &cpu_f64_trace_dir {
-        Some(dir) => Some(rust_trace_stage_map(read_rust_trace_records(dir)?)),
-        None => None,
+    let (cpu_f64_record_list, cpu_f64_records) = match &cpu_f64_trace_dir {
+        Some(dir) => {
+            let records = read_rust_trace_records(dir)?;
+            let record_map = rust_trace_stage_map(records.clone());
+            (Some(records), Some(record_map))
+        }
+        None => (None, None),
     };
     let (a770_record_list, a770_records) = match &a770_trace_dir {
         Some(dir) => {
@@ -1329,19 +1333,30 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
         &stage_mapping,
         Some(&model_path),
     );
-    if let Some(cpu_f64_records) = &cpu_f64_records {
+    if let (Some(cpu_f64_record_list), Some(cpu_f64_records)) =
+        (&cpu_f64_record_list, &cpu_f64_records)
+    {
         let frontier = cpu_comparison
             .pointer("/layer_0_prefix_drift_frontier")
             .cloned()
             .unwrap_or(Value::Null);
-        cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] =
-            layer_attention_norm_f64_capture_for_value_projection(
-                &reference_records,
-                &cpu_records,
-                cpu_f64_records,
-                &frontier,
-                0,
-            );
+        let f64_capture = layer_attention_norm_f64_capture_for_value_projection(
+            &reference_records,
+            &cpu_records,
+            cpu_f64_records,
+            &frontier,
+            0,
+        );
+        let f64_downstream = layer_attention_norm_f64_downstream_effect(
+            &reference_records,
+            cpu_f64_record_list,
+            cpu_f64_records,
+            &cpu_comparison,
+            &f64_capture,
+            0,
+        );
+        cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
+        cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
     let a770_comparison =
         a770_records.as_ref().zip(a770_record_list.as_ref()).map(|(records, record_list)| {
@@ -9811,6 +9826,248 @@ fn layer_attention_norm_f64_capture_for_value_projection(
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
     })
+}
+
+fn layer_attention_norm_f64_downstream_effect(
+    reference_records: &[ReferenceTraceRecord],
+    f64_rust_record_list: &[RustTraceRecord],
+    f64_rust_records: &BTreeMap<String, RustTraceRecord>,
+    baseline_comparison: &Value,
+    f64_capture: &Value,
+    layer: usize,
+) -> Value {
+    let stage_mapping = reference_stage_mapping();
+    let f64_stage_summary =
+        first_material_mismatch_summary(reference_records, f64_rust_records, &stage_mapping);
+    let f64_layer_output = layer_output_history_delta(reference_records, f64_rust_record_list);
+    let f64_layer_operation =
+        layer_operation_boundary_delta(reference_records, f64_rust_record_list, layer);
+    let f64_next_layer_operation =
+        layer_operation_boundary_delta(reference_records, f64_rust_record_list, layer + 1);
+
+    let f64_capture_cleared = f64_capture
+        .pointer("/f64_capture_clears_attention_norm_output_bucket_drift")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let f64_capture_exact = f64_capture
+        .pointer("/f64_capture_exactly_matches_reference")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let f64_stage_material_count =
+        value_u64(&f64_stage_summary, "/material_mismatch_count").unwrap_or(0);
+    let f64_layer_output_material_count =
+        value_u64(&f64_layer_output, "/material_mismatch_count").unwrap_or(0);
+    let f64_layer_operation_material_count =
+        value_u64(&f64_layer_operation, "/material_mismatch_count").unwrap_or(0);
+    let f64_next_layer_operation_material_count =
+        value_u64(&f64_next_layer_operation, "/material_mismatch_count").unwrap_or(0);
+    let f64_missing_stage_count = value_u64(&f64_stage_summary, "/missing_reference_count")
+        .unwrap_or(0)
+        + value_u64(&f64_stage_summary, "/missing_rust_count").unwrap_or(0);
+    let f64_layer_output_missing_count =
+        value_u64(&f64_layer_output, "/missing_rust_count").unwrap_or(0);
+    let f64_layer_operation_missing_count =
+        value_u64(&f64_layer_operation, "/missing_reference_count").unwrap_or(0)
+            + value_u64(&f64_layer_operation, "/missing_rust_count").unwrap_or(0)
+            + value_u64(&f64_next_layer_operation, "/missing_reference_count").unwrap_or(0)
+            + value_u64(&f64_next_layer_operation, "/missing_rust_count").unwrap_or(0);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !f64_capture_cleared {
+        blocked_reasons.push("f64_capture_does_not_clear_attention_norm_bucket_drift".to_string());
+    }
+    if !f64_capture_exact {
+        blocked_reasons.push("f64_capture_residual_numeric_delta_present".to_string());
+    }
+    if f64_stage_material_count > 0 {
+        blocked_reasons.push("f64_downstream_stage_mismatch_present".to_string());
+    }
+    if f64_layer_output_material_count > 0 {
+        blocked_reasons.push("f64_layer_output_material_mismatch_present".to_string());
+    }
+    if f64_layer_operation_material_count > 0 || f64_next_layer_operation_material_count > 0 {
+        blocked_reasons.push("f64_layer_operation_material_mismatch_present".to_string());
+    }
+    if f64_missing_stage_count > 0 {
+        blocked_reasons.push("f64_downstream_stage_coverage_incomplete".to_string());
+    }
+    if f64_layer_output_missing_count > 0 {
+        blocked_reasons.push("f64_layer_output_history_coverage_incomplete".to_string());
+    }
+    if f64_layer_operation_missing_count > 0 {
+        blocked_reasons.push("f64_layer_operation_coverage_incomplete".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let f64_downstream_clear = f64_capture_cleared
+        && f64_stage_material_count == 0
+        && f64_layer_output_material_count == 0
+        && f64_layer_operation_material_count == 0
+        && f64_next_layer_operation_material_count == 0
+        && f64_missing_stage_count == 0
+        && f64_layer_output_missing_count == 0
+        && f64_layer_operation_missing_count == 0;
+    let next_action = if !f64_capture_cleared {
+        "keep localizing the attention-norm capture before interpreting downstream drift"
+    } else if f64_downstream_clear {
+        "f64 diagnostic capture clears the checked downstream trace boundaries; rerun full first-token/reference parity before considering production accumulation semantics"
+    } else {
+        "f64 diagnostic capture clears the immediate bucket drift but downstream trace drift or coverage blockers remain; localize the first f64 downstream mismatch before changing production math"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 attention-norm downstream effect is diagnostic-only evidence for deciding whether the f64 capture only clears the local V-projection bucket frontier or also clears downstream first-token/layer boundaries; it does not promote runtime math changes, reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layer": layer,
+        "source": "cpu_f64_trace_dir",
+        "baseline": {
+            "first_material_mismatch": baseline_comparison.pointer("/first_material_mismatch").cloned().unwrap_or(Value::Null),
+            "layer_output_first_material_layer": baseline_comparison.pointer("/layer_output_history_delta/first_material_layer").cloned().unwrap_or(Value::Null),
+            "layer_operation_first_material_stage": baseline_comparison.pointer("/layer_0_operation_boundary_delta/first_material_stage").cloned().unwrap_or(Value::Null),
+            "next_layer_operation_first_material_stage": baseline_comparison.pointer("/layer_1_operation_boundary_delta/first_material_stage").cloned().unwrap_or(Value::Null),
+        },
+        "f64_capture_clears_attention_norm_output_bucket_drift": f64_capture_cleared,
+        "f64_capture_exactly_matches_reference": f64_capture_exact,
+        "f64": {
+            "stage_summary": f64_stage_summary,
+            "layer_output_history_delta": f64_layer_output,
+            "layer_operation_boundary_delta": f64_layer_operation,
+            "next_layer_operation_boundary_delta": f64_next_layer_operation,
+        },
+        "f64_downstream_clear": f64_downstream_clear,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
+fn first_material_mismatch_summary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    mapping: &[(&str, &str)],
+) -> Value {
+    let mut first_material_mismatch = Value::Null;
+    let mut compared_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut scope_mismatch_count = 0usize;
+    let mut missing_reference_count = 0usize;
+    let mut missing_rust_count = 0usize;
+    let mut first_scope_mismatch = Value::Null;
+
+    for (reference_stage, rust_stage) in mapping {
+        let candidates = reference_records
+            .iter()
+            .filter(|record| record.stage == *reference_stage)
+            .collect::<Vec<_>>();
+        let rust = rust_records.get(*rust_stage);
+        let reference = rust
+            .and_then(|rust| {
+                candidates
+                    .iter()
+                    .copied()
+                    .find(|record| record.nelements == rust.num_elements as u64)
+            })
+            .or_else(|| candidates.first().copied());
+
+        if reference.is_none() {
+            missing_reference_count += 1;
+        }
+        if rust.is_none() {
+            missing_rust_count += 1;
+        }
+
+        let mut status = "missing";
+        let mut rms_abs_delta = None::<f64>;
+        let mut first_values_delta = Value::Null;
+        let mut full_first_values_match = false;
+        let mut rms_material = false;
+        let mut rms_material_ignored_due_to_full_first_values_match = false;
+        let mut material_mismatch = reference.is_none() || rust.is_none();
+        let scope_mismatch = trace_scope_mismatch(reference, rust);
+        let has_scope_mismatch = scope_mismatch.is_some();
+        if let (Some(reference), Some(rust)) = (reference, rust) {
+            compared_count += 1;
+            let element_count_match = reference.nelements == rust.num_elements as u64;
+            let dtype_match = trace_dtype_compatible(&reference.dtype, &rust.dtype);
+            rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
+            rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
+            if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
+                first_values_delta = compare_prefix(
+                    &reference.first_values,
+                    &rust.first_values,
+                    reference.first_values.len().min(rust.first_values.len()),
+                );
+                full_first_values_match = reference.first_values.len() as u64
+                    == reference.nelements
+                    && rust.first_values.len() == rust.num_elements
+                    && first_values_delta
+                        .pointer("/count_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                    && first_values_delta
+                        .pointer("/sha256_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+            }
+            if has_scope_mismatch {
+                material_mismatch = false;
+                status = "scope_mismatch";
+            } else {
+                rms_material_ignored_due_to_full_first_values_match =
+                    rms_material && full_first_values_match;
+                material_mismatch = !element_count_match
+                    || !dtype_match
+                    || (rms_material && !full_first_values_match);
+                status = if material_mismatch { "material_mismatch" } else { "summary_match" };
+            }
+        }
+        if has_scope_mismatch {
+            scope_mismatch_count += 1;
+        }
+        if material_mismatch {
+            material_mismatch_count += 1;
+        }
+
+        let row = json!({
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "status": status,
+            "candidate_reference_records": candidates.len(),
+            "reference": reference.map(reference_record_summary),
+            "rust": rust.map(rust_record_summary),
+            "rms_abs_delta": rms_abs_delta,
+            "rms_material": rms_material,
+            "full_first_values_match": full_first_values_match,
+            "rms_material_ignored_due_to_full_first_values_match": rms_material_ignored_due_to_full_first_values_match,
+            "first_values_delta": first_values_delta,
+            "scope_mismatch": has_scope_mismatch,
+            "scope": scope_mismatch,
+            "material_mismatch": material_mismatch,
+        });
+        if has_scope_mismatch && first_scope_mismatch.is_null() {
+            first_scope_mismatch = row.clone();
+        }
+        if material_mismatch && first_material_mismatch.is_null() {
+            first_material_mismatch = row;
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "compared_stage_count": compared_count,
+        "material_mismatch_count": material_mismatch_count,
+        "scope_mismatch_count": scope_mismatch_count,
+        "missing_reference_count": missing_reference_count,
+        "missing_rust_count": missing_rust_count,
+        "first_scope_mismatch": first_scope_mismatch,
+        "first_material_mismatch": first_material_mismatch,
+    })
+}
+
+fn value_u64(value: &Value, pointer: &str) -> Option<u64> {
+    value.pointer(pointer).and_then(Value::as_u64)
 }
 
 fn prefix_token_relative_position(frontier: &Value, token: usize) -> Value {
@@ -22022,6 +22279,70 @@ mod tests {
             report.pointer("/current_blocked_reasons").and_then(Value::as_array).map(Vec::len),
             Some(0)
         );
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_f64_downstream_effect_as_diagnostic() {
+        let mut reference_layer0 = test_reference_trace_record("l_out", vec![1.0, 2.0]);
+        reference_layer0.name = "l_out-0".to_string();
+        reference_layer0.layer = Some(0);
+        reference_layer0.nelements = 2;
+        let mut rust_layer0 = test_rust_trace_record("post_layer", vec![1.0, 2.5]);
+        rust_layer0.name = "t0/blk0/post_layer".to_string();
+        rust_layer0.layer = Some(0);
+        rust_layer0.num_elements = 2;
+        let rust_records = vec![rust_layer0.clone()];
+        let mut rust_map = BTreeMap::new();
+        rust_map.insert("post_layer".to_string(), rust_layer0);
+        let baseline = json!({
+            "first_material_mismatch": {
+                "reference_stage": "attn_norm",
+                "rust_stage": "attn_norm",
+                "status": "material_mismatch"
+            },
+            "layer_output_history_delta": {
+                "first_material_layer": {
+                    "layer": 0
+                }
+            },
+            "layer_0_operation_boundary_delta": {
+                "first_material_stage": Value::Null
+            },
+            "layer_1_operation_boundary_delta": {
+                "first_material_stage": Value::Null
+            }
+        });
+        let f64_capture = json!({
+            "f64_capture_clears_attention_norm_output_bucket_drift": true,
+            "f64_capture_exactly_matches_reference": false,
+        });
+
+        let report = layer_attention_norm_f64_downstream_effect(
+            &[reference_layer0],
+            &rust_records,
+            &rust_map,
+            &baseline,
+            &f64_capture,
+            0,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/f64_capture_clears_attention_norm_output_bucket_drift"),
+            Some(&json!(true))
+        );
+        assert_eq!(report.pointer("/f64_downstream_clear"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer(
+                "/f64/layer_output_history_delta/first_material_layer/first_values_delta/max_abs_delta"
+            ),
+            Some(&json!(0.5))
+        );
+        let reasons = report.pointer("/current_blocked_reasons").unwrap().as_array().unwrap();
+        assert!(reasons.contains(&json!("f64_capture_residual_numeric_delta_present")));
+        assert!(reasons.contains(&json!("f64_layer_output_material_mismatch_present")));
+        assert!(reasons.contains(&json!("f64_downstream_stage_coverage_incomplete")));
     }
 
     #[test]
