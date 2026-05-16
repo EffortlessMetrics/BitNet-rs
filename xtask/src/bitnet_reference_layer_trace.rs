@@ -24,6 +24,8 @@ const DEFAULT_ATTN_OUTPUT_SAME_INPUT_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-attn-output-same-input-parity.json";
 const DEFAULT_VALUE_PROJECTION_SAME_INPUT_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-value-projection-same-input-parity.json";
+const DEFAULT_VALUE_PROJECTION_HISTORY_REPLAY_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-value-projection-history-replay.json";
 const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
@@ -172,6 +174,16 @@ struct AttnOutputSameInputArgs {
 #[derive(Debug)]
 struct ValueProjectionSameInputArgs {
     reference: PathBuf,
+    model: Option<PathBuf>,
+    weight: String,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct ValueProjectionHistoryReplayArgs {
+    reference: PathBuf,
+    cpu_trace_dir: PathBuf,
     model: Option<PathBuf>,
     weight: String,
     output: Option<PathBuf>,
@@ -365,6 +377,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-value-projection-history-replay") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_value_projection_history_replay_help();
+                return Ok(true);
+            }
+            let opts = parse_value_projection_history_replay_args(args)?;
+            let report = build_value_projection_history_replay(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -408,6 +438,12 @@ fn print_attn_output_same_input_help() {
 fn print_value_projection_same_input_help() {
     println!(
         "Project the reference attn_norm vector through Rust-loaded blk.0.attn_v.weight and compare with reference Vcur\n\nUsage: xtask.exe bitnet-reference-value-projection-same-input-parity [OPTIONS]\n\nOptions:\n      --reference <PATH>  Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --model <PATH>      GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>     GGUF QK256 value projection weight [default: blk.0.attn_v.weight]\n      --output <PATH>     Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-value-projection-same-input-parity.json]\n      --format <FORMAT>   Output format: human or json [default: human]\n  -h, --help              Print help"
+    );
+}
+
+fn print_value_projection_history_replay_help() {
+    println!(
+        "Replay full-prefix attn_norm histories through Rust-loaded blk.0.attn_v.weight and compare reference/Rust V histories\n\nUsage: xtask.exe bitnet-reference-value-projection-history-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF QK256 value projection weight [default: blk.0.attn_v.weight]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-value-projection-history-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
     );
 }
 
@@ -638,6 +674,42 @@ fn parse_value_projection_same_input_args(args: &[String]) -> Result<ValueProjec
         }
     }
     Ok(ValueProjectionSameInputArgs { reference, model, weight, output, format })
+}
+
+fn parse_value_projection_history_replay_args(
+    args: &[String],
+) -> Result<ValueProjectionHistoryReplayArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-value-projection-history-replay") {
+        bail!("parse_value_projection_history_replay_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
+    let mut model = None::<PathBuf>;
+    let mut weight = DEFAULT_VALUE_PROJECTION_WEIGHT.to_string();
+    let mut output = Some(PathBuf::from(DEFAULT_VALUE_PROJECTION_HISTORY_REPLAY_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
+            "--model" => model = Some(PathBuf::from(value()?)),
+            "--weight" => weight = value()?,
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => {
+                bail!("unknown bitnet-reference-value-projection-history-replay option {other}")
+            }
+        }
+    }
+    Ok(ValueProjectionHistoryReplayArgs { reference, cpu_trace_dir, model, weight, output, format })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -1592,15 +1664,215 @@ fn build_value_projection_same_input_parity(args: &ValueProjectionSameInputArgs)
     }))
 }
 
+fn build_value_projection_history_replay(args: &ValueProjectionHistoryReplayArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let reference_root = read_json(&reference_path)?;
+    let reference_records = read_reference_records(&reference_root)?;
+    let trace = reference_trace_receipt(&reference_root)?;
+    let model_path = args
+        .model
+        .clone()
+        .or_else(|| {
+            reference_root.pointer("/model/model_path").and_then(Value::as_str).map(PathBuf::from)
+        })
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
+    let model_path = normalize_path(&model_path)?;
+
+    let rust_records = read_rust_trace_dir(&cpu_trace_dir).ok();
+    let reference_input =
+        reference_records.iter().find(|record| record.stage == "attn_norm_history_ref_layout");
+    let reference_target =
+        reference_records.iter().find(|record| record.stage == "vcur_history_ref_layout");
+    let reference_current_input = reference_records
+        .iter()
+        .find(|record| record.stage == "attn_norm" && record.layer == Some(0));
+    let reference_current_target =
+        reference_records.iter().find(|record| record.stage == "Vcur" && record.layer == Some(0));
+    let rust_input = rust_records
+        .as_ref()
+        .and_then(|records| records.get("attention_v_input_history_ref_layout"));
+    let rust_target = rust_records
+        .as_ref()
+        .and_then(|records| collect_rust_value_before_cache_history(records).ok());
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !reference_path.is_file() {
+        blocked_reasons.push("reference_layer_trace_receipt_missing".to_string());
+    }
+    if !model_path.is_file() {
+        blocked_reasons.push("model_gguf_missing".to_string());
+    }
+    if reference_input.is_none() {
+        blocked_reasons.push("reference_attn_norm_history_ref_layout_missing".to_string());
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push("reference_vcur_history_ref_layout_missing".to_string());
+    }
+    if rust_records.is_none() {
+        blocked_reasons.push("rust_cpu_trace_dir_unavailable".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push("rust_attention_v_input_history_ref_layout_missing".to_string());
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push("rust_attention_v_before_cache_store_history_unavailable".to_string());
+    }
+
+    let mut model = json!({
+        "path": path_to_string(&model_path),
+        "exists": model_path.is_file(),
+    });
+    let mut weight = json!({
+        "name": args.weight,
+    });
+    let mut replay = Value::Null;
+
+    if model_path.is_file() && reference_input.is_some() && reference_target.is_some() {
+        let reference_input = reference_input.expect("checked above");
+        let reference_target = reference_target.expect("checked above");
+        match build_value_projection_history_replay_body(
+            &model_path,
+            &args.weight,
+            reference_input,
+            reference_target,
+            rust_input,
+            rust_target.as_ref(),
+            reference_current_input,
+            reference_current_target,
+        ) {
+            Ok((model_report, weight_report, replay_report)) => {
+                model = model_report;
+                weight = weight_report;
+                replay = replay_report;
+            }
+            Err(err) => {
+                blocked_reasons.push(format!("value_projection_history_replay_unavailable:{err}"));
+            }
+        }
+    }
+
+    let reference_replay_matches = replay
+        .pointer("/reference_history_replay/rust_replay_vs_reference_target/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-3);
+    let rust_replay_matches_runtime = replay
+        .pointer("/rust_history_replay/rust_replay_vs_rust_trace/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-3);
+    let rust_replay_bucket_mismatches_reference = replay
+        .pointer("/rust_history_replay/rust_replay_vs_reference_target/f16_bucket_mismatch_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let input_history_materially_same = replay
+        .pointer("/input_history/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-6);
+    let current_token_history_consistent = replay
+        .pointer("/current_token_replay/current_input_vs_history_token/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-6)
+        && replay
+            .pointer("/current_token_replay/current_replay_vs_history_replay_token/max_abs_delta")
+            .and_then(Value::as_f64)
+            .is_some_and(|delta| delta <= 1.0e-3);
+
+    let current_blocked_reasons = if blocked_reasons.is_empty() {
+        classify_value_projection_history_replay(
+            reference_replay_matches,
+            rust_replay_matches_runtime,
+            rust_replay_bucket_mismatches_reference,
+            input_history_materially_same,
+            current_token_history_consistent,
+        )
+    } else {
+        blocked_reasons.clone()
+    };
+    let next_action = value_projection_history_replay_next_action(&current_blocked_reasons);
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_value_projection_history_replay",
+        "diagnostic": "bitnet_reference_value_projection_history_replay",
+        "producer": "cargo xtask bitnet-reference-value-projection-history-replay",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "promotion_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "model": path_to_string(&model_path),
+            "weight": args.weight,
+        },
+        "reference_trace": {
+            "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
+            "warmup_skip_policy": trace.pointer("/warmup_skip_policy").cloned().unwrap_or(Value::Null),
+            "n_tokens": trace.pointer("/n_tokens").cloned().unwrap_or(Value::Null),
+            "n_outputs": trace.pointer("/n_outputs").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_index": trace.pointer("/sampled_output_token_index").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_id": trace.pointer("/sampled_output_token_id").cloned().unwrap_or(Value::Null),
+            "attn_norm_history_ref_layout": reference_input.map(reference_record_summary).unwrap_or(Value::Null),
+            "vcur_history_ref_layout": reference_target.map(reference_record_summary).unwrap_or(Value::Null),
+        },
+        "rust_trace": {
+            "present": rust_records.is_some(),
+            "attention_v_input_history_ref_layout": rust_input.map(rust_record_summary).unwrap_or(Value::Null),
+            "attention_v_before_cache_store_history": rust_target.as_ref().map(rust_value_history_summary).unwrap_or(Value::Null),
+        },
+        "model": model,
+        "weight": weight,
+        "replay": replay,
+        "decision": {
+            "reference_history_replay_matches_reference": reference_replay_matches,
+            "rust_history_replay_matches_rust_trace": rust_replay_matches_runtime,
+            "rust_history_replay_reference_f16_bucket_mismatch_count": rust_replay_bucket_mismatches_reference,
+            "input_history_materially_same": input_history_materially_same,
+            "current_token_history_consistent": current_token_history_consistent,
+            "current_blocked_reasons": current_blocked_reasons,
+            "next_action": next_action,
+            "claim_allowed": false,
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
 fn project_qk256_same_input(
     model_path: &Path,
     weight_name: &str,
     input: &[f32],
     expected_output_len: Option<usize>,
 ) -> Result<(Value, Value, Vec<f32>)> {
+    let projection = load_qk256_same_input_projection(
+        model_path,
+        weight_name,
+        input.len(),
+        expected_output_len,
+    )?;
+    let output = project_qk256_loaded_row(&projection, input)?;
+    Ok((projection.model_report, projection.weight_report, output))
+}
+
+#[derive(Debug, Clone)]
+struct LoadedQk256Projection {
+    model_report: Value,
+    weight_report: Value,
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    scale: f32,
+    qk256_bytes: Vec<u8>,
+}
+
+fn load_qk256_same_input_projection(
+    model_path: &Path,
+    weight_name: &str,
+    input_len: usize,
+    expected_output_len: Option<usize>,
+) -> Result<LoadedQk256Projection> {
     use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
     use bitnet_models::loader::MmapFile;
-    use bitnet_models::quant::i2s_qk256::gemv_qk256_activation_quantized_scaled;
 
     let mmap =
         MmapFile::open(model_path).map_err(|err| anyhow::anyhow!("opening GGUF model: {err}"))?;
@@ -1619,7 +1891,7 @@ fn project_qk256_same_input(
         .get_tensor_data_by_info(info)
         .map_err(|err| anyhow::anyhow!("reading raw data for '{weight_name}': {err}"))?;
     let layout =
-        select_qk256_same_input_layout(&info.shape, input.len(), expected_output_len, data.len())?;
+        select_qk256_same_input_layout(&info.shape, input_len, expected_output_len, data.len())?;
     let rows = layout.rows;
     let cols = layout.cols;
     let row_stride_bytes = cols.div_ceil(256) * 64;
@@ -1637,19 +1909,6 @@ fn project_qk256_same_input(
     } else {
         1.0
     };
-    let qk256_bytes = &data[..logical_bytes];
-    let mut output = vec![0.0f32; rows];
-    gemv_qk256_activation_quantized_scaled(
-        qk256_bytes,
-        input,
-        &mut output,
-        rows,
-        cols,
-        row_stride_bytes,
-        scale,
-    )
-    .map_err(|err| anyhow::anyhow!("same-input QK256 projection failed: {err}"))?;
-
     let model_report = json!({
         "path": path_to_string(model_path),
         "exists": true,
@@ -1668,7 +1927,401 @@ fn project_qk256_same_input(
         "trailer_or_padding_bytes": data.len().saturating_sub(logical_bytes),
         "trailer_scale": scale,
     });
-    Ok((model_report, weight_report, output))
+    Ok(LoadedQk256Projection {
+        model_report,
+        weight_report,
+        rows,
+        cols,
+        row_stride_bytes,
+        scale,
+        qk256_bytes: data[..logical_bytes].to_vec(),
+    })
+}
+
+fn project_qk256_loaded_row(projection: &LoadedQk256Projection, input: &[f32]) -> Result<Vec<f32>> {
+    use bitnet_models::quant::i2s_qk256::gemv_qk256_activation_quantized_scaled;
+
+    if input.len() != projection.cols {
+        bail!(
+            "QK256 projection input length {} does not match cols {}",
+            input.len(),
+            projection.cols
+        );
+    }
+    let mut output = vec![0.0f32; projection.rows];
+    gemv_qk256_activation_quantized_scaled(
+        &projection.qk256_bytes,
+        input,
+        &mut output,
+        projection.rows,
+        projection.cols,
+        projection.row_stride_bytes,
+        projection.scale,
+    )
+    .map_err(|err| anyhow::anyhow!("same-input QK256 projection failed: {err}"))?;
+    Ok(output)
+}
+
+#[derive(Debug, Clone)]
+struct RustValueHistory {
+    values: Vec<f32>,
+    head_dim: usize,
+    head_count: usize,
+    token_count: usize,
+}
+
+fn build_value_projection_history_replay_body(
+    model_path: &Path,
+    weight_name: &str,
+    reference_input: &ReferenceTraceRecord,
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustValueHistory>,
+    reference_current_input: Option<&ReferenceTraceRecord>,
+    reference_current_target: Option<&ReferenceTraceRecord>,
+) -> Result<(Value, Value, Value)> {
+    let reference_input_dim = dim_major_dim_count(reference_input)?;
+    let token_count = dim_major_token_count(reference_input)?;
+    let reference_target_dim = dim_major_dim_count(reference_target)?;
+    let target_token_count = dim_major_token_count(reference_target)?;
+    if token_count != target_token_count {
+        bail!(
+            "reference input token_count {token_count} does not match target token_count {target_token_count}"
+        );
+    }
+    let projection = load_qk256_same_input_projection(
+        model_path,
+        weight_name,
+        reference_input_dim,
+        Some(reference_target_dim),
+    )?;
+    let reference_replay = replay_qk256_dim_major_history(
+        &reference_input.first_values,
+        reference_input_dim,
+        token_count,
+        &projection,
+    )?;
+    let reference_delta = f16_bucket_delta_dim_major(
+        &reference_replay,
+        &reference_target.first_values,
+        reference_target_dim,
+        token_count,
+    );
+
+    let input_history_delta = rust_input.map(|rust| {
+        dim_major_token_value_delta(
+            &reference_input.first_values,
+            &rust.first_values,
+            reference_input_dim,
+            token_count,
+        )
+    });
+
+    let rust_replay = match rust_input {
+        Some(rust) if !rust.first_values.is_empty() => Some(replay_qk256_dim_major_history(
+            &rust.first_values,
+            reference_input_dim,
+            token_count,
+            &projection,
+        )?),
+        _ => None,
+    };
+    let rust_replay_vs_rust_trace =
+        rust_replay.as_ref().zip(rust_target).map(|(replay, target)| {
+            f16_bucket_delta_dim_major(
+                replay,
+                &target.values,
+                target.head_dim * target.head_count,
+                target.token_count,
+            )
+        });
+    let rust_replay_vs_reference_target = rust_replay.as_ref().map(|replay| {
+        f16_bucket_delta_dim_major(
+            replay,
+            &reference_target.first_values,
+            reference_target_dim,
+            token_count,
+        )
+    });
+    let current_token_replay = current_value_projection_token_replay(
+        reference_current_input,
+        reference_current_target,
+        &reference_input.first_values,
+        &reference_replay,
+        reference_input_dim,
+        reference_target_dim,
+        token_count,
+        &projection,
+    );
+
+    let replay = json!({
+        "kernel": "rust_qk256_activation_quantized_scaled_history_replay_cpu_oracle",
+        "input_history": {
+            "reference_stage": "attn_norm_history_ref_layout",
+            "rust_stage": "attention_v_input_history_ref_layout",
+            "reference": row_report(&reference_input.first_values),
+            "rust": rust_input.map(|record| row_report(&record.first_values)).unwrap_or(Value::Null),
+            "reference_vs_rust": input_history_delta.unwrap_or(Value::Null),
+        },
+        "reference_history_replay": {
+            "input_stage": "attn_norm_history_ref_layout",
+            "target_stage": "vcur_history_ref_layout",
+            "rust_replay": row_report(&reference_replay),
+            "reference_target": row_report(&reference_target.first_values),
+            "rust_replay_vs_reference_target": reference_delta,
+        },
+        "rust_history_replay": {
+            "input_stage": "attention_v_input_history_ref_layout",
+            "target_stage_prefix": "attention_v_before_cache_store_kv_head",
+            "rust_replay": rust_replay.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
+            "rust_target": rust_target.map(rust_value_history_summary).unwrap_or(Value::Null),
+            "rust_replay_vs_rust_trace": rust_replay_vs_rust_trace.unwrap_or(Value::Null),
+            "rust_replay_vs_reference_target": rust_replay_vs_reference_target.unwrap_or(Value::Null),
+        },
+        "current_token_replay": current_token_replay,
+    });
+
+    Ok((projection.model_report, projection.weight_report, replay))
+}
+
+fn replay_qk256_dim_major_history(
+    input_history: &[f32],
+    input_dim: usize,
+    token_count: usize,
+    projection: &LoadedQk256Projection,
+) -> Result<Vec<f32>> {
+    replay_dim_major_history(input_history, input_dim, token_count, projection.rows, |row| {
+        project_qk256_loaded_row(projection, row)
+    })
+}
+
+fn replay_dim_major_history<F>(
+    input_history: &[f32],
+    input_dim: usize,
+    token_count: usize,
+    output_dim: usize,
+    mut project: F,
+) -> Result<Vec<f32>>
+where
+    F: FnMut(&[f32]) -> Result<Vec<f32>>,
+{
+    if input_history.len() < input_dim.saturating_mul(token_count) {
+        bail!(
+            "input history has {} values, shorter than dim*token {}",
+            input_history.len(),
+            input_dim.saturating_mul(token_count)
+        );
+    }
+    let mut token_major_outputs = Vec::with_capacity(output_dim.saturating_mul(token_count));
+    for token in 0..token_count {
+        let input = slice_dim_major_token(input_history, input_dim, token_count, token)?;
+        let output = project(&input)?;
+        if output.len() != output_dim {
+            bail!("projection returned {} values, expected {output_dim}", output.len());
+        }
+        token_major_outputs.extend_from_slice(&output);
+    }
+    let mut dim_major_outputs = Vec::with_capacity(output_dim.saturating_mul(token_count));
+    for dim in 0..output_dim {
+        for token in 0..token_count {
+            dim_major_outputs.push(token_major_outputs[token * output_dim + dim]);
+        }
+    }
+    Ok(dim_major_outputs)
+}
+
+fn slice_dim_major_token(
+    values: &[f32],
+    dim_count: usize,
+    token_count: usize,
+    token: usize,
+) -> Result<Vec<f32>> {
+    if token >= token_count {
+        bail!("token {token} out of range for token_count {token_count}");
+    }
+    if values.len() < dim_count.saturating_mul(token_count) {
+        bail!(
+            "dim-major values have {} entries, shorter than dim*token {}",
+            values.len(),
+            dim_count.saturating_mul(token_count)
+        );
+    }
+    let mut out = Vec::with_capacity(dim_count);
+    for dim in 0..dim_count {
+        out.push(values[dim * token_count + token]);
+    }
+    Ok(out)
+}
+
+fn dim_major_dim_count(record: &ReferenceTraceRecord) -> Result<usize> {
+    record
+        .shape
+        .first()
+        .and_then(|dim| usize::try_from(*dim).ok())
+        .filter(|dim| *dim > 0)
+        .with_context(|| {
+            format!("{} has unusable dim-major shape {:?}", record.stage, record.shape)
+        })
+}
+
+fn dim_major_token_count(record: &ReferenceTraceRecord) -> Result<usize> {
+    record
+        .shape
+        .get(1)
+        .and_then(|dim| usize::try_from(*dim).ok())
+        .filter(|dim| *dim > 0)
+        .with_context(|| {
+            format!("{} has unusable token count shape {:?}", record.stage, record.shape)
+        })
+}
+
+fn collect_rust_value_before_cache_history(
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Result<RustValueHistory> {
+    let heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_v_before_cache_store_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    if heads.is_empty() {
+        bail!("no attention_v_before_cache_store_kv_head traces found");
+    }
+    let expected_head_count = heads.keys().next_back().copied().unwrap_or(0) + 1;
+    let first = heads.values().next().context("missing first Rust V head")?;
+    let head_dim = first
+        .shape
+        .first()
+        .copied()
+        .filter(|dim| *dim > 0)
+        .context("Rust V head trace missing head_dim shape")?;
+    let token_count = first
+        .shape
+        .get(1)
+        .copied()
+        .or_else(|| first.first_values.len().checked_div(head_dim))
+        .filter(|count| *count > 0)
+        .context("Rust V head trace missing token_count shape")?;
+    let mut values = Vec::with_capacity(expected_head_count * head_dim * token_count);
+    for head in 0..expected_head_count {
+        let record =
+            heads.get(&head).with_context(|| format!("missing Rust V before-cache head {head}"))?;
+        if record.shape.first().copied() != Some(head_dim) {
+            bail!("Rust V head {head} head_dim shape mismatch");
+        }
+        if record.shape.get(1).copied() != Some(token_count) {
+            bail!("Rust V head {head} token_count shape mismatch");
+        }
+        values.extend_from_slice(&record.first_values);
+    }
+    Ok(RustValueHistory { values, head_dim, head_count: expected_head_count, token_count })
+}
+
+fn rust_value_history_summary(history: &RustValueHistory) -> Value {
+    json!({
+        "layout": "dim_major_token_minor",
+        "head_dim": history.head_dim,
+        "head_count": history.head_count,
+        "token_count": history.token_count,
+        "values": row_report(&history.values),
+    })
+}
+
+fn current_value_projection_token_replay(
+    reference_current_input: Option<&ReferenceTraceRecord>,
+    reference_current_target: Option<&ReferenceTraceRecord>,
+    reference_input_history: &[f32],
+    reference_replay_history: &[f32],
+    input_dim: usize,
+    output_dim: usize,
+    token_count: usize,
+    projection: &LoadedQk256Projection,
+) -> Value {
+    let token = reference_current_target
+        .and_then(reference_sampled_token_index)
+        .or_else(|| reference_current_input.and_then(reference_sampled_token_index))
+        .and_then(|token| usize::try_from(token).ok())
+        .unwrap_or_else(|| token_count.saturating_sub(1));
+    let current_input = match reference_current_input {
+        Some(record) if !record.first_values.is_empty() => Some(record.first_values.clone()),
+        _ => None,
+    };
+    let current_target = match reference_current_target {
+        Some(record) if !record.first_values.is_empty() => Some(record.first_values.clone()),
+        _ => None,
+    };
+    let history_input_token =
+        slice_dim_major_token(reference_input_history, input_dim, token_count, token).ok();
+    let history_replay_token =
+        slice_dim_major_token(reference_replay_history, output_dim, token_count, token).ok();
+    let current_replay =
+        current_input.as_ref().and_then(|input| project_qk256_loaded_row(projection, input).ok());
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "token": token,
+        "current_input_present": current_input.is_some(),
+        "current_target_present": current_target.is_some(),
+        "history_input_token_present": history_input_token.is_some(),
+        "history_replay_token_present": history_replay_token.is_some(),
+        "current_input_vs_history_token": current_input.as_ref().zip(history_input_token.as_ref()).map(|(left, right)| compare_vectors(left, right)).unwrap_or(Value::Null),
+        "current_replay_vs_history_replay_token": current_replay.as_ref().zip(history_replay_token.as_ref()).map(|(left, right)| compare_vectors(left, right)).unwrap_or(Value::Null),
+        "current_replay_vs_reference_current_target": current_replay.as_ref().zip(current_target.as_ref()).map(|(left, right)| compare_vectors(left, right)).unwrap_or(Value::Null),
+    })
+}
+
+fn classify_value_projection_history_replay(
+    reference_replay_matches: bool,
+    rust_replay_matches_runtime: bool,
+    rust_replay_bucket_mismatches_reference: u64,
+    input_history_materially_same: bool,
+    current_token_history_consistent: bool,
+) -> Vec<String> {
+    if !reference_replay_matches {
+        vec!["reference_history_replay_does_not_match_reference_vcur".to_string()]
+    } else if !rust_replay_matches_runtime {
+        vec!["rust_history_replay_does_not_match_rust_runtime_v_output".to_string()]
+    } else if !current_token_history_consistent {
+        vec!["current_token_same_input_differs_from_history_replay".to_string()]
+    } else if rust_replay_bucket_mismatches_reference > 0 && input_history_materially_same {
+        vec!["tiny_input_history_delta_amplified_by_qk256_activation_quantization".to_string()]
+    } else if rust_replay_bucket_mismatches_reference > 0 {
+        vec!["rust_input_history_delta_explains_value_projection_bucket_drift".to_string()]
+    } else {
+        vec![
+            "value_projection_history_replay_no_longer_explains_value_cache_bucket_drift"
+                .to_string(),
+        ]
+    }
+}
+
+fn value_projection_history_replay_next_action(reasons: &[String]) -> &'static str {
+    if reasons
+        .iter()
+        .any(|reason| reason == "reference_history_replay_does_not_match_reference_vcur")
+    {
+        "inspect QK256 value-projection activation quantization, integer-dot formula, trailer scale, and history layout against the reference Vcur output"
+    } else if reasons
+        .iter()
+        .any(|reason| reason == "rust_history_replay_does_not_match_rust_runtime_v_output")
+    {
+        "inspect Rust runtime QK256 dispatch flattening/output reshape before changing reference parity logic"
+    } else if reasons
+        .iter()
+        .any(|reason| reason == "current_token_same_input_differs_from_history_replay")
+    {
+        "inspect all-token versus current-token value-projection context and token-major flattening"
+    } else if reasons.iter().any(|reason| {
+        reason == "tiny_input_history_delta_amplified_by_qk256_activation_quantization"
+            || reason == "rust_input_history_delta_explains_value_projection_bucket_drift"
+    }) {
+        "localize the upstream attention-norm history delta that feeds the value projection"
+    } else {
+        "continue with the next reference/Rust layer boundary; do not promote claims from this diagnostic"
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -10419,6 +11072,93 @@ mod tests {
         assert_eq!(parsed.weight, "blk.1.attn_v.weight");
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn value_projection_history_replay_args_parse_defaults_and_overrides() {
+        let default_args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-value-projection-history-replay".to_string(),
+        ];
+        let defaults = parse_value_projection_history_replay_args(&default_args).unwrap();
+        assert_eq!(defaults.reference, PathBuf::from(DEFAULT_RUN_OUTPUT));
+        assert_eq!(defaults.cpu_trace_dir, PathBuf::from(DEFAULT_CPU_TRACE_DIR));
+        assert_eq!(defaults.model, None);
+        assert_eq!(defaults.weight, DEFAULT_VALUE_PROJECTION_WEIGHT);
+        assert_eq!(
+            defaults.output,
+            Some(PathBuf::from(DEFAULT_VALUE_PROJECTION_HISTORY_REPLAY_OUTPUT))
+        );
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-value-projection-history-replay".to_string(),
+            "--reference".to_string(),
+            "ref.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "trace-dir".to_string(),
+            "--model".to_string(),
+            "model.gguf".to_string(),
+            "--weight".to_string(),
+            "blk.1.attn_v.weight".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_value_projection_history_replay_args(&args).unwrap();
+        assert_eq!(parsed.reference, PathBuf::from("ref.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("trace-dir"));
+        assert_eq!(parsed.model, Some(PathBuf::from("model.gguf")));
+        assert_eq!(parsed.weight, "blk.1.attn_v.weight");
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn value_projection_history_replay_replays_dim_major_history() {
+        let input = vec![
+            1.0, 2.0, // dim 0, tokens 0/1
+            3.0, 4.0, // dim 1, tokens 0/1
+        ];
+
+        let replay = replay_dim_major_history(&input, 2, 2, 2, |row| {
+            Ok(vec![row[0] + row[1], row[0] - row[1]])
+        })
+        .unwrap();
+
+        assert_eq!(
+            replay,
+            vec![
+                4.0, 6.0, // output dim 0, tokens 0/1
+                -2.0, -2.0, // output dim 1, tokens 0/1
+            ]
+        );
+        assert_eq!(slice_dim_major_token(&input, 2, 2, 1).unwrap(), vec![2.0, 4.0]);
+    }
+
+    #[test]
+    fn value_projection_history_replay_classifies_input_amplification() {
+        let reasons = classify_value_projection_history_replay(true, true, 10, true, true);
+        assert_eq!(
+            reasons,
+            vec!["tiny_input_history_delta_amplified_by_qk256_activation_quantization"]
+        );
+        assert_eq!(
+            value_projection_history_replay_next_action(&reasons),
+            "localize the upstream attention-norm history delta that feeds the value projection"
+        );
+    }
+
+    #[test]
+    fn value_projection_history_replay_detects_projection_semantic_mismatch() {
+        let reasons = classify_value_projection_history_replay(false, true, 0, true, true);
+        assert_eq!(reasons, vec!["reference_history_replay_does_not_match_reference_vcur"]);
+        assert_eq!(
+            value_projection_history_replay_next_action(&reasons),
+            "inspect QK256 value-projection activation quantization, integer-dot formula, trailer scale, and history layout against the reference Vcur output"
+        );
     }
 
     #[test]
