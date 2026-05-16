@@ -5132,6 +5132,8 @@ fn compare_reference_to_rust_with_records(
         layer_operation_boundary_delta(reference_records, rust_record_list, 1);
     report["layer_1_attention_norm_history_drift"] =
         layer_attention_norm_history_drift(reference_records, rust_record_list, 1);
+    report["layer_1_attention_norm_input_source_delta"] =
+        layer_attention_norm_input_source_delta(reference_records, rust_record_list, 1);
     report["layer_0_history_boundary_delta"] =
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_0_attention_output_history_boundary_delta"] =
@@ -5717,6 +5719,177 @@ fn layer_attention_norm_history_drift(
             "input_max_abs_delta": input_max_abs,
             "output_max_abs_delta": output_max_abs,
             "max_abs_reduction_ratio": max_abs_reduction_ratio,
+        },
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
+fn layer_attention_norm_input_source_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Value {
+    let Some(previous_layer) = layer.checked_sub(1) else {
+        return json!({
+            "diagnostic_only": true,
+            "claim_allowed": false,
+            "layer": layer,
+            "policy": "Layer attention-norm input source deltas are diagnostic-only current-token handoff evidence; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+            "current_blocked_reasons": ["layer_has_no_previous_layer"],
+        });
+    };
+    let reference_previous =
+        find_reference_trace_record(reference_records, "l_out", Some(previous_layer));
+    let rust_previous = find_rust_trace_record(rust_records, "post_layer", Some(previous_layer));
+    let reference_input_history = find_reference_trace_record(
+        reference_records,
+        "attn_norm_input_history_ref_layout",
+        Some(layer),
+    );
+    let rust_input_history = find_rust_trace_record(
+        rust_records,
+        "attention_norm_input_history_ref_layout",
+        Some(layer),
+    );
+
+    let selected_token = reference_input_history
+        .and_then(reference_sampled_token_index)
+        .or_else(|| rust_input_history.and_then(|record| record.seq.map(|seq| seq as u64)));
+    let reference_input_token =
+        selected_token.and_then(|token| usize::try_from(token).ok()).and_then(|token| {
+            reference_input_history.and_then(|record| reference_dim_major_token(record, token).ok())
+        });
+    let rust_input_token =
+        selected_token.and_then(|token| usize::try_from(token).ok()).and_then(|token| {
+            rust_input_history.and_then(|record| rust_dim_major_token(record, token).ok())
+        });
+
+    let reference_handoff_delta = reference_previous
+        .zip(reference_input_token.as_ref())
+        .map(|(previous, input)| compare_vectors(&previous.first_values, input));
+    let rust_handoff_delta = rust_previous
+        .zip(rust_input_token.as_ref())
+        .map(|(previous, input)| compare_vectors(&previous.first_values, input));
+    let previous_output_delta = reference_previous
+        .zip(rust_previous)
+        .map(|(reference, rust)| compare_vectors(&reference.first_values, &rust.first_values));
+    let input_token_delta = reference_input_token
+        .as_ref()
+        .zip(rust_input_token.as_ref())
+        .map(|(reference, rust)| compare_vectors(reference, rust));
+
+    let reference_handoff_material =
+        reference_handoff_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+    let rust_handoff_material =
+        rust_handoff_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+    let previous_output_material =
+        previous_output_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+    let input_token_material =
+        input_token_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+    let handoff_clean = reference_handoff_delta
+        .as_ref()
+        .is_some_and(|delta| !delta_has_material_numeric_delta(delta))
+        && rust_handoff_delta
+            .as_ref()
+            .is_some_and(|delta| !delta_has_material_numeric_delta(delta));
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference_previous.is_none() {
+        blocked_reasons.push("reference_previous_layer_l_out_missing".to_string());
+    }
+    if rust_previous.is_none() {
+        blocked_reasons.push("rust_previous_layer_post_layer_missing".to_string());
+    }
+    if reference_input_history.is_none() {
+        blocked_reasons.push("reference_attention_norm_input_history_missing".to_string());
+    }
+    if rust_input_history.is_none() {
+        blocked_reasons.push("rust_attention_norm_input_history_missing".to_string());
+    }
+    if selected_token.is_none() {
+        blocked_reasons.push("attention_norm_input_source_selected_token_missing".to_string());
+    }
+    if reference_input_token.is_none() {
+        blocked_reasons.push("reference_attention_norm_input_token_unavailable".to_string());
+    }
+    if rust_input_token.is_none() {
+        blocked_reasons.push("rust_attention_norm_input_token_unavailable".to_string());
+    }
+    if reference_handoff_material {
+        blocked_reasons
+            .push("reference_previous_layer_to_attention_norm_input_handoff_delta".to_string());
+    }
+    if rust_handoff_material {
+        blocked_reasons
+            .push("rust_previous_layer_to_attention_norm_input_handoff_delta".to_string());
+    }
+    if previous_output_material {
+        blocked_reasons.push("previous_layer_output_current_token_delta_present".to_string());
+    }
+    if input_token_material {
+        blocked_reasons.push("attention_norm_input_current_token_delta_present".to_string());
+    }
+    if handoff_clean && previous_output_material && input_token_material {
+        blocked_reasons.push("previous_layer_output_delta_feeds_attention_norm_input".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if blocked_reasons.iter().any(|reason| {
+        reason == "reference_previous_layer_l_out_missing"
+            || reason == "rust_previous_layer_post_layer_missing"
+            || reason == "reference_attention_norm_input_history_missing"
+            || reason == "rust_attention_norm_input_history_missing"
+            || reason == "attention_norm_input_source_selected_token_missing"
+    }) {
+        "capture the missing previous-layer output or current-layer input history before interpreting the handoff"
+    } else if reference_handoff_material || rust_handoff_material {
+        "inspect inter-layer trace/handoff semantics because previous-layer output does not match the current-layer attention-norm input token"
+    } else if handoff_clean && previous_output_material && input_token_material {
+        "localize the previous layer's current-token output drift; the layer handoff itself is clean for the sampled token"
+    } else if input_token_material {
+        "attention-norm input token differs without a matching previous-layer output delta; inspect layer-input history serialization"
+    } else {
+        "current-token layer handoff is clean and not the active drift; continue with full-prefix history coverage"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "previous_layer": previous_layer,
+        "policy": "Layer attention-norm input source deltas are diagnostic-only current-token handoff evidence; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "scope": {
+            "kind": "current_token_handoff",
+            "selected_token": selected_token,
+            "full_prefix_previous_layer_history_compared": false,
+            "limitation": "This section checks the sampled-token handoff using previous-layer current output plus the current-layer input history token; it does not replace full-prefix previous-layer history comparison.",
+        },
+        "reference_handoff": {
+            "previous_stage": "l_out",
+            "input_stage": "attn_norm_input_history_ref_layout",
+            "previous": reference_previous.map(reference_record_summary).unwrap_or(Value::Null),
+            "input_history": reference_input_history.map(reference_record_summary).unwrap_or(Value::Null),
+            "input_token": reference_input_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
+            "previous_vs_input_token": reference_handoff_delta.unwrap_or(Value::Null),
+            "material_mismatch": reference_handoff_material,
+        },
+        "rust_handoff": {
+            "previous_stage": "post_layer",
+            "input_stage": "attention_norm_input_history_ref_layout",
+            "previous": rust_previous.map(rust_record_summary).unwrap_or(Value::Null),
+            "input_history": rust_input_history.map(rust_record_summary).unwrap_or(Value::Null),
+            "input_token": rust_input_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
+            "previous_vs_input_token": rust_handoff_delta.unwrap_or(Value::Null),
+            "material_mismatch": rust_handoff_material,
+        },
+        "cross_runtime": {
+            "previous_layer_output_delta": previous_output_delta.unwrap_or(Value::Null),
+            "attention_norm_input_token_delta": input_token_delta.unwrap_or(Value::Null),
+            "previous_layer_output_material_mismatch": previous_output_material,
+            "attention_norm_input_token_material_mismatch": input_token_material,
+            "handoff_clean": handoff_clean,
         },
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -13601,6 +13774,110 @@ mod tests {
         assert_eq!(drift.pointer("/output_history/rust_present"), Some(&json!(false)));
         assert!(reasons.contains(&json!("reference_attention_norm_input_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_norm_output_history_missing")));
+    }
+
+    #[test]
+    fn compare_reports_layer1_attention_norm_input_source_current_token_handoff() {
+        let mut reference_layer0_output = ReferenceTraceRecord {
+            shape: vec![2, 1, 1, 1],
+            full_shape: vec![2, 3, 1, 1],
+            sample_offset: Some(4),
+            token_axis: Some(1),
+            nelements: 2,
+            first_values: vec![1.2, 2.2],
+            ..test_reference_trace_record("l_out", vec![1.2, 2.2])
+        };
+        reference_layer0_output.layer = Some(0);
+        let mut reference_layer1_input = ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            full_shape: vec![2, 3, 1, 1],
+            sample_offset: Some(4),
+            token_axis: Some(1),
+            nelements: 6,
+            first_values: vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+            ..test_reference_trace_record(
+                "attn_norm_input_history_ref_layout",
+                vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+            )
+        };
+        reference_layer1_input.layer = Some(1);
+        let reference_records = vec![reference_layer0_output, reference_layer1_input];
+
+        let mut rust_layer0_output = RustTraceRecord {
+            name: "t2/blk0/post_layer".to_string(),
+            shape: vec![2],
+            num_elements: 2,
+            seq: Some(2),
+            first_values: vec![1.25, 2.2],
+            ..test_rust_trace_record("post_layer", vec![1.25, 2.2])
+        };
+        rust_layer0_output.layer = Some(0);
+        let mut rust_layer1_input = RustTraceRecord {
+            name: "t2/blk1/attention_norm_input_history_ref_layout".to_string(),
+            shape: vec![2, 3],
+            num_elements: 6,
+            seq: Some(2),
+            first_values: vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+            ..test_rust_trace_record(
+                "attention_norm_input_history_ref_layout",
+                vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+            )
+        };
+        rust_layer1_input.layer = Some(1);
+        let rust_records = vec![rust_layer0_output, rust_layer1_input];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let source = report.pointer("/layer_1_attention_norm_input_source_delta").unwrap();
+        let reasons = source.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(source.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(source.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(source.pointer("/scope/kind"), Some(&json!("current_token_handoff")));
+        assert_eq!(source.pointer("/scope/selected_token"), Some(&json!(2)));
+        assert_eq!(
+            source.pointer("/scope/full_prefix_previous_layer_history_compared"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            source.pointer("/reference_handoff/previous_vs_input_token/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(
+            source.pointer("/rust_handoff/previous_vs_input_token/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(source.pointer("/cross_runtime/handoff_clean"), Some(&json!(true)));
+        assert_eq!(
+            source.pointer("/cross_runtime/previous_layer_output_delta/max_abs_delta"),
+            Some(&json!(0.04999995231628418))
+        );
+        assert_eq!(
+            source.pointer("/cross_runtime/attention_norm_input_token_delta/max_abs_delta"),
+            Some(&json!(0.04999995231628418))
+        );
+        assert!(reasons.contains(&json!("previous_layer_output_current_token_delta_present")));
+        assert!(reasons.contains(&json!("attention_norm_input_current_token_delta_present")));
+        assert!(reasons.contains(&json!("previous_layer_output_delta_feeds_attention_norm_input")));
+    }
+
+    #[test]
+    fn compare_reports_layer1_attention_norm_input_source_missing_as_diagnostic() {
+        let report = compare_reference_to_rust_with_records(&[], &BTreeMap::new(), &[], &[]);
+        let source = report.pointer("/layer_1_attention_norm_input_source_delta").unwrap();
+        let reasons = source.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(source.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(source.pointer("/claim_allowed"), Some(&json!(false)));
+        assert!(reasons.contains(&json!("reference_previous_layer_l_out_missing")));
+        assert!(reasons.contains(&json!("rust_previous_layer_post_layer_missing")));
+        assert!(reasons.contains(&json!("reference_attention_norm_input_history_missing")));
+        assert!(reasons.contains(&json!("rust_attention_norm_input_history_missing")));
     }
 
     #[test]
