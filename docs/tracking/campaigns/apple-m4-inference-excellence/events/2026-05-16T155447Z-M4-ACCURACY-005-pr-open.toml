@@ -7,7 +7,7 @@ from = "in_progress"
 to = "pr_open"
 pr = 5154
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-005-failure-taxonomy"
-head_sha = "cb1d76dba1712053184a1db3414e39cfdfd92c6d"
+head_sha = "2f2d0e1b7811258a7aa109be8e2512819165cc68"
 summary = "Opened PR #5154 for dense SLM mechanical failure categories."
 
 notes = [
