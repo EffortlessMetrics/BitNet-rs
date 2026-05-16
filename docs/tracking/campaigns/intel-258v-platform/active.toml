@@ -3235,8 +3235,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-003"
-status = "pr_open"
+status = "merged"
 pr = 5071
+merge_sha = "396b721a57673fe73b4077980c9f49fc68b22a16"
 head_sha = "f627a2e9426dd29f66d8807c7d347a3a4b15e735"
 branch = "codex/lunar-lake/LNL258V-ROUTE-003-profile-decisions"
 stackable = false
