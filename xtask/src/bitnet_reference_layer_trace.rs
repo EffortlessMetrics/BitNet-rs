@@ -5138,6 +5138,8 @@ fn compare_reference_to_rust_with_records(
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_0_ffn_history_drift"] =
         layer_ffn_history_drift(reference_records, rust_record_list, 0);
+    report["layer_0_full_prefix_token_drift"] =
+        layer_full_prefix_token_drift(reference_records, rust_record_list, 0);
     report["layer_0_attention_output_history_boundary_delta"] =
         layer_attention_output_history_boundary_delta(reference_records, rust_record_list, 0);
     report["attention_score_raw_history_delta"] =
@@ -5695,6 +5697,257 @@ fn layer_ffn_history_drift(
             "current_blocked_reasons": blocked_reasons,
             "next_action": next_action,
         },
+    })
+}
+
+#[derive(Debug, Clone)]
+struct TokenDriftSummary {
+    token: usize,
+    stage_count: usize,
+    total_mismatch_count: u64,
+    max_abs_delta: f64,
+    first_stage: String,
+    first_boundary: String,
+}
+
+fn layer_full_prefix_token_drift(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Value {
+    const HISTORY_STAGES: &[(&str, &str, &str)] = &[
+        (
+            "attn_value_mix_history_ref_layout",
+            "attention_value_mix_merged_history_ref_layout",
+            "attention_value_mix_history",
+        ),
+        (
+            "attn_o_out_history_ref_layout",
+            "post_o_proj_history_ref_layout",
+            "attention_output_projection_history",
+        ),
+        (
+            "ffn_inp_history_ref_layout",
+            "post_attention_residual_history_ref_layout",
+            "ffn_input_history",
+        ),
+        (
+            "ffn_norm_history_ref_layout",
+            "post_ffn_norm_history_ref_layout",
+            "ffn_norm_output_history",
+        ),
+        (
+            "ffn_out_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_swiglu_output_history",
+        ),
+        (
+            "ffn_sub_norm_history_ref_layout",
+            "post_ffn_subnorm_history_ref_layout",
+            "ffn_subnorm_output_history",
+        ),
+        (
+            "ffn_down_history_ref_layout",
+            "post_down_proj_history_ref_layout",
+            "ffn_down_projection_history",
+        ),
+        ("l_out_history_ref_layout", "post_layer_history_ref_layout", "layer_output_history"),
+    ];
+
+    let selected_token = layer_current_token(reference_records, rust_records, layer);
+    let mut rows = Vec::<Value>::new();
+    let mut token_summaries = BTreeMap::<usize, TokenDriftSummary>::new();
+    let mut compared_stage_count = 0usize;
+    let mut missing_stage_count = 0usize;
+    let mut material_stage_count = 0usize;
+
+    for (reference_stage, rust_stage, boundary) in HISTORY_STAGES {
+        let reference =
+            find_reference_trace_record(reference_records, reference_stage, Some(layer));
+        let rust = find_rust_trace_record(rust_records, rust_stage, Some(layer));
+        if reference.is_none() || rust.is_none() {
+            missing_stage_count += 1;
+        }
+
+        let delta = reference
+            .zip(rust)
+            .map(|(reference, rust)| dim_major_history_record_delta(reference, rust));
+        let material_mismatch = delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+        if delta.is_some() {
+            compared_stage_count += 1;
+        }
+        if material_mismatch {
+            material_stage_count += 1;
+        }
+        if let Some(delta) = &delta {
+            accumulate_token_drift(delta, boundary, reference_stage, &mut token_summaries);
+        }
+
+        rows.push(json!({
+            "layer": layer,
+            "boundary": boundary,
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "reference_present": reference.is_some(),
+            "rust_present": rust.is_some(),
+            "material_mismatch": material_mismatch,
+            "delta": delta.unwrap_or(Value::Null),
+        }));
+    }
+
+    let mut token_rows = token_summaries
+        .values()
+        .map(|summary| token_drift_summary_json(summary, selected_token))
+        .collect::<Vec<_>>();
+    token_rows.sort_by(|left, right| {
+        let left_token = left.pointer("/token").and_then(Value::as_u64).unwrap_or(u64::MAX);
+        let right_token = right.pointer("/token").and_then(Value::as_u64).unwrap_or(u64::MAX);
+        left_token.cmp(&right_token)
+    });
+
+    let current_token_material = selected_token
+        .and_then(|token| usize::try_from(token).ok())
+        .is_some_and(|token| token_summaries.contains_key(&token));
+    let earlier_token_count = token_summaries
+        .keys()
+        .filter(|token| selected_token.is_some_and(|selected| **token < selected as usize))
+        .count();
+    let first_material_token = token_summaries.keys().next().copied();
+    let max_delta_token = token_summaries
+        .values()
+        .max_by(|left, right| left.max_abs_delta.total_cmp(&right.max_abs_delta))
+        .map(token_drift_summary_json_for_max);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if missing_stage_count > 0 {
+        blocked_reasons.push("layer_full_prefix_history_stage_missing".to_string());
+    }
+    if selected_token.is_none() {
+        blocked_reasons.push("sampled_current_token_unavailable".to_string());
+    }
+    if material_stage_count > 0 {
+        blocked_reasons.push("layer_full_prefix_token_drift_present".to_string());
+    }
+    if earlier_token_count > 0 {
+        blocked_reasons.push("earlier_prefix_token_drift_present".to_string());
+    }
+    if current_token_material {
+        blocked_reasons.push("sampled_current_token_history_drift_present".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if missing_stage_count > 0 {
+        "capture missing layer full-prefix history stages before interpreting token-local drift"
+    } else if earlier_token_count > 0 && !current_token_material {
+        "localize the earliest earlier-prefix token drift source before changing sampled-current-token math"
+    } else if current_token_material {
+        "inspect sampled-current-token history drift alongside current-token operation traces"
+    } else if material_stage_count > 0 {
+        "inspect full-prefix history drift that lacks token-local attribution"
+    } else {
+        "layer full-prefix token history is not the active material drift"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer full-prefix token drift is diagnostic-only evidence for identifying which earlier history tokens feed layer drift; it does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "selected_current_token": selected_token,
+        "compared_stage_count": compared_stage_count,
+        "missing_stage_count": missing_stage_count,
+        "material_stage_count": material_stage_count,
+        "material_token_count": token_summaries.len(),
+        "earlier_material_token_count": earlier_token_count,
+        "sampled_current_token_material": current_token_material,
+        "first_material_token": first_material_token,
+        "max_delta_token": max_delta_token.unwrap_or(Value::Null),
+        "token_rows": token_rows,
+        "stage_rows": rows,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
+fn layer_current_token(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Option<u64> {
+    find_reference_trace_record(reference_records, "l_out", Some(layer))
+        .and_then(reference_sampled_token_index)
+        .or_else(|| {
+            find_rust_trace_record(rust_records, "post_layer", Some(layer))
+                .and_then(|record| record.seq.map(|seq| seq as u64))
+        })
+}
+
+fn accumulate_token_drift(
+    delta: &Value,
+    boundary: &str,
+    reference_stage: &str,
+    token_summaries: &mut BTreeMap<usize, TokenDriftSummary>,
+) {
+    let Some(rows) = delta.pointer("/token_mismatch_counts").and_then(Value::as_array) else {
+        return;
+    };
+    for row in rows {
+        let Some(token) = row
+            .pointer("/token")
+            .and_then(Value::as_u64)
+            .and_then(|token| usize::try_from(token).ok())
+        else {
+            continue;
+        };
+        let mismatch_count = row.pointer("/mismatch_count").and_then(Value::as_u64).unwrap_or(0);
+        let max_abs_delta = row.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0);
+        let entry = token_summaries.entry(token).or_insert_with(|| TokenDriftSummary {
+            token,
+            stage_count: 0,
+            total_mismatch_count: 0,
+            max_abs_delta: 0.0,
+            first_stage: reference_stage.to_string(),
+            first_boundary: boundary.to_string(),
+        });
+        entry.stage_count += 1;
+        entry.total_mismatch_count = entry.total_mismatch_count.saturating_add(mismatch_count);
+        entry.max_abs_delta = entry.max_abs_delta.max(max_abs_delta);
+    }
+}
+
+fn token_drift_summary_json(summary: &TokenDriftSummary, selected_token: Option<u64>) -> Value {
+    let relative_position = selected_token
+        .map(|selected| {
+            if summary.token < selected as usize {
+                "before_sampled_current"
+            } else if summary.token == selected as usize {
+                "sampled_current"
+            } else {
+                "after_sampled_current"
+            }
+        })
+        .unwrap_or("unknown");
+    json!({
+        "token": summary.token,
+        "relative_position": relative_position,
+        "stage_count": summary.stage_count,
+        "total_mismatch_count": summary.total_mismatch_count,
+        "max_abs_delta": summary.max_abs_delta,
+        "first_boundary": summary.first_boundary,
+        "first_reference_stage": summary.first_stage,
+    })
+}
+
+fn token_drift_summary_json_for_max(summary: &TokenDriftSummary) -> Value {
+    json!({
+        "token": summary.token,
+        "stage_count": summary.stage_count,
+        "total_mismatch_count": summary.total_mismatch_count,
+        "max_abs_delta": summary.max_abs_delta,
+        "first_boundary": summary.first_boundary,
+        "first_reference_stage": summary.first_stage,
     })
 }
 
@@ -14307,6 +14560,102 @@ mod tests {
                 .unwrap()
                 .contains("capture missing layer FFN")
         );
+    }
+
+    #[test]
+    fn compare_reports_layer0_full_prefix_token_drift_before_sampled_current() {
+        let mut reference_history = test_reference_trace_record(
+            "ffn_inp_history_ref_layout",
+            vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+        );
+        reference_history.shape = vec![2, 3, 1, 1];
+        reference_history.nelements = 6;
+        reference_history.layer = Some(0);
+        let mut rust_history = test_rust_trace_record(
+            "post_attention_residual_history_ref_layout",
+            vec![1.5, 1.1, 1.2, 2.0, 2.1, 2.7],
+        );
+        rust_history.name = "t2/blk0/post_attention_residual_history_ref_layout".to_string();
+        rust_history.shape = vec![2, 3];
+        rust_history.num_elements = 6;
+        rust_history.seq = Some(2);
+        rust_history.layer = Some(0);
+
+        let mut reference_current = test_reference_trace_record("l_out", vec![3.0, 4.0]);
+        reference_current.name = "l_out-0".to_string();
+        reference_current.layer = Some(0);
+        reference_current.sample_offset = Some(4);
+        reference_current.full_shape = vec![2, 3, 1, 1];
+        reference_current.shape = vec![2, 1, 1, 1];
+        reference_current.nelements = 2;
+        let mut rust_current = test_rust_trace_record("post_layer", vec![3.0, 4.0]);
+        rust_current.name = "t2/blk0/post_layer".to_string();
+        rust_current.seq = Some(2);
+        rust_current.layer = Some(0);
+
+        let reference_records = vec![reference_history, reference_current];
+        let rust_records = vec![rust_history, rust_current];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let drift = report.pointer("/layer_0_full_prefix_token_drift").unwrap();
+        let reasons = drift.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(drift.pointer("/selected_current_token"), Some(&json!(2)));
+        assert_eq!(drift.pointer("/material_token_count"), Some(&json!(2)));
+        assert_eq!(drift.pointer("/earlier_material_token_count"), Some(&json!(1)));
+        assert_eq!(drift.pointer("/sampled_current_token_material"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/first_material_token"), Some(&json!(0)));
+        assert_eq!(
+            drift.pointer("/token_rows/0/relative_position"),
+            Some(&json!("before_sampled_current"))
+        );
+        assert_eq!(
+            drift.pointer("/token_rows/1/relative_position"),
+            Some(&json!("sampled_current"))
+        );
+        assert!(reasons.contains(&json!("earlier_prefix_token_drift_present")));
+        assert!(reasons.contains(&json!("sampled_current_token_history_drift_present")));
+    }
+
+    #[test]
+    fn compare_reports_layer0_full_prefix_token_drift_missing_token_as_diagnostic() {
+        let mut reference_history =
+            test_reference_trace_record("ffn_inp_history_ref_layout", vec![1.0, 1.1]);
+        reference_history.shape = vec![1, 2, 1, 1];
+        reference_history.nelements = 2;
+        reference_history.layer = Some(0);
+        let mut rust_history =
+            test_rust_trace_record("post_attention_residual_history_ref_layout", vec![1.0, 1.6]);
+        rust_history.name = "t0/blk0/post_attention_residual_history_ref_layout".to_string();
+        rust_history.shape = vec![1, 2];
+        rust_history.num_elements = 2;
+        rust_history.seq = None;
+        rust_history.layer = Some(0);
+
+        let rust_records = vec![rust_history];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+        let report = compare_reference_to_rust_with_records(
+            &[reference_history],
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let drift = report.pointer("/layer_0_full_prefix_token_drift").unwrap();
+        let reasons = drift.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(drift.pointer("/selected_current_token"), Some(&Value::Null));
+        assert!(reasons.contains(&json!("sampled_current_token_unavailable")));
+        assert!(reasons.contains(&json!("layer_full_prefix_token_drift_present")));
     }
 
     #[test]
