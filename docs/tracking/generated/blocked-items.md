@@ -59,7 +59,7 @@
 | apple-m4-durable-inference-evidence | M4-DURABLE-002 | M4-DURABLE-001 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-003 | M4-DURABLE-001 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-004 | M4-DURABLE-002, M4-DURABLE-003 | merged |
-| apple-m4-durable-inference-evidence | M4-DURABLE-005 | M4-DURABLE-004 | proposed |
+| apple-m4-durable-inference-evidence | M4-DURABLE-005 | M4-DURABLE-004 | in_progress |
 | apple-m4-inference-ops | M4-INF-OPS-002 | M4-INF-OPS-001 | merged |
 | apple-m4-inference-ops | M4-INF-OPS-003 | M4-INF-OPS-002 | merged |
 | apple-m4-inference-ops | M4-INF-OPS-004 | M4-INF-OPS-003 | merged |

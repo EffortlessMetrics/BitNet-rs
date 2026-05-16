@@ -1,0 +1,11 @@
+timestamp = "2026-05-16T01:27:11Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the durable M4 operator-envelope-v3 item after M4-DURABLE-004 merged.",
+  "Scope is docs and tracking only: refresh cadence, regression thresholds, resident_100 status, disk/cache guidance, and claim boundaries from committed matching-history reports.",
+  "No live model run, model download, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
