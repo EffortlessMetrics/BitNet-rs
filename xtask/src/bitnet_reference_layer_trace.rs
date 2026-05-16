@@ -136,6 +136,7 @@ struct LayerTraceRunArgs {
     patch: PathBuf,
     plan: PathBuf,
     sidecar: PathBuf,
+    trace_layer: Option<usize>,
     output: Option<PathBuf>,
     format: String,
 }
@@ -156,6 +157,7 @@ struct LayerTraceRustCaptureArgs {
     a770_trace_dir: PathBuf,
     skip_a770: bool,
     diag_rmsnorm_f64_accum: bool,
+    trace_layer: Option<usize>,
     overwrite: bool,
     output: Option<PathBuf>,
     format: String,
@@ -470,7 +472,7 @@ fn print_help() {
 
 fn print_run_help() {
     println!(
-        "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>  BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>        llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>           Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>         Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>  BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>        llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>           Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>         Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --trace-layer <N>        Capture layer-specific reference stages for layer N instead of layer 0\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -482,7 +484,7 @@ fn print_compare_help() {
 
 fn print_rust_capture_help() {
     println!(
-        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --diag-rmsnorm-f64-accum Capture Rust traces with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --diag-rmsnorm-f64-accum Capture Rust traces with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --trace-layer <N>        Capture layer-specific Rust trace stages for layer N instead of layer 0\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -561,6 +563,7 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
     let mut patch = PathBuf::from(DEFAULT_PATCH);
     let mut plan = PathBuf::from(DEFAULT_REFERENCE_PLAN);
     let mut sidecar = PathBuf::from(DEFAULT_SIDECAR);
+    let mut trace_layer = None::<usize>;
     let mut output = Some(PathBuf::from(DEFAULT_RUN_OUTPUT));
     let mut format = "human".to_string();
     let mut i = 2usize;
@@ -578,12 +581,24 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
             "--patch" => patch = PathBuf::from(value()?),
             "--plan" => plan = PathBuf::from(value()?),
             "--sidecar" => sidecar = PathBuf::from(value()?),
+            "--trace-layer" => {
+                trace_layer = Some(value()?.parse().context("--trace-layer must be an integer")?)
+            }
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
             other => bail!("unknown bitnet-reference-layer-trace-run option {other}"),
         }
     }
-    Ok(LayerTraceRunArgs { reference_root, cpp_root, patch, plan, sidecar, output, format })
+    Ok(LayerTraceRunArgs {
+        reference_root,
+        cpp_root,
+        patch,
+        plan,
+        sidecar,
+        trace_layer,
+        output,
+        format,
+    })
 }
 
 fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
@@ -626,6 +641,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
     let mut a770_trace_dir = PathBuf::from(DEFAULT_A770_TRACE_DIR);
     let mut skip_a770 = false;
     let mut diag_rmsnorm_f64_accum = false;
+    let mut trace_layer = None::<usize>;
     let mut overwrite = false;
     let mut output = Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT));
     let mut format = "human".to_string();
@@ -644,6 +660,9 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
             "--a770-trace-dir" => a770_trace_dir = PathBuf::from(value()?),
             "--skip-a770" => skip_a770 = true,
             "--diag-rmsnorm-f64-accum" => diag_rmsnorm_f64_accum = true,
+            "--trace-layer" => {
+                trace_layer = Some(value()?.parse().context("--trace-layer must be an integer")?)
+            }
             "--overwrite" => overwrite = true,
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
@@ -656,6 +675,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
         a770_trace_dir,
         skip_a770,
         diag_rmsnorm_f64_accum,
+        trace_layer,
         overwrite,
         output,
         format,
@@ -953,7 +973,7 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
         } else {
             let mut argv = reference_argv.clone();
             argv[0] = path_to_string(&selected_exe);
-            run_capture = Some(run_reference_with_sidecar(&argv, &sidecar)?);
+            run_capture = Some(run_reference_with_sidecar(&argv, &sidecar, args.trace_layer)?);
             if !run_capture.as_ref().is_some_and(|capture| capture.success) {
                 blocked_reasons.push("reference_layer_trace_run_failed".to_string());
             }
@@ -1036,6 +1056,7 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
             "reference_status_before": capture_json(reference_status_before.as_ref()),
             "cpp_status_before": capture_json(cpp_status_before.as_ref()),
             "first_values_limit_env": std::env::var("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT").ok(),
+            "trace_layer": args.trace_layer,
         },
         "kernel_codegen": capture_json(codegen_capture.as_ref()),
         "compatibility_fixes": compatibility,
@@ -1245,6 +1266,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             cpu_argv.as_deref().unwrap_or(&[]),
             &cpu_trace_dir,
             trace_target_seq,
+            args.trace_layer,
             args.diag_rmsnorm_f64_accum,
         )?
     } else {
@@ -1258,6 +1280,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             a770_argv.as_deref().unwrap_or(&[]),
             &a770_trace_dir,
             trace_target_seq,
+            args.trace_layer,
             args.diag_rmsnorm_f64_accum,
         )?
     } else {
@@ -1295,6 +1318,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "a770_trace_dir": path_to_string(&a770_trace_dir),
             "skip_a770": args.skip_a770,
             "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
+            "trace_layer": args.trace_layer,
             "overwrite": args.overwrite,
         },
         "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
@@ -1309,6 +1333,8 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "a770_command_key": a770_command_key,
             "trace_target_seq": trace_target_seq,
             "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
+            "trace_layer": args.trace_layer,
+            "trace_layer_source": args.trace_layer.map(|_| "--trace-layer"),
             "cpu_trace_feature_injected": cpu_trace_feature_injected.unwrap_or(false),
             "a770_trace_feature_injected": a770_trace_feature_injected.unwrap_or(false),
             "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
@@ -4555,6 +4581,8 @@ fn compare_reference_to_rust_with_records(
     });
     report["layer_output_history_delta"] =
         layer_output_history_delta(reference_records, rust_record_list);
+    report["layer_1_operation_boundary_delta"] =
+        layer_operation_boundary_delta(reference_records, rust_record_list, 1);
     report
 }
 
@@ -4654,6 +4682,142 @@ fn layer_output_history_delta(
         "missing_rust_count": missing_rust_count,
         "material_mismatch_count": material_mismatch_count,
         "first_material_layer": first_material_layer,
+        "rows": rows,
+    })
+}
+
+fn layer_operation_boundary_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Value {
+    const STAGE_MAPPING: &[(&str, &str, &str)] = &[
+        ("attn_norm", "attn_norm", "attention_norm_output"),
+        ("attn_o_out", "post_o_proj", "attention_output_projection"),
+        ("ffn_inp", "post_attention_residual", "attention_residual_output"),
+        ("ffn_norm", "post_ffn_norm", "ffn_norm_output"),
+        ("ffn_out", "post_swiglu", "ffn_swiglu_output"),
+        ("ffn_sub_norm", "post_ffn_subnorm", "ffn_subnorm_output"),
+        ("ffn_down", "post_down_proj", "ffn_down_projection"),
+        ("l_out", "post_layer", "layer_output"),
+    ];
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_reference_count = 0usize;
+    let mut missing_rust_count = 0usize;
+    let mut scope_mismatch_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut first_scope_mismatch = Value::Null;
+    let mut first_material_stage = Value::Null;
+
+    for (reference_stage, rust_stage, boundary) in STAGE_MAPPING {
+        let reference =
+            find_reference_trace_record(reference_records, reference_stage, Some(layer));
+        let rust = find_rust_trace_record(rust_records, rust_stage, Some(layer));
+        if reference.is_none() {
+            missing_reference_count += 1;
+        }
+        if rust.is_none() {
+            missing_rust_count += 1;
+        }
+
+        let mut status = match (reference.is_some(), rust.is_some()) {
+            (false, false) => "missing_both",
+            (false, true) => "missing_reference",
+            (true, false) => "missing_rust",
+            (true, true) => "summary_match",
+        };
+        let mut first_values_delta = Value::Null;
+        let mut full_first_values_match = false;
+        let mut material_mismatch = false;
+        let mut rms_abs_delta = None::<f64>;
+        let mut rms_material = false;
+        let mut rms_material_ignored_due_to_full_first_values_match = false;
+        let scope_mismatch = trace_scope_mismatch(reference, rust);
+        let has_scope_mismatch = scope_mismatch.is_some();
+
+        if let (Some(reference), Some(rust)) = (reference, rust) {
+            compared_count += 1;
+            let element_count_match = reference.nelements == rust.num_elements as u64;
+            let dtype_match = trace_dtype_compatible(&reference.dtype, &rust.dtype);
+            rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
+            rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
+            if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
+                first_values_delta = compare_prefix(
+                    &reference.first_values,
+                    &rust.first_values,
+                    reference.first_values.len().min(rust.first_values.len()),
+                );
+                full_first_values_match = reference.first_values.len() as u64
+                    == reference.nelements
+                    && rust.first_values.len() == rust.num_elements
+                    && first_values_delta
+                        .pointer("/count_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                    && first_values_delta
+                        .pointer("/sha256_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+            }
+            if has_scope_mismatch {
+                status = "scope_mismatch";
+            } else {
+                rms_material_ignored_due_to_full_first_values_match =
+                    rms_material && full_first_values_match;
+                material_mismatch = !element_count_match
+                    || !dtype_match
+                    || (rms_material && !full_first_values_match);
+                status = if material_mismatch { "material_mismatch" } else { "summary_match" };
+            }
+        }
+
+        if has_scope_mismatch {
+            scope_mismatch_count += 1;
+        }
+        if material_mismatch {
+            material_mismatch_count += 1;
+        }
+
+        let row = json!({
+            "layer": layer,
+            "boundary": boundary,
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "status": status,
+            "reference": reference.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "rms_abs_delta": rms_abs_delta,
+            "rms_material": rms_material,
+            "full_first_values_match": full_first_values_match,
+            "rms_material_ignored_due_to_full_first_values_match": rms_material_ignored_due_to_full_first_values_match,
+            "first_values_delta": first_values_delta,
+            "scope_mismatch": has_scope_mismatch,
+            "scope": scope_mismatch,
+            "material_mismatch": material_mismatch,
+        });
+        if has_scope_mismatch && first_scope_mismatch.is_null() {
+            first_scope_mismatch = row.clone();
+        }
+        if material_mismatch && first_material_stage.is_null() {
+            first_material_stage = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer-operation boundary deltas are diagnostic-only evidence for locating the first intra-layer reference/Rust drift; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "compared_count": compared_count,
+        "missing_reference_count": missing_reference_count,
+        "missing_rust_count": missing_rust_count,
+        "scope_mismatch_count": scope_mismatch_count,
+        "material_mismatch_count": material_mismatch_count,
+        "first_scope_mismatch": first_scope_mismatch,
+        "first_material_stage": first_material_stage,
         "rows": rows,
     })
 }
@@ -10554,10 +10718,17 @@ fn find_vsdevcmd() -> Option<PathBuf> {
     vsdevcmd.is_file().then_some(vsdevcmd)
 }
 
-fn run_reference_with_sidecar(argv: &[String], sidecar: &Path) -> Result<CommandCapture> {
+fn run_reference_with_sidecar(
+    argv: &[String],
+    sidecar: &Path,
+    trace_layer: Option<usize>,
+) -> Result<CommandCapture> {
     let executable = argv.first().context("empty reference command")?;
     let mut command = Command::new(executable);
     command.args(&argv[1..]).env("BITNET_RS_REFERENCE_LAYER_TRACE", sidecar).stdin(Stdio::null());
+    if let Some(trace_layer) = trace_layer {
+        command.env("BITNET_RS_REFERENCE_LAYER_TRACE_LAYER", trace_layer.to_string());
+    }
     run_command(&mut command)
 }
 
@@ -10566,6 +10737,7 @@ fn run_rust_trace_capture(
     argv: &[String],
     trace_dir: &Path,
     trace_target_seq: Option<usize>,
+    trace_layer: Option<usize>,
     diag_rmsnorm_f64_accum: bool,
 ) -> Result<Value> {
     let executable = argv.first().context("empty Rust trace command")?;
@@ -10582,6 +10754,9 @@ fn run_rust_trace_capture(
     if let Some(trace_target_seq) = trace_target_seq {
         command.env("BITNET_TRACE_TARGET_SEQ", trace_target_seq.to_string());
     }
+    if let Some(trace_layer) = trace_layer {
+        command.env("BITNET_TRACE_LAYER", trace_layer.to_string());
+    }
     let capture = run_command(&mut command)?;
     let trace = summarize_rust_trace_dir(trace_dir);
     Ok(json!({
@@ -10590,6 +10765,8 @@ fn run_rust_trace_capture(
         "trace_dir": path_to_string(trace_dir),
         "trace_target_seq": trace_target_seq,
         "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
+        "trace_layer": trace_layer,
+        "trace_layer_env": trace_layer.map(|layer| format!("BITNET_TRACE_LAYER={layer}")),
         "diag_rmsnorm_f64_accum": diag_rmsnorm_f64_accum,
         "diag_rmsnorm_f64_accum_env": diag_rmsnorm_f64_accum
             .then_some("BITNET_DIAG_RMSNORM_F64_ACCUM=1"),
@@ -10871,8 +11048,16 @@ fn emit_report(report: &Value, format: &str) -> Result<()> {
                     .pointer("/cpu/material_mismatch_count")
                     .and_then(Value::as_u64)
                     .unwrap_or(0);
+                let layer1_boundary = report
+                    .pointer("/cpu/layer_1_operation_boundary_delta/first_material_stage/boundary")
+                    .and_then(Value::as_str)
+                    .unwrap_or("none");
+                let layer1_status = report
+                    .pointer("/cpu/layer_1_operation_boundary_delta/first_material_stage/status")
+                    .and_then(Value::as_str)
+                    .unwrap_or("none");
                 println!(
-                    "bitnet reference layer trace compare: diagnostic_only=true claim_allowed=false cpu_first_mismatch={stage}:{first} cpu_mismatches={mismatches}"
+                    "bitnet reference layer trace compare: diagnostic_only=true claim_allowed=false cpu_first_mismatch={stage}:{first} cpu_mismatches={mismatches} layer1_first_boundary={layer1_boundary}:{layer1_status}"
                 );
                 return Ok(());
             }
@@ -11316,6 +11501,186 @@ mod tests {
     }
 
     #[test]
+    fn compare_reports_layer1_operation_first_material_stage() {
+        let mut reference_attn = test_reference_trace_record("attn_norm", vec![1.0, 2.0]);
+        reference_attn.name = "attn_norm-1".to_string();
+        reference_attn.layer = Some(1);
+        let mut reference_o = test_reference_trace_record("attn_o_out", vec![3.0, 4.0]);
+        reference_o.name = "attn_o_out-1".to_string();
+        reference_o.layer = Some(1);
+        let reference_records = vec![reference_attn, reference_o];
+
+        let mut rust_attn = test_rust_trace_record("attn_norm", vec![1.0, 2.0]);
+        rust_attn.name = "t0/blk1/attn_norm".to_string();
+        rust_attn.layer = Some(1);
+        let mut rust_o = test_rust_trace_record("post_o_proj", vec![3.0, 4.5]);
+        rust_o.name = "t0/blk1/post_o_proj".to_string();
+        rust_o.layer = Some(1);
+        let rust_records = vec![rust_attn, rust_o];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(
+            boundary.pointer("/first_material_stage/boundary"),
+            Some(&json!("attention_output_projection"))
+        );
+        assert_eq!(
+            boundary.pointer("/first_material_stage/first_values_delta/max_abs_delta"),
+            Some(&json!(0.5))
+        );
+    }
+
+    #[test]
+    fn layer1_operation_delta_keeps_full_first_values_match_stronger_than_rms() {
+        let mut reference = test_reference_trace_record("attn_o_out", vec![3.0, 4.0]);
+        reference.name = "attn_o_out-1".to_string();
+        reference.layer = Some(1);
+        reference.rms = Some(123.0);
+        let reference_records = vec![reference];
+
+        let mut rust = test_rust_trace_record("post_o_proj", vec![3.0, 4.0]);
+        rust.name = "t0/blk1/post_o_proj".to_string();
+        rust.layer = Some(1);
+        rust.rms = 1.0;
+        let rust_records = vec![rust];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
+        let row = boundary
+            .pointer("/rows")
+            .and_then(Value::as_array)
+            .unwrap()
+            .iter()
+            .find(|row| row.pointer("/boundary") == Some(&json!("attention_output_projection")))
+            .unwrap();
+
+        assert_eq!(row.pointer("/status"), Some(&json!("summary_match")));
+        assert_eq!(row.pointer("/full_first_values_match"), Some(&json!(true)));
+        assert_eq!(row.pointer("/rms_material"), Some(&json!(true)));
+        assert_eq!(
+            row.pointer("/rms_material_ignored_due_to_full_first_values_match"),
+            Some(&json!(true))
+        );
+        assert_eq!(row.pointer("/material_mismatch"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/first_material_stage"), Some(&Value::Null));
+    }
+
+    #[test]
+    fn layer1_operation_delta_reports_missing_stage_blockers() {
+        let mut reference = test_reference_trace_record("attn_o_out", vec![3.0, 4.0]);
+        reference.name = "attn_o_out-1".to_string();
+        reference.layer = Some(1);
+        let reference_records = vec![reference];
+        let rust_records = Vec::<RustTraceRecord>::new();
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
+
+        assert_eq!(boundary.pointer("/compared_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/missing_rust_count"), Some(&json!(8)));
+        assert_eq!(boundary.pointer("/missing_reference_count"), Some(&json!(7)));
+        assert_eq!(boundary.pointer("/rows/1/status"), Some(&json!("missing_rust")));
+        assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(0)));
+    }
+
+    #[test]
+    fn layer1_operation_delta_prioritizes_scope_mismatch_over_material_mismatch() {
+        let mut reference = test_reference_trace_record("attn_o_out", vec![3.0, 4.0]);
+        reference.name = "attn_o_out-1".to_string();
+        reference.layer = Some(1);
+        reference.token_axis = Some(0);
+        reference.sample_offset = Some(1);
+        let reference_records = vec![reference];
+
+        let mut rust = test_rust_trace_record("post_o_proj", vec![30.0, 40.0]);
+        rust.name = "t0/blk1/post_o_proj".to_string();
+        rust.layer = Some(1);
+        rust.seq = Some(0);
+        let rust_records = vec![rust];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
+        let row = boundary
+            .pointer("/rows")
+            .and_then(Value::as_array)
+            .unwrap()
+            .iter()
+            .find(|row| row.pointer("/boundary") == Some(&json!("attention_output_projection")))
+            .unwrap();
+
+        assert_eq!(row.pointer("/status"), Some(&json!("scope_mismatch")));
+        assert_eq!(row.pointer("/scope_mismatch"), Some(&json!(true)));
+        assert_eq!(row.pointer("/material_mismatch"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/scope_mismatch_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/first_material_stage"), Some(&Value::Null));
+    }
+
+    #[test]
+    fn run_args_parse_trace_layer() {
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-layer-trace-run".to_string(),
+            "--reference-root".to_string(),
+            "reference".to_string(),
+            "--cpp-root".to_string(),
+            "cpp".to_string(),
+            "--patch".to_string(),
+            "trace.patch".to_string(),
+            "--plan".to_string(),
+            "plan.json".to_string(),
+            "--sidecar".to_string(),
+            "sidecar.json".to_string(),
+            "--trace-layer".to_string(),
+            "1".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+
+        let parsed = parse_run_args(&args).unwrap();
+
+        assert_eq!(parsed.reference_root, PathBuf::from("reference"));
+        assert_eq!(parsed.cpp_root, PathBuf::from("cpp"));
+        assert_eq!(parsed.patch, PathBuf::from("trace.patch"));
+        assert_eq!(parsed.plan, PathBuf::from("plan.json"));
+        assert_eq!(parsed.sidecar, PathBuf::from("sidecar.json"));
+        assert_eq!(parsed.trace_layer, Some(1));
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
     fn run_report_stays_diagnostic_when_inputs_are_missing() {
         let dir = tempdir().unwrap();
         let report = run_instrumented_reference(&LayerTraceRunArgs {
@@ -11324,6 +11689,7 @@ mod tests {
             patch: dir.path().join("missing.patch"),
             plan: dir.path().join("missing-plan.json"),
             sidecar: dir.path().join("sidecar.json"),
+            trace_layer: None,
             output: None,
             format: "json".to_string(),
         })
@@ -11347,6 +11713,7 @@ mod tests {
             a770_trace_dir: dir.path().join("a770"),
             skip_a770: false,
             diag_rmsnorm_f64_accum: false,
+            trace_layer: None,
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -11374,6 +11741,7 @@ mod tests {
         assert_eq!(defaults.a770_trace_dir, PathBuf::from(DEFAULT_A770_TRACE_DIR));
         assert!(!defaults.skip_a770);
         assert!(!defaults.diag_rmsnorm_f64_accum);
+        assert_eq!(defaults.trace_layer, None);
         assert!(!defaults.overwrite);
         assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT)));
         assert_eq!(defaults.format, "human");
@@ -11389,6 +11757,8 @@ mod tests {
             "a770".to_string(),
             "--skip-a770".to_string(),
             "--diag-rmsnorm-f64-accum".to_string(),
+            "--trace-layer".to_string(),
+            "1".to_string(),
             "--overwrite".to_string(),
             "--output".to_string(),
             "out.json".to_string(),
@@ -11401,6 +11771,7 @@ mod tests {
         assert_eq!(parsed.a770_trace_dir, PathBuf::from("a770"));
         assert!(parsed.skip_a770);
         assert!(parsed.diag_rmsnorm_f64_accum);
+        assert_eq!(parsed.trace_layer, Some(1));
         assert!(parsed.overwrite);
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
@@ -11452,6 +11823,7 @@ mod tests {
             a770_trace_dir: dir.path().join("a770"),
             skip_a770: true,
             diag_rmsnorm_f64_accum: true,
+            trace_layer: Some(1),
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -11461,7 +11833,9 @@ mod tests {
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(true)));
+        assert_eq!(report.pointer("/inputs/trace_layer"), Some(&json!(1)));
         assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(true)));
+        assert_eq!(report.pointer("/preflight/trace_layer"), Some(&json!(1)));
         assert_eq!(
             report.pointer("/preflight/diag_rmsnorm_f64_accum_env"),
             Some(&json!("BITNET_DIAG_RMSNORM_F64_ACCUM=1"))
@@ -11485,6 +11859,7 @@ mod tests {
             a770_trace_dir: a770,
             skip_a770: false,
             diag_rmsnorm_f64_accum: false,
+            trace_layer: None,
             overwrite: false,
             output: None,
             format: "json".to_string(),

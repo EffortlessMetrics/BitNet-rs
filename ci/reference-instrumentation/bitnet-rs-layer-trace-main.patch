@@ -29,12 +29,104 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,991 @@ struct llama_context {
+@@ -3441,6 +3444,1087 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
++static bool bitnet_rs_reference_layer_trace_parse_layer_suffix(const char * name, size_t * base_len, int * layer) {
++    if (name == nullptr || name[0] == '\0') {
++        return false;
++    }
++    const char * dash = strrchr(name, '-');
++    if (dash == nullptr || dash == name || dash[1] == '\0') {
++        return false;
++    }
++    int parsed = 0;
++    for (const char * p = dash + 1; *p != '\0'; ++p) {
++        if (*p < '0' || *p > '9') {
++            return false;
++        }
++        parsed = parsed * 10 + (*p - '0');
++    }
++    if (base_len != nullptr) {
++        *base_len = (size_t) (dash - name);
++    }
++    if (layer != nullptr) {
++        *layer = parsed;
++    }
++    return true;
++}
++
++static int bitnet_rs_reference_layer_trace_requested_layer() {
++    const char * env = std::getenv("BITNET_RS_REFERENCE_LAYER_TRACE_LAYER");
++    if (env == nullptr || env[0] == '\0') {
++        return 0;
++    }
++    int parsed = 0;
++    for (const char * p = env; *p != '\0'; ++p) {
++        if (*p < '0' || *p > '9') {
++            return 0;
++        }
++        parsed = parsed * 10 + (*p - '0');
++    }
++    return parsed;
++}
++
++static const char * bitnet_rs_reference_layer_trace_layer_stage(const char * name, int * layer) {
++    size_t base_len = 0;
++    int parsed_layer = -1;
++    if (!bitnet_rs_reference_layer_trace_parse_layer_suffix(name, &base_len, &parsed_layer)) {
++        return nullptr;
++    }
++    static const std::pair<const char *, const char *> stages[] = {
++        {"attn_norm", "attn_norm"},
++        {"Qcur", "Qcur"},
++        {"Kcur", "Kcur"},
++        {"Vcur", "Vcur"},
++        {"kq", "kq"},
++        {"kq_soft_max_ext", "kq_soft_max_ext"},
++        {"k", "k"},
++        {"v", "v"},
++        {"kqv", "kqv"},
++        {"kqv_merged", "kqv_merged"},
++        {"kqv_merged_cont", "kqv_merged_cont"},
++        {"attn_value_mix", "attn_value_mix"},
++        {"attn_sub_norm", "attn_sub_norm"},
++        {"attn_o_out", "attn_o_out"},
++        {"ffn_inp", "ffn_inp"},
++        {"ffn_norm", "ffn_norm"},
++        {"ffn_out", "ffn_out"},
++        {"ffn_sub_norm", "ffn_sub_norm"},
++        {"ffn_down", "ffn_down"},
++        {"l_out", "l_out"},
++    };
++    for (const auto & stage : stages) {
++        if (strlen(stage.first) == base_len && strncmp(name, stage.first, base_len) == 0) {
++            if (layer != nullptr) {
++                *layer = parsed_layer;
++            }
++            return stage.second;
++        }
++    }
++    return nullptr;
++}
++
 +static bool bitnet_rs_reference_layer_trace_target(const char * name) {
 +    if (name == nullptr || name[0] == '\0') {
++        return false;
++    }
++
++    int layer = -1;
++    const char * stage = bitnet_rs_reference_layer_trace_layer_stage(name, &layer);
++    if (stage != nullptr) {
++        return strcmp(stage, "l_out") == 0 || layer == bitnet_rs_reference_layer_trace_requested_layer();
++    }
++
++    if (strcmp(name, "inp_embd") == 0 || strcmp(name, "result_norm") == 0 || strcmp(name, "result_output") == 0) {
++        return true;
++    }
++
++    if (bitnet_rs_reference_layer_trace_requested_layer() != 0) {
 +        return false;
 +    }
 +
@@ -82,6 +174,10 @@ index 666fcc4d..23ee29ff 100644
 +}
 +
 +static const char * bitnet_rs_reference_layer_trace_stage(const char * name) {
++    const char * layer_stage = bitnet_rs_reference_layer_trace_layer_stage(name, nullptr);
++    if (layer_stage != nullptr) {
++        return layer_stage;
++    }
 +    if (strcmp(name, "inp_embd") == 0) {
 +        return "inp_embd";
 +    }
@@ -1021,7 +1117,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +16443,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -15460,6 +16539,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
@@ -1029,7 +1125,7 @@ index 666fcc4d..23ee29ff 100644
              
                  cur = llm_build_norm(ctx0, cur, hparams,
                          model.layers[il].attn_sub_norm, NULL,
-@@ -17655,8 +18639,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18735,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  

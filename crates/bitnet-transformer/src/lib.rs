@@ -60,11 +60,24 @@ fn trace_layer0_tensor(
     stage: &str,
     tensor: &Tensor,
 ) -> Result<()> {
-    if layer_idx == 0 {
-        let suffix = format!("blk0/{stage}");
-        trace_tensor_token_axis_record(&suffix, tensor, base_seq, token_axis, Some(0), stage)?;
+    let target_layer = trace_target_layer();
+    if layer_idx == target_layer {
+        let suffix = format!("blk{target_layer}/{stage}");
+        trace_tensor_token_axis_record(
+            &suffix,
+            tensor,
+            base_seq,
+            token_axis,
+            Some(target_layer as isize),
+            stage,
+        )?;
     }
     Ok(())
+}
+
+#[cfg(feature = "trace")]
+fn trace_target_layer() -> usize {
+    std::env::var("BITNET_TRACE_LAYER").ok().and_then(|value| value.parse().ok()).unwrap_or(0)
 }
 
 #[cfg(feature = "trace")]
