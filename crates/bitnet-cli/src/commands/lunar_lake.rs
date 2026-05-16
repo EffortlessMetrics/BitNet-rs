@@ -269,7 +269,17 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = OPERATOR_READINESS)]
         operator_receipt: PathBuf,
 
-        /// Operator route to execute. Only dense_slm_default_cpu is supported initially.
+        /// Route promotion ledger to use when --route auto or --device auto is requested.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROMOTION_LEDGER)]
+        promotion_ledger: PathBuf,
+
+        /// Workload profile to resolve when auto-routing is requested.
+        #[arg(long, default_value = "ask_normal")]
+        profile: String,
+
+        /// Operator route to execute, or auto to select from the promotion ledger.
+        /// Only ledger-promoted dense_slm_default_cpu can execute today.
         #[arg(long, default_value = DEFAULT_ASK_ROUTE)]
         route: String,
 
@@ -1691,14 +1701,15 @@ pub fn build_route_promotion_ledger_with_created_utc(
         promotion_ready,
         default_route_id: operator.default_route.route_id.clone(),
         auto_route_policy: AutoRoutePolicy {
-            policy_stage: "policy_only_no_auto_dispatch_change".to_string(),
+            policy_stage: "ledger_driven_auto_route_enabled".to_string(),
             default_route: DEFAULT_ASK_ROUTE.to_string(),
             hidden_fallback_allowed: false,
             cpu_default_until_profile_promoted: true,
             candidate_routes_require_profile_promotion: true,
             route_reason_required: true,
             notes: vec![
-                "dense Qwen CPU remains the user-facing auto/default route".to_string(),
+                "ledger-driven auto routing may select only routes promoted for the requested profile".to_string(),
+                "dense Qwen CPU remains the user-facing auto/default route for ask profiles".to_string(),
                 "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion".to_string(),
                 "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists".to_string(),
             ],
@@ -2004,6 +2015,230 @@ pub fn load_operator_ask_route(
     }
 
     Ok(route.clone())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OperatorAskRouteSelection {
+    pub requested_device: String,
+    pub requested_route: String,
+    pub profile_id: String,
+    pub selected_route: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub promotion_status: String,
+    pub selection_source: String,
+    pub route_reason: String,
+    pub why_not_cpu: Vec<String>,
+    pub why_not_gpu: Vec<String>,
+    pub why_not_npu: Vec<String>,
+    pub candidate_routes: Vec<String>,
+    pub promotion_ledger: Option<String>,
+    pub route: OperatorRoute,
+}
+
+pub fn resolve_operator_ask_route_selection(
+    root: &Path,
+    operator_receipt: &Path,
+    promotion_ledger: &Path,
+    requested_route: &str,
+    requested_device: &str,
+    profile_id: &str,
+) -> Result<OperatorAskRouteSelection> {
+    let requested_route = normalize_auto_selector(requested_route, DEFAULT_ASK_ROUTE);
+    let requested_device = normalize_auto_selector(requested_device, "auto");
+    let route_auto = requested_route.eq_ignore_ascii_case("auto");
+    let device_auto = requested_device.eq_ignore_ascii_case("auto");
+
+    if !route_auto && !device_auto {
+        let route = load_operator_ask_route(root, operator_receipt, &requested_route)?;
+        return Ok(OperatorAskRouteSelection {
+            requested_device,
+            requested_route,
+            profile_id: profile_id.to_string(),
+            selected_route: route.route_id.clone(),
+            selected_backend: route.selected_backend.clone(),
+            runtime_api: route.runtime_api.clone(),
+            promotion_status: "direct_route_validated".to_string(),
+            selection_source: "operator_receipt_direct".to_string(),
+            route_reason: route.route_reason.clone(),
+            why_not_cpu: if route.route_id == DEFAULT_ASK_ROUTE {
+                vec!["CPU route was explicitly requested and validated".to_string()]
+            } else {
+                vec!["CPU route was not requested".to_string()]
+            },
+            why_not_gpu: vec!["auto routing was not requested".to_string()],
+            why_not_npu: vec!["auto routing was not requested".to_string()],
+            candidate_routes: vec![],
+            promotion_ledger: None,
+            route,
+        });
+    }
+
+    let ledger_path = resolve_receipt_path(root, promotion_ledger);
+    let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&ledger_path)?;
+    validate_auto_route_ledger(&ledger)?;
+    let profile = ledger
+        .workload_profiles
+        .iter()
+        .find(|profile| profile.profile_id == profile_id)
+        .with_context(|| format!("auto route profile `{profile_id}` not found in ledger"))?;
+    let selected_route_id =
+        profile.promoted_route.as_deref().unwrap_or(ledger.default_route_id.as_str());
+    let promotion = route_promotion(&ledger, selected_route_id)?;
+    validate_auto_selected_promotion(promotion, profile_id)?;
+    let route = load_operator_ask_route(root, operator_receipt, selected_route_id)?;
+    let (why_not_cpu, why_not_gpu, why_not_npu) =
+        route_selection_explanations(&ledger, profile, selected_route_id);
+
+    Ok(OperatorAskRouteSelection {
+        requested_device,
+        requested_route,
+        profile_id: profile.profile_id.clone(),
+        selected_route: route.route_id.clone(),
+        selected_backend: route.selected_backend.clone(),
+        runtime_api: route.runtime_api.clone(),
+        promotion_status: promotion.status.clone(),
+        selection_source: "promotion_ledger_auto".to_string(),
+        route_reason: promotion.reason.clone(),
+        why_not_cpu,
+        why_not_gpu,
+        why_not_npu,
+        candidate_routes: profile.candidate_routes.clone(),
+        promotion_ledger: Some(path_string(&ledger_path)),
+        route,
+    })
+}
+
+fn normalize_auto_selector(value: &str, default_value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() { default_value.to_string() } else { trimmed.to_string() }
+}
+
+fn validate_auto_route_ledger(ledger: &LunarLakeRoutePromotionLedger) -> Result<()> {
+    if !ledger.promotion_ready {
+        bail!("Lunar Lake route promotion ledger is not ready: {}", ledger.gaps.join("; "));
+    }
+    if ledger.machine_id != "intel-258v" {
+        bail!("Lunar Lake auto route requires machine_id=intel-258v; got {}", ledger.machine_id);
+    }
+    if ledger.default_route_id != DEFAULT_ASK_ROUTE
+        || ledger.auto_route_policy.default_route != DEFAULT_ASK_ROUTE
+    {
+        bail!(
+            "Lunar Lake auto route requires default route {DEFAULT_ASK_ROUTE}; got ledger default {} policy default {}",
+            ledger.default_route_id,
+            ledger.auto_route_policy.default_route
+        );
+    }
+    if ledger.auto_route_policy.hidden_fallback_allowed
+        || ledger.claim_boundary.hidden_fallback_allowed
+    {
+        bail!("Lunar Lake auto route refuses ledgers that allow hidden fallback");
+    }
+    if !ledger.auto_route_policy.cpu_default_until_profile_promoted
+        || !ledger.auto_route_policy.candidate_routes_require_profile_promotion
+        || !ledger.auto_route_policy.route_reason_required
+    {
+        bail!("Lunar Lake auto route requires fail-closed route promotion policy flags");
+    }
+    if ledger.claim_boundary.arc_bitnet_full_inference_claimed
+        || ledger.claim_boundary.npu_bitnet_full_inference_claimed
+        || ledger.claim_boundary.qk256_accelerator_decode_claimed
+    {
+        bail!("Lunar Lake auto route refuses ledgers with accelerator BitNet/QK256 claims");
+    }
+    Ok(())
+}
+
+fn route_promotion<'a>(
+    ledger: &'a LunarLakeRoutePromotionLedger,
+    route_id: &str,
+) -> Result<&'a RoutePromotion> {
+    ledger
+        .routes
+        .iter()
+        .find(|route| route.route_id == route_id)
+        .with_context(|| format!("route `{route_id}` not found in promotion ledger"))
+}
+
+fn validate_auto_selected_promotion(route: &RoutePromotion, profile_id: &str) -> Result<()> {
+    if route.status != "promoted" || !route.promoted_for.iter().any(|profile| profile == profile_id)
+    {
+        bail!(
+            "route `{}` is not promoted for profile `{profile_id}`; status={} promoted_for={}",
+            route.route_id,
+            route.status,
+            route.promoted_for.join(",")
+        );
+    }
+    if route.fallback_used != Some(false) {
+        bail!("route `{}` does not prove fallback_used=false", route.route_id);
+    }
+    if route.speedup_claim || route.acceleration_claim {
+        bail!(
+            "route `{}` cannot be auto-selected with speedup or acceleration claims",
+            route.route_id
+        );
+    }
+    if route.reason.trim().is_empty() {
+        bail!("route `{}` is missing a route reason", route.route_id);
+    }
+    Ok(())
+}
+
+fn route_selection_explanations(
+    ledger: &LunarLakeRoutePromotionLedger,
+    profile: &WorkloadProfile,
+    selected_route_id: &str,
+) -> (Vec<String>, Vec<String>, Vec<String>) {
+    let why_not_cpu = if selected_route_id == DEFAULT_ASK_ROUTE {
+        vec![format!(
+            "{DEFAULT_ASK_ROUTE} is promoted for profile {} and remains the safe no-fallback default",
+            profile.profile_id
+        )]
+    } else {
+        route_not_selected_reasons(ledger, DEFAULT_ASK_ROUTE, &profile.profile_id)
+    };
+    let why_not_gpu =
+        route_not_selected_reasons(ledger, "dense_slm_openvino_gpu_candidate", &profile.profile_id);
+    let why_not_npu =
+        route_not_selected_reasons(ledger, "dense_slm_openvino_npu_candidate", &profile.profile_id);
+    (why_not_cpu, why_not_gpu, why_not_npu)
+}
+
+fn route_not_selected_reasons(
+    ledger: &LunarLakeRoutePromotionLedger,
+    route_id: &str,
+    profile_id: &str,
+) -> Vec<String> {
+    let Some(route) = ledger.routes.iter().find(|route| route.route_id == route_id) else {
+        return vec![format!("route `{route_id}` is not present in the promotion ledger")];
+    };
+    let mut reasons = Vec::new();
+    if route.status != "promoted" {
+        reasons.push(format!("route status is `{}`", route.status));
+    }
+    if !route.promoted_for.iter().any(|profile| profile == profile_id) {
+        reasons.push(format!("route is not promoted for profile `{profile_id}`"));
+    }
+    if route.fallback_used != Some(false) {
+        reasons.push("route does not prove fallback_used=false".to_string());
+    }
+    if route.speedup_claim {
+        reasons.push("route source claims speedup before profile promotion".to_string());
+    }
+    if route.acceleration_claim {
+        reasons.push("route source claims acceleration before profile promotion".to_string());
+    }
+    for item in &route.missing_evidence {
+        reasons.push(format!("missing evidence: {item}"));
+    }
+    if reasons.is_empty() {
+        reasons.push(format!("route was not selected for profile `{profile_id}`"));
+    }
+    reasons.sort();
+    reasons.dedup();
+    reasons
 }
 
 fn normalize_created_utc(created_utc: &str) -> Result<String> {
@@ -4502,6 +4737,109 @@ mod tests {
                 .to_string();
 
         assert!(err.contains("not ready") || err.contains("fallback"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_selects_promoted_cpu_route_from_ledger() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-16T10:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-16T10:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-16T10:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-16T10:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let selection = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            "auto",
+            "auto",
+            "ask_normal",
+        )?;
+
+        assert_eq!(selection.selection_source, "promotion_ledger_auto");
+        assert_eq!(selection.selected_route, DEFAULT_ASK_ROUTE);
+        assert_eq!(selection.promotion_status, "promoted");
+        assert_eq!(selection.selected_backend, "cpu-rust");
+        assert_eq!(selection.runtime_api, "cpu");
+        assert!(
+            selection.candidate_routes.contains(&"dense_slm_openvino_gpu_candidate".to_string())
+        );
+        assert!(selection.why_not_gpu.iter().any(|reason| {
+            reason.contains("route status is `candidate`")
+                || reason.contains("route is not promoted for profile")
+        }));
+        assert!(selection.why_not_npu.iter().any(|reason| {
+            reason.contains("route status is `candidate`")
+                || reason.contains("route is not promoted for profile")
+        }));
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_rejects_unknown_profile() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-16T10:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-16T10:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-16T10:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-16T10:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            "auto",
+            "auto",
+            "unlisted_profile",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("profile `unlisted_profile` not found"), "got: {err}");
         Ok(())
     }
 

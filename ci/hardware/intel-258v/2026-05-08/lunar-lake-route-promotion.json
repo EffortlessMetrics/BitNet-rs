@@ -10,14 +10,15 @@
   "promotion_ready": true,
   "default_route_id": "dense_slm_default_cpu",
   "auto_route_policy": {
-    "policy_stage": "policy_only_no_auto_dispatch_change",
+    "policy_stage": "ledger_driven_auto_route_enabled",
     "default_route": "dense_slm_default_cpu",
     "hidden_fallback_allowed": false,
     "cpu_default_until_profile_promoted": true,
     "candidate_routes_require_profile_promotion": true,
     "route_reason_required": true,
     "notes": [
-      "dense Qwen CPU remains the user-facing auto/default route",
+      "ledger-driven auto routing may select only routes promoted for the requested profile",
+      "dense Qwen CPU remains the user-facing auto/default route for ask profiles",
       "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion",
       "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists"
     ]

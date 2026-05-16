@@ -1816,7 +1816,9 @@ async fn async_main() -> Result<()> {
             handle_lunar_lake_probe_command(json_out).await
         }
         #[cfg(feature = "full-cli")]
-        Some(Commands::LunarLake(command)) => handle_lunar_lake_command(command).await,
+        Some(Commands::LunarLake(command)) => {
+            handle_lunar_lake_command(command, &requested_backend_label).await
+        }
         Some(Commands::IntelNpuProbe { strict, json_out }) => {
             intel_npu::handle_probe_command(strict, json_out).await
         }
@@ -9964,11 +9966,16 @@ fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) 
 }
 
 #[cfg(feature = "full-cli")]
-async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
+async fn handle_lunar_lake_command(
+    command: LunarLakeCommand,
+    requested_backend_label: &str,
+) -> Result<()> {
     match command.action {
         LunarLakeAction::Ask {
             artifact_root,
             operator_receipt,
+            promotion_ledger,
+            profile,
             route,
             model,
             tokenizer,
@@ -9982,6 +9989,8 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
             run_lunar_lake_ask(
                 artifact_root,
                 operator_receipt,
+                promotion_ledger,
+                profile,
                 route,
                 model,
                 tokenizer,
@@ -9989,6 +9998,7 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
                 max_new_tokens,
                 expect_contains,
                 json_out,
+                requested_backend_label,
             )
             .await
         }
@@ -10001,6 +10011,8 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
 async fn run_lunar_lake_ask(
     artifact_root: std::path::PathBuf,
     operator_receipt: std::path::PathBuf,
+    promotion_ledger: std::path::PathBuf,
+    profile: String,
     route_id: String,
     model: std::path::PathBuf,
     tokenizer: Option<std::path::PathBuf>,
@@ -10008,15 +10020,20 @@ async fn run_lunar_lake_ask(
     max_new_tokens: usize,
     expect_contains: Option<String>,
     json_out: Option<std::path::PathBuf>,
+    requested_backend_label: &str,
 ) -> Result<()> {
     if !(1..=128).contains(&max_new_tokens) {
         anyhow::bail!("lunar-lake ask requires --max-new-tokens in 1..=128");
     }
-    let route = commands::lunar_lake::load_operator_ask_route(
+    let route_selection = commands::lunar_lake::resolve_operator_ask_route_selection(
         &artifact_root,
         &operator_receipt,
+        &promotion_ledger,
         &route_id,
+        requested_backend_label,
+        &profile,
     )?;
+    let route = route_selection.route.clone();
     let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
     let source_run_path = source_run_receipt_path(&receipt_path);
 
@@ -10094,6 +10111,7 @@ async fn run_lunar_lake_ask(
         operator_receipt_path: &operator_receipt_path,
         source_run_path: &source_run_path,
         route: &route,
+        route_selection: &route_selection,
         question: &question,
         answer,
         normalized_answer: &normalized_answer,
@@ -10140,6 +10158,7 @@ struct LunarLakeAskReceiptContext<'a> {
     operator_receipt_path: &'a std::path::Path,
     source_run_path: &'a std::path::Path,
     route: &'a commands::lunar_lake::OperatorRoute,
+    route_selection: &'a commands::lunar_lake::OperatorAskRouteSelection,
     question: &'a str,
     answer: &'a str,
     normalized_answer: &'a str,
@@ -10170,6 +10189,15 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "artifact_root": ctx.artifact_root.display().to_string(),
         "operator_receipt": ctx.operator_receipt_path.display().to_string(),
         "source_run_receipt": ctx.source_run_path.display().to_string(),
+        "requested_device": ctx.route_selection.requested_device,
+        "requested_route": ctx.route_selection.requested_route,
+        "profile_id": ctx.route_selection.profile_id,
+        "selected_route": ctx.route_selection.selected_route,
+        "promotion_status": ctx.route_selection.promotion_status,
+        "route_reason": ctx.route_selection.route_reason,
+        "why_not_cpu": ctx.route_selection.why_not_cpu,
+        "why_not_gpu": ctx.route_selection.why_not_gpu,
+        "why_not_npu": ctx.route_selection.why_not_npu,
         "requested_backend": requested_backend,
         "selected_backend": selected_backend,
         "runtime_api": runtime_api,
@@ -10178,6 +10206,22 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "backend_lane": "dense_slm_cpu",
         "selected_kernel_or_runtime": selected_kernel_or_runtime,
         "route_id": ctx.route.route_id,
+        "route_selection": {
+            "requested_device": ctx.route_selection.requested_device,
+            "requested_route": ctx.route_selection.requested_route,
+            "profile_id": ctx.route_selection.profile_id,
+            "selected_route": ctx.route_selection.selected_route,
+            "selected_backend": ctx.route_selection.selected_backend,
+            "runtime_api": ctx.route_selection.runtime_api,
+            "promotion_status": ctx.route_selection.promotion_status,
+            "selection_source": ctx.route_selection.selection_source,
+            "route_reason": ctx.route_selection.route_reason,
+            "why_not_cpu": ctx.route_selection.why_not_cpu,
+            "why_not_gpu": ctx.route_selection.why_not_gpu,
+            "why_not_npu": ctx.route_selection.why_not_npu,
+            "candidate_routes": ctx.route_selection.candidate_routes,
+            "promotion_ledger": ctx.route_selection.promotion_ledger,
+        },
         "model_family": model_family,
         "model_architecture": model_architecture,
         "quantization": quantization,
@@ -13114,6 +13158,29 @@ mod tests {
             phase_evidence: Some("slm-phase-warm-session-qwen25-cpu.json".to_string()),
             acceleration_claim: false,
         };
+        let route_selection = commands::lunar_lake::OperatorAskRouteSelection {
+            requested_device: "auto".to_string(),
+            requested_route: "auto".to_string(),
+            profile_id: "ask_normal".to_string(),
+            selected_route: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            promotion_status: "promoted".to_string(),
+            selection_source: "promotion_ledger_auto".to_string(),
+            route_reason: "test route".to_string(),
+            why_not_cpu: vec![
+                "dense_slm_default_cpu is promoted for profile ask_normal and remains the safe no-fallback default"
+                    .to_string(),
+            ],
+            why_not_gpu: vec!["route is not promoted for profile `ask_normal`".to_string()],
+            why_not_npu: vec!["route is not promoted for profile `ask_normal`".to_string()],
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+            promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+            route: route.clone(),
+        };
         let source = serde_json::json!({
             "requested_backend": "cpu",
             "selected_backend": "cpu-rust",
@@ -13151,6 +13218,7 @@ mod tests {
             operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
             source_run_path: std::path::Path::new("lunar-lake-operator-ask-source-run.json"),
             route: &route,
+            route_selection: &route_selection,
             question: "2+2?",
             answer: "\n4<|im_end|>",
             normalized_answer: "4",
@@ -13166,6 +13234,13 @@ mod tests {
         assert_eq!(receipt["backend_lane"], "dense_slm_cpu");
         assert_eq!(receipt["selected_kernel_or_runtime"], "dense-qwen-cpu-reference");
         assert_eq!(receipt["route_id"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["requested_device"], "auto");
+        assert_eq!(receipt["requested_route"], "auto");
+        assert_eq!(receipt["profile_id"], "ask_normal");
+        assert_eq!(receipt["selected_route"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["promotion_status"], "promoted");
+        assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto");
+        assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");
         assert_eq!(receipt["quantization"], "Q8_0");
