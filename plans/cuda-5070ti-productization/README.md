@@ -18,6 +18,8 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
   [`BITNET-PROP-0002`](../../docs/proposals/BITNET-PROP-0002-9950x3d-5070ti-cuda-productization.md)
 - Contract spec:
   [`BITNET-SPEC-0007`](../../docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
+- Server readiness spec:
+  [`BITNET-SPEC-0010`](../../docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md)
 - Bench ADR:
   [`BITNET-ADR-0004`](../../docs/adr/BITNET-ADR-0004-9950x3d-5070ti-cuda-product-bench.md)
 - CUDA campaign:
@@ -39,6 +41,8 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
   onboarding ladder.
 - [`benchmark-qualification.md`](benchmark-qualification.md) owns
   profile-specific speed decisions.
+- [`server-readiness.md`](server-readiness.md) owns exact-profile server
+  readiness promotion rules.
 
 ## Claim Boundary
 
