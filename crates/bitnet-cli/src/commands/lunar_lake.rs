@@ -2051,6 +2051,7 @@ pub fn resolve_operator_ask_route_selection(
 
     if !route_auto && !device_auto {
         let route = load_operator_ask_route(root, operator_receipt, &requested_route)?;
+        validate_operator_ask_requested_device(&requested_device, &route)?;
         return Ok(OperatorAskRouteSelection {
             requested_device,
             requested_route,
@@ -2087,6 +2088,7 @@ pub fn resolve_operator_ask_route_selection(
     let promotion = route_promotion(&ledger, selected_route_id)?;
     validate_auto_selected_promotion(promotion, profile_id)?;
     let route = load_operator_ask_route(root, operator_receipt, selected_route_id)?;
+    validate_operator_ask_requested_device(&requested_device, &route)?;
     let (why_not_cpu, why_not_gpu, why_not_npu) =
         route_selection_explanations(&ledger, profile, selected_route_id);
 
@@ -2112,6 +2114,28 @@ pub fn resolve_operator_ask_route_selection(
 fn normalize_auto_selector(value: &str, default_value: &str) -> String {
     let trimmed = value.trim();
     if trimmed.is_empty() { default_value.to_string() } else { trimmed.to_string() }
+}
+
+fn validate_operator_ask_requested_device(
+    requested_device: &str,
+    route: &OperatorRoute,
+) -> Result<()> {
+    if requested_device.eq_ignore_ascii_case("auto") {
+        return Ok(());
+    }
+
+    let normalized = requested_device.to_ascii_lowercase();
+    let route_is_cpu = route.selected_backend == "cpu-rust" && route.runtime_api == "cpu";
+    if route_is_cpu && matches!(normalized.as_str(), "cpu" | "cpu-rust" | DEFAULT_ASK_ROUTE) {
+        return Ok(());
+    }
+
+    bail!(
+        "Lunar Lake ask route `{}` selects {}/{} but requested --device `{requested_device}`; explicit accelerator devices are not auto-routed until their routes are promoted",
+        route.route_id,
+        route.selected_backend,
+        route.runtime_api
+    )
 }
 
 fn validate_auto_route_ledger(ledger: &LunarLakeRoutePromotionLedger) -> Result<()> {
@@ -4840,6 +4864,52 @@ mod tests {
         .to_string();
 
         assert!(err.contains("profile `unlisted_profile` not found"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_rejects_explicit_accelerator_device_mismatch() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-16T10:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-16T10:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-16T10:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-16T10:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            "auto",
+            "openvino-npu",
+            "ask_normal",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("requested --device `openvino-npu`"), "got: {err}");
+        assert!(err.contains("explicit accelerator devices are not auto-routed"), "got: {err}");
         Ok(())
     }
 
