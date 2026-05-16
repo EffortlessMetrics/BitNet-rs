@@ -1701,6 +1701,46 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-STATUS-001"
+status = "in_progress"
+branch = "docs/cuda-capability-matrix"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a user-facing CUDA capability matrix status page for the 9950X3D + RTX 5070 Ti lane, sourced from the model coverage matrix and NVIDIA campaign proof ledger. The page must distinguish official BitNet I2_S/QK256, dense Qwen2.5, Qwen3, SmolLM2, and later dense candidates; preserve speedup_claim=false and server_ready=false where the model coverage row says false; and avoid creating any new model, runtime, CUDA, answer, speed, server, full-residency, or publication claim."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/status/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  ".github/workflows/**",
+  "README.md",
+]
+may_claim = [
+  "Users have a CUDA capability status page that summarizes current model tiers, routes, speed, server, and claim boundaries from existing proof sources.",
+]
+must_not_claim = [
+  "The status page creates new model, CUDA, answer, speed, server, or residency proof.",
+  "Qwen3 product CLI readiness is promoted.",
+  "SmolLM2 CPU answer readiness or CUDA planning is unblocked.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2_S/QK256 proof.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
+]
+
+[[work_item]]
 id = "CUDA-UX-001"
 status = "merged"
 branch = "codex/cuda-ux-receipts-explain"
