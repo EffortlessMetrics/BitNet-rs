@@ -3595,6 +3595,13 @@ fn build_ffn_norm_prefix_replay_body(
             "rust": rust_input_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
             "reference_vs_rust": reference_input_vs_rust.unwrap_or(Value::Null),
             "token_attribution": input_attribution,
+            "attention_output_projection_sensitivity": ffn_norm_attention_output_projection_sensitivity(
+                model_path,
+                layer,
+                token,
+                reference_records,
+                rust_records,
+            )?,
         },
         "targets": {
             "reference_stage": "ffn_norm_history_ref_layout",
@@ -3769,6 +3776,105 @@ fn ffn_norm_input_token_attribution(
         "current_blocked_reasons": current_blocked_reasons,
         "rows": rows,
     })
+}
+
+fn ffn_norm_attention_output_projection_sensitivity(
+    model_path: &Path,
+    layer: usize,
+    token: usize,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: Option<&[RustTraceRecord]>,
+) -> Result<Value> {
+    let reference_input = find_reference_trace_record(
+        reference_records,
+        "attn_sub_norm_history_ref_layout",
+        Some(layer),
+    );
+    let reference_target = find_reference_trace_record(
+        reference_records,
+        "attn_o_out_history_ref_layout",
+        Some(layer),
+    );
+    let rust_input = rust_records.and_then(|records| {
+        find_rust_trace_record(records, "post_attention_subnorm_history_ref_layout", Some(layer))
+    });
+    let rust_target = rust_records.and_then(|records| {
+        find_rust_trace_record(records, "post_o_proj_history_ref_layout", Some(layer))
+    });
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference_input.is_none() {
+        blocked_reasons.push("reference_attention_subnorm_history_missing".to_string());
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push("reference_attention_output_history_missing".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push("rust_attention_subnorm_history_missing".to_string());
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push("rust_attention_output_history_missing".to_string());
+    }
+    if !blocked_reasons.is_empty() {
+        return Ok(json!({
+            "available": false,
+            "claim_allowed": false,
+            "diagnostic_only": true,
+            "current_blocked_reasons": blocked_reasons,
+        }));
+    }
+
+    let reference_input = reference_input.expect("checked above");
+    let reference_target = reference_target.expect("checked above");
+    let rust_input = rust_input.expect("checked above");
+    let rust_target = rust_target.expect("checked above");
+    let reference_input_token = reference_dim_major_token(reference_input, token)?;
+    let reference_target_token = reference_dim_major_token(reference_target, token)?;
+    let rust_input_token = rust_dim_major_token(rust_input, token)?;
+    let rust_target_token = rust_dim_major_token(rust_target, token)?;
+    let weight_name = format!("blk.{layer}.attn_output.weight");
+    let projection = load_qk256_same_input_projection(
+        model_path,
+        &weight_name,
+        reference_input_token.len(),
+        Some(reference_target_token.len()),
+    )?;
+    let reference_output = project_qk256_loaded_row(&projection, &reference_input_token)?;
+    let rust_input_output = project_qk256_loaded_row(&projection, &rust_input_token)?;
+    let reference_output_vs_reference_target =
+        compare_vectors(&reference_output, &reference_target_token);
+    let rust_input_output_vs_rust_target = compare_vectors(&rust_input_output, &rust_target_token);
+    let input_substitution_delta = compare_vectors(&reference_output, &rust_input_output);
+    let reference_input_output_vs_rust_target =
+        compare_vectors(&reference_output, &rust_target_token);
+    let rust_runtime_projection_separate_mismatch =
+        delta_metric(&rust_input_output_vs_rust_target, "/max_abs_delta") > 1.0e-6;
+    let input_substitution_crosses_runtime_threshold =
+        delta_metric(&input_substitution_delta, "/max_abs_delta") > 1.0e-6;
+
+    Ok(json!({
+        "available": true,
+        "policy": "Selected-token attention-output projection sensitivity is diagnostic-only evidence for whether the FFN input drift is explained by attention subnorm input substitution through blk.N.attn_output.weight. It does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention/value residency, full residency, performance, or completion",
+        "claim_allowed": false,
+        "diagnostic_only": true,
+        "layer": layer,
+        "token": token,
+        "weight": projection.weight_report,
+        "reference_input_stage": "attn_sub_norm_history_ref_layout",
+        "rust_input_stage": "post_attention_subnorm_history_ref_layout",
+        "reference_target_stage": "attn_o_out_history_ref_layout",
+        "rust_target_stage": "post_o_proj_history_ref_layout",
+        "reference_input_vs_rust_input": compare_vectors(&reference_input_token, &rust_input_token),
+        "reference_output_vs_reference_target": reference_output_vs_reference_target,
+        "rust_input_output_vs_rust_target": rust_input_output_vs_rust_target,
+        "reference_input_output_vs_rust_input_output": input_substitution_delta,
+        "reference_input_output_vs_rust_target": reference_input_output_vs_rust_target,
+        "classification": {
+            "same_input_projection_explains_reference_target": delta_metric(&reference_output_vs_reference_target, "/max_abs_delta") <= 1.0e-3,
+            "rust_input_projection_explains_rust_target": !rust_runtime_projection_separate_mismatch,
+            "input_substitution_crosses_runtime_threshold": input_substitution_crosses_runtime_threshold,
+            "rust_runtime_projection_separate_mismatch": rust_runtime_projection_separate_mismatch,
+        },
+    }))
 }
 
 fn ffn_norm_runtime_arithmetic_boundary(
@@ -22773,6 +22879,27 @@ mod tests {
         );
         assert!(reasons.contains(&json!("ffn_norm_input_subthreshold_delta_present")));
         assert!(reasons.contains(&json!("ffn_norm_input_runtime_threshold_delta_present")));
+    }
+
+    #[test]
+    fn ffn_norm_attention_output_projection_sensitivity_reports_missing_inputs() {
+        let report = ffn_norm_attention_output_projection_sensitivity(
+            Path::new("missing.gguf"),
+            0,
+            0,
+            &[],
+            None,
+        )
+        .unwrap();
+        let reasons = report.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(report.pointer("/available"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert!(reasons.contains(&json!("reference_attention_subnorm_history_missing")));
+        assert!(reasons.contains(&json!("reference_attention_output_history_missing")));
+        assert!(reasons.contains(&json!("rust_attention_subnorm_history_missing")));
+        assert!(reasons.contains(&json!("rust_attention_output_history_missing")));
     }
 
     #[test]
