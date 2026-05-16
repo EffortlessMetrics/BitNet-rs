@@ -6749,6 +6749,8 @@ fn compare_reference_to_rust_with_records_with_model(
     });
     report["attention_key_score_input_history_delta"] =
         attention_key_score_input_history_delta(reference_records, rust_records);
+    report["attention_score_key_history_effect"] =
+        attention_score_key_history_effect(reference_records, rust_records);
     report["layer_output_history_delta"] =
         layer_output_history_delta(reference_records, rust_record_list);
     report["layer_0_operation_boundary_delta"] =
@@ -10082,6 +10084,8 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_key_score_input_delta(reference_records, f64_rust_records);
     let key_score_input_history_delta =
         attention_key_score_input_history_delta(reference_records, f64_rust_records);
+    let score_key_history_effect =
+        attention_score_key_history_effect(reference_records, f64_rust_records);
     let query_rope_delta =
         attention_query_rope_ref_layout_delta(reference_records, f64_rust_records);
 
@@ -10150,6 +10154,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "score_input_attribution": score_input_attribution,
         "key_score_input_delta": key_score_input_delta,
         "key_score_input_history_delta": key_score_input_history_delta,
+        "score_key_history_effect": score_key_history_effect,
         "query_rope_delta": query_rope_delta,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -16082,6 +16087,258 @@ fn attention_key_score_input_history_delta(
         "max_rms_delta": max_rms_delta,
         "all_compared": !rust_heads.is_empty() && missing_head_count == 0,
         "blocked_reasons": blocked_reasons,
+        "rows": rows,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ScoreKeyHistoryEffectVariant<'a> {
+    id: &'static str,
+    query_source: &'static str,
+    query_values: &'a [f32],
+    query_f16_roundtrip: bool,
+    key_f16_roundtrip: bool,
+}
+
+fn score_delta_values(left: &[f32], right: &[f32], count: usize) -> Vec<f32> {
+    let compared_count = count.min(left.len()).min(right.len());
+    (0..compared_count).map(|idx| right[idx] - left[idx]).collect()
+}
+
+fn attention_score_key_history_effect(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_query = reference_rope_query_record(reference_records);
+    let rust_query = rust_records.get("attention_q_rope");
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kcur_history_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_scores = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_scores = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_exact_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let (reference_head_dim, reference_head_count) =
+        reference_query.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+    let (rust_head_dim, rust_head_count) =
+        rust_query.and_then(rust_query_head_dim_count).unwrap_or((0, 0));
+    let head_dim = if reference_head_dim != 0 { reference_head_dim } else { rust_head_dim };
+    let head_count = if reference_head_count != 0 { reference_head_count } else { rust_head_count };
+    let group_size =
+        if head_count > 0 && !reference_heads.is_empty() && head_count % reference_heads.len() == 0
+        {
+            Some(head_count / reference_heads.len())
+        } else if !reference_heads.is_empty()
+            && !rust_heads.is_empty()
+            && rust_heads.len().is_multiple_of(reference_heads.len())
+        {
+            Some(rust_heads.len() / reference_heads.len())
+        } else {
+            None
+        };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut best_variant_counts = BTreeMap::<String, usize>::new();
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+    let mut max_actual_score_delta_abs = 0.0f64;
+    let mut max_predicted_score_delta_abs = 0.0f64;
+
+    for (&head, reference_score) in &reference_scores {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let reference_key = kv_head.and_then(|kv_head| reference_heads.get(&kv_head).copied());
+        let rust_key = rust_heads.get(&head).copied();
+        let rust_score = rust_scores.get(&head).copied();
+        if let (Some(reference_key), Some(rust_key), Some(rust_score), Some(kv_head)) =
+            (reference_key, rust_key, rust_score, kv_head)
+        {
+            let live_token_count = reference_key_token_count(reference_key)
+                .unwrap_or(reference_score.first_values.len())
+                .min(rust_key_token_count(rust_key).unwrap_or(rust_score.first_values.len()))
+                .min(reference_score.first_values.len())
+                .min(rust_score.first_values.len());
+            let actual_delta = score_delta_values(
+                &reference_score.first_values,
+                &rust_score.first_values,
+                live_token_count,
+            );
+            let mut variants = Vec::<ScoreKeyHistoryEffectVariant<'_>>::new();
+            if let Some(reference_query) = reference_query {
+                variants.push(ScoreKeyHistoryEffectVariant {
+                    id: "reference_q_key_f32",
+                    query_source: "reference_Qcur",
+                    query_values: &reference_query.first_values,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                });
+                variants.push(ScoreKeyHistoryEffectVariant {
+                    id: "reference_q_key_f16",
+                    query_source: "reference_Qcur",
+                    query_values: &reference_query.first_values,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: true,
+                });
+            }
+            if let Some(rust_query) = rust_query {
+                variants.push(ScoreKeyHistoryEffectVariant {
+                    id: "rust_q_key_f32",
+                    query_source: "rust_attention_q_rope",
+                    query_values: &rust_query.first_values,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                });
+                variants.push(ScoreKeyHistoryEffectVariant {
+                    id: "rust_q_key_f16",
+                    query_source: "rust_attention_q_rope",
+                    query_values: &rust_query.first_values,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: true,
+                });
+            }
+
+            let mut variant_rows = Vec::<Value>::new();
+            let mut best_variant: Option<&'static str> = None;
+            let mut best_delta = Value::Null;
+            for variant in variants {
+                let reference_row = score_row_from_query_key_values(
+                    variant.query_values,
+                    &reference_key.first_values,
+                    head,
+                    head_dim,
+                    live_token_count,
+                    ScoreKeyLayout::DimMajor,
+                    variant.query_f16_roundtrip,
+                    variant.key_f16_roundtrip,
+                    ReferenceScoreAccumPolicy::F32,
+                );
+                let rust_row = score_row_from_query_key_values(
+                    variant.query_values,
+                    &rust_key.first_values,
+                    head,
+                    head_dim,
+                    live_token_count,
+                    ScoreKeyLayout::DimMajor,
+                    variant.query_f16_roundtrip,
+                    variant.key_f16_roundtrip,
+                    ReferenceScoreAccumPolicy::F32,
+                );
+                if let (Some(reference_row), Some(rust_row)) = (reference_row, rust_row) {
+                    let predicted_delta =
+                        score_delta_values(&reference_row, &rust_row, live_token_count);
+                    let explanation_delta = compare_vectors(&predicted_delta, &actual_delta);
+                    max_predicted_score_delta_abs = max_predicted_score_delta_abs.max(
+                        predicted_delta.iter().map(|value| value.abs() as f64).fold(0.0, f64::max),
+                    );
+                    if best_variant.is_none()
+                        || delta_metric(&explanation_delta, "/rms_abs_delta")
+                            < delta_metric(&best_delta, "/rms_abs_delta")
+                    {
+                        best_variant = Some(variant.id);
+                        best_delta = explanation_delta.clone();
+                    }
+                    variant_rows.push(json!({
+                        "variant": variant.id,
+                        "query_source": variant.query_source,
+                        "query_f16_roundtrip": variant.query_f16_roundtrip,
+                        "key_f16_roundtrip": variant.key_f16_roundtrip,
+                        "predicted_delta_vs_actual_delta": explanation_delta,
+                    }));
+                }
+            }
+
+            max_actual_score_delta_abs = max_actual_score_delta_abs
+                .max(actual_delta.iter().map(|value| value.abs() as f64).fold(0.0, f64::max));
+            if let Some(best_variant) = best_variant {
+                *best_variant_counts.entry(best_variant.to_string()).or_insert(0) += 1;
+                max_best_abs_delta =
+                    max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+                max_best_rms_delta =
+                    max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+                compared_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "compared",
+                    "live_token_count": live_token_count,
+                    "actual_score_delta_max_abs": actual_delta.iter().map(|value| value.abs() as f64).fold(0.0, f64::max),
+                    "best_variant": best_variant,
+                    "best_delta": best_delta,
+                    "variants": variant_rows,
+                }));
+            } else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "variant_count": 0,
+                }));
+            }
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "reference_query_present": reference_query.is_some(),
+                "rust_query_present": rust_query.is_some(),
+                "reference_key_present": reference_key.is_some(),
+                "rust_key_present": rust_key.is_some(),
+                "reference_score_present": true,
+                "rust_score_present": rust_score.is_some(),
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "score key-history effect is diagnostic-only evidence for whether replacing reference Kcur history with Rust score-input K predicts raw score drift; it does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or any support claim",
+        "reference_query_stage_present": reference_query.is_some(),
+        "rust_query_stage_present": rust_query.is_some(),
+        "reference_key_stage_prefix": "kcur_history_kv_head",
+        "rust_key_stage_prefix": "attention_k_score_input_head",
+        "reference_score_stage_prefix": "kq_head",
+        "rust_score_stage_prefix": "attention_scores_raw_head",
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "group_size": group_size,
+        "reference_key_head_count": reference_heads.len(),
+        "rust_key_head_count": rust_heads.len(),
+        "reference_score_head_count": reference_scores.len(),
+        "rust_score_head_count": rust_scores.len(),
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "best_variant_counts": best_variant_counts,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
+        "max_actual_score_delta_abs": max_actual_score_delta_abs,
+        "max_predicted_score_delta_abs": max_predicted_score_delta_abs,
+        "all_compared": !reference_scores.is_empty() && missing_input_count == 0,
         "rows": rows,
     })
 }
@@ -22876,6 +23133,11 @@ mod tests {
             Some(&json!(false))
         );
         assert_eq!(
+            report
+                .pointer("/f64/probability_history_effect/score_key_history_effect/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
             report.pointer("/f64/probability_history_effect/query_rope_delta/claim_allowed"),
             Some(&json!(false))
         );
@@ -24303,6 +24565,78 @@ mod tests {
         assert_eq!(delta.pointer("/rows/0/delta/token_mismatch_counts/0/token"), Some(&json!(1)));
         assert_eq!(delta.pointer("/rows/0/delta/max_abs_delta"), Some(&json!(0.25)));
         assert_eq!(delta.pointer("/rows/1/delta/max_abs_delta"), Some(&json!(0.5)));
+    }
+
+    #[test]
+    fn compare_reports_attention_score_key_history_effect() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1],
+                nelements: 2,
+                first_values: vec![1.0, 2.0],
+                ..test_reference_trace_record("Qcur", vec![1.0, 2.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 10.0, 20.0],
+                ..test_reference_trace_record(
+                    "kcur_history_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 10.0, 20.0],
+                )
+            },
+            ReferenceTraceRecord {
+                shape: vec![2],
+                nelements: 2,
+                first_values: vec![21.0, 42.0],
+                ..test_reference_trace_record("kq_head0", vec![21.0, 42.0])
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_q_rope".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 2],
+                num_elements: 2,
+                first_values: vec![1.0, 2.0],
+                ..test_rust_trace_record("attention_q_rope", vec![1.0, 2.0])
+            },
+        );
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.5, 2.0, 10.0, 21.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![1.5, 2.0, 10.0, 21.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                first_values: vec![21.5, 44.0],
+                ..test_rust_trace_record("attention_scores_raw_head0", vec![21.5, 44.0])
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let effect = report.pointer("/attention_score_key_history_effect").unwrap();
+
+        assert_eq!(effect.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(effect.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(effect.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(effect.pointer("/missing_input_count"), Some(&json!(0)));
+        assert_eq!(effect.pointer("/group_size"), Some(&json!(1)));
+        assert_eq!(effect.pointer("/max_best_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(effect.pointer("/max_actual_score_delta_abs"), Some(&json!(2.0)));
+        assert_eq!(effect.pointer("/rows/0/status"), Some(&json!("compared")));
+        assert_eq!(effect.pointer("/rows/0/best_variant"), Some(&json!("reference_q_key_f32")));
+        assert_eq!(effect.pointer("/rows/0/best_delta/sha256_match"), Some(&json!(true)));
     }
 
     #[test]
