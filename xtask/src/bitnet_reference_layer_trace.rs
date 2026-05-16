@@ -2252,6 +2252,7 @@ fn compare_reference_to_rust(
         "attention_value_cache_kv_head_best_matches": attention_value_cache_kv_head_best_matches(reference_records, rust_records),
         "attention_value_cache_rust_layout_best_matches": attention_value_cache_rust_layout_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
+        "attention_value_cache_f16_amplification": attention_value_cache_f16_amplification(reference_records, rust_records),
         "attention_value_mix_reference_scalar_recompute": attention_value_mix_reference_scalar_recompute(reference_records),
         "attention_value_mix_reference_numeric_variants": attention_value_mix_reference_numeric_variants(reference_records),
         "attention_value_mix_rust_scalar_recompute": attention_value_mix_rust_scalar_recompute(rust_records),
@@ -5371,6 +5372,129 @@ fn attention_value_cache_f16_roundtrip_best_matches(
         "attention_v_cache_f16_roundtrip_kv_head",
         "value-cache F16-roundtrip best matches are diagnostic dtype-transform evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
     )
+}
+
+fn f16_bucket_delta(left: &[f32], right: &[f32]) -> Value {
+    let compared_count = left.len().min(right.len());
+    let mut mismatch_count = 0usize;
+    let mut first_mismatch = Value::Null;
+    for index in 0..compared_count {
+        let left_bits = f32_to_f16_bits_nearest_even(left[index]);
+        let right_bits = f32_to_f16_bits_nearest_even(right[index]);
+        if left_bits != right_bits {
+            mismatch_count += 1;
+            if first_mismatch.is_null() {
+                first_mismatch = json!({
+                    "index": index,
+                    "left": left[index],
+                    "right": right[index],
+                    "left_f16_bits": format!("0x{left_bits:04x}"),
+                    "right_f16_bits": format!("0x{right_bits:04x}"),
+                    "left_f16_value": f16_bits_to_f32(left_bits),
+                    "right_f16_value": f16_bits_to_f32(right_bits),
+                });
+            }
+        }
+    }
+    let delta = compare_prefix(left, right, compared_count);
+    json!({
+        "compared_count": compared_count,
+        "left_count": left.len(),
+        "right_count": right.len(),
+        "count_match": left.len() == right.len(),
+        "f16_bucket_mismatch_count": mismatch_count,
+        "f16_bucket_match_count": compared_count.saturating_sub(mismatch_count),
+        "first_f16_bucket_mismatch": first_mismatch,
+        "max_abs_delta": delta_metric(&delta, "/max_abs_delta"),
+        "rms_abs_delta": delta_metric(&delta, "/rms_abs_delta"),
+        "delta": delta,
+    })
+}
+
+fn attention_value_cache_f16_amplification(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_projection = reference_records.iter().find(|record| {
+        record.stage == "Vcur" && record.values_available && !record.first_values.is_empty()
+    });
+    let rust_projection =
+        rust_records.get("attention_v").filter(|record| !record.first_values.is_empty());
+    let projection_delta = reference_projection
+        .zip(rust_projection)
+        .map(|(reference, rust)| f16_bucket_delta(&reference.first_values, &rust.first_values));
+
+    let reference_cache_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "v_cache_rust_layout_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_cache_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_v_cache_f16_roundtrip_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut total_bucket_mismatch_count = 0usize;
+    let mut max_bucket_mismatch_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, reference) in &reference_cache_heads {
+        if let Some(rust) = rust_cache_heads.get(&head) {
+            let delta = f16_bucket_delta(&reference.first_values, &rust.first_values);
+            let bucket_mismatch_count =
+                delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0)
+                    as usize;
+            total_bucket_mismatch_count += bucket_mismatch_count;
+            max_bucket_mismatch_count = max_bucket_mismatch_count.max(bucket_mismatch_count);
+            max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+            max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+            compared_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "compared",
+                "delta": delta,
+            }));
+        } else {
+            missing_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "missing_rust_value_cache",
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "value-cache F16 amplification is diagnostic-only evidence for whether tiny V-projection deltas cross F16 bucket boundaries before value mix; it does not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
+        "reference_projection_stage": "Vcur",
+        "rust_projection_stage": "attention_v",
+        "reference_projection_present": reference_projection.is_some(),
+        "rust_projection_present": rust_projection.is_some(),
+        "projection_delta": projection_delta,
+        "reference_value_cache_stage_prefix": "v_cache_rust_layout_head",
+        "rust_value_cache_stage_prefix": "attention_v_cache_f16_roundtrip_kv_head",
+        "reference_head_count": reference_cache_heads.len(),
+        "rust_head_count": rust_cache_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "total_f16_bucket_mismatch_count": total_bucket_mismatch_count,
+        "max_head_f16_bucket_mismatch_count": max_bucket_mismatch_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !reference_cache_heads.is_empty() && missing_head_count == 0,
+        "rows": rows,
+    })
 }
 
 fn head_lane_best_matches(
@@ -8511,6 +8635,61 @@ mod tests {
         assert_eq!(f16_roundtrip.pointer("/identity_best_count"), Some(&json!(1)));
         assert_eq!(f16_roundtrip.pointer("/non_identity_best_count"), Some(&json!(1)));
         assert_eq!(f16_roundtrip.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
+    }
+
+    #[test]
+    fn compare_reports_value_cache_f16_amplification() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![1.0, 2.0],
+                ..test_reference_trace_record("Vcur", vec![1.0, 2.0])
+            },
+            test_reference_trace_record("v_cache_rust_layout_head0_live", vec![1.0, 2.0]),
+            test_reference_trace_record("v_cache_rust_layout_head1_live", vec![3.0, 4.0]),
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 1, 2],
+                num_elements: 2,
+                first_values: vec![1.0, 2.5],
+                ..test_rust_trace_record("attention_v", vec![1.0, 2.5])
+            },
+        );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout".to_string(),
+            test_rust_trace_record(
+                "attention_v_cache_f16_roundtrip_kv_head0_live_ref_layout",
+                vec![1.0, 2.0],
+            ),
+        );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout".to_string(),
+            test_rust_trace_record(
+                "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout",
+                vec![3.0, 4.5],
+            ),
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let amplification = report.pointer("/attention_value_cache_f16_amplification").unwrap();
+
+        assert_eq!(amplification.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(amplification.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(amplification.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(
+            amplification.pointer("/projection_delta/f16_bucket_mismatch_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(amplification.pointer("/total_f16_bucket_mismatch_count"), Some(&json!(1)));
+        assert_eq!(amplification.pointer("/max_head_f16_bucket_mismatch_count"), Some(&json!(1)));
+        assert_eq!(
+            amplification.pointer("/rows/1/delta/first_f16_bucket_mismatch/index"),
+            Some(&json!(1))
+        );
     }
 
     #[test]
