@@ -51,11 +51,71 @@ mod tests {
     }
 
     #[test]
+    fn timing_metrics_default_has_no_phase_values() {
+        let metrics = TimingMetrics::default();
+        assert!(metrics.prefill_ms.is_none());
+        assert!(metrics.decode_ms.is_none());
+        assert!(metrics.tokenization_encode_ms.is_none());
+        assert!(metrics.tokenization_decode_ms.is_none());
+    }
+
+    #[test]
     fn throughput_metrics_default_has_empty_phase_values() {
         let metrics = ThroughputMetrics::default();
         assert_eq!(metrics.prefill_tokens_per_sec, None);
         assert_eq!(metrics.decode_tokens_per_sec, None);
         assert_eq!(metrics.end_to_end_tokens_per_sec, 0.0);
         assert_eq!(metrics.total_tokens, 0);
+    }
+
+    #[test]
+    fn timing_metrics_serde_round_trip() {
+        let original = TimingMetrics {
+            prefill_ms: Some(11),
+            decode_ms: Some(22),
+            tokenization_encode_ms: Some(3),
+            tokenization_decode_ms: Some(4),
+            total_ms: 40,
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: TimingMetrics = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed, original);
+    }
+
+    #[test]
+    fn throughput_metrics_serde_round_trip() {
+        let original = ThroughputMetrics {
+            prefill_tokens_per_sec: Some(123.5),
+            decode_tokens_per_sec: Some(45.6),
+            end_to_end_tokens_per_sec: 78.9,
+            total_tokens: 42,
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: ThroughputMetrics = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed, original);
+    }
+
+    #[test]
+    fn timing_metrics_deserializes_with_missing_optional_fields() {
+        let parsed: TimingMetrics =
+            serde_json::from_str(r#"{"total_ms": 100}"#).expect("deserialize");
+        assert_eq!(parsed.total_ms, 100);
+        assert!(parsed.prefill_ms.is_none());
+        assert!(parsed.decode_ms.is_none());
+    }
+
+    #[test]
+    fn metrics_implement_clone() {
+        let timing = TimingMetrics { total_ms: 5, ..TimingMetrics::default() };
+        let cloned = timing.clone();
+        assert_eq!(cloned, timing);
+
+        let throughput = ThroughputMetrics {
+            total_tokens: 7,
+            end_to_end_tokens_per_sec: 1.0,
+            ..ThroughputMetrics::default()
+        };
+        let cloned_t = throughput.clone();
+        assert_eq!(cloned_t, throughput);
     }
 }

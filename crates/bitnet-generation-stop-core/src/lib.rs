@@ -120,4 +120,76 @@ mod tests {
             proptest::prop_assert!(result.is_none());
         }
     }
+
+    #[test]
+    fn stop_on_eos_token() {
+        let criteria = make_criteria(&[], &[], 100, Some(2));
+        assert_eq!(check_stop(&criteria, 2, &[], ""), Some(StopReason::EosToken));
+    }
+
+    #[test]
+    fn eos_takes_priority_over_max_tokens() {
+        let criteria = make_criteria(&[], &[], 3, Some(7));
+        // Budget exhausted AND eos produced — eos check fires first per documented order.
+        assert_eq!(check_stop(&criteria, 7, &[10, 11, 12], ""), Some(StopReason::EosToken));
+    }
+
+    #[test]
+    fn max_tokens_zero_means_no_limit() {
+        let criteria = make_criteria(&[], &[], 0, None);
+        // No matter how many tokens have been generated, max_tokens=0 must not fire.
+        assert!(check_stop(&criteria, 1, &[1, 2, 3, 4, 5], "").is_none());
+    }
+
+    #[test]
+    fn max_tokens_fires_at_exact_limit() {
+        let criteria = make_criteria(&[], &[], 3, None);
+        assert!(check_stop(&criteria, 1, &[1, 2], "").is_none());
+        assert_eq!(check_stop(&criteria, 1, &[1, 2, 3], ""), Some(StopReason::MaxTokens));
+    }
+
+    #[test]
+    fn stop_string_fires_only_when_tail_contains_it() {
+        let criteria = make_criteria(&[], &["END"], 100, None);
+        assert!(check_stop(&criteria, 1, &[], "still going").is_none());
+        assert_eq!(
+            check_stop(&criteria, 1, &[], "the END."),
+            Some(StopReason::StopString("END".to_string()))
+        );
+    }
+
+    #[test]
+    fn stop_string_takes_first_match_in_declared_order() {
+        let criteria = make_criteria(&[], &["A", "B"], 100, None);
+        // Both substrings present; the first one configured wins.
+        let result = check_stop(&criteria, 1, &[], "AB");
+        assert_eq!(result, Some(StopReason::StopString("A".to_string())));
+    }
+
+    #[test]
+    fn max_tokens_takes_priority_over_stop_strings() {
+        let criteria = make_criteria(&[], &["x"], 2, None);
+        // Budget reached and a stop string also matches — MaxTokens comes first.
+        assert_eq!(check_stop(&criteria, 1, &[1, 2], "xxx"), Some(StopReason::MaxTokens));
+    }
+
+    #[test]
+    fn stop_criteria_default_yields_no_stop() {
+        let criteria = StopCriteria::default();
+        assert!(check_stop(&criteria, 0, &[], "").is_none());
+    }
+
+    #[test]
+    fn stop_reason_serde_round_trip() {
+        for reason in [
+            StopReason::MaxTokens,
+            StopReason::EosToken,
+            StopReason::StopTokenId(42),
+            StopReason::StopString("end".to_string()),
+        ] {
+            let json = serde_json::to_string(&reason).expect("serialize");
+            let parsed: StopReason = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(parsed, reason);
+        }
+    }
 }

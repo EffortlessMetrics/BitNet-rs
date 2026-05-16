@@ -258,6 +258,111 @@ mod tests {
         }
     }
 
+    #[test]
+    fn eviction_tracker_len_and_is_empty() {
+        let mut ev = KvEviction::new(EvictionPolicy::Fifo);
+        assert!(ev.is_empty());
+        assert_eq!(ev.len(), 0);
+
+        ev.insert(10);
+        ev.insert(20);
+        assert!(!ev.is_empty());
+        assert_eq!(ev.len(), 2);
+    }
+
+    #[test]
+    fn select_evictions_with_zero_count_or_empty_returns_empty() {
+        let ev_empty = KvEviction::new(EvictionPolicy::Lru);
+        assert!(ev_empty.select_evictions(5).is_empty());
+
+        let mut ev = KvEviction::new(EvictionPolicy::Lru);
+        ev.insert(1);
+        ev.insert(2);
+        assert!(ev.select_evictions(0).is_empty());
+    }
+
+    #[test]
+    fn select_evictions_clamps_to_tracked_len() {
+        let mut ev = KvEviction::new(EvictionPolicy::Lru);
+        ev.insert(1);
+        ev.insert(2);
+        let evicted = ev.select_evictions(99);
+        assert_eq!(evicted.len(), 2);
+    }
+
+    #[test]
+    fn eviction_tracker_fifo_matches_insertion_order() {
+        let mut ev = KvEviction::new(EvictionPolicy::Fifo);
+        ev.insert(100);
+        ev.insert(101);
+        ev.insert(102);
+        assert_eq!(ev.select_evictions(2), vec![100, 101]);
+    }
+
+    #[test]
+    fn update_scores_ignores_extra_scores() {
+        let mut ev = KvEviction::new(EvictionPolicy::AttentionScore);
+        ev.insert(0);
+        ev.insert(1);
+        // Pass more scores than tracked entries; the surplus is ignored.
+        ev.update_scores(&[1.0, 2.0, 999.0, 999.0]);
+        // The two tracked entries should still be selected by lowest score: position 0 first.
+        let evicted = ev.select_evictions(1);
+        assert_eq!(evicted, vec![0]);
+    }
+
+    #[test]
+    fn update_scores_accumulates_across_calls() {
+        let mut ev = KvEviction::new(EvictionPolicy::AttentionScore);
+        ev.insert(10);
+        ev.insert(11);
+        ev.update_scores(&[1.0, 0.0]);
+        ev.update_scores(&[0.5, 0.0]);
+        // Slot 0's combined score (1.5) > slot 1's (0.0), so we evict slot 1 first.
+        assert_eq!(ev.select_evictions(1), vec![11]);
+    }
+
+    #[test]
+    fn remove_positions_drops_only_matching_entries() {
+        let mut ev = KvEviction::new(EvictionPolicy::Fifo);
+        for i in 0..4 {
+            ev.insert(i);
+        }
+        ev.remove_positions(&[1, 3]);
+        assert_eq!(ev.len(), 2);
+        // Selecting all remaining returns the kept positions in FIFO order.
+        let mut evicted = ev.select_evictions(2);
+        evicted.sort_unstable();
+        assert_eq!(evicted, vec![0, 2]);
+    }
+
+    #[test]
+    fn hybrid_policy_blends_recency_and_attention() {
+        let mut ev = KvEviction::new(EvictionPolicy::hybrid(0.5));
+        for i in 0..3 {
+            ev.insert(i);
+        }
+        // Give entry 0 a huge attention bump — it should outrank the recency penalty.
+        ev.update_scores(&[10.0, 0.0, 0.0]);
+        let evicted = ev.select_evictions(1);
+        assert_ne!(evicted, vec![0], "high attention should protect entry 0");
+    }
+
+    #[test]
+    fn display_for_hybrid_shows_percent_weight() {
+        let formatted = format!("{}", EvictionPolicy::hybrid(0.75));
+        assert_eq!(formatted, "Hybrid(attn=75%)");
+    }
+
+    #[test]
+    fn attention_weight_f32_for_known_policies() {
+        assert_eq!(EvictionPolicy::Lru.attention_weight_f32(), 0.0);
+        assert_eq!(EvictionPolicy::Fifo.attention_weight_f32(), 0.0);
+        assert_eq!(EvictionPolicy::AttentionScore.attention_weight_f32(), 1.0);
+        let half = EvictionPolicy::Hybrid { attention_weight: 50 };
+        assert!((half.attention_weight_f32() - 0.5).abs() < 1e-6);
+    }
+
     proptest::proptest! {
         #[test]
         fn action_matches_transition(current in 0usize..2048, next in 0usize..2048) {

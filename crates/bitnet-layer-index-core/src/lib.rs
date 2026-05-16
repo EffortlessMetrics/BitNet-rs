@@ -140,4 +140,57 @@ mod tests {
         assert_eq!(parse_block_index("layers.3.attn_q.weight"), None);
         assert_eq!(parse_block_index("blk.3x.attn_q.weight"), None);
     }
+
+    #[test]
+    fn parse_usize_prefix_rejects_empty_input() {
+        assert_eq!(parse_usize_prefix(b""), None);
+    }
+
+    #[test]
+    fn parse_usize_prefix_stops_at_first_non_digit() {
+        assert_eq!(parse_usize_prefix(b"4096abc"), Some(4096));
+        assert_eq!(parse_usize_prefix(b"7."), Some(7));
+    }
+
+    #[test]
+    fn parse_block_index_requires_pure_numeric_segment() {
+        // "blk.3" with no trailing dot still parses the block index — the suffix
+        // string is consumed by the int parser.
+        assert_eq!(parse_block_index("blk.3"), Some(3));
+        // But ".3.x" with a non-numeric tail in the same segment must fail.
+        assert_eq!(parse_block_index("blk.3a"), None);
+    }
+
+    #[test]
+    fn extract_any_layer_index_picks_first_numeric_segment() {
+        // When several segments parse as numbers, only the first wins.
+        assert_eq!(extract_any_layer_index("model.layers.3.attn.4.weight"), Some(3));
+    }
+
+    #[test]
+    fn extract_any_layer_index_handles_empty_string() {
+        assert_eq!(extract_any_layer_index(""), None);
+    }
+
+    #[test]
+    fn extract_structured_layer_index_handles_layers_with_numeric_suffix() {
+        // The "prefix" variant accepts a digit prefix even when the segment is
+        // not purely numeric.
+        assert_eq!(extract_structured_layer_index("layers.7x.weight"), Some(7));
+    }
+
+    #[test]
+    fn extract_structured_layer_index_segment_rejects_numeric_with_suffix() {
+        // The "segment" variant rejects the same input because "7x" is not a
+        // valid usize on its own.
+        assert_eq!(extract_structured_layer_index_segment("layers.7x.weight"), None);
+    }
+
+    #[test]
+    fn extract_structured_returns_none_for_unrelated_names() {
+        for name in ["output.weight", "tok_embd.bias", "norm.weight"] {
+            assert_eq!(extract_structured_layer_index(name), None);
+            assert_eq!(extract_structured_layer_index_segment(name), None);
+        }
+    }
 }

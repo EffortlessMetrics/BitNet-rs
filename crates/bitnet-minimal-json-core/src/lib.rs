@@ -145,4 +145,71 @@ mod tests {
         assert!(MinimalJson::parse("not json").is_err());
         assert!(MinimalJson::parse("[1,2]").is_err());
     }
+
+    #[test]
+    fn parses_multiple_fields() {
+        let j = MinimalJson::parse(r#"{"a":"x","b":1,"c":true}"#).unwrap();
+        assert_eq!(j.get_str("a"), Some("x".to_string()));
+        assert_eq!(j.get_u32("b"), Some(1));
+        assert_eq!(j.get_bool("c"), Some(true));
+    }
+
+    #[test]
+    fn parses_false_bool() {
+        let j = MinimalJson::parse(r#"{"flag":false}"#).unwrap();
+        assert_eq!(j.get_bool("flag"), Some(false));
+    }
+
+    #[test]
+    fn bool_accessor_returns_none_for_non_bool_value() {
+        let j = MinimalJson::parse(r#"{"flag":"yes"}"#).unwrap();
+        assert_eq!(j.get_bool("flag"), None);
+    }
+
+    #[test]
+    fn u32_accessor_returns_none_for_non_numeric() {
+        let j = MinimalJson::parse(r#"{"n":"abc"}"#).unwrap();
+        assert_eq!(j.get_u32("n"), None);
+    }
+
+    #[test]
+    fn f32_accessor_returns_none_for_non_numeric() {
+        let j = MinimalJson::parse(r#"{"f":"abc"}"#).unwrap();
+        assert_eq!(j.get_f32("f"), None);
+    }
+
+    #[test]
+    fn parses_empty_object() {
+        let j = MinimalJson::parse("{}").unwrap();
+        assert_eq!(j.get_str("missing"), None);
+        assert_eq!(j.get_u32("missing"), None);
+        assert_eq!(j.get_bool("missing"), None);
+    }
+
+    #[test]
+    fn tolerates_outer_whitespace() {
+        let j = MinimalJson::parse(r#"   { "a" : "b" }   "#).unwrap();
+        assert_eq!(j.get_str("a"), Some("b".to_string()));
+    }
+
+    #[test]
+    fn nested_object_value_is_preserved_with_commas() {
+        let j = MinimalJson::parse(r#"{"obj":{"a":1,"b":2,"c":3}}"#).unwrap();
+        // The whole brace-balanced value (commas included) is kept as a single
+        // string — not split across keys.
+        assert_eq!(j.get_str("obj"), Some(r#"{"a":1,"b":2,"c":3}"#.to_string()));
+    }
+
+    #[test]
+    fn rejects_inputs_without_closing_brace() {
+        assert!(MinimalJson::parse("{").is_err());
+        assert!(MinimalJson::parse(r#"{"a":1"#).is_err());
+    }
+
+    #[test]
+    fn string_value_with_comma_does_not_split_field() {
+        let j = MinimalJson::parse(r#"{"msg":"a, b, c","n":1}"#).unwrap();
+        assert_eq!(j.get_str("msg"), Some("a, b, c".to_string()));
+        assert_eq!(j.get_u32("n"), Some(1));
+    }
 }
