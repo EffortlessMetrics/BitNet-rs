@@ -29,13 +29,22 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,975 @@ struct llama_context {
+@@ -3441,6 +3444,991 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
 +static bool bitnet_rs_reference_layer_trace_target(const char * name) {
 +    if (name == nullptr || name[0] == '\0') {
 +        return false;
++    }
++
++    if (strncmp(name, "l_out-", 6) == 0) {
++        for (const char * p = name + 6; *p != '\0'; ++p) {
++            if (*p < '0' || *p > '9') {
++                return false;
++            }
++        }
++        return true;
 +    }
 +
 +    static const char * names[] = {
@@ -133,7 +142,7 @@ index 666fcc4d..23ee29ff 100644
 +    if (strcmp(name, "ffn_down-0") == 0) {
 +        return "ffn_down";
 +    }
-+    if (strcmp(name, "l_out-0") == 0) {
++    if (strncmp(name, "l_out-", 6) == 0) {
 +        return "l_out";
 +    }
 +    if (strcmp(name, "result_norm") == 0) {
@@ -146,9 +155,16 @@ index 666fcc4d..23ee29ff 100644
 +}
 +
 +static int bitnet_rs_reference_layer_trace_layer(const char * name) {
-+    const size_t len = strlen(name);
-+    if (len >= 2 && name[len - 2] == '-' && name[len - 1] == '0') {
-+        return 0;
++    const char * dash = strrchr(name, '-');
++    if (dash != nullptr && dash[1] != '\0') {
++        int layer = 0;
++        for (const char * p = dash + 1; *p != '\0'; ++p) {
++            if (*p < '0' || *p > '9') {
++                return -1;
++            }
++            layer = layer * 10 + (*p - '0');
++        }
++        return layer;
 +    }
 +    return -1;
 +}
@@ -1005,7 +1021,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +16427,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -15460,6 +16443,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
@@ -1013,7 +1029,7 @@ index 666fcc4d..23ee29ff 100644
              
                  cur = llm_build_norm(ctx0, cur, hparams,
                          model.layers[il].attn_sub_norm, NULL,
-@@ -17655,8 +18623,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18639,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  

@@ -2174,31 +2174,21 @@ fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
         if model_path.is_file() { read_gguf_block_count(&model_path).ok().flatten() } else { None };
     let expected_final_layer = model_block_count.and_then(|layers| layers.checked_sub(1));
 
-    let rust_records = read_rust_trace_dir(&cpu_trace_dir).ok();
-    let reference_input = match expected_final_layer {
-        Some(layer) => reference_records.iter().find(|record| {
-            record.stage == "l_out"
-                && record.layer.and_then(|value| usize::try_from(value).ok()) == Some(layer)
-        }),
-        None => reference_records.iter().find(|record| record.stage == "l_out"),
-    }
-    .filter(|record| record.values_available && !record.first_values.is_empty());
+    let rust_records = read_rust_trace_records(&cpu_trace_dir).ok();
+    let reference_input =
+        find_reference_trace_record(&reference_records, "l_out", expected_final_layer)
+            .filter(|record| record.values_available && !record.first_values.is_empty());
     let reference_target = reference_records
         .iter()
         .find(|record| record.stage == "result_norm")
         .filter(|record| record.values_available && !record.first_values.is_empty());
     let rust_input = rust_records
         .as_ref()
-        .and_then(|records| records.get("post_layer"))
-        .filter(|record| {
-            expected_final_layer.is_none()
-                || record.layer.and_then(|value| usize::try_from(value).ok())
-                    == expected_final_layer
-        })
+        .and_then(|records| find_rust_trace_record(records, "post_layer", expected_final_layer))
         .filter(|record| !record.first_values.is_empty());
     let rust_target = rust_records
         .as_ref()
-        .and_then(|records| records.get("final_norm"))
+        .and_then(|records| find_rust_trace_record(records, "final_norm", None))
         .filter(|record| !record.first_values.is_empty());
 
     let mut blocked_reasons = Vec::<String>::new();
@@ -2252,6 +2242,11 @@ fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
         ) {
             Ok((model_report, weight_report, replay_report)) => {
                 model = model_report;
+                if let Some(model_object) = model.as_object_mut() {
+                    model_object.insert("block_count".to_string(), json!(model_block_count));
+                    model_object
+                        .insert("expected_final_layer".to_string(), json!(expected_final_layer));
+                }
                 weight = weight_report;
                 replay = replay_report;
             }
@@ -4151,14 +4146,14 @@ fn compare_vectors(left: &[f32], right: &[f32]) -> Value {
     })
 }
 
-fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
+fn read_rust_trace_records(dir: &Path) -> Result<Vec<RustTraceRecord>> {
     if !dir.exists() {
         bail!("rust trace directory missing: {}", dir.display());
     }
     if !dir.is_dir() {
         bail!("rust trace path is not a directory: {}", dir.display());
     }
-    let mut records = BTreeMap::new();
+    let mut records = Vec::new();
     for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
         let entry = entry.with_context(|| format!("reading entry in {}", dir.display()))?;
         let path = entry.path();
@@ -4169,10 +4164,18 @@ fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> 
             fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         let record: RustTraceRecord =
             serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
-        let stage = record
-            .stage
-            .clone()
-            .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string());
+        records.push(record);
+    }
+    if records.is_empty() {
+        bail!("rust trace directory has no .trace files: {}", dir.display());
+    }
+    Ok(records)
+}
+
+fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
+    let mut records = BTreeMap::new();
+    for record in read_rust_trace_records(dir)? {
+        let stage = rust_trace_stage(&record);
         let should_insert = records.get(&stage).is_none_or(|existing| {
             rust_trace_preference(&record) < rust_trace_preference(existing)
         });
@@ -4180,10 +4183,56 @@ fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> 
             records.insert(stage, record);
         }
     }
-    if records.is_empty() {
-        bail!("rust trace directory has no .trace files: {}", dir.display());
-    }
     Ok(records)
+}
+
+fn rust_trace_stage(record: &RustTraceRecord) -> String {
+    record
+        .stage
+        .clone()
+        .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string())
+}
+
+fn find_reference_trace_record<'a>(
+    records: &'a [ReferenceTraceRecord],
+    stage: &str,
+    expected_layer: Option<usize>,
+) -> Option<&'a ReferenceTraceRecord> {
+    records
+        .iter()
+        .filter(|record| record.stage == stage)
+        .filter(|record| {
+            expected_layer.is_none_or(|layer| {
+                record.layer.and_then(|value| usize::try_from(value).ok()) == Some(layer)
+            })
+        })
+        .min_by_key(|record| reference_trace_preference(record.layer))
+}
+
+fn find_rust_trace_record<'a>(
+    records: &'a [RustTraceRecord],
+    stage: &str,
+    expected_layer: Option<usize>,
+) -> Option<&'a RustTraceRecord> {
+    records
+        .iter()
+        .filter(|record| rust_trace_stage(record) == stage)
+        .filter(|record| {
+            expected_layer.is_none_or(|layer| {
+                record.layer.and_then(|value| usize::try_from(value).ok()) == Some(layer)
+            })
+        })
+        .min_by_key(|record| rust_trace_preference(record))
+}
+
+fn reference_trace_preference(layer: Option<i64>) -> i64 {
+    match layer {
+        Some(0) => 0,
+        Some(-1) => 1,
+        Some(layer) if layer > 0 => 10 + layer,
+        Some(layer) => 100 + layer.abs(),
+        None => 1_000,
+    }
 }
 
 fn rust_trace_preference(record: &RustTraceRecord) -> i64 {
@@ -10863,6 +10912,29 @@ mod tests {
         fs::write(path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
     }
 
+    fn write_rust_trace_with_layer(
+        dir: &Path,
+        file_stem: &str,
+        stage: &str,
+        layer: isize,
+        first_values: &[f32],
+    ) {
+        let path = dir.join(format!("{file_stem}.trace"));
+        let record = json!({
+            "name": format!("t0/blk{layer}/{stage}"),
+            "shape": [first_values.len()],
+            "dtype": "F32",
+            "blake3": "abc",
+            "rms": sample_rms(first_values),
+            "num_elements": first_values.len(),
+            "first_values": first_values,
+            "seq": 0,
+            "layer": layer,
+            "stage": stage,
+        });
+        fs::write(path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
+    }
+
     fn test_reference_trace_record(stage: &str, first_values: Vec<f32>) -> ReferenceTraceRecord {
         ReferenceTraceRecord {
             name: format!("{stage}-0"),
@@ -11009,6 +11081,64 @@ mod tests {
             report.pointer("/decision/source_anchors_ready_for_target_local_patch"),
             Some(&json!(false))
         );
+    }
+
+    #[test]
+    fn reference_patch_targets_all_l_out_layers_for_final_norm_replay() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        assert!(patch.contains("strncmp(name, \"l_out-\", 6) == 0"));
+        assert!(patch.contains("return \"l_out\";"));
+        assert!(patch.contains("strrchr(name, '-')"));
+    }
+
+    #[test]
+    fn final_norm_trace_record_lookup_selects_expected_layer_inputs() {
+        let mut reference_layer0 = test_reference_trace_record("l_out", vec![1.0, 2.0]);
+        reference_layer0.name = "l_out-0".to_string();
+        reference_layer0.layer = Some(0);
+        let mut reference_final = test_reference_trace_record("l_out", vec![3.0, 4.0]);
+        reference_final.name = "l_out-2".to_string();
+        reference_final.layer = Some(2);
+        let reference_records = vec![reference_layer0, reference_final];
+
+        let selected_reference =
+            find_reference_trace_record(&reference_records, "l_out", Some(2)).unwrap();
+
+        assert_eq!(selected_reference.layer, Some(2));
+        assert_eq!(selected_reference.first_values, vec![3.0, 4.0]);
+
+        let mut rust_layer0 = test_rust_trace_record("post_layer", vec![1.0, 2.0]);
+        rust_layer0.layer = Some(0);
+        let mut rust_final = test_rust_trace_record("post_layer", vec![3.0, 4.0]);
+        rust_final.name = "t0/blk2/post_layer".to_string();
+        rust_final.layer = Some(2);
+        let rust_records = vec![rust_layer0, rust_final];
+
+        let selected_rust = find_rust_trace_record(&rust_records, "post_layer", Some(2)).unwrap();
+
+        assert_eq!(selected_rust.layer, Some(2));
+        assert_eq!(selected_rust.first_values, vec![3.0, 4.0]);
+    }
+
+    #[test]
+    fn read_rust_trace_records_preserves_duplicate_stage_layers() {
+        let dir = tempdir().unwrap();
+        write_rust_trace_with_layer(dir.path(), "post_layer_layer0", "post_layer", 0, &[1.0, 2.0]);
+        write_rust_trace_with_layer(dir.path(), "post_layer_layer2", "post_layer", 2, &[3.0, 4.0]);
+
+        let records = read_rust_trace_records(dir.path()).unwrap();
+        let collapsed = read_rust_trace_dir(dir.path()).unwrap();
+
+        assert_eq!(
+            records.iter().filter(|record| rust_trace_stage(record) == "post_layer").count(),
+            2
+        );
+        assert_eq!(collapsed.get("post_layer").and_then(|record| record.layer), Some(0));
+        let selected = find_rust_trace_record(&records, "post_layer", Some(2)).unwrap();
+        assert_eq!(selected.layer, Some(2));
+        assert_eq!(selected.first_values, vec![3.0, 4.0]);
     }
 
     #[test]
