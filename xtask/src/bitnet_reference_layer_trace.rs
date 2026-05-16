@@ -5122,6 +5122,8 @@ fn compare_reference_to_rust_with_records(
     });
     report["layer_output_history_delta"] =
         layer_output_history_delta(reference_records, rust_record_list);
+    report["layer_0_operation_boundary_delta"] =
+        layer_operation_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_1_operation_boundary_delta"] =
         layer_operation_boundary_delta(reference_records, rust_record_list, 1);
     report["layer_0_history_boundary_delta"] =
@@ -12926,6 +12928,48 @@ mod tests {
         assert_eq!(
             boundary.pointer("/first_material_stage/boundary"),
             Some(&json!("attention_output_projection"))
+        );
+        assert_eq!(
+            boundary.pointer("/first_material_stage/first_values_delta/max_abs_delta"),
+            Some(&json!(0.5))
+        );
+    }
+
+    #[test]
+    fn compare_reports_layer0_operation_first_material_stage() {
+        let mut reference_attn = test_reference_trace_record("attn_norm", vec![1.0, 2.0]);
+        reference_attn.name = "attn_norm-0".to_string();
+        reference_attn.layer = Some(0);
+        let mut reference_down = test_reference_trace_record("ffn_down", vec![5.0, 6.0]);
+        reference_down.name = "ffn_down-0".to_string();
+        reference_down.layer = Some(0);
+        let reference_records = vec![reference_attn, reference_down];
+
+        let mut rust_attn = test_rust_trace_record("attn_norm", vec![1.0, 2.0]);
+        rust_attn.name = "t0/blk0/attn_norm".to_string();
+        rust_attn.layer = Some(0);
+        let mut rust_down = test_rust_trace_record("post_down_proj", vec![5.0, 6.5]);
+        rust_down.name = "t0/blk0/post_down_proj".to_string();
+        rust_down.layer = Some(0);
+        let rust_records = vec![rust_attn, rust_down];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_0_operation_boundary_delta").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/layer"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(
+            boundary.pointer("/first_material_stage/boundary"),
+            Some(&json!("ffn_down_projection"))
         );
         assert_eq!(
             boundary.pointer("/first_material_stage/first_values_delta/max_abs_delta"),
