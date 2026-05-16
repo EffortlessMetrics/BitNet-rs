@@ -315,7 +315,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-003-stop-template-scoring"
 stackable = false
 review_mode = "codex_premerge"
@@ -323,6 +323,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-001"]
 pr = 5128
+merge_sha = "39d81c8062b8cb0e33a256768363fddd2a70489e"
 acceptance = "Fix dense SLM stop-token, prompt-template, normalization, and scoring misses found by the expanded corpus while preserving deterministic scoring and receipt schema."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
