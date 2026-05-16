@@ -76,7 +76,7 @@ artifacts to separate strict proof items.
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 | M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
 | M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
-| M3MBA-018 | in_progress | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy. |
+| M3MBA-018 | pr_open | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; opened in #5214. |
 
 Current focus: `M3MBA-018` reconciles the roadmap after `M3MBA-017` merged, so
 operators do not follow stale instructions to merge already completed setup
