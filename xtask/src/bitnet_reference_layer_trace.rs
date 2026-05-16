@@ -5183,6 +5183,12 @@ fn compare_reference_to_rust_with_records(
         &layer_0_prefix_drift_frontier,
         0,
     );
+    report["layer_0_prefix_ffn_norm_boundary"] = layer_prefix_ffn_norm_boundary(
+        reference_records,
+        rust_record_list,
+        &layer_0_prefix_drift_frontier,
+        0,
+    );
     report["layer_0_prefix_drift_frontier"] = layer_0_prefix_drift_frontier;
     report["layer_0_full_prefix_token_drift"] = layer_0_full_prefix_token_drift;
     report["layer_0_current_history_consistency"] = layer_0_current_history_consistency;
@@ -6306,6 +6312,170 @@ fn dim_major_record_token_delta(
         object.insert("rust_token_count".to_string(), json!(rust_token_count));
     }
     Ok(delta)
+}
+
+fn layer_prefix_ffn_norm_boundary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    frontier: &Value,
+    layer: usize,
+) -> Value {
+    let targets = prefix_stage_targets(frontier);
+    let reference_input =
+        find_reference_trace_record(reference_records, "ffn_inp_history_ref_layout", Some(layer));
+    let rust_input = find_rust_trace_record(
+        rust_records,
+        "post_attention_residual_history_ref_layout",
+        Some(layer),
+    );
+    let reference_output =
+        find_reference_trace_record(reference_records, "ffn_norm_history_ref_layout", Some(layer));
+    let rust_output =
+        find_rust_trace_record(rust_records, "post_ffn_norm_history_ref_layout", Some(layer));
+
+    let mut rows = Vec::<Value>::new();
+    let mut missing_stage_count = 0usize;
+    let mut delta_unavailable_count = 0usize;
+    let mut clean_input_material_output_count = 0usize;
+    let mut material_output_count = 0usize;
+    let mut first_clean_input_material_output = Value::Null;
+
+    for (token, labels) in targets {
+        let input_delta = reference_input.zip(rust_input).and_then(|(reference, rust)| {
+            dim_major_record_token_delta(reference, rust, token).ok()
+        });
+        let output_delta = reference_output.zip(rust_output).and_then(|(reference, rust)| {
+            dim_major_record_token_delta(reference, rust, token).ok()
+        });
+        let input_delta_unavailable =
+            reference_input.is_some() && rust_input.is_some() && input_delta.is_none();
+        let output_delta_unavailable =
+            reference_output.is_some() && rust_output.is_some() && output_delta.is_none();
+        let input_material = input_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+        let output_material = output_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+        let input_max_abs =
+            input_delta.as_ref().map(|delta| delta_metric(delta, "/max_abs_delta")).unwrap_or(0.0);
+        let output_max_abs =
+            output_delta.as_ref().map(|delta| delta_metric(delta, "/max_abs_delta")).unwrap_or(0.0);
+        let amplification_ratio =
+            if input_max_abs > 0.0 { Some(output_max_abs / input_max_abs) } else { None };
+        let clean_input_material_output = !input_material && output_material;
+        let boundary_classification = if reference_input.is_none()
+            || rust_input.is_none()
+            || reference_output.is_none()
+            || rust_output.is_none()
+        {
+            "missing_stage"
+        } else if input_delta_unavailable || output_delta_unavailable {
+            "delta_unavailable"
+        } else if clean_input_material_output {
+            "ffn_norm_output_amplification"
+        } else if input_material && output_material {
+            "ffn_input_already_material"
+        } else if input_material {
+            "ffn_input_material_without_output"
+        } else {
+            "ffn_norm_boundary_clean"
+        };
+
+        if reference_input.is_none()
+            || rust_input.is_none()
+            || reference_output.is_none()
+            || rust_output.is_none()
+        {
+            missing_stage_count += 1;
+        }
+        if input_delta_unavailable || output_delta_unavailable {
+            delta_unavailable_count += 1;
+        }
+        if output_material {
+            material_output_count += 1;
+        }
+        if clean_input_material_output {
+            clean_input_material_output_count += 1;
+        }
+
+        let row = json!({
+            "layer": layer,
+            "token": token,
+            "labels": labels,
+            "relative_position": prefix_token_relative_position(frontier, token),
+            "reference_input_stage": "ffn_inp_history_ref_layout",
+            "rust_input_stage": "post_attention_residual_history_ref_layout",
+            "reference_output_stage": "ffn_norm_history_ref_layout",
+            "rust_output_stage": "post_ffn_norm_history_ref_layout",
+            "input_present": reference_input.is_some() && rust_input.is_some(),
+            "output_present": reference_output.is_some() && rust_output.is_some(),
+            "input_delta": input_delta.unwrap_or(Value::Null),
+            "output_delta": output_delta.unwrap_or(Value::Null),
+            "input_delta_unavailable": input_delta_unavailable,
+            "output_delta_unavailable": output_delta_unavailable,
+            "input_material": input_material,
+            "output_material": output_material,
+            "input_material_mismatch": input_material,
+            "output_material_mismatch": output_material,
+            "clean_input_material_output": clean_input_material_output,
+            "boundary_classification": boundary_classification,
+            "amplification_ratio": amplification_ratio,
+        });
+        if clean_input_material_output && first_clean_input_material_output.is_null() {
+            first_clean_input_material_output = row.clone();
+        }
+        rows.push(row);
+    }
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if rows.is_empty() {
+        blocked_reasons.push("prefix_ffn_norm_target_missing".to_string());
+    }
+    if missing_stage_count > 0 {
+        blocked_reasons.push("prefix_ffn_norm_stage_missing".to_string());
+    }
+    if delta_unavailable_count > 0 {
+        blocked_reasons.push("prefix_ffn_norm_delta_unavailable".to_string());
+    }
+    if clean_input_material_output_count > 0 {
+        blocked_reasons.push("prefix_ffn_norm_clean_input_material_output_present".to_string());
+    }
+    if material_output_count > 0 {
+        blocked_reasons.push("prefix_ffn_norm_output_delta_present".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if rows.is_empty() {
+        "capture prefix frontier target tokens before interpreting FFN norm boundary deltas"
+    } else if missing_stage_count > 0 || delta_unavailable_count > 0 {
+        "capture complete FFN norm input/output history samples for prefix frontier tokens"
+    } else if clean_input_material_output_count > 0 {
+        "replay GGML and Rust FFN RMSNorm for the clean-input material-output prefix token"
+    } else if material_output_count > 0 {
+        "localize upstream FFN input drift before replaying FFN RMSNorm"
+    } else {
+        "prefix FFN norm boundary is not the active material drift"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer prefix FFN norm boundary deltas are diagnostic-only evidence for deciding whether to replay FFN RMSNorm for an earlier prefix token; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "source_frontier": {
+            "active_frontier": frontier.pointer("/active_frontier").cloned().unwrap_or(Value::Null),
+            "selected_current_token": frontier.pointer("/selected_current_token").cloned().unwrap_or(Value::Null),
+            "current_history_consistency_clean": frontier.pointer("/current_history_consistency_clean").cloned().unwrap_or(Value::Null),
+        },
+        "target_token_count": rows.len(),
+        "missing_stage_count": missing_stage_count,
+        "delta_unavailable_count": delta_unavailable_count,
+        "material_output_count": material_output_count,
+        "clean_input_material_output_count": clean_input_material_output_count,
+        "first_clean_input_material_output": first_clean_input_material_output,
+        "rows": rows,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
 }
 
 fn layer_current_token(
@@ -15534,6 +15704,167 @@ mod tests {
         assert!(token0_labels.contains(&json!("max_earlier_prefix_token")));
         assert!(token2_labels.contains(&json!("sampled_current_token")));
         assert!(stage_reasons.contains(&json!("prefix_token_stage_delta_present")));
+    }
+
+    #[test]
+    fn compare_reports_layer0_prefix_ffn_norm_boundary_amplification() {
+        const STAGE_MAPPING: &[(&str, &str, &str, &str)] = &[
+            (
+                "ffn_inp",
+                "ffn_inp_history_ref_layout",
+                "post_attention_residual",
+                "post_attention_residual_history_ref_layout",
+            ),
+            (
+                "ffn_norm",
+                "ffn_norm_history_ref_layout",
+                "post_ffn_norm",
+                "post_ffn_norm_history_ref_layout",
+            ),
+            (
+                "ffn_out",
+                "ffn_out_history_ref_layout",
+                "post_swiglu",
+                "post_swiglu_history_ref_layout",
+            ),
+            (
+                "ffn_sub_norm",
+                "ffn_sub_norm_history_ref_layout",
+                "post_ffn_subnorm",
+                "post_ffn_subnorm_history_ref_layout",
+            ),
+            (
+                "ffn_down",
+                "ffn_down_history_ref_layout",
+                "post_down_proj",
+                "post_down_proj_history_ref_layout",
+            ),
+            ("l_out", "l_out_history_ref_layout", "post_layer", "post_layer_history_ref_layout"),
+        ];
+
+        let mut reference_records = Vec::<ReferenceTraceRecord>::new();
+        let mut rust_records = Vec::<RustTraceRecord>::new();
+
+        for (reference_history_stage, rust_history_stage) in [
+            ("attn_value_mix_history_ref_layout", "attention_value_mix_merged_history_ref_layout"),
+            ("attn_o_out_history_ref_layout", "post_o_proj_history_ref_layout"),
+        ] {
+            let history_values = vec![0.0, 0.1, 0.2, 1.0, 1.1, 1.2];
+            let mut reference_history =
+                test_reference_trace_record(reference_history_stage, history_values.clone());
+            reference_history.shape = vec![2, 3, 1, 1];
+            reference_history.full_shape = vec![2, 3, 1, 1];
+            reference_history.nelements = 6;
+            reference_history.layer = Some(0);
+
+            let mut rust_history =
+                test_rust_trace_record(rust_history_stage, history_values.clone());
+            rust_history.name = format!("t2/blk0/{rust_history_stage}");
+            rust_history.shape = vec![2, 3];
+            rust_history.num_elements = 6;
+            rust_history.seq = Some(2);
+            rust_history.layer = Some(0);
+
+            reference_records.push(reference_history);
+            rust_records.push(rust_history);
+        }
+
+        for (
+            index,
+            (
+                reference_current_stage,
+                reference_history_stage,
+                rust_current_stage,
+                rust_history_stage,
+            ),
+        ) in STAGE_MAPPING.iter().enumerate()
+        {
+            let offset = index as f32 * 10.0;
+            let reference_history_values = vec![
+                1.0 + offset,
+                1.1 + offset,
+                1.2 + offset,
+                2.0 + offset,
+                2.1 + offset,
+                2.2 + offset,
+            ];
+            let mut rust_history_values = reference_history_values.clone();
+            if *reference_history_stage == "ffn_norm_history_ref_layout" {
+                rust_history_values[0] = 1.5 + offset;
+            }
+
+            let mut reference_history = test_reference_trace_record(
+                reference_history_stage,
+                reference_history_values.clone(),
+            );
+            reference_history.shape = vec![2, 3, 1, 1];
+            reference_history.full_shape = vec![2, 3, 1, 1];
+            reference_history.nelements = 6;
+            reference_history.layer = Some(0);
+
+            let mut rust_history =
+                test_rust_trace_record(rust_history_stage, rust_history_values.clone());
+            rust_history.name = format!("t2/blk0/{rust_history_stage}");
+            rust_history.shape = vec![2, 3];
+            rust_history.num_elements = 6;
+            rust_history.seq = Some(2);
+            rust_history.layer = Some(0);
+
+            let mut reference_current = test_reference_trace_record(
+                reference_current_stage,
+                vec![reference_history_values[2], reference_history_values[5]],
+            );
+            reference_current.name = format!("{reference_current_stage}-0");
+            reference_current.sample_offset = Some(4);
+            reference_current.full_shape = vec![2, 3, 1, 1];
+            reference_current.shape = vec![2, 1, 1, 1];
+            reference_current.nelements = 2;
+            reference_current.layer = Some(0);
+
+            let mut rust_current = test_rust_trace_record(
+                rust_current_stage,
+                vec![rust_history_values[2], rust_history_values[5]],
+            );
+            rust_current.name = format!("t2/blk0/{rust_current_stage}");
+            rust_current.seq = Some(2);
+            rust_current.layer = Some(0);
+
+            reference_records.push(reference_history);
+            reference_records.push(reference_current);
+            rust_records.push(rust_history);
+            rust_records.push(rust_current);
+        }
+
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_0_prefix_ffn_norm_boundary").unwrap();
+        let reasons =
+            boundary.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            boundary.pointer("/source_frontier/active_frontier"),
+            Some(&json!("earliest_earlier_prefix_token"))
+        );
+        assert_eq!(boundary.pointer("/target_token_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/clean_input_material_output_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/material_output_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/rows/0/token"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/rows/0/input_material_mismatch"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/rows/0/output_material_mismatch"), Some(&json!(true)));
+        assert_eq!(
+            boundary.pointer("/rows/0/boundary_classification"),
+            Some(&json!("ffn_norm_output_amplification"))
+        );
+        assert_eq!(boundary.pointer("/first_clean_input_material_output/token"), Some(&json!(0)));
+        assert!(reasons.contains(&json!("prefix_ffn_norm_clean_input_material_output_present")));
+        assert!(reasons.contains(&json!("prefix_ffn_norm_output_delta_present")));
     }
 
     #[test]
