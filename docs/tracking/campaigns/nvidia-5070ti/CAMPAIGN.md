@@ -168,7 +168,7 @@ the claim boundary before new runtime work.
 |---|---|---|---|
 | BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
 | Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts and benchmark qualification reviews exist; direct ask/chat hardware receipts not found | `docs/reports/CUDA_DENSE_QWEN25_Q8_PRODUCT_AUDIT.md` | direct ask/chat user-path receipts if required, then server reuse |
-| Qwen3 0.6B | candidate with artifact, CPU sanity, all-layer plan, one-token strict CUDA proof, bounded short-decode strict CUDA proof, warm-session strict CUDA proof, and benchmark qualification review | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json` | repeated comparator evidence or exact earned-tier status promotion |
+| Qwen3 0.6B | accelerator-ready dense SLM candidate with artifact, CPU sanity, all-layer plan, one-token strict CUDA proof, bounded short-decode strict CUDA proof, warm-session strict CUDA proof, and benchmark qualification review; product CLI, speed, server, full-residency, and BitNet QK256 claims remain false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json` | user-facing ask/chat product UX or repeated comparator evidence before any product CLI or speed profile promotion |
 | SmolLM2 360M | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | Llama 3.2 3B | registered candidate | none | memory envelope, artifact contract, tokenizer/prompt authority |
@@ -251,6 +251,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-MODEL-005 | merged | PR #4971 added the Qwen3 0.6B bounded short-decode strict CUDA proof after one-token CUDA landed, keeping warm-session, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-006 | merged | PR #4985 recorded Qwen3 0.6B warm-session strict CUDA proof after short-decode CUDA landed, keeping ask/chat product UX, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-007 | merged | PR #4996 recorded a Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict CUDA proof receipts, rejected speedup for every reviewed profile, and kept server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
+| CUDA-MODEL-008 | pr_open | PR #5007 syncs Qwen3 0.6B model coverage and model-status output to the exact earned accelerator-ready candidate tier after CUDA-MODEL-007, without promoting product CLI, speed, server, full-residency, broad dense GGUF, or BitNet QK256 claims. |
 | CUDA-UX-008 | merged | PR #4724 added a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | merged | PR #4754 added the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |

@@ -1,0 +1,12 @@
+timestamp = "2026-05-15T23:28:28Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-008"
+event = "in_progress"
+branch = "codex/cuda-qwen3-status-sync"
+actor = "codex"
+
+notes = [
+  "Started Qwen3 0.6B earned-tier model coverage sync after CUDA-MODEL-007 landed.",
+  "Scope is limited to model coverage, model-status output/tests, and campaign tracker state.",
+  "Product CLI readiness, speedup, server readiness, full CUDA residency, broad dense GGUF readiness, and BitNet packed I2_S/QK256 proof remain false.",
+]
