@@ -20,6 +20,8 @@ use crate::model_cache::{self, VerifiedCachedModel};
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
 const APPLE_M3_AIR_CPU_NEON: &str = "apple-m3-air-cpu-neon";
 const APPLE_M4_METAL: &str = "apple-m4-metal";
+const APPLE_M3_AIR_METAL: &str = "apple-m3-air-metal";
+const APPLE_M3_AIR_MPSGRAPH: &str = "apple-m3-air-mpsgraph";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
@@ -2429,7 +2431,7 @@ fn ensure_supported_mac_validate_device(
         APPLE_M4_CPU_NEON => Ok(APPLE_M4_CPU_NEON),
         APPLE_M3_AIR_CPU_NEON => Ok(APPLE_M3_AIR_CPU_NEON),
         _ => anyhow::bail!(
-            "mac validate routes supported Apple CPU/NEON validation through --device {APPLE_M4_CPU_NEON} or --device {APPLE_M3_AIR_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+            "mac validate routes supported Apple CPU/NEON validation through --device {APPLE_M4_CPU_NEON} or --device {APPLE_M3_AIR_CPU_NEON}; requested --device {label}. Full {APPLE_M4_METAL}/{APPLE_M3_AIR_METAL} inference, {APPLE_M3_AIR_MPSGRAPH}/MPSGraph model inference, and hidden CPU fallback are not supported by this wrapper."
         ),
     }
 }
@@ -13322,6 +13324,20 @@ fn receipt_flag_true(value: &serde_json::Value, key: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mac_validate_rejects_m3_metal_identity_without_cpu_fallback_claim() -> Result<(), String> {
+        let err = match ensure_supported_mac_validate_device(Some(APPLE_M3_AIR_METAL)) {
+            Ok(label) => return Err(format!("M3 Air Metal should be rejected, got {label}")),
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains(APPLE_M3_AIR_METAL), "got: {err}");
+        assert!(err.contains(APPLE_M3_AIR_MPSGRAPH), "got: {err}");
+        assert!(err.contains(APPLE_M3_AIR_CPU_NEON), "got: {err}");
+        assert!(err.contains("hidden CPU fallback"), "got: {err}");
+        Ok(())
+    }
 
     fn test_verified_model(cache_root: &Path) -> VerifiedCachedModel {
         VerifiedCachedModel {
