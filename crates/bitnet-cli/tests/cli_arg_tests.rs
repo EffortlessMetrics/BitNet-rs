@@ -5679,8 +5679,9 @@ fn reference_compare_validates_slm_external_reference_artifact() {
 /// `reference-compare` accepts the SmolLM2 first-token/top-k comparator shape.
 #[cfg(feature = "full-cli")]
 #[test]
-fn reference_compare_validates_smollm2_first_token_topk_artifact() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn reference_compare_validates_smollm2_first_token_topk_artifact()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let artifact = dir.path().join("smollm2-reference.json");
     let out = dir.path().join("smollm2-reference-validation.json");
     std::fs::write(
@@ -5717,22 +5718,18 @@ fn reference_compare_validates_smollm2_first_token_topk_artifact() {
             "chosen_id": 504
           }
         }"#,
-    )
-    .expect("write artifact");
+    )?;
 
     bitnet()
-        .args([
-            "reference-compare",
-            "--artifact",
-            artifact.to_str().unwrap(),
-            "--json-out",
-            out.to_str().unwrap(),
-        ])
+        .arg("reference-compare")
+        .arg("--artifact")
+        .arg(&artifact)
+        .arg("--json-out")
+        .arg(&out)
         .assert()
         .success();
 
-    let receipt: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
     assert_eq!(receipt["artifact_kind"], "slm_reference_divergence_validation");
     assert_eq!(receipt["model"]["family"], "smollm2");
     assert_eq!(receipt["validation"]["passed"], true);
@@ -5744,13 +5741,15 @@ fn reference_compare_validates_smollm2_first_token_topk_artifact() {
     );
     assert_eq!(receipt["comparison"]["bitnet_rs"]["fallback_used"], false);
     assert_eq!(receipt["speedup_claim"], false);
+    Ok(())
 }
 
 /// `--require-match` keeps the SmolLM2 comparator fail-closed when top-k diverges.
 #[cfg(feature = "full-cli")]
 #[test]
-fn reference_compare_require_match_fails_smollm2_topk_divergence() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn reference_compare_require_match_fails_smollm2_topk_divergence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let artifact = dir.path().join("smollm2-reference.json");
     let out = dir.path().join("smollm2-reference-validation.json");
     std::fs::write(
@@ -5787,21 +5786,19 @@ fn reference_compare_require_match_fails_smollm2_topk_divergence() {
             "chosen_id": 504
           }
         }"#,
-    )
-    .expect("write artifact");
+    )?;
 
     bitnet()
-        .args([
-            "reference-compare",
-            "--artifact",
-            artifact.to_str().unwrap(),
-            "--json-out",
-            out.to_str().unwrap(),
-            "--require-match",
-        ])
+        .arg("reference-compare")
+        .arg("--artifact")
+        .arg(&artifact)
+        .arg("--json-out")
+        .arg(&out)
+        .arg("--require-match")
         .assert()
         .failure()
         .stderr(predicate::str::contains("reference artifact diverged"));
+    Ok(())
 }
 
 /// `first-token-divergence --help` documents the external reference and local CPU inputs.
