@@ -3191,6 +3191,7 @@ fn compare_reference_to_rust(
         "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_amplification": attention_value_cache_f16_amplification(reference_records, rust_records),
         "attention_value_cache_store_readback_boundary": attention_value_cache_store_readback_boundary(reference_records, rust_records),
+        "attention_norm_history_delta": attention_norm_history_delta(reference_records, rust_records),
         "attention_value_projection_input_history": attention_value_projection_input_history(reference_records, rust_records),
         "attention_value_projection_output_history": attention_value_projection_output_history(reference_records, rust_records),
         "attention_value_mix_reference_scalar_recompute": attention_value_mix_reference_scalar_recompute(reference_records),
@@ -6602,6 +6603,205 @@ fn attention_value_projection_input_history(
         "delta": delta,
         "current_blocked_reasons": blocked_reasons,
     })
+}
+
+fn attention_norm_history_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_current = reference_records
+        .iter()
+        .find(|record| record.stage == "attn_norm" && record.layer == Some(0))
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let reference_history = reference_records
+        .iter()
+        .find(|record| record.stage == "attn_norm_history_ref_layout")
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let rust_current =
+        rust_records.get("attn_norm").filter(|record| !record.first_values.is_empty());
+    let rust_history = rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| !record.first_values.is_empty());
+
+    let reference_sampled_token_index = reference_current.and_then(reference_sampled_token_index);
+    let rust_current_seq = rust_current.and_then(|record| record.seq.map(|seq| seq as u64));
+    let rust_history_seq = rust_history.and_then(|record| record.seq.map(|seq| seq as u64));
+    let selected_token = reference_sampled_token_index.or(rust_history_seq).or(rust_current_seq);
+
+    let reference_history_token =
+        selected_token.and_then(|token| usize::try_from(token).ok()).and_then(|token| {
+            reference_history.and_then(|record| reference_dim_major_token(record, token).ok())
+        });
+    let rust_history_token = selected_token
+        .and_then(|token| usize::try_from(token).ok())
+        .and_then(|token| rust_history.and_then(|record| rust_dim_major_token(record, token).ok()));
+
+    let reference_current_vs_history_token = reference_current
+        .zip(reference_history_token.as_ref())
+        .map(|(current, history)| compare_vectors(&current.first_values, history));
+    let rust_current_vs_history_token = rust_current
+        .zip(rust_history_token.as_ref())
+        .map(|(current, history)| compare_vectors(&current.first_values, history));
+    let reference_current_vs_rust_current = reference_current
+        .zip(rust_current)
+        .map(|(reference, rust)| compare_vectors(&reference.first_values, &rust.first_values));
+    let reference_history_token_vs_rust_history_token = reference_history_token
+        .as_ref()
+        .zip(rust_history_token.as_ref())
+        .map(|(reference, rust)| compare_vectors(reference, rust));
+    let reference_history_token_vs_rust_history_token_f16 = reference_history_token
+        .as_ref()
+        .zip(rust_history_token.as_ref())
+        .map(|(reference, rust)| f16_bucket_delta(reference, rust));
+
+    let mut scope_failures = Vec::<Value>::new();
+    if let (Some(reference), Some(rust)) = (reference_sampled_token_index, rust_current_seq)
+        && reference != rust
+    {
+        scope_failures.push(json!({
+            "reason": "reference_sampled_token_index_does_not_match_rust_attn_norm_seq",
+            "reference_sampled_token_index": reference,
+            "rust_seq": rust,
+        }));
+    }
+    if let (Some(reference), Some(rust)) = (reference_sampled_token_index, rust_history_seq)
+        && reference != rust
+    {
+        scope_failures.push(json!({
+            "reason": "reference_sampled_token_index_does_not_match_rust_history_seq",
+            "reference_sampled_token_index": reference,
+            "rust_history_seq": rust,
+        }));
+    }
+    if let (Some(current), Some(history)) = (rust_current_seq, rust_history_seq)
+        && current != history
+    {
+        scope_failures.push(json!({
+            "reason": "rust_attn_norm_seq_does_not_match_rust_history_seq",
+            "rust_seq": current,
+            "rust_history_seq": history,
+        }));
+    }
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference_current.is_none() {
+        blocked_reasons.push("reference_attn_norm_current_missing".to_string());
+    }
+    if reference_history.is_none() {
+        blocked_reasons.push("reference_attn_norm_history_ref_layout_missing".to_string());
+    }
+    if rust_current.is_none() {
+        blocked_reasons.push("rust_attn_norm_current_missing".to_string());
+    }
+    if rust_history.is_none() {
+        blocked_reasons.push("rust_attention_v_input_history_ref_layout_missing".to_string());
+    }
+    if selected_token.is_none() {
+        blocked_reasons.push("attention_norm_selected_token_unavailable".to_string());
+    }
+    if reference_history_token.is_none() {
+        blocked_reasons.push("reference_attn_norm_history_token_unavailable".to_string());
+    }
+    if rust_history_token.is_none() {
+        blocked_reasons.push("rust_attention_v_input_history_token_unavailable".to_string());
+    }
+    if !scope_failures.is_empty() {
+        blocked_reasons.push("attention_norm_trace_scope_mismatch".to_string());
+    }
+
+    let classification = classify_attention_norm_history_delta(
+        !scope_failures.is_empty(),
+        reference_current_vs_history_token.as_ref(),
+        rust_current_vs_history_token.as_ref(),
+        reference_current_vs_rust_current.as_ref(),
+        reference_history_token_vs_rust_history_token_f16.as_ref(),
+    );
+    blocked_reasons.extend(classification.iter().map(|reason| (*reason).to_string()));
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "attention-norm history delta is diagnostic-only evidence for whether value-projection input drift enters through RMSNorm/current-token computation, history serialization, or trace scope; it does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "reference_current_stage": "attn_norm",
+        "reference_history_stage": "attn_norm_history_ref_layout",
+        "rust_current_stage": "attn_norm",
+        "rust_history_stage": "attention_v_input_history_ref_layout",
+        "reference_current_present": reference_current.is_some(),
+        "reference_history_present": reference_history.is_some(),
+        "rust_current_present": rust_current.is_some(),
+        "rust_history_present": rust_history.is_some(),
+        "scope": {
+            "reference_sampled_token_index": reference_sampled_token_index,
+            "rust_current_seq": rust_current_seq,
+            "rust_history_seq": rust_history_seq,
+            "selected_token": selected_token,
+            "scope_mismatch": !scope_failures.is_empty(),
+            "failures": scope_failures,
+        },
+        "reference_current_vs_reference_history_token": reference_current_vs_history_token,
+        "rust_current_vs_rust_history_token": rust_current_vs_history_token,
+        "reference_current_vs_rust_current": reference_current_vs_rust_current,
+        "reference_history_token_vs_rust_history_token": reference_history_token_vs_rust_history_token,
+        "reference_history_token_vs_rust_history_token_f16": reference_history_token_vs_rust_history_token_f16,
+        "current_blocked_reasons": blocked_reasons,
+    })
+}
+
+fn reference_dim_major_token(record: &ReferenceTraceRecord, token: usize) -> Result<Vec<f32>> {
+    let dim_count = dim_major_dim_count(record)?;
+    let token_count = dim_major_token_count(record)?;
+    slice_dim_major_token(&record.first_values, dim_count, token_count, token)
+}
+
+fn rust_dim_major_token(record: &RustTraceRecord, token: usize) -> Result<Vec<f32>> {
+    let dim_count = record.shape.first().copied().filter(|dim| *dim > 0).with_context(|| {
+        format!("{} has unusable dim-major shape {:?}", record.name, record.shape)
+    })?;
+    let token_count = record.shape.get(1).copied().filter(|dim| *dim > 0).with_context(|| {
+        format!("{} has unusable token count shape {:?}", record.name, record.shape)
+    })?;
+    slice_dim_major_token(&record.first_values, dim_count, token_count, token)
+}
+
+fn classify_attention_norm_history_delta(
+    scope_mismatch: bool,
+    reference_current_vs_history_token: Option<&Value>,
+    rust_current_vs_history_token: Option<&Value>,
+    reference_current_vs_rust_current: Option<&Value>,
+    reference_history_token_vs_rust_history_token_f16: Option<&Value>,
+) -> Vec<&'static str> {
+    if scope_mismatch {
+        return vec!["attention_norm_trace_scope_mismatch"];
+    }
+    if reference_current_vs_history_token.is_some_and(delta_has_material_numeric_delta) {
+        return vec!["reference_attn_norm_history_serialization_delta"];
+    }
+    if rust_current_vs_history_token.is_some_and(delta_has_material_numeric_delta) {
+        return vec!["rust_attention_v_input_history_serialization_delta"];
+    }
+    if reference_current_vs_rust_current.is_some_and(delta_has_any_numeric_delta) {
+        let mut reasons = vec!["attention_norm_current_token_delta"];
+        if reference_history_token_vs_rust_history_token_f16
+            .and_then(|delta| delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64))
+            .is_some_and(|count| count > 0)
+        {
+            reasons.push("attention_norm_delta_crosses_f16_bucket_boundary");
+        }
+        return reasons;
+    }
+    Vec::new()
+}
+
+fn delta_has_material_numeric_delta(delta: &Value) -> bool {
+    delta_metric(delta, "/max_abs_delta") > 1.0e-6
+        || !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn delta_has_any_numeric_delta(delta: &Value) -> bool {
+    delta_metric(delta, "/max_abs_delta") > 0.0
+        || !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false)
 }
 
 fn attention_value_projection_output_history(
@@ -10361,6 +10561,263 @@ mod tests {
         assert_eq!(input_history.pointer("/delta/first_mismatch_layout/dim"), Some(&json!(0)));
         assert_eq!(input_history.pointer("/delta/first_mismatch_layout/token"), Some(&json!(2)));
         assert_eq!(input_history.pointer("/delta/token_mismatch_counts/0/token"), Some(&json!(2)));
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_history_delta_as_current_token_delta() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                full_shape: vec![2, 3, 1, 1],
+                sample_offset: Some(4),
+                token_axis: Some(1),
+                nelements: 2,
+                first_values: vec![1.2, 2.2],
+                ..test_reference_trace_record("attn_norm", vec![1.2, 2.2])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 3, 1, 1],
+                nelements: 6,
+                first_values: vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+                ..test_reference_trace_record(
+                    "attn_norm_history_ref_layout",
+                    vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attn_norm".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                seq: Some(2),
+                first_values: vec![1.25, 2.2],
+                ..test_rust_trace_record("attn_norm", vec![1.25, 2.2])
+            },
+        );
+        rust_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                seq: Some(2),
+                first_values: vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let delta = report.pointer("/attention_norm_history_delta").unwrap();
+        let reasons = delta.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(delta.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(delta.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(delta.pointer("/scope/scope_mismatch"), Some(&json!(false)));
+        assert!(reasons.contains(&json!("attention_norm_current_token_delta")));
+        assert_eq!(
+            delta.pointer("/reference_current_vs_reference_history_token/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(
+            delta.pointer("/rust_current_vs_rust_history_token/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(
+            delta.pointer("/reference_current_vs_rust_current/max_abs_delta"),
+            Some(&json!(0.04999995231628418))
+        );
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_history_delta_as_rust_history_serialization_delta() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                full_shape: vec![2, 3, 1, 1],
+                sample_offset: Some(4),
+                token_axis: Some(1),
+                nelements: 2,
+                first_values: vec![1.2, 2.2],
+                ..test_reference_trace_record("attn_norm", vec![1.2, 2.2])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 3, 1, 1],
+                nelements: 6,
+                first_values: vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+                ..test_reference_trace_record(
+                    "attn_norm_history_ref_layout",
+                    vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attn_norm".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                seq: Some(2),
+                first_values: vec![1.2, 2.2],
+                ..test_rust_trace_record("attn_norm", vec![1.2, 2.2])
+            },
+        );
+        rust_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                seq: Some(2),
+                first_values: vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let delta = report.pointer("/attention_norm_history_delta").unwrap();
+        let reasons = delta.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert!(reasons.contains(&json!("rust_attention_v_input_history_serialization_delta")));
+        assert!(!reasons.contains(&json!("attention_norm_current_token_delta")));
+        assert_eq!(
+            delta.pointer("/rust_current_vs_rust_history_token/max_abs_delta"),
+            Some(&json!(0.04999995231628418))
+        );
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_scope_mismatch_before_numeric_delta() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                full_shape: vec![2, 3, 1, 1],
+                sample_offset: Some(4),
+                token_axis: Some(1),
+                nelements: 2,
+                first_values: vec![1.2, 2.2],
+                ..test_reference_trace_record("attn_norm", vec![1.2, 2.2])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 3, 1, 1],
+                nelements: 6,
+                first_values: vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+                ..test_reference_trace_record(
+                    "attn_norm_history_ref_layout",
+                    vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attn_norm".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                seq: Some(1),
+                first_values: vec![1.25, 2.2],
+                ..test_rust_trace_record("attn_norm", vec![1.25, 2.2])
+            },
+        );
+        rust_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                seq: Some(2),
+                first_values: vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let delta = report.pointer("/attention_norm_history_delta").unwrap();
+        let reasons = delta.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(delta.pointer("/scope/scope_mismatch"), Some(&json!(true)));
+        assert!(reasons.contains(&json!("attention_norm_trace_scope_mismatch")));
+        assert!(!reasons.contains(&json!("attention_norm_current_token_delta")));
+        assert_eq!(
+            delta.pointer("/scope/failures/0/reason"),
+            Some(&json!("reference_sampled_token_index_does_not_match_rust_attn_norm_seq"))
+        );
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_tiny_delta_crossing_f16_bucket() {
+        let left = 1.0004882f32;
+        let right = 1.0004884f32;
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                full_shape: vec![2, 3, 1, 1],
+                sample_offset: Some(4),
+                token_axis: Some(1),
+                nelements: 2,
+                first_values: vec![left, 2.2],
+                ..test_reference_trace_record("attn_norm", vec![left, 2.2])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 3, 1, 1],
+                nelements: 6,
+                first_values: vec![1.0, 1.1, left, 2.0, 2.1, 2.2],
+                ..test_reference_trace_record(
+                    "attn_norm_history_ref_layout",
+                    vec![1.0, 1.1, left, 2.0, 2.1, 2.2],
+                )
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attn_norm".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                seq: Some(2),
+                first_values: vec![right, 2.2],
+                ..test_rust_trace_record("attn_norm", vec![right, 2.2])
+            },
+        );
+        rust_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                seq: Some(2),
+                first_values: vec![1.0, 1.1, right, 2.0, 2.1, 2.2],
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![1.0, 1.1, right, 2.0, 2.1, 2.2],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let delta = report.pointer("/attention_norm_history_delta").unwrap();
+        let reasons = delta.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert!(reasons.contains(&json!("attention_norm_current_token_delta")));
+        assert!(reasons.contains(&json!("attention_norm_delta_crosses_f16_bucket_boundary")));
+        assert_eq!(
+            delta.pointer(
+                "/reference_history_token_vs_rust_history_token_f16/f16_bucket_mismatch_count"
+            ),
+            Some(&json!(1))
+        );
+        assert!(
+            delta_metric(
+                delta.pointer("/reference_current_vs_rust_current").unwrap(),
+                "/max_abs_delta"
+            ) < 1.0e-6
+        );
     }
 
     #[test]
