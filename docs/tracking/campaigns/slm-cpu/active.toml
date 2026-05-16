@@ -1931,9 +1931,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-019"
-status = "pr_open"
+status = "merged"
 pr = 5081
-head_sha = "9d5f152b706ee02fded9c0185ae1565853afeb84"
+head_sha = "c93ad85786934dc93b3be4ef4eb7aa31694d19cd"
+merge_sha = "11ca6d7ceee41cfc4ec073976a15f5c0fb5b21d8"
 branch = "model/slm-cpu-019-smollm2-normalization-validation"
 stackable = false
 review_mode = "codex_premerge"
