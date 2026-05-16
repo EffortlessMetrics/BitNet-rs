@@ -63,7 +63,7 @@
 | apple-m4-inference-excellence | M4-EXCELLENCE-003 | M4-EXCELLENCE-001, M4-EXCELLENCE-002 | merged |
 | apple-m4-inference-excellence | M4-EXCELLENCE-004 | M4-EXCELLENCE-003 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-001 | M4-ACCURACY-000 | merged |
-| apple-m4-inference-excellence | M4-ACCURACY-002 | M4-ACCURACY-001 | in_progress |
+| apple-m4-inference-excellence | M4-ACCURACY-002 | M4-ACCURACY-001 | pr_open |
 | apple-m4-inference-excellence | M4-ACCURACY-003 | M4-ACCURACY-001 | proposed |
 | apple-m4-inference-excellence | M4-ACCURACY-004 | M4-ACCURACY-002, M4-ACCURACY-003 | proposed |
 | apple-m4-inference-excellence | M4-ACCURACY-005 | M4-ACCURACY-004 | proposed |

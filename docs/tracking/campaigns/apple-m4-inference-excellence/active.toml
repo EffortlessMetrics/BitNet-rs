@@ -276,13 +276,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-002-dense-500"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-001"]
+pr = 5119
 acceptance = "Expand the seeded dense SLM corpus to 500 deterministic cases after 100-case scoring is stable, keeping all scoring mechanical and reproducible."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
