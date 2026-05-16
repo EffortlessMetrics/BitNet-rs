@@ -9845,6 +9845,16 @@ fn layer_attention_norm_f64_downstream_effect(
         f64_rust_record_list,
         layer,
     );
+    let frontier = baseline_comparison
+        .pointer("/layer_0_prefix_drift_frontier")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let f64_value_mix_attribution = layer_prefix_value_mix_history_attribution(
+        reference_records,
+        f64_rust_records,
+        &frontier,
+        layer,
+    );
     let f64_ffn_history = layer_ffn_history_drift(reference_records, f64_rust_record_list, layer);
     let f64_layer_operation =
         layer_operation_boundary_delta(reference_records, f64_rust_record_list, layer);
@@ -9865,6 +9875,15 @@ fn layer_attention_norm_f64_downstream_effect(
         value_u64(&f64_layer_output, "/material_mismatch_count").unwrap_or(0);
     let f64_attention_output_history_material_count =
         value_u64(&f64_attention_output_history, "/material_mismatch_count").unwrap_or(0);
+    let f64_value_mix_target_material_count =
+        value_u64(&f64_value_mix_attribution, "/material_target_delta_count").unwrap_or(0);
+    let f64_value_mix_rust_self_material_count =
+        value_u64(&f64_value_mix_attribution, "/rust_self_recompute_material_count").unwrap_or(0);
+    let f64_value_mix_source_material_count =
+        value_u64(&f64_value_mix_attribution, "/probability_source_delta_material_count")
+            .unwrap_or(0)
+            + value_u64(&f64_value_mix_attribution, "/value_cache_source_delta_material_count")
+                .unwrap_or(0);
     let f64_ffn_history_material_count =
         value_u64(&f64_ffn_history, "/history/material_stage_count").unwrap_or(0);
     let f64_ffn_current_material_count =
@@ -9881,6 +9900,18 @@ fn layer_attention_norm_f64_downstream_effect(
     let f64_attention_output_history_missing_count =
         value_u64(&f64_attention_output_history, "/missing_reference_count").unwrap_or(0)
             + value_u64(&f64_attention_output_history, "/missing_rust_count").unwrap_or(0);
+    let f64_value_mix_attribution_missing_count =
+        if value_u64(&f64_value_mix_attribution, "/target_token_count").unwrap_or(0) == 0 {
+            1
+        } else {
+            0
+        } + value_u64(&f64_value_mix_attribution, "/missing_input_count").unwrap_or(0)
+            + value_u64(&f64_value_mix_attribution, "/rust_self_recompute_missing_count")
+                .unwrap_or(0)
+            + value_u64(&f64_value_mix_attribution, "/probability_source_delta_missing_count")
+                .unwrap_or(0)
+            + value_u64(&f64_value_mix_attribution, "/value_cache_source_delta_missing_count")
+                .unwrap_or(0);
     let f64_ffn_missing_count = value_u64(&f64_ffn_history, "/history/missing_stage_count")
         .unwrap_or(0)
         + value_u64(&f64_ffn_history, "/current_token/missing_stage_count").unwrap_or(0);
@@ -9906,6 +9937,16 @@ fn layer_attention_norm_f64_downstream_effect(
     if f64_attention_output_history_material_count > 0 {
         blocked_reasons.push("f64_attention_output_history_material_mismatch_present".to_string());
     }
+    if f64_value_mix_target_material_count > 0 {
+        blocked_reasons.push("f64_value_mix_history_target_mismatch_present".to_string());
+    }
+    if f64_value_mix_rust_self_material_count > 0 {
+        blocked_reasons
+            .push("f64_value_mix_history_rust_self_recompute_mismatch_present".to_string());
+    }
+    if f64_value_mix_source_material_count > 0 {
+        blocked_reasons.push("f64_value_mix_history_source_delta_present".to_string());
+    }
     if f64_ffn_history_material_count > 0 {
         blocked_reasons.push("f64_ffn_history_material_mismatch_present".to_string());
     }
@@ -9924,6 +9965,9 @@ fn layer_attention_norm_f64_downstream_effect(
     if f64_attention_output_history_missing_count > 0 {
         blocked_reasons.push("f64_attention_output_history_coverage_incomplete".to_string());
     }
+    if f64_value_mix_attribution_missing_count > 0 {
+        blocked_reasons.push("f64_value_mix_history_attribution_coverage_incomplete".to_string());
+    }
     if f64_ffn_missing_count > 0 {
         blocked_reasons.push("f64_ffn_history_coverage_incomplete".to_string());
     }
@@ -9937,6 +9981,9 @@ fn layer_attention_norm_f64_downstream_effect(
         && f64_stage_material_count == 0
         && f64_layer_output_material_count == 0
         && f64_attention_output_history_material_count == 0
+        && f64_value_mix_target_material_count == 0
+        && f64_value_mix_rust_self_material_count == 0
+        && f64_value_mix_source_material_count == 0
         && f64_ffn_history_material_count == 0
         && f64_ffn_current_material_count == 0
         && f64_layer_operation_material_count == 0
@@ -9944,6 +9991,7 @@ fn layer_attention_norm_f64_downstream_effect(
         && f64_missing_stage_count == 0
         && f64_layer_output_missing_count == 0
         && f64_attention_output_history_missing_count == 0
+        && f64_value_mix_attribution_missing_count == 0
         && f64_ffn_missing_count == 0
         && f64_layer_operation_missing_count == 0;
     let next_action = if !f64_capture_cleared {
@@ -9972,6 +10020,7 @@ fn layer_attention_norm_f64_downstream_effect(
             "stage_summary": f64_stage_summary,
             "layer_output_history_delta": f64_layer_output,
             "attention_output_history_boundary_delta": f64_attention_output_history,
+            "value_mix_history_attribution": f64_value_mix_attribution,
             "ffn_history_drift": f64_ffn_history,
             "layer_operation_boundary_delta": f64_layer_operation,
             "next_layer_operation_boundary_delta": f64_next_layer_operation,
@@ -22351,6 +22400,29 @@ mod tests {
         reference_ffn_history.shape = vec![2, 2, 1, 1];
         reference_ffn_history.full_shape = vec![2, 2, 1, 1];
         reference_ffn_history.nelements = 4;
+        let mut reference_probability = test_reference_trace_record(
+            "kq_soft_max_ext_head0_history_ref_layout",
+            vec![1.0, 0.75, 0.0, 0.25],
+        );
+        reference_probability.name = "kq_soft_max_ext_head0_history_ref_layout-0".to_string();
+        reference_probability.layer = Some(0);
+        reference_probability.shape = vec![2, 2, 1, 1];
+        reference_probability.full_shape = vec![2, 2, 1, 1];
+        reference_probability.nelements = 4;
+        let mut reference_value_cache =
+            test_reference_trace_record("v_cache_rust_layout_head0_live", vec![2.0, 4.0, 6.0, 8.0]);
+        reference_value_cache.name = "v_cache_rust_layout_head0_live-0".to_string();
+        reference_value_cache.layer = Some(0);
+        reference_value_cache.shape = vec![2, 2, 1, 1];
+        reference_value_cache.full_shape = vec![2, 2, 1, 1];
+        reference_value_cache.nelements = 4;
+        let mut reference_value_mix_head =
+            test_reference_trace_record("kqv_head0_history_ref_layout", vec![2.0, 2.5, 6.0, 6.5]);
+        reference_value_mix_head.name = "kqv_head0_history_ref_layout-0".to_string();
+        reference_value_mix_head.layer = Some(0);
+        reference_value_mix_head.shape = vec![2, 2, 1, 1];
+        reference_value_mix_head.full_shape = vec![2, 2, 1, 1];
+        reference_value_mix_head.nelements = 4;
         let mut rust_ffn_history = test_rust_trace_record(
             "post_attention_residual_history_ref_layout",
             vec![1.0, 2.5, 3.0, 4.0],
@@ -22359,12 +22431,54 @@ mod tests {
         rust_ffn_history.layer = Some(0);
         rust_ffn_history.shape = vec![2, 2];
         rust_ffn_history.num_elements = 4;
-        let rust_records =
-            vec![rust_layer0.clone(), rust_attention.clone(), rust_ffn_history.clone()];
+        let mut rust_probability = test_rust_trace_record(
+            "attn_scores_softmax_head0_history_ref_layout",
+            vec![1.0, 0.5, 0.0, 0.5],
+        );
+        rust_probability.name = "t0/blk0/attn_scores_softmax_head0_history_ref_layout".to_string();
+        rust_probability.layer = Some(0);
+        rust_probability.shape = vec![2, 2];
+        rust_probability.num_elements = 4;
+        let mut rust_value_cache = test_rust_trace_record(
+            "attention_v_cache_expanded_for_value_mix_head0_ref_layout",
+            vec![2.0, 4.0, 6.0, 8.0],
+        );
+        rust_value_cache.name =
+            "t0/blk0/attention_v_cache_expanded_for_value_mix_head0_ref_layout".to_string();
+        rust_value_cache.layer = Some(0);
+        rust_value_cache.shape = vec![2, 2];
+        rust_value_cache.num_elements = 4;
+        let mut rust_value_mix_head = test_rust_trace_record(
+            "attention_value_mix_head0_history_ref_layout",
+            vec![2.0, 3.0, 6.0, 7.0],
+        );
+        rust_value_mix_head.name =
+            "t0/blk0/attention_value_mix_head0_history_ref_layout".to_string();
+        rust_value_mix_head.layer = Some(0);
+        rust_value_mix_head.shape = vec![2, 2];
+        rust_value_mix_head.num_elements = 4;
+        let rust_records = vec![
+            rust_layer0.clone(),
+            rust_attention.clone(),
+            rust_ffn_history.clone(),
+            rust_probability.clone(),
+            rust_value_cache.clone(),
+            rust_value_mix_head.clone(),
+        ];
         let mut rust_map = BTreeMap::new();
         rust_map.insert("post_layer".to_string(), rust_layer0);
         rust_map.insert("post_o_proj_history_ref_layout".to_string(), rust_attention);
         rust_map.insert("post_attention_residual_history_ref_layout".to_string(), rust_ffn_history);
+        rust_map
+            .insert("attn_scores_softmax_head0_history_ref_layout".to_string(), rust_probability);
+        rust_map.insert(
+            "attention_v_cache_expanded_for_value_mix_head0_ref_layout".to_string(),
+            rust_value_cache,
+        );
+        rust_map.insert(
+            "attention_value_mix_head0_history_ref_layout".to_string(),
+            rust_value_mix_head,
+        );
         let baseline = json!({
             "first_material_mismatch": {
                 "reference_stage": "attn_norm",
@@ -22381,6 +22495,15 @@ mod tests {
             },
             "layer_1_operation_boundary_delta": {
                 "first_material_stage": Value::Null
+            },
+            "layer_0_prefix_drift_frontier": {
+                "active_frontier": "sampled_current_token",
+                "selected_current_token": 1,
+                "current_history_consistency_clean": true,
+                "sampled_current_token_row": {
+                    "token": 1,
+                    "relative_position": "sampled_current"
+                }
             }
         });
         let f64_capture = json!({
@@ -22389,7 +22512,14 @@ mod tests {
         });
 
         let report = layer_attention_norm_f64_downstream_effect(
-            &[reference_layer0, reference_attention, reference_ffn_history],
+            &[
+                reference_layer0,
+                reference_attention,
+                reference_ffn_history,
+                reference_probability,
+                reference_value_cache,
+                reference_value_mix_head,
+            ],
             &rust_records,
             &rust_map,
             &baseline,
@@ -22420,10 +22550,26 @@ mod tests {
             report.pointer("/f64/ffn_history_drift/history/first_material_stage/boundary"),
             Some(&json!("ffn_input_history"))
         );
+        assert_eq!(
+            report.pointer("/f64/value_mix_history_attribution/material_target_delta_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            report.pointer(
+                "/f64/value_mix_history_attribution/probability_source_delta_material_count"
+            ),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            report.pointer("/f64/value_mix_history_attribution/rust_self_recompute_material_count"),
+            Some(&json!(0))
+        );
         let reasons = report.pointer("/current_blocked_reasons").unwrap().as_array().unwrap();
         assert!(reasons.contains(&json!("f64_capture_residual_numeric_delta_present")));
         assert!(reasons.contains(&json!("f64_attention_output_history_material_mismatch_present")));
         assert!(reasons.contains(&json!("f64_attention_output_history_coverage_incomplete")));
+        assert!(reasons.contains(&json!("f64_value_mix_history_target_mismatch_present")));
+        assert!(reasons.contains(&json!("f64_value_mix_history_source_delta_present")));
         assert!(reasons.contains(&json!("f64_ffn_history_material_mismatch_present")));
         assert!(reasons.contains(&json!("f64_ffn_history_coverage_incomplete")));
         assert!(reasons.contains(&json!("f64_layer_output_material_mismatch_present")));
