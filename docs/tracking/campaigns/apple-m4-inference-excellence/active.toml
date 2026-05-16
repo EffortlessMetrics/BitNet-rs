@@ -84,6 +84,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5066
 acceptance = "Run and commit a second BitNet variable warm-session refresh for the accepted artifact/tokenizer identity so the BitNet warm dashboard group can move from insufficient_history to comparable matching history while chat and serve remain disabled."
 commands = [
   "target/release/bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
