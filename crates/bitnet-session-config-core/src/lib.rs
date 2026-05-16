@@ -187,14 +187,8 @@ mod tests {
 
     #[test]
     fn config_error_display_messages() {
-        assert_eq!(
-            ConfigError::EmptyModelPath.to_string(),
-            "model_path must not be empty"
-        );
-        assert_eq!(
-            ConfigError::EmptyTokenizerPath.to_string(),
-            "tokenizer_path must not be empty"
-        );
+        assert_eq!(ConfigError::EmptyModelPath.to_string(), "model_path must not be empty");
+        assert_eq!(ConfigError::EmptyTokenizerPath.to_string(), "tokenizer_path must not be empty");
         assert_eq!(
             ConfigError::UnsupportedBackend("foo".into()).to_string(),
             "unsupported backend: \"foo\""
