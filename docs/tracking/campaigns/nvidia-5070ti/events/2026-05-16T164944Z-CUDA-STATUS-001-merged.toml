@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T16:49:44Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-STATUS-001"
+event = "merged"
+pr = 5158
+head_sha = "9f3cc37206c10f9a6db866edf84a78d4551f5417"
+merge_sha = "25357a82dcff5f1e7797d84b22a8e0306b7970ea"
+actor = "codex"
+
+notes = [
+  "Merged PR #5158, adding the user-facing CUDA capability matrix status page.",
+  "The page summarizes model coverage and NVIDIA campaign proof state for official BitNet I2_S/QK256, dense Qwen2.5, Qwen3, SmolLM2, and later dense candidates.",
+  "The merged PR did not change model coverage rows, receipts, runtime behavior, CUDA kernels, speed claims, server claims, README badges, crates.io, or docs.rs claims.",
+]
