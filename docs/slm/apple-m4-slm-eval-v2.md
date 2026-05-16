@@ -12,21 +12,21 @@ The v2 corpus is:
 ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml
 ```
 
-It contains 120 deterministic cases generated from seed `777331` across these
+It contains 500 deterministic cases generated from seed `777331` across these
 task families:
 
 | Family | Cases | Primary scoring |
 |---|---:|---|
-| `arithmetic_exact` | 20 | `exact_match` |
-| `numeric_tolerance` | 10 | `numeric_tolerance` |
-| `fixed_table_qa` | 12 | `exact_match` |
-| `format_constrained_json` | 10 | `json_schema` |
-| `closed_label_classification` | 12 | `exact_match` |
-| `synthetic_extraction` | 12 | `exact_match` |
-| `ordering_sorting` | 12 | `normalized_match` |
-| `copy_edit_rewrite` | 12 | `required_keywords` |
-| `constrained_summary` | 10 | `required_keywords` |
-| `instruction_following_required_forbidden` | 10 | `required_forbidden_tokens` |
+| `arithmetic_exact` | 84 | `exact_match` |
+| `numeric_tolerance` | 42 | `numeric_tolerance` |
+| `fixed_table_qa` | 50 | `exact_match` |
+| `format_constrained_json` | 42 | `json_schema` |
+| `closed_label_classification` | 50 | `exact_match` |
+| `synthetic_extraction` | 50 | `exact_match` |
+| `ordering_sorting` | 50 | `normalized_match` |
+| `copy_edit_rewrite` | 50 | `required_keywords` |
+| `constrained_summary` | 41 | `required_keywords` |
+| `instruction_following_required_forbidden` | 41 | `required_forbidden_tokens` |
 
 `M4-SLM-EVAL2-001` validates only the corpus shape and deterministic scoring
 metadata through `answer-corpus --dry-run`. It does not run live model
@@ -39,7 +39,7 @@ corpus expansion. The YAML records `metadata.corpus_contract` with:
 ```text
 contract_version: m4-eval-corpus-scorer-contract-v1
 corpus_id: apple-m4-slm-eval-seeded-corpus-v2
-corpus_version: 2.0.0
+corpus_version: 2.1.0
 seed: 777331
 generator_policy: deterministic-static-fixture-v2
 scoring_schema: answer_corpus_mechanical_scoring_v1
@@ -51,6 +51,11 @@ model outputs or LLM-judge labels. `answer-corpus` aggregate receipts propagate
 the contract under `corpus.contract` and `scoring_contract` so later pass rates
 can be compared only when corpus, scorer, normalization, and receipt contracts
 match.
+
+`M4-ACCURACY-002` expands the static corpus from the earlier 120-case fixture to
+500 deterministic cases. This is a corpus/scoring-contract change only; the
+historical runtime reports below still describe the 120-case runs that produced
+their committed receipts.
 
 ## Report Contract
 

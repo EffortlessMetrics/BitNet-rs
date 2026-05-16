@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T11:34:53Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-002"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-002-dense-500"
+pr = 5119
+head_sha = "36196aab94680d4fdb379eba6cd2c6357fc99a69"
+summary = "Opened dense 500-case corpus expansion PR."
+
+notes = [
+  "PR #5119 expands the seeded dense SLM eval-v2 corpus to 500 deterministic mechanically scored cases.",
+  "The PR changes corpus/docs/tracking only; it does not run live models, download models, refresh pass rates, or claim broad dense quality, BitNet behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad performance, or speedup.",
+]
