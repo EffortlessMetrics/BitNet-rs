@@ -9,7 +9,7 @@ use clap::{Args, Subcommand};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -23,6 +23,8 @@ const DENSE_OV_GPU: &str = "slm-openvino-gpu-arc140v-llmpipeline-smoke.json";
 const DENSE_OV_NPU: &str = "slm-openvino-npu-llmpipeline-smoke.json";
 const DENSE_OV_GPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-gpu-math-brief.json";
 const DENSE_OV_NPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-npu-math-brief.json";
+const DENSE_CPU_CORPUS_V2: &str = "slm-answer-corpus-qwen25-cpu-corpus-v2.json";
+const DENSE_OV_CORPUS_V2: &str = "slm-openvino-cpu-gpu-npu-corpus-v2.json";
 const BITNET_CPU_BUNDLE: &str = "cpu-reference-bundle-after-semantic-fix.json";
 const BITNET_REFERENCE: &str = "cpu-bitnet-ref-001-external-boundary.json";
 const BITNET_REFERENCE_DIRECT: &str = "external-first-token-reference-direct.json";
@@ -200,6 +202,16 @@ pub enum LunarLakeAction {
         /// Dense SLM phase comparison receipt to index. Relative paths are resolved under artifact-root.
         #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
         phase_comparison: PathBuf,
+
+        /// Dense Qwen CPU corpus-v2 execution receipt to classify promoted CPU profile quality.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
+        cpu_corpus_v2: Option<PathBuf>,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 execution receipt to classify candidate profile quality.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: Option<PathBuf>,
 
         /// Output JSON profile comparison to file.
         #[arg(long)]
@@ -537,6 +549,10 @@ pub struct LunarLakeRouteProfileComparison {
     pub artifact_root: String,
     pub promotion_ledger: String,
     pub phase_comparison_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_corpus_v2_receipt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub openvino_corpus_v2_receipt: Option<String>,
     pub profile_comparison_ready: bool,
     pub default_route_id: String,
     pub profiles: Vec<WorkloadProfileEvaluation>,
@@ -570,8 +586,24 @@ pub struct ProfileRouteEvidence {
     pub timing: ProfileTimingSummary,
     pub benchmark_qualified_advantage: bool,
     pub promotion_eligible_for_profile: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_quality: Option<ProfileQualityEvidence>,
     pub evidence: Vec<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileQualityEvidence {
+    pub source_receipt: String,
+    pub route_id: String,
+    pub profile_id: String,
+    pub profile_present: bool,
+    pub cases_total: u64,
+    pub passed: u64,
+    pub failed: u64,
+    pub fallback_used: Option<bool>,
+    pub status: String,
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -692,6 +724,8 @@ impl LunarLakeCommand {
                 artifact_root,
                 promotion_ledger,
                 phase_comparison,
+                cpu_corpus_v2,
+                openvino_corpus_v2,
                 json_out,
                 created_utc,
                 strict,
@@ -700,10 +734,12 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_route_profile_comparison_with_created_utc(
+                let receipt = build_route_profile_comparison_with_created_utc_and_inputs(
                     artifact_root,
                     promotion_ledger,
                     phase_comparison,
+                    cpu_corpus_v2.as_deref(),
+                    openvino_corpus_v2.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
@@ -1523,16 +1559,36 @@ pub fn build_route_promotion_ledger_with_created_utc(
     })
 }
 
+#[cfg(test)]
 pub fn build_route_profile_comparison_with_created_utc(
     root: &Path,
     promotion_ledger: &Path,
     phase_comparison: &Path,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
+    build_route_profile_comparison_with_created_utc_and_inputs(
+        root,
+        promotion_ledger,
+        phase_comparison,
+        None,
+        None,
+        created_utc,
+    )
+}
+
+pub fn build_route_profile_comparison_with_created_utc_and_inputs(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
     let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
     let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
     let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&promotion_ledger_path)?;
     let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
+    let quality_index = load_profile_quality_index(root, cpu_corpus_v2, openvino_corpus_v2)?;
 
     let mut gaps = Vec::new();
     if !ledger.promotion_ready {
@@ -1554,17 +1610,23 @@ pub fn build_route_profile_comparison_with_created_utc(
     let profiles = ledger
         .workload_profiles
         .iter()
-        .map(|profile| evaluate_workload_profile(root, profile, &ledger, &phase_comparison_json))
+        .map(|profile| {
+            evaluate_workload_profile(
+                root,
+                profile,
+                &ledger,
+                &phase_comparison_json,
+                &quality_index,
+            )
+        })
         .collect::<Result<Vec<_>>>()?;
 
-    let default_profile_ready = profiles.iter().any(|profile| {
+    let default_profile_indexed = profiles.iter().any(|profile| {
         profile.promoted_route.as_deref() == Some(DEFAULT_ASK_ROUTE)
-            && profile.route_evidence.iter().any(|route| {
-                route.route_id == DEFAULT_ASK_ROUTE && route.promotion_eligible_for_profile
-            })
+            && profile.route_evidence.iter().any(|route| route.route_id == DEFAULT_ASK_ROUTE)
     });
-    if !default_profile_ready {
-        gaps.push("dense Qwen CPU default route is not profile-eligible".to_string());
+    if !default_profile_indexed {
+        gaps.push("dense Qwen CPU default route is not indexed in route profiles".to_string());
     }
     for profile in &profiles {
         for route in &profile.route_evidence {
@@ -1593,6 +1655,8 @@ pub fn build_route_profile_comparison_with_created_utc(
         artifact_root: path_string(root),
         promotion_ledger: path_string(&promotion_ledger_path),
         phase_comparison_receipt: path_string(&phase_comparison_path),
+        cpu_corpus_v2_receipt: quality_index.cpu_source.clone(),
+        openvino_corpus_v2_receipt: quality_index.openvino_source.clone(),
         profile_comparison_ready,
         default_route_id: ledger.default_route_id,
         profiles,
@@ -1998,6 +2062,123 @@ fn compare_route(route: &OperatorRoute, evidence: &[EvidenceStatus]) -> RouteCom
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct ProfileQualityIndex {
+    by_route: BTreeMap<String, BTreeMap<String, ProfileQualityEvidence>>,
+    cpu_source: Option<String>,
+    openvino_source: Option<String>,
+}
+
+impl ProfileQualityIndex {
+    fn insert(&mut self, quality: ProfileQualityEvidence) {
+        self.by_route
+            .entry(quality.route_id.clone())
+            .or_default()
+            .insert(quality.profile_id.clone(), quality);
+    }
+
+    fn get(&self, route_id: &str, profile_id: &str) -> Option<&ProfileQualityEvidence> {
+        self.by_route.get(route_id)?.get(profile_id)
+    }
+
+    fn has_route(&self, route_id: &str) -> bool {
+        self.by_route.contains_key(route_id)
+    }
+}
+
+fn load_profile_quality_index(
+    root: &Path,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+) -> Result<ProfileQualityIndex> {
+    let mut index = ProfileQualityIndex::default();
+    if let Some(path) = cpu_corpus_v2 {
+        let path = resolve_receipt_path(root, path);
+        let json: Value = read_json_receipt(&path)?;
+        let source = path_string(&path);
+        index.cpu_source = Some(source.clone());
+        insert_profile_summary(
+            &mut index,
+            DEFAULT_ASK_ROUTE,
+            &source,
+            value_at(&json, "profile_summary"),
+            bool_at_any(&json, &["fallback_used", "backend.fallback_used"]),
+        );
+    }
+    if let Some(path) = openvino_corpus_v2 {
+        let path = resolve_receipt_path(root, path);
+        let json: Value = read_json_receipt(&path)?;
+        let source = path_string(&path);
+        index.openvino_source = Some(source.clone());
+        if let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) {
+            for device in devices {
+                let Some(route_id) = openvino_device_route_id(device) else {
+                    continue;
+                };
+                insert_profile_summary(
+                    &mut index,
+                    route_id,
+                    &source,
+                    value_at(device, "quality_summary.profile_summary"),
+                    bool_at_any(device, &["fallback_used"]),
+                );
+            }
+        }
+    }
+    Ok(index)
+}
+
+fn openvino_device_route_id(device: &Value) -> Option<&'static str> {
+    match string_at_any(device, &["runtime_device", "device"]).as_deref()? {
+        "GPU.0" => Some("dense_slm_openvino_gpu_candidate"),
+        "NPU" => Some("dense_slm_openvino_npu_candidate"),
+        _ => None,
+    }
+}
+
+fn insert_profile_summary(
+    index: &mut ProfileQualityIndex,
+    route_id: &str,
+    source_receipt: &str,
+    profile_summary: Option<&Value>,
+    fallback_used: Option<bool>,
+) {
+    let Some(summary) = profile_summary.and_then(Value::as_object) else {
+        return;
+    };
+    for (profile_id, profile) in summary {
+        let cases_total = u64_at(profile, "total").unwrap_or(0);
+        let passed = u64_at(profile, "passed").unwrap_or(0);
+        let failed = u64_at(profile, "failed").unwrap_or(0);
+        let status = if failed == 0 && cases_total > 0 {
+            "passed"
+        } else if cases_total == 0 {
+            "missing"
+        } else {
+            "quality_failed"
+        };
+        let mut notes = Vec::new();
+        if failed > 0 {
+            notes.push(format!("{failed} corpus-v2 cases failed for profile {profile_id}"));
+        }
+        if fallback_used == Some(true) {
+            notes.push("fallback_used=true observed in corpus-v2 receipt".to_string());
+        }
+        index.insert(ProfileQualityEvidence {
+            source_receipt: source_receipt.to_string(),
+            route_id: route_id.to_string(),
+            profile_id: profile_id.clone(),
+            profile_present: cases_total > 0,
+            cases_total,
+            passed,
+            failed,
+            fallback_used,
+            status: status.to_string(),
+            notes,
+        });
+    }
+}
+
 fn promote_route(
     route: &OperatorRoute,
     operator: &LunarLakeOperatorReceipt,
@@ -2190,6 +2371,7 @@ fn evaluate_workload_profile(
     profile: &WorkloadProfile,
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
+    quality_index: &ProfileQualityIndex,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
     if let Some(route_id) = &profile.promoted_route {
@@ -2203,7 +2385,9 @@ fn evaluate_workload_profile(
 
     let route_evidence = route_ids
         .iter()
-        .map(|route_id| evaluate_profile_route(root, profile, route_id, ledger, phase_comparison))
+        .map(|route_id| {
+            evaluate_profile_route(root, profile, route_id, ledger, phase_comparison, quality_index)
+        })
         .collect::<Result<Vec<_>>>()?;
 
     let mut gaps = Vec::new();
@@ -2223,8 +2407,15 @@ fn evaluate_workload_profile(
     }
 
     let promoted_ready = route_evidence.iter().any(|route| route.promotion_eligible_for_profile);
+    let promoted_route_blocked = profile.promoted_route.as_ref().is_some_and(|route_id| {
+        route_evidence
+            .iter()
+            .any(|route| route.route_id == *route_id && !route.promotion_eligible_for_profile)
+    });
     let profile_status = if promoted_ready {
         "promoted_route_ready"
+    } else if promoted_route_blocked {
+        "promoted_route_blocked"
     } else if route_evidence.iter().any(|route| route.route_status == "candidate") {
         "candidate_only"
     } else {
@@ -2265,6 +2456,7 @@ fn evaluate_profile_route(
     route_id: &str,
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
+    quality_index: &ProfileQualityIndex,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
         .routes
@@ -2273,6 +2465,7 @@ fn evaluate_profile_route(
         .with_context(|| format!("route `{route_id}` not found in promotion ledger"))?;
     let timing = profile_timing_for_route(root, route_id, phase_comparison)?;
     let mut blockers = route.missing_evidence.clone();
+    let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
     if route.status != "promoted" || !route.promoted_for.contains(&profile.profile_id) {
         blockers.push(format!("route not promoted for profile {}", profile.profile_id));
     }
@@ -2288,6 +2481,22 @@ fn evaluate_profile_route(
     if route.speedup_claim {
         blockers.push("route source claims speedup before profile promotion".to_string());
     }
+    if let Some(quality) = &profile_quality {
+        if !quality.profile_present {
+            blockers.push("corpus_v2 profile quality evidence missing".to_string());
+        }
+        if quality.fallback_used == Some(true) {
+            blockers.push("corpus_v2 profile observed fallback_used=true".to_string());
+        }
+        if quality.failed > 0 {
+            blockers.push(format!(
+                "corpus_v2 profile {} has {} quality failures",
+                profile.profile_id, quality.failed
+            ));
+        }
+    } else if quality_index.has_route(route_id) {
+        blockers.push("corpus_v2 profile quality evidence missing".to_string());
+    }
     blockers.sort();
     blockers.dedup();
 
@@ -2295,6 +2504,13 @@ fn evaluate_profile_route(
         && route.promoted_for.contains(&profile.profile_id)
         && route.fallback_used == Some(false)
         && blockers.is_empty();
+
+    let mut evidence = route.present_evidence.clone();
+    if let Some(quality) = &profile_quality
+        && !evidence.contains(&quality.source_receipt)
+    {
+        evidence.push(quality.source_receipt.clone());
+    }
 
     Ok(ProfileRouteEvidence {
         route_id: route.route_id.clone(),
@@ -2307,7 +2523,8 @@ fn evaluate_profile_route(
         timing,
         benchmark_qualified_advantage: false,
         promotion_eligible_for_profile,
-        evidence: route.present_evidence.clone(),
+        profile_quality,
+        evidence,
         blockers,
     })
 }
@@ -2768,6 +2985,14 @@ fn number_at_any(json: &Value, paths: &[&str]) -> Option<f64> {
     paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_f64))
 }
 
+fn u64_at(json: &Value, path: &str) -> Option<u64> {
+    value_at(json, path).and_then(|value| {
+        value
+            .as_u64()
+            .or_else(|| value.as_f64().filter(|value| *value >= 0.0).map(|value| value as u64))
+    })
+}
+
 fn value_at<'a>(json: &'a Value, dotted_path: &str) -> Option<&'a Value> {
     let mut current = json;
     for segment in dotted_path.split('.') {
@@ -3185,6 +3410,108 @@ mod tests {
     }
 
     #[test]
+    fn route_profile_comparison_indexes_corpus_v2_profile_quality_blockers() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            "2026-05-16T07:30:00Z".to_string(),
+        )?;
+
+        assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
+        let cpu_corpus_path = path_string(&temp.path().join(DENSE_CPU_CORPUS_V2));
+        assert_eq!(profiles.cpu_corpus_v2_receipt.as_deref(), Some(cpu_corpus_path.as_str()));
+        let Some(ask_short) =
+            profiles.profiles.iter().find(|profile| profile.profile_id == "ask_short")
+        else {
+            bail!("missing ask_short profile");
+        };
+        assert_eq!(ask_short.profile_status, "promoted_route_blocked");
+        let Some(cpu_route) =
+            ask_short.route_evidence.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        else {
+            bail!("missing CPU route evidence");
+        };
+        assert!(!cpu_route.promotion_eligible_for_profile);
+        assert_eq!(cpu_route.profile_quality.as_ref().map(|quality| quality.failed), Some(1));
+        assert!(cpu_route.blockers.iter().any(|blocker| {
+            blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
+        }));
+        let Some(gpu_route) = ask_short
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+        else {
+            bail!("missing GPU route evidence");
+        };
+        assert_eq!(gpu_route.profile_quality.as_ref().map(|quality| quality.passed), Some(1));
+        assert!(gpu_route.blockers.iter().any(|blocker| {
+            blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
+        }));
+        Ok(())
+    }
+
+    #[test]
     fn regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -3585,6 +3912,63 @@ cases:
     profile: decode_heavy
     gate: {kind: readable}
 "#,
+        )?;
+        Ok(())
+    }
+
+    fn write_route_corpus_v2_receipts(root: &Path) -> Result<()> {
+        write_json(
+            root,
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "fallback_used": false,
+                "profile_summary": {
+                    "regression_tiny": {"total": 4, "passed": 4, "failed": 0},
+                    "ask_short": {"total": 2, "passed": 1, "failed": 1},
+                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            DENSE_OV_CORPUS_V2,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "runtime_device": "CPU",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0}
+                                }
+                            }
+                        },
+                        {
+                            "runtime_device": "GPU.0",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 1, "failed": 1},
+                                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                                }
+                            }
+                        },
+                        {
+                            "runtime_device": "NPU",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0}
+                                }
+                            }
+                        }
+                    ]
+                }
+            }),
         )?;
         Ok(())
     }

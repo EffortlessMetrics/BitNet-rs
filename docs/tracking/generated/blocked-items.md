@@ -259,6 +259,7 @@
 | intel-258v-platform | LNL258V-ASK-002 | LNL258V-ASK-001 | merged |
 | intel-258v-platform | LNL258V-ROUTE-001 | LNL258V-OP-003 | merged |
 | intel-258v-platform | LNL258V-ROUTE-002 | LNL258V-ROUTE-001 | merged |
+| intel-258v-platform | LNL258V-ROUTE-003 | LNL258V-QUAL-002, LNL258V-QUAL-003, LNL258V-ROUTE-002 | pr_open |
 | intel-258v-platform | LNL258V-QUAL-001 | LNL258V-ROUTE-002 | merged |
 | intel-258v-platform | LNL258V-REG-002 | LNL258V-QUAL-001, LNL258V-ROUTE-002 | merged |
 | intel-258v-platform | LNL258V-REG-003 | LNL258V-REG-002 | merged |
