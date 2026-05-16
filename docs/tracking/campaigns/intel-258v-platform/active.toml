@@ -4271,10 +4271,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BENCH-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-BENCH-001-cold-warm"
 pr = 5172
-head_sha = "1227f36124ff658c016a357299314219986ee159"
+merge_sha = "7763922569e9ba801b4119f9367e8d3339e8cd36"
+head_sha = "f019f2f3a1290ac87677270af9e1aebbed59cef1"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

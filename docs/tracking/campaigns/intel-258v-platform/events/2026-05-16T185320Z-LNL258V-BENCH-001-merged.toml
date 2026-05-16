@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T18:53:20Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5172
+branch = "codex/lunar-lake/LNL258V-BENCH-001-cold-warm"
+head_sha = "f019f2f3a1290ac87677270af9e1aebbed59cef1"
+merge_sha = "7763922569e9ba801b4119f9367e8d3339e8cd36"
+summary = "Merged LNL258V-BENCH-001 cold/warm profile benchmark qualification."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5172",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+]
+
+notes = [
+  "The merged PR adds a no-inference benchmark qualification receipt that indexes cold/warm route timing and telemetry blockers from existing Lunar Lake receipts.",
+  "CI passed after rerunning the aggregate PR Gate, which had timed out before CI Core Success appeared; CI Core itself completed successfully.",
+  "No route promotion, speedup, acceleration, new inference, or BitNet QK256/I2_S behavior change is claimed.",
+]
