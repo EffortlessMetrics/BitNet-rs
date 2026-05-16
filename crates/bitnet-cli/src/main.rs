@@ -11,73 +11,20 @@ compile_error!("The 'mock' feature must never be enabled for the CLI - tests onl
 
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
-use bitnet_startup_contract_guard::{
-    ContractPolicy, RuntimeComponent, evaluate_and_emit, feature_line,
-};
+use bitnet_startup_contract_guard::{ContractPolicy, RuntimeComponent, evaluate_and_emit};
 use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
-use std::alloc::{GlobalAlloc, Layout, System};
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, error, info, warn};
 
 #[global_allocator]
-static ALLOCATION_AUDIT_ALLOCATOR: AllocationAuditAllocator = AllocationAuditAllocator;
+static ALLOCATION_AUDIT_ALLOCATOR: allocation_audit::AllocationAuditAllocator =
+    allocation_audit::AllocationAuditAllocator;
 
-static ALLOCATION_AUDIT_ENABLED: AtomicBool = AtomicBool::new(false);
-static ALLOCATION_AUDIT_ALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_ALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-
-struct AllocationAuditAllocator;
-
-unsafe impl GlobalAlloc for AllocationAuditAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc_zeroed(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-        }
-        unsafe { System.dealloc(ptr, layout) };
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        let new_ptr = unsafe { System.realloc(ptr, layout, new_size) };
-        if !new_ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-            record_allocation_audit_alloc(new_size);
-        }
-        new_ptr
-    }
-}
-
-fn record_allocation_audit_alloc(size: usize) {
-    ALLOCATION_AUDIT_ALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_ALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
-fn record_allocation_audit_dealloc(size: usize) {
-    ALLOCATION_AUDIT_DEALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_DEALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
+mod allocation_audit;
+mod cli_identity;
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
@@ -94,60 +41,16 @@ mod score;
 mod simple_generation;
 pub mod tokenizer_discovery;
 
+use allocation_audit::{AllocationAuditGuard, AllocationAuditSnapshot};
+use cli_identity::{
+    BITNET_CPP_ANSWER_TEMPLATE, INTERFACE_VERSION, RTX_5070_TI_CUDA, bitnet_version,
+    critical_not_claims, sha256_token_ids,
+};
 use exit::*;
 
 /// Build the CLI command for external use (e.g., in tests)
 pub fn build_cli() -> clap::Command {
     Cli::command()
-}
-
-/// CLI interface version (SemVer for CLI surface compatibility)
-const INTERFACE_VERSION: &str = "1.0.0";
-const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
-const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
-
-fn bitnet_version() -> &'static str {
-    use std::sync::OnceLock;
-    static VERSION_STRING: OnceLock<String> = OnceLock::new();
-
-    VERSION_STRING.get_or_init(|| {
-        let features_line = feature_line();
-
-        #[cfg(feature = "iq2s-ffi")]
-        let ggml_line = format!("ggml: {}", bitnet_ggml_ffi::GGML_COMMIT);
-        #[cfg(not(feature = "iq2s-ffi"))]
-        let ggml_line = String::new();
-
-        if ggml_line.is_empty() {
-            format!("{}\n{}", env!("CARGO_PKG_VERSION"), features_line)
-        } else {
-            format!("{}\n{}\n{}", env!("CARGO_PKG_VERSION"), features_line, ggml_line)
-        }
-    })
-}
-
-fn sha256_hex_bytes(bytes: &[u8]) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
-}
-
-fn sha256_token_ids(tokens: &[u32]) -> Result<String> {
-    Ok(sha256_hex_bytes(&serde_json::to_vec(tokens)?))
-}
-
-fn critical_not_claims() -> Vec<&'static str> {
-    vec![
-        "selected_attention_residency",
-        "resident_kv_decode",
-        "attention_scores_residency",
-        "softmax_residency",
-        "attention_value_mix_residency",
-        "full_support_op_residency",
-        "full_device_residency",
-        "completion",
-    ]
 }
 
 #[cfg(feature = "cli-bench")]
@@ -11338,52 +11241,6 @@ fn ms_to_us(ms: f64) -> u128 {
 
 fn rounded_ms(ms: f64) -> f64 {
     (ms * 1000.0).round() / 1000.0
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct AllocationAuditSnapshot {
-    alloc_count: u64,
-    alloc_bytes: u64,
-    dealloc_count: u64,
-    dealloc_bytes: u64,
-}
-
-impl AllocationAuditSnapshot {
-    fn current() -> Self {
-        Self {
-            alloc_count: ALLOCATION_AUDIT_ALLOC_COUNT.load(Ordering::Relaxed),
-            alloc_bytes: ALLOCATION_AUDIT_ALLOC_BYTES.load(Ordering::Relaxed),
-            dealloc_count: ALLOCATION_AUDIT_DEALLOC_COUNT.load(Ordering::Relaxed),
-            dealloc_bytes: ALLOCATION_AUDIT_DEALLOC_BYTES.load(Ordering::Relaxed),
-        }
-    }
-
-    fn delta_since(start: Self) -> Self {
-        let current = Self::current();
-        Self {
-            alloc_count: current.alloc_count.saturating_sub(start.alloc_count),
-            alloc_bytes: current.alloc_bytes.saturating_sub(start.alloc_bytes),
-            dealloc_count: current.dealloc_count.saturating_sub(start.dealloc_count),
-            dealloc_bytes: current.dealloc_bytes.saturating_sub(start.dealloc_bytes),
-        }
-    }
-}
-
-struct AllocationAuditGuard {
-    previous: bool,
-}
-
-impl AllocationAuditGuard {
-    fn enable(enabled: bool) -> Self {
-        let previous = ALLOCATION_AUDIT_ENABLED.swap(enabled, Ordering::Relaxed);
-        Self { previous }
-    }
-}
-
-impl Drop for AllocationAuditGuard {
-    fn drop(&mut self) {
-        ALLOCATION_AUDIT_ENABLED.store(self.previous, Ordering::Relaxed);
-    }
 }
 
 fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
