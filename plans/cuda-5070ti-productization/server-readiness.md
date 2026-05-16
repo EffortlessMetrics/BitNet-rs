@@ -29,8 +29,11 @@ ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-s
 ```
 
 That receipt is evidence for the bounded smoke path. It is not, by itself, a
-`server_ready=true` promotion. The model coverage row remains false until a
-later promotion PR applies the exact-profile requirements in BITNET-SPEC-0010.
+`server_ready=true` promotion. CUDA-SERVER-003 audited it against
+BITNET-SPEC-0010 and found the receipt is missing artifact checksum identity,
+endpoint or request-profile scope, and generation-policy fields. The model
+coverage row remains false until a later promotion PR supplies those fields and
+applies the exact-profile requirements in BITNET-SPEC-0010.
 
 Official BitNet I2_S/QK256 does not have a server-readiness claim from the dense
 Qwen server smoke. It needs its own exact-profile server receipt before any
@@ -38,7 +41,7 @@ server row can promote.
 
 ## Work Item: CUDA-SERVER-003
 
-Status: ready
+Status: blocked
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
@@ -48,13 +51,13 @@ Blocks: exact-profile server readiness promotions
 
 ### Goal
 
-Define or apply the server readiness promotion checklist for the bounded dense
-Qwen2.5 server-smoke evidence before changing any model coverage boolean.
+Apply the server readiness promotion checklist to the bounded dense Qwen2.5
+server-smoke evidence before changing any model coverage boolean.
 
 ### Production Delta
 
-Docs and status alignment only unless the PR explicitly includes a model
-coverage promotion under BITNET-SPEC-0010.
+Docs and status alignment only. CUDA-SERVER-003 records that the current server
+smoke is not promotable as-is.
 
 ### Non-Goals
 
@@ -65,9 +68,9 @@ speedup, no full-residency claim, and no default PR CI expansion.
 
 - The exact model coverage row is identified.
 - The exact server receipt path is identified.
-- The endpoint/profile scope is stated.
-- `server_ready=true` remains false unless all BITNET-SPEC-0010 promotion
-  requirements are met in the same PR.
+- Missing artifact checksum, endpoint/profile scope, and generation-policy
+  fields are recorded as blockers.
+- `server_ready=true` remains false.
 - `speedup_claim=false` and `full_residency_claim=false` remain unchanged.
 
 ### Proof Commands
@@ -90,13 +93,14 @@ Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
 Campaign item: `CUDA-SERVER-004`
-Blocked by: CUDA-SERVER-003
+Blocked by: CUDA-SERVER-003 missing receipt fields
 Blocks: dense Qwen server status UX
 
 ### Goal
 
-Promote dense Qwen2.5 server readiness only for the exact bounded profile, if
-the committed receipt and status surfaces satisfy BITNET-SPEC-0010.
+Promote dense Qwen2.5 server readiness only for the exact bounded profile after
+a refreshed or supplemental receipt carries the artifact checksum, endpoint or
+request-profile scope, and generation policy required by BITNET-SPEC-0010.
 
 ### Claim Boundary
 
