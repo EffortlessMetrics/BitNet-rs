@@ -2908,6 +2908,54 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-SERVER-003"
+status = "merged"
+branch = "docs/dense-qwen-server-readiness"
+pr = 5190
+head_sha = "9aa2c0c2cdb1e928d5565a2970f6de04f21e2a8d"
+merge_sha = "2d53cec49ff1741e2cf9c390e121aa0b365c5670"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-SERVER-002"]
+acceptance = "Audit the bounded dense Qwen strict RTX 5070 Ti server-smoke receipt against BITNET-SPEC-0010 and record that server_ready remains false because the receipt lacks artifact checksum identity, endpoint or request-profile scope, and generation-policy fields."
+commands = [
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-15\\server-strict-dense-qwen25-q8-smoke.json",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-file-policy --report-dir target/bitnet/reports --fail-on-error",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/reports/CUDA_SERVER_003_DENSE_QWEN_READINESS_AUDIT.md",
+  "docs/status/CUDA_CAPABILITY_MATRIX.md",
+  "plans/cuda-5070ti-productization/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  ".github/workflows/**",
+  "ci/hardware/**",
+  "README.md",
+]
+may_claim = [
+  "The bounded dense Qwen server-smoke receipt has been audited against BITNET-SPEC-0010.",
+  "The current receipt is useful bounded evidence but is not sufficient for exact-profile server_ready promotion.",
+]
+must_not_claim = [
+  "Production server readiness exists.",
+  "Model coverage server_ready is promoted.",
+  "A refreshed server receipt with artifact checksum, endpoint/profile, and generation policy exists.",
+  "Server proof creates a global CUDA speedup or full-residency claim.",
+  "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
 id = "CUDA-PROD-008"
 status = "merged"
 branch = "docs/cuda-5070ti-proof-reconciliation"

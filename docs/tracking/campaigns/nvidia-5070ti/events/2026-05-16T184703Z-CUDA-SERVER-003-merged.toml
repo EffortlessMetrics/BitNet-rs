@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T18:47:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-003"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "docs/dense-qwen-server-readiness"
+pr = 5190
+head_sha = "9aa2c0c2cdb1e928d5565a2970f6de04f21e2a8d"
+merge_sha = "2d53cec49ff1741e2cf9c390e121aa0b365c5670"
+summary = "Merged PR #5190 with the CUDA-SERVER-003 dense Qwen server-readiness blocker audit."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5190",
+  "docs/reports/CUDA_SERVER_003_DENSE_QWEN_READINESS_AUDIT.md",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json",
+]
+
+notes = [
+  "The bounded dense Qwen server-smoke receipt remains useful evidence but is not sufficient for BITNET-SPEC-0010 server_ready promotion.",
+  "The receipt lacks durable artifact checksum identity, endpoint or request-profile scope, and generation-policy fields.",
+  "server_ready, speedup_claim, full_cuda_residency_claim, and BitNet packed I2_S/QK256 proof remain false.",
+]
