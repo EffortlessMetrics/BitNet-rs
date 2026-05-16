@@ -1,0 +1,52 @@
+schema: 1
+artifact_kind: slm_answer_corpus
+name: kaby-second-model-qwen25-sanity-v1
+description: Minimal i5-8250U second dense SLM sanity corpus for Qwen2.5 Q8_0.
+metadata:
+  campaign: slm-cpu
+  work_item: SLM-CPU-017
+  route_scope: kaby_second_dense_model_sanity
+  model_role: second_small_dense_model
+  prompt_template: qwen2.5
+  claim_boundary:
+    broad_quality_claim: false
+    sustained_throughput_claim: false
+    q4_q5_claim: false
+    server_claim: false
+    gpu_claim: false
+    npu_claim: false
+    openvino_claim: false
+    qwen35_claim: false
+    bitnet_qk256_claim: false
+model:
+  repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q8_0.gguf
+  sha256: ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen2.5
+  max_new_tokens: 8
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 240
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 2
+cases:
+  - id: math_2_plus_2_brief
+    category: math
+    profile: regression_tiny
+    question: "What is 2+2? Answer briefly."
+    max_new_tokens: 8
+    scoring:
+      kind: required_forbidden_tokens
+      required_keywords:
+        - "4"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "4"
+        - "four"
