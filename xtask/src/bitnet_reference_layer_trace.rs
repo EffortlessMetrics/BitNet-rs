@@ -6065,7 +6065,7 @@ fn attention_value_mix_reference_scalar_recompute(
     let probability_heads = reference_records
         .iter()
         .filter_map(|record| {
-            parse_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
+            parse_exact_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -6078,7 +6078,9 @@ fn attention_value_mix_reference_scalar_recompute(
         .collect::<BTreeMap<_, _>>();
     let value_mix_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kqv_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kqv_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
 
@@ -6341,7 +6343,7 @@ fn attention_value_mix_reference_numeric_variants(
     let probability_heads = reference_records
         .iter()
         .filter_map(|record| {
-            parse_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
+            parse_exact_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -6354,7 +6356,9 @@ fn attention_value_mix_reference_numeric_variants(
         .collect::<BTreeMap<_, _>>();
     let value_mix_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kqv_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kqv_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let variants = reference_value_mix_numeric_variant_specs();
@@ -6525,7 +6529,7 @@ fn attention_value_mix_rust_scalar_recompute(
     let probability_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attn_scores_softmax_head").map(|head| (head, record))
+            parse_exact_stage_head(stage, "attn_scores_softmax_head").map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -6540,7 +6544,8 @@ fn attention_value_mix_rust_scalar_recompute(
     let value_mix_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attention_value_mix_f16_cache_head").map(|head| (head, record))
+            parse_exact_stage_head(stage, "attention_value_mix_f16_cache_head")
+                .map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -6656,7 +6661,7 @@ fn attention_value_mix_input_attribution(
     let reference_probability_heads = reference_records
         .iter()
         .filter_map(|record| {
-            parse_stage_head(&record.stage, "kq_soft_max_ext_head")
+            parse_exact_stage_head(&record.stage, "kq_soft_max_ext_head")
                 .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
         })
         .collect::<BTreeMap<_, _>>();
@@ -6670,14 +6675,14 @@ fn attention_value_mix_input_attribution(
     let reference_value_mix_heads = reference_records
         .iter()
         .filter_map(|record| {
-            parse_stage_head(&record.stage, "kqv_head")
+            parse_exact_stage_head(&record.stage, "kqv_head")
                 .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
         })
         .collect::<BTreeMap<_, _>>();
     let rust_probability_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attn_scores_softmax_head")
+            parse_exact_stage_head(stage, "attn_scores_softmax_head")
                 .map(|head| (head, scalar_rust_tensor(record)))
         })
         .collect::<BTreeMap<_, _>>();
@@ -7189,7 +7194,9 @@ fn attention_score_reference_scalar_recompute(reference_records: &[ReferenceTrac
         .collect::<BTreeMap<_, _>>();
     let score_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
 
@@ -7452,7 +7459,9 @@ fn attention_score_reference_semantic_variants(
         .collect::<BTreeMap<_, _>>();
     let score_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let variants = reference_score_variant_specs();
@@ -7770,7 +7779,9 @@ fn attention_score_reference_numeric_variants(reference_records: &[ReferenceTrac
         .collect::<BTreeMap<_, _>>();
     let score_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let variants = reference_score_numeric_variant_specs();
@@ -8149,13 +8160,15 @@ fn attention_score_input_attribution(
         .collect::<BTreeMap<_, _>>();
     let reference_score_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let rust_score_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+            parse_exact_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -8713,13 +8726,15 @@ fn attention_probability_reference_softmax_variants(
     let query = reference_rope_query_record(reference_records);
     let score_heads = reference_records
         .iter()
-        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter_map(|record| {
+            parse_exact_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let probability_heads = reference_records
         .iter()
         .filter_map(|record| {
-            parse_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
+            parse_exact_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -8882,14 +8897,14 @@ fn attention_probability_rust_softmax_recompute(
     let score_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+            parse_exact_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let probability_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attn_scores_softmax_head").map(|head| (head, record))
+            parse_exact_stage_head(stage, "attn_scores_softmax_head").map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -9059,7 +9074,7 @@ fn attention_score_rust_scalar_recompute(
     let score_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+            parse_exact_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -11567,14 +11582,14 @@ fn head_lane_best_matches(
     let reference_heads = reference_records
         .iter()
         .filter_map(|record| {
-            parse_stage_head(&record.stage, reference_prefix).map(|head| (head, record))
+            parse_current_stage_head(&record.stage, reference_prefix).map(|head| (head, record))
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
     let rust_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
-            parse_stage_head(stage, rust_prefix).map(|head| (head, record))
+            parse_current_stage_head(stage, rust_prefix).map(|head| (head, record))
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -11660,6 +11675,21 @@ fn parse_stage_head(stage: &str, prefix: &str) -> Option<usize> {
         return None;
     }
     suffix[..digit_count].parse::<usize>().ok()
+}
+
+fn parse_current_stage_head(stage: &str, prefix: &str) -> Option<usize> {
+    if stage.ends_with("_history_ref_layout") {
+        return None;
+    }
+    parse_stage_head(stage, prefix)
+}
+
+fn parse_exact_stage_head(stage: &str, prefix: &str) -> Option<usize> {
+    let suffix = stage.strip_prefix(prefix)?;
+    if suffix.is_empty() || !suffix.chars().all(|ch| ch.is_ascii_digit()) {
+        return None;
+    }
+    suffix.parse::<usize>().ok()
 }
 
 fn head_lane_delta(
@@ -14758,7 +14788,7 @@ mod tests {
 
     #[test]
     fn reference_probability_softmax_variants_pin_scaled_padded_policy() {
-        let reference_records = vec![
+        let mut reference_records = vec![
             ReferenceTraceRecord {
                 shape: vec![4, 1, 1, 1],
                 nelements: 4,
@@ -14781,11 +14811,27 @@ mod tests {
                 )
             },
         ];
+        let mut stale_reference_score_history = test_reference_trace_record(
+            "kq_head0_history_ref_layout",
+            vec![1000.0, 1000.0, 1000.0, 1000.0],
+        );
+        stale_reference_score_history.shape = vec![2, 2, 1, 1];
+        stale_reference_score_history.nelements = 4;
+        reference_records.push(stale_reference_score_history);
+        let mut stale_reference_probability_history = test_reference_trace_record(
+            "kq_soft_max_ext_head0_history_ref_layout",
+            vec![0.0, 1.0, 1.0, 0.0],
+        );
+        stale_reference_probability_history.shape = vec![2, 2, 1, 1];
+        stale_reference_probability_history.nelements = 4;
+        reference_records.push(stale_reference_probability_history);
 
         let report = attention_probability_reference_softmax_variants(&reference_records);
 
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/score_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/probability_head_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/missing_input_count"), Some(&json!(0)));
         assert_eq!(report.pointer("/all_heads_explained"), Some(&json!(true)));
@@ -14837,6 +14883,18 @@ mod tests {
             },
         );
         rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![9000.0, 9000.0, 9000.0, 9000.0],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head0_history_ref_layout",
+                    vec![9000.0, 9000.0, 9000.0, 9000.0],
+                )
+            },
+        );
+        rust_records.insert(
             "attn_scores_softmax_head0".to_string(),
             RustTraceRecord {
                 shape: vec![2],
@@ -14845,11 +14903,25 @@ mod tests {
                 ..test_rust_trace_record("attn_scores_softmax_head0", vec![0.37754068, 0.62245935])
             },
         );
+        rust_records.insert(
+            "attn_scores_softmax_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![0.0, 1.0, 1.0, 0.0],
+                ..test_rust_trace_record(
+                    "attn_scores_softmax_head0_history_ref_layout",
+                    vec![0.0, 1.0, 1.0, 0.0],
+                )
+            },
+        );
 
         let report = attention_probability_rust_softmax_recompute(&rust_records);
 
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/score_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/probability_head_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/missing_input_count"), Some(&json!(0)));
         assert_eq!(report.pointer("/all_heads_explained"), Some(&json!(true)));
@@ -14996,7 +15068,7 @@ mod tests {
 
     #[test]
     fn score_input_attribution_prefers_actual_score_key_input_stage() {
-        let reference_records = vec![
+        let mut reference_records = vec![
             ReferenceTraceRecord {
                 shape: vec![2, 1],
                 nelements: 2,
@@ -15016,6 +15088,13 @@ mod tests {
                 ..test_reference_trace_record("kq_head0", vec![11.0, 17.0])
             },
         ];
+        let mut stale_reference_score_history = test_reference_trace_record(
+            "kq_head0_history_ref_layout",
+            vec![1000.0, 2000.0, 3000.0, 4000.0],
+        );
+        stale_reference_score_history.shape = vec![2, 2, 1, 1];
+        stale_reference_score_history.nelements = 4;
+        reference_records.push(stale_reference_score_history);
         let mut rust_records = BTreeMap::new();
         rust_records.insert(
             "attention_q_rope".to_string(),
@@ -15071,6 +15150,18 @@ mod tests {
                 ..test_rust_trace_record("attention_scores_raw_head0", vec![140.0, 220.0])
             },
         );
+        rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![9000.0, 9000.0, 9000.0, 9000.0],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head0_history_ref_layout",
+                    vec![9000.0, 9000.0, 9000.0, 9000.0],
+                )
+            },
+        );
 
         let report = attention_score_input_attribution(&reference_records, &rust_records);
 
@@ -15093,6 +15184,10 @@ mod tests {
         );
         assert_eq!(report.pointer("/rows/0/rust_best_candidate"), Some(&json!("rust_q_rust_k")));
         assert_eq!(report.pointer("/rows/0/rust_key_f16_probe_present"), Some(&json!(true)));
+        assert_eq!(report.pointer("/reference_score_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rust_score_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rows/0/reference_score_token_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/rows/0/rust_score_token_count"), Some(&json!(2)));
         assert_eq!(
             report.pointer("/rows/0/candidates/3/key_source"),
             Some(&json!("reference_k_kv_head"))
