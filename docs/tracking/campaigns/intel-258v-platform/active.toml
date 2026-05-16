@@ -4203,10 +4203,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-004"
-status = "pr_open"
+status = "merged"
 pr = 5160
+merge_sha = "7b0d0ffe22818c2602ae1090724476d41ac7788c"
 branch = "codex/lunar-lake/LNL258V-OP-004-ledger-auto-route"
-head_sha = "9171282ff8a5ea4e12cec72d1965501293afddbc"
+head_sha = "f3d781c26fc78e49659bf1d752cb5984f3782d01"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
