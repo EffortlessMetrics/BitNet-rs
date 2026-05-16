@@ -80,6 +80,15 @@ const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
     "timing_decode_total_ms_recorded",
     "latency_total_ms_recorded",
 ];
+const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
+    "exact_match",
+    "normalized_match",
+    "json_schema",
+    "numeric_tolerance",
+    "required_keywords",
+    "forbidden_tokens",
+    "required_forbidden_tokens",
+];
 
 /// Run the fixed answer corpus through the existing `bitnet run` surface.
 #[derive(Args, Debug)]
@@ -333,12 +342,15 @@ impl AnswerCorpusCommand {
             "prompt_template": corpus.defaults.prompt_template.as_str(),
             "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
             "corpus": {
+                "id": corpus.corpus_id(),
                 "path": self.corpus.display().to_string(),
-                "name": corpus.name,
-                "description": corpus.description,
+                "name": corpus.name.clone(),
+                "description": corpus.description.clone(),
                 "case_count": corpus.cases.len(),
                 "selected_case_count": selected_case_ids.len(),
                 "selected_case_ids": selected_case_ids,
+                "metadata": answer_corpus_metadata_receipt(&corpus),
+                "contract": answer_corpus_contract_receipt(&corpus),
             },
             "model": {
                 "id": model_identity.id,
@@ -398,6 +410,7 @@ impl AnswerCorpusCommand {
                 "not_run": not_run,
             },
             "scoring_summary": scoring_summary(&rows),
+            "scoring_contract": answer_corpus_scoring_contract_receipt(&corpus),
             "task_family_summary": task_family_summary(&rows),
             "profile_summary": profile_summary(&rows),
             "reference_comparison": reference_comparison_summary(
@@ -740,6 +753,8 @@ struct AnswerCorpus {
     artifact_kind: String,
     name: String,
     description: String,
+    #[serde(default)]
+    metadata: AnswerCorpusMetadata,
     model: CorpusModel,
     defaults: CorpusDefaults,
     cases: Vec<AnswerCase>,
@@ -760,11 +775,69 @@ impl AnswerCorpus {
         if corpus.cases.is_empty() {
             anyhow::bail!("answer corpus must contain at least one case");
         }
+        let mut case_ids = BTreeSet::new();
         for case in &corpus.cases {
+            if !case_ids.insert(case.id.as_str()) {
+                anyhow::bail!("answer corpus case id `{}` is duplicated", case.id);
+            }
             validate_answer_scoring(case)?;
         }
+        validate_answer_corpus_contract(&corpus)?;
         Ok(corpus)
     }
+
+    fn corpus_id(&self) -> &str {
+        self.metadata
+            .corpus_contract
+            .as_ref()
+            .map(|contract| contract.corpus_id.as_str())
+            .filter(|value| !value.is_empty())
+            .unwrap_or(self.name.as_str())
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct AnswerCorpusMetadata {
+    #[serde(default)]
+    campaign: Option<String>,
+    #[serde(default)]
+    work_item: Option<String>,
+    #[serde(default)]
+    seed: Option<u64>,
+    #[serde(default)]
+    generator_policy: Option<String>,
+    #[serde(default)]
+    case_count_target: Option<usize>,
+    #[serde(default)]
+    prompt_template: Option<String>,
+    #[serde(default)]
+    scoring_status: Option<String>,
+    #[serde(default)]
+    claim_boundary: Option<Value>,
+    #[serde(default)]
+    corpus_contract: Option<CorpusContract>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct CorpusContract {
+    #[serde(default)]
+    contract_version: String,
+    #[serde(default)]
+    corpus_id: String,
+    #[serde(default)]
+    corpus_version: String,
+    #[serde(default)]
+    seed_generation_rules: String,
+    #[serde(default)]
+    expected_output_provenance: String,
+    #[serde(default)]
+    normalization_rules: String,
+    #[serde(default)]
+    scoring_schema: String,
+    #[serde(default)]
+    scorer_self_tests: Vec<String>,
+    #[serde(default)]
+    receipt_contract: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1115,6 +1188,122 @@ fn validate_answer_corpus_inputs(
     }
 
     Ok(())
+}
+
+fn validate_answer_corpus_contract(corpus: &AnswerCorpus) -> Result<()> {
+    let Some(contract) = corpus.metadata.corpus_contract.as_ref() else {
+        return Ok(());
+    };
+
+    let required_fields = [
+        ("contract_version", contract.contract_version.as_str()),
+        ("corpus_id", contract.corpus_id.as_str()),
+        ("corpus_version", contract.corpus_version.as_str()),
+        ("seed_generation_rules", contract.seed_generation_rules.as_str()),
+        ("expected_output_provenance", contract.expected_output_provenance.as_str()),
+        ("normalization_rules", contract.normalization_rules.as_str()),
+        ("scoring_schema", contract.scoring_schema.as_str()),
+        ("receipt_contract", contract.receipt_contract.as_str()),
+    ];
+    let missing: Vec<&str> = required_fields
+        .into_iter()
+        .filter_map(|(field, value)| value.trim().is_empty().then_some(field))
+        .collect();
+    if !missing.is_empty() {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract is missing required fields: {}",
+            corpus.name,
+            missing.join(", ")
+        );
+    }
+    if contract.scorer_self_tests.is_empty()
+        || contract.scorer_self_tests.iter().any(|value| value.trim().is_empty())
+    {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract.scorer_self_tests must list non-empty scorer self-tests",
+            corpus.name
+        );
+    }
+    if contract.corpus_id != corpus.name {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract.corpus_id must match corpus name `{}`",
+            contract.corpus_id,
+            corpus.name
+        );
+    }
+    if corpus.metadata.seed.is_none() {
+        anyhow::bail!("answer corpus `{}` corpus_contract requires metadata.seed", corpus.name);
+    }
+    if corpus.metadata.generator_policy.as_deref().is_none_or(str::is_empty) {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract requires metadata.generator_policy",
+            corpus.name
+        );
+    }
+    if corpus.metadata.case_count_target != Some(corpus.cases.len()) {
+        anyhow::bail!(
+            "answer corpus `{}` metadata.case_count_target must equal case count {}",
+            corpus.name,
+            corpus.cases.len()
+        );
+    }
+    if corpus.metadata.prompt_template.as_deref() != Some(corpus.defaults.prompt_template.as_str())
+    {
+        anyhow::bail!(
+            "answer corpus `{}` metadata.prompt_template must match defaults.prompt_template `{}`",
+            corpus.name,
+            corpus.defaults.prompt_template
+        );
+    }
+    Ok(())
+}
+
+fn answer_corpus_metadata_receipt(corpus: &AnswerCorpus) -> Value {
+    json!({
+        "campaign": corpus.metadata.campaign,
+        "work_item": corpus.metadata.work_item,
+        "seed": corpus.metadata.seed,
+        "generator_policy": corpus.metadata.generator_policy,
+        "case_count_target": corpus.metadata.case_count_target,
+        "prompt_template": corpus.metadata.prompt_template,
+        "scoring_status": corpus.metadata.scoring_status,
+        "claim_boundary": corpus.metadata.claim_boundary,
+    })
+}
+
+fn answer_corpus_contract_receipt(corpus: &AnswerCorpus) -> Value {
+    corpus
+        .metadata
+        .corpus_contract
+        .as_ref()
+        .map(|contract| {
+            json!({
+                "contract_version": contract.contract_version,
+                "corpus_id": contract.corpus_id,
+                "corpus_version": contract.corpus_version,
+                "seed_generation_rules": contract.seed_generation_rules,
+                "expected_output_provenance": contract.expected_output_provenance,
+                "normalization_rules": contract.normalization_rules,
+                "scoring_schema": contract.scoring_schema,
+                "scorer_self_tests": contract.scorer_self_tests,
+                "receipt_contract": contract.receipt_contract,
+            })
+        })
+        .unwrap_or(Value::Null)
+}
+
+fn answer_corpus_scoring_contract_receipt(corpus: &AnswerCorpus) -> Value {
+    let contract = corpus.metadata.corpus_contract.as_ref();
+    json!({
+        "contract_version": contract.map(|contract| contract.contract_version.as_str()),
+        "scoring_schema": contract.map(|contract| contract.scoring_schema.as_str()),
+        "normalization_rules": contract.map(|contract| contract.normalization_rules.as_str()),
+        "expected_output_provenance": contract
+            .map(|contract| contract.expected_output_provenance.as_str()),
+        "receipt_contract": contract.map(|contract| contract.receipt_contract.as_str()),
+        "scorer_self_tests": contract.map(|contract| contract.scorer_self_tests.as_slice()),
+        "supported_scoring_kinds": ANSWER_CORPUS_SCORING_KINDS,
+    })
 }
 
 fn corpus_answer_ready_artifact_available(model: &CorpusModel) -> bool {

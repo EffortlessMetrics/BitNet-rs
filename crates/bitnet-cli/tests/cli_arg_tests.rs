@@ -5423,8 +5423,31 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
 
     let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["case_count"], 100);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 912587);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-bitnet-v1"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "1.0.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+    );
     assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
     assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
     assert_eq!(receipt["model"]["bytes"], 1_187_801_280u64);
@@ -5499,8 +5522,52 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
     let receipt: serde_json::Value =
         serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
     assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-slm-eval-seeded-corpus-v2");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-slm-eval-seeded-corpus-v2");
     assert_eq!(receipt["corpus"]["case_count"], 120);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 777331);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-v2"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.0.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority."
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; known stop markers are stripped before scoring while exact_match remains strict after trim."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["receipt_contract"],
+        "answer_corpus_aggregate_receipt_v1"
+    );
+    let scoring_kinds: Vec<&str> = receipt["scoring_contract"]["supported_scoring_kinds"]
+        .as_array()
+        .ok_or("missing supported scoring kinds")?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for kind in [
+        "exact_match",
+        "normalized_match",
+        "json_schema",
+        "numeric_tolerance",
+        "required_keywords",
+        "forbidden_tokens",
+        "required_forbidden_tokens",
+    ] {
+        assert!(scoring_kinds.contains(&kind), "missing scoring contract kind `{kind}`");
+    }
     assert_eq!(receipt["model"]["id"], "qwen2.5-1.5b-instruct-q4_k_m");
     assert_eq!(receipt["model"]["repo"], "Qwen/Qwen2.5-1.5B-Instruct-GGUF");
     assert_eq!(receipt["model"]["revision"], "91cad51170dc346986eccefdc2dd33a9da36ead9");

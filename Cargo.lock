@@ -858,6 +858,7 @@ version = "0.2.1-dev"
 dependencies = [
  "proptest",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -981,6 +982,7 @@ name = "bitnet-inference-metrics-core"
 version = "0.2.1-dev"
 dependencies = [
  "serde",
+ "serde_json",
 ]
 
 [[package]]

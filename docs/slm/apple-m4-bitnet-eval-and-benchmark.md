@@ -35,6 +35,27 @@ through the existing answer-corpus parser/scoring path. This is a fixture and
 tracking PR only. It does not run the model and does not claim runtime accuracy
 or performance.
 
+`M4-ACCURACY-000` freezes the BitNet eval corpus/scorer contract before any
+larger BitNet accuracy expansion. The YAML records `metadata.corpus_contract`
+with:
+
+```text
+contract_version: m4-eval-corpus-scorer-contract-v1
+corpus_id: apple-m4-bitnet-eval-seeded-corpus
+corpus_version: 1.0.0
+seed: 912587
+generator_policy: deterministic-static-fixture-bitnet-v1
+scoring_schema: answer_corpus_mechanical_scoring_v1
+receipt_contract: answer_corpus_aggregate_receipt_v1
+```
+
+Expected outputs are closed-form deterministic fixture answers from the YAML
+prompt data. Reference-runner answers can be added as comparison evidence, but
+they do not replace the mechanical expected-output authority. `answer-corpus`
+aggregate receipts propagate the contract under `corpus.contract` and
+`scoring_contract`; this keeps BitNet eval identity separate from dense SLM
+evidence.
+
 Later work items add:
 
 - BitNet eval/report schema fields for reference-vs-Rust comparison.
