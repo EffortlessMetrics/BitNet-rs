@@ -31,6 +31,8 @@
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
 - [CUDA Configuration Guide](cuda-configuration-guide.md)
+- [RTX 5070 Ti BitNet CUDA Guide](tutorials/rtx5070ti-bitnet-cuda.md)
+- [RTX 5070 Ti Dense Qwen CUDA Guide](tutorials/rtx5070ti-dense-qwen-cuda.md)
 - [Intel Arc GPU Setup](INTEL_GPU_SETUP.md)
 
 ## Miscellaneous

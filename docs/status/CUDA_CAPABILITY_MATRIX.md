@@ -24,6 +24,7 @@ bitnet receipts explain --latest
 | Strict CUDA product contract | `docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md` |
 | User quickstart | `docs/tutorials/9950x3d-5070ti-cuda-quickstart.md` |
 | BitNet CUDA guide | `docs/tutorials/rtx5070ti-bitnet-cuda.md` |
+| Dense Qwen CUDA guide | `docs/tutorials/rtx5070ti-dense-qwen-cuda.md` |
 
 ## Current CUDA Rows
 
