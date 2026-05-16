@@ -33,8 +33,10 @@ docs/architecture/reference-topology.md
 The official Microsoft I2_S path is first because it is the official target and
 the shared model-artifact gate records answer-ready evidence when external
 Microsoft tokenizer pre-tokenizer authority is supplied. The 0.7B 1bitLLM model
-is a smaller control candidate. The 3B model must not be treated as an I2_S
-target unless the compatibility ledger changes.
+is a smaller control candidate, but its official repository currently has no
+GGUF. The 3B model must not be treated as an I2_S target unless the
+compatibility ledger changes, and its current official repository has no GGUF
+for TL1/TL2 diagnostics.
 
 ## Required Record
 

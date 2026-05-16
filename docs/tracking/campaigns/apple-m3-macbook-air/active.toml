@@ -787,7 +787,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-007"
-status = "proposed"
+status = "pr_open"
+pr = 5235
+head_sha = "fdcadee0f0c5d0e98c36deb487163ecb0b124300"
 branch = "codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic"
 stackable = false
 review_mode = "codex_premerge"
@@ -822,9 +824,12 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "The 3B candidate has recorded TL diagnostic evidence for the M3 Air context.",
+  "The 3B candidate is blocked for M3 Air TL diagnostic evidence until an official GGUF, reproducible conversion path, or explicitly approved third-party TL diagnostic artifact exists and local storage can absorb the large-candidate work safely.",
 ]
 must_not_claim = [
+  "The official 1bitLLM 3B repository contains a GGUF artifact.",
+  "A third-party 1bitLLM 3B GGUF is accepted for M3 Air evidence.",
+  "3B TL1/TL2 diagnostic inference was run.",
   "3B I2_S is supported.",
   "The 3B diagnostic route proves Apple local-answer quality.",
 ]

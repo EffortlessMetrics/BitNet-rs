@@ -101,20 +101,22 @@ source_repo = "1bitLLM/bitnet_b1_58-3B"
 source_url = "https://huggingface.co/1bitLLM/bitnet_b1_58-3B"
 file = "pending"
 known_sha256 = "pending"
-known_size_bytes = 0
-storage_estimate = "3b_model; exact GGUF bytes pending candidate probe"
-format = "pending"
+known_size_bytes = 13297592664
+storage_estimate = "official_safetensors_shards_total_13297592664_bytes; current M3 Air preflight would leave about 4435547 KiB free after shards"
+format = "blocked_no_official_gguf"
 quantization = "tl1_or_tl2_only_until_compatibility_changes"
-tokenizer_authority = "pending"
-pretokenizer_authority = "pending"
-prompt_template = "pending_reference_runner_decision"
+tokenizer_authority = "official_tokenizer_files_present"
+pretokenizer_authority = "pending_runner_conversion_path"
+prompt_template = "blocked_until_gguf_or_converter_path"
 reference_runner = "microsoft_bitnet_cpp_candidate"
-reference_status = "diagnostic_only_until_runner_path_verified"
+reference_status = "blocked_no_official_gguf_at_revision_af89e318d78a70802061246bf037199d2fb97020"
 cleanup_required = true
 next_item = "M3MBA-007"
 notes = [
   "Compatibility ledger marks 3B I2_S unsupported upstream for ARM and x86.",
-  "Use only TL1/TL2 diagnostic routes until a verified runner path and coherent reference output exist.",
+  "The official repository at revision af89e318d78a70802061246bf037199d2fb97020 contains safetensors shards and tokenizer/config files, but no .gguf artifact.",
+  "Current M3 Air preflight records only 17427716 KiB available; downloading the official safetensors shards without cleanup or conversion approval would leave about 4435547 KiB, below the hard free-space floor.",
+  "Use only TL1/TL2 diagnostic routes if a verified runner path and coherent reference output exist.",
 ]
 
   [[candidate.route]]
@@ -126,7 +128,13 @@ notes = [
   [[candidate.route]]
   arch = "arm"
   kernel = "tl1"
-  status = "listed_supported_verify_runner"
+  status = "blocked_no_official_gguf_or_conversion_path"
+  proof_use = "diagnostic_route_until_runner_path_verified"
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "blocked_no_official_gguf_or_conversion_path"
   proof_use = "diagnostic_route_until_runner_path_verified"
 
 [[candidate]]

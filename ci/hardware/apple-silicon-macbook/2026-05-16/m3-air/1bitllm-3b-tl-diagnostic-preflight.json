@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "artifact_kind": "apple_m3_air_bitnet_candidate_preflight",
+  "work_item": "M3MBA-007",
+  "machine_lane": "apple-m3-macbook-air",
+  "timestamp_utc": "2026-05-16T23:16:39Z",
+  "source": {
+    "repository": "1bitLLM/bitnet_b1_58-3B",
+    "api": "https://huggingface.co/api/models/1bitLLM/bitnet_b1_58-3B",
+    "tree": "https://huggingface.co/1bitLLM/bitnet_b1_58-3B/tree/main",
+    "revision": "af89e318d78a70802061246bf037199d2fb97020",
+    "last_modified": "2024-03-29T11:57:44.000Z",
+    "gguf_files": [],
+    "tokenizer_files": [
+      "added_tokens.json",
+      "special_tokens_map.json",
+      "tokenization_bitnet.py",
+      "tokenizer.json",
+      "tokenizer.model",
+      "tokenizer_config.json"
+    ],
+    "model_files": [
+      {
+        "path": "model-00001-of-00003.safetensors",
+        "size_bytes": 4993720872
+      },
+      {
+        "path": "model-00002-of-00003.safetensors",
+        "size_bytes": 4997878792
+      },
+      {
+        "path": "model-00003-of-00003.safetensors",
+        "size_bytes": 3305993000
+      }
+    ],
+    "model_shards_total_bytes": 13297592664
+  },
+  "local_preflight": {
+    "volume": "/System/Volumes/Data",
+    "available_kib": 17427716,
+    "total_kib": 482797652,
+    "capacity_percent": 96,
+    "cache_root": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models",
+    "bitnet_cpp_runner": "/Users/sarahisaacs/.cache/bitnet_cpp/build/bin/llama-cli",
+    "huggingface_cli_available": false,
+    "would_leave_available_kib_after_safetensors_shards": 4435547,
+    "hard_free_space_floor_kib": 8388608,
+    "preferred_free_space_floor_kib": 26214400
+  },
+  "decision": {
+    "status": "blocked",
+    "download_attempted": false,
+    "inference_attempted": false,
+    "reason": "The official 3B repository has no GGUF artifact for the M3MBA-007 TL1/TL2 BitNet.cpp command shape, and downloading the safetensors shards would leave the Mac below the hard free-space floor.",
+    "next_unblockers": [
+      "An official TL1/TL2 GGUF appears in 1bitLLM/bitnet_b1_58-3B.",
+      "A reproducible conversion path from the official safetensors repository to a runner-supported TL1/TL2 GGUF is approved.",
+      "A separate artifact-authority item explicitly approves a third-party TL diagnostic artifact with source, revision, SHA256, tokenizer authority, runner command, output, and cleanup evidence.",
+      "Local storage is freed enough that any approved large-candidate download leaves at least the hard free-space floor after download."
+    ]
+  },
+  "claim_boundary": [
+    "No model binary was committed.",
+    "No TL1 or TL2 diagnostic inference was run.",
+    "This receipt does not claim 3B I2_S support.",
+    "This receipt does not claim Apple local-answer quality or performance."
+  ]
+}
