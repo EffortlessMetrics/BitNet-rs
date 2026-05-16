@@ -1,0 +1,15 @@
+timestamp = "2026-05-16T15:05:13Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5141
+merge_sha = "7bfd011346bd5f3463e33d723f400e873e04188d"
+
+notes = [
+  "Merged PR #5141, publishing a derived dense SLM task-family pass-rate rollup for the committed 2026-05-16T0240Z M4 eval-v2 summaries.",
+  "The rollup records exact supported model identities, tokenizer authority, backend and fallback context, source answer-corpus receipts, scoring summaries, quality summaries, task-family counts, and claim boundaries.",
+  "M4-ACCURACY-004 is tracker-closed as a dense SLM evidence publication derived from existing 120-case receipts; no fresh runtime run, 500-case pass-rate refresh, BitNet proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
