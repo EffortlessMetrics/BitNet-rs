@@ -1834,7 +1834,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-018"
-status = "ready"
+status = "pr_open"
+pr = 5062
+head_sha = "7074bfabd9dfeb1c3a1e011e5cecc241f0a2f553"
 branch = "docs/slm-cpu-018-smollm2-normalization-policy"
 stackable = false
 review_mode = "codex_premerge"
