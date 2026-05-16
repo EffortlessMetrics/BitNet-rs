@@ -64,7 +64,9 @@ bitnet mac status
 bitnet mac report-refresh
 bitnet mac regression-dashboard
 target/release/bitnet mac benchmark ... --profile resident_100 ...
+target/release/bitnet answer-corpus ...
 target/release/bitnet mac bitnet-benchmark ...
+target/release/bitnet mac bitnet-warm ...
 bitnet mac report-refresh
 bitnet mac regression-dashboard
 bitnet mac receipts-check <new-summary.json> --json
@@ -100,6 +102,52 @@ The new `resident_100` profile gives a longer warm-session stability sample:
 | `qwen2.5-0.5b-instruct-q8_0` | 860 | 2150.0 ms | 2246.0 ms | 15.650 | 1.707 | 4156.750 | 1.875 |
 | `qwen2.5-0.5b-instruct-q4_k_m` | 928 | 2151.0 ms | 2246.0 ms | 15.650 | 3.078 | 4159.609 | 0.968 |
 | `qwen2.5-1.5b-instruct-q4_k_m` | 804 | 8078.0 ms | 8966.0 ms | 4.780 | 0.352 | 8395.047 | 0.000 |
+
+## BitNet Refresh Results
+
+The 2026-05-15T2214Z BitNet refresh reran the accepted Microsoft I2_S GGUF and
+external tokenizer through the bounded eval, benchmark, and variable
+warm-session surfaces. The new receipts live under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-warm/variable-warm-session.json
+```
+
+All three receipts validate with `fallback_used=false`,
+`selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`, and the accepted model
+and tokenizer SHA256 identity.
+
+The eval refresh matches the earlier 2026-05-15 BitNet eval context and has no
+regression warnings:
+
+| Cases | Passed | Failed | Timeout | Not run | Generated tokens | Regression warnings |
+|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 75 | 25 | 0 | 0 | 765 | 0 |
+
+The benchmark refresh also matches the earlier 2026-05-15 BitNet benchmark
+context. Advisory regression comparison reports five warnings, all on sub-ms
+prompt-tokenize timing fields (`0.205 ms` baseline to `0.241 ms` observed);
+generation, fallback, identity, and prompt counts still validate.
+
+| Prompts | Generated tokens | TTFT p50 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 | Total wall p50 | Peak memory p50 |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 4 | 8 | 7910.0 ms | 2.422 | 0.238 | 2.065 | 8388.460 ms | 4246.359 MiB |
+
+The variable warm-session refresh ran five operator prompts with one exact
+repeat. It loaded the model and tokenizer once, passed the repeated-prompt
+determinism check, and produced the expected short outputs:
+
+| Prompts | Generated tokens | Repeated prompt stable | TTFT p50 | Decode tok/s p50 | Total session |
+|---:|---:|---|---:|---:|---:|
+| 5 | 10 | yes | 7909.0 ms | 2.095 | 43955.621 ms |
+
+`bitnet mac regression` currently supports BitNet eval and benchmark receipts;
+it does not yet accept `bitnet_apple_m4_warm_session` as a regression baseline
+kind. The warm-session refresh is therefore receipt-validated and
+identity-matched, but not compared by the strict regression command in this
+item.
 
 ## Claim Boundary
 

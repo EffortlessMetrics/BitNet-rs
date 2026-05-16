@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_regression_bundle",
+  "proof_stage": "operator_regression_indexed",
+  "created_utc": "2026-05-14T23:55:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "answer_corpus_v2": {
+    "path": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+    "schema": 1,
+    "name": "lunar-lake-qwen25-answer-corpus-v2",
+    "route_scope": "dense_slm_default_cpu",
+    "model_family": "qwen",
+    "model_architecture": "qwen2",
+    "quantization": "Q8_0",
+    "prompt_template": "qwen2.5",
+    "case_count": 12,
+    "profiles": [
+      "ask_normal",
+      "ask_short",
+      "decode_heavy",
+      "prefill_heavy",
+      "regression_tiny",
+      "structured"
+    ],
+    "categories": [
+      "copy_exact",
+      "decode_heavy",
+      "instruction_following",
+      "long_prompt_summarization",
+      "math",
+      "prompt_history_sensitivity",
+      "short_factual",
+      "short_reasoning",
+      "stop_and_eos",
+      "structured_output",
+      "yes_no"
+    ],
+    "claim_boundary_preserved": true,
+    "fixture_ready": true,
+    "gaps": []
+  },
+  "route_profile_comparison": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+    "profile_comparison_ready": true,
+    "default_route_id": "dense_slm_default_cpu",
+    "profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal",
+      "prefill_heavy",
+      "decode_heavy",
+      "structured",
+      "low_power",
+      "bitnet_strict_reference"
+    ],
+    "candidate_routes_remain_unpromoted": true,
+    "benchmark_qualified_advantage_claimed": false,
+    "fallback_observed": false,
+    "gpu_npu_promotion_blockers": [
+      "benchmark_qualified_speedup_or_power_advantage",
+      "candidate route requires benchmark-qualified profile evidence",
+      "power telemetry receipt missing for low_power promotion",
+      "profile_regression_bundle",
+      "route not promoted for profile ask_normal",
+      "route not promoted for profile ask_short",
+      "route not promoted for profile decode_heavy",
+      "route not promoted for profile low_power",
+      "route not promoted for profile prefill_heavy",
+      "timing coverage has missing profile fields"
+    ],
+    "regression_ready": true,
+    "gaps": []
+  },
+  "regression_passed": true,
+  "checks": [
+    {
+      "check_id": "operator_receipt_ready",
+      "status": "passed",
+      "evidence": [
+        "lunar-lake-operator-readiness.json"
+      ],
+      "notes": [
+        "operator readiness receipt reports operator_ready=true"
+      ]
+    },
+    {
+      "check_id": "dense_slm_default_cpu_route",
+      "status": "passed",
+      "evidence": [
+        "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+        "slm-phase-warm-session-qwen25-cpu.json"
+      ],
+      "notes": [
+        "default_route=dense_slm_default_cpu",
+        "selected_backend=cpu-rust"
+      ]
+    },
+    {
+      "check_id": "bitnet_cpu_reference_route",
+      "status": "passed",
+      "evidence": [
+        "cpu-reference-bundle-after-semantic-fix.json",
+        "cpu-bitnet-ref-001-external-boundary.json",
+        "external-first-token-reference-direct.json",
+        "first-token-divergence-classification-direct.json",
+        "cpu-bitnet-perf-001-i2s-microbench.json",
+        "cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+        "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+        "cpu-bitnet-embd-001-q6k-embedding-evidence.json"
+      ],
+      "notes": [
+        "BitNet remains CPU reference-only in the operator route policy"
+      ]
+    },
+    {
+      "check_id": "openvino_dense_slm_candidates_bounded",
+      "status": "passed",
+      "evidence": [
+        "slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+        "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+        "slm-openvino-npu-llmpipeline-smoke.json",
+        "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+      ],
+      "notes": [
+        "OpenVINO GPU and NPU remain candidate routes without speedup claims"
+      ]
+    },
+    {
+      "check_id": "arc_npu_bitnet_claim_boundaries",
+      "status": "passed",
+      "evidence": [
+        "arc-140v-opencl-parity.json",
+        "npu-bitnet-rmsnorm-subgraph-parity.json",
+        "npu-bitnet-linear-projection-subgraph-parity.json",
+        "npu-bitnet-ffn-subgraph-parity.json"
+      ],
+      "notes": [
+        "Arc and NPU evidence remains bounded to parity/subgraph receipts"
+      ]
+    },
+    {
+      "check_id": "no_hidden_fallback_or_acceleration_claim",
+      "status": "passed",
+      "evidence": [
+        "lunar-lake-operator-readiness.json"
+      ],
+      "notes": [
+        "all indexed evidence reports fallback_used=false",
+        "all operator routes keep acceleration_claim=false"
+      ]
+    },
+    {
+      "check_id": "dense_slm_answer_corpus_v2_fixture",
+      "status": "passed",
+      "evidence": [
+        "ci/quality/lunar-lake-answer-corpus-v2.yaml"
+      ],
+      "notes": [
+        "case_count=12",
+        "profiles=ask_normal,ask_short,decode_heavy,prefill_heavy,regression_tiny,structured",
+        "categories=copy_exact,decode_heavy,instruction_following,long_prompt_summarization,math,prompt_history_sensitivity,short_factual,short_reasoning,stop_and_eos,structured_output,yes_no",
+        "claim_boundary_preserved=true"
+      ]
+    },
+    {
+      "check_id": "route_profile_comparison_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json"
+      ],
+      "notes": [
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "candidate_routes_remain_unpromoted=true",
+        "benchmark_qualified_advantage_claimed=false",
+        "fallback_observed=false"
+      ]
+    }
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "cpu_is_truth_path": true,
+    "dense_slm_default_is_cpu_until_speedup_qualified": true,
+    "openvino_gpu_npu_are_candidates_not_speedup_claims": true,
+    "arc_bitnet_full_inference_claimed": false,
+    "npu_bitnet_full_inference_claimed": false,
+    "qk256_accelerator_decode_claimed": false,
+    "hidden_fallback_allowed": false
+  }
+}

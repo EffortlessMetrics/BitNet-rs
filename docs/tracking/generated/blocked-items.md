@@ -57,7 +57,7 @@
 | apple-m4-dense-slm-regression | M4-SLM-REG-004 | M4-SLM-REG-003 | merged |
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | M4-SLM-REG-004 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-002 | M4-DURABLE-001 | merged |
-| apple-m4-durable-inference-evidence | M4-DURABLE-003 | M4-DURABLE-001 | proposed |
+| apple-m4-durable-inference-evidence | M4-DURABLE-003 | M4-DURABLE-001 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-004 | M4-DURABLE-002, M4-DURABLE-003 | proposed |
 | apple-m4-durable-inference-evidence | M4-DURABLE-005 | M4-DURABLE-004 | proposed |
 | apple-m4-inference-ops | M4-INF-OPS-002 | M4-INF-OPS-001 | merged |
@@ -223,6 +223,7 @@
 | intel-258v-platform | LNL258V-ROUTE-001 | LNL258V-OP-003 | merged |
 | intel-258v-platform | LNL258V-ROUTE-002 | LNL258V-ROUTE-001 | merged |
 | intel-258v-platform | LNL258V-QUAL-001 | LNL258V-ROUTE-002 | merged |
+| intel-258v-platform | LNL258V-REG-002 | LNL258V-QUAL-001, LNL258V-ROUTE-002 | pr_open |
 | intel-258v-platform | LNL258V-ASK-004 | LNL258V-ASK-003, SLM-OV258V-006 | merged |
 | intel-258v-platform | CPU-BITNET-REF-002 | CPU-BITNET-REF-001 | merged |
 | intel-258v-platform | CPU-BITNET-REF-003 | CPU-BITNET-REF-002 | merged |

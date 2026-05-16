@@ -9,6 +9,7 @@ use clap::{Args, Subcommand};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -38,8 +39,10 @@ const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
 const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
 const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
+const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
+const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
 
 /// Lunar Lake operator commands.
@@ -79,6 +82,16 @@ pub enum LunarLakeAction {
         /// Operator readiness receipt to verify. Relative paths are resolved under artifact-root.
         #[arg(long, default_value = OPERATOR_READINESS)]
         operator_receipt: PathBuf,
+
+        /// Optional expanded Lunar Lake answer corpus v2 fixture to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ANSWER_CORPUS_V2)]
+        answer_corpus_v2: Option<PathBuf>,
+
+        /// Optional route profile comparison receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: Option<PathBuf>,
 
         /// Output JSON regression bundle to file.
         #[arg(long)]
@@ -286,6 +299,10 @@ pub struct LunarLakeRegressionBundle {
     pub machine_id: String,
     pub artifact_root: String,
     pub operator_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_corpus_v2: Option<AnswerCorpusV2Summary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_profile_comparison: Option<RouteProfileRegressionSummary>,
     pub regression_passed: bool,
     pub checks: Vec<RegressionCheck>,
     pub gaps: Vec<String>,
@@ -298,6 +315,38 @@ pub struct RegressionCheck {
     pub status: String,
     pub evidence: Vec<String>,
     pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AnswerCorpusV2Summary {
+    pub path: String,
+    pub schema: u64,
+    pub name: String,
+    pub route_scope: Option<String>,
+    pub model_family: Option<String>,
+    pub model_architecture: Option<String>,
+    pub quantization: Option<String>,
+    pub prompt_template: Option<String>,
+    pub case_count: usize,
+    pub profiles: Vec<String>,
+    pub categories: Vec<String>,
+    pub claim_boundary_preserved: bool,
+    pub fixture_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RouteProfileRegressionSummary {
+    pub path: String,
+    pub profile_comparison_ready: bool,
+    pub default_route_id: String,
+    pub profiles: Vec<String>,
+    pub candidate_routes_remain_unpromoted: bool,
+    pub benchmark_qualified_advantage_claimed: bool,
+    pub fallback_observed: bool,
+    pub gpu_npu_promotion_blockers: Vec<String>,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -489,6 +538,8 @@ impl LunarLakeCommand {
             LunarLakeAction::Regress {
                 artifact_root,
                 operator_receipt,
+                answer_corpus_v2,
+                route_profile_comparison,
                 json_out,
                 created_utc,
                 strict,
@@ -497,9 +548,11 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_regression_bundle_with_created_utc(
+                let receipt = build_regression_bundle_with_created_utc_and_inputs(
                     artifact_root,
                     operator_receipt,
+                    answer_corpus_v2.as_deref(),
+                    route_profile_comparison.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -776,9 +829,26 @@ pub fn build_operator_readiness_receipt_with_created_utc(
     })
 }
 
+#[cfg(test)]
 pub fn build_regression_bundle_with_created_utc(
     root: &Path,
     operator_receipt: &Path,
+    created_utc: String,
+) -> Result<LunarLakeRegressionBundle> {
+    build_regression_bundle_with_created_utc_and_inputs(
+        root,
+        operator_receipt,
+        None,
+        None,
+        created_utc,
+    )
+}
+
+pub fn build_regression_bundle_with_created_utc_and_inputs(
+    root: &Path,
+    operator_receipt: &Path,
+    answer_corpus_v2: Option<&Path>,
+    route_profile_comparison: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -787,7 +857,7 @@ pub fn build_regression_bundle_with_created_utc(
     let operator: LunarLakeOperatorReceipt = serde_json::from_slice(&bytes)
         .with_context(|| format!("failed to parse {}", operator_receipt_path.display()))?;
 
-    let checks = vec![
+    let mut checks = vec![
         regression_check(
             "operator_receipt_ready",
             operator.operator_ready,
@@ -878,6 +948,32 @@ pub fn build_regression_bundle_with_created_utc(
             ],
         ),
     ];
+    let answer_corpus_v2 = if let Some(path) = answer_corpus_v2 {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_answer_corpus_v2(&path)?;
+        checks.push(regression_check_owned(
+            "dense_slm_answer_corpus_v2_fixture",
+            summary.fixture_ready,
+            vec![summary.path.clone()],
+            corpus_v2_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
+    let route_profile_comparison = if let Some(path) = route_profile_comparison {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_route_profile_regression(&path)?;
+        checks.push(regression_check_owned(
+            "route_profile_comparison_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            route_profile_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -892,11 +988,262 @@ pub fn build_regression_bundle_with_created_utc(
         machine_id: "intel-258v".to_string(),
         artifact_root: path_string(root),
         operator_receipt: path_string(&operator_receipt_path),
+        answer_corpus_v2,
+        route_profile_comparison,
         regression_passed: gaps.is_empty(),
         checks,
         gaps,
         claim_boundary: operator.claim_boundary,
     })
+}
+
+#[derive(Debug, Deserialize)]
+struct AnswerCorpusV2Fixture {
+    schema: u64,
+    artifact_kind: String,
+    name: String,
+    #[serde(default)]
+    metadata: AnswerCorpusV2Metadata,
+    #[serde(default)]
+    model: AnswerCorpusV2Model,
+    #[serde(default)]
+    cases: Vec<AnswerCorpusV2Case>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct AnswerCorpusV2Metadata {
+    route_scope: Option<String>,
+    prompt_template: Option<String>,
+    #[serde(default)]
+    claim_boundary: AnswerCorpusV2ClaimBoundary,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct AnswerCorpusV2ClaimBoundary {
+    broad_quality_claim: Option<bool>,
+    speedup_claim: Option<bool>,
+    arc_execution_claim: Option<bool>,
+    npu_execution_claim: Option<bool>,
+    bitnet_qk256_claim: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct AnswerCorpusV2Model {
+    family: Option<String>,
+    architecture: Option<String>,
+    quant_format: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AnswerCorpusV2Case {
+    id: String,
+    category: String,
+    profile: String,
+    #[serde(default)]
+    gate: Option<serde_yaml::Value>,
+}
+
+fn inspect_answer_corpus_v2(path: &Path) -> Result<AnswerCorpusV2Summary> {
+    let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let corpus: AnswerCorpusV2Fixture = serde_yaml::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+
+    let profiles = sorted_unique(corpus.cases.iter().map(|case| case.profile.as_str()));
+    let categories = sorted_unique(corpus.cases.iter().map(|case| case.category.as_str()));
+    let mut gaps = Vec::new();
+    if corpus.schema != 1 {
+        gaps.push(format!("expected schema=1, got {}", corpus.schema));
+    }
+    if corpus.artifact_kind != "slm_answer_corpus" {
+        gaps.push(format!(
+            "expected artifact_kind=slm_answer_corpus, got {}",
+            corpus.artifact_kind
+        ));
+    }
+    if corpus.name != "lunar-lake-qwen25-answer-corpus-v2" {
+        gaps.push(format!("unexpected corpus name {}", corpus.name));
+    }
+    if corpus.metadata.route_scope.as_deref() != Some(DEFAULT_ASK_ROUTE) {
+        gaps.push(format!(
+            "route_scope must be {DEFAULT_ASK_ROUTE}; got {:?}",
+            corpus.metadata.route_scope
+        ));
+    }
+    if corpus.model.family.as_deref() != Some("qwen")
+        || corpus.model.architecture.as_deref() != Some("qwen2")
+        || corpus.model.quant_format.as_deref() != Some("Q8_0")
+    {
+        gaps.push("model identity must remain Qwen/Qwen2 Q8_0".to_string());
+    }
+    if corpus.cases.len() < 10 {
+        gaps.push(format!("expected at least 10 bounded cases, got {}", corpus.cases.len()));
+    }
+    if let Some(case) = corpus.cases.iter().find(|case| case.gate.is_none()) {
+        gaps.push(format!("case {} is missing a gate", case.id));
+    }
+
+    let required_profiles = [
+        "regression_tiny",
+        "ask_short",
+        "ask_normal",
+        "structured",
+        "prefill_heavy",
+        "decode_heavy",
+    ];
+    if let Some(missing) = first_missing(&profiles, &required_profiles) {
+        gaps.push(format!("missing required profile {missing}"));
+    }
+    let required_categories = [
+        "math",
+        "copy_exact",
+        "yes_no",
+        "short_factual",
+        "instruction_following",
+        "stop_and_eos",
+        "prompt_history_sensitivity",
+        "structured_output",
+        "long_prompt_summarization",
+        "short_reasoning",
+        "decode_heavy",
+    ];
+    if let Some(missing) = first_missing(&categories, &required_categories) {
+        gaps.push(format!("missing required category {missing}"));
+    }
+
+    let claim_boundary = &corpus.metadata.claim_boundary;
+    let claim_boundary_preserved = claim_boundary.broad_quality_claim == Some(false)
+        && claim_boundary.speedup_claim == Some(false)
+        && claim_boundary.arc_execution_claim == Some(false)
+        && claim_boundary.npu_execution_claim == Some(false)
+        && claim_boundary.bitnet_qk256_claim == Some(false);
+    if !claim_boundary_preserved {
+        gaps.push(
+            "corpus v2 claim boundary must keep quality/speedup/Arc/NPU/BitNet-QK256 claims false"
+                .to_string(),
+        );
+    }
+
+    Ok(AnswerCorpusV2Summary {
+        path: path_string(path),
+        schema: corpus.schema,
+        name: corpus.name,
+        route_scope: corpus.metadata.route_scope,
+        model_family: corpus.model.family,
+        model_architecture: corpus.model.architecture,
+        quantization: corpus.model.quant_format,
+        prompt_template: corpus.metadata.prompt_template,
+        case_count: corpus.cases.len(),
+        profiles,
+        categories,
+        claim_boundary_preserved,
+        fixture_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
+fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressionSummary> {
+    let comparison: LunarLakeRouteProfileComparison = read_json_receipt(path)?;
+    let profiles =
+        comparison.profiles.iter().map(|profile| profile.profile_id.clone()).collect::<Vec<_>>();
+    let mut gaps = Vec::new();
+    if !comparison.profile_comparison_ready {
+        gaps.push(format!("route profile comparison not ready: {}", comparison.gaps.join("; ")));
+    }
+    if comparison.default_route_id != DEFAULT_ASK_ROUTE {
+        gaps.push(format!(
+            "default route changed from {DEFAULT_ASK_ROUTE} to {}",
+            comparison.default_route_id
+        ));
+    }
+    let required_profiles = [
+        "regression_tiny",
+        "ask_short",
+        "ask_normal",
+        "prefill_heavy",
+        "decode_heavy",
+        "structured",
+        "low_power",
+        "bitnet_strict_reference",
+    ];
+    if let Some(missing) = first_missing(&profiles, &required_profiles) {
+        gaps.push(format!("route profile comparison missing profile {missing}"));
+    }
+
+    let mut fallback_observed = false;
+    let mut benchmark_qualified_advantage_claimed = false;
+    let mut candidate_promotion_eligible = false;
+    let mut blockers = BTreeSet::new();
+    for profile in &comparison.profiles {
+        for route in &profile.route_evidence {
+            if route.fallback_used == Some(true) {
+                fallback_observed = true;
+            }
+            if route.benchmark_qualified_advantage {
+                benchmark_qualified_advantage_claimed = true;
+            }
+            if is_openvino_candidate_route(&route.route_id) {
+                if route.promotion_eligible_for_profile {
+                    candidate_promotion_eligible = true;
+                }
+                for blocker in &route.blockers {
+                    blockers.insert(blocker.clone());
+                }
+            }
+        }
+    }
+    if fallback_observed {
+        gaps.push("route profile comparison observed fallback_used=true".to_string());
+    }
+    if benchmark_qualified_advantage_claimed {
+        gaps.push("benchmark-qualified route advantage was claimed".to_string());
+    }
+    if candidate_promotion_eligible {
+        gaps.push("OpenVINO GPU/NPU candidate route became promotion-eligible".to_string());
+    }
+    if blockers.is_empty() {
+        gaps.push("OpenVINO GPU/NPU candidate blockers are missing".to_string());
+    }
+
+    Ok(RouteProfileRegressionSummary {
+        path: path_string(path),
+        profile_comparison_ready: comparison.profile_comparison_ready,
+        default_route_id: comparison.default_route_id,
+        profiles,
+        candidate_routes_remain_unpromoted: !candidate_promotion_eligible,
+        benchmark_qualified_advantage_claimed,
+        fallback_observed,
+        gpu_npu_promotion_blockers: blockers.into_iter().collect(),
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
+fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
+    let mut notes = vec![
+        format!("case_count={}", summary.case_count),
+        format!("profiles={}", summary.profiles.join(",")),
+        format!("categories={}", summary.categories.join(",")),
+        format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn route_profile_regression_notes(summary: &RouteProfileRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profiles={}", summary.profiles.join(",")),
+        format!(
+            "candidate_routes_remain_unpromoted={}",
+            summary.candidate_routes_remain_unpromoted
+        ),
+        format!(
+            "benchmark_qualified_advantage_claimed={}",
+            summary.benchmark_qualified_advantage_claimed
+        ),
+        format!("fallback_observed={}", summary.fallback_observed),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
 }
 
 pub fn build_comparison_receipt_with_created_utc(
@@ -2145,6 +2492,32 @@ fn regression_check(
     }
 }
 
+fn regression_check_owned(
+    check_id: &str,
+    passed: bool,
+    evidence: Vec<String>,
+    notes: Vec<String>,
+) -> RegressionCheck {
+    RegressionCheck {
+        check_id: check_id.to_string(),
+        status: if passed { "passed" } else { "failed" }.to_string(),
+        evidence,
+        notes,
+    }
+}
+
+fn sorted_unique<'a>(items: impl Iterator<Item = &'a str>) -> Vec<String> {
+    items.map(ToString::to_string).collect::<BTreeSet<_>>().into_iter().collect()
+}
+
+fn first_missing<'a>(actual: &[String], required: &'a [&str]) -> Option<&'a str> {
+    required.iter().copied().find(|item| !actual.iter().any(|actual| actual == item))
+}
+
+fn is_openvino_candidate_route(route_id: &str) -> bool {
+    matches!(route_id, "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate")
+}
+
 fn route_ok(operator: &LunarLakeOperatorReceipt, route_id: &str) -> bool {
     operator.routes.iter().any(|route| route.route_id == route_id && !route.acceleration_claim)
 }
@@ -2680,6 +3053,105 @@ mod tests {
     }
 
     #[test]
+    fn regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-14T17:30:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+
+        let bundle = build_regression_bundle_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Some(Path::new("corpus-v2.yaml")),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "2026-05-14T23:55:00Z".to_string(),
+        )?;
+
+        assert!(bundle.regression_passed, "{:?}", bundle.gaps);
+        assert!(bundle.checks.iter().any(|check| {
+            check.check_id == "dense_slm_answer_corpus_v2_fixture" && check.status == "passed"
+        }));
+        assert!(bundle.checks.iter().any(|check| {
+            check.check_id == "route_profile_comparison_regression_ready"
+                && check.status == "passed"
+        }));
+        let Some(corpus) = bundle.answer_corpus_v2 else {
+            bail!("missing answer_corpus_v2 summary");
+        };
+        assert_eq!(corpus.case_count, 11);
+        assert!(corpus.profiles.contains(&"prefill_heavy".to_string()));
+        let Some(route_profiles) = bundle.route_profile_comparison else {
+            bail!("missing route_profile_comparison summary");
+        };
+        assert!(route_profiles.candidate_routes_remain_unpromoted);
+        assert!(!route_profiles.benchmark_qualified_advantage_claimed);
+        Ok(())
+    }
+
+    #[test]
     fn ask_route_loads_dense_cpu_default_only() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -2813,6 +3285,76 @@ mod tests {
     fn write_json(root: &Path, file: &str, value: Value) -> Result<()> {
         fs::create_dir_all(root)?;
         fs::write(root.join(file), serde_json::to_vec_pretty(&value)?)?;
+        Ok(())
+    }
+
+    fn write_answer_corpus_v2(root: &Path, file: &str) -> Result<()> {
+        fs::create_dir_all(root)?;
+        fs::write(
+            root.join(file),
+            r#"schema: 1
+artifact_kind: slm_answer_corpus
+name: lunar-lake-qwen25-answer-corpus-v2
+metadata:
+  route_scope: dense_slm_default_cpu
+  prompt_template: qwen2.5
+  claim_boundary:
+    broad_quality_claim: false
+    speedup_claim: false
+    arc_execution_claim: false
+    npu_execution_claim: false
+    bitnet_qk256_claim: false
+model:
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+cases:
+  - id: math_2_plus_2_brief
+    category: math
+    profile: regression_tiny
+    gate: {kind: contains_any}
+  - id: copy_exact_color_triplet
+    category: copy_exact
+    profile: regression_tiny
+    gate: {kind: contains_any}
+  - id: yes_no_clear_sky
+    category: yes_no
+    profile: ask_short
+    gate: {kind: starts_with_any}
+  - id: short_factual_capital_france
+    category: short_factual
+    profile: ask_short
+    gate: {kind: contains_any}
+  - id: instruction_single_sentence_rust
+    category: instruction_following
+    profile: ask_normal
+    gate: {kind: contains_any}
+  - id: stop_token_one_word_done
+    category: stop_and_eos
+    profile: regression_tiny
+    gate: {kind: starts_with_any}
+  - id: transcript_context_code_word
+    category: prompt_history_sensitivity
+    profile: ask_normal
+    gate: {kind: contains_any}
+  - id: structured_json_city_country
+    category: structured_output
+    profile: structured
+    gate: {kind: contains_any}
+  - id: long_prompt_summary_route_policy
+    category: long_prompt_summarization
+    profile: prefill_heavy
+    gate: {kind: contains_any}
+  - id: short_reasoning_heavier_object
+    category: short_reasoning
+    profile: ask_normal
+    gate: {kind: contains_any}
+  - id: decode_heavy_short_list
+    category: decode_heavy
+    profile: decode_heavy
+    gate: {kind: readable}
+"#,
+        )?;
         Ok(())
     }
 }
