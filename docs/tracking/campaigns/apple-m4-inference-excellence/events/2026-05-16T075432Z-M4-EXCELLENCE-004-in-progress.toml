@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T07:54:32Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-004"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-004-drift-thresholds"
+summary = "Started publishing dense SLM and BitNet drift thresholds for M4 matching-history reports."
+
+notes = [
+  "The doc update records the current advisory threshold classes from the M4 regression behavior: zero-tolerance quality and timeout drift, advisory timing drift, advisory memory drift, identity mismatch blockers, and unsupported-claim blockers.",
+  "The work is docs/tracking only and does not change runtime behavior, run live models, download models, enable BitNet chat/serve, or claim Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup.",
+]

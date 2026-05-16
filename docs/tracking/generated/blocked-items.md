@@ -61,7 +61,7 @@
 | apple-m4-durable-inference-evidence | M4-DURABLE-004 | M4-DURABLE-002, M4-DURABLE-003 | merged |
 | apple-m4-durable-inference-evidence | M4-DURABLE-005 | M4-DURABLE-004 | merged |
 | apple-m4-inference-excellence | M4-EXCELLENCE-003 | M4-EXCELLENCE-001, M4-EXCELLENCE-002 | merged |
-| apple-m4-inference-excellence | M4-EXCELLENCE-004 | M4-EXCELLENCE-003 | proposed |
+| apple-m4-inference-excellence | M4-EXCELLENCE-004 | M4-EXCELLENCE-003 | in_progress |
 | apple-m4-inference-excellence | M4-ACCURACY-001 | M4-ACCURACY-000 | proposed |
 | apple-m4-inference-excellence | M4-ACCURACY-002 | M4-ACCURACY-001 | proposed |
 | apple-m4-inference-excellence | M4-ACCURACY-003 | M4-ACCURACY-001 | proposed |
