@@ -30,6 +30,8 @@ const DEFAULT_ATTN_NORM_CURRENT_REPLAY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-attn-norm-current-replay.json";
 const DEFAULT_ATTN_SUBNORM_REPLAY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-attn-subnorm-replay.json";
+const DEFAULT_FFN_NORM_PREFIX_REPLAY_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-ffn-norm-prefix-replay.json";
 const DEFAULT_FINAL_NORM_REPLAY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-final-norm-replay.json";
 const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
@@ -39,6 +41,7 @@ const DEFAULT_ATTN_OUTPUT_WEIGHT: &str = "blk.0.attn_output.weight";
 const DEFAULT_VALUE_PROJECTION_WEIGHT: &str = "blk.0.attn_v.weight";
 const DEFAULT_ATTN_NORM_WEIGHT: &str = "blk.0.attn_norm.weight";
 const DEFAULT_ATTN_SUBNORM_WEIGHT: &str = "blk.0.attn_sub_norm.weight";
+const DEFAULT_FFN_NORM_WEIGHT: &str = "blk.0.ffn_norm.weight";
 const DEFAULT_FINAL_NORM_WEIGHT: &str = "output_norm.weight";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
@@ -225,6 +228,18 @@ struct AttnSubnormReplayArgs {
     model: Option<PathBuf>,
     weight: String,
     layer: Option<usize>,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct FfnNormPrefixReplayArgs {
+    reference: PathBuf,
+    cpu_trace_dir: PathBuf,
+    model: Option<PathBuf>,
+    weight: String,
+    layer: Option<usize>,
+    token: usize,
     output: Option<PathBuf>,
     format: String,
 }
@@ -480,6 +495,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-ffn-norm-prefix-replay") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_ffn_norm_prefix_replay_help();
+                return Ok(true);
+            }
+            let opts = parse_ffn_norm_prefix_replay_args(args)?;
+            let report = build_ffn_norm_prefix_replay(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         Some("bitnet-reference-final-norm-replay") => {
             if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
                 print_final_norm_replay_help();
@@ -559,6 +592,12 @@ fn print_attn_norm_current_replay_help() {
 fn print_attn_subnorm_replay_help() {
     println!(
         "Replay layer-specific attention subnorm RMSNorm from reference/Rust value-mix inputs and compare attn_sub_norm/post_attention_subnorm outputs\n\nUsage: xtask.exe bitnet-reference-attn-subnorm-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF attention subnorm RMSNorm weight [default: blk.0.attn_sub_norm.weight]\n      --layer <N>             Reference/Rust layer to compare [default: inferred from --weight or 0]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-attn-subnorm-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
+    );
+}
+
+fn print_ffn_norm_prefix_replay_help() {
+    println!(
+        "Replay layer-specific FFN RMSNorm for a dim-major prefix-history token and compare ffn_norm/post_ffn_norm outputs\n\nUsage: xtask.exe bitnet-reference-ffn-norm-prefix-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF FFN RMSNorm weight [default: blk.0.ffn_norm.weight]\n      --layer <N>             Reference/Rust layer to compare [default: inferred from --weight or 0]\n      --token <N>             Prefix-history token to replay [default: 0]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-ffn-norm-prefix-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
     );
 }
 
@@ -938,6 +977,51 @@ fn parse_attn_subnorm_replay_args(args: &[String]) -> Result<AttnSubnormReplayAr
         }
     }
     Ok(AttnSubnormReplayArgs { reference, cpu_trace_dir, model, weight, layer, output, format })
+}
+
+fn parse_ffn_norm_prefix_replay_args(args: &[String]) -> Result<FfnNormPrefixReplayArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-ffn-norm-prefix-replay") {
+        bail!("parse_ffn_norm_prefix_replay_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
+    let mut model = None::<PathBuf>;
+    let mut weight = DEFAULT_FFN_NORM_WEIGHT.to_string();
+    let mut layer = None::<usize>;
+    let mut token = 0usize;
+    let mut output = Some(PathBuf::from(DEFAULT_FFN_NORM_PREFIX_REPLAY_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
+            "--model" => model = Some(PathBuf::from(value()?)),
+            "--weight" => weight = value()?,
+            "--layer" => layer = Some(value()?.parse().context("--layer must be an integer")?),
+            "--token" => token = value()?.parse().context("--token must be an integer")?,
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => bail!("unknown bitnet-reference-ffn-norm-prefix-replay option {other}"),
+        }
+    }
+    Ok(FfnNormPrefixReplayArgs {
+        reference,
+        cpu_trace_dir,
+        model,
+        weight,
+        layer,
+        token,
+        output,
+        format,
+    })
 }
 
 fn parse_final_norm_replay_args(args: &[String]) -> Result<FinalNormReplayArgs> {
@@ -2533,6 +2617,212 @@ fn build_attn_subnorm_replay(args: &AttnSubnormReplayArgs) -> Result<Value> {
     }))
 }
 
+fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let reference_root = read_json(&reference_path)?;
+    let reference_records = read_reference_records(&reference_root)?;
+    let trace = reference_trace_receipt(&reference_root)?;
+    let model_path = args
+        .model
+        .clone()
+        .or_else(|| {
+            reference_root.pointer("/model/model_path").and_then(Value::as_str).map(PathBuf::from)
+        })
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
+    let model_path = normalize_path(&model_path)?;
+    let weight_layer = layer_index_from_blk_weight(&args.weight);
+    let layer = args.layer.or(weight_layer).unwrap_or(0);
+    let layer_source = if args.layer.is_some() {
+        "--layer"
+    } else if weight_layer.is_some() {
+        "weight_name"
+    } else {
+        "default_layer0"
+    };
+    let layer_weight_mismatch =
+        args.layer.is_some() && weight_layer.is_some() && args.layer != weight_layer;
+
+    let rust_record_list = read_rust_trace_records(&cpu_trace_dir).ok();
+    let reference_input =
+        find_reference_trace_record(&reference_records, "ffn_inp_history_ref_layout", Some(layer))
+            .filter(|record| record.values_available && !record.first_values.is_empty());
+    let reference_target =
+        find_reference_trace_record(&reference_records, "ffn_norm_history_ref_layout", Some(layer))
+            .filter(|record| record.values_available && !record.first_values.is_empty());
+    let rust_input = rust_record_list
+        .as_ref()
+        .and_then(|records| {
+            find_rust_trace_record(
+                records,
+                "post_attention_residual_history_ref_layout",
+                Some(layer),
+            )
+        })
+        .filter(|record| !record.first_values.is_empty());
+    let rust_target = rust_record_list
+        .as_ref()
+        .and_then(|records| {
+            find_rust_trace_record(records, "post_ffn_norm_history_ref_layout", Some(layer))
+        })
+        .filter(|record| !record.first_values.is_empty());
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !reference_path.is_file() {
+        blocked_reasons.push("reference_layer_trace_receipt_missing".to_string());
+    }
+    if !model_path.is_file() {
+        blocked_reasons.push("model_gguf_missing".to_string());
+    }
+    if layer_weight_mismatch {
+        blocked_reasons.push(format!(
+            "ffn_norm_prefix_replay_layer_mismatch:requested_layer{}_weight_layer{}",
+            layer,
+            weight_layer.expect("checked above")
+        ));
+    }
+    if rust_record_list.is_none() {
+        blocked_reasons.push("rust_cpu_trace_dir_unavailable".to_string());
+    }
+    if reference_input.is_none() {
+        blocked_reasons.push(format!("reference_ffn_input_history_layer{layer}_missing"));
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push(format!("reference_ffn_norm_history_layer{layer}_missing"));
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push(format!("rust_post_attention_residual_history_layer{layer}_missing"));
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push(format!("rust_post_ffn_norm_history_layer{layer}_missing"));
+    }
+
+    let mut model = json!({
+        "path": path_to_string(&model_path),
+        "exists": model_path.is_file(),
+    });
+    let mut weight = json!({
+        "name": args.weight,
+    });
+    let mut replay = Value::Null;
+
+    if model_path.is_file()
+        && reference_input.is_some()
+        && reference_target.is_some()
+        && !layer_weight_mismatch
+    {
+        match build_ffn_norm_prefix_replay_body(
+            &model_path,
+            &args.weight,
+            layer,
+            args.token,
+            reference_input.expect("checked above"),
+            reference_target.expect("checked above"),
+            rust_input,
+            rust_target,
+        ) {
+            Ok((model_report, weight_report, replay_report)) => {
+                model = model_report;
+                weight = weight_report;
+                replay = replay_report;
+            }
+            Err(err) => {
+                blocked_reasons.push(format!("ffn_norm_prefix_replay_unavailable:{err}"));
+            }
+        }
+    }
+
+    let scope_mismatch =
+        replay.pointer("/scope/scope_mismatch").and_then(Value::as_bool).unwrap_or(false);
+    let reference_input_matches_rust_input = replay
+        .pointer("/inputs/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-6);
+    let reference_target_differs_from_rust_target = replay
+        .pointer("/targets/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta > 1.0e-9);
+    let reference_target_f16_bucket_mismatch_count = replay
+        .pointer("/targets/reference_vs_rust_f16/f16_bucket_mismatch_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let best_reference_delta = replay
+        .pointer("/reference_input_replay/best_vs_reference_target/max_abs_delta")
+        .and_then(Value::as_f64);
+    let best_rust_delta = replay
+        .pointer("/rust_input_replay/best_vs_rust_target/max_abs_delta")
+        .and_then(Value::as_f64);
+
+    let current_blocked_reasons = if blocked_reasons.is_empty() {
+        classify_ffn_norm_prefix_replay(
+            scope_mismatch,
+            reference_input_matches_rust_input,
+            best_reference_delta,
+            best_rust_delta,
+            reference_target_differs_from_rust_target,
+            reference_target_f16_bucket_mismatch_count,
+        )
+    } else {
+        blocked_reasons.clone()
+    };
+    let next_action = ffn_norm_prefix_replay_next_action(&current_blocked_reasons);
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_ffn_norm_prefix_replay",
+        "diagnostic": "bitnet_reference_ffn_norm_prefix_replay",
+        "producer": "cargo xtask bitnet-reference-ffn-norm-prefix-replay",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "promotion_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "model": path_to_string(&model_path),
+            "weight": args.weight,
+            "requested_layer": args.layer,
+            "inferred_weight_layer": weight_layer,
+            "selected_layer": layer,
+            "layer_source": layer_source,
+            "token": args.token,
+        },
+        "reference_trace": {
+            "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
+            "warmup_skip_policy": trace.pointer("/warmup_skip_policy").cloned().unwrap_or(Value::Null),
+            "n_tokens": trace.pointer("/n_tokens").cloned().unwrap_or(Value::Null),
+            "n_outputs": trace.pointer("/n_outputs").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_index": trace.pointer("/sampled_output_token_index").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_id": trace.pointer("/sampled_output_token_id").cloned().unwrap_or(Value::Null),
+            "ffn_input_history": reference_input.map(reference_record_summary).unwrap_or(Value::Null),
+            "ffn_norm_history": reference_target.map(reference_record_summary).unwrap_or(Value::Null),
+        },
+        "rust_trace": {
+            "present": rust_record_list.is_some(),
+            "post_attention_residual_history": rust_input.map(rust_record_summary).unwrap_or(Value::Null),
+            "post_ffn_norm_history": rust_target.map(rust_record_summary).unwrap_or(Value::Null),
+        },
+        "model": model,
+        "weight": weight,
+        "replay": replay,
+        "decision": {
+            "scope_mismatch": scope_mismatch,
+            "reference_input_matches_rust_input": reference_input_matches_rust_input,
+            "reference_target_differs_from_rust_target": reference_target_differs_from_rust_target,
+            "reference_target_f16_bucket_mismatch_count": reference_target_f16_bucket_mismatch_count,
+            "best_reference_delta": best_reference_delta,
+            "best_rust_delta": best_rust_delta,
+            "selected_layer": layer,
+            "token": args.token,
+            "current_blocked_reasons": current_blocked_reasons,
+            "next_action": next_action,
+            "claim_allowed": false,
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
 fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
     let reference_path = normalize_path(&args.reference)?;
     let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
@@ -3135,6 +3425,97 @@ fn build_attn_subnorm_replay_body(
             "rust_stage": "post_attention_subnorm",
             "reference": row_report(&reference_target.first_values),
             "rust": rust_target.map(|record| row_report(&record.first_values)).unwrap_or(Value::Null),
+            "reference_vs_rust": reference_target_vs_rust.unwrap_or(Value::Null),
+            "reference_vs_rust_f16": reference_target_vs_rust_f16.unwrap_or(Value::Null),
+        },
+        "reference_input_replay": reference_input_replay,
+        "rust_input_replay": rust_input_replay,
+    });
+
+    Ok((weight.model_report, weight.weight_report, replay))
+}
+
+fn build_ffn_norm_prefix_replay_body(
+    model_path: &Path,
+    weight_name: &str,
+    layer: usize,
+    token: usize,
+    reference_input: &ReferenceTraceRecord,
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustTraceRecord>,
+) -> Result<(Value, Value, Value)> {
+    let reference_input_token = reference_dim_major_token(reference_input, token)?;
+    let reference_target_token = reference_dim_major_token(reference_target, token)?;
+    let rust_input_token =
+        rust_input.map(|record| rust_dim_major_token(record, token)).transpose()?;
+    let rust_target_token =
+        rust_target.map(|record| rust_dim_major_token(record, token)).transpose()?;
+
+    let hidden = reference_input_token.len();
+    if hidden == 0 {
+        bail!("reference FFN input history token is empty");
+    }
+    if reference_target_token.len() != hidden {
+        bail!(
+            "reference FFN norm history token has {} values, expected hidden {hidden}",
+            reference_target_token.len()
+        );
+    }
+    let weight = load_rmsnorm_weight(model_path, weight_name, hidden)?;
+    let variants = rmsnorm_replay_variants(weight.eps, &weight.eps_source);
+    let reference_input_vs_rust =
+        rust_input_token.as_ref().map(|values| compare_vectors(&reference_input_token, values));
+    let reference_target_vs_rust =
+        rust_target_token.as_ref().map(|values| compare_vectors(&reference_target_token, values));
+    let reference_target_vs_rust_f16 =
+        rust_target_token.as_ref().map(|values| f16_bucket_delta(&reference_target_token, values));
+    let reference_input_replay = rmsnorm_replay_section(
+        "reference_ffn_input_history_token",
+        &reference_input_token,
+        &weight.values,
+        &variants,
+        Some(&reference_target_token),
+        rust_target_token.as_deref(),
+    )?;
+    let rust_input_replay = match rust_input_token.as_ref() {
+        Some(values) => rmsnorm_replay_section(
+            "rust_post_attention_residual_history_token",
+            values,
+            &weight.values,
+            &variants,
+            Some(&reference_target_token),
+            rust_target_token.as_deref(),
+        )?,
+        None => Value::Null,
+    };
+    let scope = ffn_norm_prefix_replay_scope(
+        layer,
+        token,
+        reference_input,
+        reference_target,
+        rust_input,
+        rust_target,
+    );
+
+    let replay = json!({
+        "kernel": "rust_scalar_rmsnorm_ffn_prefix_token_replay",
+        "policy": "FFN norm prefix-token replay is diagnostic-only evidence for localizing the clean-input material-output FFN RMSNorm boundary; it does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "layer": layer,
+        "token": token,
+        "scope": scope,
+        "inputs": {
+            "reference_stage": "ffn_inp_history_ref_layout",
+            "rust_stage": "post_attention_residual_history_ref_layout",
+            "reference": row_report(&reference_input_token),
+            "rust": rust_input_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
+            "reference_vs_rust": reference_input_vs_rust.unwrap_or(Value::Null),
+        },
+        "targets": {
+            "reference_stage": "ffn_norm_history_ref_layout",
+            "rust_stage": "post_ffn_norm_history_ref_layout",
+            "reference": row_report(&reference_target_token),
+            "rust": rust_target_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
             "reference_vs_rust": reference_target_vs_rust.unwrap_or(Value::Null),
             "reference_vs_rust_f16": reference_target_vs_rust_f16.unwrap_or(Value::Null),
         },
@@ -3799,6 +4180,154 @@ fn attn_subnorm_replay_next_action(reasons: &[String]) -> &'static str {
         "compare the selected attention subnorm replay rule against Rust runtime arithmetic before changing model math"
     } else {
         "Attention subnorm replay explains the selected layer; continue downstream o_proj sensitivity only if same-input projection no longer matches"
+    }
+}
+
+fn ffn_norm_prefix_replay_scope(
+    expected_layer: usize,
+    token: usize,
+    reference_input: &ReferenceTraceRecord,
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustTraceRecord>,
+) -> Value {
+    let reference_input_layer = reference_input.layer;
+    let reference_target_layer = reference_target.layer;
+    let rust_input_layer = rust_input.and_then(|record| record.layer.map(|layer| layer as i64));
+    let rust_target_layer = rust_target.and_then(|record| record.layer.map(|layer| layer as i64));
+    let reference_input_counts =
+        dim_major_dim_count(reference_input).ok().zip(dim_major_token_count(reference_input).ok());
+    let reference_target_counts = dim_major_dim_count(reference_target)
+        .ok()
+        .zip(dim_major_token_count(reference_target).ok());
+    let rust_input_counts = rust_input.and_then(rust_dim_major_shape_counts);
+    let rust_target_counts = rust_target.and_then(rust_dim_major_shape_counts);
+
+    let mut failures = Vec::<Value>::new();
+    for (label, layer) in [
+        ("reference_ffn_input_history_layer", reference_input_layer),
+        ("reference_ffn_norm_history_layer", reference_target_layer),
+        ("rust_post_attention_residual_history_layer", rust_input_layer),
+        ("rust_post_ffn_norm_history_layer", rust_target_layer),
+    ] {
+        if layer != Some(expected_layer as i64) {
+            failures.push(json!({
+                "reason": format!("{label}_does_not_match_selected_layer"),
+                "selected_layer": expected_layer,
+                "observed_layer": layer,
+            }));
+        }
+    }
+    for (label, counts) in [
+        ("reference_ffn_input_history", reference_input_counts),
+        ("reference_ffn_norm_history", reference_target_counts),
+        ("rust_post_attention_residual_history", rust_input_counts),
+        ("rust_post_ffn_norm_history", rust_target_counts),
+    ] {
+        match counts {
+            Some((_, token_count)) if token < token_count => {}
+            Some((_, token_count)) => failures.push(json!({
+                "reason": format!("{label}_token_out_of_range"),
+                "token": token,
+                "token_count": token_count,
+            })),
+            None => failures.push(json!({
+                "reason": format!("{label}_shape_unavailable"),
+                "token": token,
+            })),
+        }
+    }
+    if let (Some((reference_dim, _)), Some((rust_dim, _))) =
+        (reference_input_counts, rust_input_counts)
+        && reference_dim != rust_dim
+    {
+        failures.push(json!({
+            "reason": "reference_rust_ffn_input_hidden_dim_mismatch",
+            "reference_dim": reference_dim,
+            "rust_dim": rust_dim,
+        }));
+    }
+    if let (Some((reference_dim, _)), Some((rust_dim, _))) =
+        (reference_target_counts, rust_target_counts)
+        && reference_dim != rust_dim
+    {
+        failures.push(json!({
+            "reason": "reference_rust_ffn_norm_hidden_dim_mismatch",
+            "reference_dim": reference_dim,
+            "rust_dim": rust_dim,
+        }));
+    }
+
+    json!({
+        "selected_layer": expected_layer,
+        "token": token,
+        "reference_input_layer": reference_input_layer,
+        "reference_target_layer": reference_target_layer,
+        "rust_input_layer": rust_input_layer,
+        "rust_target_layer": rust_target_layer,
+        "reference_input_counts": reference_input_counts.map(|(dim_count, token_count)| json!({"dim_count": dim_count, "token_count": token_count})).unwrap_or(Value::Null),
+        "reference_target_counts": reference_target_counts.map(|(dim_count, token_count)| json!({"dim_count": dim_count, "token_count": token_count})).unwrap_or(Value::Null),
+        "rust_input_counts": rust_input_counts.map(|(dim_count, token_count)| json!({"dim_count": dim_count, "token_count": token_count})).unwrap_or(Value::Null),
+        "rust_target_counts": rust_target_counts.map(|(dim_count, token_count)| json!({"dim_count": dim_count, "token_count": token_count})).unwrap_or(Value::Null),
+        "scope_mismatch": !failures.is_empty(),
+        "failures": failures,
+    })
+}
+
+fn classify_ffn_norm_prefix_replay(
+    scope_mismatch: bool,
+    reference_input_matches_rust_input: bool,
+    best_reference_delta: Option<f64>,
+    best_rust_delta: Option<f64>,
+    reference_target_differs_from_rust_target: bool,
+    reference_target_f16_bucket_mismatch_count: u64,
+) -> Vec<String> {
+    let mut reasons = Vec::<String>::new();
+    if scope_mismatch {
+        reasons.push("ffn_norm_prefix_trace_scope_mismatch".to_string());
+    }
+    if !reference_input_matches_rust_input {
+        reasons.push("ffn_norm_prefix_input_delta_present".to_string());
+    }
+    match best_reference_delta {
+        Some(delta) if delta > 1.0e-6 => {
+            reasons.push("rmsnorm_replay_does_not_match_reference_ffn_norm".to_string());
+        }
+        None => reasons.push("rmsnorm_reference_ffn_norm_replay_unavailable".to_string()),
+        _ => {}
+    }
+    match best_rust_delta {
+        Some(delta) if delta > 1.0e-6 => {
+            reasons.push("rmsnorm_replay_does_not_match_rust_ffn_norm".to_string());
+        }
+        None => reasons.push("rmsnorm_rust_ffn_norm_replay_unavailable".to_string()),
+        _ => {}
+    }
+    if reference_target_differs_from_rust_target {
+        reasons.push("reference_rust_ffn_norm_delta_present".to_string());
+    }
+    if reference_target_f16_bucket_mismatch_count > 0 {
+        reasons.push("ffn_norm_delta_crosses_f16_bucket_boundary".to_string());
+    }
+    reasons.sort_unstable();
+    reasons.dedup();
+    reasons
+}
+
+fn ffn_norm_prefix_replay_next_action(reasons: &[String]) -> &'static str {
+    if reasons.iter().any(|reason| reason == "ffn_norm_prefix_trace_scope_mismatch") {
+        "align reference and Rust layer/token prefix-history scope before interpreting FFN norm replay"
+    } else if reasons
+        .iter()
+        .any(|reason| reason == "rmsnorm_replay_does_not_match_reference_ffn_norm")
+    {
+        "pin GGML FFN RMSNorm epsilon, accumulation, and output rounding for the prefix token"
+    } else if reasons.iter().any(|reason| reason == "ffn_norm_prefix_input_delta_present") {
+        "localize upstream FFN input prefix drift before replaying FFN RMSNorm"
+    } else if reasons.iter().any(|reason| reason == "reference_rust_ffn_norm_delta_present") {
+        "compare the selected FFN RMSNorm replay rule against Rust runtime arithmetic before changing model math"
+    } else {
+        "FFN RMSNorm replay explains the prefix token; continue downstream FFN SwiGLU sensitivity"
     }
 }
 
@@ -14528,6 +15057,37 @@ fn emit_report(report: &Value, format: &str) -> Result<()> {
                 }
                 return Ok(());
             }
+            if receipt_type == "bitnet_reference_ffn_norm_prefix_replay" {
+                let layer = report.pointer("/decision/selected_layer").and_then(Value::as_u64);
+                let token = report.pointer("/decision/token").and_then(Value::as_u64);
+                let best_reference_delta =
+                    report.pointer("/decision/best_reference_delta").and_then(Value::as_f64);
+                let best_rust_delta =
+                    report.pointer("/decision/best_rust_delta").and_then(Value::as_f64);
+                let reasons = report
+                    .pointer("/decision/current_blocked_reasons")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                println!(
+                    "bitnet reference ffn-norm prefix replay: diagnostic_only=true claim_allowed=false layer={} token={} best_reference_delta={} best_rust_delta={}",
+                    layer.map(|value| value.to_string()).unwrap_or_else(|| "n/a".to_string()),
+                    token.map(|value| value.to_string()).unwrap_or_else(|| "n/a".to_string()),
+                    best_reference_delta
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "n/a".to_string()),
+                    best_rust_delta
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "n/a".to_string())
+                );
+                if !reasons.is_empty() {
+                    println!("blocked_reasons:");
+                    for reason in reasons {
+                        println!("  - {}", reason.as_str().unwrap_or("<non-string>"));
+                    }
+                }
+                return Ok(());
+            }
             if receipt_type == "bitnet_reference_final_norm_replay" {
                 let block_count = report.pointer("/model/block_count").and_then(Value::as_u64);
                 let expected_final_layer =
@@ -20747,6 +21307,51 @@ mod tests {
     }
 
     #[test]
+    fn ffn_norm_prefix_replay_args_parse_defaults_and_overrides() {
+        let default_args =
+            vec!["xtask".to_string(), "bitnet-reference-ffn-norm-prefix-replay".to_string()];
+        let defaults = parse_ffn_norm_prefix_replay_args(&default_args).unwrap();
+        assert_eq!(defaults.reference, PathBuf::from(DEFAULT_RUN_OUTPUT));
+        assert_eq!(defaults.cpu_trace_dir, PathBuf::from(DEFAULT_CPU_TRACE_DIR));
+        assert_eq!(defaults.model, None);
+        assert_eq!(defaults.weight, DEFAULT_FFN_NORM_WEIGHT);
+        assert_eq!(defaults.layer, None);
+        assert_eq!(defaults.token, 0);
+        assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_FFN_NORM_PREFIX_REPLAY_OUTPUT)));
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-ffn-norm-prefix-replay".to_string(),
+            "--reference".to_string(),
+            "ref.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "trace-dir".to_string(),
+            "--model".to_string(),
+            "model.gguf".to_string(),
+            "--weight".to_string(),
+            "blk.1.ffn_norm.weight".to_string(),
+            "--layer".to_string(),
+            "1".to_string(),
+            "--token".to_string(),
+            "3".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_ffn_norm_prefix_replay_args(&args).unwrap();
+        assert_eq!(parsed.reference, PathBuf::from("ref.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("trace-dir"));
+        assert_eq!(parsed.model, Some(PathBuf::from("model.gguf")));
+        assert_eq!(parsed.weight, "blk.1.ffn_norm.weight");
+        assert_eq!(parsed.layer, Some(1));
+        assert_eq!(parsed.token, 3);
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
     fn value_projection_history_replay_replays_dim_major_history() {
         let input = vec![
             1.0, 2.0, // dim 0, tokens 0/1
@@ -21347,6 +21952,86 @@ mod tests {
             "attention_subnorm_replay_layer_mismatch:requested_layer1_weight_layer0"
         )));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn ffn_norm_prefix_replay_report_blocks_without_model_or_rust_trace() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let model = dir.path().join("missing.gguf");
+        let trace_dir = dir.path().join("missing-trace-dir");
+        write_file(
+            &reference,
+            &serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "ffn_inp_history_ref_layout-1",
+                        "stage": "ffn_inp_history_ref_layout",
+                        "graph_index": 20,
+                        "layer": 1,
+                        "dtype": "f32",
+                        "shape": [2, 2, 1, 1],
+                        "nelements": 4,
+                        "first_values": [1.0, 1.5, 2.0, 2.5],
+                        "values_available": true,
+                        "stats": {"rms": 1.8371173}
+                    },
+                    {
+                        "name": "ffn_norm_history_ref_layout-1",
+                        "stage": "ffn_norm_history_ref_layout",
+                        "graph_index": 21,
+                        "layer": 1,
+                        "dtype": "f32",
+                        "shape": [2, 2, 1, 1],
+                        "nelements": 4,
+                        "first_values": [0.5, 0.6, 1.0, 1.1],
+                        "values_available": true,
+                        "stats": {"rms": 0.8215838}
+                    }
+                ]
+            }))
+            .unwrap(),
+        );
+
+        let report = build_ffn_norm_prefix_replay(&FfnNormPrefixReplayArgs {
+            reference,
+            cpu_trace_dir: trace_dir,
+            model: Some(model),
+            weight: "blk.1.ffn_norm.weight".to_string(),
+            layer: Some(1),
+            token: 0,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(
+            report.pointer("/receipt_type"),
+            Some(&json!("bitnet_reference_ffn_norm_prefix_replay"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/inputs/selected_layer"), Some(&json!(1)));
+        assert_eq!(report.pointer("/inputs/token"), Some(&json!(0)));
+        assert!(reasons.contains(&json!("model_gguf_missing")));
+        assert!(reasons.contains(&json!("rust_cpu_trace_dir_unavailable")));
+        assert!(reasons.contains(&json!("rust_post_attention_residual_history_layer1_missing")));
+        assert!(reasons.contains(&json!("rust_post_ffn_norm_history_layer1_missing")));
+        assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn ffn_norm_prefix_replay_classifies_clean_input_material_output() {
+        let reasons = classify_ffn_norm_prefix_replay(false, true, Some(0.0), Some(0.0), true, 0);
+
+        assert_eq!(reasons, vec!["reference_rust_ffn_norm_delta_present"]);
+        assert_eq!(
+            ffn_norm_prefix_replay_next_action(&reasons),
+            "compare the selected FFN RMSNorm replay rule against Rust runtime arithmetic before changing model math"
+        );
     }
 
     #[test]
