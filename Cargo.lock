@@ -483,6 +483,7 @@ name = "bitnet-build-info-core"
 version = "0.2.1-dev"
 dependencies = [
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -554,6 +555,8 @@ dependencies = [
  "anyhow",
  "dirs",
  "serde",
+ "temp-env",
+ "tempfile",
  "toml",
  "tracing",
 ]
