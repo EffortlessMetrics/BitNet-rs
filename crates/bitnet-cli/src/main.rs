@@ -18,66 +18,15 @@ use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
-use std::alloc::{GlobalAlloc, Layout, System};
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, error, info, warn};
 
 #[global_allocator]
-static ALLOCATION_AUDIT_ALLOCATOR: AllocationAuditAllocator = AllocationAuditAllocator;
+static ALLOCATION_AUDIT_ALLOCATOR: allocation_audit::AllocationAuditAllocator =
+    allocation_audit::AllocationAuditAllocator;
 
-static ALLOCATION_AUDIT_ENABLED: AtomicBool = AtomicBool::new(false);
-static ALLOCATION_AUDIT_ALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_ALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-
-struct AllocationAuditAllocator;
-
-unsafe impl GlobalAlloc for AllocationAuditAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc_zeroed(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-        }
-        unsafe { System.dealloc(ptr, layout) };
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        let new_ptr = unsafe { System.realloc(ptr, layout, new_size) };
-        if !new_ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-            record_allocation_audit_alloc(new_size);
-        }
-        new_ptr
-    }
-}
-
-fn record_allocation_audit_alloc(size: usize) {
-    ALLOCATION_AUDIT_ALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_ALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
-fn record_allocation_audit_dealloc(size: usize) {
-    ALLOCATION_AUDIT_DEALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_DEALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
+mod allocation_audit;
+mod answer_quality;
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
@@ -93,7 +42,12 @@ mod planner_receipts;
 mod score;
 mod simple_generation;
 pub mod tokenizer_discovery;
+mod windows_cuda_toolkit;
 
+use allocation_audit::{AllocationAuditGuard, AllocationAuditSnapshot};
+use answer_quality::answer_quality_receipt;
+#[cfg(feature = "full-cli")]
+use answer_quality::{answer_mostly_text, strip_answer_special_markers};
 use exit::*;
 
 /// Build the CLI command for external use (e.g., in tests)
@@ -10789,7 +10743,7 @@ fn validate_strict_cpu_answer_quality(answer_receipt: &serde_json::Value) -> Res
 pub(crate) fn ensure_strict_cuda_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
     #[cfg(all(feature = "cuda", target_os = "windows"))]
     {
-        ensure_windows_cuda_toolkit_bin_on_path()
+        windows_cuda_toolkit::ensure_windows_cuda_toolkit_bin_on_path()
     }
 
     #[cfg(not(all(feature = "cuda", target_os = "windows")))]
@@ -10797,318 +10751,6 @@ pub(crate) fn ensure_strict_cuda_runtime_libraries_visible() -> Result<Option<st
         Ok(None)
     }
 }
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn ensure_windows_cuda_toolkit_bin_on_path() -> Result<Option<std::path::PathBuf>> {
-    if windows_cuda_runtime_libraries_visible_on_path() {
-        return Ok(None);
-    }
-
-    let Some(cuda_bin) = discover_windows_cuda_toolkit_bin() else {
-        return Ok(None);
-    };
-    prepend_process_path(&cuda_bin).with_context(|| {
-        format!("failed to add CUDA Toolkit bin to PATH: {}", cuda_bin.display())
-    })?;
-    Ok(Some(cuda_bin))
-}
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn discover_windows_cuda_toolkit_bin() -> Option<std::path::PathBuf> {
-    discover_cuda_toolkit_bin_from_roots(windows_cuda_toolkit_search_roots())
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-fn discover_cuda_toolkit_bin_from_roots<I, P>(roots: I) -> Option<std::path::PathBuf>
-where
-    I: IntoIterator<Item = P>,
-    P: AsRef<std::path::Path>,
-{
-    let mut candidates = Vec::new();
-    for root in roots {
-        collect_cuda_toolkit_bin_candidates(root.as_ref(), &mut candidates);
-    }
-    candidates.sort_by(|left, right| {
-        cuda_bin_version_key(right).cmp(&cuda_bin_version_key(left)).then_with(|| left.cmp(right))
-    });
-    candidates.into_iter().find(|candidate| cuda_toolkit_bin_has_runtime_libraries(candidate))
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-fn collect_cuda_toolkit_bin_candidates(
-    root: &std::path::Path,
-    candidates: &mut Vec<std::path::PathBuf>,
-) {
-    candidates.push(root.to_path_buf());
-    candidates.push(root.join("bin"));
-
-    let Ok(children) = std::fs::read_dir(root) else {
-        return;
-    };
-    for child in children.flatten() {
-        let path = child.path();
-        if path.is_dir()
-            && path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with('v'))
-        {
-            candidates.push(path.join("bin"));
-        }
-    }
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-fn cuda_toolkit_bin_has_runtime_libraries(bin: &std::path::Path) -> bool {
-    cuda_toolkit_bin_has_any(bin, WINDOWS_NVRTC_LIBRARY_NAMES)
-        && cuda_toolkit_bin_has_any(bin, WINDOWS_CUDART_LIBRARY_NAMES)
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-fn cuda_toolkit_bin_has_any(bin: &std::path::Path, names: &[&str]) -> bool {
-    names.iter().any(|name| bin.join(name).is_file())
-}
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn windows_cuda_runtime_libraries_visible_on_path() -> bool {
-    let Some(path) = std::env::var_os("PATH") else {
-        return false;
-    };
-    std::env::split_paths(&path).any(|entry| cuda_toolkit_bin_has_runtime_libraries(&entry))
-}
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn windows_cuda_toolkit_search_roots() -> Vec<std::path::PathBuf> {
-    let mut roots = Vec::new();
-    for (key, value) in std::env::vars_os() {
-        if key.to_string_lossy().to_ascii_uppercase().starts_with("CUDA_PATH") && !value.is_empty()
-        {
-            roots.push(std::path::PathBuf::from(value));
-        }
-    }
-
-    for key in ["ProgramW6432", "ProgramFiles"] {
-        if let Some(program_files) = std::env::var_os(key) {
-            roots.push(
-                std::path::PathBuf::from(program_files)
-                    .join("NVIDIA GPU Computing Toolkit")
-                    .join("CUDA"),
-            );
-        }
-    }
-    roots.push(std::path::PathBuf::from(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"));
-
-    dedupe_paths(roots)
-}
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn dedupe_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
-    let mut deduped = Vec::<std::path::PathBuf>::new();
-    for path in paths {
-        if !deduped.iter().any(|existing| paths_equal_for_process_path(existing, &path)) {
-            deduped.push(path);
-        }
-    }
-    deduped
-}
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn prepend_process_path(path: &std::path::Path) -> Result<()> {
-    let current = std::env::var_os("PATH").unwrap_or_default();
-    let mut entries = Vec::from([path.to_path_buf()]);
-    entries.extend(
-        std::env::split_paths(&current).filter(|entry| !paths_equal_for_process_path(entry, path)),
-    );
-    let updated_path = std::env::join_paths(entries)?;
-    // SAFETY: Strict CUDA ask adjusts this process before CUDA/NVRTC loading
-    // starts, so cudarc can discover Toolkit DLLs installed in the standard
-    // Windows location. The CLI does not read PATH concurrently in this block.
-    unsafe {
-        std::env::set_var("PATH", updated_path);
-    }
-    Ok(())
-}
-
-#[cfg(all(feature = "cuda", target_os = "windows"))]
-fn paths_equal_for_process_path(left: &std::path::Path, right: &std::path::Path) -> bool {
-    left.to_string_lossy().eq_ignore_ascii_case(&right.to_string_lossy())
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-fn cuda_bin_version_key(path: &std::path::Path) -> (u32, u32, u32) {
-    let version_name =
-        path.parent().and_then(|parent| parent.file_name()).and_then(|name| name.to_str());
-    parse_cuda_version_name(version_name.unwrap_or_default())
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-fn parse_cuda_version_name(name: &str) -> (u32, u32, u32) {
-    let Some(rest) = name.strip_prefix('v') else {
-        return (0, 0, 0);
-    };
-    let mut parts = rest.split('.');
-    let major = parts.next().and_then(|value| value.parse().ok()).unwrap_or_default();
-    let minor = parts.next().and_then(|value| value.parse().ok()).unwrap_or_default();
-    let patch = parts.next().and_then(|value| value.parse().ok()).unwrap_or_default();
-    (major, minor, patch)
-}
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-const WINDOWS_NVRTC_LIBRARY_NAMES: &[&str] =
-    &["nvrtc64_120_0.dll", "nvrtc64_120.dll", "nvrtc64_12.dll", "nvrtc64.dll", "nvrtc.dll"];
-
-#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
-const WINDOWS_CUDART_LIBRARY_NAMES: &[&str] =
-    &["cudart64_120.dll", "cudart64_12.dll", "cudart64.dll", "cudart.dll"];
-
-fn answer_quality_receipt(
-    answer: &str,
-    run_receipt: &serde_json::Value,
-    max_new_tokens: usize,
-) -> serde_json::Value {
-    let trimmed = strip_answer_special_markers(answer).trim().to_string();
-    let non_empty_answer = !trimmed.is_empty();
-    let printable_utf8 = trimmed.chars().all(|ch| ch == '\n' || ch == '\t' || !ch.is_control());
-    let no_replacement_chars = !trimmed.contains('\u{FFFD}');
-    let no_raw_special_tokens = !trimmed.contains("<|") && !trimmed.contains("|>");
-    let mostly_text = answer_mostly_text(&trimmed);
-    let language_signal = answer_has_language_signal(&trimmed);
-    let suspicious_fragment_count = suspicious_answer_fragment_count(&trimmed);
-    let fragment_filter_passed = suspicious_fragment_count <= 1;
-    let garbage_filter_passed = non_empty_answer
-        && printable_utf8
-        && no_replacement_chars
-        && no_raw_special_tokens
-        && mostly_text
-        && language_signal
-        && fragment_filter_passed;
-    let generated = run_receipt["tokens"]["generated"].as_u64().unwrap_or_default() as usize;
-    serde_json::json!({
-        "printable_utf8": printable_utf8,
-        "non_empty_answer": non_empty_answer,
-        "stop_reason": if generated >= max_new_tokens { "max_tokens" } else { "eos_or_stop_sequence" },
-        "garbage_filter_passed": garbage_filter_passed,
-        "no_replacement_chars": no_replacement_chars,
-        "no_raw_special_tokens": no_raw_special_tokens,
-        "mostly_text": mostly_text,
-        "language_signal": language_signal,
-        "suspicious_fragment_count": suspicious_fragment_count,
-        "fragment_filter_passed": fragment_filter_passed,
-    })
-}
-
-fn strip_answer_special_markers(answer: &str) -> String {
-    answer.replace("<|begin_of_text|>", "").replace("<|end_of_text|>", "").replace("<|eot_id|>", "")
-}
-
-fn answer_mostly_text(answer: &str) -> bool {
-    let mut meaningful = 0usize;
-    let mut punctuation_or_control = 0usize;
-    for ch in answer.chars() {
-        if ch.is_alphanumeric() || ch.is_whitespace() {
-            meaningful += 1;
-        } else if ch.is_ascii_punctuation() || ch.is_control() {
-            punctuation_or_control += 1;
-        }
-    }
-    meaningful > 0 && punctuation_or_control <= meaningful.saturating_mul(2)
-}
-
-fn answer_has_language_signal(answer: &str) -> bool {
-    let compact: String = answer.chars().filter(|ch| !ch.is_whitespace()).collect();
-    let numeric_short_answer = compact.len() <= 8
-        && compact.chars().any(|ch| ch.is_ascii_digit())
-        && compact.chars().all(|ch| ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+'));
-    if numeric_short_answer {
-        return true;
-    }
-
-    answer_word_tokens(answer).any(|word| ANSWER_QUALITY_LANGUAGE_WORDS.contains(&word.as_str()))
-}
-
-fn suspicious_answer_fragment_count(answer: &str) -> usize {
-    answer
-        .split_whitespace()
-        .filter(|token| {
-            let alphabetic = token.chars().filter(|ch| ch.is_alphabetic()).count();
-            if alphabetic == 0 {
-                return false;
-            }
-            let apostrophes = token.matches('\'').count();
-            let ascii_punctuation = token.chars().filter(|ch| ch.is_ascii_punctuation()).count();
-            let internal_period = token.contains('.')
-                && !token.ends_with('.')
-                && token.chars().any(|ch| ch.is_alphabetic());
-            (apostrophes > 1) || internal_period || (alphabetic >= 3 && ascii_punctuation >= 3)
-        })
-        .count()
-}
-
-fn answer_word_tokens(answer: &str) -> impl Iterator<Item = String> + '_ {
-    answer
-        .split(|ch: char| !ch.is_alphabetic())
-        .filter(|word| word.len() >= 2)
-        .map(str::to_ascii_lowercase)
-}
-
-const ANSWER_QUALITY_LANGUAGE_WORDS: &[&str] = &[
-    "a",
-    "about",
-    "add",
-    "adds",
-    "an",
-    "and",
-    "answer",
-    "are",
-    "architecture",
-    "blue",
-    "bit",
-    "bitnet",
-    "black",
-    "capital",
-    "color",
-    "colors",
-    "common",
-    "compute",
-    "data",
-    "efficient",
-    "explain",
-    "for",
-    "four",
-    "france",
-    "function",
-    "green",
-    "is",
-    "language",
-    "low",
-    "memory",
-    "model",
-    "number",
-    "numbers",
-    "of",
-    "one",
-    "paris",
-    "python",
-    "red",
-    "reduce",
-    "sentence",
-    "shape",
-    "shapes",
-    "the",
-    "that",
-    "three",
-    "to",
-    "uses",
-    "weight",
-    "weights",
-    "white",
-    "with",
-    "wet",
-    "water",
-    "yellow",
-    "yes",
-    "no",
-];
 
 fn ensure_non_empty_generation_context(
     tokens: &mut Vec<u32>,
@@ -11338,52 +10980,6 @@ fn ms_to_us(ms: f64) -> u128 {
 
 fn rounded_ms(ms: f64) -> f64 {
     (ms * 1000.0).round() / 1000.0
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct AllocationAuditSnapshot {
-    alloc_count: u64,
-    alloc_bytes: u64,
-    dealloc_count: u64,
-    dealloc_bytes: u64,
-}
-
-impl AllocationAuditSnapshot {
-    fn current() -> Self {
-        Self {
-            alloc_count: ALLOCATION_AUDIT_ALLOC_COUNT.load(Ordering::Relaxed),
-            alloc_bytes: ALLOCATION_AUDIT_ALLOC_BYTES.load(Ordering::Relaxed),
-            dealloc_count: ALLOCATION_AUDIT_DEALLOC_COUNT.load(Ordering::Relaxed),
-            dealloc_bytes: ALLOCATION_AUDIT_DEALLOC_BYTES.load(Ordering::Relaxed),
-        }
-    }
-
-    fn delta_since(start: Self) -> Self {
-        let current = Self::current();
-        Self {
-            alloc_count: current.alloc_count.saturating_sub(start.alloc_count),
-            alloc_bytes: current.alloc_bytes.saturating_sub(start.alloc_bytes),
-            dealloc_count: current.dealloc_count.saturating_sub(start.dealloc_count),
-            dealloc_bytes: current.dealloc_bytes.saturating_sub(start.dealloc_bytes),
-        }
-    }
-}
-
-struct AllocationAuditGuard {
-    previous: bool,
-}
-
-impl AllocationAuditGuard {
-    fn enable(enabled: bool) -> Self {
-        let previous = ALLOCATION_AUDIT_ENABLED.swap(enabled, Ordering::Relaxed);
-        Self { previous }
-    }
-}
-
-impl Drop for AllocationAuditGuard {
-    fn drop(&mut self) {
-        ALLOCATION_AUDIT_ENABLED.store(self.previous, Ordering::Relaxed);
-    }
 }
 
 fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
@@ -12066,6 +11662,7 @@ fn apple_machine_receipt_json_from_probe(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::windows_cuda_toolkit::discover_cuda_toolkit_bin_from_roots;
 
     #[test]
     #[cfg(feature = "full-cli")]
