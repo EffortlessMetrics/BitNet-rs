@@ -2103,6 +2103,28 @@ mod tests {
         Ok(rms)
     }
 
+    fn rmsnorm_manual_f32(input: &[f32], gamma: &[f32], eps: f32) -> Vec<f32> {
+        let mut sum_sq = 0.0f32;
+        for &value in input {
+            sum_sq += value * value;
+        }
+        let denom = ((sum_sq / input.len() as f32) + eps).sqrt();
+        input.iter().zip(gamma).map(|(&x, &g)| (x / denom) * g).collect()
+    }
+
+    fn rmsnorm_manual_f64(input: &[f32], gamma: &[f32], eps: f32) -> Vec<f32> {
+        let mut sum_sq = 0.0f64;
+        for &value in input {
+            sum_sq += (value as f64) * (value as f64);
+        }
+        let denom = ((sum_sq / input.len() as f64) + eps as f64).sqrt() as f32;
+        input.iter().zip(gamma).map(|(&x, &g)| (x / denom) * g).collect()
+    }
+
+    fn max_abs_delta(left: &[f32], right: &[f32]) -> f32 {
+        left.iter().zip(right).map(|(&l, &r)| (l - r).abs()).fold(0.0f32, f32::max)
+    }
+
     #[test]
     fn test_layer_norm_with_standard_gamma() -> candle_core::Result<()> {
         // Test that RMSNorm behaves correctly with standard gamma (RMS ≈ 1.0)
@@ -2142,6 +2164,45 @@ mod tests {
         let has_inf = vec_data.iter().any(|x| x.is_infinite());
         assert!(!has_nan, "Output should not contain NaN");
         assert!(!has_inf, "Output should not contain Inf");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_rmsnorm_cpu_runtime_matches_f32_accumulation() -> candle_core::Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let hidden_size = 4096;
+        let eps = 1e-5;
+        let input_data = std::iter::once(4096.0f32)
+            .chain(std::iter::repeat_n(1.0f32, hidden_size - 1))
+            .collect::<Vec<_>>();
+        let gamma_data = vec![1.0f32; hidden_size];
+        let input = Tensor::from_slice(&input_data, (1, 1, hidden_size), &device)?;
+        let mut tensors = HashMap::new();
+        tensors
+            .insert("weight".to_string(), Tensor::from_slice(&gamma_data, hidden_size, &device)?);
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+
+        let norm = layer_norm_with_optional_bias(hidden_size, eps, NormType::RmsNorm, vb)?;
+        let output = norm.forward(&input)?;
+        let output = output.flatten_all()?.to_vec1::<f32>()?;
+        let f32_replay = rmsnorm_manual_f32(&input_data, &gamma_data, eps as f32);
+        let f64_replay = rmsnorm_manual_f64(&input_data, &gamma_data, eps as f32);
+        let candle_vs_f32 = max_abs_delta(&output, &f32_replay);
+        let candle_vs_f64 = max_abs_delta(&output, &f64_replay);
+        let f32_vs_f64 = max_abs_delta(&f32_replay, &f64_replay);
+
+        assert!(
+            candle_vs_f32 <= 1.0e-8,
+            "Candle RMSNorm CPU path should match f32 accumulation replay, got {candle_vs_f32:.6e}"
+        );
+        assert!(f32_vs_f64 > 0.0, "diagnostic vector should distinguish f32 and f64 accumulation");
+        assert!(
+            candle_vs_f32 <= candle_vs_f64,
+            "Candle RMSNorm CPU path should be no farther from f32 replay than f64 replay: f32={candle_vs_f32:.6e}, f64={candle_vs_f64:.6e}"
+        );
 
         Ok(())
     }
