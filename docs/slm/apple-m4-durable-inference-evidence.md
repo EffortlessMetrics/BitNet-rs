@@ -188,6 +188,24 @@ dense benchmark, BitNet eval, and BitNet benchmark reports; it must not claim a
 trend for dense eval v2 or BitNet variable warm until another matching report is
 committed for those identities.
 
+## Operator Envelope V3
+
+`M4-DURABLE-005` publishes the durable refresh layer in:
+
+```text
+docs/slm/apple-m4-operator-envelope-v3.md
+```
+
+The v3 envelope keeps the command-to-receipt map from
+`docs/slm/apple-m4-operator-envelope-v2.md` and adds the operating contract from
+the matching-history reports: refresh cadence, regression thresholds,
+`resident_100` dense status, BitNet durable status, disk/cache guidance, and
+claim boundaries.
+
+The envelope is documentation and tracking only. It does not run a new model,
+download an artifact, enable BitNet chat or serve, enable Metal, or widen the
+M4 claim surface.
+
 ## Claim Boundary
 
 This lane may claim only that the tooling and committed receipts support durable

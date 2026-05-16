@@ -49,8 +49,10 @@ evidence family, model identity, tokenizer authority, backend, and fallback
 state before offering regression commands. Groups with only one report are
 marked `insufficient_history`.
 
-The full command-to-receipt operator map lives in
-`docs/slm/apple-m4-operator-envelope-v2.md`.
+The command-to-receipt operator map lives in
+`docs/slm/apple-m4-operator-envelope-v2.md`. The durable refresh cadence,
+matching-history thresholds, `resident_100` status, and disk/cache guidance
+live in `docs/slm/apple-m4-operator-envelope-v3.md`.
 
 ```bash
 bitnet mac ask \

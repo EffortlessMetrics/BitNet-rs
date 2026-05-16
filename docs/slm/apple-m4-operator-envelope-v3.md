@@ -1,0 +1,269 @@
+# Apple M4 Operator Envelope V3
+
+This envelope refreshes the M4 Mac mini operator contract after the durable
+evidence campaign added matching-history reports. It extends the command map in
+`docs/slm/apple-m4-operator-envelope-v2.md` with refresh cadence, regression
+thresholds, `resident_100` status, disk/cache guidance, and claim boundaries
+from the committed dense SLM and BitNet report history.
+
+It is a local M4 Mac mini evidence envelope. It is not a broad Apple Silicon
+benchmark and it is not a broad model-quality claim.
+
+## Evidence Inputs
+
+The durable envelope is based on these committed evidence surfaces:
+
+| Surface | Receipt path | Evidence | Status |
+|---|---|---|---|
+| Dense SLM benchmark v2 refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/<model-id>/summary.json` | Supported Qwen dense models, nine benchmark profiles, including `resident_100` | comparable matching history exists |
+| BitNet eval refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json` | Accepted Microsoft I2_S GGUF plus external tokenizer, 100 deterministic cases | comparable matching history exists |
+| BitNet benchmark refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json` | Accepted BitNet one-shot benchmark profile | comparable matching history exists |
+| BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-warm/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | receipt-valid, still insufficient history |
+| Report dashboard | `target/apple-m4-durable-inference-evidence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | five comparable groups, four insufficient-history groups |
+
+All durable refresh receipts used by this envelope keep the supported local M4
+route bounded to:
+
+```text
+machine_id or machine.id=apple-m4-mac-mini
+selected_backend=apple-m4-cpu-neon
+runtime_api=cpu
+fallback_used=false
+```
+
+Dense SLM evidence and BitNet evidence stay separate. A dense Qwen report does
+not prove BitNet behavior, and a BitNet report does not broaden dense model
+support.
+
+## Refresh Cadence
+
+Use this cadence to keep the M4 appliance measured without moving live hardware
+runs into generic PR CI:
+
+| Lane | When | Required surface | Live model run |
+|---|---|---|---|
+| Generic PR | Every PR | Campaign checks, receipt schema checks, generated tracking status, docs diff hygiene | no |
+| Advisory local | After `main` sync, model cache changes, receipt schema changes, or M4 CLI changes | `bitnet mac status`, `bitnet mac report-refresh`, `bitnet mac regression-dashboard`, `bitnet mac receipts-check` | no by default |
+| Scheduled M4 | Nightly or weekly on the M4 Mac mini | Dense SLM eval/benchmark, BitNet eval/benchmark, BitNet variable warm, report-refresh, regression-dashboard | yes |
+| Release gate | Before publishing a new M4 expectation envelope | Full supported dense matrix, accepted BitNet artifact/tokenizer eval and benchmark, warm-session receipts, dashboard refresh, operator docs | yes |
+
+The model-free refresh sequence is:
+
+```bash
+bitnet mac models
+bitnet mac status
+bitnet mac report-refresh \
+  --json-out target/apple-m4-durable-inference-evidence/report-refresh-manifest.json \
+  --json
+bitnet mac regression-dashboard \
+  --json-out target/apple-m4-durable-inference-evidence/regression-dashboard.json \
+  --markdown-out target/apple-m4-durable-inference-evidence/regression-dashboard.md \
+  --json
+bitnet mac receipts-check target/apple-m4-durable-inference-evidence/regression-dashboard.json --json
+```
+
+The live refresh sequence belongs only in advisory, scheduled, or release lanes:
+
+```bash
+target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
+  --model-id <dense-model-id> \
+  --profile short_prompt_16_out \
+  --profile short_prompt_64_out \
+  --profile long_prompt_16_out \
+  --profile long_prompt_128_out \
+  --profile context_1k \
+  --profile context_4k \
+  --profile resident_25 \
+  --profile resident_50 \
+  --profile resident_100 \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-benchmark-v2/<model-id>/summary.json
+
+target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json
+
+target/release/bitnet mac receipts-check <new-receipt.json> --json
+target/release/bitnet mac regression <new-receipt.json> --baseline <matching-baseline.json>
+```
+
+## Regression Thresholds
+
+The dashboard may compare reports only when the identity context matches:
+
+```text
+artifact kind
+evidence family
+model id
+model SHA256
+tokenizer authority and tokenizer SHA256 when present
+prompt template or benchmark profile set
+selected backend
+runtime API
+fallback_used=false
+machine id
+```
+
+If any identity field does not match, the report is a new baseline. It must not
+be described as a trend against the previous context.
+
+Dashboard states mean:
+
+| State | Meaning | Operator action |
+|---|---|---|
+| `ready` | At least two committed reports share the same comparison identity. | Use dashboard warnings/failures as the regression signal. |
+| `insufficient_history` | Only one matching report exists for that identity. | Commit another matching refresh before claiming a trend. |
+| `identity_mismatch` or profile-set mismatch | The current report differs in model, tokenizer, backend, fallback, corpus, or benchmark profiles. | Treat the report as a new baseline. |
+| warning | Context matched, but an advisory metric drifted. | Inspect the metric and receipt, then decide whether to refresh or file a follow-up. |
+| failure | Context matched and a required quality, fallback, identity, or receipt invariant failed. | Block the claim and fix before publishing the envelope. |
+
+Quality gates must fail the release claim when any of these change in a matching
+context:
+
+```text
+fallback_used becomes true
+selected_backend changes away from apple-m4-cpu-neon
+model SHA256 or tokenizer SHA256 changes without starting a new baseline
+cases_total changes without an explicit corpus version update
+timeouts or not_run cases become non-zero
+pass rate drops beyond the dashboard threshold
+valid UTF-8, generated text, or generated token IDs disappear
+```
+
+Performance drift is advisory unless the release gate explicitly promotes a
+metric to required. Operators should still inspect p50, p90, and p99 for:
+
+```text
+cold_load_ms
+tokenizer_load_ms
+prompt_tokenize_ms
+prefill_ms
+time_to_first_token_ms
+input_tok_s
+output_tok_s
+decode_tok_s
+total_wall_ms
+peak_memory_mb
+memory_drift_mb
+```
+
+The current BitNet benchmark comparison reports five advisory warnings, all on
+sub-ms prompt-tokenize timing fields. Identity, fallback, prompt count, and
+generation fields still validate.
+
+## Resident-100 Status
+
+The 2026-05-15T1845Z dense benchmark refresh ran all supported dense M4 model
+IDs across the full nine-profile set. The `resident_100` profile is now the
+longer warm-session stability sample for dense SLMs:
+
+| Model | Generated | TTFT p50 | TTFT p99 | Decode tok/s p50 | Output tok/s p50 | Peak MB | Memory drift MB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 860 | 2150.0 ms | 2246.0 ms | 15.650 | 1.707 | 4156.750 | 1.875 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 928 | 2151.0 ms | 2246.0 ms | 15.650 | 3.078 | 4159.609 | 0.968 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 804 | 8078.0 ms | 8966.0 ms | 4.780 | 0.352 | 8395.047 | 0.000 |
+
+This supports a bounded dense M4 resident-stability claim for the recorded
+model identities and profile set. It does not prove BitNet behavior and it does
+not claim broad Apple Silicon performance.
+
+The same dense benchmark refresh shows that long-context prompts are the main
+latency tail. Operators should consult
+`docs/slm/apple-m4-durable-inference-evidence.md` before treating 1k or 4k
+context profiles as interactive.
+
+## BitNet Durable Status
+
+The 2026-05-15T2214Z BitNet refresh uses:
+
+```text
+model_repo=microsoft/bitnet-b1.58-2B-4T-gguf
+model_file=ggml-model-i2_s.gguf
+model_sha256=4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+tokenizer_authority=external_tokenizer_json
+tokenizer_sha256=e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+selected_backend=apple-m4-cpu-neon
+runtime_api=cpu
+fallback_used=false
+```
+
+Current matching-history status:
+
+| Family | Result | Trend status |
+|---|---|---|
+| BitNet eval | 100 cases, 75 passed, 25 failed, 0 timeout, 0 not_run | comparable |
+| BitNet benchmark | 4 prompts, 8 generated tokens, TTFT p50 7910.0 ms, decode p50 2.065 tok/s, peak memory p50 4246.359 MiB | comparable with advisory prompt-tokenize warnings |
+| BitNet variable warm | 5 prompts, 10 generated tokens, repeated prompt stable, total session 43955.621 ms | receipt-valid, insufficient history |
+
+BitNet chat and BitNet serve remain disabled. Variable warm receipts are
+required evidence for future chat work, but they are not chat enablement by
+themselves.
+
+## Disk And Cache Guidance
+
+Before a scheduled or release refresh, run:
+
+```bash
+df -h .
+bitnet mac models
+bitnet model verify <model-id>
+bitnet model prune
+```
+
+Use these local thresholds:
+
+| Situation | Minimum free disk | Guidance |
+|---|---:|---|
+| Full dense plus BitNet refresh | 20 GiB | Preferred floor before running benchmark, eval, warm, dashboard, and receipt validation in one session. |
+| Single dense ask, smoke, or doctor | 10 GiB | Enough for ordinary operation if the required model is already cached. |
+| New model fetch or cache repair | model size plus 10 GiB | Verify cache state first and avoid duplicate GGUF copies. |
+| Below 10 GiB | stop | Prune caches or archive artifacts before running long M4 jobs. |
+
+Supported dense cache sizes are small enough to keep together on the appliance:
+
+| Model | Approx cache size |
+|---|---:|
+| `qwen2.5-0.5b-instruct-q4_k_m` | 468.64 MiB |
+| `qwen2.5-0.5b-instruct-q8_0` | 644.41 MiB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 1065.56 MiB |
+
+The accepted BitNet GGUF is about 1.19 GB plus the external tokenizer. Do not
+copy model files into the repository and never commit `models/**`. Prefer the
+configured model cache and symlinks when a local runner needs an explicit path.
+
+Memory guidance from the durable receipts:
+
+| Surface | Peak memory signal |
+|---|---:|
+| Dense 0.5B `resident_100` | about 4.16 GiB |
+| Dense 1.5B `resident_100` | about 8.40 GiB |
+| BitNet one-shot benchmark | about 4.25 GiB p50 |
+
+## Claim Boundary
+
+Allowed claim:
+
+```text
+The M4 operator envelope describes the durable evidence refresh process,
+matching-history regression boundaries, resident_100 dense SLM status, disk and
+cache guidance, and claim boundaries for the recorded M4 Mac mini receipts.
+```
+
+Still not allowed:
+
+```text
+BitNet chat works.
+BitNet serve works.
+Full apple-m4-metal inference works.
+QK256 on Apple Silicon is supported.
+Neural Engine execution is used.
+MPSGraph model inference is used.
+MacBook evidence exists.
+The reports are broad Apple Silicon benchmarks.
+The reports prove broad model quality.
+Dense SLM evidence proves BitNet behavior.
+The envelope proves a speedup.
+```
+
+When a future campaign changes any of those boundaries, it must publish a new
+receipt family or matching-history report set before updating the operator
+claim.
