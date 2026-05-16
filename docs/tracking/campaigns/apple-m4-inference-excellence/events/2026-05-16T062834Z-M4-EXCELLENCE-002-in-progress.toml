@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T06:28:34Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-002-bitnet-warm-refresh"
+summary = "Started the second BitNet variable warm-session refresh on the dashboard-indexed productization path."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session-prompts/",
+  "docs/slm/apple-m4-inference-excellence.md",
+  "docs/slm/apple-m4-operator-envelope-v3.md",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/active.toml",
+]
+
+notes = [
+  "The accepted Microsoft I2_S GGUF at models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf verified with SHA256 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162.",
+  "The explicit external tokenizer at models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json verified with SHA256 e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7.",
+  "The committed receipt path uses bitnet-productization because mac report-refresh indexes bitnet_variable_warm from that path segment.",
+  "The run records five operator prompts, one exact repeated prompt, model/tokenizer loaded once, repeated-prompt determinism passed, fallback_used=false, chat=false, and serve=false.",
+  "No BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is made.",
+]
