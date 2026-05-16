@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T14:31:45Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-004"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-004-task-family-report"
+pr = 5141
+head_sha = "21eb19a5053a3308c7e2aec279c191bc10ef73a8"
+summary = "Opened PR #5141 for the dense SLM task-family pass-rate publication."
+
+notes = [
+  "PR #5141 publishes a derived task-family pass-rate rollup for the committed 2026-05-16T0240Z dense SLM eval-v2 receipts.",
+  "No fresh runtime run, 500-case pass-rate refresh, BitNet proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim is included.",
+]

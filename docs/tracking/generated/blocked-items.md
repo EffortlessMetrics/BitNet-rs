@@ -65,7 +65,7 @@
 | apple-m4-inference-excellence | M4-ACCURACY-001 | M4-ACCURACY-000 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-002 | M4-ACCURACY-001 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-003 | M4-ACCURACY-001 | merged |
-| apple-m4-inference-excellence | M4-ACCURACY-004 | M4-ACCURACY-002, M4-ACCURACY-003 | proposed |
+| apple-m4-inference-excellence | M4-ACCURACY-004 | M4-ACCURACY-002, M4-ACCURACY-003 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-005 | M4-ACCURACY-004 | proposed |
 | apple-m4-inference-excellence | M4-CANARY-001 | M4-ACCURACY-000, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001 | proposed |
@@ -266,7 +266,7 @@
 | intel-258v-platform | LNL258V-QUAL-002 | LNL258V-REG-003, LNL258V-QUAL-001 | merged |
 | intel-258v-platform | LNL258V-QUAL-003 | LNL258V-QUAL-002, SLM-OV258V-006 | merged |
 | intel-258v-platform | LNL258V-QUAL-004 | LNL258V-QUAL-002, LNL258V-ROUTE-003 | merged |
-| intel-258v-platform | LNL258V-QUAL-005 | LNL258V-QUAL-004 | pr_open |
+| intel-258v-platform | LNL258V-QUAL-005 | LNL258V-QUAL-004 | merged |
 | intel-258v-platform | LNL258V-ASK-004 | LNL258V-ASK-003, SLM-OV258V-006 | merged |
 | intel-258v-platform | CPU-BITNET-REF-002 | CPU-BITNET-REF-001 | merged |
 | intel-258v-platform | CPU-BITNET-REF-003 | CPU-BITNET-REF-002 | merged |

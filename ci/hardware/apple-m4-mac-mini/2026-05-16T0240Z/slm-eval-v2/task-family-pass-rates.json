@@ -1,0 +1,683 @@
+{
+  "artifact_kind": "apple_m4_slm_eval_task_family_pass_rates",
+  "schema_version": "1.0.0",
+  "work_item": "M4-ACCURACY-004",
+  "campaign": "apple-m4-inference-excellence",
+  "machine_id": "apple-m4-mac-mini",
+  "source_evidence_family": "dense_slm_eval_v2",
+  "source_report_timestamp": "2026-05-16T0240Z",
+  "source_reports": [
+    "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+    "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+    "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+  ],
+  "corpus": {
+    "name": "apple-m4-slm-eval-seeded-corpus-v2",
+    "path": "ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml",
+    "seed": 777331,
+    "case_count": 120,
+    "selected_case_count": 120
+  },
+  "report_scope": {
+    "dense_slm_only": true,
+    "supported_m4_dense_models_only": true,
+    "supported_model_count": 3,
+    "derived_from_committed_summaries": true,
+    "runtime_refresh": false,
+    "source_runtime_work_item": "M4-EXCELLENCE-001",
+    "source_runtime_case_count": 120,
+    "static_corpus_case_count_after_m4_accuracy_002": 500,
+    "fresh_500_case_runtime_claim": false,
+    "mechanical_scoring_only": true,
+    "llm_judge_required": false
+  },
+  "claim_boundary": {
+    "dense_slm_only": true,
+    "bounded_seeded_corpus_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "bitnet_evidence": false,
+    "bitnet_quality_claimed": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "speedup_claim": false
+  },
+  "models": [
+    {
+      "model_id": "qwen2.5-0.5b-instruct-q8_0",
+      "source_summary": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/answer-corpus.json",
+      "model": {
+        "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+        "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+        "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "bytes": 675710816,
+        "family": "qwen",
+        "architecture": "qwen2",
+        "quantization": "Q8_0"
+      },
+      "tokenizer": {
+        "source": "gguf_metadata",
+        "authority": "gguf_metadata",
+        "pretokenizer_authority": "qwen2",
+        "gguf_tokenizer_model": "gguf_metadata",
+        "strict": true
+      },
+      "requested_backend": "apple-m4-cpu-neon",
+      "selected_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "prompt_template": "qwen2.5",
+      "scoring_summary": {
+        "enabled": true,
+        "failed": 58,
+        "failure_taxonomy": {
+          "answer_content": 41,
+          "fenced_json": 9,
+          "format_only": 10,
+          "punctuation_casing_normalization": 7
+        },
+        "kinds": [
+          "exact_match",
+          "json_schema",
+          "normalized_match",
+          "numeric_tolerance",
+          "required_forbidden_tokens",
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 62,
+        "total": 120
+      },
+      "quality_summary": {
+        "failed": 58,
+        "not_run": 0,
+        "passed": 62,
+        "timeout": 0,
+        "total": 120
+      },
+      "task_families": {
+        "arithmetic_exact": {
+          "cases_total": 20,
+          "cases_scored": 20,
+          "cases_passed": 19,
+          "pass_rate": 0.95,
+          "quality_gate_cases_passed": 19,
+          "quality_gate_pass_rate": 0.95,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 1
+          }
+        },
+        "closed_label_classification": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 2,
+          "pass_rate": 0.167,
+          "quality_gate_cases_passed": 2,
+          "quality_gate_pass_rate": 0.167,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 6,
+            "punctuation_casing_normalization": 4
+          }
+        },
+        "constrained_summary": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 9,
+          "pass_rate": 0.9,
+          "quality_gate_cases_passed": 9,
+          "quality_gate_pass_rate": 0.9,
+          "scoring_kinds": [
+            "required_keywords"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 1
+          }
+        },
+        "copy_edit_rewrite": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 8,
+          "pass_rate": 0.667,
+          "quality_gate_cases_passed": 8,
+          "quality_gate_pass_rate": 0.667,
+          "scoring_kinds": [
+            "required_keywords"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 4
+          }
+        },
+        "fixed_table_qa": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 2,
+          "pass_rate": 0.167,
+          "quality_gate_cases_passed": 2,
+          "quality_gate_pass_rate": 0.167,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "punctuation_casing_normalization": 3,
+            "answer_content": 7
+          }
+        },
+        "format_constrained_json": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "json_schema"
+          ],
+          "failure_taxonomy": {
+            "fenced_json": 9,
+            "format_only": 10
+          }
+        },
+        "instruction_following_required_forbidden": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 10,
+          "pass_rate": 1,
+          "quality_gate_cases_passed": 10,
+          "quality_gate_pass_rate": 1,
+          "scoring_kinds": [
+            "required_forbidden_tokens"
+          ],
+          "failure_taxonomy": {}
+        },
+        "numeric_tolerance": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "numeric_tolerance"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 10
+          }
+        },
+        "ordering_sorting": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "normalized_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 12
+          }
+        },
+        "synthetic_extraction": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 12,
+          "pass_rate": 1,
+          "quality_gate_cases_passed": 12,
+          "quality_gate_pass_rate": 1,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {}
+        }
+      },
+      "claim_boundary": {
+        "dense_slm_only": true,
+        "bounded_seeded_corpus_only": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "bitnet_evidence": false,
+        "bitnet_quality_claimed": false,
+        "full_metal_inference_claimed": false,
+        "qk256_apple_claimed": false,
+        "neural_engine_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "macbook_evidence": false,
+        "speedup_claim": false
+      }
+    },
+    {
+      "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+      "source_summary": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+      "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus.json",
+      "model": {
+        "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+        "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+        "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+        "bytes": 491400032,
+        "family": "qwen",
+        "architecture": "qwen2",
+        "quantization": "Q4_K_M"
+      },
+      "tokenizer": {
+        "source": "gguf_metadata",
+        "authority": "gguf_metadata",
+        "pretokenizer_authority": "qwen2",
+        "gguf_tokenizer_model": "gguf_metadata",
+        "strict": true
+      },
+      "requested_backend": "apple-m4-cpu-neon",
+      "selected_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "prompt_template": "qwen2.5",
+      "scoring_summary": {
+        "enabled": true,
+        "failed": 54,
+        "failure_taxonomy": {
+          "answer_content": 43,
+          "fenced_json": 10,
+          "format_only": 10,
+          "punctuation_casing_normalization": 1
+        },
+        "kinds": [
+          "exact_match",
+          "json_schema",
+          "normalized_match",
+          "numeric_tolerance",
+          "required_forbidden_tokens",
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 66,
+        "total": 120
+      },
+      "quality_summary": {
+        "failed": 54,
+        "not_run": 0,
+        "passed": 66,
+        "timeout": 0,
+        "total": 120
+      },
+      "task_families": {
+        "arithmetic_exact": {
+          "cases_total": 20,
+          "cases_scored": 20,
+          "cases_passed": 19,
+          "pass_rate": 0.95,
+          "quality_gate_cases_passed": 19,
+          "quality_gate_pass_rate": 0.95,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 1
+          }
+        },
+        "closed_label_classification": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 6,
+          "pass_rate": 0.5,
+          "quality_gate_cases_passed": 6,
+          "quality_gate_pass_rate": 0.5,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 5,
+            "punctuation_casing_normalization": 1
+          }
+        },
+        "constrained_summary": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 10,
+          "pass_rate": 1,
+          "quality_gate_cases_passed": 10,
+          "quality_gate_pass_rate": 1,
+          "scoring_kinds": [
+            "required_keywords"
+          ],
+          "failure_taxonomy": {}
+        },
+        "copy_edit_rewrite": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 9,
+          "pass_rate": 0.75,
+          "quality_gate_cases_passed": 9,
+          "quality_gate_pass_rate": 0.75,
+          "scoring_kinds": [
+            "required_keywords"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 3
+          }
+        },
+        "fixed_table_qa": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 12
+          }
+        },
+        "format_constrained_json": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "json_schema"
+          ],
+          "failure_taxonomy": {
+            "fenced_json": 10,
+            "format_only": 10
+          }
+        },
+        "instruction_following_required_forbidden": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 10,
+          "pass_rate": 1,
+          "quality_gate_cases_passed": 10,
+          "quality_gate_pass_rate": 1,
+          "scoring_kinds": [
+            "required_forbidden_tokens"
+          ],
+          "failure_taxonomy": {}
+        },
+        "numeric_tolerance": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "numeric_tolerance"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 10
+          }
+        },
+        "ordering_sorting": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "normalized_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 12
+          }
+        },
+        "synthetic_extraction": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 12,
+          "pass_rate": 1,
+          "quality_gate_cases_passed": 12,
+          "quality_gate_pass_rate": 1,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {}
+        }
+      },
+      "claim_boundary": {
+        "dense_slm_only": true,
+        "bounded_seeded_corpus_only": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "bitnet_evidence": false,
+        "bitnet_quality_claimed": false,
+        "full_metal_inference_claimed": false,
+        "qk256_apple_claimed": false,
+        "neural_engine_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "macbook_evidence": false,
+        "speedup_claim": false
+      }
+    },
+    {
+      "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+      "source_summary": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+      "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/answer-corpus.json",
+      "model": {
+        "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+        "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+        "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "bytes": 1117320736,
+        "family": "qwen",
+        "architecture": "qwen2",
+        "quantization": "Q4_K_M"
+      },
+      "tokenizer": {
+        "source": "gguf_metadata",
+        "authority": "gguf_metadata",
+        "pretokenizer_authority": "qwen2",
+        "gguf_tokenizer_model": "gguf_metadata",
+        "strict": true
+      },
+      "requested_backend": "apple-m4-cpu-neon",
+      "selected_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "prompt_template": "qwen2.5",
+      "scoring_summary": {
+        "enabled": true,
+        "failed": 61,
+        "failure_taxonomy": {
+          "answer_content": 43,
+          "fenced_json": 3,
+          "format_only": 10,
+          "punctuation_casing_normalization": 8
+        },
+        "kinds": [
+          "exact_match",
+          "json_schema",
+          "normalized_match",
+          "numeric_tolerance",
+          "required_forbidden_tokens",
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 59,
+        "total": 120
+      },
+      "quality_summary": {
+        "failed": 61,
+        "not_run": 0,
+        "passed": 59,
+        "timeout": 0,
+        "total": 120
+      },
+      "task_families": {
+        "arithmetic_exact": {
+          "cases_total": 20,
+          "cases_scored": 20,
+          "cases_passed": 20,
+          "pass_rate": 1,
+          "quality_gate_cases_passed": 20,
+          "quality_gate_pass_rate": 1,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {}
+        },
+        "closed_label_classification": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "punctuation_casing_normalization": 7,
+            "answer_content": 5
+          }
+        },
+        "constrained_summary": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 9,
+          "pass_rate": 0.9,
+          "quality_gate_cases_passed": 9,
+          "quality_gate_pass_rate": 0.9,
+          "scoring_kinds": [
+            "required_keywords"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 1
+          }
+        },
+        "copy_edit_rewrite": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 11,
+          "pass_rate": 0.917,
+          "quality_gate_cases_passed": 11,
+          "quality_gate_pass_rate": 0.917,
+          "scoring_kinds": [
+            "required_keywords"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 1
+          }
+        },
+        "fixed_table_qa": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 2,
+          "pass_rate": 0.167,
+          "quality_gate_cases_passed": 2,
+          "quality_gate_pass_rate": 0.167,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 9,
+            "punctuation_casing_normalization": 1
+          }
+        },
+        "format_constrained_json": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "json_schema"
+          ],
+          "failure_taxonomy": {
+            "format_only": 10,
+            "fenced_json": 3
+          }
+        },
+        "instruction_following_required_forbidden": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 9,
+          "pass_rate": 0.9,
+          "quality_gate_cases_passed": 9,
+          "quality_gate_pass_rate": 0.9,
+          "scoring_kinds": [
+            "required_forbidden_tokens"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 1
+          }
+        },
+        "numeric_tolerance": {
+          "cases_total": 10,
+          "cases_scored": 10,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "numeric_tolerance"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 10
+          }
+        },
+        "ordering_sorting": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 0,
+          "pass_rate": 0,
+          "quality_gate_cases_passed": 0,
+          "quality_gate_pass_rate": 0,
+          "scoring_kinds": [
+            "normalized_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 12
+          }
+        },
+        "synthetic_extraction": {
+          "cases_total": 12,
+          "cases_scored": 12,
+          "cases_passed": 8,
+          "pass_rate": 0.667,
+          "quality_gate_cases_passed": 8,
+          "quality_gate_pass_rate": 0.667,
+          "scoring_kinds": [
+            "exact_match"
+          ],
+          "failure_taxonomy": {
+            "answer_content": 4
+          }
+        }
+      },
+      "claim_boundary": {
+        "dense_slm_only": true,
+        "bounded_seeded_corpus_only": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "bitnet_evidence": false,
+        "bitnet_quality_claimed": false,
+        "full_metal_inference_claimed": false,
+        "qk256_apple_claimed": false,
+        "neural_engine_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "macbook_evidence": false,
+        "speedup_claim": false
+      }
+    }
+  ]
+}

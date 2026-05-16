@@ -355,7 +355,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-004"
-status = "proposed"
+status = "merged"
+pr = 5141
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-004-task-family-report"
 stackable = false
 review_mode = "codex_premerge"

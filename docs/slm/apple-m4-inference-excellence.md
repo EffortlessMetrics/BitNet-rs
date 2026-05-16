@@ -120,6 +120,16 @@ required/forbidden keyword checks use token boundaries instead of raw substring
 matches. It does not run models, refresh pass rates, prove BitNet behavior, or
 make a broad quality claim.
 
+`M4-ACCURACY-004` publishes
+`ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/task-family-pass-rates.json`
+as a derived rollup from the committed 120-case `M4-EXCELLENCE-001` dense SLM
+eval-v2 summaries. The rollup keeps exact model, tokenizer, backend,
+`fallback_used`, prompt-template, source receipt, scoring, quality, task-family,
+and claim-boundary fields per supported dense M4 model identity. It is a
+current evidence publication for the matching-history refresh; it is not a
+fresh runtime run and does not convert the 500-case static corpus into 500-case
+runtime pass rates.
+
 Scoring stays mechanical:
 
 ```text

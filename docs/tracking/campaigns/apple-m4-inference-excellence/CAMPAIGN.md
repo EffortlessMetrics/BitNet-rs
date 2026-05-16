@@ -91,7 +91,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-ACCURACY-001 | merged | Expand the seeded dense SLM corpus to 100 deterministic mechanically scored cases. |
 | M4-ACCURACY-002 | merged | Expand the dense SLM corpus to 500 deterministic cases once scoring is stable. |
 | M4-ACCURACY-003 | merged | Fix stop-token, template, normalization, and scoring misses found by the larger corpus. |
-| M4-ACCURACY-004 | proposed | Publish dense pass rates by deterministic task family and supported model identity. |
+| M4-ACCURACY-004 | merged | Publish dense pass rates by deterministic task family and supported model identity. |
 | M4-ACCURACY-005 | proposed | Add mechanical failure taxonomy for regression triage. |
 | M4-CANARY-001 | proposed | Add dense SLM and BitNet golden-token trace canaries. |
 | M4-DENSE-REF-001 | proposed | Add a dense reference-vs-Rust control for supported Qwen identities. |
