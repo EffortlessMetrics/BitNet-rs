@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1205 @@ struct llama_context {
+@@ -3441,6 +3444,1211 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -613,6 +613,8 @@ index 666fcc4d..23ee29ff 100644
 +    const bool bitnet_rs_history_is_attn_o_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_o_out") == 0;
 +    const bool bitnet_rs_history_is_ffn_inp = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_inp") == 0;
 +    const bool bitnet_rs_history_is_ffn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_norm") == 0;
++    const bool bitnet_rs_history_is_ffn_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_out") == 0;
++    const bool bitnet_rs_history_is_ffn_sub_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_sub_norm") == 0;
 +    const bool bitnet_rs_history_is_ffn_down = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_down") == 0;
 +    const bool bitnet_rs_history_is_l_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_is_requested_layer;
 +    const bool bitnet_rs_history_is_layer_boundary =
@@ -623,6 +625,8 @@ index 666fcc4d..23ee29ff 100644
 +        || bitnet_rs_history_is_attn_o_out
 +        || bitnet_rs_history_is_ffn_inp
 +        || bitnet_rs_history_is_ffn_norm
++        || bitnet_rs_history_is_ffn_out
++        || bitnet_rs_history_is_ffn_sub_norm
 +        || bitnet_rs_history_is_ffn_down
 +        || bitnet_rs_history_is_l_out;
 +    if ((bitnet_rs_history_is_attn_norm_input || (bitnet_rs_history_is_requested_layer && bitnet_rs_history_is_layer_boundary)) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens) {
@@ -637,8 +641,10 @@ index 666fcc4d..23ee29ff 100644
 +            (bitnet_rs_history_is_attn_o_out ? "attn_o_out_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_inp ? "ffn_inp_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_norm ? "ffn_norm_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_out ? "ffn_out_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_sub_norm ? "ffn_sub_norm_history_ref_layout" :
 +            (bitnet_rs_history_is_ffn_down ? "ffn_down_history_ref_layout" :
-+            "l_out_history_ref_layout"))))))));
++            "l_out_history_ref_layout"))))))))));
 +        history_record_name << history_stage_name << "-" << bitnet_rs_effective_history_layer;
 +        const int64_t hidden = tensor->ne[0];
 +        const int64_t token_count = (int64_t) n_tokens;
@@ -1235,7 +1241,7 @@ index 666fcc4d..23ee29ff 100644
  struct llama_lora_weight {
      struct ggml_tensor * a = nullptr;
      struct ggml_tensor * b = nullptr;
-@@ -15460,6 +16542,7 @@ struct ggml_cgraph * build_bitnet_158() {
+@@ -15460,6 +16548,7 @@ struct ggml_cgraph * build_bitnet_158() {
                  cur = llm_build_kv(ctx0, lctx, kv_self, gf,
                          NULL, NULL,
                          Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
@@ -1243,7 +1249,7 @@ index 666fcc4d..23ee29ff 100644
              
                  cur = llm_build_norm(ctx0, cur, hparams,
                          model.layers[il].attn_sub_norm, NULL,
-@@ -17655,8 +18738,37 @@ static int llama_decode_internal(
+@@ -17655,8 +18744,37 @@ static int llama_decode_internal(
  
          llama_set_inputs(lctx, ubatch);
  

@@ -1399,6 +1399,8 @@ impl FeedForward {
         let hidden = gate.mul(&up)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_swiglu", &hidden)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(self.layer_idx, _trace_base_seq, "post_swiglu", &hidden)?;
 
         let hidden = match &self.sub_layernorm {
             Some(norm) => norm_forward(norm, &hidden, self.norm_eps, self.norm_type)?,
@@ -1406,6 +1408,13 @@ impl FeedForward {
         };
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_subnorm", &hidden)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.layer_idx,
+            _trace_base_seq,
+            "post_ffn_subnorm",
+            &hidden,
+        )?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()

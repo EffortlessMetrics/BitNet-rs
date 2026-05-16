@@ -115,10 +115,12 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_residual", "post_attention_residual"),
     ("pre_ffn_norm", "pre_ffn_norm"),
     ("ffn_norm", "post_ffn_norm"),
+    ("ffn_parallel_output_history", "post_swiglu_history_ref_layout"),
     ("ffn_gate", "post_ffn_gate_proj"),
     ("ffn_activation", "post_ffn_gate_activation"),
     ("ffn_up", "post_ffn_up_proj"),
     ("ffn_parallel_output", "post_swiglu"),
+    ("ffn_subnorm_history", "post_ffn_subnorm_history_ref_layout"),
     ("ffn_subnorm", "post_ffn_subnorm"),
     ("ffn_down", "post_down_proj"),
     ("layer_output", "post_layer"),
@@ -4938,7 +4940,9 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("ffn_norm", "post_ffn_norm"),
         ("ffn_norm_history_ref_layout", "post_ffn_norm_history_ref_layout"),
         ("ffn_out", "post_swiglu"),
+        ("ffn_out_history_ref_layout", "post_swiglu_history_ref_layout"),
         ("ffn_sub_norm", "post_ffn_subnorm"),
+        ("ffn_sub_norm_history_ref_layout", "post_ffn_subnorm_history_ref_layout"),
         ("ffn_down", "post_down_proj"),
         ("ffn_down_history_ref_layout", "post_down_proj_history_ref_layout"),
         ("l_out", "post_layer"),
@@ -5395,6 +5399,16 @@ fn layer_history_boundary_delta(
             "ffn_norm_history_ref_layout",
             "post_ffn_norm_history_ref_layout",
             "ffn_norm_output_history",
+        ),
+        (
+            "ffn_out_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_swiglu_output_history",
+        ),
+        (
+            "ffn_sub_norm_history_ref_layout",
+            "post_ffn_subnorm_history_ref_layout",
+            "ffn_subnorm_output_history",
         ),
         (
             "ffn_down_history_ref_layout",
@@ -11724,6 +11738,8 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
         json!({"reference": "attn_norm_history_ref_layout", "rust": "attention_v_input_history_ref_layout", "scope": "layer0 full-prefix attention norm output history"}),
         json!({"reference": "ffn_inp_history_ref_layout", "rust": "post_attention_residual_history_ref_layout", "scope": "layer0 full-prefix attention residual history"}),
         json!({"reference": "ffn_norm_history_ref_layout", "rust": "post_ffn_norm_history_ref_layout", "scope": "layer0 full-prefix FFN norm output history"}),
+        json!({"reference": "ffn_out_history_ref_layout", "rust": "post_swiglu_history_ref_layout", "scope": "layer0 full-prefix FFN SwiGLU output history"}),
+        json!({"reference": "ffn_sub_norm_history_ref_layout", "rust": "post_ffn_subnorm_history_ref_layout", "scope": "layer0 full-prefix FFN subnorm output history"}),
         json!({"reference": "ffn_down_history_ref_layout", "rust": "post_down_proj_history_ref_layout", "scope": "layer0 full-prefix FFN down projection history"}),
         json!({"reference": "l_out_history_ref_layout", "rust": "post_layer_history_ref_layout", "scope": "layer0 full-prefix layer output history"}),
         json!({"reference": "result_norm", "rust": "final_norm", "scope": "final token"}),
@@ -12788,6 +12804,8 @@ mod tests {
         assert!(patch.contains("attn_o_out_history_ref_layout"));
         assert!(patch.contains("ffn_inp_history_ref_layout"));
         assert!(patch.contains("ffn_norm_history_ref_layout"));
+        assert!(patch.contains("ffn_out_history_ref_layout"));
+        assert!(patch.contains("ffn_sub_norm_history_ref_layout"));
         assert!(patch.contains("ffn_down_history_ref_layout"));
         assert!(patch.contains("l_out_history_ref_layout"));
         assert!(
@@ -13030,6 +13048,59 @@ mod tests {
             boundary.pointer("/first_material_boundary/delta/first_mismatch_layout/token"),
             Some(&json!(1))
         );
+    }
+
+    #[test]
+    fn compare_reports_layer0_ffn_intermediate_history_boundaries() {
+        let mut reference_swiglu =
+            test_reference_trace_record("ffn_out_history_ref_layout", vec![1.0, 1.1, 2.0, 2.1]);
+        reference_swiglu.shape = vec![2, 2, 1, 1];
+        reference_swiglu.nelements = 4;
+        reference_swiglu.layer = Some(0);
+        let mut reference_subnorm = test_reference_trace_record(
+            "ffn_sub_norm_history_ref_layout",
+            vec![3.0, 3.1, 4.0, 4.1],
+        );
+        reference_subnorm.shape = vec![2, 2, 1, 1];
+        reference_subnorm.nelements = 4;
+        reference_subnorm.layer = Some(0);
+        let reference_records = vec![reference_swiglu, reference_subnorm];
+
+        let mut rust_swiglu =
+            test_rust_trace_record("post_swiglu_history_ref_layout", vec![1.0, 1.6, 2.0, 2.1]);
+        rust_swiglu.name = "t1/blk0/post_swiglu_history_ref_layout".to_string();
+        rust_swiglu.shape = vec![2, 2];
+        rust_swiglu.num_elements = 4;
+        rust_swiglu.layer = Some(0);
+        let mut rust_subnorm =
+            test_rust_trace_record("post_ffn_subnorm_history_ref_layout", vec![3.0, 3.1, 4.0, 4.1]);
+        rust_subnorm.name = "t1/blk0/post_ffn_subnorm_history_ref_layout".to_string();
+        rust_subnorm.shape = vec![2, 2];
+        rust_subnorm.num_elements = 4;
+        rust_subnorm.layer = Some(0);
+        let rust_records = vec![rust_swiglu, rust_subnorm];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_0_history_boundary_delta").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(
+            boundary.pointer("/first_material_boundary/boundary"),
+            Some(&json!("ffn_swiglu_output_history"))
+        );
+        let rows = boundary.pointer("/rows").and_then(Value::as_array).unwrap();
+        assert!(rows.iter().any(|row| {
+            row.pointer("/boundary") == Some(&json!("ffn_subnorm_output_history"))
+                && row.pointer("/status") == Some(&json!("summary_match"))
+        }));
     }
 
     #[test]
