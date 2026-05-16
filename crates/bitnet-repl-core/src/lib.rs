@@ -164,4 +164,85 @@ mod tests {
 
         assert!(copied.exists());
     }
+
+    #[test]
+    fn parse_repl_input_recognises_clear_metrics_and_exit_aliases() {
+        assert_eq!(parse_repl_input("/clear"), Some(ReplInput::Clear));
+        assert_eq!(parse_repl_input("/metrics"), Some(ReplInput::Metrics));
+        assert_eq!(parse_repl_input("/exit"), Some(ReplInput::Exit));
+    }
+
+    #[test]
+    fn parse_repl_input_trims_whitespace_around_messages_and_commands() {
+        assert_eq!(parse_repl_input("\n"), None);
+        assert_eq!(parse_repl_input("   /help   "), Some(ReplInput::Help));
+        assert_eq!(parse_repl_input("  hi  "), Some(ReplInput::Message("hi".into())));
+    }
+
+    #[test]
+    fn parse_repl_input_unknown_slash_command_falls_through_to_message() {
+        // We deliberately do not invent commands; an unknown "/foo" is a plain message.
+        assert_eq!(parse_repl_input("/foo"), Some(ReplInput::Message("/foo".into())));
+    }
+
+    #[test]
+    fn chat_metrics_average_tps_with_positive_time() {
+        let mut metrics = ChatMetrics::default();
+        metrics.add_exchange(100, 1000); // 100 tokens in 1s -> 100 tps
+        metrics.add_exchange(50, 1000); //  50 tokens in 1s -> averaged into 75 tps
+        assert_eq!(metrics.num_exchanges, 2);
+        assert_eq!(metrics.total_tokens_generated, 150);
+        assert_eq!(metrics.total_time_ms, 2000);
+        assert!((metrics.average_tps() - 75.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn bounded_history_unbounded_accepts_arbitrary_pushes() {
+        let mut history = BoundedHistory::new(None);
+        for i in 0..10 {
+            history.push(i);
+        }
+        assert_eq!(history.len(), 10);
+        assert_eq!(history.to_vec(), (0..10).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn bounded_history_clear_and_is_empty() {
+        let mut history = BoundedHistory::new(Some(3));
+        assert!(history.is_empty());
+        history.push(1);
+        history.push(2);
+        assert!(!history.is_empty());
+        history.clear();
+        assert!(history.is_empty());
+        assert_eq!(history.len(), 0);
+    }
+
+    #[test]
+    fn bounded_history_to_vec_matches_iter() {
+        let mut history = BoundedHistory::new(Some(5));
+        for i in 0..3 {
+            history.push(i);
+        }
+        let iter_vec: Vec<i32> = history.iter().copied().collect();
+        assert_eq!(iter_vec, history.to_vec());
+    }
+
+    #[test]
+    fn bounded_history_zero_limit_drops_every_push() {
+        // limit == 0 means we always over-fill by 1, then trim back to 0.
+        let mut history = BoundedHistory::new(Some(0));
+        history.push(1);
+        history.push(2);
+        assert!(history.is_empty());
+    }
+
+    #[test]
+    fn copy_receipt_returns_none_when_source_missing() {
+        let dst_dir = tempdir().expect("temp dir should be created");
+        let missing = PathBuf::from("/this/path/does/not/exist/receipt.json");
+        let result = copy_receipt_if_present(&missing, dst_dir.path())
+            .expect("missing source should not be an error");
+        assert!(result.is_none());
+    }
 }
