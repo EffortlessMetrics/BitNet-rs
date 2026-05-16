@@ -1416,6 +1416,7 @@ dependencies = [
  "bytemuck",
  "half",
  "safetensors 0.7.0",
+ "tempfile",
 ]
 
 [[package]]
