@@ -7,6 +7,7 @@ to = "pr_open"
 actor = "codex"
 pr = 5227
 branch = "codex/lunar-lake/LNL258V-DURABLE-002-repeated-stability"
+head_sha = "dc7cbf89b87c950ebd285faf9f33adb6d22581d7"
 summary = "Opened LNL258V-DURABLE-002 to record live repeated Qwen CPU warm-session durability evidence."
 
 artifacts = [
