@@ -2042,7 +2042,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-022"
-status = "in_progress"
+status = "pr_open"
+pr = 5140
+head_sha = "63dfc1c71f880c8134e1235f12e5bb8c0208581e"
 branch = "model/slm-cpu-022-smollm2-reference-comparator"
 stackable = false
 review_mode = "codex_premerge"
