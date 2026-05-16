@@ -5813,6 +5813,13 @@ fn attention_score_input_attribution(
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
+    let reference_kcur_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kcur_history_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
     let rust_score_key_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
@@ -5847,11 +5854,16 @@ fn attention_score_input_attribution(
         rust_query.and_then(rust_query_head_dim_count).unwrap_or((0, 0));
     let head_dim = if reference_head_dim != 0 { reference_head_dim } else { rust_head_dim };
     let head_count = if reference_head_count != 0 { reference_head_count } else { rust_head_count };
+    let reference_score_key_head_count = if reference_kcur_history_heads.is_empty() {
+        reference_key_heads.len()
+    } else {
+        reference_kcur_history_heads.len()
+    };
     let group_size = if head_count > 0
-        && !reference_key_heads.is_empty()
-        && head_count % reference_key_heads.len() == 0
+        && reference_score_key_head_count > 0
+        && head_count % reference_score_key_head_count == 0
     {
-        Some(head_count / reference_key_heads.len())
+        Some(head_count / reference_score_key_head_count)
     } else {
         None
     };
@@ -5873,7 +5885,23 @@ fn attention_score_input_attribution(
     for (&head, reference_score) in &reference_score_heads {
         let kv_head = group_size.map(|group_size| head / group_size);
         let rust_score = rust_score_heads.get(&head).copied();
-        let reference_key = kv_head.and_then(|kv_head| reference_key_heads.get(&kv_head).copied());
+        let reference_kcur_history_key =
+            kv_head.and_then(|kv_head| reference_kcur_history_heads.get(&kv_head).copied());
+        let reference_legacy_key =
+            kv_head.and_then(|kv_head| reference_key_heads.get(&kv_head).copied());
+        let reference_key = reference_kcur_history_key.or(reference_legacy_key);
+        let reference_key_source = if reference_kcur_history_key.is_some() {
+            "reference_kcur_history_kv_head"
+        } else {
+            "reference_k_kv_head"
+        };
+        let reference_key_source_kind =
+            if reference_kcur_history_key.is_some() { "kcur_history" } else { "legacy_k_kv_head" };
+        let reference_key_layout = if reference_kcur_history_key.is_some() {
+            ScoreKeyLayout::DimMajor
+        } else {
+            ScoreKeyLayout::TokenMajor
+        };
         let actual_rust_key = rust_score_key_heads.get(&head).copied();
         let fallback_rust_key =
             kv_head.and_then(|kv_head| rust_fallback_key_heads.get(&kv_head).copied());
@@ -5909,8 +5937,8 @@ fn attention_score_input_attribution(
                     base_candidate: "reference_q_reference_k",
                     score_input_variant: "q_f16_k_f32",
                     query_source: "reference_Qcur",
-                    key_source: "reference_k_kv_head",
-                    key_layout: ScoreKeyLayout::TokenMajor,
+                    key_source: reference_key_source,
+                    key_layout: reference_key_layout,
                     query_f16_roundtrip: true,
                     key_f16_roundtrip: false,
                     query_values: &reference_query.first_values,
@@ -5921,8 +5949,8 @@ fn attention_score_input_attribution(
                     base_candidate: "reference_q_reference_k",
                     score_input_variant: "q_f16_k_f16",
                     query_source: "reference_Qcur",
-                    key_source: "reference_k_kv_head",
-                    key_layout: ScoreKeyLayout::TokenMajor,
+                    key_source: reference_key_source,
+                    key_layout: reference_key_layout,
                     query_f16_roundtrip: true,
                     key_f16_roundtrip: true,
                     query_values: &reference_query.first_values,
@@ -5933,8 +5961,8 @@ fn attention_score_input_attribution(
                     base_candidate: "rust_q_reference_k",
                     score_input_variant: "q_f16_k_f32",
                     query_source: "rust_attention_q_rope",
-                    key_source: "reference_k_kv_head",
-                    key_layout: ScoreKeyLayout::TokenMajor,
+                    key_source: reference_key_source,
+                    key_layout: reference_key_layout,
                     query_f16_roundtrip: true,
                     key_f16_roundtrip: false,
                     query_values: &rust_query.first_values,
@@ -5945,8 +5973,8 @@ fn attention_score_input_attribution(
                     base_candidate: "rust_q_reference_k",
                     score_input_variant: "q_f16_k_f16",
                     query_source: "rust_attention_q_rope",
-                    key_source: "reference_k_kv_head",
-                    key_layout: ScoreKeyLayout::TokenMajor,
+                    key_source: reference_key_source,
+                    key_layout: reference_key_layout,
                     query_f16_roundtrip: true,
                     key_f16_roundtrip: true,
                     query_values: &rust_query.first_values,
@@ -6103,6 +6131,8 @@ fn attention_score_input_attribution(
                 "live_token_count": live_token_count,
                 "reference_score_token_count": reference_score.first_values.len(),
                 "rust_score_token_count": rust_score.first_values.len(),
+                "reference_key_source": reference_key_source,
+                "reference_key_source_kind": reference_key_source_kind,
                 "rust_key_source": rust_key_source,
                 "rust_key_source_kind": rust_key_source_kind,
                 "reference_best_candidate": reference_best_info.map(|candidate| candidate.base_candidate),
@@ -6124,6 +6154,8 @@ fn attention_score_input_attribution(
                 "reference_query_present": reference_query.is_some(),
                 "rust_query_present": rust_query.is_some(),
                 "reference_key_present": reference_key.is_some(),
+                "reference_kcur_history_key_present": reference_kcur_history_key.is_some(),
+                "reference_legacy_key_present": reference_legacy_key.is_some(),
                 "rust_key_present": rust_key.is_some(),
                 "rust_score_key_present": actual_rust_key.is_some(),
                 "rust_fallback_key_present": fallback_rust_key.is_some(),
@@ -6144,7 +6176,14 @@ fn attention_score_input_attribution(
         "rust_score_length_policy": "live_key_count_only",
         "reference_query_stage_present": reference_query.is_some(),
         "rust_query_stage_present": rust_query.is_some(),
-        "reference_key_head_count": reference_key_heads.len(),
+        "reference_key_head_count": reference_score_key_head_count,
+        "reference_kcur_history_head_count": reference_kcur_history_heads.len(),
+        "reference_legacy_key_head_count": reference_key_heads.len(),
+        "reference_key_stage_source": if reference_kcur_history_heads.is_empty() {
+            "k_kv_head"
+        } else {
+            "kcur_history_kv_head"
+        },
         "rust_key_head_count": if rust_score_key_heads.is_empty() {
             rust_fallback_key_heads.len()
         } else {
@@ -10952,6 +10991,7 @@ mod tests {
         );
         assert_eq!(report.pointer("/rust_score_key_head_count"), Some(&json!(0)));
         assert_eq!(report.pointer("/rust_fallback_key_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/reference_key_stage_source"), Some(&json!("k_kv_head")));
         assert_eq!(
             report.pointer("/rows/0/reference_best_candidate"),
             Some(&json!("reference_q_reference_k"))
@@ -10970,6 +11010,14 @@ mod tests {
         assert_eq!(
             report.pointer("/rows/0/rust_key_source_kind"),
             Some(&json!("fallback_f16_cache_proxy"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/reference_key_source"),
+            Some(&json!("reference_k_kv_head"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/reference_key_source_kind"),
+            Some(&json!("legacy_k_kv_head"))
         );
         assert_eq!(
             report.pointer("/rows/0/candidates").and_then(Value::as_array).map(Vec::len),
@@ -11096,6 +11144,95 @@ mod tests {
                 },
             );
         assert!(has_actual_k_f16_candidate);
+    }
+
+    #[test]
+    fn score_input_attribution_prefers_reference_kcur_history_when_available() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![1, 1],
+                nelements: 1,
+                first_values: vec![2.0],
+                ..test_reference_trace_record("Qcur", vec![2.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![1, 2],
+                nelements: 2,
+                first_values: vec![100.0, 200.0],
+                ..test_reference_trace_record("k_kv_head0", vec![100.0, 200.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![1, 2],
+                nelements: 2,
+                first_values: vec![3.0, 5.0],
+                ..test_reference_trace_record("kcur_history_kv_head0_ref_layout", vec![3.0, 5.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2],
+                nelements: 2,
+                first_values: vec![6.0, 10.0],
+                ..test_reference_trace_record("kq_head0", vec![6.0, 10.0])
+            },
+        ];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_q_rope".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 1, 1, 1],
+                num_elements: 1,
+                first_values: vec![2.0],
+                ..test_rust_trace_record("attention_q_rope", vec![2.0])
+            },
+        );
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 2],
+                num_elements: 2,
+                first_values: vec![3.0, 5.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![3.0, 5.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                first_values: vec![6.0, 10.0],
+                ..test_rust_trace_record("attention_scores_raw_head0", vec![6.0, 10.0])
+            },
+        );
+
+        let report = attention_score_input_attribution(&reference_records, &rust_records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/reference_key_stage_source"),
+            Some(&json!("kcur_history_kv_head"))
+        );
+        assert_eq!(report.pointer("/reference_kcur_history_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/reference_legacy_key_head_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/reference_key_source"),
+            Some(&json!("reference_kcur_history_kv_head"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/reference_key_source_kind"),
+            Some(&json!("kcur_history"))
+        );
+        assert_eq!(report.pointer("/rows/0/candidates/0/key_layout"), Some(&json!("dim_major")));
+        assert_eq!(
+            report.pointer("/rows/0/reference_best_candidate"),
+            Some(&json!("reference_q_reference_k"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/reference_best_score_input_variant"),
+            Some(&json!("q_f16_k_f32"))
+        );
     }
 
     #[test]
