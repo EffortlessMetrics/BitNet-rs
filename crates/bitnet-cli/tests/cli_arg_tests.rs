@@ -5676,6 +5676,134 @@ fn reference_compare_validates_slm_external_reference_artifact() {
     assert_eq!(receipt["speedup_claim"], false);
 }
 
+/// `reference-compare` accepts the SmolLM2 first-token/top-k comparator shape.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_validates_smollm2_first_token_topk_artifact() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let artifact = dir.path().join("smollm2-reference.json");
+    let out = dir.path().join("smollm2-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "model_family": "smollm2",
+          "prompt_text": "What is 2+2? Answer with only the number.",
+          "prompt_template": "smollm2_chatml_with_explicit_system",
+          "bos": true,
+          "reference": {
+            "backend": "llama-cli-known-good",
+            "kernel": "external-reference",
+            "prompt_ids": [1, 9690, 198, 2683, 359, 253, 5356, 11173, 30, 2],
+            "generated_ids": [34],
+            "text": "4",
+            "topk_step0": [[34, 12.0], [504, 4.0]],
+            "chosen_id": 34
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "kernel": "dense-q8_0-reference",
+            "loader_mode": "real_gguf",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_strict": true,
+            "fallback_used": false,
+            "prompt_ids": [1, 9690, 198, 2683, 359, 253, 5356, 11173, 30, 2],
+            "generated_ids": [504],
+            "text": "The",
+            "topk_step0": [[504, 10.0], [34, 8.0]],
+            "chosen_id": 504
+          }
+        }"#,
+    )
+    .expect("write artifact");
+
+    bitnet()
+        .args([
+            "reference-compare",
+            "--artifact",
+            artifact.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "slm_reference_divergence_validation");
+    assert_eq!(receipt["model"]["family"], "smollm2");
+    assert_eq!(receipt["validation"]["passed"], true);
+    assert_eq!(receipt["comparison"]["passed"], false);
+    assert_eq!(receipt["comparison"]["first_divergence"]["phase"], "logits");
+    assert_eq!(
+        receipt["comparison"]["first_divergence"]["classification"],
+        "logits_or_shared_transformer_math"
+    );
+    assert_eq!(receipt["comparison"]["bitnet_rs"]["fallback_used"], false);
+    assert_eq!(receipt["speedup_claim"], false);
+}
+
+/// `--require-match` keeps the SmolLM2 comparator fail-closed when top-k diverges.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_require_match_fails_smollm2_topk_divergence() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let artifact = dir.path().join("smollm2-reference.json");
+    let out = dir.path().join("smollm2-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "model_family": "smollm2",
+          "prompt_text": "What is 2+2? Answer with only the number.",
+          "prompt_template": "smollm2_chatml_with_explicit_system",
+          "bos": true,
+          "reference": {
+            "backend": "llama-cli-known-good",
+            "kernel": "external-reference",
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [34],
+            "text": "4",
+            "topk_step0": [[34, 12.0], [504, 4.0]],
+            "chosen_id": 34
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "kernel": "dense-q8_0-reference",
+            "loader_mode": "real_gguf",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_strict": true,
+            "fallback_used": false,
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [504],
+            "text": "The",
+            "topk_step0": [[504, 10.0], [34, 8.0]],
+            "chosen_id": 504
+          }
+        }"#,
+    )
+    .expect("write artifact");
+
+    bitnet()
+        .args([
+            "reference-compare",
+            "--artifact",
+            artifact.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+            "--require-match",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("reference artifact diverged"));
+}
+
 /// `first-token-divergence --help` documents the external reference and local CPU inputs.
 #[cfg(feature = "full-cli")]
 #[test]

@@ -130,6 +130,72 @@ same prompt IDs before comparing checkpoint summaries. The trace remains a
 diagnostic artifact: it localizes the first drift point and does not claim Qwen
 answer quality or throughput.
 
+## SmolLM2 First-Token Comparator
+
+`SLM-CPU-022` applies the same offline `reference-compare` validator to the
+pinned SmolLM2 360M Instruct Q8_0 artifact after the SLM-CPU-021
+wrong-first-token diagnosis. The comparator must be same-prompt evidence, not
+a reuse of earlier reference-good output text:
+
+```json
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "backend_reference_compare",
+  "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+  "model_family": "smollm2",
+  "prompt_text": "What is 2+2? Answer with only the number.",
+  "prompt_template": "smollm2_chatml_with_explicit_system",
+  "bos": true,
+  "reference": {
+    "backend": "llama-cli-known-good",
+    "kernel": "external-reference",
+    "prompt_ids": [1, 2, 3],
+    "generated_ids": [34],
+    "text": "4",
+    "topk_step0": [[34, 12.0], [504, 4.0]],
+    "chosen_id": 34
+  },
+  "bitnet_rs": {
+    "backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "kernel": "dense-q8_0-reference",
+    "loader_mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "fallback_used": false,
+    "prompt_ids": [1, 2, 3],
+    "generated_ids": [504],
+    "text": "The",
+    "topk_step0": [[504, 10.0], [34, 8.0]],
+    "chosen_id": 504
+  }
+}
+```
+
+The committed SLM-CPU-022 contract is:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json
+```
+
+The later real comparator capture should be validated with:
+
+```powershell
+cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
+  reference-compare `
+  --artifact ci\slm-cpu\windows-9950x3d-rtx5070ti\2026-05-16\smollm2-360m-reference-comparator.json `
+  --json-out target\slm-cpu\smollm2-360m-reference-comparator-validation.json
+```
+
+Use `--require-match` only when the lane expects the comparator to pass. A
+divergent but schema-valid artifact is still useful diagnostic evidence because
+it records whether the first comparable mismatch is prompt policy, logits,
+sampler, decode, or text decoding.
+
+This comparator remains CPU correctness triage. It does not prove SmolLM2 CPU
+answer readiness, broad answer quality, CUDA planning, CUDA execution, speedup,
+server readiness, broad dense GGUF support, or BitNet QK256 behavior.
+
 ## Qwen3 Thinking Mode Boundary
 
 The default Qwen ChatML prompt ends at `<|im_start|>assistant\n`, which can

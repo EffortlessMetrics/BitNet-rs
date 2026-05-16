@@ -1,0 +1,32 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-022"
+event = "in_progress"
+timestamp = "2026-05-16T14:18:01Z"
+actor = "codex"
+branch = "model/slm-cpu-022-smollm2-reference-comparator"
+
+summary = "Started SLM-CPU-022 to define the SmolLM2 reference-compatible first-token/top-k comparator contract after the wrong-first-token diagnosis."
+
+artifacts = [
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
+  "docs/slm/SLM_CPU_SMOLLM2_360M_SANITY.md",
+]
+
+notes = [
+  "SLM-CPU-021 diagnosed the SmolLM2 blocker as unresolved between prompt policy and shared dense CPU math because committed reference evidence is not same-prompt/top-k comparable.",
+  "This item defines the required comparator shape and protects it with CLI fixture coverage; it does not claim a fresh external reference run.",
+  "SmolLM2 CPU answer readiness, CUDA planning, CUDA execution, speedup, server readiness, broad dense GGUF support, and BitNet QK256 proof remain false.",
+]
+
+validation = [
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_validates_smollm2_first_token_topk_artifact",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_require_match_fails_smollm2_topk_divergence",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
