@@ -1,0 +1,15 @@
+timestamp = "2026-05-16T04:26:35Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-SMOLLM2-002"
+event = "pr_open"
+pr = 5048
+branch = "docs/cuda-smollm2-blocker-sync"
+head_sha = "187be2999159749188b643d6c6fa7eed1c558bfc"
+actor = "codex"
+
+notes = [
+  "Opened PR #5048 to sync SmolLM2 360M CUDA/model coverage and productization docs to the committed SLM-CPU-017 strict CPU preflight blocker.",
+  "The PR keeps the SmolLM2 coverage row structurally_valid while recording status=cpu_sanity_blocked.",
+  "The blocker receipt reached strict CPU model-load preflight on the 9950X3D and failed closed at the LayerNorm gamma guard before tokenizer, prompt rendering, or generation.",
+  "CPU answer readiness, strict CUDA execution, product CLI readiness, speedup, server readiness, full CUDA residency, broad dense GGUF support, proof inheritance, and BitNet packed I2_S/QK256 proof remain false.",
+]
