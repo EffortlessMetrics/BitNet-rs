@@ -6,7 +6,8 @@ closeout: dense benchmark, BitNet eval, and BitNet benchmark groups have
 matching-history comparisons, while dense SLM eval v2 and BitNet variable warm
 were intentionally kept as `insufficient_history` until another matching
 refresh landed. `M4-EXCELLENCE-001` records the second dense SLM eval-v2
-refresh; BitNet variable warm still needs its second matching refresh.
+refresh. `M4-EXCELLENCE-002` records the second BitNet variable warm refresh
+under the dashboard-indexed `bitnet-productization` path.
 
 The goal is not to prove that the M4 can run local inference. That is already
 done for the supported dense SLM path and narrowly done for the accepted BitNet
@@ -27,7 +28,14 @@ M4-EXCELLENCE-002  second BitNet variable-warm refresh
 
 The dense refresh writes
 `ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/<model-id>/summary.json`
-for every supported dense M4 model identity. `M4-EXCELLENCE-003` refreshes the
+for every supported dense M4 model identity. The BitNet variable warm refresh
+writes
+`ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json`
+for the accepted Microsoft I2_S GGUF and explicit external tokenizer identity.
+
+A local model-free `mac report-refresh`/`mac regression-dashboard` check now
+shows `bitnet_variable_warm` with `report_count=2` and
+`comparison_status=ready`. `M4-EXCELLENCE-003` refreshes the committed
 dashboard after the matching receipts land so operators can see comparable
 trend status instead of relying on one-off receipts.
 

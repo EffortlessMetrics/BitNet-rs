@@ -18,8 +18,8 @@ The durable envelope is based on these committed evidence surfaces:
 | Dense SLM benchmark v2 refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/<model-id>/summary.json` | Supported Qwen dense models, nine benchmark profiles, including `resident_100` | comparable matching history exists |
 | BitNet eval refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json` | Accepted Microsoft I2_S GGUF plus external tokenizer, 100 deterministic cases | comparable matching history exists |
 | BitNet benchmark refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json` | Accepted BitNet one-shot benchmark profile | comparable matching history exists |
-| BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-warm/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | receipt-valid, still insufficient history |
-| Report dashboard | `target/apple-m4-durable-inference-evidence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | five comparable groups, four insufficient-history groups |
+| BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
+| Report dashboard | `target/apple-m4-durable-inference-evidence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | durable dashboard before `M4-EXCELLENCE-003`; local `M4-EXCELLENCE-002` check sees BitNet variable warm ready |
 
 All durable refresh receipts used by this envelope keep the supported local M4
 route bounded to:
@@ -82,8 +82,21 @@ target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark \
   --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
   --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json
 
+target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --prompt 'Answer with a single digit: 2+2=' \
+  --prompt 'Name the capital of France. Answer with one word.' \
+  --prompt 'Return exactly: ready' \
+  --prompt 'Answer with a single digit: 3+1=' \
+  --prompt 'Answer with a single digit: 2+2=' \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json
+
 target/release/bitnet mac receipts-check <new-receipt.json> --json
-target/release/bitnet mac regression <new-receipt.json> --baseline <matching-baseline.json>
+target/release/bitnet mac regression <new-eval-or-benchmark.json> --baseline <matching-baseline.json>
+target/release/bitnet mac report-refresh --json
+target/release/bitnet mac regression-dashboard --json
 ```
 
 ## Regression Thresholds
@@ -192,7 +205,7 @@ Current matching-history status:
 |---|---|---|
 | BitNet eval | 100 cases, 75 passed, 25 failed, 0 timeout, 0 not_run | comparable |
 | BitNet benchmark | 4 prompts, 8 generated tokens, TTFT p50 7910.0 ms, decode p50 2.065 tok/s, peak memory p50 4246.359 MiB | comparable with advisory prompt-tokenize warnings |
-| BitNet variable warm | 5 prompts, 10 generated tokens, repeated prompt stable, total session 43955.621 ms | receipt-valid, insufficient history |
+| BitNet variable warm | 5 prompts, 10 generated tokens, repeated prompt stable, total session 43809.341 ms | comparable |
 
 BitNet chat and BitNet serve remain disabled. Variable warm receipts are
 required evidence for future chat work, but they are not chat enablement by

@@ -1,0 +1,17 @@
+timestamp = "2026-05-16T06:32:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5066
+head_sha = "5b4641d45b3524f9e45d76e1a2bb241eb2472f1a"
+
+notes = [
+  "Opened PR #5066 for the second BitNet variable warm-session refresh.",
+  "The PR records `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` and five per-prompt receipts.",
+  "The receipt uses the accepted Microsoft I2_S GGUF SHA256 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162 and explicit external tokenizer SHA256 e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7.",
+  "Local report-refresh/regression-dashboard validation sees `bitnet_variable_warm` with report_count=2 and comparison_status=ready.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, and broad performance claims remain disabled.",
+]
