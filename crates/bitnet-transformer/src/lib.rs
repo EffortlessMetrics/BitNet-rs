@@ -25,6 +25,13 @@ use layer_builders::{
     linear_with_optional_bias, norm_with_optional_bias, optional_layer_norm_with_optional_bias,
 };
 use qk256::{TIED_EMBED_QK256_KEY, qk256_inline_scale};
+fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
+}
+
+fn attention_score_key_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F32)?)
+}
 
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
@@ -1761,6 +1768,64 @@ mod tests {
         assert!(!has_nan, "Output should not contain NaN");
         assert!(!has_inf, "Output should not contain Inf");
 
+        Ok(())
+    }
+
+    #[test]
+    fn attention_f16_dot_input_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_f16_dot_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_key_input_preserves_f32_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_score_key_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0003, -2.0007, 3.1259, -4.2509]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_qk_inputs_match_reference_precision_contract() -> Result<()> {
+        let device = Device::Cpu;
+        let query =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+        let key = Tensor::from_slice(&[5.0003f32, 6.0007, -7.1259, 8.2509], (1, 1, 1, 4), &device)?;
+
+        let q_values = attention_f16_dot_input(&query)?.flatten_all()?.to_vec1::<f32>()?;
+        let k_values = attention_score_key_input(&key)?.flatten_all()?.to_vec1::<f32>()?;
+        let score = q_values.iter().zip(k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
+
+        assert_eq!(q_values, vec![1.0, -2.0, 3.125, -4.25]);
+        assert_eq!(k_values, vec![5.0003, 6.0007, -7.1259, 8.2509]);
+        assert_eq!(score, -64.33586);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_value_mix_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let weights = Tensor::from_slice(&[0.25f32, 0.25, 0.25, 0.25], (1, 1, 1, 4), &device)?;
+        let values =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 4, 1), &device)?;
+
+        let rounded_values = attention_f16_dot_input(&values)?;
+        let mixed = weights.matmul(&rounded_values)?;
+        let mixed = mixed.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(mixed, vec![-0.53125]);
         Ok(())
     }
 

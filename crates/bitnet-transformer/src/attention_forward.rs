@@ -7,9 +7,10 @@
 #[cfg(feature = "trace")]
 use super::BitNetError;
 use super::{
-    LayerKVCache, MultiHeadAttention, dbg_finite, dbg_stats, debug_attn_enabled,
-    debug_attn_scale_enabled, debug_gqa_enabled, debug_rope_enabled, qwen_trace_event,
-    qwen_trace_layer_enabled, qwen_trace_tensor, trace_rms_enabled,
+    LayerKVCache, MultiHeadAttention, attention_f16_dot_input, attention_score_key_input,
+    dbg_finite, dbg_stats, debug_attn_enabled, debug_attn_scale_enabled, debug_gqa_enabled,
+    debug_rope_enabled, qwen_trace_event, qwen_trace_layer_enabled, qwen_trace_tensor,
+    trace_rms_enabled,
 };
 use bitnet_common::Result;
 use candle_core::{DType, Module, Tensor};
@@ -315,7 +316,9 @@ impl MultiHeadAttention {
             });
         }
 
-        let scores = q.matmul(&k_expanded.transpose(2, 3)?)?;
+        let q_for_scores = attention_f16_dot_input(q)?;
+        let k_for_scores = attention_score_key_input(k_expanded)?;
+        let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
 
         // Convert to fp32 for numerically stable computation
         let scores_f32 = scores.to_dtype(DType::F32)?;
@@ -424,7 +427,8 @@ impl MultiHeadAttention {
         attn_weights: &Tensor,
         v_expanded: &Tensor,
     ) -> Result<Tensor> {
-        let attn_output = attn_weights.matmul(v_expanded)?;
+        let v_for_value_mix = attention_f16_dot_input(v_expanded)?;
+        let attn_output = attn_weights.matmul(&v_for_value_mix)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("attention.output_heads", Some(self.layer_idx), &attn_output)?;
         }
