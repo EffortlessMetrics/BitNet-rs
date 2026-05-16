@@ -2042,9 +2042,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-021"
-status = "pr_open"
+status = "merged"
 pr = 5133
 head_sha = "6e280e129ac810442ba51543e9d781b398b4ba4c"
+merge_sha = "ceec8dd64366c85a26b7dbb0a5351769c92ac0cd"
 branch = "model/slm-cpu-021-smollm2-wrong-token-diagnosis"
 stackable = false
 review_mode = "codex_premerge"
