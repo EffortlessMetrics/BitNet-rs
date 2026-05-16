@@ -2242,6 +2242,7 @@ fn compare_reference_to_rust(
         "attention_score_reference_numeric_variants": attention_score_reference_numeric_variants(reference_records),
         "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
+        "attention_probability_reference_softmax_variants": attention_probability_reference_softmax_variants(reference_records),
         "attention_probability_head_lane_best_matches": attention_probability_head_lane_best_matches(reference_records, rust_records),
         "attention_key_cache_kv_head_best_matches": attention_key_cache_kv_head_best_matches(reference_records, rust_records),
         "attention_key_cache_f16_roundtrip_best_matches": attention_key_cache_f16_roundtrip_best_matches(reference_records, rust_records),
@@ -3856,6 +3857,301 @@ fn attention_score_reference_numeric_variants(reference_records: &[ReferenceTrac
         "max_best_rms_delta": max_best_rms_delta,
         "best_variant_counts": best_variant_counts,
         "all_heads_explained": !score_heads.is_empty()
+            && missing_input_count == 0
+            && unexplained_head_count == 0,
+        "rows": rows,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ReferenceProbabilitySoftmaxVariantSpec {
+    id: &'static str,
+    scale_policy: ReferenceScoreScalePolicy,
+    length_policy: ReferenceScoreLengthPolicy,
+    score_f16_roundtrip: bool,
+    output_f16_roundtrip: bool,
+}
+
+fn reference_probability_softmax_variant_specs() -> [ReferenceProbabilitySoftmaxVariantSpec; 8] {
+    [
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_unscaled_live",
+            scale_policy: ReferenceScoreScalePolicy::Unscaled,
+            length_policy: ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_scaled_1_sqrt_head_dim_live",
+            scale_policy: ReferenceScoreScalePolicy::HeadDimSqrtRecip,
+            length_policy: ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_unscaled_padded_tail_zeroed",
+            scale_policy: ReferenceScoreScalePolicy::Unscaled,
+            length_policy: ReferenceScoreLengthPolicy::PaddedTailZeroed,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_scaled_1_sqrt_head_dim_padded_tail_zeroed",
+            scale_policy: ReferenceScoreScalePolicy::HeadDimSqrtRecip,
+            length_policy: ReferenceScoreLengthPolicy::PaddedTailZeroed,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_scaled_llm_build_kq_scale_padded_tail_zeroed",
+            scale_policy: ReferenceScoreScalePolicy::LlmBuildKqScale,
+            length_policy: ReferenceScoreLengthPolicy::PaddedTailZeroed,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_scaled_1_sqrt_head_dim_mask_applied",
+            scale_policy: ReferenceScoreScalePolicy::HeadDimSqrtRecip,
+            length_policy: ReferenceScoreLengthPolicy::MaskApplied,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_scaled_1_sqrt_head_dim_score_f16",
+            scale_policy: ReferenceScoreScalePolicy::HeadDimSqrtRecip,
+            length_policy: ReferenceScoreLengthPolicy::PaddedTailZeroed,
+            score_f16_roundtrip: true,
+            output_f16_roundtrip: false,
+        },
+        ReferenceProbabilitySoftmaxVariantSpec {
+            id: "reference_probability_softmax_scaled_1_sqrt_head_dim_output_f16",
+            scale_policy: ReferenceScoreScalePolicy::HeadDimSqrtRecip,
+            length_policy: ReferenceScoreLengthPolicy::PaddedTailZeroed,
+            score_f16_roundtrip: false,
+            output_f16_roundtrip: true,
+        },
+    ]
+}
+
+fn reference_probability_live_token_count(probability: &ReferenceTraceRecord) -> Option<usize> {
+    let mut live = probability.first_values.len();
+    while live > 0 && probability.first_values[live - 1].abs() <= 1.0e-12 {
+        live -= 1;
+    }
+    if live == 0 { None } else { Some(live) }
+}
+
+fn reference_probability_softmax_values(
+    score: &ReferenceTraceRecord,
+    live_token_count: usize,
+    target_token_count: usize,
+    scale: f64,
+    variant: ReferenceProbabilitySoftmaxVariantSpec,
+) -> Option<Vec<f32>> {
+    if live_token_count == 0 || target_token_count == 0 {
+        return None;
+    }
+    let live_len = live_token_count.min(score.first_values.len()).min(target_token_count);
+    if live_len == 0 {
+        return None;
+    }
+
+    let mut scaled_scores = Vec::with_capacity(live_len);
+    for token in 0..live_len {
+        let score = numeric_variant_value(score.first_values[token], variant.score_f16_roundtrip);
+        scaled_scores.push(score as f64 * scale);
+    }
+    let row_max = scaled_scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let mut exp_values = Vec::with_capacity(live_len);
+    let mut exp_sum = 0.0f64;
+    for score in scaled_scores {
+        let value = (score - row_max).exp();
+        exp_sum += value;
+        exp_values.push(value);
+    }
+    if exp_sum == 0.0 || !exp_sum.is_finite() {
+        return None;
+    }
+
+    let mut probabilities = exp_values
+        .into_iter()
+        .map(|value| {
+            let probability = (value / exp_sum) as f32;
+            if variant.output_f16_roundtrip { f16_roundtrip(probability) } else { probability }
+        })
+        .collect::<Vec<_>>();
+
+    match variant.length_policy {
+        ReferenceScoreLengthPolicy::LiveKeyCountOnly => {}
+        ReferenceScoreLengthPolicy::PaddedTailZeroed | ReferenceScoreLengthPolicy::MaskApplied => {
+            probabilities.resize(target_token_count, 0.0);
+        }
+    }
+    Some(probabilities)
+}
+
+fn attention_probability_reference_softmax_variants(
+    reference_records: &[ReferenceTraceRecord],
+) -> Value {
+    let query = reference_rope_query_record(reference_records);
+    let score_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let probability_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let variants = reference_probability_softmax_variant_specs();
+    let (head_dim, head_count) = query.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut unexplained_head_count = 0usize;
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+    let mut best_variant_counts = BTreeMap::<String, usize>::new();
+
+    for (&head, probability) in &probability_heads {
+        let score = score_heads.get(&head).copied();
+        if let Some(score) = score {
+            let live_token_count = reference_probability_live_token_count(probability)
+                .unwrap_or(probability.first_values.len())
+                .min(score.first_values.len());
+            let target_token_count = probability.first_values.len();
+            let padded_token_count = target_token_count.saturating_sub(live_token_count);
+            let mut variant_rows = Vec::new();
+            let mut best_variant_id = "";
+            let mut best_delta = Value::Null;
+            let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+            let mut best_scale = 1.0f64;
+            let mut best_scale_policy = "";
+            let mut best_mask_policy = "";
+            let mut best_length_policy = "";
+            let mut best_score_f16_roundtrip = false;
+            let mut best_output_f16_roundtrip = false;
+
+            for variant in variants {
+                let scale = variant.scale_policy.scale(head_dim);
+                if let Some(values) = reference_probability_softmax_values(
+                    score,
+                    live_token_count,
+                    target_token_count,
+                    scale,
+                    variant,
+                ) {
+                    let delta = compare_vectors(&values, &probability.first_values);
+                    let rms = delta_metric(&delta, "/rms_abs_delta");
+                    let max_abs = delta_metric(&delta, "/max_abs_delta");
+                    let count_mismatch =
+                        !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false);
+                    let rank = (rms, max_abs, count_mismatch);
+                    if rank < best_rank {
+                        best_rank = rank;
+                        best_variant_id = variant.id;
+                        best_delta = delta.clone();
+                        best_scale = scale;
+                        best_scale_policy = variant.scale_policy.label();
+                        best_mask_policy = variant.length_policy.mask_policy();
+                        best_length_policy = variant.length_policy.label();
+                        best_score_f16_roundtrip = variant.score_f16_roundtrip;
+                        best_output_f16_roundtrip = variant.output_f16_roundtrip;
+                    }
+                    variant_rows.push(json!({
+                        "variant": variant.id,
+                        "head": head,
+                        "token_count": target_token_count,
+                        "live_token_count": live_token_count,
+                        "padded_token_count": padded_token_count,
+                        "scale": scale,
+                        "scale_policy": variant.scale_policy.label(),
+                        "scale_source": variant.scale_policy.source(),
+                        "mask_policy": variant.length_policy.mask_policy(),
+                        "length_policy": variant.length_policy.label(),
+                        "score_f16_roundtrip": variant.score_f16_roundtrip,
+                        "output_f16_roundtrip": variant.output_f16_roundtrip,
+                        "max_abs_delta": max_abs,
+                        "rms_delta": rms,
+                        "delta": delta,
+                    }));
+                }
+            }
+
+            if variant_rows.is_empty() {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "status": "missing_input",
+                    "score_stage_present": true,
+                    "probability_stage_present": true,
+                }));
+                continue;
+            }
+
+            let head_explained = reference_score_variant_explained(&best_delta);
+            if !head_explained {
+                unexplained_head_count += 1;
+            }
+            max_best_abs_delta =
+                max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+            max_best_rms_delta =
+                max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+            *best_variant_counts.entry(best_variant_id.to_string()).or_insert(0) += 1;
+            compared_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "compared",
+                "token_count": target_token_count,
+                "live_token_count": live_token_count,
+                "padded_token_count": padded_token_count,
+                "best_variant": best_variant_id,
+                "scale": best_scale,
+                "scale_policy": best_scale_policy,
+                "mask_policy": best_mask_policy,
+                "length_policy": best_length_policy,
+                "score_f16_roundtrip": best_score_f16_roundtrip,
+                "output_f16_roundtrip": best_output_f16_roundtrip,
+                "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+                "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+                "best_delta": best_delta,
+                "head_explained": head_explained,
+                "variants": variant_rows,
+            }));
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "missing_input",
+                "score_stage_present": false,
+                "probability_stage_present": true,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "reference probability softmax variants are diagnostic-only probes for reproducing reference kq_soft_max_ext_head rows from reference kq_head rows; they do not promote reference parity, A770 semantic quality, softmax residency, selected attention, resident KV, or any support claim",
+        "score_head_count": score_heads.len(),
+        "probability_head_count": probability_heads.len(),
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "variant_count": variants.len(),
+        "variants_tested": variants.iter().map(|variant| variant.id).collect::<Vec<_>>(),
+        "explanation_abs_threshold": 1.0e-4,
+        "explanation_rms_threshold": 1.0e-4,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "unexplained_head_count": unexplained_head_count,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
+        "best_variant_counts": best_variant_counts,
+        "all_heads_explained": !probability_heads.is_empty()
             && missing_input_count == 0
             && unexplained_head_count == 0,
         "rows": rows,
@@ -6511,6 +6807,65 @@ mod tests {
         assert_eq!(
             report.pointer("/rows/1/recomputed_first_values"),
             Some(&json!([3.0, 12.0, 0.0]))
+        );
+    }
+
+    #[test]
+    fn reference_probability_softmax_variants_pin_scaled_padded_policy() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![4, 1, 1, 1],
+                nelements: 4,
+                first_values: vec![0.0, 0.0, 0.0, 0.0],
+                ..test_reference_trace_record("Qcur", vec![0.0, 0.0, 0.0, 0.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![4, 1, 1, 1],
+                nelements: 4,
+                first_values: vec![0.0, 1.0, 0.0, 0.0],
+                ..test_reference_trace_record("kq_head0", vec![0.0, 1.0, 0.0, 0.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![4, 1, 1, 1],
+                nelements: 4,
+                first_values: vec![0.37754068, 0.62245935, 0.0, 0.0],
+                ..test_reference_trace_record(
+                    "kq_soft_max_ext_head0",
+                    vec![0.37754068, 0.62245935, 0.0, 0.0],
+                )
+            },
+        ];
+
+        let report = attention_probability_reference_softmax_variants(&reference_records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/missing_input_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/all_heads_explained"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/rows/0/best_variant"),
+            Some(&json!("reference_probability_softmax_scaled_1_sqrt_head_dim_padded_tail_zeroed"))
+        );
+        assert_eq!(report.pointer("/rows/0/live_token_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/rows/0/padded_token_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/rows/0/scale_policy"), Some(&json!("1_sqrt_head_dim")));
+        assert_eq!(report.pointer("/rows/0/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(
+            report.pointer("/variants_tested/0"),
+            Some(&json!("reference_probability_softmax_unscaled_live"))
+        );
+
+        let compare_report = compare_reference_to_rust(&reference_records, &BTreeMap::new(), &[]);
+        assert_eq!(
+            compare_report
+                .pointer("/attention_probability_reference_softmax_variants/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            compare_report
+                .pointer("/attention_probability_reference_softmax_variants/all_heads_explained"),
+            Some(&json!(true))
         );
     }
 
