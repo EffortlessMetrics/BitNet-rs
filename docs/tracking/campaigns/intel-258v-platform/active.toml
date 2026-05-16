@@ -3684,11 +3684,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-005"
-status = "pr_open"
+status = "merged"
 pr = 5124
 branch = "codex/lunar-lake/LNL258V-QUAL-005-qwen-gate-normalization"
-head_sha = "0a094899862df5b0a958a245bc0cc3486e040a4e"
-merge_sha = ""
+head_sha = "785c69467a26f8372dbf4e47b1f8a9436b26b22b"
+merge_sha = "2f54a87fe84ea428bac6e111c771bf2b8220e45a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
