@@ -62,7 +62,7 @@ bitnet receipts explain --latest
 | Row | Next proof |
 | --- | --- |
 | `bitnet_official_2b_i2s_qk256` | Profile-specific speedup qualification and deeper residency/transfer timing. |
-| `dense_qwen25_05b_q8_cuda` | Exact-profile server readiness promotion under `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md` before any `server_ready=true` row; the current bounded server smoke is not broad readiness. |
+| `dense_qwen25_05b_q8_cuda` | Refresh or supplement the bounded server-smoke receipt with artifact checksum identity, endpoint/profile scope, and generation policy before any exact-profile `server_ready=true` promotion under `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`. |
 | `dense_qwen3_06b_q8_candidate` | User-facing ask/chat product UX or repeated same-artifact comparator evidence before product CLI promotion. |
 | `dense_smollm2_360m_candidate` | Same-prompt SmolLM2 first-token/top-k or checkpoint comparator capture using the SLM-CPU-022 contract. |
 | Later dense SLM / small-LLM candidates | Artifact contract, tokenizer/prompt authority, CPU answer sanity, all-layer plan, boundary fixtures, strict CUDA proof, warm session, and benchmark review. |
