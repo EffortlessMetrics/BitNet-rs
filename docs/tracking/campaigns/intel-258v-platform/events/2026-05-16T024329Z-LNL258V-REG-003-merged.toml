@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T02:43:29Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5030
+merge_sha = "62a43a4da5fa0fcfe2667e484aa8a64e7610c3ab"
+branch = "codex/lunar-lake/LNL258V-REG-003-strict-v2"
+head_sha = "3bbc7b839b02c6217a72a3c248aab1e080250a73"
+summary = "Merged LNL258V-REG-003 after CI passed to make strict Lunar Lake regression fail closed on the v2 corpus/profile surface."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5030",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The merged regression bundle records a strict regression_surface summary for corpus v2 and route-profile coverage.",
+  "Strict regression now rejects missing or drifted v2 evidence, fallback, candidate GPU/NPU promotion drift, and benchmark-qualified advantage claims outside the promotion lane.",
+  "No model inference, broad quality claim, speedup claim, route promotion, Arc/NPU acceleration, full accelerator BitNet inference, or BitNet QK256/I2_S behavior change is claimed.",
+]
