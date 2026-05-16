@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T12:40:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5124
+branch = "codex/lunar-lake/LNL258V-QUAL-005-qwen-gate-normalization"
+head_sha = "0a094899862df5b0a958a245bc0cc3486e040a4e"
+summary = "Opened PR #5124 for LNL258V-QUAL-005 dense Qwen corpus-v2 assistant-prefix normalization and refreshed Lunar Lake quality/profile regression evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "PR #5124 keeps affected dense Qwen corpus-v2 profiles blocked after the refreshed run: 7 of 12 bounded cases pass and remaining blockers are classified as content, gate, or budget issues.",
+  "The PR does not promote OpenVINO GPU/NPU routes, claim speedup, or change BitNet QK256/I2_S behavior.",
+]

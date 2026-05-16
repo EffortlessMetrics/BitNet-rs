@@ -68,9 +68,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 10141,
-    "decode_first_ms": 10141,
-    "total_ms": 12452
+    "cmd_to_first_ms": 10147,
+    "decode_first_ms": 10147,
+    "total_ms": 12502
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -266,82 +266,82 @@
     "decode": {
       "embed_ms": {
         "count": 8,
-        "max_ms": 0.043,
-        "mean_ms": 0.029,
+        "max_ms": 0.048,
+        "mean_ms": 0.033,
         "min_ms": 0.02,
-        "p50_ms": 0.024,
-        "p95_ms": 0.043,
-        "total_ms": 0.228
+        "p50_ms": 0.03,
+        "p95_ms": 0.048,
+        "total_ms": 0.26
       },
-      "first_token_decode_ms": 337.941,
+      "first_token_decode_ms": 349.109,
       "forward_ms": {
         "count": 8,
-        "max_ms": 240.329,
-        "mean_ms": 235.095,
-        "min_ms": 231.488,
-        "p50_ms": 234.603,
-        "p95_ms": 240.329,
-        "total_ms": 1880.761
+        "max_ms": 250.96,
+        "mean_ms": 238.479,
+        "min_ms": 233.482,
+        "p50_ms": 236.392,
+        "p95_ms": 250.96,
+        "total_ms": 1907.828
       },
       "generated_tokens": 8,
       "logits_ms": {
         "count": 8,
-        "max_ms": 92.288,
-        "mean_ms": 86.019,
-        "min_ms": 81.703,
-        "p50_ms": 85.96,
-        "p95_ms": 92.288,
-        "total_ms": 688.152
+        "max_ms": 102.904,
+        "mean_ms": 88.994,
+        "min_ms": 83.067,
+        "p50_ms": 86.271,
+        "p95_ms": 102.904,
+        "total_ms": 711.949
       },
       "per_token_ms": {
         "count": 8,
-        "max_ms": 337.941,
-        "mean_ms": 330.88,
-        "min_ms": 327.329,
-        "p50_ms": 328.489,
-        "p95_ms": 337.941,
-        "total_ms": 2647.043
+        "max_ms": 349.109,
+        "mean_ms": 337.83,
+        "min_ms": 330.671,
+        "p50_ms": 334.061,
+        "p95_ms": 349.109,
+        "total_ms": 2702.64
       },
       "sample_ms": {
         "count": 8,
-        "max_ms": 3.23,
-        "mean_ms": 2.937,
-        "min_ms": 2.661,
-        "p50_ms": 2.889,
-        "p95_ms": 3.23,
-        "total_ms": 23.497
+        "max_ms": 3.796,
+        "mean_ms": 3.183,
+        "min_ms": 2.583,
+        "p50_ms": 3.134,
+        "p95_ms": 3.796,
+        "total_ms": 25.461
       },
       "steady_per_token_ms": {
         "count": 7,
-        "max_ms": 336.943,
-        "mean_ms": 329.872,
-        "min_ms": 327.329,
-        "p50_ms": 328.489,
-        "p95_ms": 336.943,
-        "total_ms": 2309.102
+        "max_ms": 348.683,
+        "mean_ms": 336.219,
+        "min_ms": 330.671,
+        "p50_ms": 334.061,
+        "p95_ms": 348.683,
+        "total_ms": 2353.531
       },
-      "steady_state_tok_s": 3.031,
+      "steady_state_tok_s": 2.974,
       "steady_state_tokens": 7,
       "token_decode_ms": {
         "count": 8,
-        "max_ms": 0.079,
-        "mean_ms": 0.04,
-        "min_ms": 0.023,
+        "max_ms": 0.099,
+        "mean_ms": 0.047,
+        "min_ms": 0.025,
         "p50_ms": 0.032,
-        "p95_ms": 0.079,
-        "total_ms": 0.319
+        "p95_ms": 0.099,
+        "total_ms": 0.376
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13554.928,
+    "model_load_ms": 14315.509,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 9802.883,
+      "ms": 9795.833,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -353,9 +353,9 @@
       },
       "tokens": 42
     },
-    "prompt_tokenize_ms": 464.42,
+    "prompt_tokenize_ms": 476.634,
     "requested": false,
-    "tokenizer_load_ms": 587.308
+    "tokenizer_load_ms": 634.021
   },
   "prompt": "Answer yes or no: is the sky usually blue on a clear day?",
   "prompt_identity": {
@@ -428,7 +428,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 8,
-    "decode_tps": 0.6424670735624799,
+    "decode_tps": 0.639897616381379,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -448,22 +448,22 @@
   "text": ": Yes. The sky is usually blue",
   "throughput": {
     "decoded_tokens": 8,
-    "tokens_per_second": 0.6424670735624799
+    "tokens_per_second": 0.639897616381379
   },
-  "timestamp": "2026-05-16T03:31:04.285795100+00:00",
+  "timestamp": "2026-05-16T12:23:35.133457900+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.031,
-    "decode_total_ms": 2647.043,
+    "decode_steady_state_tok_s": 2.974,
+    "decode_total_ms": 2702.64,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 337.941,
-    "first_token_ms": 10141,
+    "first_token_decode_ms": 349.109,
+    "first_token_ms": 10147,
     "host_to_device_bytes": null,
-    "model_load_ms": 13554.928,
-    "prefill_ms": 9802.883,
-    "sampling_ms_per_token": 2.937,
-    "tokenize_ms": 464.42,
-    "tokenizer_load_ms": 587.308
+    "model_load_ms": 14315.509,
+    "prefill_ms": 9795.833,
+    "sampling_ms_per_token": 3.183,
+    "tokenize_ms": 476.634,
+    "tokenizer_load_ms": 634.021
   },
   "tokenizer": {
     "bos": 151643,

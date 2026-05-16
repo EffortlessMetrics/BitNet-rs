@@ -2653,6 +2653,7 @@ fn classify_corpus_v2_failure(
     let trimmed = answer.trim_start();
     if trimmed.starts_with(':')
         && matches!(gate_kind, Some("starts_with_any"))
+        && failed_rules.iter().any(|rule| rule == "gate_starts_with_any")
         && failed_rules.iter().any(|rule| rule.contains("normalized_match"))
     {
         return "assistant_prefix_gate_mismatch".to_string();
@@ -4373,14 +4374,14 @@ mod tests {
                             "passed": false,
                             "gate_kind": "starts_with_any",
                             "generated_tokens": 8,
-                            "failed_rules": ["gate_starts_with_any", "scoring_normalized_match"],
+                            "failed_rules": ["scoring_normalized_match"],
                             "failure_taxonomy": ["answer_content"],
                             "scoring": {
                                 "kind": "normalized_match",
                                 "passed": false,
                                 "details": {
                                     "expected_normalized": "yes",
-                                    "observed_normalized": ": yes. the sky is usually blue"
+                                    "observed_normalized": "yes. the sky is usually blue"
                                 }
                             }
                         }
@@ -4432,8 +4433,9 @@ mod tests {
         assert!(
             receipt.quality_summary.failure_classes.contains_key("generation_budget_or_truncation")
         );
+        assert!(receipt.quality_summary.failure_classes.contains_key("answer_content_failed"));
         assert!(
-            receipt.quality_summary.failure_classes.contains_key("assistant_prefix_gate_mismatch")
+            !receipt.quality_summary.failure_classes.contains_key("assistant_prefix_gate_mismatch")
         );
         assert!(receipt.profile_diagnoses.iter().any(|profile| profile.profile_id == "ask_short"
             && profile.route_profile_status.as_deref() == Some("promoted_route_blocked")));

@@ -68,9 +68,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 10782,
-    "decode_first_ms": 10782,
-    "total_ms": 13108
+    "cmd_to_first_ms": 10807,
+    "decode_first_ms": 10807,
+    "total_ms": 13115
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -266,82 +266,82 @@
     "decode": {
       "embed_ms": {
         "count": 8,
-        "max_ms": 0.044,
-        "mean_ms": 0.027,
-        "min_ms": 0.02,
-        "p50_ms": 0.024,
-        "p95_ms": 0.044,
-        "total_ms": 0.217
+        "max_ms": 0.133,
+        "mean_ms": 0.042,
+        "min_ms": 0.018,
+        "p50_ms": 0.023,
+        "p95_ms": 0.133,
+        "total_ms": 0.336
       },
-      "first_token_decode_ms": 354.301,
+      "first_token_decode_ms": 342.578,
       "forward_ms": {
         "count": 8,
-        "max_ms": 252.032,
-        "mean_ms": 238.435,
-        "min_ms": 230.36,
-        "p50_ms": 234.42,
-        "p95_ms": 252.032,
-        "total_ms": 1907.484
+        "max_ms": 245.985,
+        "mean_ms": 235.27,
+        "min_ms": 224.871,
+        "p50_ms": 236.36,
+        "p95_ms": 245.985,
+        "total_ms": 1882.158
       },
       "generated_tokens": 8,
       "logits_ms": {
         "count": 8,
-        "max_ms": 90.04,
-        "mean_ms": 86.12,
-        "min_ms": 84.001,
-        "p50_ms": 85.766,
-        "p95_ms": 90.04,
-        "total_ms": 688.957
+        "max_ms": 87.07,
+        "mean_ms": 85.294,
+        "min_ms": 84.121,
+        "p50_ms": 84.623,
+        "p95_ms": 87.07,
+        "total_ms": 682.355
       },
       "per_token_ms": {
         "count": 8,
-        "max_ms": 354.301,
-        "mean_ms": 334.567,
-        "min_ms": 323.974,
-        "p50_ms": 330.495,
-        "p95_ms": 354.301,
-        "total_ms": 2676.539
+        "max_ms": 342.578,
+        "mean_ms": 331.0,
+        "min_ms": 321.765,
+        "p50_ms": 331.965,
+        "p95_ms": 342.578,
+        "total_ms": 2647.997
       },
       "sample_ms": {
         "count": 8,
-        "max_ms": 3.279,
-        "mean_ms": 2.892,
-        "min_ms": 2.747,
-        "p50_ms": 2.829,
-        "p95_ms": 3.279,
-        "total_ms": 23.137
+        "max_ms": 3.499,
+        "mean_ms": 2.963,
+        "min_ms": 2.722,
+        "p50_ms": 2.828,
+        "p95_ms": 3.499,
+        "total_ms": 23.702
       },
       "steady_per_token_ms": {
         "count": 7,
-        "max_ms": 338.75,
-        "mean_ms": 331.748,
-        "min_ms": 323.974,
-        "p50_ms": 330.495,
-        "p95_ms": 338.75,
-        "total_ms": 2322.238
+        "max_ms": 334.923,
+        "mean_ms": 329.346,
+        "min_ms": 321.765,
+        "p50_ms": 331.965,
+        "p95_ms": 334.923,
+        "total_ms": 2305.42
       },
-      "steady_state_tok_s": 3.014,
+      "steady_state_tok_s": 3.036,
       "steady_state_tokens": 7,
       "token_decode_ms": {
         "count": 8,
-        "max_ms": 0.159,
-        "mean_ms": 0.055,
-        "min_ms": 0.023,
-        "p50_ms": 0.032,
-        "p95_ms": 0.159,
-        "total_ms": 0.441
+        "max_ms": 0.138,
+        "mean_ms": 0.048,
+        "min_ms": 0.022,
+        "p50_ms": 0.027,
+        "p95_ms": 0.138,
+        "total_ms": 0.383
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13727.356,
+    "model_load_ms": 13260.336,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 10429.547,
+      "ms": 10462.662,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -353,9 +353,9 @@
       },
       "tokens": 45
     },
-    "prompt_tokenize_ms": 456.772,
+    "prompt_tokenize_ms": 443.375,
     "requested": false,
-    "tokenizer_load_ms": 585.121
+    "tokenizer_load_ms": 625.74
   },
   "prompt": "A full mug is heavier than an empty mug. Which one is heavier? Answer briefly.",
   "prompt_identity": {
@@ -428,7 +428,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 8,
-    "decode_tps": 0.6103143118706134,
+    "decode_tps": 0.6099885627144491,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -448,22 +448,22 @@
   "text": "\nAn empty mug is heavier.<|im_end|>",
   "throughput": {
     "decoded_tokens": 8,
-    "tokens_per_second": 0.6103143118706134
+    "tokens_per_second": 0.6099885627144491
   },
-  "timestamp": "2026-05-16T03:34:47.710668200+00:00",
+  "timestamp": "2026-05-16T12:27:24.995670400+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.014,
-    "decode_total_ms": 2676.539,
+    "decode_steady_state_tok_s": 3.036,
+    "decode_total_ms": 2647.997,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 354.301,
-    "first_token_ms": 10782,
+    "first_token_decode_ms": 342.578,
+    "first_token_ms": 10807,
     "host_to_device_bytes": null,
-    "model_load_ms": 13727.356,
-    "prefill_ms": 10429.547,
-    "sampling_ms_per_token": 2.892,
-    "tokenize_ms": 456.772,
-    "tokenizer_load_ms": 585.121
+    "model_load_ms": 13260.336,
+    "prefill_ms": 10462.662,
+    "sampling_ms_per_token": 2.963,
+    "tokenize_ms": 443.375,
+    "tokenizer_load_ms": 625.74
   },
   "tokenizer": {
     "bos": 151643,
