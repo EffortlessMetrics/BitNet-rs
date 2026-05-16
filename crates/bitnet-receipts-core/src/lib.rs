@@ -27,6 +27,12 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
+mod cuda_receipt_validation;
+mod receipt_field_validation;
+
+use cuda_receipt_validation::*;
+use receipt_field_validation::*;
+
 /// Schema version for receipt format
 pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
 
@@ -8161,103 +8167,6 @@ pub fn validate_cuda_parity_receipt_file(path: &Path) -> Result<()> {
     validate_cuda_parity_receipt_json(&receipt)
 }
 
-fn load_json_receipt(path: &Path) -> Result<Value> {
-    let content = std::fs::read_to_string(path)?;
-    Ok(serde_json::from_str(&content)?)
-}
-
-fn validate_cuda_receipt_common<'a>(
-    receipt: &'a Value,
-    artifact_kind: &str,
-    claim: &str,
-) -> Result<&'a Value> {
-    require_u64_eq(receipt, "schema", 1)?;
-    require_string_eq(receipt, "artifact_kind", artifact_kind)?;
-    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
-    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
-    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
-    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
-    require_string_eq(receipt, "runtime_api", "cuda")?;
-    require_string_eq(receipt, "claim", claim)?;
-    require_bool_eq(receipt, "fallback_used", false)?;
-    require_null(receipt, "fallback_backend")?;
-    require_null(receipt, "fallback_reason")?;
-    require_null(receipt, "error")?;
-
-    let cuda = object_field(receipt, "cuda")?;
-    require_bool_eq(cuda, "available", true)?;
-    require_positive_u64(cuda, "device_count")?;
-    require_cuda_device_index(cuda)?;
-    require_rtx_5070_ti_name(cuda, "device_name")?;
-    require_string_eq(cuda, "compute_capability", "12.0")?;
-    require_string_non_empty_not_tbd(cuda, "driver_version")?;
-    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
-    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
-    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
-    require_positive_u64(cuda, "vram_bytes")?;
-
-    let stats = first_kernel_stats(receipt)?;
-    require_string_non_empty(stats, "kernel_id")?;
-    require_positive_u64(stats, "invocations")?;
-    require_u64_eq(stats, "fallback_invocations", 0)?;
-    require_positive_u64(stats, "host_to_device_bytes")?;
-    require_positive_u64(stats, "device_to_host_bytes")?;
-    require_positive_u64(stats, "kernel_launches")?;
-    require_optional_non_negative_number(stats, "kernel_time_ms")?;
-
-    Ok(stats)
-}
-
-fn first_kernel_stats(receipt: &Value) -> Result<&Value> {
-    let stats = object_field(receipt, "kernel_stats")?;
-    let stats = stats.as_array().ok_or_else(|| anyhow!("kernel_stats must be an array"))?;
-    stats.first().ok_or_else(|| anyhow!("kernel_stats must contain at least one entry"))
-}
-
-fn object_field<'a>(object: &'a Value, field: &str) -> Result<&'a Value> {
-    object.get(field).ok_or_else(|| anyhow!("missing required field `{field}`"))
-}
-
-fn array_field<'a>(object: &'a Value, field: &str) -> Result<&'a Vec<Value>> {
-    object_field(object, field)?
-        .as_array()
-        .ok_or_else(|| anyhow!("field `{field}` must be an array"))
-}
-
-fn required_string<'a>(object: &'a Value, field: &str) -> Result<&'a str> {
-    object_field(object, field)?.as_str().ok_or_else(|| anyhow!("field `{field}` must be a string"))
-}
-
-fn required_u64(object: &Value, field: &str) -> Result<u64> {
-    object_field(object, field)?
-        .as_u64()
-        .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))
-}
-
-fn require_string_eq(object: &Value, field: &str, expected: &str) -> Result<()> {
-    let actual = required_string(object, field)?;
-    if actual != expected {
-        return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
-    }
-    Ok(())
-}
-
-fn require_string_non_empty(object: &Value, field: &str) -> Result<()> {
-    let value = required_string(object, field)?;
-    if value.trim().is_empty() {
-        return Err(anyhow!("field `{field}` must not be empty"));
-    }
-    Ok(())
-}
-
-fn require_string_non_empty_not_tbd(object: &Value, field: &str) -> Result<()> {
-    let value = required_string(object, field)?;
-    if value.trim().is_empty() || value == "TBD" {
-        return Err(anyhow!("field `{field}` must record a concrete value"));
-    }
-    Ok(())
-}
-
 const DENSE_ALL_LAYER_OPERATION_SEQUENCE: [(&str, &str); 14] = [
     ("attention_norm", "rmsnorm"),
     ("attention_q", "matmul"),
@@ -8306,171 +8215,6 @@ fn dense_all_layer_operation_signature_entry(op: &Value) -> Result<Value> {
     Ok(Value::Object(entry))
 }
 
-fn require_sha256(object: &Value, field: &str) -> Result<()> {
-    let value = required_string(object, field)?;
-    if value.len() != 64 || !value.chars().all(|ch| ch.is_ascii_hexdigit()) {
-        return Err(anyhow!("field `{field}` must be a 64-character sha256 hex digest"));
-    }
-    Ok(())
-}
-
-fn require_extractable_dense_linear_role(role: &str) -> Result<()> {
-    const EXTRACTABLE_ROLES: &[&str] = &[
-        "output",
-        "attention_q",
-        "attention_k",
-        "attention_v",
-        "attention_output",
-        "mlp_gate",
-        "mlp_up",
-        "mlp_down",
-    ];
-    if !EXTRACTABLE_ROLES.contains(&role) {
-        return Err(anyhow!(
-            "linear_fixture.role must be an extractable dense linear role, got `{role}`"
-        ));
-    }
-    Ok(())
-}
-
-fn require_extractable_dense_norm_role(role: &str) -> Result<()> {
-    const EXTRACTABLE_ROLES: &[&str] = &["attention_norm", "ffn_norm"];
-    if !EXTRACTABLE_ROLES.contains(&role) {
-        return Err(anyhow!(
-            "norm_fixtures.role must be an extractable dense norm role, got `{role}`"
-        ));
-    }
-    Ok(())
-}
-
-fn require_rtx_5070_ti_name(object: &Value, field: &str) -> Result<()> {
-    let value = required_string(object, field)?;
-    let compact = value
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .collect::<String>()
-        .to_ascii_lowercase();
-    if !(compact.contains("nvidia") && compact.contains("rtx5070ti")) {
-        return Err(anyhow!("field `{field}` must identify NVIDIA GeForce RTX 5070 Ti"));
-    }
-    Ok(())
-}
-
-fn require_bool_eq(object: &Value, field: &str, expected: bool) -> Result<()> {
-    let actual = object_field(object, field)?
-        .as_bool()
-        .ok_or_else(|| anyhow!("field `{field}` must be a bool"))?;
-    if actual != expected {
-        return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
-    }
-    Ok(())
-}
-
-fn require_null(object: &Value, field: &str) -> Result<()> {
-    if !object_field(object, field)?.is_null() {
-        return Err(anyhow!("field `{field}` must be null"));
-    }
-    Ok(())
-}
-
-fn require_u64_eq(object: &Value, field: &str, expected: u64) -> Result<()> {
-    let actual = object_field(object, field)?
-        .as_u64()
-        .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))?;
-    if actual != expected {
-        return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
-    }
-    Ok(())
-}
-
-fn require_positive_u64(object: &Value, field: &str) -> Result<()> {
-    let actual = object_field(object, field)?
-        .as_u64()
-        .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))?;
-    if actual == 0 {
-        return Err(anyhow!("field `{field}` must be greater than zero"));
-    }
-    Ok(())
-}
-
-fn require_optional_positive_u64(object: &Value, field: &str) -> Result<()> {
-    let value = object_field(object, field)?;
-    if value.is_null() {
-        return Ok(());
-    }
-    let actual = value
-        .as_u64()
-        .ok_or_else(|| anyhow!("field `{field}` must be null or an unsigned integer"))?;
-    if actual == 0 {
-        return Err(anyhow!("field `{field}` must be greater than zero when measured"));
-    }
-    Ok(())
-}
-
-fn reject_bitnet_packed_marker(value: &str, field: &str) -> Result<()> {
-    let normalized = value
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .collect::<String>()
-        .to_ascii_lowercase();
-    const BITNET_PACKED_MARKERS: &[&str] = &["bitnet", "i2s", "iq2s", "qk256", "w158a8"];
-    if BITNET_PACKED_MARKERS.iter().any(|marker| normalized.contains(marker)) {
-        return Err(anyhow!(
-            "field `{field}` must not identify BitNet packed I2_S/QK256 proof, got `{value}`"
-        ));
-    }
-    Ok(())
-}
-
-fn require_cuda_device_index(cuda: &Value) -> Result<()> {
-    if object_field(cuda, "device_index")
-        .and_then(|value| {
-            value
-                .as_u64()
-                .ok_or_else(|| anyhow!("field `device_index` must be an unsigned integer"))
-        })
-        .is_ok()
-        || object_field(cuda, "selected_device_index")
-            .and_then(|value| {
-                value.as_u64().ok_or_else(|| {
-                    anyhow!("field `selected_device_index` must be an unsigned integer")
-                })
-            })
-            .is_ok()
-    {
-        return Ok(());
-    }
-
-    Err(anyhow!("cuda receipt must record `device_index` or `selected_device_index`"))
-}
-
-fn require_non_negative_number(object: &Value, field: &str) -> Result<()> {
-    let actual = object_field(object, field)?
-        .as_f64()
-        .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
-    if actual < 0.0 {
-        return Err(anyhow!("field `{field}` must be non-negative"));
-    }
-    Ok(())
-}
-
-fn require_positive_number(object: &Value, field: &str) -> Result<()> {
-    let actual = object_field(object, field)?
-        .as_f64()
-        .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
-    if actual <= 0.0 {
-        return Err(anyhow!("field `{field}` must be positive"));
-    }
-    Ok(())
-}
-
-fn require_number(object: &Value, field: &str) -> Result<()> {
-    object_field(object, field)?
-        .as_f64()
-        .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
-    Ok(())
-}
-
 fn validate_dense_boundary_tensor_fixture(fixture: &Value, expected_role: &str) -> Result<()> {
     require_string_non_empty(fixture, "name")?;
     reject_bitnet_packed_marker(
@@ -8499,19 +8243,6 @@ fn validate_dense_boundary_tensor_fixture(fixture: &Value, expected_role: &str) 
     require_non_negative_number(fixture, "max_abs")?;
     require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
     require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
-    Ok(())
-}
-
-fn require_optional_non_negative_number(object: &Value, field: &str) -> Result<()> {
-    let value = object_field(object, field)?;
-    if value.is_null() {
-        return Ok(());
-    }
-    let actual =
-        value.as_f64().ok_or_else(|| anyhow!("field `{field}` must be null or a number"))?;
-    if actual < 0.0 {
-        return Err(anyhow!("field `{field}` must be non-negative"));
-    }
     Ok(())
 }
 
