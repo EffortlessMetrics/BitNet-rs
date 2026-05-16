@@ -252,6 +252,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-MODEL-006 | merged | PR #4985 recorded Qwen3 0.6B warm-session strict CUDA proof after short-decode CUDA landed, keeping ask/chat product UX, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-007 | merged | PR #4996 recorded a Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict CUDA proof receipts, rejected speedup for every reviewed profile, and kept server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-008 | merged | PR #5007 synced Qwen3 0.6B model coverage and model-status output to the exact earned accelerator-ready candidate tier after CUDA-MODEL-007, without promoting product CLI, speed, server, full-residency, broad dense GGUF, or BitNet QK256 claims. |
+| CUDA-MODEL-SMOLLM2-001 | ready | Next executable dense SLM onboarding item: add the exact SmolLM2 360M artifact contract before any CPU answer, CUDA, product CLI, speed, server, full-residency, broad dense GGUF, or BitNet QK256 claim. |
 | CUDA-UX-008 | merged | PR #4724 added a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | merged | PR #4754 added the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |
