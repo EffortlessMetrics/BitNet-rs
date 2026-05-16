@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T11:31:46Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-002-dense-500"
+summary = "Started dense 500-case corpus expansion."
+
+notes = [
+  "Expands the existing seeded dense SLM eval-v2 corpus from 120 to 500 deterministic mechanically scored cases.",
+  "This item changes corpus coverage and docs/tracking only; it does not run live models, download models, refresh pass rates, or claim broad dense quality, BitNet behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad performance, or speedup.",
+]

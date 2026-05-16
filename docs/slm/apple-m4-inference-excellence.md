@@ -102,6 +102,15 @@ and instruction-following required/forbidden-token families. The earlier
 machine-readable corpus/scorer contract needed before interpreting it inside the
 excellence campaign.
 
+`M4-ACCURACY-002` expands that same static dense SLM eval-v2 corpus to 500
+deterministic cases while keeping scoring mechanical and reproducible. The
+500-case distribution is `84` arithmetic, `42` numeric-tolerance, `50`
+fixed-table QA, `42` JSON/schema, `50` closed-label classification, `50`
+synthetic extraction, `50` ordering/sorting, `50` copy/edit/rewrite, `41`
+constrained-summary, and `41` instruction-following required/forbidden-token
+cases. This is corpus coverage only; it does not refresh runtime pass rates or
+make a broad quality claim.
+
 Scoring stays mechanical:
 
 ```text

@@ -5524,7 +5524,7 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
     assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
     assert_eq!(receipt["corpus"]["id"], "apple-m4-slm-eval-seeded-corpus-v2");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-slm-eval-seeded-corpus-v2");
-    assert_eq!(receipt["corpus"]["case_count"], 120);
+    assert_eq!(receipt["corpus"]["case_count"], 500);
     assert_eq!(receipt["corpus"]["metadata"]["seed"], 777331);
     assert_eq!(
         receipt["corpus"]["metadata"]["generator_policy"],
@@ -5534,7 +5534,7 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
         receipt["corpus"]["contract"]["contract_version"],
         "m4-eval-corpus-scorer-contract-v1"
     );
-    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.0.0");
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.1.0");
     assert_eq!(
         receipt["corpus"]["contract"]["expected_output_provenance"],
         "Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority."
