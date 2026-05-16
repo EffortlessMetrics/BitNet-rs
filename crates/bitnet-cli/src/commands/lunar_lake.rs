@@ -43,7 +43,34 @@ const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
+const REGRESSION_V2_SURFACE_ID: &str = "lunar_lake_regression_v2";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
+
+const REQUIRED_CORPUS_V2_PROFILES: &[&str] =
+    &["regression_tiny", "ask_short", "ask_normal", "structured", "prefill_heavy", "decode_heavy"];
+const REQUIRED_CORPUS_V2_CATEGORIES: &[&str] = &[
+    "math",
+    "copy_exact",
+    "yes_no",
+    "short_factual",
+    "instruction_following",
+    "stop_and_eos",
+    "prompt_history_sensitivity",
+    "structured_output",
+    "long_prompt_summarization",
+    "short_reasoning",
+    "decode_heavy",
+];
+const REQUIRED_ROUTE_PROFILES: &[&str] = &[
+    "regression_tiny",
+    "ask_short",
+    "ask_normal",
+    "prefill_heavy",
+    "decode_heavy",
+    "structured",
+    "low_power",
+    "bitnet_strict_reference",
+];
 
 /// Lunar Lake operator commands.
 #[derive(Args, Debug, Clone)]
@@ -303,10 +330,59 @@ pub struct LunarLakeRegressionBundle {
     pub answer_corpus_v2: Option<AnswerCorpusV2Summary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub route_profile_comparison: Option<RouteProfileRegressionSummary>,
+    #[serde(default)]
+    pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
     pub checks: Vec<RegressionCheck>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RegressionSurfaceSummary {
+    pub surface_id: String,
+    pub strict_default: bool,
+    pub answer_corpus_v2_indexed: bool,
+    pub route_profile_comparison_indexed: bool,
+    pub required_answer_profiles: Vec<String>,
+    pub required_answer_categories: Vec<String>,
+    pub required_route_profiles: Vec<String>,
+    pub fallback_observed: bool,
+    pub candidate_routes_remain_unpromoted: bool,
+    pub benchmark_qualified_advantage_claimed: bool,
+    pub strict_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+impl Default for RegressionSurfaceSummary {
+    fn default() -> Self {
+        Self {
+            surface_id: REGRESSION_V2_SURFACE_ID.to_string(),
+            strict_default: true,
+            answer_corpus_v2_indexed: false,
+            route_profile_comparison_indexed: false,
+            required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
+                .iter()
+                .map(|profile| (*profile).to_string())
+                .collect(),
+            required_answer_categories: REQUIRED_CORPUS_V2_CATEGORIES
+                .iter()
+                .map(|category| (*category).to_string())
+                .collect(),
+            required_route_profiles: REQUIRED_ROUTE_PROFILES
+                .iter()
+                .map(|profile| (*profile).to_string())
+                .collect(),
+            fallback_observed: false,
+            candidate_routes_remain_unpromoted: false,
+            benchmark_qualified_advantage_claimed: false,
+            strict_ready: false,
+            gaps: vec![
+                "answer corpus v2 is not indexed".to_string(),
+                "route profile comparison is not indexed".to_string(),
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -556,8 +632,11 @@ impl LunarLakeCommand {
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
-                if *strict && !receipt.regression_passed {
-                    bail!("Lunar Lake regression bundle failed: {}", receipt.gaps.join("; "));
+                if *strict {
+                    let strict_gaps = strict_regression_v2_gaps(&receipt);
+                    if !strict_gaps.is_empty() {
+                        bail!("Lunar Lake regression bundle failed: {}", strict_gaps.join("; "));
+                    }
                 }
                 Ok(())
             }
@@ -979,6 +1058,10 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         .filter(|check| check.status != "passed")
         .map(|check| format!("{}: {}", check.check_id, check.notes.join(", ")))
         .collect::<Vec<_>>();
+    let regression_surface = build_regression_surface_summary(
+        answer_corpus_v2.as_ref(),
+        route_profile_comparison.as_ref(),
+    );
 
     Ok(LunarLakeRegressionBundle {
         schema_version: "1.0.0".to_string(),
@@ -990,11 +1073,85 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         operator_receipt: path_string(&operator_receipt_path),
         answer_corpus_v2,
         route_profile_comparison,
+        regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
         gaps,
         claim_boundary: operator.claim_boundary,
     })
+}
+
+fn build_regression_surface_summary(
+    answer_corpus_v2: Option<&AnswerCorpusV2Summary>,
+    route_profile_comparison: Option<&RouteProfileRegressionSummary>,
+) -> RegressionSurfaceSummary {
+    let mut summary = RegressionSurfaceSummary {
+        answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
+        route_profile_comparison_indexed: route_profile_comparison.is_some(),
+        candidate_routes_remain_unpromoted: route_profile_comparison
+            .map(|summary| summary.candidate_routes_remain_unpromoted)
+            .unwrap_or(false),
+        benchmark_qualified_advantage_claimed: route_profile_comparison
+            .map(|summary| summary.benchmark_qualified_advantage_claimed)
+            .unwrap_or(false),
+        fallback_observed: route_profile_comparison
+            .map(|summary| summary.fallback_observed)
+            .unwrap_or(false),
+        gaps: Vec::new(),
+        ..RegressionSurfaceSummary::default()
+    };
+
+    if let Some(corpus) = answer_corpus_v2 {
+        if !corpus.fixture_ready {
+            summary
+                .gaps
+                .push(format!("answer corpus v2 fixture is not ready: {}", corpus.gaps.join("; ")));
+        }
+    } else {
+        summary.gaps.push("answer corpus v2 is not indexed".to_string());
+    }
+
+    if let Some(route_profiles) = route_profile_comparison {
+        if !route_profiles.regression_ready {
+            summary.gaps.push(format!(
+                "route profile comparison is not regression-ready: {}",
+                route_profiles.gaps.join("; ")
+            ));
+        }
+        if route_profiles.fallback_observed {
+            summary.gaps.push("route profile comparison observed fallback_used=true".to_string());
+        }
+        if route_profiles.benchmark_qualified_advantage_claimed {
+            summary.gaps.push("benchmark-qualified route advantage was claimed".to_string());
+        }
+        if !route_profiles.candidate_routes_remain_unpromoted {
+            summary
+                .gaps
+                .push("OpenVINO GPU/NPU candidate route became promotion-eligible".to_string());
+        }
+    } else {
+        summary.gaps.push("route profile comparison is not indexed".to_string());
+    }
+
+    summary.gaps.sort();
+    summary.gaps.dedup();
+    summary.strict_ready = summary.gaps.is_empty();
+    summary
+}
+
+fn strict_regression_v2_gaps(receipt: &LunarLakeRegressionBundle) -> Vec<String> {
+    let mut gaps = Vec::new();
+    if !receipt.regression_passed {
+        gaps.extend(receipt.gaps.iter().cloned());
+    }
+    if !receipt.regression_surface.strict_ready {
+        gaps.extend(
+            receipt.regression_surface.gaps.iter().map(|gap| format!("regression_surface: {gap}")),
+        );
+    }
+    gaps.sort();
+    gaps.dedup();
+    gaps
 }
 
 #[derive(Debug, Deserialize)]
@@ -1082,31 +1239,10 @@ fn inspect_answer_corpus_v2(path: &Path) -> Result<AnswerCorpusV2Summary> {
         gaps.push(format!("case {} is missing a gate", case.id));
     }
 
-    let required_profiles = [
-        "regression_tiny",
-        "ask_short",
-        "ask_normal",
-        "structured",
-        "prefill_heavy",
-        "decode_heavy",
-    ];
-    if let Some(missing) = first_missing(&profiles, &required_profiles) {
+    if let Some(missing) = first_missing(&profiles, REQUIRED_CORPUS_V2_PROFILES) {
         gaps.push(format!("missing required profile {missing}"));
     }
-    let required_categories = [
-        "math",
-        "copy_exact",
-        "yes_no",
-        "short_factual",
-        "instruction_following",
-        "stop_and_eos",
-        "prompt_history_sensitivity",
-        "structured_output",
-        "long_prompt_summarization",
-        "short_reasoning",
-        "decode_heavy",
-    ];
-    if let Some(missing) = first_missing(&categories, &required_categories) {
+    if let Some(missing) = first_missing(&categories, REQUIRED_CORPUS_V2_CATEGORIES) {
         gaps.push(format!("missing required category {missing}"));
     }
 
@@ -1155,17 +1291,7 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
             comparison.default_route_id
         ));
     }
-    let required_profiles = [
-        "regression_tiny",
-        "ask_short",
-        "ask_normal",
-        "prefill_heavy",
-        "decode_heavy",
-        "structured",
-        "low_power",
-        "bitnet_strict_reference",
-    ];
-    if let Some(missing) = first_missing(&profiles, &required_profiles) {
+    if let Some(missing) = first_missing(&profiles, REQUIRED_ROUTE_PROFILES) {
         gaps.push(format!("route profile comparison missing profile {missing}"));
     }
 
@@ -2763,6 +2889,12 @@ mod tests {
         assert_eq!(bundle.artifact_kind, "lunar_lake_regression_bundle");
         assert!(bundle.checks.iter().any(|check| check.check_id == "dense_slm_default_cpu_route"));
         assert!(bundle.checks.iter().all(|check| check.status == "passed"));
+        assert!(!bundle.regression_surface.strict_ready);
+        assert!(
+            strict_regression_v2_gaps(&bundle)
+                .iter()
+                .any(|gap| gap.contains("answer corpus v2 is not indexed"))
+        );
         assert!(!bundle.claim_boundary.hidden_fallback_allowed);
         Ok(())
     }
@@ -3138,16 +3270,115 @@ mod tests {
             check.check_id == "route_profile_comparison_regression_ready"
                 && check.status == "passed"
         }));
-        let Some(corpus) = bundle.answer_corpus_v2 else {
+        let Some(corpus) = bundle.answer_corpus_v2.as_ref() else {
             bail!("missing answer_corpus_v2 summary");
         };
         assert_eq!(corpus.case_count, 11);
         assert!(corpus.profiles.contains(&"prefill_heavy".to_string()));
-        let Some(route_profiles) = bundle.route_profile_comparison else {
+        let Some(route_profiles) = bundle.route_profile_comparison.as_ref() else {
             bail!("missing route_profile_comparison summary");
         };
         assert!(route_profiles.candidate_routes_remain_unpromoted);
         assert!(!route_profiles.benchmark_qualified_advantage_claimed);
+        assert!(bundle.regression_surface.strict_default);
+        assert!(bundle.regression_surface.strict_ready, "{:?}", bundle.regression_surface.gaps);
+        assert!(bundle.regression_surface.answer_corpus_v2_indexed);
+        assert!(bundle.regression_surface.route_profile_comparison_indexed);
+        assert!(strict_regression_v2_gaps(&bundle).is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn regression_bundle_v2_fails_when_profile_comparison_reports_fallback() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let mut profiles = build_route_profile_comparison_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-14T17:30:00Z".to_string(),
+        )?;
+        let Some(route) =
+            profiles.profiles.iter_mut().flat_map(|profile| &mut profile.route_evidence).next()
+        else {
+            bail!("missing route profile evidence");
+        };
+        route.fallback_used = Some(true);
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+
+        let bundle = build_regression_bundle_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Some(Path::new("corpus-v2.yaml")),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "2026-05-14T23:55:00Z".to_string(),
+        )?;
+
+        assert!(!bundle.regression_passed);
+        assert!(!bundle.regression_surface.strict_ready);
+        assert!(
+            strict_regression_v2_gaps(&bundle).iter().any(|gap| gap.contains("fallback_used=true")),
+            "{:?}",
+            strict_regression_v2_gaps(&bundle)
+        );
         Ok(())
     }
 

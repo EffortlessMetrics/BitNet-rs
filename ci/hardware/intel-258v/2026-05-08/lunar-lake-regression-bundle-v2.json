@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-14T23:55:00Z",
+  "created_utc": "2026-05-16T00:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -71,6 +71,48 @@
       "timing coverage has missing profile fields"
     ],
     "regression_ready": true,
+    "gaps": []
+  },
+  "regression_surface": {
+    "surface_id": "lunar_lake_regression_v2",
+    "strict_default": true,
+    "answer_corpus_v2_indexed": true,
+    "route_profile_comparison_indexed": true,
+    "required_answer_profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal",
+      "structured",
+      "prefill_heavy",
+      "decode_heavy"
+    ],
+    "required_answer_categories": [
+      "math",
+      "copy_exact",
+      "yes_no",
+      "short_factual",
+      "instruction_following",
+      "stop_and_eos",
+      "prompt_history_sensitivity",
+      "structured_output",
+      "long_prompt_summarization",
+      "short_reasoning",
+      "decode_heavy"
+    ],
+    "required_route_profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal",
+      "prefill_heavy",
+      "decode_heavy",
+      "structured",
+      "low_power",
+      "bitnet_strict_reference"
+    ],
+    "fallback_observed": false,
+    "candidate_routes_remain_unpromoted": true,
+    "benchmark_qualified_advantage_claimed": false,
+    "strict_ready": true,
     "gaps": []
   },
   "regression_passed": true,

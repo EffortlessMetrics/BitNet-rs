@@ -1,0 +1,18 @@
+timestamp = "2026-05-16T01:54:55Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-003"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-REG-003-strict-v2"
+summary = "Started LNL258V-REG-003 to make strict Lunar Lake regression fail closed on the v2 answer-corpus and route-profile surface."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "This is regression-policy and receipt-surface hardening only.",
+  "No model inference, broad quality claim, speedup claim, GPU/NPU promotion, Arc/NPU acceleration, full accelerator BitNet inference, or BitNet QK256/I2_S behavior change is in scope.",
+]
