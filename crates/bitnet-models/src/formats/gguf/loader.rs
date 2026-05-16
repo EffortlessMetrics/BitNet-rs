@@ -21,6 +21,22 @@ type TensorLoadResult = Result<(Tensor, Vec<(String, Tensor)>, Option<Correction
 type Qk256RawEntries = (Tensor, Vec<(String, Tensor)>, Option<f32>, usize);
 type Qk256RawEntriesResult = Result<Qk256RawEntries>;
 
+pub(crate) const SMOLLM2_360M_CONTRACT_ID: &str = "smollm2_360m_instruct_q8_0";
+pub(crate) const SMOLLM2_360M_FINGERPRINT: &str =
+    "sha256-48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201";
+pub(crate) const SMOLLM2_360M_HIDDEN_SIZE: usize = 960;
+pub(crate) const SMOLLM2_360M_LAYER_COUNT: usize = 32;
+pub(crate) const SMOLLM2_360M_VOCAB_SIZE: usize = 49_152;
+pub(crate) const SMOLLM2_360M_INTERMEDIATE_SIZE: usize = 2_560;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NormValidationPolicy {
+    Generic,
+    BitNetPreScaled,
+    DenseQwen,
+    SmolLm2_360MInstructQ8,
+}
+
 /// GGUF format loader
 pub struct GgufLoader;
 
@@ -460,8 +476,8 @@ impl GgufLoader {
     /// Validate LayerNorm gamma statistics to catch quantization artifacts.
     ///
     /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
-    /// BitNet GGUFs can also store pre-scaled RMSNorm weights near
-    /// 1/sqrt(hidden_size); accept that narrow envelope for real hidden vectors.
+    /// Family-scoped policies may accept additional narrow envelopes through
+    /// `check_ln_gamma_stats_with_policy`; this generic validator stays unit-scaled.
     /// If stats are suspicious, fail in strict mode or warn otherwise.
     ///
     /// Set BITNET_STRICT_MODE=1 to fail on invalid LN gamma.
@@ -474,21 +490,11 @@ impl GgufLoader {
 
         // Acceptable envelopes for γ RMS.
         let unit_scaled_ok = (0.5..=2.0).contains(&rms);
-        let hidden_scaled_ok = w32
-            .dims()
-            .last()
-            .copied()
-            .filter(|hidden| *hidden >= 512)
-            .map(|hidden| {
-                let target = 1.0 / (hidden as f32).sqrt();
-                ((target * 0.5)..=(target * 1.5)).contains(&rms)
-            })
-            .unwrap_or(false);
-        let ok = rms.is_finite() && (unit_scaled_ok || hidden_scaled_ok);
+        let ok = rms.is_finite() && unit_scaled_ok;
 
         if !ok {
             let msg = format!(
-                "LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0 or pre-scaled ≈1/sqrt(hidden_size))",
+                "LayerNorm gamma '{}' suspicious: rms={:.5} (expected near 1.0)",
                 name, rms
             );
 
@@ -501,6 +507,93 @@ impl GgufLoader {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn check_ln_gamma_stats_with_policy(
+        name: &str,
+        w: &Tensor,
+        policy: NormValidationPolicy,
+    ) -> Result<Option<CorrectionRecord>> {
+        match policy {
+            NormValidationPolicy::DenseQwen => Ok(None),
+            NormValidationPolicy::BitNetPreScaled => {
+                if Self::hidden_scaled_ln_gamma_ok(w)? {
+                    return Ok(None);
+                }
+                Self::check_ln_gamma_stats(name, w)?;
+                Ok(None)
+            }
+            NormValidationPolicy::SmolLm2_360MInstructQ8 => {
+                if let Some(record) = Self::smollm2_norm_acceptance_record(name, w)? {
+                    return Ok(Some(record));
+                }
+                Self::check_ln_gamma_stats(name, w)?;
+                Ok(None)
+            }
+            NormValidationPolicy::Generic => {
+                Self::check_ln_gamma_stats(name, w)?;
+                Ok(None)
+            }
+        }
+    }
+
+    fn hidden_scaled_ln_gamma_ok(w: &Tensor) -> Result<bool> {
+        let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
+        let rms = Self::rms_f32(&w32)?;
+        Ok(rms.is_finite()
+            && w32
+                .dims()
+                .last()
+                .copied()
+                .filter(|hidden| *hidden >= 512)
+                .map(|hidden| {
+                    let target = 1.0 / (hidden as f32).sqrt();
+                    ((target * 0.5)..=(target * 1.5)).contains(&rms)
+                })
+                .unwrap_or(false))
+    }
+
+    fn smollm2_norm_acceptance_record(name: &str, w: &Tensor) -> Result<Option<CorrectionRecord>> {
+        if !is_layernorm_weight(name) {
+            return Ok(None);
+        }
+
+        let dims = w.dims();
+        if dims.last().copied() != Some(SMOLLM2_360M_HIDDEN_SIZE) {
+            return Ok(None);
+        }
+
+        let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
+        let rms = Self::rms_f32(&w32)?;
+        let target = 3.0 / (SMOLLM2_360M_HIDDEN_SIZE as f32).sqrt();
+        let min_rms = target * 0.5;
+        let max_rms = target * 2.0;
+        if !(rms.is_finite() && (min_rms..=max_rms).contains(&rms)) {
+            return Ok(None);
+        }
+
+        let metadata = serde_json::json!({
+            "policy": "slm_cpu_019_smollm2_exact_metadata_norm_envelope",
+            "contract_id": SMOLLM2_360M_CONTRACT_ID,
+            "artifact_fingerprint": SMOLLM2_360M_FINGERPRINT,
+            "architecture": "llama",
+            "tokenizer_pre": "smollm",
+            "hidden_size": SMOLLM2_360M_HIDDEN_SIZE,
+            "block_count": SMOLLM2_360M_LAYER_COUNT,
+            "vocab_size": SMOLLM2_360M_VOCAB_SIZE,
+            "rms_envelope": [min_rms, max_rms],
+            "source": "docs/slm/SLM_CPU_SMOLLM2_NORMALIZATION_POLICY.md",
+        });
+
+        Ok(Some(CorrectionRecord {
+            layer: name.to_string(),
+            correction_type: "smollm2_norm_gamma_envelope_accept".to_string(),
+            rms_before: Some(rms),
+            rms_after: None,
+            factor: None,
+            policy_fingerprint: format!("slm-cpu-019:{SMOLLM2_360M_CONTRACT_ID}"),
+            metadata: Some(metadata),
+        }))
     }
 
     /// Select LayerNorm rescale configuration from policy
@@ -1031,15 +1124,8 @@ impl FormatLoader for GgufLoader {
 
         // Extract model configuration
         let model_config = self.extract_config(&reader)?;
-        let dense_qwen_load = reader
-            .get_string_metadata("general.architecture")
-            .map(|architecture| {
-                matches!(
-                    classify_dense_qwen_architecture(&architecture),
-                    DenseQwenArchitecture::Supported(_)
-                )
-            })
-            .unwrap_or(false);
+        let norm_validation_policy =
+            self.select_norm_validation_policy(&reader, &model_config, &fingerprint);
         if Self::env_truthy("BITNET_STRICT_MODE") {
             if let Some((tensor_name, tensor_type)) =
                 reader.first_unsupported_standard_quantized_tensor()
@@ -1060,7 +1146,7 @@ impl FormatLoader for GgufLoader {
 
         // Load tensors with fingerprint for policy matching (returns both regular and raw QK256 tensors)
         let (tensors, raw_tensors) =
-            self.load_tensors(&reader, device, config, &fingerprint, dense_qwen_load)?;
+            self.load_tensors(&reader, device, config, &fingerprint, norm_validation_policy)?;
 
         if let Some(callback) = &config.progress_callback {
             callback(0.9, "Initializing model...");
@@ -1148,6 +1234,64 @@ impl GgufLoader {
             "Strict real_gguf load rejected unsupported/incomplete tensor layout: missing {}",
             missing.join(", ")
         )))
+    }
+
+    pub(crate) fn select_norm_validation_policy(
+        &self,
+        reader: &GgufReader,
+        config: &BitNetConfig,
+        fingerprint: &str,
+    ) -> NormValidationPolicy {
+        if reader
+            .get_string_metadata("general.architecture")
+            .map(|architecture| {
+                matches!(
+                    classify_dense_qwen_architecture(&architecture),
+                    DenseQwenArchitecture::Supported(_)
+                )
+            })
+            .unwrap_or(false)
+        {
+            return NormValidationPolicy::DenseQwen;
+        }
+
+        if reader
+            .get_string_metadata("general.architecture")
+            .map(|architecture| architecture.to_ascii_lowercase().contains("bitnet"))
+            .unwrap_or(false)
+        {
+            return NormValidationPolicy::BitNetPreScaled;
+        }
+
+        if self.smollm2_360m_metadata_matches(reader, config, fingerprint) {
+            return NormValidationPolicy::SmolLm2_360MInstructQ8;
+        }
+
+        NormValidationPolicy::Generic
+    }
+
+    fn smollm2_360m_metadata_matches(
+        &self,
+        reader: &GgufReader,
+        config: &BitNetConfig,
+        fingerprint: &str,
+    ) -> bool {
+        let architecture = reader
+            .get_string_metadata("general.architecture")
+            .map(|value| value.eq_ignore_ascii_case("llama"))
+            .unwrap_or(false);
+        let tokenizer_pre = reader
+            .get_string_metadata("tokenizer.ggml.pre")
+            .map(|value| value.eq_ignore_ascii_case("smollm"))
+            .unwrap_or(false);
+
+        architecture
+            && tokenizer_pre
+            && fingerprint == SMOLLM2_360M_FINGERPRINT
+            && config.model.hidden_size == SMOLLM2_360M_HIDDEN_SIZE
+            && config.model.num_layers == SMOLLM2_360M_LAYER_COUNT
+            && config.model.vocab_size == SMOLLM2_360M_VOCAB_SIZE
+            && config.model.intermediate_size == SMOLLM2_360M_INTERMEDIATE_SIZE
     }
 
     /// Check if a tensor name indicates it's an embedding tensor
@@ -1924,7 +2068,7 @@ impl GgufLoader {
         device: &Device,
         config: &LoadConfig,
         fingerprint: &str,
-        dense_qwen_load: bool,
+        norm_validation_policy: NormValidationPolicy,
     ) -> Result<(GgufTensors, std::collections::HashMap<String, Tensor>)> {
         let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
@@ -1983,7 +2127,7 @@ impl GgufLoader {
                     device,
                     &model_config,
                     policy_plan.as_ref(),
-                    dense_qwen_load,
+                    norm_validation_policy,
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
 

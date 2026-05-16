@@ -28,6 +28,7 @@ promotion tied to receipts.
 | 18 | CUDA-SERVER-002 | `server(cuda): commit dense Qwen strict smoke receipt` | server receipt path |
 | 19 | CUDA-MODEL-008 | `model(cuda): sync Qwen3 earned status row` | model coverage and status |
 | 20 | CUDA-MODEL-SMOLLM2-001 | `model(cuda): add SmolLM2 360M artifact contract` | model artifact docs |
+| 21 | CUDA-MODEL-SMOLLM2-002 | `docs(cuda): sync SmolLM2 CPU blocker state` | model coverage and plan docs |
 
 ## Shared Links
 
@@ -53,7 +54,7 @@ All work items link to:
 | BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
 | Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts, benchmark qualification reviews, and bounded server-smoke receipts exist; speed and broad server readiness stay false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json` | exact-profile server readiness promotion spec before any `server_ready=true` row |
 | Qwen3 0.6B | accelerator-ready dense SLM candidate; one-token, short-decode, warm-session, and benchmark-review evidence exists; product CLI, speed, server, full residency, broad dense GGUF, and BitNet proof stay false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json` | user-facing ask/chat product UX or repeated same-artifact comparator evidence before any product CLI or speed profile promotion |
-| SmolLM2 360M | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| SmolLM2 360M | structurally valid artifact contract; strict CPU preflight blocked before tokenizer/prompt/generation; governed normalization-policy audit recorded | `ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json` | implement exact metadata-scoped SmolLM2 normalization validation and retry CPU sanity before all-layer planning or CUDA |
 | Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | Llama 3.2 3B | registered candidate | none | memory envelope, artifact contract, tokenizer/prompt authority |
 | Gemma/Phi small | registered candidate | none | architecture policy, artifact contract, tokenizer/prompt authority |
@@ -285,12 +286,12 @@ proves the claim.
 
 ## Work items: CUDA-MODEL-001 through CUDA-MODEL-005
 
-Status: merged through CUDA-MODEL-008; next candidate is SmolLM2 360M
+Status: merged through CUDA-MODEL-008 and CUDA-MODEL-SMOLLM2-001; SmolLM2 CPU sanity is blocked by SLM-CPU-017 strict-loader evidence
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
 Campaign items: `CUDA-MODEL-001` through `CUDA-MODEL-008`,
-`CUDA-MODEL-SMOLLM2-001`
+`CUDA-MODEL-SMOLLM2-001`, `CUDA-MODEL-SMOLLM2-002`
 Blocked by: CUDA-DENSE-050
 Blocks: later SmolLM2/Llama/Gemma/Phi candidate ladders
 
@@ -310,9 +311,10 @@ Do not batch-promote all candidates. Do not inherit Qwen2.5 evidence.
 
 Qwen3 artifact contract, CPU sanity, all-layer plan, one-token CUDA,
 short-decode, warm-session, benchmark review, and earned status sync landed as
-separate PRs. The next candidate starts with a SmolLM2 360M artifact contract
-before any CPU, CUDA, product CLI, speed, server, full-residency, or BitNet
-claim.
+separate PRs. SmolLM2 360M artifact-contract proof has landed, and SLM-CPU-017
+records a strict CPU preflight blocker before tokenizer/prompt/generation. The
+next candidate proof is an SLM CPU loader-policy follow-up before any SmolLM2
+CPU answer, CUDA, product CLI, speed, server, full-residency, or BitNet claim.
 
 ### Proof commands
 
@@ -338,7 +340,7 @@ Revert only the candidate row or receipt introduced by the failed PR.
 
 ## Work item: CUDA-MODEL-SMOLLM2-001
 
-Status: ready
+Status: merged
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
@@ -398,6 +400,69 @@ readiness or CUDA execution.
 
 Revert the SmolLM2 artifact contract/report and restore the model coverage row
 to registered candidate state.
+
+## Work item: CUDA-MODEL-SMOLLM2-002
+
+Status: merged
+Linked proposal: BITNET-PROP-0002
+Linked specs: BITNET-SPEC-0007
+Linked ADRs: BITNET-ADR-0004
+Campaign item: `CUDA-MODEL-SMOLLM2-002`
+Blocked by: CUDA-MODEL-SMOLLM2-001, SLM-CPU-017
+Blocks: SmolLM2 CPU sanity retry, dense all-layer planning, and CUDA route planning
+
+### Goal
+
+Sync the CUDA productization and model coverage surfaces to the committed
+SLM-CPU-017 SmolLM2 strict CPU preflight blocker.
+
+### Production delta
+
+Docs and model coverage only. The model row records that SmolLM2 360M reached
+strict CPU model-load preflight on the 9950X3D and failed closed at strict
+loader normalization policy before tokenizer, prompt rendering, or generation.
+
+### Non-goals
+
+No runtime code, loader-policy change, CPU answer claim, CUDA route claim,
+product CLI readiness, speedup, server readiness, full-residency claim, broad
+dense GGUF claim, or BitNet QK256 proof.
+
+### Acceptance
+
+- `ci/model-artifacts/model-coverage-matrix.toml` records the SmolLM2 row as
+  structurally valid with CPU sanity blocked by strict loader policy.
+- The row links the next proof to resolving the strict loader/model-family
+  normalization policy or recording a governed exception.
+- The NVIDIA campaign and CUDA productization plan point to the SLM-CPU-017
+  blocker receipt as the last real evidence.
+- The SmolLM2 ladder does not start CUDA planning until CPU sanity is
+  unblocked.
+
+### Proof commands
+
+```bash
+git diff --check
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+```
+
+### Receipt paths
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json
+```
+
+### Claim boundary
+
+This work can only claim that the SmolLM2 artifact contract exists and that a
+strict CPU preflight blocker is recorded. It cannot claim CPU answer readiness,
+CUDA execution, product CLI readiness, speed, server readiness, full residency,
+broad dense GGUF support, or BitNet QK256 proof.
+
+### Rollback
+
+Revert the SmolLM2 blocker-status wording and restore the post-artifact-contract
+candidate text.
 
 ## Work items: CUDA-UX-008, CUDA-UX-010, CUDA-SERVER-001, CUDA-SERVER-002
 

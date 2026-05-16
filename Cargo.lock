@@ -10042,6 +10042,7 @@ dependencies = [
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-prompt-templates",
  "bitnet-sys",
  "bitnet-test-support",
  "bitnet-tokenizers",

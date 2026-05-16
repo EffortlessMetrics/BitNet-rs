@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T06:59:29Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5066
+merge_sha = "290abbc1e2dc78c02f2b041b3a7e8825a13b7b10"
+
+notes = [
+  "Merged PR #5066, recording the second BitNet variable warm-session refresh for the accepted M4 BitNet artifact and external tokenizer identity.",
+  "The merged evidence path is `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` with per-prompt receipts in the sibling prompts directory.",
+  "M4-EXCELLENCE-002 is tracker-closed as BitNet variable warm matching-history evidence only.",
+  "No runtime route expansion, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]

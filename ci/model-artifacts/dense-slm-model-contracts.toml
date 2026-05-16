@@ -1,12 +1,13 @@
 schema = 1
 artifact_kind = "dense_slm_model_contract_matrix"
-updated = "2026-05-15"
-work_item = "CUDA-MODEL-001"
+updated = "2026-05-16"
+work_item = "CUDA-MODEL-SMOLLM2-001"
 claim_boundary = "Dense SLM artifact contracts record exact model identity, metadata, storage envelopes, and proof preconditions. They do not imply CPU answer readiness, CUDA execution, speedup, server readiness, BitNet packed I2_S/QK256 proof, or proof inheritance across dense model families."
 
 claim_rules = [
   "Dense SLM proof is model-family and artifact-specific.",
   "Qwen2.5 CUDA receipts cannot promote Qwen3.",
+  "Qwen2.5 or Qwen3 CUDA receipts cannot promote SmolLM2.",
   "A structurally valid dense GGUF still needs tokenizer/prompt authority, CPU answer sanity, all-layer planning, model-boundary fixtures, strict CUDA receipts, and benchmark review before product claims.",
   "speedup_claim, full_residency_claim, and server_ready remain false unless exact profile receipts explicitly upgrade them in the model coverage matrix.",
 ]
@@ -95,4 +96,95 @@ claim_boundary = "Qwen3 0.6B Q8_0 has an exact artifact contract and structural 
     "docs/slm/SLM_CPU_8250U_RUNBOOK.md",
     "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
     "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-qproj-drift-diagnosis.json",
+  ]
+
+[[contract]]
+id = "smollm2_360m_instruct_q8_0"
+model_class = "dense_slm"
+family = "smollm2"
+capability_id = "smollm2-360m-instruct"
+artifact_id = "smollm2-360m-instruct-q8_0"
+source = "huggingface"
+repo = "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
+repo_revision = "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f"
+base_model = "HuggingFaceTB/SmolLM2-360M-Instruct"
+file = "smollm2-360m-instruct-q8_0.gguf"
+source_url = "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/blob/593b5a2e04c8f3e4ee880263f93e0bd2901ad47f/smollm2-360m-instruct-q8_0.gguf"
+sha256 = "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201"
+bytes = 386404992
+format = "gguf"
+gguf_version = "GGUF V3"
+gguf_architecture = "llama"
+gguf_file_type = "Q8_0"
+architecture = "llama"
+quantization = "Q8_0"
+license = "apache-2.0"
+context_length = 8192
+block_count = 32
+embedding_length = 960
+intermediate_length = 2560
+attention_heads = 15
+attention_kv_heads = 5
+vocab_size = 49152
+tie_word_embeddings = true
+tokenizer_source = "gguf_metadata"
+tokenizer_model = "gpt2"
+tokenizer_pre = "smollm"
+chat_template_present = true
+chat_template_policy = "smollm2_chatml_with_explicit_system_required_before_answer_claims"
+eos_token_id = 2
+bos_token_id = 1
+padding_token_id = 2
+storage_envelope = "fits_local_small_slm_storage"
+storage_bytes = 386404992
+storage_mib = 368.50
+vram_estimate = "candidate_only; exact CUDA residency not measured"
+vram_estimate_bytes_min = 386404992
+vram_estimate_bytes_recommended = 1073741824
+status = "artifact_contract_recorded"
+current_tier = "structurally_valid"
+tokenizer_authority = "gguf_metadata_present_contract_only"
+prompt_authority = "smollm2_chatml_present_contract_only"
+cpu_reference = "candidate_cpu_sanity_required"
+accelerator_routes = []
+permitted_claims = [
+  "artifact_identity",
+  "structural_metadata",
+  "candidate_registration",
+]
+forbidden_claims = [
+  "cpu_answer_ready",
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+  "full_residency",
+]
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+  "model_boundary_fixtures",
+  "strict_cuda_one_token",
+  "short_decode",
+  "warm_session",
+  "benchmark_profile_receipt",
+]
+evidence = [
+  "ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml",
+  "ci/quality/apple-m4-slm-model-breadth-rust-m4-quality.toml",
+  "docs/slm/apple-m4-slm-model-breadth-candidates.md",
+  "docs/slm/apple-m4-slm-model-breadth-reference-sanity.md",
+  "docs/slm/apple-m4-slm-model-breadth-rust-m4-quality.md",
+]
+claim_boundary = "SmolLM2 360M Instruct Q8_0 has an exact artifact contract and structural metadata only for the RTX 5070 Ti onboarding ladder. Existing Qwen2.5, Qwen3, or Apple M4 evidence does not prove SmolLM2 CPU answers, strict CUDA execution, speedup, server readiness, full residency, broad dense GGUF support, or BitNet QK256 behavior."
+
+  [contract.known_blocker]
+  status = "candidate_cpu_sanity_not_started"
+  summary = "Existing Apple M4 evidence accepted the reference runner output but rejected current Rust M4 support before generation; the RTX 5070 Ti lane still needs its own CPU sanity and CUDA route planning before accelerator proof."
+  evidence = [
+    "ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml",
+    "ci/quality/apple-m4-slm-model-breadth-rust-m4-quality.toml",
   ]

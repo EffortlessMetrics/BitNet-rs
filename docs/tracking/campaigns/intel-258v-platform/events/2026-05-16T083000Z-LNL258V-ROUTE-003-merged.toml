@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T08:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5071
+merge_sha = "396b721a57673fe73b4077980c9f49fc68b22a16"
+head_sha = "fc600376c99b4f0321fedd8ae722b5b6e016502f"
+branch = "codex/lunar-lake/LNL258V-ROUTE-003-profile-decisions"
+summary = "Merged LNL258V-ROUTE-003 after CI passed to classify route profile decisions with corpus-v2 quality evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5071",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+
+notes = [
+  "The route profile comparison now indexes dense Qwen CPU and OpenVINO CPU/GPU/NPU corpus-v2 receipts per profile.",
+  "Corpus-v2 failures become explicit route/profile blockers, while OpenVINO GPU/NPU remain unpromoted without benchmark-qualified advantage.",
+  "The merge preserves the claim boundary: no new inference, broad quality claim, speedup claim, route promotion, native OpenCL/NPU proof, or BitNet QK256/I2_S behavior change.",
+]

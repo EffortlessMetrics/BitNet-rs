@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T03:59:11Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-017"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5041
+branch = "codex/slm-cpu-017-second-model-sanity"
+merge_sha = "8f05904886c6124d3355f360d0f79a7d5237a68b"
+
+summary = "Merged #5041 with bounded SmolLM2 360M Q8_0 strict CPU preflight blocker evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5041",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json",
+  "docs/slm/SLM_CPU_SMOLLM2_360M_SANITY.md",
+]
+
+notes = [
+  "The merged receipt records exact artifact metadata, selected cpu-rust backend, runtime_api=cpu, and fallback_used=false.",
+  "The strict loader rejects the SmolLM2 artifact at blk.0.ffn_norm.weight before tokenizer loading, prompt rendering, or generation.",
+  "This is a failure/blocker receipt, not CPU answer readiness or broad second-model product support.",
+  "No sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, CUDA, or BitNet QK256 claim was made.",
+]

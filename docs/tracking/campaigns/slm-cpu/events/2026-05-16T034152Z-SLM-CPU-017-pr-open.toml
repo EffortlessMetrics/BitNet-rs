@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T03:41:52Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-017"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 5041
+branch = "codex/slm-cpu-017-second-model-sanity"
+head_sha = "072d67bc7f76423a2db6ffdfd632647c46299135"
+
+summary = "Opened #5041 with bounded SmolLM2 360M Q8_0 strict CPU preflight blocker evidence for SLM-CPU-017."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5041",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json",
+  "docs/slm/SLM_CPU_SMOLLM2_360M_SANITY.md",
+]
+
+notes = [
+  "The pinned SmolLM2 artifact matched the contract SHA256 and byte count before execution.",
+  "The strict CPU route selected cpu-rust with fallback_used=false, then failed closed at the strict loader LayerNorm gamma guard before tokenizer loading, prompt rendering, or generation.",
+  "This PR records a blocker receipt, not CPU answer readiness or broad SmolLM2 product support.",
+  "No sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, CUDA, or BitNet QK256 claim is made.",
+]

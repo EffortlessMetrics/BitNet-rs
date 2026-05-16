@@ -1,0 +1,21 @@
+timestamp = "2026-05-16T07:35:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5071
+head_sha = "f627a2e9426dd29f66d8807c7d347a3a4b15e735"
+branch = "codex/lunar-lake/LNL258V-ROUTE-003-profile-decisions"
+summary = "Opened LNL258V-ROUTE-003 to classify Lunar Lake route profile decisions with corpus-v2 quality evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5071",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+
+notes = [
+  "The PR makes profile comparison consume dense Qwen CPU and OpenVINO CPU/GPU/NPU corpus-v2 receipts, attaching per-profile quality evidence and blockers.",
+  "The PR records route-decision evidence only; it does not run new inference, promote GPU/NPU routes, claim speedup, or change BitNet QK256/I2_S behavior.",
+]

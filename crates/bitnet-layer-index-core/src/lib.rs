@@ -142,55 +142,76 @@ mod tests {
     }
 
     #[test]
-    fn parse_usize_prefix_rejects_empty_input() {
+    fn parse_prefix_digits_empty_returns_none() {
         assert_eq!(parse_usize_prefix(b""), None);
     }
 
     #[test]
-    fn parse_usize_prefix_stops_at_first_non_digit() {
-        assert_eq!(parse_usize_prefix(b"4096abc"), Some(4096));
-        assert_eq!(parse_usize_prefix(b"7."), Some(7));
+    fn parse_prefix_digits_zero_and_single_digit() {
+        assert_eq!(parse_usize_prefix(b"0"), Some(0));
+        assert_eq!(parse_usize_prefix(b"7"), Some(7));
+        assert_eq!(parse_usize_prefix(b"0.foo"), Some(0));
     }
 
     #[test]
-    fn parse_block_index_requires_pure_numeric_segment() {
-        // "blk.3" with no trailing dot still parses the block index — the suffix
-        // string is consumed by the int parser.
-        assert_eq!(parse_block_index("blk.3"), Some(3));
-        // But ".3.x" with a non-numeric tail in the same segment must fail.
-        assert_eq!(parse_block_index("blk.3a"), None);
+    fn parse_prefix_digits_stops_at_first_non_digit() {
+        assert_eq!(parse_usize_prefix(b"42x99"), Some(42));
+        assert_eq!(parse_usize_prefix(b"1_0"), Some(1));
     }
 
     #[test]
-    fn extract_any_layer_index_picks_first_numeric_segment() {
-        // When several segments parse as numbers, only the first wins.
-        assert_eq!(extract_any_layer_index("model.layers.3.attn.4.weight"), Some(3));
-    }
-
-    #[test]
-    fn extract_any_layer_index_handles_empty_string() {
+    fn extract_any_index_empty_or_no_dots() {
         assert_eq!(extract_any_layer_index(""), None);
+        assert_eq!(extract_any_layer_index("weight"), None);
     }
 
     #[test]
-    fn extract_structured_layer_index_handles_layers_with_numeric_suffix() {
-        // The "prefix" variant accepts a digit prefix even when the segment is
-        // not purely numeric.
-        assert_eq!(extract_structured_layer_index("layers.7x.weight"), Some(7));
+    fn extract_any_index_returns_first_numeric_segment() {
+        // First numeric segment wins, not the structurally meaningful one.
+        assert_eq!(extract_any_layer_index("model.7.layers.39.mlp"), Some(7));
     }
 
     #[test]
-    fn extract_structured_layer_index_segment_rejects_numeric_with_suffix() {
-        // The "segment" variant rejects the same input because "7x" is not a
-        // valid usize on its own.
-        assert_eq!(extract_structured_layer_index_segment("layers.7x.weight"), None);
+    fn extract_any_index_segment_must_be_pure_numeric() {
+        // "39x" is not a valid usize so the iterator moves on.
+        assert_eq!(extract_any_layer_index("model.layers.39x.mlp"), None);
+        // Empty inputs split into a single empty segment which does not parse.
+        assert_eq!(extract_any_layer_index("."), None);
     }
 
     #[test]
-    fn extract_structured_returns_none_for_unrelated_names() {
-        for name in ["output.weight", "tok_embd.bias", "norm.weight"] {
-            assert_eq!(extract_structured_layer_index(name), None);
-            assert_eq!(extract_structured_layer_index_segment(name), None);
-        }
+    fn extract_structured_index_blk_without_digits_returns_none() {
+        // `blk.` is present but not followed by digits — prefix match yields
+        // no index and the `blk` precedence rule short-circuits before
+        // `layers.` is considered.
+        assert_eq!(extract_structured_layer_index("blk.foo.weight"), None);
+    }
+
+    #[test]
+    fn extract_structured_index_prefix_form_accepts_trailing_dot() {
+        // Prefix form does not require a trailing dot delimiter after the
+        // numeric prefix: `blk.5weight` is parsed as block index 5.
+        assert_eq!(extract_structured_layer_index("blk.5weight"), Some(5));
+    }
+
+    #[test]
+    fn extract_structured_segment_index_blk_without_following_dot() {
+        // Segment form requires a `.` after the numeric segment; missing → None.
+        assert_eq!(extract_structured_layer_index_segment("blk.5"), None);
+        assert_eq!(extract_structured_layer_index_segment("blk.5weight"), None);
+    }
+
+    #[test]
+    fn extract_structured_segment_index_layers_without_following_dot() {
+        assert_eq!(extract_structured_layer_index_segment("layers.7"), None);
+        assert_eq!(extract_structured_layer_index_segment("layers.7x"), None);
+    }
+
+    #[test]
+    fn parse_block_index_rejects_partial_names() {
+        assert_eq!(parse_block_index(""), None);
+        assert_eq!(parse_block_index("blk"), None);
+        assert_eq!(parse_block_index("blk."), None);
+        assert_eq!(parse_block_index("notblk.3"), None);
     }
 }

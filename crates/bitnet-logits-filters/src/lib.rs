@@ -14,12 +14,8 @@ use std::cmp::Ordering;
 /// Returns the number of non-`NEG_INFINITY` entries remaining.
 /// If `top_k == 0` or `top_k >= logits.len()`, the slice is unchanged.
 pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
-    if top_k == 0 || top_k >= logits.len() {
-        return logits.len();
-    }
-
     let unmasked = logits.iter().filter(|&&x| x > f32::NEG_INFINITY).count();
-    if unmasked <= top_k {
+    if top_k == 0 || top_k >= logits.len() || unmasked <= top_k {
         return unmasked;
     }
 
@@ -197,6 +193,33 @@ mod tests {
         let kept = apply_top_k(&mut logits, 2);
         assert_eq!(kept, 0);
         assert!(logits.iter().all(|value| *value == f32::NEG_INFINITY));
+    }
+
+    #[test]
+    fn top_k_zero_returns_unmasked_count_not_slice_len() {
+        // top_k == 0 is a no-op for the slice, but the return value must still
+        // reflect the contract: "number of non-NEG_INFINITY entries remaining".
+        let original = vec![f32::NEG_INFINITY, 5.0, f32::NEG_INFINITY, 2.0, 4.0];
+        let mut logits = original.clone();
+        let kept = apply_top_k(&mut logits, 0);
+        assert_eq!(kept, 3, "kept must count unmasked entries, not slice length");
+        assert_eq!(logits, original, "slice must be unchanged when top_k == 0");
+    }
+
+    #[test]
+    fn top_k_at_or_above_len_returns_unmasked_count_not_slice_len() {
+        // top_k >= len is a no-op for the slice, but the return value must
+        // still equal the unmasked-entry count.
+        let original = vec![f32::NEG_INFINITY, 5.0, f32::NEG_INFINITY, 2.0, 4.0];
+        let mut logits = original.clone();
+        let kept = apply_top_k(&mut logits, original.len());
+        assert_eq!(kept, 3, "kept must count unmasked entries when top_k == len");
+        assert_eq!(logits, original);
+
+        let mut logits = original.clone();
+        let kept = apply_top_k(&mut logits, original.len() + 10);
+        assert_eq!(kept, 3, "kept must count unmasked entries when top_k > len");
+        assert_eq!(logits, original);
     }
 
     #[test]

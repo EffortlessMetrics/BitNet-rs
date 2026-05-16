@@ -597,10 +597,14 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
   "ci/slm-cpu/**",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
   "docs/slm/**",
+  "docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md",
   "docs/tracking/campaigns/slm-cpu/**",
   "docs/tracking/generated/**",
+  "plans/cuda-5070ti-productization/**",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/**",
@@ -1061,6 +1065,105 @@ must_not_claim = [
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-017"
+status = "merged"
+pr = 5041
+branch = "codex/slm-cpu-017-second-model-sanity"
+merge_sha = "8f05904886c6124d3355f360d0f79a7d5237a68b"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-016"]
+acceptance = "Add a bounded second small dense GGUF model sanity check after the Qwen3-0.6B Q8_0 appliance profile. The slice must select a non-Qwen3 candidate only by verified artifact metadata, pinned SHA256, GGUF architecture, tokenizer authority, quant format, and tensor naming; run the strict CPU preflight and the smallest diagnosable strict CPU answer or failure receipt the current command surface supports; record prompt IDs, generated IDs when generated, decoded text when generated, selected backend/kernel, loader mode, tokenizer source/strictness, and fallback_used=false. It must preserve the Qwen3 Q8_0 appliance profile as the baseline and must not claim broad answer quality, sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "A second small dense GGUF candidate has bounded strict CPU sanity evidence only after exact metadata, tokenizer authority, selected CPU backend, and fallback=false are recorded.",
+  "The Qwen3-0.6B Q8_0 appliance profile remains the established Kaby Lake baseline.",
+]
+must_not_claim = [
+  "Broad answer quality is proven for the second model.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-017A"
+status = "merged"
+pr = 5060
+branch = "codex/slm-cpu-017a-qwen25-second-model-sanity"
+merge_sha = "76a10d534be7292f7dac24e9ec995e05ee08435d"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-017"]
+acceptance = "Record a positive bounded second-model sanity receipt for qwen2.5-0.5b-instruct-q8_0 after SLM-CPU-017's SmolLM2 strict preflight blocker slice. The slice must verify the exact Qwen2.5 Q8_0 GGUF artifact by pinned SHA256, run the smallest strict CPU answer-corpus case supported by the current command surface, and record prompt IDs, generated IDs, decoded text, selected backend/kernel, loader mode, tokenizer source/strictness, logits boundary evidence, and fallback_used=false. It must preserve the Qwen3 Q8_0 appliance profile as the Kaby baseline and must not claim broad answer quality, sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir target\\slm-cpu-017\\cache --json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci\\quality\\slm-second-model-sanity-corpus.yaml --model target\\slm-cpu-017\\cache\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --model-id qwen2.5-0.5b-instruct-q8_0 --device cpu --threads 4 --case-id math_2_plus_2_brief --dump-logit-steps 1 --logits-topk 5 --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-16\\qwen25-second-model-sanity.json",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "qwen2.5-0.5b-instruct-q8_0 has bounded strict CPU second-model sanity evidence on the i5-8250U path.",
+  "The Qwen3-0.6B Q8_0 appliance profile remains the established Kaby Lake baseline.",
+]
+must_not_claim = [
+  "Broad answer quality is proven for Qwen2.5.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
 
@@ -1775,5 +1878,109 @@ must_not_claim = [
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-018"
+status = "merged"
+pr = 5067
+head_sha = "04de329278126312b13eca85d8d59a8ad8e43a9c"
+merge_sha = "1f9dd9cb1d0d76e40077ffd82e98715e15c7ce71"
+branch = "docs/slm-cpu-018-smollm2-normalization-policy-linear"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-017"]
+acceptance = "Record the governed SmolLM2 360M normalization-policy decision after the SLM-CPU-017 strict CPU preflight blocker. The item must preserve the generic llama strict LayerNorm/RMSNorm gamma guard as fail-closed, define the exact metadata required before any SmolLM2-family exception can be implemented, and commit a machine-readable policy audit. It must not change loader behavior, retry CPU answer sanity, start CUDA planning, or claim CPU answer readiness, throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, broad dense GGUF support, or BitNet QK256 behavior."
+commands = [
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The SmolLM2 360M strict CPU preflight blocker has a governed normalization-policy audit after merge.",
+  "The next SmolLM2 proof must implement exact metadata-scoped loader validation before CPU sanity can be retried.",
+]
+must_not_claim = [
+  "SmolLM2 strict CPU loading is fixed.",
+  "SmolLM2 CPU answer readiness is proven.",
+  "SmolLM2 broad answer quality is proven.",
+  "Sustained 8250U or 9950X3D throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "CUDA planning or CUDA execution is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-019"
+status = "merged"
+pr = 5081
+head_sha = "c93ad85786934dc93b3be4ef4eb7aa31694d19cd"
+merge_sha = "11ca6d7ceee41cfc4ec073976a15f5c0fb5b21d8"
+branch = "model/slm-cpu-019-smollm2-normalization-validation"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-018"]
+acceptance = "Implement exact metadata-scoped SmolLM2 360M normalization validation in the strict GGUF loader while preserving generic llama strict LayerNorm/RMSNorm gamma fail-closed behavior. The accepted SmolLM2 exception must require the pinned artifact SHA plus exact GGUF architecture, tokenizer pre-tokenizer, tensor dimensions, vocab size, block count, and intermediate size, and must be receipt-visible. This item must not retry CPU answer sanity, start CUDA planning, or claim CPU answer readiness, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, broad dense GGUF support, or BitNet QK256 behavior."
+commands = [
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu --lib test_ln_gamma_validator_envelope",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu --lib smollm2_norm_policy_requires_exact_metadata_scope",
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "ci/slm-cpu/**",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Exact metadata-scoped SmolLM2 360M normalization validation is implemented after merge.",
+  "Generic llama strict LayerNorm/RMSNorm gamma validation remains fail-closed.",
+  "The accepted SmolLM2 normalization exception is receipt-visible.",
+  "The next proof is a strict CPU sanity retry with fallback_used=false.",
+]
+must_not_claim = [
+  "SmolLM2 CPU answer readiness is proven.",
+  "SmolLM2 broad answer quality is proven.",
+  "SmolLM2 strict CPU sanity was retried.",
+  "Sustained 8250U or 9950X3D throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "CUDA planning or CUDA execution is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]

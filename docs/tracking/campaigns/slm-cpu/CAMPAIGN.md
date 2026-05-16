@@ -66,6 +66,10 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-014 | merged | Bounded dense output-head zero-bias allocation cleanup landed in #4900; generated IDs and strict provenance remain the behavior oracle. |
 | SLM-CPU-015 | merged | Bounded i5-8250U Qwen3 Q8_0 warm-session thread and timing envelope evidence landed in #4911; generated IDs and strict provenance remain the behavior oracle. |
 | SLM-CPU-016 | merged | Kaby Lake Qwen3 Q8_0 operator appliance profile host-context support merged in #4922; receipts now record process memory and storage/free-space where available while preserving explicit unavailable thermal/power fields. |
+| SLM-CPU-017 | merged | Bounded SmolLM2 360M Q8_0 strict CPU preflight blocker evidence landed in #5041; strict loading fails closed before tokenizer/prompt/generation, with no Q4/Q5, accelerator, server, Qwen3.5, throughput, or BitNet QK256 claim. |
+| SLM-CPU-017A | merged | Positive Qwen2.5-0.5B Q8_0 second-model sanity evidence landed in #5060; strict CPU receipt records prompt/generated IDs, GGUF tokenizer authority, cpu-rust, dense-qwen-cpu-reference, and fallback=false without broad quality or throughput claims. |
+| SLM-CPU-018 | merged | SmolLM2 360M normalization policy audit landed in #5067: generic `llama` strict LayerNorm gamma validation remains fail-closed, and any SmolLM2 loader exception must be governed by exact artifact/model-family metadata before CPU sanity can be retried. |
+| SLM-CPU-019 | merged | Exact metadata-scoped SmolLM2 360M normalization validation landed in #5081: generic `llama` strict LayerNorm/RMSNorm gamma validation remains fail-closed, and the SmolLM2 exception requires exact artifact SHA, GGUF metadata, and dimensions before the next strict CPU sanity retry. No CPU answer, CUDA, throughput, server, broad dense GGUF, or BitNet QK256 claim is made. |
 
 ## Review Policy
 

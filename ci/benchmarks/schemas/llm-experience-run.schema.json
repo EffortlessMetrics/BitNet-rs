@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EffortlessMetrics/BitNet-rs/ci/benchmarks/schemas/llm-experience-run.schema.json",
+  "title": "BitNet-rs LLM experience run receipt",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "receipt_type",
+    "producer",
+    "repo",
+    "model",
+    "device",
+    "kernel_route",
+    "backend",
+    "benchmark_profile",
+    "quality",
+    "measurement_supplements",
+    "load",
+    "ttft",
+    "input_speed",
+    "output_speed",
+    "resource_envelope",
+    "claim_gate",
+    "not_claims"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "receipt_type": {
+      "const": "llm_experience_run"
+    },
+    "producer": {
+      "type": "string"
+    },
+    "repo": {
+      "type": "object"
+    },
+    "model": {
+      "type": "object"
+    },
+    "device": {
+      "type": "object"
+    },
+    "kernel_route": {
+      "type": "object"
+    },
+    "backend": {
+      "type": "object"
+    },
+    "benchmark_profile": {
+      "type": "object"
+    },
+    "quality": {
+      "type": "object",
+      "required": ["passed"]
+    },
+    "measurement_supplements": {
+      "type": "object",
+      "required": ["cli_stage_receipt"]
+    },
+    "load": {
+      "$ref": "#/$defs/section"
+    },
+    "ttft": {
+      "$ref": "#/$defs/section"
+    },
+    "input_speed": {
+      "$ref": "#/$defs/section"
+    },
+    "output_speed": {
+      "$ref": "#/$defs/section"
+    },
+    "resource_envelope": {
+      "$ref": "#/$defs/section"
+    },
+    "claim_gate": {
+      "type": "object",
+      "required": ["claim_allowed", "classification", "blocked_reasons"],
+      "properties": {
+        "claim_allowed": {
+          "type": "boolean"
+        },
+        "classification": {
+          "type": "string"
+        },
+        "blocked_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "not_claims": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "section": {
+      "type": "object",
+      "required": ["complete", "missing"],
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+timestamp = "2026-05-16T02:01:55Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-SMOLLM2-001"
+event = "pr_open"
+pr = 5029
+branch = "model/cuda-smollm2-360m-artifact-contract"
+head_sha = "dd448e83741600597c0a64b3f6f649d1f726e26e"
+actor = "codex"
+
+notes = [
+  "Opened PR #5029 to add the exact SmolLM2 360M Instruct Q8_0 artifact contract and report.",
+  "The PR title names CUDA-MODEL-SMOLLM2-001 so campaign doctor can associate the open PR with this tracker item.",
+  "The PR promotes the model coverage row only to structurally_valid artifact-contract state.",
+  "CPU answer readiness, strict CUDA execution, product CLI readiness, speedup, server readiness, full CUDA residency, broad dense GGUF support, proof inheritance, and BitNet packed I2_S/QK256 proof remain false.",
+]

@@ -1,0 +1,12 @@
+timestamp = "2026-05-16T01:54:12Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-SMOLLM2-001"
+event = "in_progress"
+branch = "model/cuda-smollm2-360m-artifact-contract"
+actor = "codex"
+
+notes = [
+  "Started the exact SmolLM2 360M Instruct Q8_0 artifact contract after Qwen3 reached the earned accelerator-ready candidate tier.",
+  "Scope is limited to model artifact contract, model coverage metadata, artifact report, and campaign tracker state.",
+  "CPU answer readiness, strict CUDA execution, product CLI readiness, speedup, server readiness, full CUDA residency, broad dense GGUF support, and BitNet packed I2_S/QK256 proof remain false.",
+]

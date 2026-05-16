@@ -38,6 +38,7 @@ use walkdir::WalkDir;
 mod apple_m4;
 mod bench_receipt;
 mod campaign;
+mod check_greedy_argmax;
 mod ci;
 mod claims;
 mod cpp_setup_auto;
@@ -48,6 +49,7 @@ mod grid_check;
 mod hardware;
 #[allow(dead_code)]
 mod health_check;
+mod llm_experience;
 mod model_contract;
 mod model_coverage;
 #[allow(dead_code)]
@@ -314,6 +316,13 @@ enum Cmd {
         cmd: ClaimsCmd,
     },
 
+    /// Generate and verify LLM experience proof artifacts.
+    #[command(name = "llm-experience")]
+    LlmExperience {
+        #[command(subcommand)]
+        cmd: LlmExperienceCmd,
+    },
+
     /// Verify hardware claim rails and resolve device-specific kernel routes.
     Hardware {
         #[command(subcommand)]
@@ -375,6 +384,26 @@ enum Cmd {
         rs_dir: PathBuf,
         /// C++ trace directory
         cpp_dir: PathBuf,
+    },
+
+    /// Verify greedy argmax invariant from CLI JSON output
+    ///
+    /// Native Rust port of `scripts/check_greedy_argmax.py`. Reads the JSON
+    /// produced by `bitnet run --json-out ... --dump-logit-steps ...` and
+    /// confirms that the chosen token at every recorded step matches the
+    /// argmax of the recorded top logits.
+    ///
+    /// Exit codes:
+    ///   0 — invariant holds for every step
+    ///   7 — invariant violated for at least one step
+    ///   non-zero anyhow error — JSON file missing or malformed
+    ///
+    /// Usage:
+    ///   cargo run -p xtask -- check-greedy-argmax path/to/cli-output.json
+    #[command(name = "check-greedy-argmax")]
+    CheckGreedyArgmax {
+        /// Path to the JSON file produced by `bitnet run --json-out`
+        json_file: PathBuf,
     },
 
     /// Check C++ backend availability for cross-validation
@@ -1376,6 +1405,32 @@ enum PromptSuiteCmd {
 
 #[derive(Subcommand)]
 enum BenchCmd {
+    /// Convert a profile CLI-stage receipt into a quality-gated benchmark receipt.
+    #[command(name = "from-cli-stage")]
+    FromCliStage {
+        /// Profile CLI plan emitted by a profile planner.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage-plan.json")]
+        plan: PathBuf,
+        /// CLI-stage JSON receipt emitted by bitnet run --json-out.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage.json")]
+        cli_stage_receipt: PathBuf,
+        /// Model contract YAML file.
+        #[arg(long, default_value = "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml")]
+        model_contract: PathBuf,
+        /// Quality receipt path this benchmark depends on.
+        #[arg(long, default_value = "target/quality/a770-bitnet-quality.json")]
+        quality_receipt: PathBuf,
+        /// Whether the referenced quality receipt passed.
+        #[arg(long, default_value_t = false)]
+        quality_passed: bool,
+        /// Output benchmark receipt JSON file.
+        #[arg(long, default_value = "target/bench-runs/profile-cli-stage.json")]
+        output: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+
     /// Verify a quality-gated benchmark receipt.
     #[command(name = "verify-receipt")]
     VerifyReceipt {
@@ -1419,6 +1474,38 @@ enum ClaimsCmd {
         /// Check mode: fail if docs are stale.
         #[arg(long, default_value_t = false)]
         check: bool,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum LlmExperienceCmd {
+    /// Generate an exact-token CLI-stage plan for an experience benchmark profile.
+    #[command(name = "profile-cli-plan")]
+    ProfileCliPlan {
+        /// Model contract YAML file.
+        #[arg(long, default_value = "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml")]
+        model_contract: PathBuf,
+        /// Benchmark profiles TOML file.
+        #[arg(long, default_value = "ci/benchmarks/profiles.toml")]
+        profiles: PathBuf,
+        /// Benchmark profile ID to synthesize.
+        #[arg(long, default_value = "prefill_512_decode_64")]
+        profile: String,
+        /// Planned backend for the generated CLI command.
+        #[arg(long, default_value = "intel-arc-a770-opencl")]
+        backend: String,
+        /// Concrete device slug for the generated proof plan.
+        #[arg(long, default_value = "amd-5700x-intel-a770")]
+        device_slug: String,
+        /// Declared kernel route ID for diagnostic proof binding.
+        #[arg(long, default_value = "a770.bitnet.i2s.qk256")]
+        kernel_route: String,
+        /// Output plan JSON file.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage-plan.json")]
+        output: PathBuf,
         /// Output format: human or json.
         #[arg(long, default_value = "human")]
         format: String,
@@ -1579,6 +1666,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
 }
 
 fn real_main() -> Result<()> {
+    if llm_experience::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
     let cli = Cli::parse();
     match cli.cmd {
         Cmd::DownloadModel {
@@ -1650,6 +1740,23 @@ fn real_main() -> Result<()> {
             }
         },
         Cmd::Bench { cmd } => match cmd {
+            BenchCmd::FromCliStage {
+                plan,
+                cli_stage_receipt,
+                model_contract,
+                quality_receipt,
+                quality_passed,
+                output,
+                format,
+            } => bench_receipt::from_cli_stage(
+                &plan,
+                &cli_stage_receipt,
+                &model_contract,
+                &quality_receipt,
+                quality_passed,
+                &output,
+                &format,
+            ),
             BenchCmd::VerifyReceipt { receipt, require_claimable, format } => {
                 bench_receipt::verify_receipt(&receipt, &format, require_claimable)
             }
@@ -1661,6 +1768,27 @@ fn real_main() -> Result<()> {
             ClaimsCmd::Docs { ledger, output, check, format } => {
                 claims::docs(&ledger, &output, check, &format)
             }
+        },
+        Cmd::LlmExperience { cmd } => match cmd {
+            LlmExperienceCmd::ProfileCliPlan {
+                model_contract,
+                profiles,
+                profile,
+                backend,
+                device_slug,
+                kernel_route,
+                output,
+                format,
+            } => llm_experience::profile_cli_plan(
+                &model_contract,
+                &profiles,
+                &profile,
+                &backend,
+                &device_slug,
+                &kernel_route,
+                Some(&output),
+                &format,
+            ),
         },
         Cmd::Hardware { cmd } => match cmd {
             HardwareCmd::A770 { cmd } => match cmd {
@@ -1702,6 +1830,7 @@ fn real_main() -> Result<()> {
             trace_diff::run(&rs_dir, &cpp_dir)?;
             Ok(())
         }
+        Cmd::CheckGreedyArgmax { json_file } => check_greedy_argmax::run(&json_file),
         #[cfg(any(feature = "crossval", feature = "crossval-all"))]
         Cmd::Preflight { backend, verbose, repair, no_repair } => {
             cpp_backend_preflight_cmd(backend, verbose, repair, no_repair)?;

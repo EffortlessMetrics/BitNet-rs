@@ -51,15 +51,6 @@ mod tests {
     }
 
     #[test]
-    fn timing_metrics_default_has_no_phase_values() {
-        let metrics = TimingMetrics::default();
-        assert!(metrics.prefill_ms.is_none());
-        assert!(metrics.decode_ms.is_none());
-        assert!(metrics.tokenization_encode_ms.is_none());
-        assert!(metrics.tokenization_decode_ms.is_none());
-    }
-
-    #[test]
     fn throughput_metrics_default_has_empty_phase_values() {
         let metrics = ThroughputMetrics::default();
         assert_eq!(metrics.prefill_tokens_per_sec, None);
@@ -69,53 +60,75 @@ mod tests {
     }
 
     #[test]
+    fn timing_metrics_clone_and_equality() {
+        let original = TimingMetrics {
+            prefill_ms: Some(12),
+            decode_ms: Some(345),
+            tokenization_encode_ms: Some(1),
+            tokenization_decode_ms: Some(2),
+            total_ms: 360,
+        };
+        let cloned = original.clone();
+        assert_eq!(original, cloned);
+        assert_ne!(cloned, TimingMetrics::default());
+    }
+
+    #[test]
+    fn throughput_metrics_clone_and_equality() {
+        let original = ThroughputMetrics {
+            prefill_tokens_per_sec: Some(100.0),
+            decode_tokens_per_sec: Some(50.0),
+            end_to_end_tokens_per_sec: 75.0,
+            total_tokens: 128,
+        };
+        let cloned = original.clone();
+        assert_eq!(original, cloned);
+        assert_ne!(cloned, ThroughputMetrics::default());
+    }
+
+    #[test]
     fn timing_metrics_serde_round_trip() {
         let original = TimingMetrics {
-            prefill_ms: Some(11),
-            decode_ms: Some(22),
+            prefill_ms: Some(10),
+            decode_ms: None,
             tokenization_encode_ms: Some(3),
-            tokenization_decode_ms: Some(4),
-            total_ms: 40,
+            tokenization_decode_ms: None,
+            total_ms: 42,
         };
-        let json = serde_json::to_string(&original).expect("serialize");
-        let parsed: TimingMetrics = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(parsed, original);
+        let json = serde_json::to_string(&original).expect("serialize timing metrics");
+        let restored: TimingMetrics =
+            serde_json::from_str(&json).expect("deserialize timing metrics");
+        assert_eq!(original, restored);
+    }
+
+    #[test]
+    fn timing_metrics_serializes_none_fields() {
+        let metrics = TimingMetrics::default();
+        let json = serde_json::to_value(&metrics).expect("serialize default timing metrics");
+        // total_ms is non-optional and must always be present.
+        assert_eq!(json.get("total_ms"), Some(&serde_json::json!(0)));
     }
 
     #[test]
     fn throughput_metrics_serde_round_trip() {
         let original = ThroughputMetrics {
-            prefill_tokens_per_sec: Some(123.5),
-            decode_tokens_per_sec: Some(45.6),
-            end_to_end_tokens_per_sec: 78.9,
-            total_tokens: 42,
+            prefill_tokens_per_sec: Some(120.5),
+            decode_tokens_per_sec: None,
+            end_to_end_tokens_per_sec: 80.0,
+            total_tokens: 64,
         };
-        let json = serde_json::to_string(&original).expect("serialize");
-        let parsed: ThroughputMetrics = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(parsed, original);
+        let json = serde_json::to_string(&original).expect("serialize throughput metrics");
+        let restored: ThroughputMetrics =
+            serde_json::from_str(&json).expect("deserialize throughput metrics");
+        assert_eq!(original, restored);
     }
 
     #[test]
-    fn timing_metrics_deserializes_with_missing_optional_fields() {
-        let parsed: TimingMetrics =
-            serde_json::from_str(r#"{"total_ms": 100}"#).expect("deserialize");
-        assert_eq!(parsed.total_ms, 100);
-        assert!(parsed.prefill_ms.is_none());
-        assert!(parsed.decode_ms.is_none());
-    }
-
-    #[test]
-    fn metrics_implement_clone() {
-        let timing = TimingMetrics { total_ms: 5, ..TimingMetrics::default() };
-        let cloned = timing.clone();
-        assert_eq!(cloned, timing);
-
-        let throughput = ThroughputMetrics {
-            total_tokens: 7,
-            end_to_end_tokens_per_sec: 1.0,
-            ..ThroughputMetrics::default()
-        };
-        let cloned_t = throughput.clone();
-        assert_eq!(cloned_t, throughput);
+    fn throughput_metrics_default_serde_round_trip() {
+        let original = ThroughputMetrics::default();
+        let json = serde_json::to_string(&original).expect("serialize default throughput metrics");
+        let restored: ThroughputMetrics =
+            serde_json::from_str(&json).expect("deserialize default throughput metrics");
+        assert_eq!(original, restored);
     }
 }

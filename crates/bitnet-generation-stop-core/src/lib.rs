@@ -111,6 +111,69 @@ mod tests {
         );
     }
 
+    #[test]
+    fn stop_on_eos_token_when_no_explicit_stop_ids() {
+        let criteria = make_criteria(&[], &[], 100, Some(2));
+        assert_eq!(check_stop(&criteria, 2, &[], ""), Some(StopReason::EosToken));
+    }
+
+    #[test]
+    fn max_tokens_takes_priority_over_stop_string() {
+        let criteria = make_criteria(&[], &["END"], 3, None);
+        // generated.len() >= max_tokens, but decoded tail also contains "END".
+        assert_eq!(
+            check_stop(&criteria, 99, &[1, 2, 3], "this has END inside"),
+            Some(StopReason::MaxTokens),
+        );
+    }
+
+    #[test]
+    fn max_tokens_zero_means_no_token_budget() {
+        // max_tokens == 0 is documented as "no limit": must not trigger
+        // regardless of how many tokens have been generated.
+        let criteria = make_criteria(&[], &[], 0, None);
+        let generated: Vec<u32> = (0..50).collect();
+        assert!(check_stop(&criteria, 7, &generated, "").is_none());
+    }
+
+    #[test]
+    fn stop_string_only_matches_when_present_in_tail() {
+        let criteria = make_criteria(&[], &["END"], 100, None);
+        assert!(check_stop(&criteria, 5, &[], "harmless text").is_none());
+    }
+
+    #[test]
+    fn stop_string_returns_first_matching_in_order() {
+        let criteria = make_criteria(&[], &["alpha", "beta"], 100, None);
+        // Both candidates appear; the first registered one must win.
+        assert_eq!(
+            check_stop(&criteria, 1, &[], "contains alpha and beta"),
+            Some(StopReason::StopString("alpha".to_string())),
+        );
+    }
+
+    #[test]
+    fn no_stop_when_all_criteria_empty() {
+        let criteria = StopCriteria::default();
+        assert!(check_stop(&criteria, 0, &[], "").is_none());
+    }
+
+    #[test]
+    fn stop_reason_serde_round_trip() {
+        let reasons = [
+            StopReason::MaxTokens,
+            StopReason::EosToken,
+            StopReason::StopTokenId(42),
+            StopReason::StopString("END".to_string()),
+        ];
+        for r in &reasons {
+            let json = serde_json::to_string(r).expect("serialize stop reason");
+            let restored: StopReason =
+                serde_json::from_str(&json).expect("deserialize stop reason");
+            assert_eq!(*r, restored);
+        }
+    }
+
     proptest::proptest! {
         #[test]
         fn no_stop_without_triggers(id in 1000u32..2000, generated_len in 1usize..50) {
