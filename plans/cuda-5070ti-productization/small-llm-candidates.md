@@ -29,8 +29,13 @@ Each model uses the same sequence:
 
 ## Work items: CUDA-MODEL-001 through CUDA-MODEL-005
 
-Qwen3 0.6B is the first candidate because it is closest to the existing Qwen2.5
-dense infrastructure.
+Qwen3 0.6B was the first candidate because it is closest to the existing
+Qwen2.5 dense infrastructure. It has now advanced through artifact contract,
+CPU sanity, all-layer planning, one-token strict CUDA, short-decode strict CUDA,
+warm-session strict CUDA, benchmark review, and earned status sync as an
+accelerator-ready candidate. Product CLI readiness, speedup, server readiness,
+full CUDA residency, broad dense GGUF readiness, and BitNet QK256 proof remain
+false.
 
 ### CUDA-MODEL-001: Artifact Contract
 
@@ -116,8 +121,12 @@ Acceptance:
 
 Rollback: remove the decode/session receipt and demote status rows.
 
-## Later Candidates
+## Next Candidate
 
-After Qwen3 proves the generalized ladder, repeat the same A through G sequence
-for SmolLM2 360M, Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi.
-Do not combine candidate families in one PR.
+The next candidate is SmolLM2 360M. Start at step A with an exact artifact
+contract before any CPU answer, CUDA route, product CLI, benchmark, speed,
+server, full-residency, broad dense GGUF, or BitNet QK256 claim.
+
+After SmolLM2 360M starts the next ladder, repeat the same A through G sequence
+for Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine
+candidate families in one PR.

@@ -2606,6 +2606,47 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-SMOLLM2-001"
+status = "ready"
+branch = "model/cuda-smollm2-360m-artifact-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-008"]
+acceptance = "Add an exact SmolLM2 360M artifact contract with source, file identity, SHA256, byte size, GGUF metadata, quantization, tokenizer, chat template, context length, license, storage envelope, and VRAM estimate where available, while keeping CPU answer, CUDA, product CLI, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false."
+commands = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+]
+allowed_paths = [
+  "ci/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  ".github/workflows/**",
+  "README.md",
+]
+may_claim = [
+  "SmolLM2 360M artifact identity is recorded after the exact artifact contract lands.",
+  "SmolLM2 360M remains a candidate until later CPU, CUDA, benchmark, and product UX proof lands.",
+]
+must_not_claim = [
+  "SmolLM2 CPU answer readiness exists.",
+  "SmolLM2 CUDA execution exists.",
+  "SmolLM2 product CLI readiness exists.",
+  "SmolLM2 speedup exists.",
+  "SmolLM2 server readiness exists.",
+  "SmolLM2 full CUDA residency exists.",
+  "SmolLM2 proof inherits Qwen2.5 or Qwen3 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
 id = "CUDA-UX-008"
 status = "merged"
 branch = "cli/cuda-model-support-dashboard"
