@@ -425,6 +425,45 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M3MBA-018"
+status = "in_progress"
+branch = "codex/apple-m3-macbook-air/M3MBA-018-roadmap-state-refresh"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-017"]
+acceptance = "Refresh the M3 Air roadmap and campaign prose after M3MBA-017 so the current stack no longer points at merged work, the remaining M3MBA-007/M3MBA-008 sequence is explicit, and the selected-long-job CI completion rule remains encoded through comparison-profile workflow inputs and phase evidence uploads before expensive M3 runs."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/apple-m3-air-dense-slm.yml",
+  "docs/apple-silicon/**",
+  "docs/ci/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air roadmap and campaign state reflect the post-M3MBA-017 stack.",
+  "The selected M3 long-job CI completion rule remains a lane design constraint.",
+]
+must_not_claim = [
+  "Any new M3 Air model inference was run.",
+  "Any new BitNet artifact was downloaded or accepted.",
+  "M3 Air evidence proves M4 Mac mini performance.",
+]
+
+[[work_item]]
 id = "M3MBA-004A"
 status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
