@@ -4928,8 +4928,11 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("kqv_head19", "attention_value_mix_head19"),
         ("kqv_merged", "attention_value_mix_merged"),
         ("attn_value_mix", "attention_value_mix_merged"),
+        ("attn_value_mix_history_ref_layout", "attention_value_mix_merged_history_ref_layout"),
         ("attn_sub_norm", "post_attention_subnorm"),
+        ("attn_sub_norm_history_ref_layout", "post_attention_subnorm_history_ref_layout"),
         ("attn_o_out", "post_o_proj"),
+        ("attn_o_out_history_ref_layout", "post_o_proj_history_ref_layout"),
         ("ffn_inp", "post_attention_residual"),
         ("ffn_inp_history_ref_layout", "post_attention_residual_history_ref_layout"),
         ("ffn_norm", "post_ffn_norm"),
@@ -5123,6 +5126,8 @@ fn compare_reference_to_rust_with_records(
         layer_operation_boundary_delta(reference_records, rust_record_list, 1);
     report["layer_0_history_boundary_delta"] =
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
+    report["layer_0_attention_output_history_boundary_delta"] =
+        layer_attention_output_history_boundary_delta(reference_records, rust_record_list, 0);
     report["attention_norm_input_history_delta"] =
         attention_norm_input_history_delta(reference_records, rust_records);
     report
@@ -5452,6 +5457,103 @@ fn layer_history_boundary_delta(
         "claim_allowed": false,
         "layer": layer,
         "policy": "Layer full-history boundary deltas are diagnostic-only evidence for locating where full-prefix layer-output drift enters; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "compared_count": compared_count,
+        "missing_reference_count": missing_reference_count,
+        "missing_rust_count": missing_rust_count,
+        "material_mismatch_count": material_mismatch_count,
+        "first_material_boundary": first_material_boundary,
+        "rows": rows,
+    })
+}
+
+fn layer_attention_output_history_boundary_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Value {
+    const STAGE_MAPPING: &[(&str, &str, &str)] = &[
+        (
+            "attn_value_mix_history_ref_layout",
+            "attention_value_mix_merged_history_ref_layout",
+            "attention_value_mix_merged_history",
+        ),
+        (
+            "attn_sub_norm_history_ref_layout",
+            "post_attention_subnorm_history_ref_layout",
+            "attention_subnorm_history",
+        ),
+        (
+            "attn_o_out_history_ref_layout",
+            "post_o_proj_history_ref_layout",
+            "attention_output_projection_history",
+        ),
+        (
+            "ffn_inp_history_ref_layout",
+            "post_attention_residual_history_ref_layout",
+            "attention_residual_history",
+        ),
+    ];
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_reference_count = 0usize;
+    let mut missing_rust_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut first_material_boundary = Value::Null;
+
+    for (reference_stage, rust_stage, boundary) in STAGE_MAPPING {
+        let reference =
+            find_reference_trace_record(reference_records, reference_stage, Some(layer));
+        let rust = find_rust_trace_record(rust_records, rust_stage, Some(layer));
+        if reference.is_none() {
+            missing_reference_count += 1;
+        }
+        if rust.is_none() {
+            missing_rust_count += 1;
+        }
+
+        let mut status = match (reference.is_some(), rust.is_some()) {
+            (false, false) => "missing_both",
+            (false, true) => "missing_reference",
+            (true, false) => "missing_rust",
+            (true, true) => "summary_match",
+        };
+        let mut delta = Value::Null;
+        let mut material_mismatch = false;
+
+        if let (Some(reference), Some(rust)) = (reference, rust) {
+            compared_count += 1;
+            delta = dim_major_history_record_delta(reference, rust);
+            material_mismatch = delta_has_material_numeric_delta(&delta);
+            if material_mismatch {
+                status = "material_mismatch";
+                material_mismatch_count += 1;
+            }
+        }
+
+        let row = json!({
+            "layer": layer,
+            "boundary": boundary,
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "status": status,
+            "reference": reference.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "delta": delta,
+            "material_mismatch": material_mismatch,
+        });
+        if material_mismatch && first_material_boundary.is_null() {
+            first_material_boundary = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer attention-output full-history boundary deltas are diagnostic-only evidence for locating where attention residual drift enters; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
         "layout": "dim_major_token_minor",
         "compared_count": compared_count,
         "missing_reference_count": missing_reference_count,
@@ -11227,6 +11329,9 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
         json!({"reference": "attn_sub_norm", "rust": "post_attention_subnorm", "scope": "layer0"}),
         json!({"reference": "attn_o_out", "rust": "post_o_proj", "scope": "layer0"}),
         json!({"reference": "ffn_inp", "rust": "post_attention_residual", "scope": "layer0"}),
+        json!({"reference": "attn_value_mix_history_ref_layout", "rust": "attention_value_mix_merged_history_ref_layout", "scope": "layer0 full-prefix merged value-mix history"}),
+        json!({"reference": "attn_sub_norm_history_ref_layout", "rust": "post_attention_subnorm_history_ref_layout", "scope": "layer0 full-prefix attention subnorm history"}),
+        json!({"reference": "attn_o_out_history_ref_layout", "rust": "post_o_proj_history_ref_layout", "scope": "layer0 full-prefix attention output projection history"}),
         json!({"reference": "ffn_norm", "rust": "post_ffn_norm", "scope": "layer0"}),
         json!({"reference": "ffn_out", "rust": "post_swiglu", "scope": "layer0"}),
         json!({"reference": "ffn_sub_norm", "rust": "post_ffn_subnorm", "scope": "layer0"}),
@@ -12294,6 +12399,9 @@ mod tests {
             "bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer)"
         ));
         assert!(patch.contains("bitnet_rs_history_is_requested_layer"));
+        assert!(patch.contains("attn_value_mix_history_ref_layout"));
+        assert!(patch.contains("attn_sub_norm_history_ref_layout"));
+        assert!(patch.contains("attn_o_out_history_ref_layout"));
         assert!(patch.contains("ffn_inp_history_ref_layout"));
         assert!(patch.contains("ffn_norm_history_ref_layout"));
         assert!(patch.contains("ffn_down_history_ref_layout"));
@@ -12488,6 +12596,65 @@ mod tests {
         );
         assert_eq!(
             boundary.pointer("/first_material_boundary/delta/first_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+    }
+
+    #[test]
+    fn compare_reports_layer0_attention_output_history_first_material_boundary() {
+        let mut reference_mix = test_reference_trace_record(
+            "attn_value_mix_history_ref_layout",
+            vec![1.0, 1.1, 2.0, 2.1],
+        );
+        reference_mix.shape = vec![2, 2, 1, 1];
+        reference_mix.nelements = 4;
+        reference_mix.layer = Some(0);
+        let mut reference_subnorm = test_reference_trace_record(
+            "attn_sub_norm_history_ref_layout",
+            vec![3.0, 3.1, 4.0, 4.1],
+        );
+        reference_subnorm.shape = vec![2, 2, 1, 1];
+        reference_subnorm.nelements = 4;
+        reference_subnorm.layer = Some(0);
+        let reference_records = vec![reference_mix, reference_subnorm];
+
+        let mut rust_mix = test_rust_trace_record(
+            "attention_value_mix_merged_history_ref_layout",
+            vec![1.0, 1.1, 2.0, 2.1],
+        );
+        rust_mix.name = "t1/blk0/attention_value_mix_merged_history_ref_layout".to_string();
+        rust_mix.shape = vec![2, 2];
+        rust_mix.num_elements = 4;
+        rust_mix.layer = Some(0);
+        let mut rust_subnorm = test_rust_trace_record(
+            "post_attention_subnorm_history_ref_layout",
+            vec![3.0, 3.1, 4.0, 4.6],
+        );
+        rust_subnorm.name = "t1/blk0/post_attention_subnorm_history_ref_layout".to_string();
+        rust_subnorm.shape = vec![2, 2];
+        rust_subnorm.num_elements = 4;
+        rust_subnorm.layer = Some(0);
+        let rust_records = vec![rust_mix, rust_subnorm];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_0_attention_output_history_boundary_delta").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(
+            boundary.pointer("/first_material_boundary/boundary"),
+            Some(&json!("attention_subnorm_history"))
+        );
+        assert_eq!(
+            boundary.pointer("/first_material_boundary/delta/first_mismatch_layout/dim"),
             Some(&json!(1))
         );
     }

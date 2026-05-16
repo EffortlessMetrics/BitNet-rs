@@ -1167,6 +1167,13 @@ impl MultiHeadAttention {
             "attention_value_mix_merged",
             &attn_output,
         )?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.layer_idx,
+            _trace_base_seq,
+            "attention_value_mix_merged",
+            &attn_output,
+        )?;
         let attn_output = match &self.sub_layernorm {
             Some(norm) => norm_forward(norm, &attn_output, self.norm_eps, self.norm_type)?,
             None => attn_output,
@@ -1179,10 +1186,19 @@ impl MultiHeadAttention {
             "post_attention_subnorm",
             &attn_output,
         )?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.layer_idx,
+            _trace_base_seq,
+            "post_attention_subnorm",
+            &attn_output,
+        )?;
 
         let output = self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_o_proj", &output)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(self.layer_idx, _trace_base_seq, "post_o_proj", &output)?;
         Ok(output)
     }
 
