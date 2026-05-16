@@ -152,6 +152,7 @@ struct LayerTraceRustCaptureArgs {
     cpu_trace_dir: PathBuf,
     a770_trace_dir: PathBuf,
     skip_a770: bool,
+    diag_rmsnorm_f64_accum: bool,
     overwrite: bool,
     output: Option<PathBuf>,
     format: String,
@@ -450,7 +451,7 @@ fn print_compare_help() {
 
 fn print_rust_capture_help() {
     println!(
-        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --diag-rmsnorm-f64-accum Capture Rust traces with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -587,6 +588,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
     let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
     let mut a770_trace_dir = PathBuf::from(DEFAULT_A770_TRACE_DIR);
     let mut skip_a770 = false;
+    let mut diag_rmsnorm_f64_accum = false;
     let mut overwrite = false;
     let mut output = Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT));
     let mut format = "human".to_string();
@@ -604,6 +606,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
             "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
             "--a770-trace-dir" => a770_trace_dir = PathBuf::from(value()?),
             "--skip-a770" => skip_a770 = true,
+            "--diag-rmsnorm-f64-accum" => diag_rmsnorm_f64_accum = true,
             "--overwrite" => overwrite = true,
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
@@ -615,6 +618,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
         cpu_trace_dir,
         a770_trace_dir,
         skip_a770,
+        diag_rmsnorm_f64_accum,
         overwrite,
         output,
         format,
@@ -1157,6 +1161,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             cpu_argv.as_deref().unwrap_or(&[]),
             &cpu_trace_dir,
             trace_target_seq,
+            args.diag_rmsnorm_f64_accum,
         )?
     } else {
         skipped_rust_trace_capture("cpu", cpu_argv.as_deref(), &cpu_trace_dir)
@@ -1169,6 +1174,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             a770_argv.as_deref().unwrap_or(&[]),
             &a770_trace_dir,
             trace_target_seq,
+            args.diag_rmsnorm_f64_accum,
         )?
     } else {
         if args.skip_a770 {
@@ -1204,6 +1210,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "cpu_trace_dir": path_to_string(&cpu_trace_dir),
             "a770_trace_dir": path_to_string(&a770_trace_dir),
             "skip_a770": args.skip_a770,
+            "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
             "overwrite": args.overwrite,
         },
         "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
@@ -1220,6 +1227,10 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
             "cpu_trace_feature_injected": cpu_trace_feature_injected.unwrap_or(false),
             "a770_trace_feature_injected": a770_trace_feature_injected.unwrap_or(false),
+            "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
+            "diag_rmsnorm_f64_accum_env": args
+                .diag_rmsnorm_f64_accum
+                .then_some("BITNET_DIAG_RMSNORM_F64_ACCUM=1"),
             "cpu_trace_dir_prepare": cpu_prepare,
             "a770_trace_dir_prepare": a770_prepare,
             "first_values_limit_env": std::env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok(),
@@ -9731,6 +9742,7 @@ fn run_rust_trace_capture(
     argv: &[String],
     trace_dir: &Path,
     trace_target_seq: Option<usize>,
+    diag_rmsnorm_f64_accum: bool,
 ) -> Result<Value> {
     let executable = argv.first().context("empty Rust trace command")?;
     let mut command = Command::new(executable);
@@ -9740,6 +9752,9 @@ fn run_rust_trace_capture(
         .env("BITNET_DETERMINISTIC", "1")
         .env("BITNET_SEED", "0")
         .stdin(Stdio::null());
+    if diag_rmsnorm_f64_accum {
+        command.env("BITNET_DIAG_RMSNORM_F64_ACCUM", "1");
+    }
     if let Some(trace_target_seq) = trace_target_seq {
         command.env("BITNET_TRACE_TARGET_SEQ", trace_target_seq.to_string());
     }
@@ -9751,6 +9766,9 @@ fn run_rust_trace_capture(
         "trace_dir": path_to_string(trace_dir),
         "trace_target_seq": trace_target_seq,
         "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
+        "diag_rmsnorm_f64_accum": diag_rmsnorm_f64_accum,
+        "diag_rmsnorm_f64_accum_env": diag_rmsnorm_f64_accum
+            .then_some("BITNET_DIAG_RMSNORM_F64_ACCUM=1"),
         "argv": argv,
         "command": capture_json(Some(&capture)),
         "trace": trace,
@@ -10353,6 +10371,7 @@ mod tests {
             cpu_trace_dir: dir.path().join("cpu"),
             a770_trace_dir: dir.path().join("a770"),
             skip_a770: false,
+            diag_rmsnorm_f64_accum: false,
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -10363,8 +10382,78 @@ mod tests {
 
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(false)));
+        assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(false)));
+        assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum_env"), Some(&Value::Null));
         assert!(reasons.contains(&json!("reference_plan_missing")));
         assert_eq!(report.pointer("/decision/compare_ready"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn rust_capture_args_parse_diag_rmsnorm_f64_accum_flag() {
+        let default_args =
+            vec!["xtask".to_string(), "bitnet-reference-layer-trace-capture-rust".to_string()];
+        let defaults = parse_rust_capture_args(&default_args).unwrap();
+        assert_eq!(defaults.plan, PathBuf::from(DEFAULT_REFERENCE_PLAN));
+        assert_eq!(defaults.cpu_trace_dir, PathBuf::from(DEFAULT_CPU_TRACE_DIR));
+        assert_eq!(defaults.a770_trace_dir, PathBuf::from(DEFAULT_A770_TRACE_DIR));
+        assert!(!defaults.skip_a770);
+        assert!(!defaults.diag_rmsnorm_f64_accum);
+        assert!(!defaults.overwrite);
+        assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT)));
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-layer-trace-capture-rust".to_string(),
+            "--plan".to_string(),
+            "plan.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "cpu".to_string(),
+            "--a770-trace-dir".to_string(),
+            "a770".to_string(),
+            "--skip-a770".to_string(),
+            "--diag-rmsnorm-f64-accum".to_string(),
+            "--overwrite".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_rust_capture_args(&args).unwrap();
+        assert_eq!(parsed.plan, PathBuf::from("plan.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("cpu"));
+        assert_eq!(parsed.a770_trace_dir, PathBuf::from("a770"));
+        assert!(parsed.skip_a770);
+        assert!(parsed.diag_rmsnorm_f64_accum);
+        assert!(parsed.overwrite);
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn rust_capture_report_records_diag_rmsnorm_f64_accum_intent() {
+        let dir = tempdir().unwrap();
+        let report = capture_rust_layer_traces(&LayerTraceRustCaptureArgs {
+            plan: dir.path().join("missing-plan.json"),
+            cpu_trace_dir: dir.path().join("cpu"),
+            a770_trace_dir: dir.path().join("a770"),
+            skip_a770: true,
+            diag_rmsnorm_f64_accum: true,
+            overwrite: false,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(true)));
+        assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/preflight/diag_rmsnorm_f64_accum_env"),
+            Some(&json!("BITNET_DIAG_RMSNORM_F64_ACCUM=1"))
+        );
     }
 
     #[test]
@@ -10383,6 +10472,7 @@ mod tests {
             cpu_trace_dir: cpu,
             a770_trace_dir: a770,
             skip_a770: false,
+            diag_rmsnorm_f64_accum: false,
             overwrite: false,
             output: None,
             format: "json".to_string(),
