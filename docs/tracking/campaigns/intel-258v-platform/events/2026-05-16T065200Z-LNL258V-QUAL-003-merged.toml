@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T06:52:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5055
+merge_sha = "69f6baa1e0165e744d089c97c7348a11d5eb5f74"
+head_sha = "5382fe010fbc4d3daf1becf46066d4ed456cba24"
+branch = "codex/lunar-lake/LNL258V-QUAL-003-openvino-corpus-v2"
+summary = "Merged LNL258V-QUAL-003 after CI passed to record bounded OpenVINO CPU, GPU.0, and NPU corpus-v2 candidate-route evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5055",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+]
+
+notes = [
+  "The committed receipt records 36 total OpenVINO candidate-route corpus-v2 cases, 21 passed, 15 quality_failed, fallback_used=false, and route_promotion_changed=false.",
+  "The merge preserves the claim boundary: no broad quality claim, speedup claim, route promotion, native OpenCL/NPU proof, or BitNet QK256/I2_S proof.",
+]
