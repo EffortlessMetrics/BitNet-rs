@@ -311,7 +311,7 @@ index 666fcc4d..23ee29ff 100644
 +            limit = (size_t) parsed;
 +        }
 +    }
-+    const size_t max_limit = 65536;
++    const size_t max_limit = 262144;
 +    if (limit > max_limit) {
 +        limit = max_limit;
 +    }
