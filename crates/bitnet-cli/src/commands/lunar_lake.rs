@@ -42,9 +42,12 @@ const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
 const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
 const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
+const REGRESSION_BUNDLE_V2: &str = "lunar-lake-regression-bundle-v2.json";
 const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
+const DURABILITY_BUNDLE: &str =
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -76,6 +79,7 @@ const REQUIRED_ROUTE_PROFILES: &[&str] = &[
     "low_power",
     "bitnet_strict_reference",
 ];
+const DURABILITY_REQUIRED_PROFILES: &[&str] = &["regression_tiny", "ask_short", "ask_normal"];
 
 /// Lunar Lake operator commands.
 #[derive(Args, Debug, Clone)]
@@ -290,6 +294,46 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the benchmark qualification surface cannot safely gate route promotion.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Index repeated-run durability requirements without running inference or changing routes.
+    #[command(alias = "durable")]
+    Durability {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Route profile comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: PathBuf,
+
+        /// Cold/warm benchmark qualification receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
+        cold_warm_benchmark: PathBuf,
+
+        /// Dense Qwen CPU corpus-v2 receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
+        cpu_corpus_v2: PathBuf,
+
+        /// Strict regression-v2 bundle to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = REGRESSION_BUNDLE_V2)]
+        regression_bundle: PathBuf,
+
+        /// Repeated executions required before a profile can be called durable.
+        #[arg(long, default_value_t = 10)]
+        required_repeats: u64,
+
+        /// Output JSON durability bundle to file.
+        #[arg(long, default_value = DURABILITY_BUNDLE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the durability index violates routing or claim boundaries.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -874,6 +918,58 @@ pub struct BenchmarkClaimBoundary {
     pub dense_slm_as_bitnet_proof: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeDurabilityBundle {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub route_profile_comparison_receipt: String,
+    pub cold_warm_benchmark_receipt: String,
+    pub cpu_corpus_v2_receipt: String,
+    pub regression_bundle_receipt: String,
+    pub required_repeat_count: u64,
+    pub durability_index_ready: bool,
+    pub stability_proven: bool,
+    pub profiles: Vec<DurabilityProfileSummary>,
+    pub gaps: Vec<String>,
+    pub next_required_evidence: Vec<String>,
+    pub claim_boundary: DurabilityClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DurabilityProfileSummary {
+    pub profile_id: String,
+    pub route_id: String,
+    pub route_status: String,
+    pub promoted_route: Option<String>,
+    pub baseline_case_count: u64,
+    pub baseline_cases_passed: u64,
+    pub baseline_cases_failed: u64,
+    pub observed_execution_count: u64,
+    pub required_execution_count: u64,
+    pub answer_drift_detected: Option<bool>,
+    pub route_drift_detected: bool,
+    pub fallback_drift_detected: Option<bool>,
+    pub latency_variance_status: String,
+    pub stability_status: String,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DurabilityClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub acceleration_claim: bool,
+    pub hidden_fallback_allowed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+    pub repeated_run_stability_claim: bool,
+}
+
 impl LunarLakeCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
@@ -1055,6 +1151,36 @@ impl LunarLakeCommand {
                         "Lunar Lake cold/warm benchmark qualification failed: {}",
                         receipt.gaps.join("; ")
                     );
+                }
+                Ok(())
+            }
+            LunarLakeAction::Durability {
+                artifact_root,
+                route_profile_comparison,
+                cold_warm_benchmark,
+                cpu_corpus_v2,
+                regression_bundle,
+                required_repeats,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_durability_bundle_with_created_utc(
+                    artifact_root,
+                    route_profile_comparison,
+                    cold_warm_benchmark,
+                    cpu_corpus_v2,
+                    regression_bundle,
+                    *required_repeats,
+                    created_utc,
+                )?;
+                write_or_print_durability_bundle(&receipt, Some(json_out))?;
+                if *strict && !receipt.durability_index_ready {
+                    bail!("Lunar Lake durability index failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -2311,6 +2437,225 @@ fn cold_warm_route_benchmark(
     }
 }
 
+pub fn build_durability_bundle_with_created_utc(
+    root: &Path,
+    route_profile_comparison: &Path,
+    cold_warm_benchmark: &Path,
+    cpu_corpus_v2: &Path,
+    regression_bundle: &Path,
+    required_repeat_count: u64,
+    created_utc: String,
+) -> Result<LunarLakeDurabilityBundle> {
+    let route_profile_comparison_path = resolve_receipt_path(root, route_profile_comparison);
+    let cold_warm_benchmark_path = resolve_receipt_path(root, cold_warm_benchmark);
+    let cpu_corpus_v2_path = resolve_receipt_path(root, cpu_corpus_v2);
+    let regression_bundle_path = resolve_receipt_path(root, regression_bundle);
+
+    let comparison: LunarLakeRouteProfileComparison =
+        read_json_receipt(&route_profile_comparison_path)?;
+    let benchmark: LunarLakeColdWarmBenchmark = read_json_receipt(&cold_warm_benchmark_path)?;
+    let corpus: Value = read_json_receipt(&cpu_corpus_v2_path)?;
+    let regression: LunarLakeRegressionBundle = read_json_receipt(&regression_bundle_path)?;
+
+    let mut gaps = Vec::new();
+    if !comparison.profile_comparison_ready {
+        gaps.push(format!("route profile comparison is not ready: {}", comparison.gaps.join("; ")));
+    }
+    if !benchmark.benchmark_gate_ready {
+        gaps.push(format!("cold/warm benchmark is not ready: {}", benchmark.gaps.join("; ")));
+    }
+    if !regression.regression_passed || !regression.regression_surface.strict_ready {
+        gaps.push("strict regression-v2 bundle is not ready".to_string());
+    }
+    if comparison.claim_boundary.hidden_fallback_allowed
+        || benchmark.claim_boundary.hidden_fallback_allowed
+        || regression.claim_boundary.hidden_fallback_allowed
+    {
+        gaps.push("durability index refuses hidden fallback".to_string());
+    }
+    if benchmark.claim_boundary.new_inference_executed {
+        gaps.push(
+            "durability index refuses benchmark receipts that executed new inference".to_string(),
+        );
+    }
+    if benchmark.claim_boundary.route_promotion_changed {
+        gaps.push("durability index refuses route-promotion changes".to_string());
+    }
+    if benchmark.claim_boundary.speedup_claim || benchmark.claim_boundary.acceleration_claim {
+        gaps.push("durability index refuses speedup or acceleration claims".to_string());
+    }
+    if benchmark.claim_boundary.dense_slm_as_bitnet_proof {
+        gaps.push("durability index refuses dense SLM evidence as BitNet proof".to_string());
+    }
+    if fallback_used(&corpus) == Some(true) {
+        gaps.push("CPU corpus-v2 receipt observed fallback_used=true".to_string());
+    }
+
+    let corpus_profiles = corpus_profile_counts(&corpus);
+    let benchmark_profiles = benchmark
+        .profiles
+        .iter()
+        .map(|profile| (profile.profile_id.as_str(), profile))
+        .collect::<BTreeMap<_, _>>();
+    let mut next_required_evidence = Vec::new();
+    let mut profiles = Vec::new();
+
+    for profile_id in DURABILITY_REQUIRED_PROFILES {
+        let Some(profile) =
+            comparison.profiles.iter().find(|profile| profile.profile_id == *profile_id)
+        else {
+            gaps.push(format!("durability profile {profile_id} is missing from route comparison"));
+            continue;
+        };
+        let counts = corpus_profiles.get(*profile_id).cloned().unwrap_or_default();
+        let route = profile.route_evidence.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE);
+        let benchmark_route = benchmark_profiles.get(profile_id).and_then(|profile| {
+            profile.routes.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        });
+        let Some(route) = route else {
+            gaps.push(format!(
+                "durability profile {profile_id} is missing dense Qwen CPU route evidence"
+            ));
+            continue;
+        };
+
+        let observed_execution_count = if counts.total > 0 { 1 } else { 0 };
+        let mut blockers = route.blockers.clone();
+        if counts.total == 0 {
+            blockers.push("no CPU corpus-v2 baseline cases for profile".to_string());
+        }
+        if counts.failed > 0 {
+            blockers.push(format!("CPU corpus-v2 profile has {} quality failures", counts.failed));
+        }
+        if route.fallback_used == Some(true) || counts.fallback_observed {
+            blockers.push("fallback_used=true observed in indexed profile evidence".to_string());
+        }
+        if observed_execution_count < required_repeat_count {
+            blockers.push(format!(
+                "repeated-run evidence missing: observed {observed_execution_count}/{required_repeat_count} executions"
+            ));
+            next_required_evidence.push(format!(
+                "run {profile_id} on {DEFAULT_ASK_ROUTE} {required_repeat_count} times and record answer, route, fallback, and latency variance"
+            ));
+        }
+        if benchmark_route.map(|route| !route.critical_timing_present).unwrap_or(true) {
+            blockers.push("critical cold/warm timing missing for durability profile".to_string());
+        }
+        blockers.sort();
+        blockers.dedup();
+
+        let stability_status = if blockers.iter().any(|blocker| blocker.contains("repeated-run")) {
+            "awaiting_repeated_run_evidence"
+        } else if blockers.is_empty() {
+            "stable"
+        } else {
+            "blocked"
+        };
+
+        profiles.push(DurabilityProfileSummary {
+            profile_id: (*profile_id).to_string(),
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            route_status: route.route_status.clone(),
+            promoted_route: profile.promoted_route.clone(),
+            baseline_case_count: counts.total,
+            baseline_cases_passed: counts.passed,
+            baseline_cases_failed: counts.failed,
+            observed_execution_count,
+            required_execution_count: required_repeat_count,
+            answer_drift_detected: if observed_execution_count >= 2 { Some(false) } else { None },
+            route_drift_detected: profile.promoted_route.as_deref() != Some(DEFAULT_ASK_ROUTE),
+            fallback_drift_detected: Some(
+                route.fallback_used == Some(true) || counts.fallback_observed,
+            ),
+            latency_variance_status: if observed_execution_count >= 2 {
+                "variance_window_available".to_string()
+            } else {
+                "not_evaluated_single_execution".to_string()
+            },
+            stability_status: stability_status.to_string(),
+            blockers,
+        });
+    }
+
+    next_required_evidence.sort();
+    next_required_evidence.dedup();
+
+    let stability_proven = !profiles.is_empty()
+        && profiles.iter().all(|profile| {
+            profile.observed_execution_count >= profile.required_execution_count
+                && profile.baseline_cases_failed == 0
+                && profile.answer_drift_detected == Some(false)
+                && !profile.route_drift_detected
+                && profile.fallback_drift_detected == Some(false)
+                && profile.blockers.is_empty()
+        });
+    if !stability_proven {
+        next_required_evidence.push(
+            "collect repeated-run receipts before promoting durability or latency-variance claims"
+                .to_string(),
+        );
+        next_required_evidence.sort();
+        next_required_evidence.dedup();
+    }
+
+    let durability_index_ready = gaps.is_empty();
+    Ok(LunarLakeDurabilityBundle {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_durability_bundle".to_string(),
+        proof_stage: "repeated_run_requirements_indexed_no_new_inference".to_string(),
+        created_utc,
+        machine_id: comparison.machine_id,
+        artifact_root: path_string(root),
+        route_profile_comparison_receipt: path_string(&route_profile_comparison_path),
+        cold_warm_benchmark_receipt: path_string(&cold_warm_benchmark_path),
+        cpu_corpus_v2_receipt: path_string(&cpu_corpus_v2_path),
+        regression_bundle_receipt: path_string(&regression_bundle_path),
+        required_repeat_count,
+        durability_index_ready,
+        stability_proven,
+        profiles,
+        gaps,
+        next_required_evidence,
+        claim_boundary: DurabilityClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            acceleration_claim: false,
+            hidden_fallback_allowed: false,
+            dense_slm_as_bitnet_proof: false,
+            repeated_run_stability_claim: false,
+        },
+    })
+}
+
+#[derive(Default, Clone)]
+struct CorpusProfileCounts {
+    total: u64,
+    passed: u64,
+    failed: u64,
+    fallback_observed: bool,
+}
+
+fn corpus_profile_counts(corpus: &Value) -> BTreeMap<String, CorpusProfileCounts> {
+    let mut counts = BTreeMap::<String, CorpusProfileCounts>::new();
+    let top_level_fallback = fallback_used(corpus) == Some(true);
+    for case in corpus.get("cases").and_then(Value::as_array).into_iter().flatten() {
+        let Some(profile) = case.get("profile").and_then(Value::as_str) else {
+            continue;
+        };
+        let entry = counts.entry(profile.to_string()).or_default();
+        entry.total += 1;
+        if case.get("status").and_then(Value::as_str) == Some("passed") {
+            entry.passed += 1;
+        } else {
+            entry.failed += 1;
+        }
+        entry.fallback_observed |= top_level_fallback || fallback_used(case) == Some(true);
+    }
+    counts
+}
+
 pub fn build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
     root: &Path,
     cpu_corpus_v2: &Path,
@@ -3044,6 +3389,25 @@ fn write_or_print_cold_warm_benchmark(
         }
         fs::write(path, json)?;
         println!("Lunar Lake cold/warm profile benchmark written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_durability_bundle(
+    receipt: &LunarLakeDurabilityBundle,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake durability bundle written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -4986,6 +5350,185 @@ mod tests {
         }));
         assert!(!benchmark.claim_boundary.speedup_claim);
         assert!(!benchmark.claim_boundary.route_promotion_changed);
+        Ok(())
+    }
+
+    #[test]
+    fn durability_bundle_indexes_repeat_gap_without_claiming_stability() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "fallback_used": false,
+                "profile_summary": {
+                    "regression_tiny": {"total": 4, "passed": 4, "failed": 0},
+                    "ask_short": {"total": 2, "passed": 2, "failed": 0},
+                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                },
+                "cases": [
+                    {"id": "math_2_plus_2_brief", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "copy_exact_color_triplet", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "stop_token_one_word_done", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "arithmetic_add_7_8", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "yes_no_clear_sky", "profile": "ask_short", "status": "passed"},
+                    {"id": "short_factual_capital_france", "profile": "ask_short", "status": "passed"},
+                    {"id": "instruction_single_sentence_rust", "profile": "ask_normal", "status": "passed"},
+                    {"id": "transcript_context_code_word", "profile": "ask_normal", "status": "passed"},
+                    {"id": "short_reasoning_apples_left", "profile": "ask_normal", "status": "passed"}
+                ]
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_OV_CORPUS_V2,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "runtime_device": "GPU.0",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0},
+                                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                                }
+                            }
+                        },
+                        {
+                            "runtime_device": "NPU",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0}
+                                }
+                            }
+                        }
+                    ]
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            "2026-05-16T07:30:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-16T18:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+        let regression_v2 = build_regression_bundle_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Some(Path::new("corpus-v2.yaml")),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new("cold-warm.json")),
+            "2026-05-16T19:05:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(REGRESSION_BUNDLE_V2),
+            serde_json::to_vec_pretty(&regression_v2)?,
+        )?;
+
+        let durability = build_durability_bundle_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new("cold-warm.json"),
+            Path::new(DENSE_CPU_CORPUS_V2),
+            Path::new(REGRESSION_BUNDLE_V2),
+            10,
+            "2026-05-16T20:20:00Z".to_string(),
+        )?;
+
+        assert!(durability.durability_index_ready, "{:?}", durability.gaps);
+        assert!(!durability.stability_proven);
+        assert!(!durability.claim_boundary.repeated_run_stability_claim);
+        assert!(!durability.claim_boundary.new_inference_executed);
+        let ask_short = durability
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short durability profile")?;
+        assert_eq!(ask_short.observed_execution_count, 1);
+        assert_eq!(ask_short.required_execution_count, 10);
+        assert_eq!(ask_short.baseline_cases_failed, 0);
+        assert!(ask_short.answer_drift_detected.is_none());
+        assert!(ask_short.blockers.iter().any(|blocker| blocker.contains("repeated-run")));
+        assert!(
+            durability
+                .next_required_evidence
+                .iter()
+                .any(|evidence| { evidence.contains("collect repeated-run receipts") })
+        );
         Ok(())
     }
 
