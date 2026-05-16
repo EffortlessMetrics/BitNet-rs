@@ -6702,6 +6702,13 @@ fn compare_reference_to_rust_with_records(
         &layer_0_prefix_drift_frontier,
         0,
     );
+    report["layer_0_prefix_value_mix_history_attribution"] =
+        layer_prefix_value_mix_history_attribution(
+            reference_records,
+            rust_records,
+            &layer_0_prefix_drift_frontier,
+            0,
+        );
     report["layer_0_prefix_ffn_norm_boundary"] = layer_prefix_ffn_norm_boundary(
         reference_records,
         rust_record_list,
@@ -7759,6 +7766,299 @@ fn layer_prefix_token_stage_deltas(
         "delta_unavailable_count": delta_unavailable_count,
         "material_target_count": material_target_count,
         "target_rows": target_rows,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
+fn layer_prefix_value_mix_history_attribution(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    frontier: &Value,
+    layer: usize,
+) -> Value {
+    let targets = prefix_stage_targets(frontier);
+    let reference_layer = i64::try_from(layer).ok();
+    let rust_layer = isize::try_from(layer).ok();
+    let reference_probability_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if record.layer != reference_layer || !record.stage.ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(&record.stage, "kq_soft_max_ext_head")
+                .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let reference_value_cache_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if record.layer != reference_layer {
+                return None;
+            }
+            parse_stage_head(&record.stage, "v_cache_rust_layout_head")
+                .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let reference_value_mix_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if record.layer != reference_layer || !record.stage.ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(&record.stage, "kqv_head")
+                .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let rust_probability_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if record.layer != rust_layer
+                || !record.stage.as_deref().unwrap_or("").ends_with("_history_ref_layout")
+            {
+                return None;
+            }
+            parse_stage_head(stage, "attn_scores_softmax_head")
+                .map(|head| (head, scalar_rust_tensor(record)))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let rust_value_cache_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if record.layer != rust_layer
+                || !record.stage.as_deref().unwrap_or("").ends_with("_ref_layout")
+            {
+                return None;
+            }
+            parse_stage_head(stage, "attention_v_cache_expanded_for_value_mix_head")
+                .map(|head| (head, scalar_rust_tensor(record)))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let rust_value_mix_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if record.layer != rust_layer
+                || !record.stage.as_deref().unwrap_or("").ends_with("_history_ref_layout")
+            {
+                return None;
+            }
+            parse_stage_head(stage, "attention_value_mix_head")
+                .map(|head| (head, scalar_rust_tensor(record)))
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    let group_size = if reference_value_cache_heads.is_empty()
+        || reference_value_mix_heads.is_empty()
+        || !reference_value_mix_heads.len().is_multiple_of(reference_value_cache_heads.len())
+    {
+        None
+    } else {
+        Some(reference_value_mix_heads.len() / reference_value_cache_heads.len())
+    };
+
+    let candidates = [
+        ValueMixHistoryInputCandidate {
+            id: "reference_probability_history_reference_value_cache_history",
+            probability_source: "reference_probability_history",
+            value_cache_source: "reference_value_cache_history",
+            value_cache_lookup: ValueMixHistoryCacheLookup::KvHead,
+            probability_heads: &reference_probability_heads,
+            value_cache_heads: &reference_value_cache_heads,
+        },
+        ValueMixHistoryInputCandidate {
+            id: "reference_probability_history_rust_expanded_value_cache_history",
+            probability_source: "reference_probability_history",
+            value_cache_source: "rust_expanded_value_cache_history",
+            value_cache_lookup: ValueMixHistoryCacheLookup::AttentionHead,
+            probability_heads: &reference_probability_heads,
+            value_cache_heads: &rust_value_cache_heads,
+        },
+        ValueMixHistoryInputCandidate {
+            id: "rust_probability_history_reference_value_cache_history",
+            probability_source: "rust_probability_history",
+            value_cache_source: "reference_value_cache_history",
+            value_cache_lookup: ValueMixHistoryCacheLookup::KvHead,
+            probability_heads: &rust_probability_heads,
+            value_cache_heads: &reference_value_cache_heads,
+        },
+        ValueMixHistoryInputCandidate {
+            id: "rust_probability_history_rust_expanded_value_cache_history",
+            probability_source: "rust_probability_history",
+            value_cache_source: "rust_expanded_value_cache_history",
+            value_cache_lookup: ValueMixHistoryCacheLookup::AttentionHead,
+            probability_heads: &rust_probability_heads,
+            value_cache_heads: &rust_value_cache_heads,
+        },
+    ];
+
+    let mut token_rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut material_target_delta_count = 0usize;
+    let mut best_candidate_counts = BTreeMap::<String, usize>::new();
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+
+    for (token, labels) in targets {
+        let mut head_rows = Vec::new();
+        let mut token_compared_head_count = 0usize;
+        let mut token_missing_input_count = 0usize;
+        let mut token_material_target_delta_count = 0usize;
+
+        for (&head, target) in &reference_value_mix_heads {
+            let kv_head = group_size.map(|group_size| head / group_size);
+            let rust_target = rust_value_mix_heads.get(&head);
+            let target_delta = rust_target
+                .and_then(|rust_target| scalar_tensor_token_delta(target, rust_target, token));
+            let target_material =
+                target_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+            if target_material {
+                material_target_delta_count += 1;
+                token_material_target_delta_count += 1;
+            }
+
+            let mut candidate_rows = Vec::new();
+            let mut best_id = None::<&str>;
+            let mut best_delta = Value::Null;
+            let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+
+            for candidate in candidates {
+                let probability = candidate.probability_heads.get(&head);
+                let value_cache_head = value_mix_history_candidate_value_cache_head(
+                    head,
+                    kv_head,
+                    candidate.value_cache_lookup,
+                );
+                let value_cache =
+                    value_cache_head.and_then(|head| candidate.value_cache_heads.get(&head));
+                if let (Some(probability), Some(value_cache)) = (probability, value_cache)
+                    && let Some(delta) = value_mix_history_candidate_token_delta(
+                        probability,
+                        value_cache,
+                        target,
+                        token,
+                    )
+                {
+                    let rank = value_mix_candidate_rank(&delta);
+                    if rank < best_rank {
+                        best_rank = rank;
+                        best_id = Some(candidate.id);
+                        best_delta = delta.clone();
+                    }
+                    candidate_rows.push(json!({
+                        "candidate": candidate.id,
+                        "probability_source": candidate.probability_source,
+                        "value_cache_source": candidate.value_cache_source,
+                        "value_cache_head": value_cache_head,
+                        "max_abs_delta": delta_metric(&delta, "/max_abs_delta"),
+                        "rms_delta": delta_metric(&delta, "/rms_abs_delta"),
+                        "delta": delta,
+                    }));
+                }
+            }
+
+            if let Some(best_id) = best_id {
+                compared_head_count += 1;
+                token_compared_head_count += 1;
+                *best_candidate_counts.entry(best_id.to_string()).or_insert(0) += 1;
+                max_best_abs_delta =
+                    max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+                max_best_rms_delta =
+                    max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+                head_rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "compared",
+                    "rust_value_mix_head_history_present": rust_target.is_some(),
+                    "target_delta": target_delta.unwrap_or(Value::Null),
+                    "target_material_mismatch": target_material,
+                    "best_candidate": best_id,
+                    "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+                    "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+                    "candidate_count": candidate_rows.len(),
+                    "candidates": candidate_rows,
+                }));
+            } else {
+                missing_input_count += 1;
+                token_missing_input_count += 1;
+                head_rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "rust_value_mix_head_history_present": rust_target.is_some(),
+                    "target_delta": target_delta.unwrap_or(Value::Null),
+                    "target_material_mismatch": target_material,
+                    "candidate_count": 0,
+                    "reference_probability_history_present": reference_probability_heads.contains_key(&head),
+                    "rust_probability_history_present": rust_probability_heads.contains_key(&head),
+                    "reference_value_cache_history_present": kv_head
+                        .is_some_and(|head| reference_value_cache_heads.contains_key(&head)),
+                    "rust_expanded_value_cache_history_present": rust_value_cache_heads.contains_key(&head),
+                }));
+            }
+        }
+
+        token_rows.push(json!({
+            "layer": layer,
+            "token": token,
+            "labels": labels,
+            "relative_position": prefix_token_relative_position(frontier, token),
+            "compared_head_count": token_compared_head_count,
+            "missing_input_count": token_missing_input_count,
+            "material_target_delta_count": token_material_target_delta_count,
+            "rows": head_rows,
+        }));
+    }
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if token_rows.is_empty() {
+        blocked_reasons.push("prefix_value_mix_token_target_missing".to_string());
+    }
+    if missing_input_count > 0 {
+        blocked_reasons.push("prefix_value_mix_input_missing".to_string());
+    }
+    if material_target_delta_count > 0 {
+        blocked_reasons.push("prefix_value_mix_target_delta_present".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if token_rows.is_empty() {
+        "capture prefix frontier targets before attributing value-mix history drift"
+    } else if missing_input_count > 0 {
+        "capture missing probability/value-cache/value-mix history samples for prefix frontier tokens"
+    } else if material_target_delta_count > 0 {
+        "use token-scoped source candidates to decide whether prefix value-mix drift follows probability history, value-cache history, or both"
+    } else {
+        "prefix value-mix history attribution does not show material target drift"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer prefix value-mix history attribution is diagnostic-only token-scoped evidence for whether prefix value-mix drift follows probability history, value-cache history, or both; it does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "source_frontier": {
+            "active_frontier": frontier.pointer("/active_frontier").cloned().unwrap_or(Value::Null),
+            "selected_current_token": frontier.pointer("/selected_current_token").cloned().unwrap_or(Value::Null),
+            "current_history_consistency_clean": frontier.pointer("/current_history_consistency_clean").cloned().unwrap_or(Value::Null),
+        },
+        "group_size": group_size,
+        "reference_probability_history_head_count": reference_probability_heads.len(),
+        "rust_probability_history_head_count": rust_probability_heads.len(),
+        "reference_value_cache_history_head_count": reference_value_cache_heads.len(),
+        "rust_expanded_value_cache_history_head_count": rust_value_cache_heads.len(),
+        "reference_value_mix_history_head_count": reference_value_mix_heads.len(),
+        "rust_value_mix_history_head_count": rust_value_mix_heads.len(),
+        "target_token_count": token_rows.len(),
+        "compared_head_count": compared_head_count,
+        "missing_input_count": missing_input_count,
+        "material_target_delta_count": material_target_delta_count,
+        "best_candidate_counts": best_candidate_counts,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
+        "rows": token_rows,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
     })
@@ -8958,6 +9258,96 @@ fn value_mix_history_candidate_delta(
         object.insert("probability_key_count".to_string(), json!(probability_key_count));
         object.insert("probability_query_count".to_string(), json!(probability_query_count));
         object.insert("value_cache_token_count".to_string(), json!(value_cache_token_count));
+    }
+    Some(delta)
+}
+
+fn value_mix_history_candidate_token_delta(
+    probability: &ScalarTraceTensor,
+    value_cache: &ScalarTraceTensor,
+    target: &ScalarTraceTensor,
+    query_token: usize,
+) -> Option<Value> {
+    let (value_dim, target_token_count) = scalar_tensor_dim_token_shape(target)?;
+    let (probability_key_count, probability_query_count) =
+        scalar_tensor_dim_token_shape(probability)?;
+    let (cache_value_dim, value_cache_token_count) = scalar_tensor_dim_token_shape(value_cache)?;
+    if cache_value_dim != value_dim
+        || query_token >= target_token_count
+        || query_token >= probability_query_count
+    {
+        return None;
+    }
+    let probability_sample_count = probability_key_count.checked_mul(probability_query_count)?;
+    let value_cache_sample_count = value_dim.checked_mul(value_cache_token_count)?;
+    if probability.first_values.len() < probability_sample_count
+        || value_cache.first_values.len() < value_cache_sample_count
+        || target.first_values.len() < value_dim.checked_mul(target_token_count)?
+    {
+        return None;
+    }
+
+    let key_count = probability_key_count.min(value_cache_token_count);
+    let mut recomputed = Vec::<f32>::with_capacity(value_dim);
+    let mut target_values = Vec::<f32>::with_capacity(value_dim);
+    for dim in 0..value_dim {
+        let mut sum = 0.0f64;
+        for key_token in 0..key_count {
+            let probability =
+                probability.first_values[key_token * probability_query_count + query_token] as f64;
+            let value = value_cache.first_values[dim * value_cache_token_count + key_token] as f64;
+            sum += probability * value;
+        }
+        recomputed.push(sum as f32);
+        target_values.push(target.first_values[dim * target_token_count + query_token]);
+    }
+
+    let mut delta = compare_vectors(&recomputed, &target_values);
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("dim_major_token_minor"));
+        object.insert("query_token".to_string(), json!(query_token));
+        object.insert("key_count_used".to_string(), json!(key_count));
+        object.insert("probability_key_count".to_string(), json!(probability_key_count));
+        object.insert("probability_query_count".to_string(), json!(probability_query_count));
+        object.insert("value_cache_token_count".to_string(), json!(value_cache_token_count));
+        object.insert("value_dim".to_string(), json!(value_dim));
+    }
+    Some(delta)
+}
+
+fn scalar_tensor_token_delta(
+    reference: &ScalarTraceTensor,
+    rust: &ScalarTraceTensor,
+    token: usize,
+) -> Option<Value> {
+    let (reference_dim_count, reference_token_count) = scalar_tensor_dim_token_shape(reference)?;
+    let (rust_dim_count, rust_token_count) = scalar_tensor_dim_token_shape(rust)?;
+    let dim_count = reference_dim_count.min(rust_dim_count);
+    if token >= reference_token_count || token >= rust_token_count || dim_count == 0 {
+        return None;
+    }
+    let reference_sample_count = reference_dim_count.checked_mul(reference_token_count)?;
+    let rust_sample_count = rust_dim_count.checked_mul(rust_token_count)?;
+    if reference.first_values.len() < reference_sample_count
+        || rust.first_values.len() < rust_sample_count
+    {
+        return None;
+    }
+
+    let mut reference_values = Vec::<f32>::with_capacity(dim_count);
+    let mut rust_values = Vec::<f32>::with_capacity(dim_count);
+    for dim in 0..dim_count {
+        reference_values.push(reference.first_values[dim * reference_token_count + token]);
+        rust_values.push(rust.first_values[dim * rust_token_count + token]);
+    }
+    let mut delta = compare_vectors(&reference_values, &rust_values);
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("dim_major_token_minor"));
+        object.insert("token".to_string(), json!(token));
+        object.insert("reference_dim_count".to_string(), json!(reference_dim_count));
+        object.insert("reference_token_count".to_string(), json!(reference_token_count));
+        object.insert("rust_dim_count".to_string(), json!(rust_dim_count));
+        object.insert("rust_token_count".to_string(), json!(rust_token_count));
     }
     Some(delta)
 }
@@ -18780,6 +19170,134 @@ mod tests {
             attribution.pointer("/rows/0/candidates").and_then(Value::as_array).map(Vec::len),
             Some(4)
         );
+    }
+
+    #[test]
+    fn compare_reports_layer0_prefix_value_mix_history_attribution() {
+        let mut reference_probability = test_reference_trace_record(
+            "kq_soft_max_ext_head0_history_ref_layout",
+            vec![1.0, 0.0, 0.0, 1.0],
+        );
+        reference_probability.shape = vec![2, 2, 1, 1];
+        reference_probability.nelements = 4;
+        reference_probability.layer = Some(0);
+        let mut reference_cache = test_reference_trace_record(
+            "v_cache_rust_layout_head0_live",
+            vec![1.0, 10.0, 2.0, 20.0],
+        );
+        reference_cache.shape = vec![2, 2, 1, 1];
+        reference_cache.nelements = 4;
+        reference_cache.layer = Some(0);
+        let mut reference_value_mix =
+            test_reference_trace_record("kqv_head0_history_ref_layout", vec![1.0, 10.0, 2.0, 20.0]);
+        reference_value_mix.shape = vec![2, 2, 1, 1];
+        reference_value_mix.nelements = 4;
+        reference_value_mix.layer = Some(0);
+        let reference_records = vec![reference_probability, reference_cache, reference_value_mix];
+
+        let mut rust_probability = test_rust_trace_record(
+            "attn_scores_softmax_head0_history_ref_layout",
+            vec![0.0, 0.0, 1.0, 1.0],
+        );
+        rust_probability.name = "t1/blk0/attn_scores_softmax_head0_history_ref_layout".to_string();
+        rust_probability.stage = Some("attn_scores_softmax_head0_history_ref_layout".to_string());
+        rust_probability.shape = vec![2, 2];
+        rust_probability.num_elements = 4;
+        rust_probability.layer = Some(0);
+        let mut rust_cache = test_rust_trace_record(
+            "attention_v_cache_expanded_for_value_mix_head0_ref_layout",
+            vec![5.0, 10.0, 6.0, 20.0],
+        );
+        rust_cache.name =
+            "t1/blk0/attention_v_cache_expanded_for_value_mix_head0_ref_layout".to_string();
+        rust_cache.stage =
+            Some("attention_v_cache_expanded_for_value_mix_head0_ref_layout".to_string());
+        rust_cache.shape = vec![2, 2];
+        rust_cache.num_elements = 4;
+        rust_cache.layer = Some(0);
+        let mut rust_value_mix = test_rust_trace_record(
+            "attention_value_mix_head0_history_ref_layout",
+            vec![5.0, 10.0, 6.0, 20.0],
+        );
+        rust_value_mix.name = "t1/blk0/attention_value_mix_head0_history_ref_layout".to_string();
+        rust_value_mix.stage = Some("attention_value_mix_head0_history_ref_layout".to_string());
+        rust_value_mix.shape = vec![2, 2];
+        rust_value_mix.num_elements = 4;
+        rust_value_mix.layer = Some(0);
+        let rust_records = rust_trace_stage_map(vec![rust_probability, rust_cache, rust_value_mix]);
+
+        let frontier = json!({
+            "active_frontier": "earliest_earlier_prefix_token",
+            "selected_current_token": 1,
+            "current_history_consistency_clean": true,
+            "earliest_earlier_prefix_token": {
+                "token": 0,
+                "relative_position": "before_sampled_current"
+            },
+            "max_earlier_prefix_token": {
+                "token": 0,
+                "relative_position": "before_sampled_current"
+            },
+            "sampled_current_token_row": {
+                "token": 1,
+                "relative_position": "sampled_current"
+            }
+        });
+
+        let attribution = layer_prefix_value_mix_history_attribution(
+            &reference_records,
+            &rust_records,
+            &frontier,
+            0,
+        );
+        let reasons =
+            attribution.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+        let token0_labels =
+            attribution.pointer("/rows/0/labels").and_then(Value::as_array).unwrap();
+        let token1_labels =
+            attribution.pointer("/rows/1/labels").and_then(Value::as_array).unwrap();
+
+        assert_eq!(attribution.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(attribution.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(attribution.pointer("/layout"), Some(&json!("dim_major_token_minor")));
+        assert_eq!(
+            attribution.pointer("/source_frontier/active_frontier"),
+            Some(&json!("earliest_earlier_prefix_token"))
+        );
+        assert_eq!(attribution.pointer("/target_token_count"), Some(&json!(2)));
+        assert_eq!(attribution.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(attribution.pointer("/missing_input_count"), Some(&json!(0)));
+        assert_eq!(attribution.pointer("/material_target_delta_count"), Some(&json!(1)));
+        assert_eq!(attribution.pointer("/rows/0/token"), Some(&json!(0)));
+        assert_eq!(attribution.pointer("/rows/1/token"), Some(&json!(1)));
+        assert!(token0_labels.contains(&json!("earliest_earlier_prefix_token")));
+        assert!(token0_labels.contains(&json!("max_earlier_prefix_token")));
+        assert!(token1_labels.contains(&json!("sampled_current_token")));
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/target_material_mismatch"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/1/rows/0/target_material_mismatch"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/best_candidate"),
+            Some(&json!("reference_probability_history_reference_value_cache_history"))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/candidates/0/delta/query_token"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            attribution
+                .pointer("/rows/0/rows/0/candidates")
+                .and_then(Value::as_array)
+                .map(Vec::len),
+            Some(4)
+        );
+        assert!(reasons.contains(&json!("prefix_value_mix_target_delta_present")));
+        assert!(!reasons.contains(&json!("prefix_value_mix_input_missing")));
     }
 
     #[test]
