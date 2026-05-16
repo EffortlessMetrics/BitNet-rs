@@ -75,18 +75,17 @@ pub fn build_tables(
     }
 
     let half_dim = dim / 2;
-    let inv_freq =
-        (0..half_dim).map(|i| 1.0 / base.powf((2.0 * i as f32) / dim as f32)).collect::<Vec<_>>();
+    let theta_scale = base.powf(-2.0 / dim as f32);
 
     let mut sin = Vec::with_capacity(max_seq_len * half_dim);
     let mut cos = Vec::with_capacity(max_seq_len * half_dim);
 
     for pos in 0..max_seq_len {
-        let pos = pos as f32;
-        for &freq in &inv_freq {
-            let angle = pos * freq;
-            sin.push(angle.sin());
-            cos.push(angle.cos());
+        let mut theta = pos as f32;
+        for _ in 0..half_dim {
+            sin.push(theta.sin());
+            cos.push(theta.cos());
+            theta *= theta_scale;
         }
     }
 
@@ -143,6 +142,34 @@ mod tests {
 
         approx_eq(tables.sin[row1_offset + 1], 0.01_f32.sin(), 1e-6);
         approx_eq(tables.cos[row1_offset + 1], 0.01_f32.cos(), 1e-6);
+    }
+
+    #[test]
+    fn build_tables_uses_ggml_iterative_f32_theta() {
+        let dim = 128usize;
+        let pos = 17usize;
+        let base = 500_000.0f32;
+        let tables = build_tables(dim, pos + 1, base).expect("tables");
+        let row = pos * tables.half_dim;
+        let theta_scale = base.powf(-2.0 / dim as f32);
+        let mut theta = pos as f32;
+        let mut differs_from_independent_f64_powf = false;
+
+        for lane in 0..tables.half_dim {
+            let index = row + lane;
+            assert_eq!(tables.sin[index].to_bits(), theta.sin().to_bits());
+            assert_eq!(tables.cos[index].to_bits(), theta.cos().to_bits());
+
+            let exponent_f64 = (2.0 * lane as f64) / dim as f64;
+            let angle_f64 = pos as f64 / f64::from(base).powf(exponent_f64);
+            differs_from_independent_f64_powf |= tables.sin[index].to_bits()
+                != (angle_f64.sin() as f32).to_bits()
+                || tables.cos[index].to_bits() != (angle_f64.cos() as f32).to_bits();
+
+            theta *= theta_scale;
+        }
+
+        assert!(differs_from_independent_f64_powf);
     }
 
     #[test]
