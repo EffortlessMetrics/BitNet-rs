@@ -1,0 +1,1077 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
+  "proof_stage": "profile_timing_qualification_no_promotion_change",
+  "created_utc": "2026-05-16T18:05:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "phase_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+  "benchmark_gate_ready": true,
+  "profiles": [
+    {
+      "profile_id": "regression_tiny",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "power and thermal context not normalized in this comparison",
+            "total response latency is missing"
+          ]
+        }
+      ],
+      "profile_gaps": []
+    },
+    {
+      "profile_id": "ask_short",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "power and thermal context not normalized in this comparison",
+            "total response latency is missing"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile ask_short has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile ask_short",
+            "timing coverage has missing profile fields"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646183,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile ask_short has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile ask_short",
+            "timing coverage has missing profile fields"
+          ]
+        }
+      ],
+      "profile_gaps": [
+        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; timing coverage has missing profile fields",
+        "ask_short route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; timing coverage has missing profile fields"
+      ]
+    },
+    {
+      "profile_id": "ask_normal",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "power and thermal context not normalized in this comparison",
+            "total response latency is missing"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile ask_normal has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile ask_normal",
+            "timing coverage has missing profile fields"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646183,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile ask_normal has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile ask_normal",
+            "timing coverage has missing profile fields"
+          ]
+        }
+      ],
+      "profile_gaps": [
+        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_normal has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; timing coverage has missing profile fields",
+        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_normal has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; timing coverage has missing profile fields"
+      ]
+    },
+    {
+      "profile_id": "prefill_heavy",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "power and thermal context not normalized in this comparison",
+            "route not promoted for profile prefill_heavy",
+            "total response latency is missing"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile prefill_heavy has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile prefill_heavy",
+            "timing coverage has missing profile fields"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646183,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile prefill_heavy has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile prefill_heavy",
+            "timing coverage has missing profile fields"
+          ]
+        }
+      ],
+      "profile_gaps": [
+        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; timing coverage has missing profile fields",
+        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; timing coverage has missing profile fields"
+      ]
+    },
+    {
+      "profile_id": "decode_heavy",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "power and thermal context not normalized in this comparison",
+            "route not promoted for profile decode_heavy",
+            "total response latency is missing"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile decode_heavy has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile decode_heavy",
+            "timing coverage has missing profile fields"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646183,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile decode_heavy has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile decode_heavy",
+            "timing coverage has missing profile fields"
+          ]
+        }
+      ],
+      "profile_gaps": [
+        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile decode_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; timing coverage has missing profile fields",
+        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile decode_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; timing coverage has missing profile fields"
+      ]
+    },
+    {
+      "profile_id": "structured",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu"
+      ],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "power and thermal context not normalized in this comparison",
+            "route not promoted for profile structured",
+            "total response latency is missing"
+          ]
+        }
+      ],
+      "profile_gaps": []
+    },
+    {
+      "profile_id": "low_power",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_npu_candidate",
+        "dense_slm_openvino_gpu_candidate"
+      ],
+      "routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": null,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "power and thermal context not normalized in this comparison"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "required_for_promotion_but_not_recorded",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "bounded math ask only; not expanded profile regression corpus",
+            "corpus_v2 profile quality evidence missing",
+            "power and thermal context not normalized in this comparison",
+            "power telemetry receipt missing for low_power promotion",
+            "route not promoted for profile low_power",
+            "total response latency is missing"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646183,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "required_for_promotion_but_not_recorded",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile quality evidence missing",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "power telemetry receipt missing for low_power promotion",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile low_power",
+            "timing coverage has missing profile fields"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "required_for_promotion_but_not_recorded",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile quality evidence missing",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "power telemetry receipt missing for low_power promotion",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile low_power",
+            "timing coverage has missing profile fields"
+          ]
+        }
+      ],
+      "profile_gaps": [
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power telemetry receipt missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
+        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power telemetry receipt missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
+      ]
+    },
+    {
+      "profile_id": "bitnet_strict_reference",
+      "promoted_route": "bitnet_reference_cpu",
+      "candidate_routes": [],
+      "routes": [
+        {
+          "route_id": "bitnet_reference_cpu",
+          "route_status": "promoted",
+          "selected_backend": "intel-258v-cpu-avx2",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": null,
+          "phase_timing_present": false,
+          "timing": {
+            "timing_scope": "bitnet_reference_cpu_not_dense_slm_profile",
+            "source_receipts": [
+              "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+              "cpu-reference-bundle-after-semantic-fix.json"
+            ],
+            "cold_load_ms": null,
+            "tokenize_ms": null,
+            "prefill_ms": null,
+            "first_token_ms": null,
+            "decode_total_ms": null,
+            "generation_total_ms": null,
+            "total_response_ms": null,
+            "output_tokens": null,
+            "throughput_tokens_per_s": null,
+            "phase_coverage": [
+              "BitNet I2_S applied-thread evidence is indexed separately",
+              "Not comparable to dense Qwen OpenVINO route profiles"
+            ],
+            "known_gaps": [
+              "BitNet route remains a strict reference route, not a general dense SLM ask route"
+            ]
+          },
+          "telemetry": {
+            "memory_context": "not_normalized_in_current_profile_benchmark",
+            "power_context": "not_normalized_in_current_profile_benchmark",
+            "thermal_context": "not_normalized_in_current_profile_benchmark"
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": false,
+          "blockers": [
+            "BitNet route remains a strict reference route, not a general dense SLM ask route",
+            "BitNet route uses separate CPU reference and I2_S performance receipts"
+          ]
+        }
+      ],
+      "profile_gaps": []
+    }
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "broad_quality_claim": false,
+    "speedup_claim": false,
+    "acceleration_claim": false,
+    "hidden_fallback_allowed": false,
+    "dense_slm_as_bitnet_proof": false
+  }
+}
