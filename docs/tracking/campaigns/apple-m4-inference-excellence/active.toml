@@ -34,7 +34,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-001"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-001-dense-eval-refresh"
 stackable = false
 review_mode = "codex_premerge"
@@ -43,10 +43,11 @@ human_gate = "on_blocker_only"
 blocked_by = []
 acceptance = "Run and commit a second dense SLM eval-v2 refresh for every supported M4 dense model identity so dense_slm_eval_v2 dashboard groups can move from insufficient_history to comparable matching history without changing the corpus or broadening quality claims."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac validate --model-id <model-id> --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model <verified-cache-path>/<model-file>.gguf --model-id <model-id> --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json --per-prompt-timeout-seconds 240",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --json",
   "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/slm-eval-v2/<model-id>/summary.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]

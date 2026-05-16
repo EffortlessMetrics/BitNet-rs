@@ -128,6 +128,31 @@ schema. Current v2 failure taxonomy is dominated by `answer_content`, with
 rejects the output. The published reports therefore support bounded regression
 tracking and targeted repair work; they do not prove broad dense-model quality.
 
+## Second Matching Refresh
+
+`M4-EXCELLENCE-001` records a second dense SLM eval-v2 refresh for the same
+supported M4 dense model identities:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/<model-id>/summary.json
+```
+
+The refresh keeps the same 120-case seeded corpus, `apple-m4-cpu-neon`
+backend, `fallback_used=false`, catalog-pinned GGUF SHA256 values, strict GGUF
+tokenizer authority, Qwen2.5 prompt template, and dense-SLM-only claim
+boundary. It adds matching-history receipts for the eval-v2 family; dashboard
+status is refreshed separately by `M4-EXCELLENCE-003`.
+
+| Model | Strict score | Quality gate | TTFT p50 | TTFT p90 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 | Regression note |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `qwen2.5-0.5b-instruct-q8_0` | 62 / 120 | 62 / 120 | 3747.0 ms | 4656.0 ms | 13.101 | 1.803 | 9.067 | matched, no warnings |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 66 / 120 | 66 / 120 | 2916.0 ms | 11424.0 ms | 18.445 | 1.803 | 11.912 | advisory `ttft_ms_p90` warning |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 59 / 120 | 59 / 120 | 14027.0 ms | 38583.0 ms | 3.368 | 0.311 | 3.149 | advisory `ttft_ms_p90` warning |
+
+The strict scores and task-family pass counts match the 2026-05-14 eval-v2
+baseline. The timing warnings are preserved as advisory regression evidence,
+not hidden or converted into a speed claim.
+
 ## Benchmark Contract
 
 The v2 benchmark profile set should include:

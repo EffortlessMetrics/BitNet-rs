@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T05:39:28Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-001-dense-eval-refresh"
+summary = "Started the second dense SLM eval-v2 refresh for every supported M4 dense model identity."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+  "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+  "docs/slm/apple-m4-inference-excellence.md",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/active.toml",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/CAMPAIGN.md",
+]
+
+notes = [
+  "Refresh scope is dense SLM eval-v2 only, using the existing 120-case seeded corpus and supported Qwen model identities.",
+  "Runs use apple-m4-cpu-neon with fallback_used=false and do not change the corpus, default model, BitNet, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claims.",
+  "Q8_0 matched the previous eval-v2 regression envelope without warnings; the two Q4_K_M summaries validate but report advisory ttft_ms_p90 timing warnings against the 2026-05-14 baselines.",
+]
