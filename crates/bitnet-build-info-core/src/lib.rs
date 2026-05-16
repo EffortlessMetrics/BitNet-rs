@@ -117,7 +117,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
-    fn serde_serializes_all_fields() {
+    fn serde_serializes_all_fields() -> Result<(), Box<dyn std::error::Error>> {
         let metadata = BuildMetadata::from_env(
             Some("deadbeef"),
             Some("feature/x"),
@@ -126,8 +126,10 @@ mod tests {
             Some("aarch64-apple-darwin"),
             Some("0"),
         );
-        let json: serde_json::Value = serde_json::to_value(&metadata).expect("serialize");
-        let obj = json.as_object().expect("object");
+        let json: serde_json::Value = serde_json::to_value(&metadata)?;
+        let obj = json
+            .as_object()
+            .ok_or_else(|| std::io::Error::other("serialized metadata should be a JSON object"))?;
         assert_eq!(obj.get("git_sha").and_then(|v| v.as_str()), Some("deadbeef"));
         assert_eq!(obj.get("git_branch").and_then(|v| v.as_str()), Some("feature/x"));
         assert_eq!(
@@ -140,5 +142,6 @@ mod tests {
             Some("aarch64-apple-darwin")
         );
         assert_eq!(obj.get("cargo_opt_level").and_then(|v| v.as_str()), Some("0"));
+        Ok(())
     }
 }
