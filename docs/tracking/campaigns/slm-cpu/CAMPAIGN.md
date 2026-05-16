@@ -71,6 +71,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-018 | merged | SmolLM2 360M normalization policy audit landed in #5067: generic `llama` strict LayerNorm gamma validation remains fail-closed, and any SmolLM2 loader exception must be governed by exact artifact/model-family metadata before CPU sanity can be retried. |
 | SLM-CPU-019 | merged | Exact metadata-scoped SmolLM2 360M normalization validation landed in #5081: generic `llama` strict LayerNorm/RMSNorm gamma validation remains fail-closed, and the SmolLM2 exception requires exact artifact SHA, GGUF metadata, and dimensions before the next strict CPU sanity retry. No CPU answer, CUDA, throughput, server, broad dense GGUF, or BitNet QK256 claim is made. |
 | SLM-CPU-020 | merged | #5108 retries SmolLM2 strict CPU sanity after exact metadata-scoped normalization validation; it reaches tokenizer loading, prompt rendering, and one-token generation with `fallback_used=false`, but the math prompt generates `The`, so CPU answer readiness remains false and the next proof is wrong-first-token diagnosis before CUDA planning. |
+| SLM-CPU-021 | pr_open | #5133 diagnoses the SmolLM2 wrong-first-token blocker from committed reference-runner, prompt/tokenizer, and strict CPU retry evidence; CPU answer readiness and CUDA planning remain blocked until a reference-compatible first-token/top-k or checkpoint comparator localizes the fault. |
 
 ## Review Policy
 

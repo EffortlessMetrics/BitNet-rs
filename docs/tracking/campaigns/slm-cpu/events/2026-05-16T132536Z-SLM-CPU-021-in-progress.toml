@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T13:25:36Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-021"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "model/slm-cpu-021-smollm2-wrong-token-diagnosis"
+
+summary = "Started SLM-CPU-021 to diagnose the SmolLM2 wrong-first-token strict CPU quality blocker before any CUDA planning."
+
+artifacts = [
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+  "ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml",
+  "ci/quality/apple-m4-slm-model-breadth-rust-m4-quality.toml",
+]
+
+notes = [
+  "SLM-CPU-020 reached strict CPU tokenizer loading, prompt rendering, and one-token generation with fallback_used=false, but selected token `The` for the math prompt.",
+  "Committed reference-runner evidence shows the same artifact can answer bounded prompts under a raw SmolLM2 ChatML prompt.",
+  "Earlier committed diagnostic evidence found prompt/token parity alone was insufficient to make Rust output coherent.",
+  "This item records the blocker diagnosis and next comparator proof only; it does not start CUDA planning or claim CPU answer readiness, speed, server, broad dense GGUF, or BitNet QK256 behavior.",
+]
