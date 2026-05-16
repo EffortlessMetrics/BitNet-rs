@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1087 @@ struct llama_context {
+@@ -3441,6 +3444,1089 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -755,11 +755,12 @@ index 666fcc4d..23ee29ff 100644
 +            out << "]}";
 +        }
 +    }
-+    if ((strcmp(name, "kq-0") == 0 || strcmp(name, "kq_soft_max_ext-0") == 0 || strcmp(name, "kqv-0") == 0)
++    const char * value_mix_stage = bitnet_rs_reference_layer_trace_stage(name);
++    if ((strcmp(value_mix_stage, "kq") == 0 || strcmp(value_mix_stage, "kq_soft_max_ext") == 0 || strcmp(value_mix_stage, "kqv") == 0)
 +            && values_available && token_axis == 1 && tensor->ne[0] > 0 && tensor->ne[1] > 0 && tensor->ne[2] > 1) {
-+        const char * head_stage_prefix = strcmp(name, "kq-0") == 0
++        const char * head_stage_prefix = strcmp(value_mix_stage, "kq") == 0
 +            ? "kq_head"
-+            : (strcmp(name, "kq_soft_max_ext-0") == 0 ? "kq_soft_max_ext_head" : "kqv_head");
++            : (strcmp(value_mix_stage, "kq_soft_max_ext") == 0 ? "kq_soft_max_ext_head" : "kqv_head");
 +        const int64_t sampled_token = tensor->ne[1] - 1;
 +        for (int64_t head = 0; head < tensor->ne[2]; ++head) {
 +            const int64_t head_offset = tensor->ne[0] * sampled_token + tensor->ne[0] * tensor->ne[1] * head;
@@ -786,7 +787,7 @@ index 666fcc4d..23ee29ff 100644
 +            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
 +            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
 +            std::ostringstream head_name;
-+            head_name << head_stage_prefix << head << "-0";
++            head_name << head_stage_prefix << head << "-" << bitnet_rs_reference_layer_trace_layer(name);
 +            std::ostringstream head_stage;
 +            head_stage << head_stage_prefix << head;
 +            out << ",{";
@@ -834,8 +835,9 @@ index 666fcc4d..23ee29ff 100644
 +            out << "]}";
 +        }
 +    }
-+    if ((strcmp(name, "k-0") == 0 || strcmp(name, "v-0") == 0) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens && tensor->ne[2] > 0) {
-+        const bool is_key_cache = strcmp(name, "k-0") == 0;
++    const char * kv_cache_stage = bitnet_rs_reference_layer_trace_stage(name);
++    if ((strcmp(kv_cache_stage, "k") == 0 || strcmp(kv_cache_stage, "v") == 0) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens && tensor->ne[2] > 0) {
++        const bool is_key_cache = strcmp(kv_cache_stage, "k") == 0;
 +        for (int64_t head = 0; head < tensor->ne[2]; ++head) {
 +            const int64_t head_offset = tensor->ne[0] * tensor->ne[1] * head;
 +            const int64_t head_nelements = tensor->ne[0] * (int64_t) n_tokens;
@@ -863,7 +865,7 @@ index 666fcc4d..23ee29ff 100644
 +            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
 +            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
 +            std::ostringstream head_name;
-+            head_name << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live-0";
++            head_name << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live-" << bitnet_rs_reference_layer_trace_layer(name);
 +            std::ostringstream head_stage;
 +            head_stage << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live";
 +            out << ",{";

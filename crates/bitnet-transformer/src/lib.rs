@@ -625,7 +625,7 @@ impl MultiHeadAttention {
         };
 
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             trace_layer0_tensor(self.layer_idx, _trace_base_seq, 2, "attention_q_rope", &q)?;
         }
 
@@ -633,7 +633,7 @@ impl MultiHeadAttention {
         // **Performance note**: Borrow references instead of cloning after append.
         // Candle operations accept both owned and borrowed tensors.
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for kv_head_idx in 0..self.n_kv_heads {
                 let before_store = k
                     .narrow(1, kv_head_idx, 1)?
@@ -642,11 +642,18 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_k_before_cache_store_kv_head{kv_head_idx}_ref_layout"
+                    "t{trace_seq}/blk{}/attention_k_before_cache_store_kv_head{kv_head_idx}_ref_layout",
+                    self.layer_idx
                 );
                 let stage =
                     format!("attention_k_before_cache_store_kv_head{kv_head_idx}_ref_layout");
-                trace_tensor_record(&trace_name, &before_store, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &before_store,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
             }
             for kv_head_idx in 0..self.n_kv_heads {
                 let before_store = v
@@ -656,11 +663,18 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_v_before_cache_store_kv_head{kv_head_idx}_ref_layout"
+                    "t{trace_seq}/blk{}/attention_v_before_cache_store_kv_head{kv_head_idx}_ref_layout",
+                    self.layer_idx
                 );
                 let stage =
                     format!("attention_v_before_cache_store_kv_head{kv_head_idx}_ref_layout");
-                trace_tensor_record(&trace_name, &before_store, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &before_store,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
             }
         }
         let (k_ctx, v_ctx) = if let Some(cache) = kv_cache {
@@ -688,7 +702,7 @@ impl MultiHeadAttention {
             .repeat(&[1, 1, self.group_size, 1, 1])?    // [B, HKV, group, Tk, D]
             .reshape(&[batch_size, self.n_heads, t_k, self.head_dim])?; // [B, Hq, Tk, D]
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for kv_head_idx in 0..self.n_kv_heads {
                 let kv_live = k_ctx
                     .narrow(1, kv_head_idx, 1)?
@@ -697,14 +711,22 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_k_cache_kv_head{kv_head_idx}_live_ref_layout"
+                    "t{trace_seq}/blk{}/attention_k_cache_kv_head{kv_head_idx}_live_ref_layout",
+                    self.layer_idx
                 );
                 let stage = format!("attention_k_cache_kv_head{kv_head_idx}_live_ref_layout");
-                trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &kv_live,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
 
                 let kv_live_f16_roundtrip = kv_live.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_k_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout"
+                    "t{trace_seq}/blk{}/attention_k_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout",
+                    self.layer_idx
                 );
                 let stage =
                     format!("attention_k_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout");
@@ -712,7 +734,7 @@ impl MultiHeadAttention {
                     &trace_name,
                     &kv_live_f16_roundtrip,
                     trace_seq,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
             }
@@ -730,12 +752,15 @@ impl MultiHeadAttention {
                 head0_ref_layout.to_dtype(DType::F32)?
             };
             let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
-            let trace_name = format!("t{trace_seq}/blk0/attention_k_cache_head0_ref_layout_padded");
+            let trace_name = format!(
+                "t{trace_seq}/blk{}/attention_k_cache_head0_ref_layout_padded",
+                self.layer_idx
+            );
             trace_tensor_record(
                 &trace_name,
                 &head0_ref_layout,
                 trace_seq,
-                Some(0),
+                Some(self.layer_idx as isize),
                 "attention_k_cache_head0_ref_layout_padded",
             )?;
 
@@ -747,32 +772,48 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_v_cache_readback_kv_head{kv_head_idx}_ref_layout"
+                    "t{trace_seq}/blk{}/attention_v_cache_readback_kv_head{kv_head_idx}_ref_layout",
+                    self.layer_idx
                 );
                 let stage = format!("attention_v_cache_readback_kv_head{kv_head_idx}_ref_layout");
-                trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &kv_live,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
 
                 let kv_live_f16_roundtrip = kv_live.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_v_cache_stored_f16_kv_head{kv_head_idx}_ref_layout"
+                    "t{trace_seq}/blk{}/attention_v_cache_stored_f16_kv_head{kv_head_idx}_ref_layout",
+                    self.layer_idx
                 );
                 let stage = format!("attention_v_cache_stored_f16_kv_head{kv_head_idx}_ref_layout");
                 trace_tensor_record(
                     &trace_name,
                     &kv_live_f16_roundtrip,
                     trace_seq,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
 
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_v_cache_kv_head{kv_head_idx}_live_ref_layout"
+                    "t{trace_seq}/blk{}/attention_v_cache_kv_head{kv_head_idx}_live_ref_layout",
+                    self.layer_idx
                 );
                 let stage = format!("attention_v_cache_kv_head{kv_head_idx}_live_ref_layout");
-                trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &kv_live,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
 
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_v_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout"
+                    "t{trace_seq}/blk{}/attention_v_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout",
+                    self.layer_idx
                 );
                 let stage =
                     format!("attention_v_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout");
@@ -780,7 +821,7 @@ impl MultiHeadAttention {
                     &trace_name,
                     &kv_live_f16_roundtrip,
                     trace_seq,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
             }
@@ -798,12 +839,15 @@ impl MultiHeadAttention {
                 head0_ref_layout.to_dtype(DType::F32)?
             };
             let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
-            let trace_name = format!("t{trace_seq}/blk0/attention_v_cache_head0_ref_layout_padded");
+            let trace_name = format!(
+                "t{trace_seq}/blk{}/attention_v_cache_head0_ref_layout_padded",
+                self.layer_idx
+            );
             trace_tensor_record(
                 &trace_name,
                 &head0_ref_layout,
                 trace_seq,
-                Some(0),
+                Some(self.layer_idx as isize),
                 "attention_v_cache_head0_ref_layout_padded",
             )?;
         }
@@ -828,7 +872,7 @@ impl MultiHeadAttention {
         let q_for_scores = attention_f16_dot_input(&q)?;
         let k_for_scores = attention_score_key_input(&k_expanded)?;
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             let k_for_scores_f16_probe = attention_score_key_f16_probe_input(&k_expanded)?;
             trace_layer0_tensor(
                 self.layer_idx,
@@ -845,10 +889,17 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_k_score_input_head{head_idx}_live_ref_layout"
+                    "t{trace_seq}/blk{}/attention_k_score_input_head{head_idx}_live_ref_layout",
+                    self.layer_idx
                 );
                 let stage = format!("attention_k_score_input_head{head_idx}_live_ref_layout");
-                trace_tensor_record(&trace_name, &key_head, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &key_head,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
 
                 let key_head_f16_probe = k_for_scores_f16_probe
                     .narrow(1, head_idx, 1)?
@@ -856,11 +907,18 @@ impl MultiHeadAttention {
                     .transpose(0, 1)?
                     .to_dtype(DType::F32)?;
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_k_score_input_f16_roundtrip_head{head_idx}_live_ref_layout"
+                    "t{trace_seq}/blk{}/attention_k_score_input_f16_roundtrip_head{head_idx}_live_ref_layout",
+                    self.layer_idx
                 );
                 let stage =
                     format!("attention_k_score_input_f16_roundtrip_head{head_idx}_live_ref_layout");
-                trace_tensor_record(&trace_name, &key_head_f16_probe, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &key_head_f16_probe,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
             }
         }
         let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
@@ -868,17 +926,17 @@ impl MultiHeadAttention {
         // Convert to fp32 for numerically stable computation
         let scores_f32 = scores.to_dtype(DType::F32)?;
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for head_idx in 0..self.n_heads {
                 let head = scores_f32.narrow(1, head_idx, 1)?;
-                let suffix = format!("blk0/attention_scores_raw_head{head_idx}");
+                let suffix = format!("blk{}/attention_scores_raw_head{head_idx}", self.layer_idx);
                 let stage = format!("attention_scores_raw_head{head_idx}");
                 trace_tensor_token_axis_record(
                     &suffix,
                     &head,
                     _trace_base_seq,
                     2,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
             }
@@ -946,17 +1004,17 @@ impl MultiHeadAttention {
         // VERIFIED: axis=3 is correct - softmax over keys (Tk dimension) in [B, H, Tq, Tk]
         let attn_weights = candle_nn::ops::softmax(&scores_stabilized, 3)?;
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for head_idx in 0..self.n_heads {
                 let head = attn_weights.narrow(1, head_idx, 1)?;
-                let suffix = format!("blk0/attn_scores_softmax_head{head_idx}");
+                let suffix = format!("blk{}/attn_scores_softmax_head{head_idx}", self.layer_idx);
                 let stage = format!("attn_scores_softmax_head{head_idx}");
                 trace_tensor_token_axis_record(
                     &suffix,
                     &head,
                     _trace_base_seq,
                     2,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
             }
@@ -987,7 +1045,7 @@ impl MultiHeadAttention {
 
         let v_for_value_mix = attention_f16_dot_input(&v_expanded)?;
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for head_idx in 0..self.n_heads {
                 let head = v_for_value_mix
                     .narrow(1, head_idx, 1)?
@@ -996,26 +1054,34 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
-                    "t{trace_seq}/blk0/attention_v_cache_expanded_for_value_mix_head{head_idx}_ref_layout"
+                    "t{trace_seq}/blk{}/attention_v_cache_expanded_for_value_mix_head{head_idx}_ref_layout",
+                    self.layer_idx
                 );
                 let stage =
                     format!("attention_v_cache_expanded_for_value_mix_head{head_idx}_ref_layout");
-                trace_tensor_record(&trace_name, &head, trace_seq, Some(0), &stage)?;
+                trace_tensor_record(
+                    &trace_name,
+                    &head,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
             }
         }
         let attn_value_mix = attn_weights.matmul(&v_for_value_mix)?;
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for head_idx in 0..self.n_heads {
                 let head = attn_value_mix.narrow(1, head_idx, 1)?;
-                let suffix = format!("blk0/attention_value_mix_f16_cache_head{head_idx}");
+                let suffix =
+                    format!("blk{}/attention_value_mix_f16_cache_head{head_idx}", self.layer_idx);
                 let stage = format!("attention_value_mix_f16_cache_head{head_idx}");
                 trace_tensor_token_axis_record(
                     &suffix,
                     &head,
                     _trace_base_seq,
                     2,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
             }
@@ -1040,17 +1106,17 @@ impl MultiHeadAttention {
             )?;
         }
         #[cfg(feature = "trace")]
-        if self.layer_idx == 0 {
+        if self.layer_idx == trace_target_layer() {
             for head_idx in 0..self.n_heads {
                 let head = attn_value_mix.narrow(1, head_idx, 1)?;
-                let suffix = format!("blk0/attention_value_mix_head{head_idx}");
+                let suffix = format!("blk{}/attention_value_mix_head{head_idx}", self.layer_idx);
                 let stage = format!("attention_value_mix_head{head_idx}");
                 trace_tensor_token_axis_record(
                     &suffix,
                     &head,
                     _trace_base_seq,
                     2,
-                    Some(0),
+                    Some(self.layer_idx as isize),
                     &stage,
                 )?;
             }
@@ -1458,7 +1524,7 @@ impl TransformerBlock {
             )?;
         }
         #[cfg(feature = "trace")]
-        if self.attention.layer_idx == 0 {
+        if self.attention.layer_idx == trace_target_layer() {
             let dims = x.dims();
             if dims.len() == 3 && dims[0] == 1 {
                 let seq_len = dims[1];
@@ -1466,12 +1532,15 @@ impl TransformerBlock {
                 let history =
                     x.reshape(&[seq_len, hidden])?.transpose(0, 1)?.to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
-                let trace_name = format!("t{trace_seq}/blk0/attention_v_input_history_ref_layout");
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_v_input_history_ref_layout",
+                    self.attention.layer_idx
+                );
                 trace_tensor_record(
                     &trace_name,
                     &history,
                     trace_seq,
-                    Some(0),
+                    Some(self.attention.layer_idx as isize),
                     "attention_v_input_history_ref_layout",
                 )?;
             }
