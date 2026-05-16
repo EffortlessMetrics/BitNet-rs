@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T15:54:47Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-005"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5154
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-005-failure-taxonomy"
+head_sha = "cb1d76dba1712053184a1db3414e39cfdfd92c6d"
+summary = "Opened PR #5154 for dense SLM mechanical failure categories."
+
+notes = [
+  "PR #5154 adds additive answer-corpus failure-category fields and aggregate counts for deterministic dense SLM regression triage.",
+  "The PR preserves strict failed_rules and legacy failure_taxonomy labels and does not include live model runs, BitNet proof, BitNet chat or serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claims.",
+]
