@@ -6046,6 +6046,14 @@ fn attention_value_mix_input_attribution(
             &reference_value_mix_heads,
             group_size,
         ),
+        "source_delta_summary": attention_value_mix_input_source_delta_summary(
+            &reference_probability_heads,
+            &rust_probability_heads,
+            &reference_value_cache_heads,
+            &rust_value_cache_heads,
+            &reference_value_mix_heads,
+            group_size,
+        ),
     })
 }
 
@@ -6329,6 +6337,122 @@ fn attention_value_mix_input_candidate_best_summary(
         "best_candidate_counts": best_candidate_counts,
         "max_best_abs_delta": max_best_abs_delta,
         "max_best_rms_delta": max_best_rms_delta,
+        "all_compared": !reference_value_mix_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+fn attention_value_mix_input_source_delta_summary(
+    reference_probability_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    rust_probability_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    reference_value_cache_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    rust_value_cache_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    reference_value_mix_heads: &BTreeMap<usize, ScalarTraceTensor>,
+    group_size: Option<usize>,
+) -> Value {
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut probability_larger_count = 0usize;
+    let mut value_cache_larger_count = 0usize;
+    let mut equal_source_count = 0usize;
+    let mut max_probability_only_abs_delta = 0.0f64;
+    let mut max_value_cache_only_abs_delta = 0.0f64;
+    let mut max_combined_abs_delta = 0.0f64;
+    let mut max_reference_self_abs_delta = 0.0f64;
+
+    for (&head, target) in reference_value_mix_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let reference_probability = reference_probability_heads.get(&head);
+        let rust_probability = rust_probability_heads.get(&head);
+        let reference_value_cache =
+            kv_head.and_then(|kv_head| reference_value_cache_heads.get(&kv_head));
+        let rust_value_cache = kv_head.and_then(|kv_head| rust_value_cache_heads.get(&kv_head));
+
+        let reference_self_delta = reference_probability.zip(reference_value_cache).and_then(
+            |(probability, value_cache)| {
+                value_mix_candidate_delta(probability, value_cache, target)
+            },
+        );
+        let value_cache_only_delta =
+            reference_probability.zip(rust_value_cache).and_then(|(probability, value_cache)| {
+                value_mix_candidate_delta(probability, value_cache, target)
+            });
+        let probability_only_delta =
+            rust_probability.zip(reference_value_cache).and_then(|(probability, value_cache)| {
+                value_mix_candidate_delta(probability, value_cache, target)
+            });
+        let combined_delta =
+            rust_probability.zip(rust_value_cache).and_then(|(probability, value_cache)| {
+                value_mix_candidate_delta(probability, value_cache, target)
+            });
+
+        if let (
+            Some(reference_self_delta),
+            Some(value_cache_only_delta),
+            Some(probability_only_delta),
+            Some(combined_delta),
+        ) =
+            (reference_self_delta, value_cache_only_delta, probability_only_delta, combined_delta)
+        {
+            compared_count += 1;
+            let value_cache_abs = delta_metric(&value_cache_only_delta, "/max_abs_delta");
+            let probability_abs = delta_metric(&probability_only_delta, "/max_abs_delta");
+            let combined_abs = delta_metric(&combined_delta, "/max_abs_delta");
+            let reference_self_abs = delta_metric(&reference_self_delta, "/max_abs_delta");
+            let larger_source_by_max_abs_delta = if probability_abs > value_cache_abs {
+                probability_larger_count += 1;
+                "probability"
+            } else if value_cache_abs > probability_abs {
+                value_cache_larger_count += 1;
+                "value_cache"
+            } else {
+                equal_source_count += 1;
+                "equal"
+            };
+            max_probability_only_abs_delta = max_probability_only_abs_delta.max(probability_abs);
+            max_value_cache_only_abs_delta = max_value_cache_only_abs_delta.max(value_cache_abs);
+            max_combined_abs_delta = max_combined_abs_delta.max(combined_abs);
+            max_reference_self_abs_delta = max_reference_self_abs_delta.max(reference_self_abs);
+
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "compared",
+                "larger_source_by_max_abs_delta": larger_source_by_max_abs_delta,
+                "max_abs_delta_gap": (probability_abs - value_cache_abs).abs(),
+                "reference_self_delta": reference_self_delta,
+                "value_cache_only_delta": value_cache_only_delta,
+                "probability_only_delta": probability_only_delta,
+                "combined_delta": combined_delta,
+            }));
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "reference_probability_present": reference_probability.is_some(),
+                "rust_probability_present": rust_probability.is_some(),
+                "reference_value_cache_present": reference_value_cache.is_some(),
+                "rust_value_cache_present": rust_value_cache.is_some(),
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "value-mix source delta summary is diagnostic-only evidence that ranks whether Rust probability rows or Rust F16 value-cache rows produce larger reference-target value-mix drift; it does not promote reference parity, A770 semantic quality, value mix residency, selected attention, resident KV, or any support claim",
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "probability_larger_count": probability_larger_count,
+        "value_cache_larger_count": value_cache_larger_count,
+        "equal_source_count": equal_source_count,
+        "max_reference_self_abs_delta": max_reference_self_abs_delta,
+        "max_probability_only_abs_delta": max_probability_only_abs_delta,
+        "max_value_cache_only_abs_delta": max_value_cache_only_abs_delta,
+        "max_combined_abs_delta": max_combined_abs_delta,
         "all_compared": !reference_value_mix_heads.is_empty() && missing_input_count == 0,
         "rows": rows,
     })
@@ -13855,6 +13979,27 @@ mod tests {
                 first_values: vec![3.5, 13.0, 1.0],
                 ..test_reference_trace_record("kqv_head0", vec![3.5, 13.0, 1.0])
             },
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![1.0, 0.0],
+                ..test_reference_trace_record("kq_soft_max_ext_head1", vec![1.0, 0.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head1_live",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![1.0, 3.0],
+                ..test_reference_trace_record("kqv_head1", vec![1.0, 3.0])
+            },
         ];
         let mut rust_records = BTreeMap::new();
         rust_records.insert(
@@ -13864,6 +14009,15 @@ mod tests {
                 num_elements: 2,
                 first_values: vec![0.5, 0.5],
                 ..test_rust_trace_record("attn_scores_softmax_head0", vec![0.5, 0.5])
+            },
+        );
+        rust_records.insert(
+            "attn_scores_softmax_head1".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                first_values: vec![1.0, 0.0],
+                ..test_rust_trace_record("attn_scores_softmax_head1", vec![1.0, 0.0])
             },
         );
         rust_records.insert(
@@ -13878,6 +14032,18 @@ mod tests {
                 )
             },
         );
+        rust_records.insert(
+            "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![2.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_f16_roundtrip_kv_head1_live_ref_layout",
+                    vec![2.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
 
         let report = attention_value_mix_input_attribution(&reference_records, &rust_records);
         let reference_prob_rust_value =
@@ -13887,23 +14053,24 @@ mod tests {
         let rust_prob_rust_value =
             report.pointer("/rust_probability_rust_value_cache_vs_reference").unwrap();
         let candidate_best = report.pointer("/candidate_best_summary").unwrap();
+        let source_summary = report.pointer("/source_delta_summary").unwrap();
 
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(report.pointer("/group_size"), Some(&json!(1)));
-        assert_eq!(reference_prob_rust_value.pointer("/compared_count"), Some(&json!(1)));
-        assert_eq!(reference_prob_rust_value.pointer("/max_abs_delta"), Some(&json!(0.0)));
-        assert_eq!(rust_prob_reference_value.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(reference_prob_rust_value.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(reference_prob_rust_value.pointer("/max_abs_delta"), Some(&json!(1.0)));
+        assert_eq!(rust_prob_reference_value.pointer("/compared_count"), Some(&json!(2)));
         assert_eq!(rust_prob_reference_value.pointer("/max_abs_delta"), Some(&json!(1.0)));
-        assert_eq!(rust_prob_rust_value.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(rust_prob_rust_value.pointer("/compared_count"), Some(&json!(2)));
         assert_eq!(rust_prob_rust_value.pointer("/max_abs_delta"), Some(&json!(1.0)));
         assert_eq!(candidate_best.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(candidate_best.pointer("/claim_allowed"), Some(&json!(false)));
-        assert_eq!(candidate_best.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(candidate_best.pointer("/compared_count"), Some(&json!(2)));
         assert_eq!(
             candidate_best
                 .pointer("/best_candidate_counts/reference_probability_reference_value_cache"),
-            Some(&json!(1))
+            Some(&json!(2))
         );
         assert_eq!(
             candidate_best.pointer("/rows/0/best_candidate"),
@@ -13911,6 +14078,19 @@ mod tests {
         );
         assert_eq!(candidate_best.pointer("/rows/0/max_abs_delta"), Some(&json!(0.0)));
         assert_eq!(candidate_best.pointer("/rows/0/candidate_count"), Some(&json!(4)));
+        assert_eq!(source_summary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(source_summary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(source_summary.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(source_summary.pointer("/probability_larger_count"), Some(&json!(1)));
+        assert_eq!(source_summary.pointer("/value_cache_larger_count"), Some(&json!(1)));
+        assert_eq!(
+            source_summary.pointer("/rows/0/larger_source_by_max_abs_delta"),
+            Some(&json!("probability"))
+        );
+        assert_eq!(
+            source_summary.pointer("/rows/1/larger_source_by_max_abs_delta"),
+            Some(&json!("value_cache"))
+        );
 
         let compare_report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
         assert_eq!(
