@@ -74,13 +74,12 @@ artifacts to separate strict proof items.
 | M3MBA-009 | merged | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists; merged in #4902. |
 | M3MBA-010 | merged | Audit MacBook model-cache retention and cleanup after the first large BitNet download; merged in #4839. |
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
-| M3MBA-016 | pr_open | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims. |
+| M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
 
-Current focus: `M3MBA-016` is the active device-model visibility slice. After
-that lands, `M3MBA-007` is the next bounded M3 Air artifact work surface, with
-`M3MBA-008` reserved for any accepted-artifact handoff. `M3MBA-006` is blocked
-until an official GGUF, reproducible conversion path, or explicitly approved
-third-party artifact path exists for the 0.7B candidate.
+Current focus: `M3MBA-007` is the next bounded M3 Air artifact work surface,
+with `M3MBA-008` reserved for any accepted-artifact handoff. `M3MBA-006` is
+blocked until an official GGUF, reproducible conversion path, or explicitly
+approved third-party artifact path exists for the 0.7B candidate.
 `M3MBA-010` permits another large candidate only as serialized work with fresh
 disk preflight, before/after free-space evidence, hash evidence, and no
 committed model binaries.
