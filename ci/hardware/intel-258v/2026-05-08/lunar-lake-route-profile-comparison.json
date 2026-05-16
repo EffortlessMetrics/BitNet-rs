@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-16T07:30:00Z",
+  "created_utc": "2026-05-16T12:40:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -64,12 +64,12 @@
             "profile_id": "regression_tiny",
             "profile_present": true,
             "cases_total": 4,
-            "passed": 1,
-            "failed": 3,
+            "passed": 2,
+            "failed": 2,
             "fallback_used": false,
             "status": "quality_failed",
             "notes": [
-              "3 corpus-v2 cases failed for profile regression_tiny"
+              "2 corpus-v2 cases failed for profile regression_tiny"
             ]
           },
           "evidence": [
@@ -78,7 +78,7 @@
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
           "blockers": [
-            "corpus_v2 profile regression_tiny has 3 quality failures"
+            "corpus_v2 profile regression_tiny has 2 quality failures"
           ]
         }
       ],

@@ -3077,6 +3077,36 @@ mod tests {
     }
 
     #[test]
+    fn answer_corpus_quality_normalizes_leading_assistant_colon_for_starts_with() {
+        let gate = AnswerGate {
+            starts_with_any: Some(vec!["yes".to_string()]),
+            ..gate("starts_with_any")
+        };
+        let quality = evaluate_quality(
+            ": Yes, the sky is usually blue.<|im_end|>",
+            &gate,
+            None,
+            Some(&[25, 9454, 11, 279, 12765]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert!(!quality.failed_rules.contains(&"gate_starts_with_any".to_string()));
+    }
+
+    #[test]
+    fn answer_corpus_scoring_normalizes_leading_assistant_colon_for_normalized_match() {
+        let scoring = AnswerScoring {
+            expected_normalized: Some("done".to_string()),
+            ..scoring("normalized_match")
+        };
+        let result = evaluate_scoring(": Done<|im_end|>", &scoring);
+
+        assert!(result.passed);
+    }
+
+    #[test]
     fn quality_rejects_punctuation_noise() {
         let quality = evaluate_quality("!!!,,,!!!", &gate("readable"), None, None, None, None);
         assert!(!quality.passed);
