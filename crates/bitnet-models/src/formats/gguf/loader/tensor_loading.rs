@@ -20,7 +20,7 @@ impl GgufLoader {
         device: &Device,
         model_config: &BitNetConfig,
         policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-        dense_qwen_load: bool,
+        norm_validation_policy: NormValidationPolicy,
     ) -> TensorLoadResult {
         let dtype = tensor_dtype(info.tensor_type);
         let candle_device = Self::device_to_candle(device)?;
@@ -33,10 +33,17 @@ impl GgufLoader {
                 &candle_device,
                 model_config,
                 policy_plan,
-                dense_qwen_load,
+                norm_validation_policy,
             )
         } else {
-            load_dense_tensor(info, data, dtype, &candle_device, policy_plan, dense_qwen_load)
+            load_dense_tensor(
+                info,
+                data,
+                dtype,
+                &candle_device,
+                policy_plan,
+                norm_validation_policy,
+            )
         }
     }
 }
@@ -70,7 +77,7 @@ fn load_quantized_tensor(
     candle_device: &candle_core::Device,
     model_config: &BitNetConfig,
     policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-    dense_qwen_load: bool,
+    norm_validation_policy: NormValidationPolicy,
 ) -> TensorLoadResult {
     if matches!(info.tensor_type, GgufTensorType::IQ2_S) {
         return load_iq2s_tensor(info, data, candle_device);
@@ -81,7 +88,7 @@ fn load_quantized_tensor(
     }
 
     if is_supported_dense_standard_quant(info.tensor_type) {
-        return load_dense_standard_quant_tensor(info, data, candle_device, dense_qwen_load);
+        return load_dense_standard_quant_tensor(info, data, candle_device, norm_validation_policy);
     }
 
     // Other standard GGUF quantized types stay fail-closed in strict mode until a dedicated
@@ -346,12 +353,12 @@ fn load_dense_standard_quant_tensor(
     info: &TensorInfo,
     data: &[u8],
     candle_device: &candle_core::Device,
-    dense_qwen_load: bool,
+    norm_validation_policy: NormValidationPolicy,
 ) -> TensorLoadResult {
     if matches!(
         info.tensor_type,
         GgufTensorType::Q5_0 | GgufTensorType::Q4_K | GgufTensorType::Q6_K
-    ) && !dense_qwen_load
+    ) && !matches!(norm_validation_policy, NormValidationPolicy::DenseQwen)
     {
         return Err(BitNetError::Validation(format!(
             "standard GGUF quantization {:?} in tensor '{}' is only enabled for \
@@ -414,11 +421,15 @@ fn load_dense_tensor(
     dtype: DType,
     candle_device: &candle_core::Device,
     policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-    dense_qwen_load: bool,
+    norm_validation_policy: NormValidationPolicy,
 ) -> TensorLoadResult {
     match dtype {
-        DType::F32 => load_f32_tensor(info, data, candle_device, policy_plan, dense_qwen_load),
-        DType::F16 => load_f16_tensor(info, data, candle_device, policy_plan, dense_qwen_load),
+        DType::F32 => {
+            load_f32_tensor(info, data, candle_device, policy_plan, norm_validation_policy)
+        }
+        DType::F16 => {
+            load_f16_tensor(info, data, candle_device, policy_plan, norm_validation_policy)
+        }
         _ => Err(BitNetError::Model(ModelError::InvalidFormat {
             format: format!("Unsupported data type: {:?}", dtype),
         })),
@@ -430,7 +441,7 @@ fn load_f32_tensor(
     data: &[u8],
     candle_device: &candle_core::Device,
     policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-    dense_qwen_load: bool,
+    norm_validation_policy: NormValidationPolicy,
 ) -> TensorLoadResult {
     log_layer0_attention_norm_stats(info, data);
 
@@ -455,7 +466,7 @@ fn load_f32_tensor(
             .map_err(|e| BitNetError::Validation(e.to_string()))?
     };
 
-    finalize_dense_tensor(info, tensor, "F32", policy_plan, dense_qwen_load)
+    finalize_dense_tensor(info, tensor, "F32", policy_plan, norm_validation_policy)
 }
 
 fn load_f16_tensor(
@@ -463,7 +474,7 @@ fn load_f16_tensor(
     data: &[u8],
     candle_device: &candle_core::Device,
     policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-    dense_qwen_load: bool,
+    norm_validation_policy: NormValidationPolicy,
 ) -> TensorLoadResult {
     let tensor = if GgufLoader::is_embedding_tensor(&info.name)
         && GgufLoader::embedding_is_transposed(&info.shape)
@@ -486,7 +497,7 @@ fn load_f16_tensor(
             .map_err(|e| BitNetError::Validation(e.to_string()))?
     };
 
-    finalize_dense_tensor(info, tensor, "F16->F32", policy_plan, dense_qwen_load)
+    finalize_dense_tensor(info, tensor, "F16->F32", policy_plan, norm_validation_policy)
 }
 
 fn finalize_dense_tensor(
@@ -494,10 +505,18 @@ fn finalize_dense_tensor(
     tensor: Tensor,
     dtype_label: &str,
     policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-    dense_qwen_load: bool,
+    norm_validation_policy: NormValidationPolicy,
 ) -> TensorLoadResult {
-    if is_layernorm_weight(&info.name) && !dense_qwen_load {
-        GgufLoader::check_ln_gamma_stats(&info.name, &tensor)?;
+    if is_layernorm_weight(&info.name)
+        && !matches!(norm_validation_policy, NormValidationPolicy::DenseQwen)
+    {
+        if let Some(record) = GgufLoader::check_ln_gamma_stats_with_policy(
+            &info.name,
+            &tensor,
+            norm_validation_policy,
+        )? {
+            return Ok((tensor, Vec::new(), Some(record)));
+        }
         let (rescaled, correction1) =
             GgufLoader::maybe_rescale_ln_gamma_with_policy(&info.name, tensor, policy_plan)?;
         let (final_tensor, correction2) =

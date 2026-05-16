@@ -62,11 +62,15 @@ environment fallback, or a non-strict warning downgrade.
 
 ## Next Implementation Boundary
 
-The next implementation item should add exact SmolLM2 model-family
-normalization validation, then retry the strict CPU sanity command. The retry
-may only promote SmolLM2 beyond `cpu_sanity_blocked` if it reaches tokenizer
-authority, prompt rendering, generation, and a bounded CPU answer or diagnosable
-post-load failure receipt with `fallback_used=false`.
+`SLM-CPU-019` implements the exact SmolLM2 model-family normalization
+validation boundary. The loader path remains fail-closed for generic `llama`
+normalization weights, and the SmolLM2 exception is selected only from the exact
+artifact SHA plus GGUF metadata and dimensions recorded in this audit.
+
+The next implementation item should retry the strict CPU sanity command. The
+retry may only promote SmolLM2 beyond `cpu_sanity_blocked` if it reaches
+tokenizer authority, prompt rendering, generation, and a bounded CPU answer or
+diagnosable post-load failure receipt with `fallback_used=false`.
 
 Required implementation checks:
 
@@ -74,6 +78,12 @@ Required implementation checks:
 - exact SmolLM2 360M metadata can select the governed SmolLM2 envelope;
 - the accepted exception is receipt-visible;
 - CPU answer readiness remains false until generation evidence exists.
+
+`SLM-CPU-019` implementation evidence:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json
+```
 
 ## Claim Boundary
 

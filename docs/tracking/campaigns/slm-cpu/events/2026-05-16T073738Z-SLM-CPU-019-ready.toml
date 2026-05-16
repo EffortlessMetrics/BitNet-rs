@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T07:37:38Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-019"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+branch = "model/slm-cpu-019-smollm2-normalization-validation"
+
+summary = "Added SLM-CPU-019 as the exact SmolLM2 360M normalization-validation implementation item after the SLM-CPU-018 policy audit."
+
+artifacts = [
+  "crates/bitnet-models/src/formats/gguf/loader.rs",
+  "crates/bitnet-models/src/formats/gguf/loader/tensor_loading.rs",
+  "crates/bitnet-models/src/formats/gguf/tests.rs",
+  "docs/slm/SLM_CPU_SMOLLM2_NORMALIZATION_POLICY.md",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json",
+]
+
+notes = [
+  "SLM-CPU-019 implements exact metadata-scoped SmolLM2 360M normalization validation in the strict GGUF loader.",
+  "Generic llama strict LayerNorm/RMSNorm gamma validation remains fail-closed.",
+  "The SmolLM2 normalization exception requires exact artifact SHA, architecture, tokenizer pre-tokenizer, and model dimensions, and emits a receipt-visible acceptance record.",
+  "This item does not retry CPU answer sanity, start CUDA planning, or claim CPU answer readiness, throughput, server, broad dense GGUF, or BitNet QK256 behavior.",
+]
