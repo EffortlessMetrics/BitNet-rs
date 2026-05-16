@@ -108,7 +108,7 @@ fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
     Ok(())
 }
 
-fn attention_score_dot_input(tensor: &Tensor) -> Result<Tensor> {
+fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
     Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
 }
 
@@ -701,8 +701,8 @@ impl MultiHeadAttention {
             });
         }
 
-        let q_for_scores = attention_score_dot_input(&q)?;
-        let k_for_scores = attention_score_dot_input(&k_expanded)?;
+        let q_for_scores = attention_f16_dot_input(&q)?;
+        let k_for_scores = attention_f16_dot_input(&k_expanded)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
             trace_layer0_tensor(
@@ -835,13 +835,12 @@ impl MultiHeadAttention {
             eprintln!("[dbg] attn row-sums (first 4): {:?}", take);
         }
 
-        let attn_value_mix = attn_weights.matmul(&v_expanded)?;
+        let v_for_value_mix = attention_f16_dot_input(&v_expanded)?;
+        let attn_value_mix = attn_weights.matmul(&v_for_value_mix)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
-            let v_expanded_f16_roundtrip = v_expanded.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
-            let attn_value_mix_f16_cache = attn_weights.matmul(&v_expanded_f16_roundtrip)?;
             for head_idx in 0..self.n_heads {
-                let head = attn_value_mix_f16_cache.narrow(1, head_idx, 1)?;
+                let head = attn_value_mix.narrow(1, head_idx, 1)?;
                 let suffix = format!("blk0/attention_value_mix_f16_cache_head{head_idx}");
                 let stage = format!("attention_value_mix_f16_cache_head{head_idx}");
                 trace_tensor_token_axis_record(
@@ -858,9 +857,9 @@ impl MultiHeadAttention {
                 _trace_base_seq,
                 2,
                 "attention_value_mix_f16_cache",
-                &attn_value_mix_f16_cache,
+                &attn_value_mix,
             )?;
-            let attn_output_f16_cache = attn_value_mix_f16_cache.transpose(1, 2)?.reshape(&[
+            let attn_output_f16_cache = attn_value_mix.transpose(1, 2)?.reshape(&[
                 batch_size,
                 seq_len,
                 self.n_heads * self.head_dim,
@@ -2060,15 +2059,30 @@ mod tests {
     }
 
     #[test]
-    fn attention_score_dot_input_uses_f16_roundtrip_values() -> Result<()> {
+    fn attention_f16_dot_input_uses_f16_roundtrip_values() -> Result<()> {
         let device = Device::Cpu;
         let input =
             Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
 
-        let output = attention_score_dot_input(&input)?;
+        let output = attention_f16_dot_input(&input)?;
         let values = output.flatten_all()?.to_vec1::<f32>()?;
 
         assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_value_mix_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let weights = Tensor::from_slice(&[0.25f32, 0.25, 0.25, 0.25], (1, 1, 1, 4), &device)?;
+        let values =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 4, 1), &device)?;
+
+        let rounded_values = attention_f16_dot_input(&values)?;
+        let mixed = weights.matmul(&rounded_values)?;
+        let mixed = mixed.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(mixed, vec![-0.53125]);
         Ok(())
     }
 
@@ -2265,6 +2279,10 @@ mod tests {
             Tensor::ones(hidden_size, DType::F32, &device)?,
         );
         tensors.insert(
+            "final_norm.bias".to_string(),
+            Tensor::zeros(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
             "lm_head.weight".to_string(),
             Tensor::from_slice(
                 &[
@@ -2338,6 +2356,10 @@ mod tests {
         tensors.insert(
             "final_norm.weight".to_string(),
             Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.bias".to_string(),
+            Tensor::zeros(hidden_size, DType::F32, &device)?,
         );
 
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
