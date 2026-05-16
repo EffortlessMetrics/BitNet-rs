@@ -2725,6 +2725,8 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
             &args.weight,
             layer,
             args.token,
+            &reference_records,
+            rust_record_list.as_deref(),
             reference_input.expect("checked above"),
             reference_target.expect("checked above"),
             reference_core,
@@ -3472,6 +3474,8 @@ fn build_ffn_norm_prefix_replay_body(
     weight_name: &str,
     layer: usize,
     token: usize,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: Option<&[RustTraceRecord]>,
     reference_input: &ReferenceTraceRecord,
     reference_target: &ReferenceTraceRecord,
     reference_core: Option<&ReferenceTraceRecord>,
@@ -3486,6 +3490,8 @@ fn build_ffn_norm_prefix_replay_body(
         rust_input.map(|record| rust_dim_major_token(record, token)).transpose()?;
     let rust_target_token =
         rust_target.map(|record| rust_dim_major_token(record, token)).transpose()?;
+    let input_attribution =
+        ffn_norm_input_token_attribution(reference_records, rust_records, layer, token);
 
     let hidden = reference_input_token.len();
     if hidden == 0 {
@@ -3588,6 +3594,7 @@ fn build_ffn_norm_prefix_replay_body(
             "reference": row_report(&reference_input_token),
             "rust": rust_input_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
             "reference_vs_rust": reference_input_vs_rust.unwrap_or(Value::Null),
+            "token_attribution": input_attribution,
         },
         "targets": {
             "reference_stage": "ffn_norm_history_ref_layout",
@@ -3607,6 +3614,161 @@ fn build_ffn_norm_prefix_replay_body(
     });
 
     Ok((weight.model_report, weight.weight_report, replay))
+}
+
+fn ffn_norm_input_token_attribution(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: Option<&[RustTraceRecord]>,
+    layer: usize,
+    token: usize,
+) -> Value {
+    const STAGE_MAPPING: &[(&str, &str, &str)] = &[
+        (
+            "attn_value_mix_history_ref_layout",
+            "attention_value_mix_merged_history_ref_layout",
+            "attention_value_mix_merged_history",
+        ),
+        (
+            "attn_sub_norm_history_ref_layout",
+            "post_attention_subnorm_history_ref_layout",
+            "attention_subnorm_history",
+        ),
+        (
+            "attn_o_out_history_ref_layout",
+            "post_o_proj_history_ref_layout",
+            "attention_output_projection_history",
+        ),
+        (
+            "ffn_inp_history_ref_layout",
+            "post_attention_residual_history_ref_layout",
+            "attention_residual_history",
+        ),
+    ];
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_reference_count = 0usize;
+    let mut missing_rust_count = 0usize;
+    let mut subthreshold_delta_count = 0usize;
+    let mut runtime_threshold_delta_count = 0usize;
+    let mut first_subthreshold_boundary = Value::Null;
+    let mut first_runtime_threshold_boundary = Value::Null;
+
+    for (reference_stage, rust_stage, boundary) in STAGE_MAPPING {
+        let reference =
+            find_reference_trace_record(reference_records, reference_stage, Some(layer));
+        let rust = rust_records
+            .and_then(|records| find_rust_trace_record(records, rust_stage, Some(layer)));
+        if reference.is_none() {
+            missing_reference_count += 1;
+        }
+        if rust.is_none() {
+            missing_rust_count += 1;
+        }
+
+        let mut status = match (reference.is_some(), rust.is_some()) {
+            (false, false) => "missing_both",
+            (false, true) => "missing_reference",
+            (true, false) => "missing_rust",
+            (true, true) => "bit_exact",
+        };
+        let mut delta = Value::Null;
+        let mut token_error = Value::Null;
+        let mut subthreshold_delta = false;
+        let mut runtime_threshold_delta = false;
+
+        if let (Some(reference), Some(rust)) = (reference, rust) {
+            compared_count += 1;
+            match (reference_dim_major_token(reference, token), rust_dim_major_token(rust, token)) {
+                (Ok(reference_token), Ok(rust_token)) => {
+                    delta = compare_vectors(&reference_token, &rust_token);
+                    let max_abs_delta = delta_metric(&delta, "/max_abs_delta");
+                    let bit_exact =
+                        delta.pointer("/sha256_match").and_then(Value::as_bool).unwrap_or(false);
+                    runtime_threshold_delta = max_abs_delta > 1.0e-6;
+                    subthreshold_delta = !bit_exact && max_abs_delta <= 1.0e-6;
+                    status = if runtime_threshold_delta {
+                        "runtime_threshold_delta"
+                    } else if subthreshold_delta {
+                        "subthreshold_delta"
+                    } else {
+                        "bit_exact"
+                    };
+                    if subthreshold_delta {
+                        subthreshold_delta_count += 1;
+                    }
+                    if runtime_threshold_delta {
+                        runtime_threshold_delta_count += 1;
+                    }
+                }
+                (left, right) => {
+                    status = "token_delta_unavailable";
+                    token_error = json!({
+                        "reference_error": left.err().map(|err| err.to_string()),
+                        "rust_error": right.err().map(|err| err.to_string()),
+                    });
+                }
+            }
+        }
+
+        let row = json!({
+            "layer": layer,
+            "token": token,
+            "boundary": boundary,
+            "reference_stage": reference_stage,
+            "rust_stage": rust_stage,
+            "status": status,
+            "reference": reference.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "delta": delta,
+            "token_error": token_error,
+            "subthreshold_delta": subthreshold_delta,
+            "runtime_threshold_delta": runtime_threshold_delta,
+        });
+        if subthreshold_delta && first_subthreshold_boundary.is_null() {
+            first_subthreshold_boundary = row.clone();
+        }
+        if runtime_threshold_delta && first_runtime_threshold_boundary.is_null() {
+            first_runtime_threshold_boundary = row.clone();
+        }
+        rows.push(row);
+    }
+
+    let mut current_blocked_reasons = Vec::<String>::new();
+    if rust_records.is_none() {
+        current_blocked_reasons.push("rust_cpu_trace_dir_unavailable".to_string());
+    }
+    if missing_reference_count > 0 {
+        current_blocked_reasons
+            .push("ffn_norm_input_attribution_reference_stage_missing".to_string());
+    }
+    if missing_rust_count > 0 {
+        current_blocked_reasons.push("ffn_norm_input_attribution_rust_stage_missing".to_string());
+    }
+    if subthreshold_delta_count > 0 {
+        current_blocked_reasons.push("ffn_norm_input_subthreshold_delta_present".to_string());
+    }
+    if runtime_threshold_delta_count > 0 {
+        current_blocked_reasons.push("ffn_norm_input_runtime_threshold_delta_present".to_string());
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected-token FFN norm input attribution compares reference and Rust attention-output/residual history stages for the token used by the FFN norm prefix replay. It is diagnostic-only and does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention/value residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "layer": layer,
+        "token": token,
+        "compared_count": compared_count,
+        "missing_reference_count": missing_reference_count,
+        "missing_rust_count": missing_rust_count,
+        "subthreshold_delta_count": subthreshold_delta_count,
+        "runtime_threshold_delta_count": runtime_threshold_delta_count,
+        "first_subthreshold_boundary": first_subthreshold_boundary,
+        "first_runtime_threshold_boundary": first_runtime_threshold_boundary,
+        "current_blocked_reasons": current_blocked_reasons,
+        "rows": rows,
+    })
 }
 
 fn ffn_norm_runtime_arithmetic_boundary(
@@ -22552,6 +22714,65 @@ mod tests {
             ]
         );
         assert!(!reasons.contains(&"rmsnorm_replay_does_not_match_reference_ffn_norm".to_string()));
+    }
+
+    #[test]
+    fn ffn_norm_input_token_attribution_reports_selected_token_boundaries() {
+        fn reference_history(stage: &str, values: Vec<f32>) -> ReferenceTraceRecord {
+            let mut record = test_reference_trace_record(stage, values);
+            record.shape = vec![2, 2, 1, 1];
+            record.nelements = 4;
+            record
+        }
+        fn rust_history(stage: &str, values: Vec<f32>) -> RustTraceRecord {
+            let mut record = test_rust_trace_record(stage, values);
+            record.shape = vec![2, 2];
+            record.num_elements = 4;
+            record
+        }
+
+        let reference_records = vec![
+            reference_history("attn_value_mix_history_ref_layout", vec![1.0, 10.0, 2.0, 20.0]),
+            reference_history("attn_sub_norm_history_ref_layout", vec![1.0, 10.0, 2.0, 20.0]),
+            reference_history("attn_o_out_history_ref_layout", vec![1.0, 10.0, 2.0, 20.0]),
+            reference_history("ffn_inp_history_ref_layout", vec![1.0, 10.0, 2.0, 20.0]),
+        ];
+        let rust_records = vec![
+            rust_history(
+                "attention_value_mix_merged_history_ref_layout",
+                vec![1.0, 10.0, 2.0, 20.0],
+            ),
+            rust_history(
+                "post_attention_subnorm_history_ref_layout",
+                vec![1.0000005, 10.0, 2.0, 20.0],
+            ),
+            rust_history("post_o_proj_history_ref_layout", vec![1.000002, 10.0, 2.0, 20.0]),
+            rust_history(
+                "post_attention_residual_history_ref_layout",
+                vec![1.0000005, 10.0, 2.0, 20.0],
+            ),
+        ];
+
+        let attribution =
+            ffn_norm_input_token_attribution(&reference_records, Some(&rust_records), 0, 0);
+        let reasons =
+            attribution.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(attribution.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(attribution.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(attribution.pointer("/compared_count"), Some(&json!(4)));
+        assert_eq!(attribution.pointer("/subthreshold_delta_count"), Some(&json!(2)));
+        assert_eq!(attribution.pointer("/runtime_threshold_delta_count"), Some(&json!(1)));
+        assert_eq!(
+            attribution.pointer("/first_subthreshold_boundary/boundary"),
+            Some(&json!("attention_subnorm_history"))
+        );
+        assert_eq!(
+            attribution.pointer("/first_runtime_threshold_boundary/boundary"),
+            Some(&json!("attention_output_projection_history"))
+        );
+        assert!(reasons.contains(&json!("ffn_norm_input_subthreshold_delta_present")));
+        assert!(reasons.contains(&json!("ffn_norm_input_runtime_threshold_delta_present")));
     }
 
     #[test]
