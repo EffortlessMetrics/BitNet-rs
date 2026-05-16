@@ -1,0 +1,15 @@
+timestamp = "2026-05-16T14:19:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5128
+merge_sha = "39d81c8062b8cb0e33a256768363fddd2a70489e"
+
+notes = [
+  "Merged PR #5128, tightening deterministic dense SLM answer-corpus scoring for known stop-token, prompt-template, normalization, and JSON extraction misses found while expanding the corpus.",
+  "The merged change bumps the dense seeded corpus contract to 2.2.0 and keeps the 500-case corpus mechanically scored without adding new cases.",
+  "M4-ACCURACY-003 is tracker-closed as scorer, corpus-contract, docs, and tracker work only; no runtime proof refresh, model support change, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
