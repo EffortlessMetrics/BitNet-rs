@@ -1119,9 +1119,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-017A"
-status = "pr_open"
+status = "merged"
 pr = 5060
 branch = "codex/slm-cpu-017a-qwen25-second-model-sanity"
+merge_sha = "76a10d534be7292f7dac24e9ec995e05ee08435d"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
