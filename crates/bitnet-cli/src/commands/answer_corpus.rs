@@ -6,6 +6,7 @@ use clap::{Args, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     ffi::OsString,
     fs::{self, File},
@@ -1425,7 +1426,7 @@ fn evaluate_quality(
     min_generated_tokens: Option<usize>,
     min_distinct_generated_tokens: Option<usize>,
 ) -> QualityResult {
-    let normalized = strip_special_markers(answer).trim().to_string();
+    let normalized = normalize_scoring_text(answer);
     let non_empty_answer = !normalized.is_empty();
     let no_replacement_chars = !normalized.contains('\u{FFFD}');
     let no_raw_special_tokens = !contains_raw_special_token(&normalized);
@@ -1453,7 +1454,8 @@ fn evaluate_quality(
         failed_rules.push("printable_utf8".to_string());
     }
 
-    if !gate_passed(&normalized, gate) {
+    let gate_answer = gate_evaluation_text(&normalized, scoring);
+    if !gate_passed(&gate_answer, gate) {
         failed_rules.push(format!("gate_{}", gate.kind));
     }
     let scoring_result = scoring.map(|scoring| evaluate_scoring(&normalized, scoring));
@@ -1527,9 +1529,12 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
                 .map(|schema| validate_schema_style_json(&normalized_answer, &schema))
                 .unwrap_or_else(|| SchemaStyleResult {
                     parsed: false,
+                    source: "raw",
                     failures: vec!["schema_missing_or_invalid".to_string()],
                 });
             details.insert("parsed_json".to_string(), Value::Bool(schema_result.parsed));
+            details
+                .insert("json_source".to_string(), Value::String(schema_result.source.to_string()));
             if !schema_result.failures.is_empty() {
                 failed_rules.extend(schema_result.failures);
             }
@@ -2082,13 +2087,23 @@ fn contains_fenced_json(answer: &str) -> bool {
 }
 
 fn normalize_scoring_text(value: &str) -> String {
-    strip_special_markers(value).split_whitespace().collect::<Vec<_>>().join(" ")
+    let stripped = strip_special_markers(value);
+    let collapsed = stripped.split_whitespace().collect::<Vec<_>>().join(" ");
+    strip_leading_assistant_separator(&collapsed).to_string()
 }
 
 fn normalize_match_text(value: &str) -> String {
     normalize_scoring_text(value)
         .trim_matches(|ch: char| matches!(ch, '.' | '!' | '?'))
         .to_ascii_lowercase()
+}
+
+fn gate_evaluation_text<'a>(answer: &'a str, scoring: Option<&AnswerScoring>) -> Cow<'a, str> {
+    if scoring.is_some_and(|scoring| scoring.kind() == "json_schema") {
+        json_scoring_candidate(answer).text
+    } else {
+        Cow::Borrowed(answer)
+    }
 }
 
 fn first_number(value: &str) -> Option<f64> {
@@ -2099,23 +2114,49 @@ fn first_number(value: &str) -> Option<f64> {
 }
 
 fn missing_keywords(answer: &str, keywords: Option<&[String]>) -> Vec<String> {
-    let answer = answer.to_ascii_lowercase();
     keywords
         .unwrap_or_default()
         .iter()
-        .filter(|keyword| !answer.contains(&keyword.to_ascii_lowercase()))
+        .filter(|keyword| !contains_keyword_boundary(answer, keyword))
         .cloned()
         .collect()
 }
 
 fn observed_forbidden_tokens(answer: &str, tokens: Option<&[String]>) -> Vec<String> {
-    let answer = answer.to_ascii_lowercase();
     tokens
         .unwrap_or_default()
         .iter()
-        .filter(|token| answer.contains(&token.to_ascii_lowercase()))
+        .filter(|token| contains_keyword_boundary(answer, token))
         .cloned()
         .collect()
+}
+
+fn contains_keyword_boundary(answer: &str, keyword: &str) -> bool {
+    let haystack = answer.to_ascii_lowercase();
+    let needle = keyword.trim().to_ascii_lowercase();
+    if needle.is_empty() {
+        return false;
+    }
+    let needle_starts_alnum = needle.chars().next().is_some_and(char::is_alphanumeric);
+    let needle_ends_alnum = needle.chars().next_back().is_some_and(char::is_alphanumeric);
+    let mut search_from = 0usize;
+    while let Some(relative_index) = haystack[search_from..].find(&needle) {
+        let start = search_from + relative_index;
+        let end = start + needle.len();
+        let before = haystack[..start].chars().next_back();
+        let after = haystack[end..].chars().next();
+        let left_ok = !needle_starts_alnum || before.is_none_or(|ch| !ch.is_alphanumeric());
+        let right_ok = !needle_ends_alnum || after.is_none_or(|ch| !ch.is_alphanumeric());
+        if left_ok && right_ok {
+            return true;
+        }
+        search_from = haystack[start..]
+            .chars()
+            .next()
+            .map(|ch| start + ch.len_utf8())
+            .unwrap_or(haystack.len());
+    }
+    false
 }
 
 fn normalized_json_schema(schema: &Value) -> Option<Value> {
@@ -2128,12 +2169,18 @@ fn normalized_json_schema(schema: &Value) -> Option<Value> {
 
 struct SchemaStyleResult {
     parsed: bool,
+    source: &'static str,
     failures: Vec<String>,
 }
 
 fn validate_schema_style_json(answer: &str, schema: &Value) -> SchemaStyleResult {
-    let Ok(value) = serde_json::from_str::<Value>(answer.trim()) else {
-        return SchemaStyleResult { parsed: false, failures: vec!["json_parse".to_string()] };
+    let candidate = json_scoring_candidate(answer);
+    let Ok(value) = serde_json::from_str::<Value>(candidate.text.trim()) else {
+        return SchemaStyleResult {
+            parsed: false,
+            source: candidate.source,
+            failures: vec!["json_parse".to_string()],
+        };
     };
     let mut failures = Vec::new();
     if schema["type"].as_str() == Some("object") && !value.is_object() {
@@ -2181,7 +2228,72 @@ fn validate_schema_style_json(answer: &str, schema: &Value) -> SchemaStyleResult
             }
         }
     }
-    SchemaStyleResult { parsed: true, failures }
+    SchemaStyleResult { parsed: true, source: candidate.source, failures }
+}
+
+struct JsonScoringCandidate<'a> {
+    text: Cow<'a, str>,
+    source: &'static str,
+}
+
+fn json_scoring_candidate(answer: &str) -> JsonScoringCandidate<'_> {
+    let trimmed = answer.trim();
+    if serde_json::from_str::<Value>(trimmed).is_ok() {
+        return JsonScoringCandidate { text: Cow::Borrowed(trimmed), source: "raw" };
+    }
+    if let Some(payload) = fenced_json_payload(trimmed) {
+        return JsonScoringCandidate { text: Cow::Owned(payload), source: "fenced_json" };
+    }
+    if let Some(payload) = embedded_json_object(trimmed) {
+        return JsonScoringCandidate { text: Cow::Owned(payload), source: "embedded_json" };
+    }
+    JsonScoringCandidate { text: Cow::Borrowed(trimmed), source: "raw" }
+}
+
+fn fenced_json_payload(answer: &str) -> Option<String> {
+    let fence_start = answer.find("```")?;
+    let after_open = &answer[fence_start + 3..];
+    let after_payload_start = if let Some(index) = after_open.find('\n') {
+        &after_open[index + 1..]
+    } else {
+        let trimmed = after_open.trim_start();
+        if trimmed.starts_with('{') || trimmed.starts_with('[') {
+            trimmed
+        } else {
+            let info_len = trimmed.find(char::is_whitespace)?;
+            trimmed[info_len..].trim_start()
+        }
+    };
+    let fence_end =
+        after_payload_start.find("\n```").or_else(|| after_payload_start.find("```"))?;
+    Some(after_payload_start[..fence_end].trim().to_string())
+}
+
+fn embedded_json_object(answer: &str) -> Option<String> {
+    let start = answer.find('{')?;
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (relative_index, ch) in answer[start..].char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match ch {
+            '\\' if in_string => escaped = true,
+            '"' => in_string = !in_string,
+            '{' if !in_string => depth += 1,
+            '}' if !in_string => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    let end = start + relative_index + ch.len_utf8();
+                    return Some(answer[start..end].trim().to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 fn json_type_matches(value: &Value, expected_type: &str) -> bool {
@@ -2505,12 +2617,44 @@ fn gate_passed(answer: &str, gate: &AnswerGate) -> bool {
 }
 
 fn strip_special_markers(answer: &str) -> String {
-    answer
-        .replace("<|begin_of_text|>", "")
-        .replace("<|end_of_text|>", "")
-        .replace("<|endoftext|>", "")
-        .replace("<|eot_id|>", "")
-        .replace("<|im_end|>", "")
+    let mut cleaned = strip_leading_chatml_assistant(answer.trim_start()).to_string();
+    cleaned = cleaned.replace("<|begin_of_text|>", "");
+    if let Some(index) = earliest_known_stop_marker(&cleaned) {
+        cleaned.truncate(index);
+    }
+    cleaned
+}
+
+fn strip_leading_chatml_assistant(answer: &str) -> &str {
+    let mut rest = answer;
+    loop {
+        let Some(after_marker) = rest.strip_prefix("<|im_start|>assistant") else {
+            return rest;
+        };
+        rest = after_marker
+            .strip_prefix("\r\n")
+            .or_else(|| after_marker.strip_prefix('\n'))
+            .or_else(|| after_marker.strip_prefix(' '))
+            .unwrap_or(after_marker)
+            .trim_start();
+    }
+}
+
+fn earliest_known_stop_marker(answer: &str) -> Option<usize> {
+    ["<|im_end|>", "<|end_of_text|>", "<|endoftext|>", "<|eot_id|>", "<|im_start|>"]
+        .iter()
+        .filter_map(|marker| answer.find(marker))
+        .min()
+}
+
+fn strip_leading_assistant_separator(answer: &str) -> &str {
+    if let Some(after_colon) = answer.strip_prefix(':')
+        && after_colon.starts_with(char::is_whitespace)
+    {
+        after_colon.trim_start()
+    } else {
+        answer
+    }
 }
 
 fn contains_raw_special_token(answer: &str) -> bool {
@@ -2890,6 +3034,79 @@ mod tests {
     }
 
     #[test]
+    fn slm_eval_scoring_quality_treats_qwen_im_start_tail_as_stop_marker() {
+        let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
+        let scoring =
+            AnswerScoring { expected_normalized: Some("4".to_string()), ..scoring("exact_match") };
+        let quality = evaluate_quality(
+            "4<|im_start|>user\nignored",
+            &gate,
+            Some(&scoring),
+            Some(&[19, 151644, 872]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert_eq!(
+            quality.scoring.as_ref().map(|scoring| scoring.normalized_answer.as_str()),
+            Some("4")
+        );
+        assert!(!quality.failed_rules.contains(&"raw_special_tokens".to_string()));
+    }
+
+    #[test]
+    fn slm_eval_scoring_quality_accepts_qwen_assistant_prefix_separator() {
+        let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
+        let scoring =
+            AnswerScoring { expected_normalized: Some("4".to_string()), ..scoring("exact_match") };
+        let quality = evaluate_quality(
+            ": 4<|im_end|>",
+            &gate,
+            Some(&scoring),
+            Some(&[25, 220, 19, 151645]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert_eq!(
+            quality.scoring.as_ref().map(|scoring| scoring.normalized_answer.as_str()),
+            Some("4")
+        );
+    }
+
+    #[test]
+    fn answer_corpus_quality_normalizes_leading_assistant_colon_for_starts_with() {
+        let gate = AnswerGate {
+            starts_with_any: Some(vec!["yes".to_string()]),
+            ..gate("starts_with_any")
+        };
+        let quality = evaluate_quality(
+            ": Yes, the sky is usually blue.<|im_end|>",
+            &gate,
+            None,
+            Some(&[25, 9454, 11, 279, 12765]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert!(!quality.failed_rules.contains(&"gate_starts_with_any".to_string()));
+    }
+
+    #[test]
+    fn answer_corpus_scoring_normalizes_leading_assistant_colon_for_normalized_match() {
+        let scoring = AnswerScoring {
+            expected_normalized: Some("done".to_string()),
+            ..scoring("normalized_match")
+        };
+        let result = evaluate_scoring(": Done<|im_end|>", &scoring);
+
+        assert!(result.passed);
+    }
+
+    #[test]
     fn quality_rejects_punctuation_noise() {
         let quality = evaluate_quality("!!!,,,!!!", &gate("readable"), None, None, None, None);
         assert!(!quality.passed);
@@ -2948,10 +3165,18 @@ mod tests {
         assert!(result.failure_taxonomy.contains(&"format_only".to_string()));
 
         let fenced = evaluate_scoring("```json\n{\"status\":\"ready\"}\n```", &scoring);
-        assert!(!fenced.passed);
-        assert!(fenced.failed_rules.contains(&"json_parse".to_string()));
-        assert!(fenced.failure_taxonomy.contains(&"fenced_json".to_string()));
-        assert!(fenced.failure_taxonomy.contains(&"format_only".to_string()));
+        assert!(fenced.passed);
+        assert_eq!(fenced.details["json_source"], "fenced_json");
+
+        let embedded = evaluate_scoring("Here is the JSON: {\"status\":\"ready\"}", &scoring);
+        assert!(embedded.passed);
+        assert_eq!(embedded.details["json_source"], "embedded_json");
+
+        let malformed_fenced = evaluate_scoring("```json\n{\"status\":\"ready\"\n```", &scoring);
+        assert!(!malformed_fenced.passed);
+        assert!(malformed_fenced.failed_rules.contains(&"json_parse".to_string()));
+        assert!(malformed_fenced.failure_taxonomy.contains(&"fenced_json".to_string()));
+        assert!(malformed_fenced.failure_taxonomy.contains(&"format_only".to_string()));
     }
 
     #[test]
@@ -2988,6 +3213,33 @@ mod tests {
             quality.scoring.as_ref().map(|result| result.kind.as_str()),
             Some("required_forbidden_tokens")
         );
+    }
+
+    #[test]
+    fn slm_eval_scoring_keyword_checks_use_boundaries() {
+        let required = AnswerScoring {
+            required_keywords: Some(vec!["red".to_string()]),
+            ..scoring("required_keywords")
+        };
+        let missing = evaluate_scoring("ready", &required);
+        assert!(!missing.passed);
+        assert!(missing.failed_rules.contains(&"required_keywords".to_string()));
+
+        let forbidden = AnswerScoring {
+            forbidden_tokens: Some(vec!["red".to_string()]),
+            ..scoring("forbidden_tokens")
+        };
+        let clean = evaluate_scoring("ready", &forbidden);
+        assert!(clean.passed);
+        let observed = evaluate_scoring("red alert", &forbidden);
+        assert!(!observed.passed);
+        assert!(observed.failed_rules.contains(&"forbidden_tokens".to_string()));
+
+        let phrase = AnswerScoring {
+            required_keywords: Some(vec!["model cache".to_string()]),
+            ..scoring("required_keywords")
+        };
+        assert!(evaluate_scoring("The model cache is ready.", &phrase).passed);
     }
 
     #[test]

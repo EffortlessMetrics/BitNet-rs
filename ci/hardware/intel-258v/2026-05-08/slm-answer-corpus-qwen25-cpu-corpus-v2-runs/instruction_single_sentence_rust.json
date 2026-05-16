@@ -68,9 +68,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 8265,
-    "decode_first_ms": 8265,
-    "total_ms": 15859
+    "cmd_to_first_ms": 8547,
+    "decode_first_ms": 8547,
+    "total_ms": 17116
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -266,82 +266,82 @@
     "decode": {
       "embed_ms": {
         "count": 24,
-        "max_ms": 0.062,
-        "mean_ms": 0.029,
-        "min_ms": 0.019,
-        "p50_ms": 0.022,
-        "p95_ms": 0.045,
-        "total_ms": 0.691
+        "max_ms": 0.047,
+        "mean_ms": 0.027,
+        "min_ms": 0.02,
+        "p50_ms": 0.023,
+        "p95_ms": 0.046,
+        "total_ms": 0.651
       },
-      "first_token_decode_ms": 338.713,
+      "first_token_decode_ms": 326.644,
       "forward_ms": {
         "count": 24,
-        "max_ms": 249.436,
-        "mean_ms": 234.517,
-        "min_ms": 226.067,
-        "p50_ms": 233.819,
-        "p95_ms": 241.41,
-        "total_ms": 5628.414
+        "max_ms": 410.957,
+        "mean_ms": 265.898,
+        "min_ms": 220.636,
+        "p50_ms": 251.589,
+        "p95_ms": 327.281,
+        "total_ms": 6381.56
       },
       "generated_tokens": 24,
       "logits_ms": {
         "count": 24,
-        "max_ms": 100.255,
-        "mean_ms": 86.19,
-        "min_ms": 80.347,
-        "p50_ms": 85.65,
-        "p95_ms": 89.036,
-        "total_ms": 2068.566
+        "max_ms": 156.845,
+        "mean_ms": 92.998,
+        "min_ms": 76.428,
+        "p50_ms": 89.826,
+        "p95_ms": 108.159,
+        "total_ms": 2231.945
       },
       "per_token_ms": {
         "count": 24,
-        "max_ms": 346.302,
-        "mean_ms": 330.4,
-        "min_ms": 320.303,
-        "p50_ms": 330.118,
-        "p95_ms": 342.389,
-        "total_ms": 7929.592
+        "max_ms": 514.404,
+        "mean_ms": 370.507,
+        "min_ms": 323.382,
+        "p50_ms": 353.984,
+        "p95_ms": 473.977,
+        "total_ms": 8892.157
       },
       "sample_ms": {
         "count": 24,
-        "max_ms": 4.753,
-        "mean_ms": 2.885,
-        "min_ms": 2.009,
-        "p50_ms": 2.823,
-        "p95_ms": 3.134,
-        "total_ms": 69.232
+        "max_ms": 5.567,
+        "mean_ms": 3.129,
+        "min_ms": 2.033,
+        "p50_ms": 3.039,
+        "p95_ms": 3.812,
+        "total_ms": 75.103
       },
       "steady_per_token_ms": {
         "count": 23,
-        "max_ms": 346.302,
-        "mean_ms": 330.038,
-        "min_ms": 320.303,
-        "p50_ms": 330.118,
-        "p95_ms": 342.389,
-        "total_ms": 7590.879
+        "max_ms": 514.404,
+        "mean_ms": 372.414,
+        "min_ms": 323.382,
+        "p50_ms": 355.082,
+        "p95_ms": 473.977,
+        "total_ms": 8565.513
       },
-      "steady_state_tok_s": 3.03,
+      "steady_state_tok_s": 2.685,
       "steady_state_tokens": 23,
       "token_decode_ms": {
         "count": 24,
-        "max_ms": 0.133,
-        "mean_ms": 0.039,
-        "min_ms": 0.021,
-        "p50_ms": 0.026,
+        "max_ms": 0.07,
+        "mean_ms": 0.034,
+        "min_ms": 0.023,
+        "p50_ms": 0.027,
         "p95_ms": 0.054,
-        "total_ms": 0.932
+        "total_ms": 0.812
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13216.157,
+    "model_load_ms": 13624.346,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 7926.991,
+      "ms": 8217.995,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -353,9 +353,9 @@
       },
       "tokens": 34
     },
-    "prompt_tokenize_ms": 472.36,
+    "prompt_tokenize_ms": 448.072,
     "requested": false,
-    "tokenizer_load_ms": 589.61
+    "tokenizer_load_ms": 612.981
   },
   "prompt": "Write one short sentence about Rust.",
   "prompt_identity": {
@@ -428,7 +428,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 24,
-    "decode_tps": 1.5133362759316475,
+    "decode_tps": 1.4021967749474176,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -448,22 +448,22 @@
   "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for its simplicity and efficiency. It's known",
   "throughput": {
     "decoded_tokens": 24,
-    "tokens_per_second": 1.5133362759316475
+    "tokens_per_second": 1.4021967749474176
   },
-  "timestamp": "2026-05-16T03:32:02.964720400+00:00",
+  "timestamp": "2026-05-16T12:24:35.025814400+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.03,
-    "decode_total_ms": 7929.592,
+    "decode_steady_state_tok_s": 2.685,
+    "decode_total_ms": 8892.157,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 338.713,
-    "first_token_ms": 8265,
+    "first_token_decode_ms": 326.644,
+    "first_token_ms": 8547,
     "host_to_device_bytes": null,
-    "model_load_ms": 13216.157,
-    "prefill_ms": 7926.991,
-    "sampling_ms_per_token": 2.885,
-    "tokenize_ms": 472.36,
-    "tokenizer_load_ms": 589.61
+    "model_load_ms": 13624.346,
+    "prefill_ms": 8217.995,
+    "sampling_ms_per_token": 3.129,
+    "tokenize_ms": 448.072,
+    "tokenizer_load_ms": 612.981
   },
   "tokenizer": {
     "bos": 151643,

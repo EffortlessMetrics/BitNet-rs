@@ -39,7 +39,7 @@ corpus expansion. The YAML records `metadata.corpus_contract` with:
 ```text
 contract_version: m4-eval-corpus-scorer-contract-v1
 corpus_id: apple-m4-slm-eval-seeded-corpus-v2
-corpus_version: 2.1.0
+corpus_version: 2.2.0
 seed: 777331
 generator_policy: deterministic-static-fixture-v2
 scoring_schema: answer_corpus_mechanical_scoring_v1
@@ -56,6 +56,14 @@ match.
 500 deterministic cases. This is a corpus/scoring-contract change only; the
 historical runtime reports below still describe the 120-case runs that produced
 their committed receipts.
+
+`M4-ACCURACY-003` keeps the 500 cases and expected answers unchanged while
+tightening deterministic scoring normalization. The answer-corpus scorer now
+normalizes known Qwen ChatML stop tails, the leading Qwen assistant separator
+observed in resident receipts, fenced or embedded JSON payloads for
+`json_schema` scoring, and keyword/forbidden-token boundaries. Generated text
+and token IDs remain recorded unchanged; this is a scorer/harness repair, not a
+runtime pass-rate refresh.
 
 ## Report Contract
 
@@ -99,7 +107,7 @@ families without hiding the strict result:
 |---|---|
 | `raw_special_token_tail` | Raw special-token text such as ChatML/header markers reached the decoded answer. |
 | `template_or_stop` | Output suggests prompt-template or stop-token handling leaked into the answer. |
-| `fenced_json` | A JSON-scored answer was wrapped in a Markdown code fence. |
+| `fenced_json` | A JSON-scored answer used a Markdown code fence that could not be mechanically extracted and validated. |
 | `punctuation_casing_normalization` | Strict exact-match failed, but normalized punctuation/case/spacing would match. |
 | `format_only` | The answer shape failed, such as JSON parse/schema/type or missing numeric form. |
 | `answer_content` | The answer content missed the expected value, label, keyword, forbidden token, enum, or numeric tolerance. |

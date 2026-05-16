@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_qwen_cpu_corpus_v2_diagnosis",
   "proof_stage": "corpus_v2_failures_classified_no_inference",
-  "created_utc": "2026-05-16T10:30:00Z",
+  "created_utc": "2026-05-16T12:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
@@ -17,8 +17,8 @@
   "fallback_used": false,
   "quality_summary": {
     "total": 12,
-    "passed": 6,
-    "failed": 6,
+    "passed": 7,
+    "failed": 5,
     "timeout": 0,
     "not_run": 0,
     "failed_profiles": [
@@ -32,12 +32,11 @@
       "decode_heavy",
       "math",
       "short_reasoning",
-      "stop_and_eos",
       "yes_no"
     ],
     "failure_classes": {
+      "answer_content_failed": 1,
       "answer_content_missing_required_terms": 1,
-      "assistant_prefix_gate_mismatch": 2,
       "gate_stricter_than_scoring_after_prefix": 1,
       "generation_budget_or_truncation": 2
     }
@@ -120,17 +119,16 @@
     {
       "profile_id": "regression_tiny",
       "total": 4,
-      "passed": 1,
-      "failed": 3,
+      "passed": 2,
+      "failed": 2,
       "blocked": true,
       "failed_case_ids": [
         "arithmetic_add_7_8",
-        "copy_exact_color_triplet",
-        "stop_token_one_word_done"
+        "copy_exact_color_triplet"
       ],
       "route_profile_status": "promoted_route_blocked",
       "route_blockers": [
-        "corpus_v2 profile regression_tiny has 3 quality failures",
+        "corpus_v2 profile regression_tiny has 2 quality failures",
         "dense_slm_default_cpu is listed as promoted for regression_tiny, but profile evidence is incomplete"
       ]
     },
@@ -209,7 +207,6 @@
       "gate_kind": "starts_with_any",
       "scoring_kind": "normalized_match",
       "failed_rules": [
-        "gate_starts_with_any",
         "scoring_normalized_match"
       ],
       "failure_taxonomy": [
@@ -218,41 +215,14 @@
       "missing_required_keywords": [],
       "forbidden_tokens_observed": [],
       "expected_normalized": "yes",
-      "observed_normalized": ": yes. the sky is usually blue",
+      "observed_normalized": "yes. the sky is usually blue",
       "answer_preview": ": Yes. The sky is usually blue",
       "generated_tokens": 8,
       "prompt_tokens": 43,
       "run_receipt_path": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/yes_no_clear_sky.json",
       "fallback_used": false,
-      "classification": "assistant_prefix_gate_mismatch",
-      "recommended_fix": "Normalize or suppress leading assistant-role punctuation before exact starts-with/normalized-match gates, then rerun the same case without changing route promotion."
-    },
-    {
-      "id": "stop_token_one_word_done",
-      "profile": "regression_tiny",
-      "category": "stop_and_eos",
-      "task_family": "stop_and_eos",
-      "status": "quality_failed",
-      "gate_kind": "starts_with_any",
-      "scoring_kind": "normalized_match",
-      "failed_rules": [
-        "gate_starts_with_any",
-        "scoring_normalized_match"
-      ],
-      "failure_taxonomy": [
-        "answer_content"
-      ],
-      "missing_required_keywords": [],
-      "forbidden_tokens_observed": [],
-      "expected_normalized": "done",
-      "observed_normalized": ": done",
-      "answer_preview": ": Done<|im_end|>",
-      "generated_tokens": 3,
-      "prompt_tokens": 35,
-      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/stop_token_one_word_done.json",
-      "fallback_used": false,
-      "classification": "assistant_prefix_gate_mismatch",
-      "recommended_fix": "Normalize or suppress leading assistant-role punctuation before exact starts-with/normalized-match gates, then rerun the same case without changing route promotion."
+      "classification": "answer_content_failed",
+      "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
     },
     {
       "id": "short_reasoning_heavier_object",
@@ -311,15 +281,14 @@
   ],
   "route_blocked": true,
   "blocker_summary": [
-    "6 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, regression_tiny]",
+    "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, regression_tiny]",
+    "1 failed case(s) classified as answer_content_failed",
     "1 failed case(s) classified as answer_content_missing_required_terms",
-    "2 failed case(s) classified as assistant_prefix_gate_mismatch",
     "1 failed case(s) classified as gate_stricter_than_scoring_after_prefix",
     "2 failed case(s) classified as generation_budget_or_truncation"
   ],
   "recommended_next_actions": [
     "Keep dense_slm_default_cpu blocked for affected corpus-v2 profiles until failed cases rerun cleanly.",
-    "Fix or normalize leading assistant-prefix punctuation for exact yes/no and one-word gates.",
     "Check short-answer max_new_tokens budgets before treating truncated math output as model incapability.",
     "Review prompt wording and required-keyword gates for answer-content misses, then rerun corpus v2."
   ],
