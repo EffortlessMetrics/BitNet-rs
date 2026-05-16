@@ -3774,6 +3774,9 @@ fn compare_reference_to_rust(
         let mut status = "missing";
         let mut rms_abs_delta = None::<f64>;
         let mut first_values_delta = Value::Null;
+        let mut full_first_values_match = false;
+        let mut rms_material = false;
+        let mut rms_material_ignored_due_to_full_first_values_match = false;
         let mut material_mismatch = reference.is_none() || rust.is_none();
         let scope_mismatch = trace_scope_mismatch(reference, rust);
         let has_scope_mismatch = scope_mismatch.is_some();
@@ -3782,19 +3785,34 @@ fn compare_reference_to_rust(
             let element_count_match = reference.nelements == rust.num_elements as u64;
             let dtype_match = trace_dtype_compatible(&reference.dtype, &rust.dtype);
             rms_abs_delta = reference.rms.map(|rms| (rms - rust.rms).abs());
-            let rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
+            rms_material = rms_abs_delta.is_some_and(|delta| delta > 1.0e-4);
             if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
                 first_values_delta = compare_prefix(
                     &reference.first_values,
                     &rust.first_values,
                     reference.first_values.len().min(rust.first_values.len()),
                 );
+                full_first_values_match = reference.first_values.len() as u64
+                    == reference.nelements
+                    && rust.first_values.len() == rust.num_elements
+                    && first_values_delta
+                        .pointer("/count_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                    && first_values_delta
+                        .pointer("/sha256_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
             }
             if has_scope_mismatch {
                 material_mismatch = false;
                 status = "scope_mismatch";
             } else {
-                material_mismatch = !element_count_match || !dtype_match || rms_material;
+                rms_material_ignored_due_to_full_first_values_match =
+                    rms_material && full_first_values_match;
+                material_mismatch = !element_count_match
+                    || !dtype_match
+                    || (rms_material && !full_first_values_match);
                 status = if material_mismatch { "material_mismatch" } else { "summary_match" };
             }
         }
@@ -3813,6 +3831,9 @@ fn compare_reference_to_rust(
             "reference": reference.map(reference_record_summary),
             "rust": rust.map(rust_record_summary),
             "rms_abs_delta": rms_abs_delta,
+            "rms_material": rms_material,
+            "full_first_values_match": full_first_values_match,
+            "rms_material_ignored_due_to_full_first_values_match": rms_material_ignored_due_to_full_first_values_match,
             "first_values_delta": first_values_delta,
             "scope_mismatch": has_scope_mismatch,
             "scope": scope_mismatch,
@@ -10671,6 +10692,62 @@ mod tests {
             Some(&json!(1.0))
         );
         assert!(report.pointer("/decision/current_blocked_reasons").unwrap().is_array());
+    }
+
+    #[test]
+    fn compare_full_first_values_match_overrides_rms_summary_noise() {
+        let mut reference = test_reference_trace_record("ffn_out", vec![1.0, 2.0]);
+        reference.rms = Some(10.0);
+
+        let mut rust_records = BTreeMap::new();
+        let mut rust = test_rust_trace_record("post_swiglu", vec![1.0, 2.0]);
+        rust.rms = 9.0;
+        rust_records.insert("post_swiglu".to_string(), rust);
+
+        let report =
+            compare_reference_to_rust(&[reference], &rust_records, &[("ffn_out", "post_swiglu")]);
+
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(0)));
+        assert!(report.pointer("/first_material_mismatch").unwrap().is_null());
+        assert_eq!(report.pointer("/stages/0/status"), Some(&json!("summary_match")));
+        assert_eq!(report.pointer("/stages/0/rms_material"), Some(&json!(true)));
+        assert_eq!(report.pointer("/stages/0/full_first_values_match"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/stages/0/rms_material_ignored_due_to_full_first_values_match"),
+            Some(&json!(true))
+        );
+        assert_eq!(report.pointer("/stages/0/first_values_delta/sha256_match"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn compare_partial_first_values_match_does_not_override_rms_summary_mismatch() {
+        let mut reference = test_reference_trace_record("ffn_out", vec![1.0, 2.0]);
+        reference.shape = vec![4, 1, 1, 1];
+        reference.full_shape = vec![4, 1, 1, 1];
+        reference.nelements = 4;
+        reference.rms = Some(10.0);
+
+        let mut rust_records = BTreeMap::new();
+        let mut rust = test_rust_trace_record("post_swiglu", vec![1.0, 2.0]);
+        rust.shape = vec![4];
+        rust.num_elements = 4;
+        rust.rms = 9.0;
+        rust_records.insert("post_swiglu".to_string(), rust);
+
+        let report =
+            compare_reference_to_rust(&[reference], &rust_records, &[("ffn_out", "post_swiglu")]);
+
+        assert_eq!(report.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/first_material_mismatch/reference_stage"),
+            Some(&json!("ffn_out"))
+        );
+        assert_eq!(report.pointer("/stages/0/rms_material"), Some(&json!(true)));
+        assert_eq!(report.pointer("/stages/0/full_first_values_match"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/stages/0/rms_material_ignored_due_to_full_first_values_match"),
+            Some(&json!(false))
+        );
     }
 
     #[test]
