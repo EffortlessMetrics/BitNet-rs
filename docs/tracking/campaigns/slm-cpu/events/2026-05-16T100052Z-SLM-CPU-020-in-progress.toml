@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T10:00:52Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-020"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "model/slm-cpu-020-smollm2-cpu-sanity"
+
+summary = "Started SLM-CPU-020 as the strict SmolLM2 360M CPU sanity retry after exact metadata-scoped normalization validation."
+
+artifacts = [
+  "crates/bitnet-models/src/formats/gguf/loader.rs",
+  "crates/bitnet-models/src/formats/gguf/tests.rs",
+  "docs/slm/SLM_CPU_SMOLLM2_NORMALIZATION_POLICY.md",
+  "docs/slm/SLM_CPU_SMOLLM2_360M_SANITY.md",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+]
+
+notes = [
+  "The exact SmolLM2 normalization exception remains scoped to the pinned artifact SHA plus GGUF architecture, tokenizer pre-tokenizer, and model dimensions.",
+  "The strict CPU retry reaches tokenizer loading, prompt rendering, and one-token generation with fallback_used=false.",
+  "The generated token is `The` for the math sanity prompt, so CPU answer readiness remains false.",
+  "This item does not start CUDA planning or claim throughput, server, broad dense GGUF, or BitNet QK256 behavior.",
+]

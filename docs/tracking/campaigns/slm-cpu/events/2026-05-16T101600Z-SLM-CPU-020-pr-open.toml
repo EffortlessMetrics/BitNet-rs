@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T10:16:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-020"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5108
+head_sha = "526ca4c27b379759cdc9be4324278bbfcc6a5868"
+branch = "model/slm-cpu-020-smollm2-cpu-sanity"
+
+summary = "Opened #5108 for the SmolLM2 strict CPU sanity retry after exact metadata-scoped normalization validation."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5108",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+]
+
+notes = [
+  "The PR records strict CPU tokenizer, prompt rendering, and one-token generation with fallback_used=false.",
+  "The generated token is `The` for the math sanity prompt, so CPU answer readiness remains false.",
+  "The PR does not claim CUDA planning, CUDA execution, speedup, server readiness, broad dense GGUF support, or BitNet QK256 behavior.",
+]

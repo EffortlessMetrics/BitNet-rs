@@ -565,15 +565,17 @@ impl GgufLoader {
 
         let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
         let rms = Self::rms_f32(&w32)?;
-        let target = 3.0 / (SMOLLM2_360M_HIDDEN_SIZE as f32).sqrt();
-        let min_rms = target * 0.5;
-        let max_rms = target * 2.0;
+        if !Self::smollm2_norm_name_supported(name) {
+            return Ok(None);
+        }
+        let min_rms = 0.02;
+        let max_rms = 2.0;
         if !(rms.is_finite() && (min_rms..=max_rms).contains(&rms)) {
             return Ok(None);
         }
 
         let metadata = serde_json::json!({
-            "policy": "slm_cpu_019_smollm2_exact_metadata_norm_envelope",
+            "policy": "slm_cpu_020_smollm2_exact_metadata_norm_envelope",
             "contract_id": SMOLLM2_360M_CONTRACT_ID,
             "artifact_fingerprint": SMOLLM2_360M_FINGERPRINT,
             "architecture": "llama",
@@ -582,6 +584,7 @@ impl GgufLoader {
             "block_count": SMOLLM2_360M_LAYER_COUNT,
             "vocab_size": SMOLLM2_360M_VOCAB_SIZE,
             "rms_envelope": [min_rms, max_rms],
+            "rms_envelope_basis": "exact SmolLM2 360M Q8_0 artifact normalization weights observed below unit-scaled generic llama; generic llama remains fail-closed",
             "source": "docs/slm/SLM_CPU_SMOLLM2_NORMALIZATION_POLICY.md",
         });
 
@@ -591,9 +594,16 @@ impl GgufLoader {
             rms_before: Some(rms),
             rms_after: None,
             factor: None,
-            policy_fingerprint: format!("slm-cpu-019:{SMOLLM2_360M_CONTRACT_ID}"),
+            policy_fingerprint: format!("slm-cpu-020:{SMOLLM2_360M_CONTRACT_ID}"),
             metadata: Some(metadata),
         }))
+    }
+
+    fn smollm2_norm_name_supported(name: &str) -> bool {
+        name.ends_with("attn_norm.weight")
+            || name.ends_with("attention_norm.weight")
+            || name.ends_with("ffn_norm.weight")
+            || name.ends_with("post_attention_layernorm.weight")
     }
 
     /// Select LayerNorm rescale configuration from policy

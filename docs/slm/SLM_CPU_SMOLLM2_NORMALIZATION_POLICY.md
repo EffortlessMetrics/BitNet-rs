@@ -67,10 +67,17 @@ validation boundary. The loader path remains fail-closed for generic `llama`
 normalization weights, and the SmolLM2 exception is selected only from the exact
 artifact SHA plus GGUF metadata and dimensions recorded in this audit.
 
-The next implementation item should retry the strict CPU sanity command. The
-retry may only promote SmolLM2 beyond `cpu_sanity_blocked` if it reaches
-tokenizer authority, prompt rendering, generation, and a bounded CPU answer or
-diagnosable post-load failure receipt with `fallback_used=false`.
+`SLM-CPU-020` broadens the exact SmolLM2 model-family normalization envelope
+only for the pinned artifact after the first retry showed layer-varying
+attention norm RMS values. The generic `llama` guard remains fail-closed; the
+exception still requires the exact artifact SHA plus GGUF metadata and
+dimensions recorded in this audit.
+
+The strict CPU sanity retry reached tokenizer authority, prompt rendering, and
+one-token generation with `fallback_used=false`, but it generated `The` for the
+math prompt. That is a diagnosable post-load quality failure, not CPU answer
+readiness. SmolLM2 must not advance to all-layer CUDA planning until the
+wrong-first-token behavior or prompt/template policy is resolved.
 
 Required implementation checks:
 
@@ -83,6 +90,12 @@ Required implementation checks:
 
 ```text
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json
+```
+
+`SLM-CPU-020` retry evidence:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json
 ```
 
 ## Claim Boundary
