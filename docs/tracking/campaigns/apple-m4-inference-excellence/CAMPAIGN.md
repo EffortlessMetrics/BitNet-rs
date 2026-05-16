@@ -88,7 +88,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-EXCELLENCE-003 | merged | Regenerate dashboard trend validation after the second matching-history receipts land. |
 | M4-EXCELLENCE-004 | merged | Publish drift thresholds by dense SLM and BitNet family. |
 | M4-ACCURACY-000 | merged | Freeze corpus/scorer version, seed, normalization, and expected-output contracts. |
-| M4-ACCURACY-001 | in_progress | Expand the seeded dense SLM corpus to 100 deterministic mechanically scored cases. |
+| M4-ACCURACY-001 | pr_open | Expand the seeded dense SLM corpus to 100 deterministic mechanically scored cases. |
 | M4-ACCURACY-002 | proposed | Expand the dense SLM corpus to 500 deterministic cases once scoring is stable. |
 | M4-ACCURACY-003 | proposed | Fix stop-token, template, normalization, and scoring misses found by the larger corpus. |
 | M4-ACCURACY-004 | proposed | Publish dense pass rates by deterministic task family and supported model identity. |
