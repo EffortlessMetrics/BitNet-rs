@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T21:33:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5206
+branch = "codex/lunar-lake/LNL258V-DURABLE-001-stability"
+head_sha = "bf7a33c0ab6c2314265fe4c5433d737c901aee6d"
+merge_sha = "b5eb92ac49943d76d430ed91abae1a81577d5bb5"
+summary = "Merged LNL258V-DURABLE-001 after CI passed to add a Lunar Lake repeated-run durability index."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5206",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+]
+
+notes = [
+  "The merged bundle indexes durability requirements only and keeps stability_proven=false until repeated-run receipts exist.",
+  "No new inference, route promotion, speedup, acceleration, or BitNet QK256/I2_S behavior change is claimed.",
+]
