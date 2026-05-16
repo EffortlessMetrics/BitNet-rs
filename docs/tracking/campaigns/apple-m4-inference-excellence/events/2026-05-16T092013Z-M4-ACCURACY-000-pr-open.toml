@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T09:20:13Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-000"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5099
+head_sha = "83bbe458cf976dccf0ace9ee10897a4d0636edb4"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-000-corpus-scorer-contract"
+summary = "Opened PR #5099 for the M4 eval corpus/scorer contract freeze."
+
+notes = [
+  "The PR adds machine-readable corpus/scorer contract metadata to the primary dense SLM eval-v2 and BitNet eval corpora, parses and validates that contract in answer-corpus, and emits it in aggregate receipts.",
+  "The PR is additive contract and dry-run validation work only; it does not run live models, download models, enable BitNet chat/serve, or claim Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup.",
+]

@@ -65,6 +65,26 @@ scorer self-tests
 receipt version fields
 ```
 
+`M4-ACCURACY-000` makes that contract machine-readable for the primary M4 eval
+corpora. The dense SLM v2 corpus and BitNet eval corpus now carry
+`metadata.corpus_contract` with:
+
+| Field | Purpose |
+|---|---|
+| `contract_version` | Version of the shared corpus/scorer contract shape. |
+| `corpus_id` and `corpus_version` | Stable corpus identity; prompt, expected-output, scoring, or family-count changes require a version bump. |
+| `seed_generation_rules` | How deterministic cases are derived and how case IDs / `seed_material` preserve fixture inputs. |
+| `expected_output_provenance` | Authority for expected answers; closed-form fixture answers are separate from model outputs or optional reference-runner evidence. |
+| `normalization_rules` | The scoring normalization version and where strict exact matching remains strict. |
+| `scoring_schema` | The mechanical scorer schema used by `answer-corpus`. |
+| `scorer_self_tests` | Local tests that guard scorer behavior before pass rates are interpreted. |
+| `receipt_contract` | Aggregate receipt contract expected from dry-run and live eval reports. |
+
+`answer-corpus` receipts propagate these fields under `corpus.contract` and
+`scoring_contract`, along with corpus metadata such as seed, generator policy,
+case-count target, prompt template, and claim boundary. This is contract
+readiness only; it does not create new live quality or performance evidence.
+
 Dense SLM accuracy work expands the deterministic corpus in two stages:
 
 ```text

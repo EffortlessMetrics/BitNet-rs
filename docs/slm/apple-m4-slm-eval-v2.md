@@ -33,6 +33,25 @@ metadata through `answer-corpus --dry-run`. It does not run live model
 inference, does not create runtime pass-rate evidence, and does not make a broad
 model-quality claim.
 
+`M4-ACCURACY-000` freezes the v2 corpus/scorer contract before any larger
+corpus expansion. The YAML records `metadata.corpus_contract` with:
+
+```text
+contract_version: m4-eval-corpus-scorer-contract-v1
+corpus_id: apple-m4-slm-eval-seeded-corpus-v2
+corpus_version: 2.0.0
+seed: 777331
+generator_policy: deterministic-static-fixture-v2
+scoring_schema: answer_corpus_mechanical_scoring_v1
+receipt_contract: answer_corpus_aggregate_receipt_v1
+```
+
+Expected outputs are closed-form fixture answers from the YAML prompt data, not
+model outputs or LLM-judge labels. `answer-corpus` aggregate receipts propagate
+the contract under `corpus.contract` and `scoring_contract` so later pass rates
+can be compared only when corpus, scorer, normalization, and receipt contracts
+match.
+
 ## Report Contract
 
 Later v2 reports should publish one directory per supported dense model:
