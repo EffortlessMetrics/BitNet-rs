@@ -21,6 +21,21 @@ on:
         required: true
         type: string
         default: "qwen2.5-0.5b-instruct-q8_0"
+      corpus:
+        description: "Comparison corpus for M3 dense SLM validation."
+        required: true
+        type: string
+        default: "ci/quality/apple-m4-slm-quality-corpus.yaml"
+      corpus_repeat_runs:
+        description: "Repeat count for comparison-grade corpus prompts."
+        required: true
+        type: string
+        default: "2"
+      max_new_tokens:
+        description: "Maximum generated tokens per prompt."
+        required: true
+        type: string
+        default: "32"
       min_free_gb:
         description: "Minimum free disk required before model fetch and receipt generation."
         required: true
@@ -132,13 +147,49 @@ jobs:
             echo "}"
           } > "$M3_AIR_ARTIFACT_ROOT/host-context.json"
 
+      - name: Upload M3 Air preflight evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apple-m3-air-dense-slm-preflight-${{ github.run_id }}
+          path: ${{ env.M3_AIR_ARTIFACT_ROOT }}
+          if-no-files-found: warn
+          retention-days: ${{ inputs.retention_days }}
+
       - name: Fetch and verify supported dense SLM model
+        id: fetch_verify
         run: |
           set -euo pipefail
           cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
             model fetch "${{ inputs.model_id }}"
           cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
             model verify "${{ inputs.model_id }}"
+
+      - name: Record model fetch phase
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$M3_AIR_ARTIFACT_ROOT"
+          {
+            echo "{"
+            echo "  \"artifact_kind\": \"apple_m3_air_dense_slm_model_fetch_phase\","
+            echo "  \"machine_id\": \"apple-m3-macbook-air\","
+            echo "  \"model_id\": \"${{ inputs.model_id }}\","
+            echo "  \"fetch_verify_outcome\": \"${{ steps.fetch_verify.outcome }}\","
+            echo "  \"profile_set\": \"${{ inputs.profile_set }}\","
+            echo "  \"branch\": \"${GITHUB_REF_NAME}\","
+            echo "  \"commit\": \"${GITHUB_SHA}\""
+            echo "}"
+          } > "$M3_AIR_ARTIFACT_ROOT/model-fetch-verify.json"
+
+      - name: Upload M3 Air model-fetch evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apple-m3-air-dense-slm-model-fetch-${{ github.run_id }}
+          path: ${{ env.M3_AIR_ARTIFACT_ROOT }}
+          if-no-files-found: warn
+          retention-days: ${{ inputs.retention_days }}
 
       - name: Run M3 Air dense SLM receipt
         run: |
@@ -152,6 +203,9 @@ jobs:
             --device apple-m3-air-cpu-neon \
             --profile-set "${{ inputs.profile_set }}" \
             --model-id "${{ inputs.model_id }}" \
+            --corpus "${{ inputs.corpus }}" \
+            --corpus-repeat-runs "${{ inputs.corpus_repeat_runs }}" \
+            --max-new-tokens "${{ inputs.max_new_tokens }}" \
             --cache-dir "$BITNET_MODEL_CACHE_DIR" \
             --json-out "$M3_AIR_ARTIFACT_ROOT/m3-air-dense-slm-${{ inputs.profile_set }}.json" \
             --quiet \
