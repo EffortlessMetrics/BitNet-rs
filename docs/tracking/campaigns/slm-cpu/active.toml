@@ -2041,6 +2041,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-022"
+status = "pr_open"
+pr = 5140
+head_sha = "fae5cafff90cb343bb903aebdd5b75a143b6dc5d"
+branch = "model/slm-cpu-022-smollm2-reference-comparator"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-021"]
+acceptance = "Define the SmolLM2 360M reference-compatible first-token/top-k comparator contract after the SLM-CPU-021 wrong-first-token diagnosis, and add CLI fixture coverage showing `reference-compare` validates the exact SmolLM2 model-family/top-k artifact shape and fails closed under `--require-match` when it diverges. This support slice must not claim a fresh external reference run, CPU answer readiness, CUDA planning, CUDA execution, speedup, server readiness, broad dense GGUF support, or BitNet QK256 behavior."
+commands = [
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_validates_smollm2_first_token_topk_artifact",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_require_match_fails_smollm2_topk_divergence",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "ci/slm-cpu/**",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+  "plans/cuda-5070ti-productization/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "SmolLM2 CUDA planning",
+  "SmolLM2 CUDA execution",
+]
+may_claim = [
+  "The SmolLM2 comparator contract is defined after merge.",
+  "`reference-compare` has SmolLM2 first-token/top-k fixture coverage after merge.",
+  "The next SmolLM2 proof remains a same-prompt external reference comparator capture before CPU answer readiness or CUDA planning.",
+]
+must_not_claim = [
+  "A fresh SmolLM2 external reference comparator was captured.",
+  "SmolLM2 CPU answer readiness is proven.",
+  "SmolLM2 broad answer quality is proven.",
+  "SmolLM2 all-layer CUDA planning can start.",
+  "SmolLM2 CUDA execution exists.",
+  "Sustained 8250U or 9950X3D throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-021"
 status = "merged"
 pr = 5133

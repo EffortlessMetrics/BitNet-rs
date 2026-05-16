@@ -143,20 +143,30 @@ Machine-readable diagnosis:
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json
 ```
 
-The next proof must run the exact pinned artifact with a reference-compatible
-raw ChatML prompt and record Rust CPU versus reference first-token/top-k or
-checkpoint evidence. SmolLM2 CPU answer readiness and CUDA planning remain
-blocked until that comparator localizes or clears the wrong-first-token
-behavior.
+`SLM-CPU-022` adds the comparator contract and validates the SmolLM2
+first-token/top-k artifact shape accepted by `bitnet reference-compare`.
+This is still not the missing reference run. It defines the required same-prompt
+evidence before any later proof can clear the blocker:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json
+```
+
+The next execution proof must run the exact pinned artifact with a
+reference-compatible raw ChatML prompt and record Rust CPU versus reference
+first-token/top-k or checkpoint evidence. SmolLM2 CPU answer readiness and CUDA
+planning remain blocked until that comparator localizes or clears the
+wrong-first-token behavior.
 
 ## Claim Boundary
 
 This page may claim only that the pinned SmolLM2 360M artifact reached strict
 CPU model-load preflight on the 9950X3D box, and later reached strict one-token
 CPU generation after exact metadata-scoped normalization validation. The
-wrong-first-token diagnosis may claim only that the current blocker is
-unresolved between prompt-policy and shared dense CPU math without a
-reference-compatible comparator. It must not claim SmolLM2 CPU answer quality,
-broad dense SLM support, sustained throughput, CUDA, server readiness,
-OpenVINO, NPU, UHD 620, Qwen3.5 support, Q4/Q5 expansion, BitNet QK256
-behavior, or inherited proof from Qwen2.5, Qwen3, or Apple M4 evidence.
+wrong-first-token diagnosis and comparator contract may claim only that the
+current blocker is unresolved between prompt-policy and shared dense CPU math
+until a reference-compatible comparator is captured. They must not claim
+SmolLM2 CPU answer quality, broad dense SLM support, sustained throughput, CUDA,
+server readiness, OpenVINO, NPU, UHD 620, Qwen3.5 support, Q4/Q5 expansion,
+BitNet QK256 behavior, or inherited proof from Qwen2.5, Qwen3, or Apple M4
+evidence.

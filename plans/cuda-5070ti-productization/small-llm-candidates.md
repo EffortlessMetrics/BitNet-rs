@@ -132,11 +132,13 @@ one-token generation with `fallback_used=false`.
 Do not start SmolLM2 CUDA planning yet. The strict CPU retry selected `The`
 for the math prompt, and SLM-CPU-021 records this as a wrong-first-token
 blocker rather than CPU answer readiness. The next SmolLM2 proof must be a
-reference-compatible first-token/top-k or checkpoint comparator. The current
-SmolLM2 state can only claim structurally valid artifact metadata plus the
-committed strict CPU blocker/diagnosis chain; it cannot claim CPU answer
-readiness, CUDA route, product CLI, benchmark, speed, server, full-residency,
-broad dense GGUF, or BitNet QK256 proof.
+reference-compatible first-token/top-k or checkpoint comparator. SLM-CPU-022
+defines that comparator contract and protects the `reference-compare` fixture
+shape, but it is not the missing reference run. The current SmolLM2 state can
+only claim structurally valid artifact metadata plus the committed strict CPU
+blocker/diagnosis/contract chain; it cannot claim CPU answer readiness, CUDA
+route, product CLI, benchmark, speed, server, full-residency, broad dense GGUF,
+or BitNet QK256 proof.
 
 After SmolLM2 360M clears step B, repeat the same A through G sequence for
 Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine

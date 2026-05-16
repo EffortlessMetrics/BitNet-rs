@@ -435,7 +435,7 @@ dense GGUF claim, or BitNet QK256 proof.
   structurally valid with CPU answer readiness blocked by wrong-first-token
   diagnosis.
 - The row links the next proof to a reference-compatible first-token/top-k or
-  checkpoint comparator.
+  checkpoint comparator capture using the SLM-CPU-022 contract.
 - The NVIDIA campaign and CUDA productization plan point to the SLM CPU blocker
   and diagnosis receipts as the last real evidence.
 - The SmolLM2 ladder does not start CUDA planning until CPU sanity is
@@ -454,15 +454,16 @@ cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070t
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json
 ```
 
 ### Claim boundary
 
 This work can only claim that the SmolLM2 artifact contract exists and that a
-strict CPU quality blocker is recorded through wrong-first-token diagnosis. It
-cannot claim CPU answer readiness, CUDA execution, product CLI readiness,
-speed, server readiness, full residency, broad dense GGUF support, or BitNet
-QK256 proof.
+strict CPU quality blocker is recorded through wrong-first-token diagnosis and
+comparator contract. It cannot claim CPU answer readiness, CUDA execution,
+product CLI readiness, speed, server readiness, full residency, broad dense GGUF
+support, or BitNet QK256 proof.
 
 ### Rollback
 

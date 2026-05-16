@@ -1,0 +1,37 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-022"
+event = "pr_open"
+timestamp = "2026-05-16T14:27:00Z"
+actor = "codex"
+pr = 5140
+head_sha = "63dfc1c71f880c8134e1235f12e5bb8c0208581e"
+branch = "model/slm-cpu-022-smollm2-reference-comparator"
+
+summary = "Opened #5140 with the SmolLM2 reference-comparator contract and CLI fixture coverage."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5140",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
+  "docs/slm/SLM_CPU_SMOLLM2_360M_SANITY.md",
+]
+
+notes = [
+  "The PR adds contract and validator-fixture support only; it does not capture a fresh external reference comparator.",
+  "SmolLM2 remains structurally valid and blocked before CPU answer readiness, CUDA planning, CUDA execution, speedup, server readiness, broad dense GGUF support, and BitNet QK256 proof.",
+  "The next proof remains a same-prompt reference-compatible first-token/top-k or checkpoint comparator capture.",
+]
+
+validation = [
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_validates_smollm2_first_token_topk_artifact",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_require_match_fails_smollm2_topk_divergence",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]

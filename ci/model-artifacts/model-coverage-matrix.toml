@@ -375,6 +375,7 @@ required_receipts = [
   "normalization_validation_implementation",
   "strict_cpu_sanity_retry_quality_blocker",
   "wrong_first_token_diagnosis",
+  "reference_comparator_contract",
   "cpu_reference_sanity",
   "all_layer_plan",
   "model_boundary_fixtures",
@@ -386,8 +387,8 @@ forbidden_claims = [
   "speedup",
   "server_ready",
 ]
-next_proof = "Run a reference-compatible SmolLM2 first-token/top-k or checkpoint comparator before CPU answer sanity, dense all-layer planning, model-boundary fixtures, or any strict CUDA one-token receipt."
-claim_boundary = "SmolLM2 360M Instruct Q8_0 has an exact artifact contract, structural metadata, a strict CPU preflight blocker receipt, a governed normalization-policy audit, exact metadata-scoped normalization validation, a strict CPU sanity retry that reached tokenizer, prompt rendering, and one-token generation with fallback_used=false, and a wrong-first-token diagnosis. The retry generated `The` for the math prompt; committed reference evidence is not yet same-prompt/top-k comparable, so the fault remains prompt-policy or shared dense CPU math unresolved. It has no CPU answer readiness, CUDA route, speedup, server, full-residency, broad dense GGUF, or BitNet QK256 claim."
+next_proof = "Capture or ingest a same-prompt SmolLM2 first-token/top-k or checkpoint comparator using the SLM-CPU-022 contract before CPU answer sanity, dense all-layer planning, model-boundary fixtures, or any strict CUDA one-token receipt."
+claim_boundary = "SmolLM2 360M Instruct Q8_0 has an exact artifact contract, structural metadata, a strict CPU preflight blocker receipt, a governed normalization-policy audit, exact metadata-scoped normalization validation, a strict CPU sanity retry that reached tokenizer, prompt rendering, and one-token generation with fallback_used=false, a wrong-first-token diagnosis, and a comparator contract. The retry generated `The` for the math prompt; committed reference evidence is not yet same-prompt/top-k comparable, so the fault remains prompt-policy or shared dense CPU math unresolved. It has no CPU answer readiness, CUDA route, speedup, server, full-residency, broad dense GGUF, or BitNet QK256 claim."
 
   [entry.claims]
   registered = true
