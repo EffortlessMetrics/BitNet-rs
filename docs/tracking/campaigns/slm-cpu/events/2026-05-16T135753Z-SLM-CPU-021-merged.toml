@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T13:57:53Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-021"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5133
+head_sha = "6e280e129ac810442ba51543e9d781b398b4ba4c"
+merge_sha = "ceec8dd64366c85a26b7dbb0a5351769c92ac0cd"
+branch = "model/slm-cpu-021-smollm2-wrong-token-diagnosis"
+
+summary = "Merged #5133 with the SmolLM2 wrong-first-token diagnosis before CPU answer readiness or CUDA planning."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5133",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json",
+]
+
+notes = [
+  "The diagnosis records that the strict CPU retry reached one-token generation with fallback_used=false but selected `The` for the math prompt.",
+  "SmolLM2 CPU answer readiness, CUDA planning, CUDA execution, speedup, server readiness, broad dense GGUF support, and BitNet QK256 proof remain false.",
+  "The next SmolLM2 proof remains a reference-compatible first-token/top-k or checkpoint comparator.",
+]
