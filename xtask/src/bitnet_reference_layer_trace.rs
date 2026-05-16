@@ -5130,6 +5130,8 @@ fn compare_reference_to_rust_with_records(
         layer_operation_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_1_operation_boundary_delta"] =
         layer_operation_boundary_delta(reference_records, rust_record_list, 1);
+    report["layer_1_attention_norm_history_drift"] =
+        layer_attention_norm_history_drift(reference_records, rust_record_list, 1);
     report["layer_0_history_boundary_delta"] =
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_0_attention_output_history_boundary_delta"] =
@@ -5587,6 +5589,137 @@ fn layer_attention_output_history_boundary_delta(
         "material_mismatch_count": material_mismatch_count,
         "first_material_boundary": first_material_boundary,
         "rows": rows,
+    })
+}
+
+fn layer_attention_norm_history_drift(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+    layer: usize,
+) -> Value {
+    let reference_input = find_reference_trace_record(
+        reference_records,
+        "attn_norm_input_history_ref_layout",
+        Some(layer),
+    );
+    let rust_input = find_rust_trace_record(
+        rust_records,
+        "attention_norm_input_history_ref_layout",
+        Some(layer),
+    );
+    let reference_output =
+        find_reference_trace_record(reference_records, "attn_norm_history_ref_layout", Some(layer));
+    let rust_output =
+        find_rust_trace_record(rust_records, "attention_v_input_history_ref_layout", Some(layer));
+
+    let input_delta = reference_input
+        .zip(rust_input)
+        .map(|(reference, rust)| dim_major_history_record_delta(reference, rust));
+    let output_delta = reference_output
+        .zip(rust_output)
+        .map(|(reference, rust)| dim_major_history_record_delta(reference, rust));
+    let input_material = input_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+    let output_material = output_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+    let input_max_abs = input_delta.as_ref().map(|delta| delta_metric(delta, "/max_abs_delta"));
+    let output_max_abs = output_delta.as_ref().map(|delta| delta_metric(delta, "/max_abs_delta"));
+    let max_abs_reduction_ratio = match (input_max_abs, output_max_abs) {
+        (Some(input), Some(output)) if input > 0.0 => Some(output / input),
+        _ => None,
+    };
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference_input.is_none() {
+        blocked_reasons.push("reference_attention_norm_input_history_missing".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push("rust_attention_norm_input_history_missing".to_string());
+    }
+    if reference_output.is_none() {
+        blocked_reasons.push("reference_attention_norm_output_history_missing".to_string());
+    }
+    if rust_output.is_none() {
+        blocked_reasons.push("rust_attention_norm_output_history_missing".to_string());
+    }
+    if reference_input.is_some() && rust_input.is_some() && input_delta.is_none() {
+        blocked_reasons.push("attention_norm_input_history_delta_unavailable".to_string());
+    }
+    if reference_output.is_some() && rust_output.is_some() && output_delta.is_none() {
+        blocked_reasons.push("attention_norm_output_history_delta_unavailable".to_string());
+    }
+    if input_material {
+        blocked_reasons.push("attention_norm_input_history_delta_present".to_string());
+    }
+    if output_material {
+        blocked_reasons.push("attention_norm_output_history_delta_present".to_string());
+    }
+    if !input_material && output_material {
+        blocked_reasons.push("attention_norm_output_delta_without_input_history_delta".to_string());
+    }
+    if input_material && output_material {
+        blocked_reasons
+            .push("attention_norm_input_history_delta_feeds_value_projection_input".to_string());
+    }
+    if input_material && !output_material {
+        blocked_reasons
+            .push("attention_norm_input_delta_reduced_below_material_threshold".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if blocked_reasons.iter().any(|reason| {
+        reason == "reference_attention_norm_input_history_missing"
+            || reason == "rust_attention_norm_input_history_missing"
+            || reason == "reference_attention_norm_output_history_missing"
+            || reason == "rust_attention_norm_output_history_missing"
+    }) {
+        "capture the missing layer-scoped attention-norm history stages before interpreting the value-projection input drift"
+    } else if input_material && output_material {
+        "localize the previous-layer output history delta that feeds this layer's attention-norm input"
+    } else if output_material {
+        "inspect attention RMSNorm history replay because output history diverges without an input-history delta"
+    } else if input_material {
+        "attention RMSNorm reduces the input-history delta below the material threshold; continue with downstream score/value sensitivity"
+    } else {
+        "layer attention-norm history is not the active material drift; continue downstream"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "layer": layer,
+        "policy": "Layer attention-norm history drift is diagnostic-only evidence for whether full-prefix layer input drift reaches the K/V projection input; it does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "input_history": {
+            "boundary": "attention_norm_input_history",
+            "reference_stage": "attn_norm_input_history_ref_layout",
+            "rust_stage": "attention_norm_input_history_ref_layout",
+            "reference": reference_input.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust_input.map(rust_record_summary).unwrap_or(Value::Null),
+            "reference_present": reference_input.is_some(),
+            "rust_present": rust_input.is_some(),
+            "delta": input_delta.unwrap_or(Value::Null),
+            "material_mismatch": input_material,
+        },
+        "output_history": {
+            "boundary": "attention_norm_output_history",
+            "reference_stage": "attn_norm_history_ref_layout",
+            "rust_stage": "attention_v_input_history_ref_layout",
+            "reference": reference_output.map(reference_record_summary).unwrap_or(Value::Null),
+            "rust": rust_output.map(rust_record_summary).unwrap_or(Value::Null),
+            "reference_present": reference_output.is_some(),
+            "rust_present": rust_output.is_some(),
+            "delta": output_delta.unwrap_or(Value::Null),
+            "material_mismatch": output_material,
+        },
+        "transition": {
+            "input_material_mismatch": input_material,
+            "output_material_mismatch": output_material,
+            "input_max_abs_delta": input_max_abs,
+            "output_max_abs_delta": output_max_abs,
+            "max_abs_reduction_ratio": max_abs_reduction_ratio,
+        },
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
     })
 }
 
@@ -13349,6 +13482,125 @@ mod tests {
             boundary.pointer("/first_material_stage/first_values_delta/max_abs_delta"),
             Some(&json!(0.5))
         );
+    }
+
+    #[test]
+    fn compare_reports_layer1_attention_norm_history_drift_by_explicit_layer() {
+        let mut reference_layer0_input = ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![9.0, 9.1, 9.2, 8.0, 8.1, 8.2],
+            ..test_reference_trace_record(
+                "attn_norm_input_history_ref_layout",
+                vec![9.0, 9.1, 9.2, 8.0, 8.1, 8.2],
+            )
+        };
+        reference_layer0_input.layer = Some(0);
+        let mut reference_layer1_input = ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+            ..test_reference_trace_record(
+                "attn_norm_input_history_ref_layout",
+                vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+            )
+        };
+        reference_layer1_input.layer = Some(1);
+        let mut reference_layer1_output = ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![0.5, 0.55, 0.6, 1.0, 1.05, 1.1],
+            ..test_reference_trace_record(
+                "attn_norm_history_ref_layout",
+                vec![0.5, 0.55, 0.6, 1.0, 1.05, 1.1],
+            )
+        };
+        reference_layer1_output.layer = Some(1);
+        let reference_records =
+            vec![reference_layer0_input, reference_layer1_input, reference_layer1_output];
+
+        let mut rust_layer0_input = RustTraceRecord {
+            shape: vec![2, 3],
+            num_elements: 6,
+            first_values: vec![7.0, 7.1, 7.2, 6.0, 6.1, 6.2],
+            ..test_rust_trace_record(
+                "attention_norm_input_history_ref_layout",
+                vec![7.0, 7.1, 7.2, 6.0, 6.1, 6.2],
+            )
+        };
+        rust_layer0_input.layer = Some(0);
+        let mut rust_layer1_input = RustTraceRecord {
+            name: "t2/blk1/attention_norm_input_history_ref_layout".to_string(),
+            shape: vec![2, 3],
+            num_elements: 6,
+            first_values: vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+            ..test_rust_trace_record(
+                "attention_norm_input_history_ref_layout",
+                vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+            )
+        };
+        rust_layer1_input.layer = Some(1);
+        let mut rust_layer1_output = RustTraceRecord {
+            name: "t2/blk1/attention_v_input_history_ref_layout".to_string(),
+            shape: vec![2, 3],
+            num_elements: 6,
+            first_values: vec![0.5, 0.55, 0.601, 1.0, 1.05, 1.1],
+            ..test_rust_trace_record(
+                "attention_v_input_history_ref_layout",
+                vec![0.5, 0.55, 0.601, 1.0, 1.05, 1.1],
+            )
+        };
+        rust_layer1_output.layer = Some(1);
+        let rust_records = vec![rust_layer0_input, rust_layer1_input, rust_layer1_output];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let drift = report.pointer("/layer_1_attention_norm_history_drift").unwrap();
+        let reasons = drift.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(drift.pointer("/layer"), Some(&json!(1)));
+        assert_eq!(drift.pointer("/input_history/reference/layer"), Some(&json!(1)));
+        assert_eq!(drift.pointer("/input_history/rust/layer"), Some(&json!(1)));
+        assert_eq!(
+            drift.pointer("/input_history/delta/first_mismatch_layout/token"),
+            Some(&json!(2))
+        );
+        assert_eq!(drift.pointer("/input_history/material_mismatch"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/output_history/material_mismatch"), Some(&json!(true)));
+        assert!(reasons.contains(&json!("attention_norm_input_history_delta_present")));
+        assert!(reasons.contains(&json!("attention_norm_output_history_delta_present")));
+        assert!(
+            reasons.contains(&json!(
+                "attention_norm_input_history_delta_feeds_value_projection_input"
+            ))
+        );
+        assert_eq!(
+            drift.pointer("/next_action"),
+            Some(&json!(
+                "localize the previous-layer output history delta that feeds this layer's attention-norm input"
+            ))
+        );
+    }
+
+    #[test]
+    fn compare_reports_layer1_attention_norm_history_drift_missing_as_diagnostic() {
+        let report = compare_reference_to_rust_with_records(&[], &BTreeMap::new(), &[], &[]);
+        let drift = report.pointer("/layer_1_attention_norm_history_drift").unwrap();
+        let reasons = drift.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(drift.pointer("/input_history/reference_present"), Some(&json!(false)));
+        assert_eq!(drift.pointer("/output_history/rust_present"), Some(&json!(false)));
+        assert!(reasons.contains(&json!("reference_attention_norm_input_history_missing")));
+        assert!(reasons.contains(&json!("rust_attention_norm_output_history_missing")));
     }
 
     #[test]
