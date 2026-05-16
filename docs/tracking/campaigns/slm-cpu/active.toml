@@ -1065,6 +1065,53 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-017"
+status = "ready"
+branch = "codex/slm-cpu-017-second-model-sanity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-016"]
+acceptance = "Add a bounded second small dense GGUF model sanity check after the Qwen3-0.6B Q8_0 appliance profile. The slice must select a non-Qwen3 candidate only by verified artifact metadata, pinned SHA256, GGUF architecture, tokenizer authority, quant format, and tensor naming; run the strict CPU preflight and the smallest diagnosable strict CPU answer or failure receipt the current command surface supports; record prompt IDs, generated IDs when generated, decoded text when generated, selected backend/kernel, loader mode, tokenizer source/strictness, and fallback_used=false. It must preserve the Qwen3 Q8_0 appliance profile as the baseline and must not claim broad answer quality, sustained throughput, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "A second small dense GGUF candidate has bounded strict CPU sanity evidence only after exact metadata, tokenizer authority, selected CPU backend, and fallback=false are recorded.",
+  "The Qwen3-0.6B Q8_0 appliance profile remains the established Kaby Lake baseline.",
+]
+must_not_claim = [
+  "Broad answer quality is proven for the second model.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-008AA"
 status = "merged"
 pr = 4817
