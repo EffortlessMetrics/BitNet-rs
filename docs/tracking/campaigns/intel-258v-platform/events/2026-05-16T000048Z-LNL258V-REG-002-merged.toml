@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T00:00:48Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5000
+merge_sha = "c992705288df5f5b2827e6c6c2befc9a95a8cf4b"
+branch = "codex/lunar-lake/LNL258V-REG-002-corpus-v2-regression"
+head_sha = "c38355ade22fc121c8a12e7c3674bbc49c607ff9"
+summary = "Merged LNL258V-REG-002 after CI passed to index corpus v2 and route profile evidence in the Lunar Lake regression bundle."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5000",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The merged regression bundle indexes the bounded Lunar Lake answer corpus v2 fixture and route profile comparison receipt.",
+  "Dense Qwen CPU remains the promoted default route while OpenVINO GPU/NPU remain candidate routes without benchmark-qualified advantage.",
+  "No new inference, broad quality claim, speedup claim, GPU/NPU route promotion, Arc/NPU acceleration, full accelerator BitNet inference, or QK256/I2_S behavior change is claimed.",
+]
