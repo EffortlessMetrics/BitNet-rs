@@ -112,4 +112,69 @@ mod tests {
         assert!(ModelTypeDetector::validate_vocab_size(0).is_err());
         assert!(ModelTypeDetector::validate_vocab_size(2_000_001).is_err());
     }
+
+    #[test]
+    fn requires_gpu_acceleration_threshold_is_inclusive_below() {
+        // 65536 is the boundary documented as "> 65536"; anything at or below must not trigger.
+        assert!(!ModelTypeDetector::requires_gpu_acceleration(0));
+        assert!(!ModelTypeDetector::requires_gpu_acceleration(32000));
+        assert!(!ModelTypeDetector::requires_gpu_acceleration(65536));
+    }
+
+    #[test]
+    fn requires_gpu_acceleration_triggers_above_threshold() {
+        assert!(ModelTypeDetector::requires_gpu_acceleration(65537));
+        assert!(ModelTypeDetector::requires_gpu_acceleration(128256));
+        assert!(ModelTypeDetector::requires_gpu_acceleration(256000));
+    }
+
+    #[test]
+    fn expected_vocab_size_unknown_family() {
+        assert_eq!(ModelTypeDetector::expected_vocab_size(""), None);
+        assert_eq!(ModelTypeDetector::expected_vocab_size("LLAMA2"), None);
+        assert_eq!(ModelTypeDetector::expected_vocab_size("phi"), None);
+    }
+
+    #[test]
+    fn expected_vocab_size_handles_mistral_aliases() {
+        // "mistral" without a version maps to 32000 (the original llama-derived vocab).
+        assert_eq!(ModelTypeDetector::expected_vocab_size("mistral"), Some(32000));
+    }
+
+    #[test]
+    fn validate_vocab_error_messages_carry_size_context() {
+        let too_large = ModelTypeDetector::validate_vocab_size(5_000_000).unwrap_err();
+        let rendered = format!("{too_large}");
+        assert!(
+            rendered.contains("5000000"),
+            "error should mention the offending size: {rendered}"
+        );
+    }
+
+    #[test]
+    fn detection_and_expected_size_are_round_trip_for_known_families() {
+        for family in [
+            "llama2",
+            "llama3",
+            "codellama",
+            "gpt2",
+            "phi4",
+            "phi3",
+            "phi2",
+            "qwen2.5",
+            "qwen2",
+            "gemma",
+            "mistral-v03",
+            "mistral-nemo",
+            "smollm",
+        ] {
+            let vocab = ModelTypeDetector::expected_vocab_size(family)
+                .expect("known family should have an expected vocab size");
+            assert_eq!(
+                ModelTypeDetector::detect_from_vocab_size(vocab),
+                family,
+                "detection of {family} should round-trip through its expected vocab size",
+            );
+        }
+    }
 }
