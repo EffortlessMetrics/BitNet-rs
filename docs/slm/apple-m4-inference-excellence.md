@@ -33,11 +33,23 @@ writes
 `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json`
 for the accepted Microsoft I2_S GGUF and explicit external tokenizer identity.
 
-A local model-free `mac report-refresh`/`mac regression-dashboard` check now
-shows `bitnet_variable_warm` with `report_count=2` and
-`comparison_status=ready`. `M4-EXCELLENCE-003` refreshes the committed
-dashboard after the matching receipts land so operators can see comparable
-trend status instead of relying on one-off receipts.
+`M4-EXCELLENCE-003` refreshes the model-free report manifest and regression
+dashboard after both matching-history receipts landed. The refreshed dashboard
+reports `status=ok`, five evidence families, 18 committed reports, nine
+comparison groups, and nine comparable groups. Dense SLM and BitNet evidence
+remain separate:
+
+| Family | Evidence | Reports | Groups | Comparable groups |
+|---|---|---:|---:|---:|
+| `dense_slm_eval_v2` | dense SLM | 6 | 3 | 3 |
+| `dense_slm_benchmark_v2` | dense SLM | 6 | 3 | 3 |
+| `bitnet_eval` | BitNet | 2 | 1 | 1 |
+| `bitnet_benchmark` | BitNet | 2 | 1 | 1 |
+| `bitnet_variable_warm` | BitNet | 2 | 1 | 1 |
+
+The dashboard refresh is not a live model run and does not change any chat,
+serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad
+performance, or speedup claim.
 
 ## Accuracy Depth
 
