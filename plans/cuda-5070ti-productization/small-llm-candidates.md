@@ -123,10 +123,19 @@ Rollback: remove the decode/session receipt and demote status rows.
 
 ## Next Candidate
 
-The next candidate is SmolLM2 360M. Start at step A with an exact artifact
-contract before any CPU answer, CUDA route, product CLI, benchmark, speed,
-server, full-residency, broad dense GGUF, or BitNet QK256 claim.
+The next candidate is SmolLM2 360M. Step A has landed as an exact artifact
+contract, and SLM-CPU-017 attempted step B on the 9950X3D. That strict CPU
+preflight reached model-load policy and failed closed at
+`blk.0.ffn_norm.weight` before tokenizer, prompt rendering, or generation.
 
-After SmolLM2 360M starts the next ladder, repeat the same A through G sequence
-for Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine
+Do not start SmolLM2 CUDA planning until the SLM CPU lane resolves the strict
+loader/model-family normalization policy or records a governed per-family
+exception and then produces CPU answer-sanity evidence. The current SmolLM2
+state can only claim structurally valid artifact metadata plus a committed
+strict CPU preflight blocker; it cannot claim CPU answer readiness, CUDA route,
+product CLI, benchmark, speed, server, full-residency, broad dense GGUF, or
+BitNet QK256 proof.
+
+After SmolLM2 360M clears step B, repeat the same A through G sequence for
+Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine
 candidate families in one PR.
