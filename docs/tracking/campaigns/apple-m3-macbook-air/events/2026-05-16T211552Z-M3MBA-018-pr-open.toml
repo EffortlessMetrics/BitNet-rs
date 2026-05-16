@@ -6,12 +6,12 @@ from = "in_progress"
 to = "pr_open"
 actor = "codex"
 branch = "codex/apple-m3-macbook-air/M3MBA-018-roadmap-state-refresh"
-pr = 5214
+pr = 5225
 head_sha = "3cb6ac1aee7cf41404de3054726c03adcfd08b63"
-summary = "Opened PR #5214 to refresh the M3 Air roadmap and selected-lane evidence policy."
+summary = "Opened PR #5225 to refresh the M3 Air roadmap and selected-lane evidence policy."
 
 artifacts = [
-  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5214",
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5225",
   ".github/workflows/apple-m3-air-dense-slm.yml",
   "docs/apple-silicon/m3-macbook-air-roadmap.md",
   "docs/apple-silicon/macbook-lane.md",
