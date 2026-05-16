@@ -8,7 +8,7 @@ head_sha = "a2b40e3ea6f2cec6470a1d81443b21b07c1cc5c7"
 actor = "codex"
 
 notes = [
-  "Opened PR #5158 for a user-facing CUDA capability matrix status page.",
+  "Opened PR #5158 for CUDA-STATUS-001, a user-facing CUDA capability matrix status page.",
   "The page summarizes current model tiers, routes, speed/server states, next proofs, and BitNet versus dense SLM claim boundaries from existing proof sources.",
   "The PR does not change model coverage rows, receipts, runtime behavior, CUDA kernels, CI, README badges, crates.io, or docs.rs claims.",
 ]
