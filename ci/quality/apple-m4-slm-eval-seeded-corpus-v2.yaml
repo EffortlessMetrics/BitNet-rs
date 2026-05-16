@@ -4,7 +4,7 @@ name: apple-m4-slm-eval-seeded-corpus-v2
 description: Seeded deterministic dense SLM eval corpus v2 for Apple M4 quality and regression reports.
 metadata:
   campaign: apple-m4-inference-excellence
-  work_item: M4-ACCURACY-002
+  work_item: M4-ACCURACY-003
   seed: 777331
   generator_policy: deterministic-static-fixture-v2
   case_count_target: 500
@@ -13,10 +13,10 @@ metadata:
   corpus_contract:
     contract_version: m4-eval-corpus-scorer-contract-v1
     corpus_id: apple-m4-slm-eval-seeded-corpus-v2
-    corpus_version: 2.1.0
-    seed_generation_rules: 'Static deterministic fixtures generated from seed=777331; every case ID and seed_material records family, operation, index, and fixture inputs. M4-ACCURACY-002 expands the dense corpus to 500 cases with fixed family counts: arithmetic_exact=84, numeric_tolerance=42, fixed_table_qa=50, format_constrained_json=42, closed_label_classification=50, synthetic_extraction=50, ordering_sorting=50, copy_edit_rewrite=50, constrained_summary=41, instruction_following_required_forbidden=41. Any prompt, expected-output, scoring, or family-count change requires a corpus_version bump.'
+    corpus_version: 2.2.0
+    seed_generation_rules: 'Static deterministic fixtures generated from seed=777331; every case ID and seed_material records family, operation, index, and fixture inputs. M4-ACCURACY-002 expands the dense corpus to 500 cases with fixed family counts: arithmetic_exact=84, numeric_tolerance=42, fixed_table_qa=50, format_constrained_json=42, closed_label_classification=50, synthetic_extraction=50, ordering_sorting=50, copy_edit_rewrite=50, constrained_summary=41, instruction_following_required_forbidden=41. M4-ACCURACY-003 keeps the same cases and expected outputs while tightening scorer normalization for known Qwen ChatML stop tails, leading assistant separators, fenced/embedded JSON, and keyword token boundaries. Any prompt, expected-output, scoring, or family-count change requires a corpus_version bump.'
     expected_output_provenance: Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority.
-    normalization_rules: answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; known stop markers are stripped before scoring while exact_match remains strict after trim.
+    normalization_rules: answer_corpus_normalize_scoring_text_v2 plus normalize_match_text_v1 for normalized_match only; known Qwen ChatML stop tails and leading assistant separators are stripped before scoring, JSON/schema scoring may extract fenced or embedded JSON payloads deterministically, keyword checks use token boundaries, and exact_match remains strict after trim.
     scoring_schema: answer_corpus_mechanical_scoring_v1
     scorer_self_tests:
     - cargo test --locked -p bitnet-cli slm_eval_scoring

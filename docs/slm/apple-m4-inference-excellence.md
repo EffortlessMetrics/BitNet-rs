@@ -111,6 +111,15 @@ constrained-summary, and `41` instruction-following required/forbidden-token
 cases. This is corpus coverage only; it does not refresh runtime pass rates or
 make a broad quality claim.
 
+`M4-ACCURACY-003` then repairs the deterministic scorer and normalization path
+exposed by the larger corpus. It keeps the 500 cases and expected answers
+unchanged, bumps the dense corpus contract to `2.2.0`, strips known Qwen ChatML
+stop tails and leading assistant separators before gates/scoring, allows
+parseable fenced or embedded JSON payloads for JSON/schema scoring, and makes
+required/forbidden keyword checks use token boundaries instead of raw substring
+matches. It does not run models, refresh pass rates, prove BitNet behavior, or
+make a broad quality claim.
+
 Scoring stays mechanical:
 
 ```text

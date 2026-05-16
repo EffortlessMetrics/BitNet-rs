@@ -5534,14 +5534,14 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
         receipt["corpus"]["contract"]["contract_version"],
         "m4-eval-corpus-scorer-contract-v1"
     );
-    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.1.0");
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.2.0");
     assert_eq!(
         receipt["corpus"]["contract"]["expected_output_provenance"],
         "Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority."
     );
     assert_eq!(
         receipt["corpus"]["contract"]["normalization_rules"],
-        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; known stop markers are stripped before scoring while exact_match remains strict after trim."
+        "answer_corpus_normalize_scoring_text_v2 plus normalize_match_text_v1 for normalized_match only; known Qwen ChatML stop tails and leading assistant separators are stripped before scoring, JSON/schema scoring may extract fenced or embedded JSON payloads deterministically, keyword checks use token boundaries, and exact_match remains strict after trim."
     );
     assert_eq!(
         receipt["scoring_contract"]["scoring_schema"],
