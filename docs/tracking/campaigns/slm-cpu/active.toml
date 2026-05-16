@@ -1931,7 +1931,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-019"
-status = "ready"
+status = "pr_open"
+pr = 5081
+head_sha = "9d5f152b706ee02fded9c0185ae1565853afeb84"
 branch = "model/slm-cpu-019-smollm2-normalization-validation"
 stackable = false
 review_mode = "codex_premerge"
