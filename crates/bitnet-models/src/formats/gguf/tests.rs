@@ -1046,26 +1046,26 @@ fn test_ln_name_matching() {
 
 #[test]
 #[serial_test::serial]
-fn test_ln_gamma_validator_envelope() {
+fn test_ln_gamma_validator_envelope() -> anyhow::Result<()> {
     use super::loader::GgufLoader;
     use candle_core::Tensor;
 
     // Helper to create test tensors with specific RMS
-    fn tensor_with_rms(rms_target: f32, size: usize) -> Tensor {
+    fn tensor_with_rms(rms_target: f32, size: usize) -> candle_core::Result<Tensor> {
         let data: Vec<f32> = (0..size).map(|i| (i as f32 / size as f32) * rms_target).collect();
-        Tensor::from_vec(data, &[size], &candle_core::Device::Cpu).unwrap()
+        Tensor::from_vec(data, &[size], &candle_core::Device::Cpu)
     }
 
     // Test 1: Valid RMS should pass in non-strict mode (no BITNET_STRICT_MODE set)
     {
-        let valid_tensor = tensor_with_rms(1.0, 100);
+        let valid_tensor = tensor_with_rms(1.0, 100)?;
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &valid_tensor);
         assert!(result.is_ok(), "Valid RMS should pass");
     }
 
     // Test 2: Invalid RMS should warn in non-strict mode but pass
     {
-        let invalid_tensor = tensor_with_rms(0.01, 100);
+        let invalid_tensor = tensor_with_rms(0.01, 100)?;
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &invalid_tensor);
         assert!(result.is_ok(), "Invalid RMS should warn but pass in non-strict mode");
     }
@@ -1074,21 +1074,21 @@ fn test_ln_gamma_validator_envelope() {
     {
         let _guard = EnvGuard::new("BITNET_STRICT_MODE");
         _guard.set("1");
-        let invalid_tensor = tensor_with_rms(0.01, 100);
+        let invalid_tensor = tensor_with_rms(0.01, 100)?;
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &invalid_tensor);
         assert!(result.is_err(), "Invalid RMS should fail in strict mode");
     }
 
     // Test 4: Edge of envelope (0.5) should pass
     {
-        let edge_low_tensor = tensor_with_rms(0.5, 100);
+        let edge_low_tensor = tensor_with_rms(0.5, 100)?;
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &edge_low_tensor);
         assert!(result.is_ok(), "RMS at lower boundary should pass");
     }
 
     // Test 5: Edge of envelope (2.0) should pass
     {
-        let edge_high_tensor = tensor_with_rms(2.0, 100);
+        let edge_high_tensor = tensor_with_rms(2.0, 100)?;
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &edge_high_tensor);
         assert!(result.is_ok(), "RMS at upper boundary should pass");
     }
@@ -1101,7 +1101,7 @@ fn test_ln_gamma_validator_envelope() {
         let target = 1.0 / (hidden_size as f32).sqrt();
         let data = vec![target * 0.91; hidden_size];
         let hidden_scaled_tensor =
-            Tensor::from_vec(data, &[hidden_size], &candle_core::Device::Cpu).unwrap();
+            Tensor::from_vec(data, &[hidden_size], &candle_core::Device::Cpu)?;
         let result =
             GgufLoader::check_ln_gamma_stats("blk.0.attn_norm.weight", &hidden_scaled_tensor);
         assert!(result.is_err(), "Generic strict mode should fail hidden-scaled RMSNorm gamma");
@@ -1123,8 +1123,7 @@ fn test_ln_gamma_validator_envelope() {
             data,
             &[super::loader::SMOLLM2_360M_HIDDEN_SIZE],
             &candle_core::Device::Cpu,
-        )
-        .unwrap();
+        )?;
 
         let generic_result = GgufLoader::check_ln_gamma_stats_with_policy(
             "blk.0.ffn_norm.weight",
@@ -1137,19 +1136,19 @@ fn test_ln_gamma_validator_envelope() {
             "blk.0.ffn_norm.weight",
             &smollm2_tensor,
             super::loader::NormValidationPolicy::SmolLm2_360MInstructQ8,
-        )
-        .expect("SmolLM2 policy should accept")
-        .expect("SmolLM2 acceptance should be receipt-visible");
+        )?
+        .ok_or_else(|| anyhow::anyhow!("SmolLM2 acceptance should be receipt-visible"))?;
         assert_eq!(record.correction_type, "smollm2_norm_gamma_envelope_accept");
         assert_eq!(
             record.policy_fingerprint,
             format!("slm-cpu-019:{}", super::loader::SMOLLM2_360M_CONTRACT_ID)
         );
     }
+    Ok(())
 }
 
 #[test]
-fn smollm2_norm_policy_requires_exact_metadata_scope() {
+fn smollm2_norm_policy_requires_exact_metadata_scope() -> anyhow::Result<()> {
     use super::loader::{GgufLoader, NormValidationPolicy, SMOLLM2_360M_FINGERPRINT};
 
     let smollm2_gguf = build_gguf_for_validation(
@@ -1167,8 +1166,8 @@ fn smollm2_norm_policy_requires_exact_metadata_scope() {
         ],
         Vec::new(),
     );
-    let smollm2_reader = GgufReader::new(&smollm2_gguf).expect("fixture should parse");
-    let config = GgufLoader.extract_config(&smollm2_reader).expect("config extraction");
+    let smollm2_reader = GgufReader::new(&smollm2_gguf)?;
+    let config = GgufLoader.extract_config(&smollm2_reader)?;
     assert_eq!(
         GgufLoader.select_norm_validation_policy(
             &smollm2_reader,
@@ -1191,9 +1190,8 @@ fn smollm2_norm_policy_requires_exact_metadata_scope() {
         ],
         Vec::new(),
     );
-    let generic_llama_reader = GgufReader::new(&generic_llama_gguf).expect("fixture should parse");
-    let generic_config =
-        GgufLoader.extract_config(&generic_llama_reader).expect("config extraction");
+    let generic_llama_reader = GgufReader::new(&generic_llama_gguf)?;
+    let generic_config = GgufLoader.extract_config(&generic_llama_reader)?;
     assert_eq!(
         GgufLoader.select_norm_validation_policy(
             &generic_llama_reader,
@@ -1210,6 +1208,7 @@ fn smollm2_norm_policy_requires_exact_metadata_scope() {
         ),
         NormValidationPolicy::Generic
     );
+    Ok(())
 }
 
 // ---------- Extended validation tests ----------
