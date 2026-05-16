@@ -4,19 +4,28 @@
 //!
 //! ## Optimization Strategy
 //!
-//! The hot path uses several techniques for throughput:
+//! The full-block hot path uses several techniques for throughput:
 //!
-//! - **SIMD byte expansion**: Extracts 8 grouped two-bit codes from 8 packed
-//!   bytes, matching BitNet.cpp `dequantize_row_i2_s`.
+//! - **Single-load multi-lane decode**: Each 8-byte read produces codes for all
+//!   four BitNet.cpp lanes (shifts 6/4/2/0), eliminating the 4× redundant byte
+//!   loads of the lane-by-lane MVP.
 //!
-//! - **4-wide accumulator bank**: Hides FMA latency (4–5 cycles on Haswell+) by
-//!   keeping 4 independent dependency chains in flight.
+//! - **VPERMPS table lookup**: `_mm256_permutevar8x32_ps` maps the 2-bit
+//!   codes `{0,1,2,3}` directly to weights `{-1, 0, +1, 0}` in a single op,
+//!   replacing the cmpeq+and+add decode chain (4 ops -> 1 op per lane).
 //!
-//! - **Lane-aware 32-element chunks**: Processes each BitNet.cpp 32-value lane
-//!   in 8-element SIMD chunks.
+//! - **Immediate shifts**: `_mm256_srli_epi32` with const-immediate shifts is
+//!   ~3x cheaper than `_mm256_srlv_epi32` on Haswell/Skylake.
 //!
-//! - **Software prefetch**: `_mm_prefetch(..., _MM_HINT_T0)` pulls the next block's
-//!   quantized data and input vector into L1 before they're needed.
+//! - **8-wide accumulator bank**: Four lane accumulators x two pipeline banks
+//!   keep eight independent FMA dependency chains in flight, saturating the
+//!   4-cycle FMA latency on Haswell+.
+//!
+//! - **Software prefetch**: `_mm_prefetch(..., _MM_HINT_T0)` pulls the next
+//!   block's quantized data and input vector into L1 before they're needed.
+//!
+//! Partial trailing blocks (where `cols` is not a multiple of 256) fall back
+//! to a slower per-lane decode that preserves the original tail handling.
 //!
 //! ## Safety
 //!
@@ -31,45 +40,240 @@ use std::arch::x86_64::*;
 use crate::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES};
 use anyhow::Result;
 
-/// Decode 8 grouped BitNet.cpp I2_S two-bit codes into 8 f32 weights using SIMD.
+/// LUT for code → weight: codes `0..=3` map to `[-1.0, 0.0, +1.0, 0.0]`.
 ///
-/// Each input byte contributes one code for the requested 32-value lane. The
-/// BitNet.cpp I2_S map is [0,1,2,3] -> [-1,0,+1,0].
+/// The upper four lanes mirror the lower four so that `_mm256_permutevar8x32_ps`
+/// produces correct results even if higher bits of `codes` were ever set
+/// (defense-in-depth — the AND with `mask_03` already guarantees `code < 4`).
+#[cfg(target_arch = "x86_64")]
+const QK256_WEIGHT_LUT: [f32; 8] = [-1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0];
+
+/// Decode 8 codes per lane for all 4 BitNet.cpp lanes from a single 8-byte read.
+///
+/// Returns four `__m256` weight vectors `(w_lane0, w_lane1, w_lane2, w_lane3)`,
+/// each holding eight f32 weights drawn from `{-1.0, 0.0, +1.0}` per the
+/// BitNet.cpp I2_S code map `[0,1,2,3] -> [-1,0,+1,0]`.
+///
+/// # Safety
+///
+/// Requires AVX2 + FMA. Caller must verify via `is_x86_feature_detected!` or
+/// equivalent before calling. Reads 8 bytes from `bytes`.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2,fma")]
-unsafe fn decode_8_lane_weights_avx2(
+#[inline]
+unsafe fn decode_8_codes_all_lanes_avx2(
+    bytes: *const u8,
+    lut: __m256,
+    mask_03: __m256i,
+) -> (__m256, __m256, __m256, __m256) {
+    unsafe {
+        // Single 8-byte load → 8 i32 lanes (each holding one packed byte).
+        let eight_bytes = _mm_loadl_epi64(bytes as *const __m128i);
+        let byte_lanes = _mm256_cvtepu8_epi32(eight_bytes);
+
+        // Per-lane codes via const-immediate shifts. `_mm256_srli_epi32` retires
+        // in 1 cycle vs ~3 for `_mm256_srlv_epi32` on Haswell/Skylake.
+        let codes0 = _mm256_and_si256(_mm256_srli_epi32::<6>(byte_lanes), mask_03);
+        let codes1 = _mm256_and_si256(_mm256_srli_epi32::<4>(byte_lanes), mask_03);
+        let codes2 = _mm256_and_si256(_mm256_srli_epi32::<2>(byte_lanes), mask_03);
+        let codes3 = _mm256_and_si256(byte_lanes, mask_03);
+
+        // VPERMPS table lookup: codes ∈ {0,1,2,3} → weights ∈ {-1, 0, +1, 0}.
+        // Replaces the (cmpeq×2, and×2, add) chain with one VPERMPS per lane.
+        let w0 = _mm256_permutevar8x32_ps(lut, codes0);
+        let w1 = _mm256_permutevar8x32_ps(lut, codes1);
+        let w2 = _mm256_permutevar8x32_ps(lut, codes2);
+        let w3 = _mm256_permutevar8x32_ps(lut, codes3);
+
+        (w0, w1, w2, w3)
+    }
+}
+
+/// Decode 8 codes for a single lane via VPERMPS LUT (slow path tail helper).
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2,fma")]
+#[inline]
+unsafe fn decode_8_codes_one_lane_avx2(
     bytes: *const u8,
     lane_shift: i32,
+    lut: __m256,
     mask_03: __m256i,
-    two: __m256i,
-    zero: __m256i,
-    one_ps: __m256,
-    neg_one_ps: __m256,
 ) -> __m256 {
-    let eight_bytes = unsafe { _mm_loadl_epi64(bytes as *const __m128i) };
-    let byte_lanes = _mm256_cvtepu8_epi32(eight_bytes);
-    let shifts = _mm256_set1_epi32(lane_shift);
-    let codes = _mm256_and_si256(_mm256_srlv_epi32(byte_lanes, shifts), mask_03);
+    unsafe {
+        let eight_bytes = _mm_loadl_epi64(bytes as *const __m128i);
+        let byte_lanes = _mm256_cvtepu8_epi32(eight_bytes);
+        let shifts = _mm256_set1_epi32(lane_shift);
+        let codes = _mm256_and_si256(_mm256_srlv_epi32(byte_lanes, shifts), mask_03);
+        _mm256_permutevar8x32_ps(lut, codes)
+    }
+}
 
-    let is_zero = _mm256_cmpeq_epi32(codes, zero);
-    let is_two = _mm256_cmpeq_epi32(codes, two);
-    let neg = _mm256_and_ps(_mm256_castsi256_ps(is_zero), neg_one_ps);
-    let pos = _mm256_and_ps(_mm256_castsi256_ps(is_two), one_ps);
-    _mm256_add_ps(neg, pos)
+/// Process one full 256-element block, updating 8 lane×bank accumulators.
+///
+/// Each block contains two 128-element chunks. Each chunk holds 32 packed
+/// bytes that decode to four 32-element lanes (shifts 6/4/2/0). We process
+/// each chunk in four group-position iterations of 8 codes per lane,
+/// alternating between two accumulator banks to keep the FMA pipeline full.
+///
+/// # Safety
+///
+/// `blk` must point to at least 64 valid bytes, and `x_chunk` (`x_ptr +
+/// col`) must allow reads of 256 contiguous f32 values.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2,fma")]
+#[inline]
+#[allow(clippy::too_many_arguments)]
+unsafe fn process_full_block_avx2(
+    blk: *const u8,
+    x_block_base: *const f32,
+    lut: __m256,
+    mask_03: __m256i,
+    acc_a0: &mut __m256,
+    acc_a1: &mut __m256,
+    acc_a2: &mut __m256,
+    acc_a3: &mut __m256,
+    acc_b0: &mut __m256,
+    acc_b1: &mut __m256,
+    acc_b2: &mut __m256,
+    acc_b3: &mut __m256,
+) {
+    // Chunk 0: bytes [0..32], lanes cover x[0..128]
+    // Chunk 1: bytes [32..64], lanes cover x[128..256]
+    //
+    // Unrolling both chunks × four gp-iterations gives 8 SIMD iterations per
+    // block, alternating banks A/B every iteration. Each iteration does
+    // 4 lane FMAs, for 32 FMAs per block.
+    unsafe {
+        for chunk in 0..2 {
+            let chunk_byte_base = chunk * 32;
+            let chunk_elem_base = chunk * 128;
+            let x_chunk = x_block_base.add(chunk_elem_base);
+
+            // gp 0: bank A
+            let (w0, w1, w2, w3) =
+                decode_8_codes_all_lanes_avx2(blk.add(chunk_byte_base), lut, mask_03);
+            let xv0 = _mm256_loadu_ps(x_chunk);
+            let xv1 = _mm256_loadu_ps(x_chunk.add(32));
+            let xv2 = _mm256_loadu_ps(x_chunk.add(64));
+            let xv3 = _mm256_loadu_ps(x_chunk.add(96));
+            *acc_a0 = _mm256_fmadd_ps(w0, xv0, *acc_a0);
+            *acc_a1 = _mm256_fmadd_ps(w1, xv1, *acc_a1);
+            *acc_a2 = _mm256_fmadd_ps(w2, xv2, *acc_a2);
+            *acc_a3 = _mm256_fmadd_ps(w3, xv3, *acc_a3);
+
+            // gp 8: bank B
+            let (w0, w1, w2, w3) =
+                decode_8_codes_all_lanes_avx2(blk.add(chunk_byte_base + 8), lut, mask_03);
+            let xv0 = _mm256_loadu_ps(x_chunk.add(8));
+            let xv1 = _mm256_loadu_ps(x_chunk.add(32 + 8));
+            let xv2 = _mm256_loadu_ps(x_chunk.add(64 + 8));
+            let xv3 = _mm256_loadu_ps(x_chunk.add(96 + 8));
+            *acc_b0 = _mm256_fmadd_ps(w0, xv0, *acc_b0);
+            *acc_b1 = _mm256_fmadd_ps(w1, xv1, *acc_b1);
+            *acc_b2 = _mm256_fmadd_ps(w2, xv2, *acc_b2);
+            *acc_b3 = _mm256_fmadd_ps(w3, xv3, *acc_b3);
+
+            // gp 16: bank A
+            let (w0, w1, w2, w3) =
+                decode_8_codes_all_lanes_avx2(blk.add(chunk_byte_base + 16), lut, mask_03);
+            let xv0 = _mm256_loadu_ps(x_chunk.add(16));
+            let xv1 = _mm256_loadu_ps(x_chunk.add(32 + 16));
+            let xv2 = _mm256_loadu_ps(x_chunk.add(64 + 16));
+            let xv3 = _mm256_loadu_ps(x_chunk.add(96 + 16));
+            *acc_a0 = _mm256_fmadd_ps(w0, xv0, *acc_a0);
+            *acc_a1 = _mm256_fmadd_ps(w1, xv1, *acc_a1);
+            *acc_a2 = _mm256_fmadd_ps(w2, xv2, *acc_a2);
+            *acc_a3 = _mm256_fmadd_ps(w3, xv3, *acc_a3);
+
+            // gp 24: bank B
+            let (w0, w1, w2, w3) =
+                decode_8_codes_all_lanes_avx2(blk.add(chunk_byte_base + 24), lut, mask_03);
+            let xv0 = _mm256_loadu_ps(x_chunk.add(24));
+            let xv1 = _mm256_loadu_ps(x_chunk.add(32 + 24));
+            let xv2 = _mm256_loadu_ps(x_chunk.add(64 + 24));
+            let xv3 = _mm256_loadu_ps(x_chunk.add(96 + 24));
+            *acc_b0 = _mm256_fmadd_ps(w0, xv0, *acc_b0);
+            *acc_b1 = _mm256_fmadd_ps(w1, xv1, *acc_b1);
+            *acc_b2 = _mm256_fmadd_ps(w2, xv2, *acc_b2);
+            *acc_b3 = _mm256_fmadd_ps(w3, xv3, *acc_b3);
+        }
+    }
+}
+
+/// Partial-block tail path: handles a final block where `take < 256`.
+///
+/// Mirrors the original MVP's per-lane decode but uses the faster VPERMPS LUT.
+/// Only invoked when `cols` is not a multiple of 256, which is rare in
+/// production model dimensions.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2,fma")]
+#[inline]
+#[allow(clippy::too_many_arguments)]
+unsafe fn process_partial_block_avx2(
+    blk: *const u8,
+    x_block_base: *const f32,
+    take: usize,
+    lut: __m256,
+    mask_03: __m256i,
+    acc0: &mut __m256,
+    acc1: &mut __m256,
+    acc2: &mut __m256,
+    acc3: &mut __m256,
+    scalar_acc: &mut f32,
+) {
+    unsafe {
+        for chunk in 0..2 {
+            let chunk_byte_base = chunk * 32;
+            let chunk_elem_base = chunk * 128;
+            if chunk_elem_base >= take {
+                break;
+            }
+
+            for lane in 0..4 {
+                let lane_elem_base = chunk_elem_base + lane * 32;
+                if lane_elem_base >= take {
+                    break;
+                }
+
+                let lane_take = 32usize.min(take - lane_elem_base);
+                let lane_shift = 6 - lane as i32 * 2;
+                let mut gp = 0usize;
+
+                while gp + 8 <= lane_take {
+                    let w = decode_8_codes_one_lane_avx2(
+                        blk.add(chunk_byte_base + gp),
+                        lane_shift,
+                        lut,
+                        mask_03,
+                    );
+                    let xv = _mm256_loadu_ps(x_block_base.add(lane_elem_base + gp));
+
+                    match lane {
+                        0 => *acc0 = _mm256_fmadd_ps(w, xv, *acc0),
+                        1 => *acc1 = _mm256_fmadd_ps(w, xv, *acc1),
+                        2 => *acc2 = _mm256_fmadd_ps(w, xv, *acc2),
+                        _ => *acc3 = _mm256_fmadd_ps(w, xv, *acc3),
+                    }
+                    gp += 8;
+                }
+
+                while gp < lane_take {
+                    let packed_byte = *blk.add(chunk_byte_base + gp);
+                    let code = (packed_byte >> lane_shift) & 0x03;
+                    let w = match code {
+                        0 => -1.0,
+                        2 => 1.0,
+                        _ => 0.0,
+                    };
+                    *scalar_acc += w * *x_block_base.add(lane_elem_base + gp);
+                    gp += 1;
+                }
+            }
+        }
+    }
 }
 
 /// AVX2-accelerated dot product for one QK256 row.
-///
-/// # Optimizations over the MVP scalar-unpack path
-///
-/// 1. **SIMD code extraction**: `vpsrlvd` + broadcast replaces 8 scalar shifts per
-///    8-element group, cutting unpack cost from ~16 scalar ops to 3 SIMD ops per group.
-/// 2. **4-wide accumulator bank**: 4 independent FMA dependency chains hide the
-///    4-cycle FMA latency on Haswell/Skylake.
-/// 3. **32-element main loop**: 8 packed bytes → 32 codes → 4×FMA per iteration
-///    reduces loop overhead and improves µop throughput.
-/// 4. **Software prefetch**: L1 prefetch of the next block's packed bytes and input
-///    vector prevents demand-miss stalls on block boundaries.
 ///
 /// # Safety
 ///
@@ -91,18 +295,20 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     debug_assert!(x.len() >= cols, "AVX2: x too short: {} < {}", x.len(), cols);
 
     unsafe {
-        // Hoisted constants shared by every decode_8_lane_weights_avx2 call.
         let mask_03 = _mm256_set1_epi32(0x03);
-        let two = _mm256_set1_epi32(2);
-        let zero = _mm256_setzero_si256();
-        let one_ps = _mm256_set1_ps(1.0);
-        let neg_one_ps = _mm256_set1_ps(-1.0);
+        let lut = _mm256_loadu_ps(QK256_WEIGHT_LUT.as_ptr());
 
-        // 4 independent FMA accumulators to saturate the FMA pipe.
-        let mut acc0 = _mm256_setzero_ps();
-        let mut acc1 = _mm256_setzero_ps();
-        let mut acc2 = _mm256_setzero_ps();
-        let mut acc3 = _mm256_setzero_ps();
+        // 8 independent FMA accumulators: 4 lanes × 2 banks. Two banks shorten
+        // the critical-path FMA dependency chain enough to keep the pipe full
+        // even on Haswell-class FMAs with 4-cycle latency / 1-cycle throughput.
+        let mut acc_a0 = _mm256_setzero_ps();
+        let mut acc_a1 = _mm256_setzero_ps();
+        let mut acc_a2 = _mm256_setzero_ps();
+        let mut acc_a3 = _mm256_setzero_ps();
+        let mut acc_b0 = _mm256_setzero_ps();
+        let mut acc_b1 = _mm256_setzero_ps();
+        let mut acc_b2 = _mm256_setzero_ps();
+        let mut acc_b3 = _mm256_setzero_ps();
 
         let mut scalar_acc = 0.0f32;
         let mut col = 0usize;
@@ -113,65 +319,43 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
         for blk_idx in 0..blocks_needed {
             let blk = blk_ptr.add(blk_idx * QK256_PACKED_BYTES);
             let take = QK256_BLOCK.min(cols - col);
+            let x_block_base = x_ptr.add(col);
 
             // Prefetch next block's packed bytes and input vector into L1.
             if blk_idx + 1 < blocks_needed {
                 _mm_prefetch(blk.add(QK256_PACKED_BYTES) as *const i8, _MM_HINT_T0);
                 _mm_prefetch(x_ptr.add(col + QK256_BLOCK) as *const i8, _MM_HINT_T0);
-                // Second cache-line of next input chunk (256 f32 = 1024 bytes ≈ 16 lines).
                 _mm_prefetch(x_ptr.add(col + QK256_BLOCK + 16) as *const i8, _MM_HINT_T0);
             }
 
-            for chunk in 0..2 {
-                let chunk_byte_base = chunk * 32;
-                let chunk_elem_base = chunk * 128;
-                if chunk_elem_base >= take {
-                    break;
-                }
-
-                for lane in 0..4 {
-                    let lane_elem_base = chunk_elem_base + lane * 32;
-                    if lane_elem_base >= take {
-                        break;
-                    }
-
-                    let lane_take = 32usize.min(take - lane_elem_base);
-                    let lane_shift = 6 - lane as i32 * 2;
-                    let mut gp = 0usize;
-
-                    while gp + 8 <= lane_take {
-                        let w = decode_8_lane_weights_avx2(
-                            blk.add(chunk_byte_base + gp),
-                            lane_shift,
-                            mask_03,
-                            two,
-                            zero,
-                            one_ps,
-                            neg_one_ps,
-                        );
-                        let xv = _mm256_loadu_ps(x_ptr.add(col + lane_elem_base + gp));
-
-                        match (chunk, lane) {
-                            (0, 0) | (1, 0) => acc0 = _mm256_fmadd_ps(w, xv, acc0),
-                            (0, 1) | (1, 1) => acc1 = _mm256_fmadd_ps(w, xv, acc1),
-                            (0, 2) | (1, 2) => acc2 = _mm256_fmadd_ps(w, xv, acc2),
-                            _ => acc3 = _mm256_fmadd_ps(w, xv, acc3),
-                        }
-                        gp += 8;
-                    }
-
-                    while gp < lane_take {
-                        let packed_byte = *blk.add(chunk_byte_base + gp);
-                        let code = (packed_byte >> lane_shift) & 0x03;
-                        let w = match code {
-                            0 => -1.0,
-                            2 => 1.0,
-                            _ => 0.0,
-                        };
-                        scalar_acc += w * *x_ptr.add(col + lane_elem_base + gp);
-                        gp += 1;
-                    }
-                }
+            if take == QK256_BLOCK {
+                process_full_block_avx2(
+                    blk,
+                    x_block_base,
+                    lut,
+                    mask_03,
+                    &mut acc_a0,
+                    &mut acc_a1,
+                    &mut acc_a2,
+                    &mut acc_a3,
+                    &mut acc_b0,
+                    &mut acc_b1,
+                    &mut acc_b2,
+                    &mut acc_b3,
+                );
+            } else {
+                process_partial_block_avx2(
+                    blk,
+                    x_block_base,
+                    take,
+                    lut,
+                    mask_03,
+                    &mut acc_a0,
+                    &mut acc_a1,
+                    &mut acc_a2,
+                    &mut acc_a3,
+                    &mut scalar_acc,
+                );
             }
 
             col += take;
@@ -180,10 +364,14 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
             }
         }
 
-        // Merge 4 accumulators → 1, then horizontal sum.
-        let sum01 = _mm256_add_ps(acc0, acc1);
-        let sum23 = _mm256_add_ps(acc2, acc3);
-        let acc = _mm256_add_ps(sum01, sum23);
+        // Reduce 8 accumulators → 1, then horizontal sum.
+        let s0 = _mm256_add_ps(acc_a0, acc_b0);
+        let s1 = _mm256_add_ps(acc_a1, acc_b1);
+        let s2 = _mm256_add_ps(acc_a2, acc_b2);
+        let s3 = _mm256_add_ps(acc_a3, acc_b3);
+        let s01 = _mm256_add_ps(s0, s1);
+        let s23 = _mm256_add_ps(s2, s3);
+        let acc = _mm256_add_ps(s01, s23);
 
         let hi = _mm256_extractf128_ps(acc, 1);
         let lo = _mm256_castps256_ps128(acc);
