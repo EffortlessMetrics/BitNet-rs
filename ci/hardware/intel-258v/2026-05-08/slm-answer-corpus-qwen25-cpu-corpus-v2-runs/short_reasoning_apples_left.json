@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\short_reasoning_heavier_object.json",
+  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\short_reasoning_apples_left.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -34,9 +34,9 @@
     "batch_size": 1,
     "fallback_reason": null,
     "fallback_used": false,
-    "generated_tokens": 8,
+    "generated_tokens": 3,
     "phase": "decode",
-    "prompt_tokens": 46,
+    "prompt_tokens": 50,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -68,9 +68,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 10807,
-    "decode_first_ms": 10807,
-    "total_ms": 13115
+    "cmd_to_first_ms": 11664,
+    "decode_first_ms": 11664,
+    "total_ms": 12324
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -265,83 +265,83 @@
     "claim_scope": "selected CPU backend phase timing only",
     "decode": {
       "embed_ms": {
-        "count": 8,
-        "max_ms": 0.133,
-        "mean_ms": 0.042,
-        "min_ms": 0.018,
-        "p50_ms": 0.023,
-        "p95_ms": 0.133,
-        "total_ms": 0.336
+        "count": 3,
+        "max_ms": 0.044,
+        "mean_ms": 0.031,
+        "min_ms": 0.024,
+        "p50_ms": 0.024,
+        "p95_ms": 0.044,
+        "total_ms": 0.092
       },
-      "first_token_decode_ms": 342.578,
+      "first_token_decode_ms": 344.026,
       "forward_ms": {
-        "count": 8,
-        "max_ms": 245.985,
-        "mean_ms": 235.27,
-        "min_ms": 224.871,
-        "p50_ms": 236.36,
-        "p95_ms": 245.985,
-        "total_ms": 1882.158
+        "count": 3,
+        "max_ms": 247.464,
+        "mean_ms": 237.122,
+        "min_ms": 231.125,
+        "p50_ms": 232.778,
+        "p95_ms": 247.464,
+        "total_ms": 711.367
       },
-      "generated_tokens": 8,
+      "generated_tokens": 3,
       "logits_ms": {
-        "count": 8,
-        "max_ms": 87.07,
-        "mean_ms": 85.294,
-        "min_ms": 84.121,
-        "p50_ms": 84.623,
-        "p95_ms": 87.07,
-        "total_ms": 682.355
+        "count": 3,
+        "max_ms": 86.049,
+        "mean_ms": 85.225,
+        "min_ms": 83.662,
+        "p50_ms": 85.964,
+        "p95_ms": 86.049,
+        "total_ms": 255.675
       },
       "per_token_ms": {
-        "count": 8,
-        "max_ms": 342.578,
-        "mean_ms": 331.0,
-        "min_ms": 321.765,
-        "p50_ms": 331.965,
-        "p95_ms": 342.578,
-        "total_ms": 2647.997
+        "count": 3,
+        "max_ms": 344.026,
+        "mean_ms": 333.729,
+        "min_ms": 328.502,
+        "p50_ms": 328.658,
+        "p95_ms": 344.026,
+        "total_ms": 1001.186
       },
       "sample_ms": {
-        "count": 8,
-        "max_ms": 3.499,
-        "mean_ms": 2.963,
-        "min_ms": 2.722,
-        "p50_ms": 2.828,
-        "p95_ms": 3.499,
-        "total_ms": 23.702
+        "count": 3,
+        "max_ms": 2.976,
+        "mean_ms": 2.841,
+        "min_ms": 2.742,
+        "p50_ms": 2.805,
+        "p95_ms": 2.976,
+        "total_ms": 8.522
       },
       "steady_per_token_ms": {
-        "count": 7,
-        "max_ms": 334.923,
-        "mean_ms": 329.346,
-        "min_ms": 321.765,
-        "p50_ms": 331.965,
-        "p95_ms": 334.923,
-        "total_ms": 2305.42
+        "count": 2,
+        "max_ms": 328.658,
+        "mean_ms": 328.58,
+        "min_ms": 328.502,
+        "p50_ms": 328.502,
+        "p95_ms": 328.658,
+        "total_ms": 657.16
       },
-      "steady_state_tok_s": 3.036,
-      "steady_state_tokens": 7,
+      "steady_state_tok_s": 3.043,
+      "steady_state_tokens": 2,
       "token_decode_ms": {
-        "count": 8,
-        "max_ms": 0.138,
-        "mean_ms": 0.048,
-        "min_ms": 0.022,
-        "p50_ms": 0.027,
-        "p95_ms": 0.138,
-        "total_ms": 0.383
+        "count": 3,
+        "max_ms": 0.092,
+        "mean_ms": 0.057,
+        "min_ms": 0.024,
+        "p50_ms": 0.054,
+        "p95_ms": 0.092,
+        "total_ms": 0.17
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13260.336,
+    "model_load_ms": 13795.911,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 10462.662,
+      "ms": 11321.154,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +351,27 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 45
+      "tokens": 49
     },
-    "prompt_tokenize_ms": 443.375,
+    "prompt_tokenize_ms": 435.337,
     "requested": false,
-    "tokenizer_load_ms": 625.74
+    "tokenizer_load_ms": 591.107
   },
-  "prompt": "A full mug is heavier than an empty mug. Which one is heavier? Answer briefly.",
+  "prompt": "Tom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no.",
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 46,
-    "prompt_token_ids_sha256": "27802fd920112c6edff0c2bace146186dd37ac23997d40c3bdfbdcc381e45710",
-    "rendered_prompt_sha256": "7b9558aef131c5fea8a595a08ccb410437fd758ba3b0351203748642bb0d3908",
+    "prompt_token_count": 50,
+    "prompt_token_ids_sha256": "12894895ffd59e81f8783749b2ecd338d1a9a503dcda3b501fc1da1b5b7a5ace",
+    "rendered_prompt_sha256": "bdf1aa79b5f5233df5a31462d8ea1ff73eb19255d1997ce987829caa5faac334",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "7b9558aef131c5fea8a595a08ccb410437fd758ba3b0351203748642bb0d3908",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nA full mug is heavier than an empty mug. Which one is heavier? Answer briefly.<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "bdf1aa79b5f5233df5a31462d8ea1ff73eb19255d1997ce987829caa5faac334",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nTom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no.<|im_end|>\n<|im_start|>assistant",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -427,14 +427,14 @@
       "sse2"
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
-    "decode_tokens": 8,
-    "decode_tps": 0.6099885627144491,
+    "decode_tokens": 3,
+    "decode_tps": 0.24342745861733203,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 46,
+    "prompt_tokens": 50,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +445,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": "\nAn empty mug is heavier.<|im_end|>",
+  "text": " Yes.<|im_end|>",
   "throughput": {
-    "decoded_tokens": 8,
-    "tokens_per_second": 0.6099885627144491
+    "decoded_tokens": 3,
+    "tokens_per_second": 0.24342745861733203
   },
-  "timestamp": "2026-05-16T12:27:24.995670400+00:00",
+  "timestamp": "2026-05-16T15:24:00.109863400+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.036,
-    "decode_total_ms": 2647.997,
+    "decode_steady_state_tok_s": 3.043,
+    "decode_total_ms": 1001.186,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 342.578,
-    "first_token_ms": 10807,
+    "first_token_decode_ms": 344.026,
+    "first_token_ms": 11664,
     "host_to_device_bytes": null,
-    "model_load_ms": 13260.336,
-    "prefill_ms": 10462.662,
-    "sampling_ms_per_token": 2.963,
-    "tokenize_ms": 443.375,
-    "tokenizer_load_ms": 625.74
+    "model_load_ms": 13795.911,
+    "prefill_ms": 11321.154,
+    "sampling_ms_per_token": 2.841,
+    "tokenize_ms": 435.337,
+    "tokenizer_load_ms": 591.107
   },
   "tokenizer": {
     "bos": 151643,
@@ -476,28 +476,18 @@
     "type": "gguf_metadata"
   },
   "tokens": {
-    "generated": 8,
+    "generated": 3,
     "generated_ids": [
-      198,
-      2082,
-      4287,
-      51489,
-      374,
-      43822,
+      7414,
       13,
       151645
     ],
     "ids": [
-      198,
-      2082,
-      4287,
-      51489,
-      374,
-      43822,
+      7414,
       13,
       151645
     ],
-    "prompt": 46,
+    "prompt": 50,
     "prompt_ids": [
       151644,
       8948,
@@ -523,29 +513,33 @@
       151644,
       872,
       198,
-      32,
-      2480,
-      51489,
-      374,
-      43822,
-      1091,
-      458,
-      4287,
-      51489,
-      13,
-      15920,
+      24732,
+      702,
+      1378,
+      40676,
+      323,
+      6696,
+      3123,
       825,
-      374,
-      43822,
+      23268,
+      13,
+      12553,
+      8364,
+      614,
+      825,
+      23268,
+      2115,
       30,
-      21806,
-      26753,
+      17841,
+      9834,
+      476,
+      902,
       13,
       151645,
       198,
       151644,
       77091
     ],
-    "total": 54
+    "total": 53
   }
 }

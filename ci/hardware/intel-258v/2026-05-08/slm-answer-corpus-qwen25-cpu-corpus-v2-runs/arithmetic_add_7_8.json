@@ -34,7 +34,7 @@
     "batch_size": 1,
     "fallback_reason": null,
     "fallback_used": false,
-    "generated_tokens": 8,
+    "generated_tokens": 10,
     "phase": "decode",
     "prompt_tokens": 40,
     "requested_backend": "cpu",
@@ -68,9 +68,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 9552,
-    "decode_first_ms": 9552,
-    "total_ms": 12000
+    "cmd_to_first_ms": 9423,
+    "decode_first_ms": 9423,
+    "total_ms": 12384
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -265,83 +265,83 @@
     "claim_scope": "selected CPU backend phase timing only",
     "decode": {
       "embed_ms": {
-        "count": 8,
-        "max_ms": 0.211,
-        "mean_ms": 0.068,
-        "min_ms": 0.019,
+        "count": 10,
+        "max_ms": 0.049,
+        "mean_ms": 0.033,
+        "min_ms": 0.02,
         "p50_ms": 0.029,
-        "p95_ms": 0.211,
-        "total_ms": 0.548
+        "p95_ms": 0.049,
+        "total_ms": 0.331
       },
-      "first_token_decode_ms": 320.043,
+      "first_token_decode_ms": 332.483,
       "forward_ms": {
-        "count": 8,
-        "max_ms": 265.484,
-        "mean_ms": 242.927,
-        "min_ms": 218.071,
-        "p50_ms": 240.546,
-        "p95_ms": 265.484,
-        "total_ms": 1943.416
+        "count": 10,
+        "max_ms": 246.545,
+        "mean_ms": 235.427,
+        "min_ms": 224.08,
+        "p50_ms": 234.246,
+        "p95_ms": 246.545,
+        "total_ms": 2354.266
       },
-      "generated_tokens": 8,
+      "generated_tokens": 10,
       "logits_ms": {
-        "count": 8,
-        "max_ms": 99.949,
-        "mean_ms": 91.237,
-        "min_ms": 81.896,
-        "p50_ms": 88.779,
-        "p95_ms": 99.949,
-        "total_ms": 729.894
+        "count": 10,
+        "max_ms": 88.202,
+        "mean_ms": 84.319,
+        "min_ms": 81.12,
+        "p50_ms": 83.374,
+        "p95_ms": 88.202,
+        "total_ms": 843.195
       },
       "per_token_ms": {
-        "count": 8,
-        "max_ms": 366.347,
-        "mean_ms": 345.749,
-        "min_ms": 320.043,
-        "p50_ms": 344.487,
-        "p95_ms": 366.347,
-        "total_ms": 2765.989
+        "count": 10,
+        "max_ms": 339.194,
+        "mean_ms": 329.233,
+        "min_ms": 317.555,
+        "p50_ms": 327.612,
+        "p95_ms": 339.194,
+        "total_ms": 3292.328
       },
       "sample_ms": {
-        "count": 8,
-        "max_ms": 3.707,
-        "mean_ms": 3.36,
-        "min_ms": 2.613,
-        "p50_ms": 3.531,
-        "p95_ms": 3.707,
-        "total_ms": 26.876
+        "count": 10,
+        "max_ms": 3.139,
+        "mean_ms": 2.863,
+        "min_ms": 2.492,
+        "p50_ms": 2.908,
+        "p95_ms": 3.139,
+        "total_ms": 28.625
       },
       "steady_per_token_ms": {
-        "count": 7,
-        "max_ms": 366.347,
-        "mean_ms": 349.421,
-        "min_ms": 338.092,
-        "p50_ms": 346.4,
-        "p95_ms": 366.347,
-        "total_ms": 2445.946
+        "count": 9,
+        "max_ms": 339.194,
+        "mean_ms": 328.872,
+        "min_ms": 317.555,
+        "p50_ms": 327.612,
+        "p95_ms": 339.194,
+        "total_ms": 2959.845
       },
-      "steady_state_tok_s": 2.862,
-      "steady_state_tokens": 7,
+      "steady_state_tok_s": 3.041,
+      "steady_state_tokens": 9,
       "token_decode_ms": {
-        "count": 8,
-        "max_ms": 0.099,
-        "mean_ms": 0.049,
+        "count": 10,
+        "max_ms": 0.072,
+        "mean_ms": 0.042,
         "min_ms": 0.022,
-        "p50_ms": 0.05,
-        "p95_ms": 0.099,
-        "total_ms": 0.39
+        "p50_ms": 0.044,
+        "p95_ms": 0.072,
+        "total_ms": 0.416
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13497.701,
+    "model_load_ms": 13578.058,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 9231.672,
+      "ms": 9090.222,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -353,25 +353,25 @@
       },
       "tokens": 39
     },
-    "prompt_tokenize_ms": 462.02,
+    "prompt_tokenize_ms": 456.097,
     "requested": false,
-    "tokenizer_load_ms": 605.224
+    "tokenizer_load_ms": 628.258
   },
-  "prompt": "Compute 7 + 8. Answer with the result.",
+  "prompt": "Answer with exactly the number: 7 + 8 =",
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
     "prompt_token_count": 40,
-    "prompt_token_ids_sha256": "2e56cbc0973c391f6da3fcd5f8de4ed1e0585e62c914483dc995ced9b0bdc88d",
-    "rendered_prompt_sha256": "4127fb818a0774770df084276c554ee5d120fd9df877b3bd40881ca62c2380f6",
+    "prompt_token_ids_sha256": "54ceec13972edcc174796e4ddb5a58390d8346297c42104ab6409723d56e3a08",
+    "rendered_prompt_sha256": "13b036bf51ef8e4905ed39de6e9c555d8fc85daf532a775df388cb14ed3427e5",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "4127fb818a0774770df084276c554ee5d120fd9df877b3bd40881ca62c2380f6",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nCompute 7 + 8. Answer with the result.<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "13b036bf51ef8e4905ed39de6e9c555d8fc85daf532a775df388cb14ed3427e5",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with exactly the number: 7 + 8 =<|im_end|>\n<|im_start|>assistant",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -427,8 +427,8 @@
       "sse2"
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
-    "decode_tokens": 8,
-    "decode_tps": 0.6666666666666666,
+    "decode_tokens": 10,
+    "decode_tps": 0.8074935400516796,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -445,25 +445,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": "\nThe result of 7 + ",
+  "text": "\n7 + 8 = 15<|im_end|>",
   "throughput": {
-    "decoded_tokens": 8,
-    "tokens_per_second": 0.6666666666666666
+    "decoded_tokens": 10,
+    "tokens_per_second": 0.8074935400516796
   },
-  "timestamp": "2026-05-16T12:22:37.008485600+00:00",
+  "timestamp": "2026-05-16T15:19:24.050268300+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 2.862,
-    "decode_total_ms": 2765.989,
+    "decode_steady_state_tok_s": 3.041,
+    "decode_total_ms": 3292.328,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 320.043,
-    "first_token_ms": 9552,
+    "first_token_decode_ms": 332.483,
+    "first_token_ms": 9423,
     "host_to_device_bytes": null,
-    "model_load_ms": 13497.701,
-    "prefill_ms": 9231.672,
-    "sampling_ms_per_token": 3.36,
-    "tokenize_ms": 462.02,
-    "tokenizer_load_ms": 605.224
+    "model_load_ms": 13578.058,
+    "prefill_ms": 9090.222,
+    "sampling_ms_per_token": 2.863,
+    "tokenize_ms": 456.097,
+    "tokenizer_load_ms": 628.258
   },
   "tokenizer": {
     "bos": 151643,
@@ -476,26 +476,30 @@
     "type": "gguf_metadata"
   },
   "tokens": {
-    "generated": 8,
+    "generated": 10,
     "generated_ids": [
       198,
-      785,
-      1102,
-      315,
-      220,
       22,
       488,
-      220
+      220,
+      23,
+      284,
+      220,
+      16,
+      20,
+      151645
     ],
     "ids": [
       198,
-      785,
-      1102,
-      315,
-      220,
       22,
       488,
-      220
+      220,
+      23,
+      284,
+      220,
+      16,
+      20,
+      151645
     ],
     "prompt": 40,
     "prompt_ids": [
@@ -523,23 +527,23 @@
       151644,
       872,
       198,
-      46254,
+      16141,
+      448,
+      6896,
+      279,
+      1372,
+      25,
       220,
       22,
       488,
       220,
       23,
-      13,
-      21806,
-      448,
-      279,
-      1102,
-      13,
+      284,
       151645,
       198,
       151644,
       77091
     ],
-    "total": 48
+    "total": 50
   }
 }

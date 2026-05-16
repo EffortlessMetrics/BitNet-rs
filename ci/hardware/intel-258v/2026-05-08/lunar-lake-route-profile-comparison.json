@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-16T12:40:00Z",
+  "created_utc": "2026-05-16T16:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -19,7 +19,7 @@
       "purpose": "cheap strict regression smoke for local runs",
       "promoted_route": "dense_slm_default_cpu",
       "candidate_routes": [],
-      "profile_status": "promoted_route_blocked",
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
         {
           "route_id": "dense_slm_default_cpu",
@@ -57,32 +57,28 @@
             ]
           },
           "benchmark_qualified_advantage": false,
-          "promotion_eligible_for_profile": false,
+          "promotion_eligible_for_profile": true,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "route_id": "dense_slm_default_cpu",
             "profile_id": "regression_tiny",
             "profile_present": true,
             "cases_total": 4,
-            "passed": 2,
-            "failed": 2,
+            "passed": 4,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "2 corpus-v2 cases failed for profile regression_tiny"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
-          "blockers": [
-            "corpus_v2 profile regression_tiny has 2 quality failures"
-          ]
+          "blockers": []
         }
       ],
-      "promotion_decision": "dense_slm_default_cpu is listed as promoted for regression_tiny, but profile evidence is incomplete",
+      "promotion_decision": "dense_slm_default_cpu remains promoted for regression_tiny",
       "gaps": []
     },
     {
@@ -95,7 +91,7 @@
         "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
-      "profile_status": "promoted_route_blocked",
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
         {
           "route_id": "dense_slm_default_cpu",
@@ -133,29 +129,25 @@
             ]
           },
           "benchmark_qualified_advantage": false,
-          "promotion_eligible_for_profile": false,
+          "promotion_eligible_for_profile": true,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "route_id": "dense_slm_default_cpu",
             "profile_id": "ask_short",
             "profile_present": true,
             "cases_total": 2,
-            "passed": 1,
-            "failed": 1,
+            "passed": 2,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile ask_short"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
-          "blockers": [
-            "corpus_v2 profile ask_short has 1 quality failures"
-          ]
+          "blockers": []
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
@@ -288,7 +280,7 @@
           ]
         }
       ],
-      "promotion_decision": "dense_slm_default_cpu is listed as promoted for ask_short, but profile evidence is incomplete",
+      "promotion_decision": "dense_slm_default_cpu remains promoted for ask_short",
       "gaps": []
     },
     {
@@ -301,7 +293,7 @@
         "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
-      "profile_status": "promoted_route_blocked",
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
         {
           "route_id": "dense_slm_default_cpu",
@@ -339,29 +331,25 @@
             ]
           },
           "benchmark_qualified_advantage": false,
-          "promotion_eligible_for_profile": false,
+          "promotion_eligible_for_profile": true,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "route_id": "dense_slm_default_cpu",
             "profile_id": "ask_normal",
             "profile_present": true,
             "cases_total": 3,
-            "passed": 2,
-            "failed": 1,
+            "passed": 3,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile ask_normal"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
-          "blockers": [
-            "corpus_v2 profile ask_normal has 1 quality failures"
-          ]
+          "blockers": []
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
@@ -494,7 +482,7 @@
           ]
         }
       ],
-      "promotion_decision": "dense_slm_default_cpu is listed as promoted for ask_normal, but profile evidence is incomplete",
+      "promotion_decision": "dense_slm_default_cpu remains promoted for ask_normal",
       "gaps": []
     },
     {
@@ -758,13 +746,11 @@
             "profile_id": "decode_heavy",
             "profile_present": true,
             "cases_total": 1,
-            "passed": 0,
-            "failed": 1,
+            "passed": 1,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile decode_heavy"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
@@ -772,7 +758,6 @@
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
           "blockers": [
-            "corpus_v2 profile decode_heavy has 1 quality failures",
             "route not promoted for profile decode_heavy"
           ]
         },
