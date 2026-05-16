@@ -6709,6 +6709,13 @@ fn compare_reference_to_rust_with_records(
             &layer_0_prefix_drift_frontier,
             0,
         );
+    report["layer_0_prefix_value_cache_source_localization"] =
+        layer_prefix_value_cache_source_localization(
+            reference_records,
+            rust_records,
+            &layer_0_prefix_drift_frontier,
+            0,
+        );
     report["layer_0_prefix_ffn_norm_boundary"] = layer_prefix_ffn_norm_boundary(
         reference_records,
         rust_record_list,
@@ -8223,6 +8230,201 @@ fn prefix_stage_targets(frontier: &Value) -> Vec<(usize, Vec<String>)> {
     targets.into_iter().collect()
 }
 
+fn layer_prefix_value_cache_source_localization(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    frontier: &Value,
+    layer: usize,
+) -> Value {
+    let targets = prefix_stage_targets(frontier);
+    let reference_layer = i64::try_from(layer).ok();
+    let reference_cache_heads = reference_records
+        .iter()
+        .filter(|record| record.layer == reference_layer)
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "v_cache_rust_layout_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_expanded_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_v_cache_expanded_for_value_mix_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_before_store_heads =
+        rust_cache_stage_heads(rust_records, "attention_v_before_cache_store_kv_head");
+    let rust_stored_f16_heads =
+        rust_cache_stage_heads(rust_records, "attention_v_cache_stored_f16_kv_head");
+    let rust_readback_heads =
+        rust_cache_stage_heads(rust_records, "attention_v_cache_readback_kv_head");
+
+    let group_size = if reference_cache_heads.is_empty()
+        || rust_expanded_heads.is_empty()
+        || !rust_expanded_heads.len().is_multiple_of(reference_cache_heads.len())
+    {
+        None
+    } else {
+        Some(rust_expanded_heads.len() / reference_cache_heads.len())
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_source_count = 0usize;
+    let mut material_source_delta_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut first_material_row = Value::Null;
+    let mut max_abs_delta = 0.0f64;
+    let mut boundary_counts = BTreeMap::<String, usize>::new();
+
+    for (query_token, labels) in targets.clone() {
+        for (&attention_head, rust_expanded) in &rust_expanded_heads {
+            let kv_head = group_size.map(|group_size| attention_head / group_size);
+            let Some(reference_cache) = kv_head.and_then(|head| reference_cache_heads.get(&head))
+            else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "query_token": query_token,
+                    "labels": labels,
+                    "attention_head": attention_head,
+                    "kv_head": kv_head,
+                    "status": "missing_reference_value_cache",
+                }));
+                continue;
+            };
+            let Some(reference_cache_tensor) = scalar_reference_tensor(reference_cache) else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "query_token": query_token,
+                    "labels": labels,
+                    "attention_head": attention_head,
+                    "kv_head": kv_head,
+                    "status": "reference_value_cache_unavailable",
+                }));
+                continue;
+            };
+            let rust_expanded_tensor = scalar_rust_tensor(rust_expanded);
+            let Some(source_delta) = scalar_tensor_dim_major_prefix_delta(
+                &reference_cache_tensor,
+                &rust_expanded_tensor,
+                query_token,
+            ) else {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "query_token": query_token,
+                    "labels": labels,
+                    "attention_head": attention_head,
+                    "kv_head": kv_head,
+                    "status": "source_delta_unavailable",
+                    "reference_stage": reference_cache.stage,
+                    "rust_expanded_stage": rust_expanded.stage,
+                }));
+                continue;
+            };
+
+            compared_source_count += 1;
+            max_abs_delta = max_abs_delta.max(delta_metric(&source_delta, "/max_abs_delta"));
+            if !delta_has_material_numeric_delta(&source_delta) {
+                continue;
+            }
+
+            material_source_delta_count += 1;
+            let first_mismatch =
+                source_delta.pointer("/first_mismatch_layout").cloned().unwrap_or(Value::Null);
+            let source_token = first_mismatch
+                .pointer("/token")
+                .and_then(Value::as_u64)
+                .and_then(|token| usize::try_from(token).ok());
+            let dim = first_mismatch
+                .pointer("/dim")
+                .and_then(Value::as_u64)
+                .and_then(|dim| usize::try_from(dim).ok());
+            let boundary = value_cache_source_boundary_at(
+                dim,
+                source_token,
+                &reference_cache_tensor,
+                kv_head.and_then(|head| rust_before_store_heads.get(&head).copied()),
+                kv_head.and_then(|head| rust_stored_f16_heads.get(&head).copied()),
+                kv_head.and_then(|head| rust_readback_heads.get(&head).copied()),
+                &rust_expanded_tensor,
+            );
+            if let Some(boundary_name) =
+                boundary.pointer("/first_material_boundary").and_then(Value::as_str)
+            {
+                *boundary_counts.entry(boundary_name.to_string()).or_insert(0) += 1;
+            }
+            let row = json!({
+                "query_token": query_token,
+                "labels": labels,
+                "attention_head": attention_head,
+                "kv_head": kv_head,
+                "status": "material_source_delta",
+                "reference_stage": reference_cache.stage,
+                "rust_expanded_stage": rust_expanded.stage,
+                "source_delta": source_delta,
+                "first_mismatch": first_mismatch,
+                "boundary_at_first_mismatch": boundary,
+            });
+            if first_material_row.is_null() {
+                first_material_row = row.clone();
+            }
+            rows.push(row);
+        }
+    }
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if targets.is_empty() {
+        blocked_reasons.push("prefix_value_cache_source_targets_missing".to_string());
+    }
+    if group_size.is_none() {
+        blocked_reasons.push("prefix_value_cache_source_group_size_unavailable".to_string());
+    }
+    if missing_input_count > 0 {
+        blocked_reasons.push("prefix_value_cache_source_inputs_missing".to_string());
+    }
+    if material_source_delta_count > 0 {
+        blocked_reasons.push("prefix_value_cache_source_delta_present".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if material_source_delta_count > 0 {
+        "inspect the first material value-cache source boundary for the drifting prefix tokens before changing runtime math"
+    } else if missing_input_count > 0 || group_size.is_none() {
+        "capture missing value-cache source stages before localizing the prefix value-cache drift"
+    } else {
+        "value-cache source localization is clean; prefer probability-history or arithmetic diagnostics next"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "prefix value-cache source localization is diagnostic-only evidence for where Rust expanded value-cache history first differs from reference cache history for drifting prefix value-mix inputs; it does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "layer": layer,
+        "source_frontier": frontier,
+        "related_sections": [
+            "layer_0_prefix_value_mix_history_attribution",
+            "attention_value_projection_to_cache_layout_bridge",
+            "attention_value_cache_store_readback_boundary"
+        ],
+        "reference_stage_prefix": "v_cache_rust_layout_head",
+        "rust_expanded_stage_prefix": "attention_v_cache_expanded_for_value_mix_head",
+        "reference_head_count": reference_cache_heads.len(),
+        "rust_expanded_head_count": rust_expanded_heads.len(),
+        "group_size": group_size,
+        "compared_source_count": compared_source_count,
+        "material_source_delta_count": material_source_delta_count,
+        "missing_input_count": missing_input_count,
+        "max_abs_delta": max_abs_delta,
+        "boundary_material_counts": boundary_counts,
+        "first_material_row": first_material_row,
+        "rows": rows,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
 fn prefix_token_relative_position(frontier: &Value, token: usize) -> Value {
     for pointer in [
         "/earliest_earlier_prefix_token",
@@ -9577,6 +9779,137 @@ fn scalar_tensor_dim_major_prefix_delta(
         object.insert("rust_token_count".to_string(), json!(rust_token_count));
     }
     Some(delta)
+}
+
+fn rust_cache_stage_heads<'a>(
+    rust_records: &'a BTreeMap<String, RustTraceRecord>,
+    stage_prefix: &str,
+) -> BTreeMap<usize, &'a RustTraceRecord> {
+    rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, stage_prefix).map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect()
+}
+
+fn value_cache_source_boundary_at(
+    dim: Option<usize>,
+    token: Option<usize>,
+    reference_cache: &ScalarTraceTensor,
+    before_store: Option<&RustTraceRecord>,
+    stored_f16: Option<&RustTraceRecord>,
+    readback: Option<&RustTraceRecord>,
+    expanded: &ScalarTraceTensor,
+) -> Value {
+    let mut missing = Vec::<String>::new();
+    let reference_value = dim
+        .zip(token)
+        .and_then(|(dim, token)| scalar_tensor_dim_major_value(reference_cache, dim, token));
+    let before_store_tensor = before_store.map(scalar_rust_tensor);
+    let stored_f16_tensor = stored_f16.map(scalar_rust_tensor);
+    let readback_tensor = readback.map(scalar_rust_tensor);
+    let before_store_value = dim.zip(token).and_then(|(dim, token)| {
+        before_store_tensor
+            .as_ref()
+            .and_then(|tensor| scalar_tensor_dim_major_value(tensor, dim, token))
+    });
+    let stored_f16_value = dim.zip(token).and_then(|(dim, token)| {
+        stored_f16_tensor
+            .as_ref()
+            .and_then(|tensor| scalar_tensor_dim_major_value(tensor, dim, token))
+    });
+    let readback_value = dim.zip(token).and_then(|(dim, token)| {
+        readback_tensor
+            .as_ref()
+            .and_then(|tensor| scalar_tensor_dim_major_value(tensor, dim, token))
+    });
+    let expanded_value =
+        dim.zip(token).and_then(|(dim, token)| scalar_tensor_dim_major_value(expanded, dim, token));
+
+    if dim.is_none() || token.is_none() {
+        missing.push("first_mismatch_location_missing".to_string());
+    }
+    if before_store.is_none() {
+        missing.push("attention_v_before_cache_store_kv_head_missing".to_string());
+    }
+    if stored_f16.is_none() {
+        missing.push("attention_v_cache_stored_f16_kv_head_missing".to_string());
+    }
+    if readback.is_none() {
+        missing.push("attention_v_cache_readback_kv_head_missing".to_string());
+    }
+    for (name, value) in [
+        ("reference_value_cache", reference_value),
+        ("before_cache_store", before_store_value),
+        ("cache_stored_f16", stored_f16_value),
+        ("cache_readback", readback_value),
+        ("expanded_for_value_mix", expanded_value),
+    ] {
+        if value.is_none() {
+            missing.push(format!("{name}_sample_missing"));
+        }
+    }
+    missing.sort_unstable();
+    missing.dedup();
+
+    let reference_vs_before = abs_delta_opt(reference_value, before_store_value);
+    let before_vs_stored_f16 = abs_delta_opt(before_store_value, stored_f16_value);
+    let stored_f16_vs_readback = abs_delta_opt(stored_f16_value, readback_value);
+    let readback_vs_expanded = abs_delta_opt(readback_value, expanded_value);
+    let reference_vs_expanded = abs_delta_opt(reference_value, expanded_value);
+
+    let first_material_boundary = [
+        ("before_cache_store", reference_vs_before),
+        ("cache_stored_f16", before_vs_stored_f16),
+        ("cache_readback", stored_f16_vs_readback),
+        ("expanded_for_value_mix", readback_vs_expanded),
+        ("unattributed_reference_vs_expanded", reference_vs_expanded),
+    ]
+    .into_iter()
+    .find_map(|(name, delta)| delta.is_some_and(|delta| delta > 1.0e-6).then_some(name));
+
+    json!({
+        "dim": dim,
+        "source_token": token,
+        "values": {
+            "reference_value_cache": reference_value,
+            "before_cache_store": before_store_value,
+            "cache_stored_f16": stored_f16_value,
+            "cache_readback": readback_value,
+            "expanded_for_value_mix": expanded_value,
+        },
+        "deltas": {
+            "reference_vs_before_cache_store": reference_vs_before,
+            "before_cache_store_vs_cache_stored_f16": before_vs_stored_f16,
+            "cache_stored_f16_vs_cache_readback": stored_f16_vs_readback,
+            "cache_readback_vs_expanded_for_value_mix": readback_vs_expanded,
+            "reference_vs_expanded_for_value_mix": reference_vs_expanded,
+        },
+        "first_material_boundary": first_material_boundary,
+        "missing": missing,
+    })
+}
+
+fn scalar_tensor_dim_major_value(
+    tensor: &ScalarTraceTensor,
+    dim: usize,
+    token: usize,
+) -> Option<f32> {
+    let (dim_count, token_count) = scalar_tensor_dim_token_shape(tensor)?;
+    if dim >= dim_count || token >= token_count {
+        return None;
+    }
+    let sample_count = dim_count.checked_mul(token_count)?;
+    if tensor.first_values.len() < sample_count {
+        return None;
+    }
+    tensor.first_values.get(dim.checked_mul(token_count)?.checked_add(token)?).copied()
+}
+
+fn abs_delta_opt(left: Option<f32>, right: Option<f32>) -> Option<f64> {
+    Some((left? as f64 - right? as f64).abs())
 }
 
 fn value_mix_history_candidate_value_cache_head(
@@ -19607,6 +19940,149 @@ mod tests {
         assert_eq!(token0_probability_delta.pointer("/max_abs_delta"), Some(&json!(0.0)));
         assert_eq!(token2_probability_delta.pointer("/live_key_count"), Some(&json!(3)));
         assert_eq!(token2_probability_delta.pointer("/max_abs_delta"), Some(&json!(81.0)));
+    }
+
+    #[test]
+    fn compare_reports_prefix_value_cache_source_localization() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![1.0, 2.0, 30.0, 4.0, 5.0, 60.0],
+            ..test_reference_trace_record(
+                "v_cache_rust_layout_head0_live",
+                vec![1.0, 2.0, 30.0, 4.0, 5.0, 60.0],
+            )
+        }];
+        let mut rust_records = BTreeMap::new();
+        for stage in [
+            "attention_v_before_cache_store_kv_head0_ref_layout",
+            "attention_v_cache_stored_f16_kv_head0_ref_layout",
+            "attention_v_cache_readback_kv_head0_ref_layout",
+        ] {
+            rust_records.insert(
+                stage.to_string(),
+                RustTraceRecord {
+                    shape: vec![2, 3],
+                    num_elements: 6,
+                    first_values: vec![1.0, 2.0, 30.0, 4.0, 5.0, 60.0],
+                    ..test_rust_trace_record(stage, vec![1.0, 2.0, 30.0, 4.0, 5.0, 60.0])
+                },
+            );
+        }
+        rust_records.insert(
+            "attention_v_cache_expanded_for_value_mix_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![1.0, 2.0, 31.0, 4.0, 5.0, 61.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_expanded_for_value_mix_head0_ref_layout",
+                    vec![1.0, 2.0, 31.0, 4.0, 5.0, 61.0],
+                )
+            },
+        );
+        let frontier = json!({
+            "active_frontier": "sampled_current_token",
+            "selected_current_token": 2,
+            "current_history_consistency_clean": true,
+            "sampled_current_token_row": {
+                "token": 2,
+                "relative_position": "sampled_current"
+            }
+        });
+
+        let localization = layer_prefix_value_cache_source_localization(
+            &reference_records,
+            &rust_records,
+            &frontier,
+            0,
+        );
+
+        assert_eq!(localization.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(localization.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(localization.pointer("/group_size"), Some(&json!(1)));
+        assert_eq!(localization.pointer("/compared_source_count"), Some(&json!(1)));
+        assert_eq!(localization.pointer("/material_source_delta_count"), Some(&json!(1)));
+        assert_eq!(localization.pointer("/missing_input_count"), Some(&json!(0)));
+        assert_eq!(localization.pointer("/first_material_row/query_token"), Some(&json!(2)));
+        assert_eq!(localization.pointer("/first_material_row/first_mismatch/dim"), Some(&json!(0)));
+        assert_eq!(
+            localization.pointer("/first_material_row/first_mismatch/token"),
+            Some(&json!(2))
+        );
+        assert_eq!(
+            localization
+                .pointer("/first_material_row/boundary_at_first_mismatch/first_material_boundary"),
+            Some(&json!("expanded_for_value_mix"))
+        );
+        assert_eq!(
+            localization.pointer(
+                "/first_material_row/boundary_at_first_mismatch/values/reference_value_cache"
+            ),
+            Some(&json!(30.0))
+        );
+        assert_eq!(
+            localization.pointer(
+                "/first_material_row/boundary_at_first_mismatch/values/expanded_for_value_mix"
+            ),
+            Some(&json!(31.0))
+        );
+        assert_eq!(
+            localization.pointer(
+                "/first_material_row/boundary_at_first_mismatch/deltas/cache_readback_vs_expanded_for_value_mix"
+            ),
+            Some(&json!(1.0))
+        );
+        assert_eq!(
+            localization.pointer("/boundary_material_counts/expanded_for_value_mix"),
+            Some(&json!(1))
+        );
+        let reasons =
+            localization.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+        assert!(reasons.contains(&json!("prefix_value_cache_source_delta_present")));
+    }
+
+    #[test]
+    fn value_cache_source_boundary_prioritizes_before_store_delta() {
+        let reference =
+            ScalarTraceTensor { first_values: vec![10.0], shape: vec![1, 1], num_elements: 1 };
+        let mut before = test_rust_trace_record(
+            "attention_v_before_cache_store_kv_head0_ref_layout",
+            vec![10.5],
+        );
+        before.shape = vec![1, 1];
+        before.num_elements = 1;
+        let mut stored =
+            test_rust_trace_record("attention_v_cache_stored_f16_kv_head0_ref_layout", vec![10.5]);
+        stored.shape = vec![1, 1];
+        stored.num_elements = 1;
+        let mut readback =
+            test_rust_trace_record("attention_v_cache_readback_kv_head0_ref_layout", vec![10.5]);
+        readback.shape = vec![1, 1];
+        readback.num_elements = 1;
+        let expanded =
+            ScalarTraceTensor { first_values: vec![10.5], shape: vec![1, 1], num_elements: 1 };
+
+        let boundary = value_cache_source_boundary_at(
+            Some(0),
+            Some(0),
+            &reference,
+            Some(&before),
+            Some(&stored),
+            Some(&readback),
+            &expanded,
+        );
+
+        assert_eq!(
+            boundary.pointer("/first_material_boundary"),
+            Some(&json!("before_cache_store"))
+        );
+        assert_eq!(boundary.pointer("/deltas/reference_vs_before_cache_store"), Some(&json!(0.5)));
+        assert_eq!(
+            boundary.pointer("/deltas/cache_readback_vs_expanded_for_value_mix"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(boundary.pointer("/missing").and_then(Value::as_array).map(Vec::len), Some(0));
     }
 
     #[test]
