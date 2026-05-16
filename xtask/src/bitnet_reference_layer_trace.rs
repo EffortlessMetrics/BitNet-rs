@@ -2253,6 +2253,7 @@ fn compare_reference_to_rust(
         "attention_value_cache_rust_layout_best_matches": attention_value_cache_rust_layout_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_amplification": attention_value_cache_f16_amplification(reference_records, rust_records),
+        "attention_value_cache_store_readback_boundary": attention_value_cache_store_readback_boundary(reference_records, rust_records),
         "attention_value_mix_reference_scalar_recompute": attention_value_mix_reference_scalar_recompute(reference_records),
         "attention_value_mix_reference_numeric_variants": attention_value_mix_reference_numeric_variants(reference_records),
         "attention_value_mix_rust_scalar_recompute": attention_value_mix_rust_scalar_recompute(rust_records),
@@ -5571,6 +5572,206 @@ fn attention_value_cache_f16_amplification(
     })
 }
 
+fn attention_value_cache_store_readback_boundary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_cache_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "v_cache_rust_layout_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "value-cache store/readback boundary comparison is diagnostic-only evidence for where live value-cache bucket drift enters; it does not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
+        "reference_stage_prefix": "v_cache_rust_layout_head",
+        "reference_head_count": reference_cache_heads.len(),
+        "before_cache_store": value_cache_boundary_kv_section(
+            &reference_cache_heads,
+            rust_records,
+            "attention_v_before_cache_store_kv_head",
+            "before_cache_store",
+        ),
+        "cache_readback": value_cache_boundary_kv_section(
+            &reference_cache_heads,
+            rust_records,
+            "attention_v_cache_readback_kv_head",
+            "cache_readback",
+        ),
+        "cache_stored_f16": value_cache_boundary_kv_section(
+            &reference_cache_heads,
+            rust_records,
+            "attention_v_cache_stored_f16_kv_head",
+            "cache_stored_f16",
+        ),
+        "expanded_for_value_mix": value_cache_boundary_expanded_section(
+            &reference_cache_heads,
+            rust_records,
+        ),
+    })
+}
+
+fn value_cache_boundary_kv_section(
+    reference_cache_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    rust_stage_prefix: &str,
+    boundary: &str,
+) -> Value {
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, rust_stage_prefix).map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut total_bucket_mismatch_count = 0usize;
+    let mut max_bucket_mismatch_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, reference) in reference_cache_heads {
+        if let Some(rust) = rust_heads.get(&head) {
+            let delta = value_cache_dim_major_delta(reference, rust);
+            let bucket_mismatch_count =
+                delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0)
+                    as usize;
+            total_bucket_mismatch_count += bucket_mismatch_count;
+            max_bucket_mismatch_count = max_bucket_mismatch_count.max(bucket_mismatch_count);
+            max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+            max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+            compared_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "compared",
+                "delta": delta,
+            }));
+        } else {
+            missing_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "missing_rust_boundary_stage",
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "boundary": boundary,
+        "rust_stage_prefix": rust_stage_prefix,
+        "reference_head_count": reference_cache_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "total_f16_bucket_mismatch_count": total_bucket_mismatch_count,
+        "max_head_f16_bucket_mismatch_count": max_bucket_mismatch_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !reference_cache_heads.is_empty() && missing_head_count == 0,
+        "rows": rows,
+    })
+}
+
+fn value_cache_boundary_expanded_section(
+    reference_cache_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let rust_stage_prefix = "attention_v_cache_expanded_for_value_mix_head";
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, rust_stage_prefix).map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let group_size = if reference_cache_heads.is_empty()
+        || rust_heads.is_empty()
+        || !rust_heads.len().is_multiple_of(reference_cache_heads.len())
+    {
+        None
+    } else {
+        Some(rust_heads.len() / reference_cache_heads.len())
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut total_bucket_mismatch_count = 0usize;
+    let mut max_bucket_mismatch_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+
+    for (&head, rust) in &rust_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        if let Some(reference) = kv_head.and_then(|kv_head| reference_cache_heads.get(&kv_head)) {
+            let delta = value_cache_dim_major_delta(reference, rust);
+            let bucket_mismatch_count =
+                delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0)
+                    as usize;
+            total_bucket_mismatch_count += bucket_mismatch_count;
+            max_bucket_mismatch_count = max_bucket_mismatch_count.max(bucket_mismatch_count);
+            max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+            max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+            compared_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "compared",
+                "delta": delta,
+            }));
+        } else {
+            missing_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_reference_value_cache",
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "boundary": "expanded_for_value_mix",
+        "rust_stage_prefix": rust_stage_prefix,
+        "reference_head_count": reference_cache_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "group_size": group_size,
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "total_f16_bucket_mismatch_count": total_bucket_mismatch_count,
+        "max_head_f16_bucket_mismatch_count": max_bucket_mismatch_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !rust_heads.is_empty() && missing_head_count == 0,
+        "rows": rows,
+    })
+}
+
+fn value_cache_dim_major_delta(reference: &ReferenceTraceRecord, rust: &RustTraceRecord) -> Value {
+    let dim_count = reference.shape.first().and_then(|dim| usize::try_from(*dim).ok());
+    let token_count = reference.shape.get(1).and_then(|dim| usize::try_from(*dim).ok());
+    match (dim_count, token_count) {
+        (Some(dim_count), Some(token_count)) if dim_count > 0 && token_count > 0 => {
+            f16_bucket_delta_dim_major(
+                &reference.first_values,
+                &rust.first_values,
+                dim_count,
+                token_count,
+            )
+        }
+        _ => f16_bucket_delta(&reference.first_values, &rust.first_values),
+    }
+}
+
 fn head_lane_best_matches(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
@@ -8802,6 +9003,138 @@ mod tests {
             amplification.pointer("/rows/1/delta/token_mismatch_counts/0/token"),
             Some(&json!(1))
         );
+    }
+
+    #[test]
+    fn compare_reports_value_cache_store_readback_boundary() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 2, 1, 1],
+            nelements: 4,
+            first_values: vec![1.0, 2.0, 3.0, 4.0],
+            ..test_reference_trace_record(
+                "v_cache_rust_layout_head0_live",
+                vec![1.0, 2.0, 3.0, 4.0],
+            )
+        }];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_v_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_before_cache_store_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_v_cache_readback_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_readback_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_v_cache_stored_f16_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.5],
+                ..test_rust_trace_record(
+                    "attention_v_cache_stored_f16_kv_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.5],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_v_cache_expanded_for_value_mix_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_expanded_for_value_mix_head0_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_v_cache_expanded_for_value_mix_head1_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.0, 3.0, 4.0],
+                ..test_rust_trace_record(
+                    "attention_v_cache_expanded_for_value_mix_head1_ref_layout",
+                    vec![1.0, 2.0, 3.0, 4.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_value_cache_store_readback_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            boundary.pointer("/before_cache_store/rows/0/delta/layout"),
+            Some(&json!("dim_major_token_minor"))
+        );
+        assert_eq!(
+            boundary.pointer("/before_cache_store/rows/0/delta/max_abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(
+            boundary.pointer("/cache_stored_f16/total_f16_bucket_mismatch_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            boundary.pointer("/cache_stored_f16/rows/0/delta/first_f16_bucket_mismatch_layout/dim"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            boundary
+                .pointer("/cache_stored_f16/rows/0/delta/first_f16_bucket_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+        assert_eq!(boundary.pointer("/expanded_for_value_mix/group_size"), Some(&json!(2)));
+        assert_eq!(
+            boundary.pointer("/expanded_for_value_mix/compared_head_count"),
+            Some(&json!(2))
+        );
+    }
+
+    #[test]
+    fn compare_reports_value_cache_store_readback_missing_stages_as_diagnostic() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 2, 1, 1],
+            nelements: 4,
+            first_values: vec![1.0, 2.0, 3.0, 4.0],
+            ..test_reference_trace_record(
+                "v_cache_rust_layout_head0_live",
+                vec![1.0, 2.0, 3.0, 4.0],
+            )
+        }];
+
+        let report = compare_reference_to_rust(&reference_records, &BTreeMap::new(), &[]);
+        let boundary = report.pointer("/attention_value_cache_store_readback_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            boundary.pointer("/before_cache_store/rows/0/status"),
+            Some(&json!("missing_rust_boundary_stage"))
+        );
+        assert_eq!(boundary.pointer("/cache_readback/missing_head_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/cache_stored_f16/missing_head_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/expanded_for_value_mix/all_compared"), Some(&json!(false)));
     }
 
     #[test]

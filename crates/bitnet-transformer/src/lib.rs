@@ -561,6 +561,23 @@ impl MultiHeadAttention {
         // Update KV cache if provided (store HKV heads, not Hq)
         // **Performance note**: Borrow references instead of cloning after append.
         // Candle operations accept both owned and borrowed tensors.
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            for kv_head_idx in 0..self.n_kv_heads {
+                let before_store = v
+                    .narrow(1, kv_head_idx, 1)?
+                    .reshape(&[seq_len, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_v_before_cache_store_kv_head{kv_head_idx}_ref_layout"
+                );
+                let stage =
+                    format!("attention_v_before_cache_store_kv_head{kv_head_idx}_ref_layout");
+                trace_tensor_record(&trace_name, &before_store, trace_seq, Some(0), &stage)?;
+            }
+        }
         let (k_ctx, v_ctx) = if let Some(cache) = kv_cache {
             cache.append(&k, &v)?;
             // Borrow from cache - avoids cloning full KV history
@@ -645,12 +662,30 @@ impl MultiHeadAttention {
                     .to_dtype(DType::F32)?;
                 let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
                 let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_v_cache_readback_kv_head{kv_head_idx}_ref_layout"
+                );
+                let stage = format!("attention_v_cache_readback_kv_head{kv_head_idx}_ref_layout");
+                trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
+
+                let kv_live_f16_roundtrip = kv_live.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_v_cache_stored_f16_kv_head{kv_head_idx}_ref_layout"
+                );
+                let stage = format!("attention_v_cache_stored_f16_kv_head{kv_head_idx}_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &kv_live_f16_roundtrip,
+                    trace_seq,
+                    Some(0),
+                    &stage,
+                )?;
+
+                let trace_name = format!(
                     "t{trace_seq}/blk0/attention_v_cache_kv_head{kv_head_idx}_live_ref_layout"
                 );
                 let stage = format!("attention_v_cache_kv_head{kv_head_idx}_live_ref_layout");
                 trace_tensor_record(&trace_name, &kv_live, trace_seq, Some(0), &stage)?;
 
-                let kv_live_f16_roundtrip = kv_live.to_dtype(DType::F16)?.to_dtype(DType::F32)?;
                 let trace_name = format!(
                     "t{trace_seq}/blk0/attention_v_cache_f16_roundtrip_kv_head{kv_head_idx}_live_ref_layout"
                 );
@@ -853,6 +888,23 @@ impl MultiHeadAttention {
         }
 
         let v_for_value_mix = attention_f16_dot_input(&v_expanded)?;
+        #[cfg(feature = "trace")]
+        if self.layer_idx == 0 {
+            for head_idx in 0..self.n_heads {
+                let head = v_for_value_mix
+                    .narrow(1, head_idx, 1)?
+                    .reshape(&[t_k, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_v_cache_expanded_for_value_mix_head{head_idx}_ref_layout"
+                );
+                let stage =
+                    format!("attention_v_cache_expanded_for_value_mix_head{head_idx}_ref_layout");
+                trace_tensor_record(&trace_name, &head, trace_seq, Some(0), &stage)?;
+            }
+        }
         let attn_value_mix = attn_weights.matmul(&v_for_value_mix)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
