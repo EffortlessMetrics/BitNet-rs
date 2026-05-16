@@ -26,11 +26,14 @@ const DEFAULT_VALUE_PROJECTION_SAME_INPUT_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-value-projection-same-input-parity.json";
 const DEFAULT_VALUE_PROJECTION_HISTORY_REPLAY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-value-projection-history-replay.json";
+const DEFAULT_ATTN_NORM_CURRENT_REPLAY_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-attn-norm-current-replay.json";
 const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 const DEFAULT_ATTN_OUTPUT_WEIGHT: &str = "blk.0.attn_output.weight";
 const DEFAULT_VALUE_PROJECTION_WEIGHT: &str = "blk.0.attn_v.weight";
+const DEFAULT_ATTN_NORM_WEIGHT: &str = "blk.0.attn_norm.weight";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -182,6 +185,16 @@ struct ValueProjectionSameInputArgs {
 
 #[derive(Debug)]
 struct ValueProjectionHistoryReplayArgs {
+    reference: PathBuf,
+    cpu_trace_dir: PathBuf,
+    model: Option<PathBuf>,
+    weight: String,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct AttnNormCurrentReplayArgs {
     reference: PathBuf,
     cpu_trace_dir: PathBuf,
     model: Option<PathBuf>,
@@ -395,6 +408,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-attn-norm-current-replay") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_attn_norm_current_replay_help();
+                return Ok(true);
+            }
+            let opts = parse_attn_norm_current_replay_args(args)?;
+            let report = build_attn_norm_current_replay(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -444,6 +475,12 @@ fn print_value_projection_same_input_help() {
 fn print_value_projection_history_replay_help() {
     println!(
         "Replay full-prefix attn_norm histories through Rust-loaded blk.0.attn_v.weight and compare reference/Rust V histories\n\nUsage: xtask.exe bitnet-reference-value-projection-history-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF QK256 value projection weight [default: blk.0.attn_v.weight]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-value-projection-history-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
+    );
+}
+
+fn print_attn_norm_current_replay_help() {
+    println!(
+        "Replay layer-0 attention RMSNorm from reference/Rust embedding inputs and compare current-token attn_norm outputs\n\nUsage: xtask.exe bitnet-reference-attn-norm-current-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF attention RMSNorm weight [default: blk.0.attn_norm.weight]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-attn-norm-current-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
     );
 }
 
@@ -710,6 +747,38 @@ fn parse_value_projection_history_replay_args(
         }
     }
     Ok(ValueProjectionHistoryReplayArgs { reference, cpu_trace_dir, model, weight, output, format })
+}
+
+fn parse_attn_norm_current_replay_args(args: &[String]) -> Result<AttnNormCurrentReplayArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-attn-norm-current-replay") {
+        bail!("parse_attn_norm_current_replay_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
+    let mut model = None::<PathBuf>;
+    let mut weight = DEFAULT_ATTN_NORM_WEIGHT.to_string();
+    let mut output = Some(PathBuf::from(DEFAULT_ATTN_NORM_CURRENT_REPLAY_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
+            "--model" => model = Some(PathBuf::from(value()?)),
+            "--weight" => weight = value()?,
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => bail!("unknown bitnet-reference-attn-norm-current-replay option {other}"),
+        }
+    }
+    Ok(AttnNormCurrentReplayArgs { reference, cpu_trace_dir, model, weight, output, format })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -1838,6 +1907,175 @@ fn build_value_projection_history_replay(args: &ValueProjectionHistoryReplayArgs
     }))
 }
 
+fn build_attn_norm_current_replay(args: &AttnNormCurrentReplayArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let reference_root = read_json(&reference_path)?;
+    let reference_records = read_reference_records(&reference_root)?;
+    let trace = reference_trace_receipt(&reference_root)?;
+    let model_path = args
+        .model
+        .clone()
+        .or_else(|| {
+            reference_root.pointer("/model/model_path").and_then(Value::as_str).map(PathBuf::from)
+        })
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
+    let model_path = normalize_path(&model_path)?;
+
+    let rust_records = read_rust_trace_dir(&cpu_trace_dir).ok();
+    let reference_input = reference_records
+        .iter()
+        .find(|record| record.stage == "inp_embd")
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let reference_target = reference_records
+        .iter()
+        .find(|record| record.stage == "attn_norm" && record.layer == Some(0))
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let rust_input = rust_records
+        .as_ref()
+        .and_then(|records| records.get("embeddings"))
+        .filter(|record| !record.first_values.is_empty());
+    let rust_target = rust_records
+        .as_ref()
+        .and_then(|records| records.get("attn_norm"))
+        .filter(|record| !record.first_values.is_empty());
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !reference_path.is_file() {
+        blocked_reasons.push("reference_layer_trace_receipt_missing".to_string());
+    }
+    if !model_path.is_file() {
+        blocked_reasons.push("model_gguf_missing".to_string());
+    }
+    if reference_input.is_none() {
+        blocked_reasons.push("reference_inp_embd_missing".to_string());
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push("reference_attn_norm_layer0_missing".to_string());
+    }
+    if rust_records.is_none() {
+        blocked_reasons.push("rust_cpu_trace_dir_unavailable".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push("rust_embeddings_missing".to_string());
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push("rust_attn_norm_missing".to_string());
+    }
+
+    let mut model = json!({
+        "path": path_to_string(&model_path),
+        "exists": model_path.is_file(),
+    });
+    let mut weight = json!({
+        "name": args.weight,
+    });
+    let mut replay = Value::Null;
+
+    if model_path.is_file() && reference_input.is_some() && reference_target.is_some() {
+        match build_attn_norm_current_replay_body(
+            &model_path,
+            &args.weight,
+            reference_input.expect("checked above"),
+            reference_target.expect("checked above"),
+            rust_input,
+            rust_target,
+        ) {
+            Ok((model_report, weight_report, replay_report)) => {
+                model = model_report;
+                weight = weight_report;
+                replay = replay_report;
+            }
+            Err(err) => {
+                blocked_reasons.push(format!("attn_norm_current_replay_unavailable:{err}"));
+            }
+        }
+    }
+
+    let scope_mismatch =
+        replay.pointer("/scope/scope_mismatch").and_then(Value::as_bool).unwrap_or(false);
+    let reference_input_matches_rust_input = replay
+        .pointer("/inputs/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-6);
+    let reference_target_differs_from_rust_target = replay
+        .pointer("/targets/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta > 1.0e-9);
+    let reference_target_f16_bucket_mismatch_count = replay
+        .pointer("/targets/reference_vs_rust_f16/f16_bucket_mismatch_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let best_reference_delta = replay
+        .pointer("/reference_input_replay/best_vs_reference_target/max_abs_delta")
+        .and_then(Value::as_f64);
+    let best_rust_delta = replay
+        .pointer("/rust_input_replay/best_vs_rust_target/max_abs_delta")
+        .and_then(Value::as_f64);
+
+    let current_blocked_reasons = if blocked_reasons.is_empty() {
+        classify_attn_norm_current_replay(
+            scope_mismatch,
+            reference_input_matches_rust_input,
+            best_reference_delta,
+            best_rust_delta,
+            reference_target_differs_from_rust_target,
+            reference_target_f16_bucket_mismatch_count,
+        )
+    } else {
+        blocked_reasons.clone()
+    };
+    let next_action = attn_norm_current_replay_next_action(&current_blocked_reasons);
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_attn_norm_current_replay",
+        "diagnostic": "bitnet_reference_attn_norm_current_replay",
+        "producer": "cargo xtask bitnet-reference-attn-norm-current-replay",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "promotion_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "model": path_to_string(&model_path),
+            "weight": args.weight,
+        },
+        "reference_trace": {
+            "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
+            "warmup_skip_policy": trace.pointer("/warmup_skip_policy").cloned().unwrap_or(Value::Null),
+            "n_tokens": trace.pointer("/n_tokens").cloned().unwrap_or(Value::Null),
+            "n_outputs": trace.pointer("/n_outputs").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_index": trace.pointer("/sampled_output_token_index").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_id": trace.pointer("/sampled_output_token_id").cloned().unwrap_or(Value::Null),
+            "inp_embd": reference_input.map(reference_record_summary).unwrap_or(Value::Null),
+            "attn_norm": reference_target.map(reference_record_summary).unwrap_or(Value::Null),
+        },
+        "rust_trace": {
+            "present": rust_records.is_some(),
+            "embeddings": rust_input.map(rust_record_summary).unwrap_or(Value::Null),
+            "attn_norm": rust_target.map(rust_record_summary).unwrap_or(Value::Null),
+        },
+        "model": model,
+        "weight": weight,
+        "replay": replay,
+        "decision": {
+            "scope_mismatch": scope_mismatch,
+            "reference_input_matches_rust_input": reference_input_matches_rust_input,
+            "reference_target_differs_from_rust_target": reference_target_differs_from_rust_target,
+            "reference_target_f16_bucket_mismatch_count": reference_target_f16_bucket_mismatch_count,
+            "best_reference_delta": best_reference_delta,
+            "best_rust_delta": best_rust_delta,
+            "current_blocked_reasons": current_blocked_reasons,
+            "next_action": next_action,
+            "claim_allowed": false,
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
 fn project_qk256_same_input(
     model_path: &Path,
     weight_name: &str,
@@ -2082,6 +2320,420 @@ fn build_value_projection_history_replay_body(
     });
 
     Ok((projection.model_report, projection.weight_report, replay))
+}
+
+#[derive(Debug, Clone)]
+struct LoadedRmsNormWeight {
+    model_report: Value,
+    weight_report: Value,
+    values: Vec<f32>,
+    eps: f32,
+    eps_source: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RmsNormAccumulation {
+    F32Sequential,
+    F64Sequential,
+}
+
+impl RmsNormAccumulation {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::F32Sequential => "f32_sequential",
+            Self::F64Sequential => "f64_sequential",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RmsNormReplayVariant {
+    id: String,
+    eps: f32,
+    eps_source: String,
+    accumulation: RmsNormAccumulation,
+}
+
+fn build_attn_norm_current_replay_body(
+    model_path: &Path,
+    weight_name: &str,
+    reference_input: &ReferenceTraceRecord,
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustTraceRecord>,
+) -> Result<(Value, Value, Value)> {
+    let hidden = reference_input.first_values.len();
+    if hidden == 0 {
+        bail!("reference inp_embd first_values are empty");
+    }
+    if reference_target.first_values.len() != hidden {
+        bail!(
+            "reference attn_norm has {} values, expected hidden {hidden}",
+            reference_target.first_values.len()
+        );
+    }
+    let weight = load_rmsnorm_weight(model_path, weight_name, hidden)?;
+    let variants = rmsnorm_replay_variants(weight.eps, &weight.eps_source);
+    let reference_input_vs_rust = rust_input
+        .map(|record| compare_vectors(&reference_input.first_values, &record.first_values));
+    let reference_target_vs_rust = rust_target
+        .map(|record| compare_vectors(&reference_target.first_values, &record.first_values));
+    let reference_target_vs_rust_f16 = rust_target
+        .map(|record| f16_bucket_delta(&reference_target.first_values, &record.first_values));
+    let reference_input_replay = rmsnorm_replay_section(
+        "reference_inp_embd",
+        &reference_input.first_values,
+        &weight.values,
+        &variants,
+        Some(&reference_target.first_values),
+        rust_target.map(|record| record.first_values.as_slice()),
+    )?;
+    let rust_input_replay = match rust_input {
+        Some(record) => rmsnorm_replay_section(
+            "rust_embeddings",
+            &record.first_values,
+            &weight.values,
+            &variants,
+            Some(&reference_target.first_values),
+            rust_target.map(|target| target.first_values.as_slice()),
+        )?,
+        None => Value::Null,
+    };
+    let scope = attn_norm_current_replay_scope(reference_target, rust_input, rust_target);
+
+    let replay = json!({
+        "kernel": "rust_scalar_rmsnorm_current_token_replay",
+        "policy": "RMSNorm replay is diagnostic-only evidence for localizing the tiny layer-0 attention-norm delta; it does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "scope": scope,
+        "inputs": {
+            "reference_stage": "inp_embd",
+            "rust_stage": "embeddings",
+            "reference": row_report(&reference_input.first_values),
+            "rust": rust_input.map(|record| row_report(&record.first_values)).unwrap_or(Value::Null),
+            "reference_vs_rust": reference_input_vs_rust.unwrap_or(Value::Null),
+        },
+        "targets": {
+            "reference_stage": "attn_norm",
+            "rust_stage": "attn_norm",
+            "reference": row_report(&reference_target.first_values),
+            "rust": rust_target.map(|record| row_report(&record.first_values)).unwrap_or(Value::Null),
+            "reference_vs_rust": reference_target_vs_rust.unwrap_or(Value::Null),
+            "reference_vs_rust_f16": reference_target_vs_rust_f16.unwrap_or(Value::Null),
+        },
+        "reference_input_replay": reference_input_replay,
+        "rust_input_replay": rust_input_replay,
+    });
+
+    Ok((weight.model_report, weight.weight_report, replay))
+}
+
+fn load_rmsnorm_weight(
+    model_path: &Path,
+    weight_name: &str,
+    expected_len: usize,
+) -> Result<LoadedRmsNormWeight> {
+    use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
+    use bitnet_models::loader::MmapFile;
+
+    let mmap =
+        MmapFile::open(model_path).map_err(|err| anyhow::anyhow!("opening GGUF model: {err}"))?;
+    let reader = GgufReader::new(mmap.as_slice())
+        .map_err(|err| anyhow::anyhow!("parsing GGUF model: {err}"))?;
+    let architecture = reader.get_string_metadata("general.architecture");
+    let (eps, eps_source) = gguf_rmsnorm_eps(&reader, architecture.as_deref());
+    let info = reader
+        .get_tensor_info_by_name(weight_name)
+        .with_context(|| format!("RMSNorm weight '{weight_name}' not found in GGUF"))?;
+    if !matches!(info.tensor_type, GgufTensorType::F32 | GgufTensorType::F16) {
+        bail!("weight '{weight_name}' must be GGUF F32/F16, got {:?}", info.tensor_type);
+    }
+    let element_count = info.shape.iter().try_fold(1usize, |acc, dim| {
+        acc.checked_mul(*dim).context("RMSNorm weight element count overflow")
+    })?;
+    if element_count != expected_len {
+        bail!(
+            "RMSNorm weight '{weight_name}' has {element_count} elements, expected {expected_len}"
+        );
+    }
+    let data = reader
+        .get_tensor_data_by_info(info)
+        .map_err(|err| anyhow::anyhow!("reading raw data for '{weight_name}': {err}"))?;
+    let values = (0..element_count)
+        .map(|index| decode_gguf_scalar(data, info.tensor_type, index))
+        .collect::<Result<Vec<_>>>()?;
+    let model_report = json!({
+        "path": path_to_string(model_path),
+        "exists": true,
+        "general_architecture": architecture,
+        "rms_norm_eps": eps,
+        "rms_norm_eps_source": eps_source,
+    });
+    let weight_report = json!({
+        "name": weight_name,
+        "gguf_dtype": format!("{:?}", info.tensor_type),
+        "gguf_shape": info.shape,
+        "element_count": element_count,
+        "expected_len": expected_len,
+        "row": row_report(&values),
+    });
+    Ok(LoadedRmsNormWeight { model_report, weight_report, values, eps, eps_source })
+}
+
+fn gguf_rmsnorm_eps(
+    reader: &bitnet_models::formats::gguf::GgufReader<'_>,
+    architecture: Option<&str>,
+) -> (f32, String) {
+    if let Some(architecture) = architecture {
+        let key = format!("{architecture}.attention.layer_norm_rms_epsilon");
+        if let Some(eps) = reader.get_f32_metadata(&key) {
+            return (eps, key);
+        }
+    }
+    for key in [
+        "bitnet-b1.58.attention.layer_norm_rms_epsilon",
+        "llama.attention.layer_norm_rms_epsilon",
+        "attention.layer_norm_rms_epsilon",
+    ] {
+        if let Some(eps) = reader.get_f32_metadata(key) {
+            return (eps, key.to_string());
+        }
+    }
+    (1.0e-5, "default_1e-5".to_string())
+}
+
+fn rmsnorm_replay_variants(model_eps: f32, model_eps_source: &str) -> Vec<RmsNormReplayVariant> {
+    let mut candidates = vec![
+        (model_eps, model_eps_source.to_string()),
+        (1.0e-5, "fixed_1e-5".to_string()),
+        (1.0e-6, "fixed_1e-6".to_string()),
+        (0.0, "fixed_0".to_string()),
+    ];
+    candidates.dedup_by(|left, right| left.0.to_bits() == right.0.to_bits() && left.1 == right.1);
+    let mut variants = Vec::new();
+    for (eps, eps_source) in candidates {
+        for accumulation in [RmsNormAccumulation::F32Sequential, RmsNormAccumulation::F64Sequential]
+        {
+            variants.push(RmsNormReplayVariant {
+                id: format!("{}_{}", sanitize_variant_label(&eps_source), accumulation.as_str()),
+                eps,
+                eps_source: eps_source.clone(),
+                accumulation,
+            });
+        }
+    }
+    variants
+}
+
+fn sanitize_variant_label(label: &str) -> String {
+    label
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .collect::<String>()
+        .trim_matches('_')
+        .to_string()
+}
+
+fn rmsnorm_replay_section(
+    source: &str,
+    input: &[f32],
+    weight: &[f32],
+    variants: &[RmsNormReplayVariant],
+    reference_target: Option<&[f32]>,
+    rust_target: Option<&[f32]>,
+) -> Result<Value> {
+    let mut rows = Vec::<Value>::new();
+    let mut best_reference = None::<(f64, Value)>;
+    let mut best_rust = None::<(f64, Value)>;
+
+    for variant in variants {
+        let output = replay_rmsnorm(input, weight, variant.eps, variant.accumulation)?;
+        let vs_reference_target = reference_target.map(|target| compare_vectors(&output, target));
+        let vs_rust_target = rust_target.map(|target| compare_vectors(&output, target));
+        let row = json!({
+            "id": variant.id,
+            "eps": variant.eps,
+            "eps_source": variant.eps_source,
+            "accumulation": variant.accumulation.as_str(),
+            "output": row_report(&output),
+            "vs_reference_target": vs_reference_target.clone().unwrap_or(Value::Null),
+            "vs_rust_target": vs_rust_target.clone().unwrap_or(Value::Null),
+        });
+        if let Some(delta) = vs_reference_target
+            .as_ref()
+            .and_then(|value| value.pointer("/max_abs_delta"))
+            .and_then(Value::as_f64)
+        {
+            if best_reference.as_ref().is_none_or(|(best, _)| delta < *best) {
+                best_reference =
+                    Some((delta, rmsnorm_best_variant_summary(&row, delta, "vs_reference_target")));
+            }
+        }
+        if let Some(delta) = vs_rust_target
+            .as_ref()
+            .and_then(|value| value.pointer("/max_abs_delta"))
+            .and_then(Value::as_f64)
+        {
+            if best_rust.as_ref().is_none_or(|(best, _)| delta < *best) {
+                best_rust =
+                    Some((delta, rmsnorm_best_variant_summary(&row, delta, "vs_rust_target")));
+            }
+        }
+        rows.push(row);
+    }
+
+    Ok(json!({
+        "source": source,
+        "input": row_report(input),
+        "variant_count": rows.len(),
+        "variants": rows,
+        "best_vs_reference_target": best_reference.map(|(_, value)| value).unwrap_or(Value::Null),
+        "best_vs_rust_target": best_rust.map(|(_, value)| value).unwrap_or(Value::Null),
+    }))
+}
+
+fn rmsnorm_best_variant_summary(row: &Value, max_abs_delta: f64, comparison_key: &str) -> Value {
+    json!({
+        "id": row.pointer("/id").cloned().unwrap_or(Value::Null),
+        "eps": row.pointer("/eps").cloned().unwrap_or(Value::Null),
+        "eps_source": row.pointer("/eps_source").cloned().unwrap_or(Value::Null),
+        "accumulation": row.pointer("/accumulation").cloned().unwrap_or(Value::Null),
+        "max_abs_delta": max_abs_delta,
+        "rms_abs_delta": row
+            .pointer(&format!("/{comparison_key}/rms_abs_delta"))
+            .cloned()
+            .unwrap_or(Value::Null),
+    })
+}
+
+fn replay_rmsnorm(
+    input: &[f32],
+    weight: &[f32],
+    eps: f32,
+    accumulation: RmsNormAccumulation,
+) -> Result<Vec<f32>> {
+    if input.len() != weight.len() {
+        bail!("RMSNorm input length {} does not match weight length {}", input.len(), weight.len());
+    }
+    if input.is_empty() {
+        bail!("RMSNorm input is empty");
+    }
+    let denom = match accumulation {
+        RmsNormAccumulation::F32Sequential => {
+            let mut sum_sq = 0.0f32;
+            for &value in input {
+                sum_sq += value * value;
+            }
+            ((sum_sq / input.len() as f32) + eps).sqrt()
+        }
+        RmsNormAccumulation::F64Sequential => {
+            let mut sum_sq = 0.0f64;
+            for &value in input {
+                sum_sq += (value as f64) * (value as f64);
+            }
+            ((sum_sq / input.len() as f64) + eps as f64).sqrt() as f32
+        }
+    };
+    Ok(input.iter().zip(weight).map(|(&x, &gamma)| (x / denom) * gamma).collect())
+}
+
+fn attn_norm_current_replay_scope(
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustTraceRecord>,
+) -> Value {
+    let reference_sampled_token_index = reference_sampled_token_index(reference_target);
+    let rust_input_seq = rust_input.and_then(|record| record.seq.map(|seq| seq as u64));
+    let rust_target_seq = rust_target.and_then(|record| record.seq.map(|seq| seq as u64));
+    let mut failures = Vec::<Value>::new();
+    if let (Some(reference), Some(rust)) = (reference_sampled_token_index, rust_input_seq)
+        && reference != rust
+    {
+        failures.push(json!({
+            "reason": "reference_sampled_token_index_does_not_match_rust_embeddings_seq",
+            "reference_sampled_token_index": reference,
+            "rust_seq": rust,
+        }));
+    }
+    if let (Some(reference), Some(rust)) = (reference_sampled_token_index, rust_target_seq)
+        && reference != rust
+    {
+        failures.push(json!({
+            "reason": "reference_sampled_token_index_does_not_match_rust_attn_norm_seq",
+            "reference_sampled_token_index": reference,
+            "rust_seq": rust,
+        }));
+    }
+    if let (Some(input), Some(target)) = (rust_input_seq, rust_target_seq)
+        && input != target
+    {
+        failures.push(json!({
+            "reason": "rust_embeddings_seq_does_not_match_rust_attn_norm_seq",
+            "rust_input_seq": input,
+            "rust_target_seq": target,
+        }));
+    }
+    json!({
+        "reference_sampled_token_index": reference_sampled_token_index,
+        "rust_input_seq": rust_input_seq,
+        "rust_target_seq": rust_target_seq,
+        "scope_mismatch": !failures.is_empty(),
+        "failures": failures,
+    })
+}
+
+fn classify_attn_norm_current_replay(
+    scope_mismatch: bool,
+    reference_input_matches_rust_input: bool,
+    best_reference_delta: Option<f64>,
+    best_rust_delta: Option<f64>,
+    reference_target_differs_from_rust_target: bool,
+    reference_target_f16_bucket_mismatch_count: u64,
+) -> Vec<String> {
+    let mut reasons = Vec::<String>::new();
+    if scope_mismatch {
+        reasons.push("attention_norm_trace_scope_mismatch".to_string());
+    }
+    if !reference_input_matches_rust_input {
+        reasons.push("attention_norm_input_delta_present".to_string());
+    }
+    match best_reference_delta {
+        Some(delta) if delta > 1.0e-6 => {
+            reasons.push("rmsnorm_replay_does_not_match_reference_attn_norm".to_string());
+        }
+        None => reasons.push("rmsnorm_reference_replay_unavailable".to_string()),
+        _ => {}
+    }
+    match best_rust_delta {
+        Some(delta) if delta > 1.0e-6 => {
+            reasons.push("rmsnorm_replay_does_not_match_rust_attn_norm".to_string());
+        }
+        None => reasons.push("rmsnorm_rust_replay_unavailable".to_string()),
+        _ => {}
+    }
+    if reference_target_differs_from_rust_target {
+        reasons.push("reference_rust_attn_norm_delta_present".to_string());
+    }
+    if reference_target_f16_bucket_mismatch_count > 0 {
+        reasons.push("attention_norm_delta_crosses_f16_bucket_boundary".to_string());
+    }
+    reasons.sort_unstable();
+    reasons.dedup();
+    reasons
+}
+
+fn attn_norm_current_replay_next_action(reasons: &[String]) -> &'static str {
+    if reasons.iter().any(|reason| reason == "attention_norm_trace_scope_mismatch") {
+        "align reference and Rust current-token trace scope before interpreting RMSNorm deltas"
+    } else if reasons
+        .iter()
+        .any(|reason| reason == "rmsnorm_replay_does_not_match_reference_attn_norm")
+    {
+        "pin GGML RMSNorm epsilon, accumulation, and output rounding against the reference implementation"
+    } else if reasons.iter().any(|reason| reason == "reference_rust_attn_norm_delta_present") {
+        "compare the selected RMSNorm replay rule against Candle/Rust runtime arithmetic before changing model math"
+    } else {
+        "RMSNorm replay explains current-token attention norm; continue downstream value-projection sensitivity analysis"
+    }
 }
 
 fn replay_qk256_dim_major_history(
@@ -11574,6 +12226,43 @@ mod tests {
     }
 
     #[test]
+    fn attn_norm_current_replay_args_parse_defaults_and_overrides() {
+        let default_args =
+            vec!["xtask".to_string(), "bitnet-reference-attn-norm-current-replay".to_string()];
+        let defaults = parse_attn_norm_current_replay_args(&default_args).unwrap();
+        assert_eq!(defaults.reference, PathBuf::from(DEFAULT_RUN_OUTPUT));
+        assert_eq!(defaults.cpu_trace_dir, PathBuf::from(DEFAULT_CPU_TRACE_DIR));
+        assert_eq!(defaults.model, None);
+        assert_eq!(defaults.weight, DEFAULT_ATTN_NORM_WEIGHT);
+        assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_ATTN_NORM_CURRENT_REPLAY_OUTPUT)));
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-attn-norm-current-replay".to_string(),
+            "--reference".to_string(),
+            "ref.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "trace-dir".to_string(),
+            "--model".to_string(),
+            "model.gguf".to_string(),
+            "--weight".to_string(),
+            "blk.1.attn_norm.weight".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_attn_norm_current_replay_args(&args).unwrap();
+        assert_eq!(parsed.reference, PathBuf::from("ref.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("trace-dir"));
+        assert_eq!(parsed.model, Some(PathBuf::from("model.gguf")));
+        assert_eq!(parsed.weight, "blk.1.attn_norm.weight");
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
     fn value_projection_history_replay_replays_dim_major_history() {
         let input = vec![
             1.0, 2.0, // dim 0, tokens 0/1
@@ -11593,6 +12282,59 @@ mod tests {
             ]
         );
         assert_eq!(slice_dim_major_token(&input, 2, 2, 1).unwrap(), vec![2.0, 4.0]);
+    }
+
+    #[test]
+    fn attn_norm_current_replay_uses_rmsnorm_without_mean_centering() {
+        let input = vec![3.0f32, 4.0];
+        let weight = vec![1.0f32, 2.0];
+        let output =
+            replay_rmsnorm(&input, &weight, 0.0, RmsNormAccumulation::F64Sequential).unwrap();
+        let denom = ((3.0f64 * 3.0 + 4.0 * 4.0) / 2.0).sqrt() as f32;
+
+        assert_eq!(output.len(), 2);
+        assert!((output[0] - (3.0 / denom)).abs() < 1.0e-6);
+        assert!((output[1] - ((4.0 / denom) * 2.0)).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn attn_norm_current_replay_section_selects_lowest_delta_variant() {
+        let input = vec![3.0f32, 4.0];
+        let weight = vec![1.0f32, 1.0];
+        let variants = vec![
+            RmsNormReplayVariant {
+                id: "bad_eps".to_string(),
+                eps: 1.0,
+                eps_source: "test_bad".to_string(),
+                accumulation: RmsNormAccumulation::F64Sequential,
+            },
+            RmsNormReplayVariant {
+                id: "exact_eps".to_string(),
+                eps: 0.0,
+                eps_source: "test_exact".to_string(),
+                accumulation: RmsNormAccumulation::F64Sequential,
+            },
+        ];
+        let target =
+            replay_rmsnorm(&input, &weight, 0.0, RmsNormAccumulation::F64Sequential).unwrap();
+        let section =
+            rmsnorm_replay_section("unit", &input, &weight, &variants, Some(&target), None)
+                .unwrap();
+
+        assert_eq!(section.pointer("/best_vs_reference_target/id"), Some(&json!("exact_eps")));
+        assert_eq!(section.pointer("/best_vs_reference_target/max_abs_delta"), Some(&json!(0.0)));
+    }
+
+    #[test]
+    fn attn_norm_current_replay_classifies_bucket_sensitive_target_delta() {
+        let reasons = classify_attn_norm_current_replay(false, true, Some(0.0), Some(0.0), true, 1);
+
+        assert!(reasons.contains(&"reference_rust_attn_norm_delta_present".to_string()));
+        assert!(reasons.contains(&"attention_norm_delta_crosses_f16_bucket_boundary".to_string()));
+        assert_eq!(
+            attn_norm_current_replay_next_action(&reasons),
+            "compare the selected RMSNorm replay rule against Candle/Rust runtime arithmetic before changing model math"
+        );
     }
 
     #[test]
@@ -11776,6 +12518,71 @@ mod tests {
         );
         assert!(reasons.contains(&json!("model_gguf_missing")));
         assert!(reasons.contains(&json!("reference_attn_norm_first_values_missing")));
+        assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn attn_norm_current_replay_report_blocks_without_model_or_rust_trace() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let model = dir.path().join("missing.gguf");
+        let trace_dir = dir.path().join("missing-trace-dir");
+        write_file(
+            &reference,
+            &serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "inp_embd-0",
+                        "stage": "inp_embd",
+                        "graph_index": 1,
+                        "layer": -1,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [1.0, 2.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.5811388}
+                    },
+                    {
+                        "name": "attn_norm-0",
+                        "stage": "attn_norm",
+                        "graph_index": 2,
+                        "layer": 0,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [0.5, 1.0],
+                        "values_available": true,
+                        "stats": {"rms": 0.7905694}
+                    }
+                ]
+            }))
+            .unwrap(),
+        );
+
+        let report = build_attn_norm_current_replay(&AttnNormCurrentReplayArgs {
+            reference,
+            cpu_trace_dir: trace_dir,
+            model: Some(model),
+            weight: DEFAULT_ATTN_NORM_WEIGHT.to_string(),
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(
+            report.pointer("/receipt_type"),
+            Some(&json!("bitnet_reference_attn_norm_current_replay"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert!(reasons.contains(&json!("model_gguf_missing")));
+        assert!(reasons.contains(&json!("rust_cpu_trace_dir_unavailable")));
+        assert!(reasons.contains(&json!("rust_embeddings_missing")));
+        assert!(reasons.contains(&json!("rust_attn_norm_missing")));
         assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
     }
 
