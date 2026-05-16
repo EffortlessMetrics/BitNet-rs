@@ -121,7 +121,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-003"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-003-dashboard-trends"
 stackable = false
 review_mode = "codex_premerge"

@@ -19,7 +19,7 @@ The durable envelope is based on these committed evidence surfaces:
 | BitNet eval refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json` | Accepted Microsoft I2_S GGUF plus external tokenizer, 100 deterministic cases | comparable matching history exists |
 | BitNet benchmark refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json` | Accepted BitNet one-shot benchmark profile | comparable matching history exists |
 | BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
-| Report dashboard | `target/apple-m4-durable-inference-evidence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | durable dashboard before `M4-EXCELLENCE-003`; local `M4-EXCELLENCE-002` check sees BitNet variable warm ready |
+| Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
 
 All durable refresh receipts used by this envelope keep the supported local M4
 route bounded to:
@@ -53,13 +53,13 @@ The model-free refresh sequence is:
 bitnet mac models
 bitnet mac status
 bitnet mac report-refresh \
-  --json-out target/apple-m4-durable-inference-evidence/report-refresh-manifest.json \
+  --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
   --json
 bitnet mac regression-dashboard \
-  --json-out target/apple-m4-durable-inference-evidence/regression-dashboard.json \
-  --markdown-out target/apple-m4-durable-inference-evidence/regression-dashboard.md \
+  --json-out target/apple-m4-inference-excellence/regression-dashboard.json \
+  --markdown-out target/apple-m4-inference-excellence/regression-dashboard.md \
   --json
-bitnet mac receipts-check target/apple-m4-durable-inference-evidence/regression-dashboard.json --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
 ```
 
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:
@@ -128,6 +128,23 @@ Dashboard states mean:
 | `identity_mismatch` or profile-set mismatch | The current report differs in model, tokenizer, backend, fallback, corpus, or benchmark profiles. | Treat the report as a new baseline. |
 | warning | Context matched, but an advisory metric drifted. | Inspect the metric and receipt, then decide whether to refresh or file a follow-up. |
 | failure | Context matched and a required quality, fallback, identity, or receipt invariant failed. | Block the claim and fix before publishing the envelope. |
+
+The `M4-EXCELLENCE-003` model-free dashboard refresh reports all important
+committed M4 evidence groups as comparable:
+
+| Family | Evidence | Reports | Comparable groups |
+|---|---|---:|---:|
+| `dense_slm_eval_v2` | dense SLM | 6 | 3 |
+| `dense_slm_benchmark_v2` | dense SLM | 6 | 3 |
+| `bitnet_eval` | BitNet | 2 | 1 |
+| `bitnet_benchmark` | BitNet | 2 | 1 |
+| `bitnet_variable_warm` | BitNet | 2 | 1 |
+
+This dashboard state removes the prior important `insufficient_history` gap for
+dense SLM eval v2 and BitNet variable warm. It remains dashboard-only evidence:
+no live model run, model download, BitNet chat/serve enablement, Metal, QK256,
+Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup
+claim is made by the refresh.
 
 Quality gates must fail the release claim when any of these change in a matching
 context:
