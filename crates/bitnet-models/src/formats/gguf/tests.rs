@@ -1093,19 +1093,123 @@ fn test_ln_gamma_validator_envelope() {
         assert!(result.is_ok(), "RMS at upper boundary should pass");
     }
 
-    // Test 6: BitNet RMSNorm weights may be pre-scaled near 1/sqrt(hidden)
+    // Test 6: hidden-scaled RMSNorm weights are not accepted by the generic strict validator.
     {
         let _guard = EnvGuard::new("BITNET_STRICT_MODE");
         _guard.set("1");
         let hidden_size = 2560usize;
         let target = 1.0 / (hidden_size as f32).sqrt();
         let data = vec![target * 0.91; hidden_size];
-        let bitnet_scaled_tensor =
+        let hidden_scaled_tensor =
             Tensor::from_vec(data, &[hidden_size], &candle_core::Device::Cpu).unwrap();
         let result =
-            GgufLoader::check_ln_gamma_stats("blk.0.attn_norm.weight", &bitnet_scaled_tensor);
-        assert!(result.is_ok(), "BitNet pre-scaled RMSNorm gamma should pass strict mode");
+            GgufLoader::check_ln_gamma_stats("blk.0.attn_norm.weight", &hidden_scaled_tensor);
+        assert!(result.is_err(), "Generic strict mode should fail hidden-scaled RMSNorm gamma");
+        let result = GgufLoader::check_ln_gamma_stats_with_policy(
+            "blk.0.attn_norm.weight",
+            &hidden_scaled_tensor,
+            super::loader::NormValidationPolicy::BitNetPreScaled,
+        );
+        assert!(result.is_ok(), "BitNet-scoped pre-scaled RMSNorm gamma should pass");
     }
+
+    // Test 7: exact SmolLM2 policy accepts its governed normalization envelope visibly.
+    {
+        let _guard = EnvGuard::new("BITNET_STRICT_MODE");
+        _guard.set("1");
+        let target = 3.0 / (super::loader::SMOLLM2_360M_HIDDEN_SIZE as f32).sqrt();
+        let data = vec![target; super::loader::SMOLLM2_360M_HIDDEN_SIZE];
+        let smollm2_tensor = Tensor::from_vec(
+            data,
+            &[super::loader::SMOLLM2_360M_HIDDEN_SIZE],
+            &candle_core::Device::Cpu,
+        )
+        .unwrap();
+
+        let generic_result = GgufLoader::check_ln_gamma_stats_with_policy(
+            "blk.0.ffn_norm.weight",
+            &smollm2_tensor,
+            super::loader::NormValidationPolicy::Generic,
+        );
+        assert!(generic_result.is_err(), "Generic policy must remain fail-closed");
+
+        let record = GgufLoader::check_ln_gamma_stats_with_policy(
+            "blk.0.ffn_norm.weight",
+            &smollm2_tensor,
+            super::loader::NormValidationPolicy::SmolLm2_360MInstructQ8,
+        )
+        .expect("SmolLM2 policy should accept")
+        .expect("SmolLM2 acceptance should be receipt-visible");
+        assert_eq!(record.correction_type, "smollm2_norm_gamma_envelope_accept");
+        assert_eq!(
+            record.policy_fingerprint,
+            format!("slm-cpu-019:{}", super::loader::SMOLLM2_360M_CONTRACT_ID)
+        );
+    }
+}
+
+#[test]
+fn smollm2_norm_policy_requires_exact_metadata_scope() {
+    use super::loader::{GgufLoader, NormValidationPolicy, SMOLLM2_360M_FINGERPRINT};
+
+    let smollm2_gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("smollm2-360m-fixture".to_string())),
+            ("tokenizer.ggml.pre", GgufValue::String("smollm".to_string())),
+            ("llama.block_count", GgufValue::U32(32)),
+            ("llama.context_length", GgufValue::U32(8192)),
+            ("llama.embedding_length", GgufValue::U32(960)),
+            ("llama.feed_forward_length", GgufValue::U32(2560)),
+            ("llama.attention.head_count", GgufValue::U32(15)),
+            ("llama.attention.head_count_kv", GgufValue::U32(5)),
+            ("llama.vocab_size", GgufValue::U32(49_152)),
+        ],
+        Vec::new(),
+    );
+    let smollm2_reader = GgufReader::new(&smollm2_gguf).expect("fixture should parse");
+    let config = GgufLoader.extract_config(&smollm2_reader).expect("config extraction");
+    assert_eq!(
+        GgufLoader.select_norm_validation_policy(
+            &smollm2_reader,
+            &config,
+            SMOLLM2_360M_FINGERPRINT,
+        ),
+        NormValidationPolicy::SmolLm2_360MInstructQ8
+    );
+
+    let generic_llama_gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            ("general.name", GgufValue::String("generic-llama-fixture".to_string())),
+            ("tokenizer.ggml.pre", GgufValue::String("llama-bpe".to_string())),
+            ("llama.block_count", GgufValue::U32(32)),
+            ("llama.embedding_length", GgufValue::U32(960)),
+            ("llama.feed_forward_length", GgufValue::U32(2560)),
+            ("llama.attention.head_count", GgufValue::U32(15)),
+            ("llama.vocab_size", GgufValue::U32(49_152)),
+        ],
+        Vec::new(),
+    );
+    let generic_llama_reader = GgufReader::new(&generic_llama_gguf).expect("fixture should parse");
+    let generic_config =
+        GgufLoader.extract_config(&generic_llama_reader).expect("config extraction");
+    assert_eq!(
+        GgufLoader.select_norm_validation_policy(
+            &generic_llama_reader,
+            &generic_config,
+            SMOLLM2_360M_FINGERPRINT,
+        ),
+        NormValidationPolicy::Generic
+    );
+    assert_eq!(
+        GgufLoader.select_norm_validation_policy(
+            &smollm2_reader,
+            &config,
+            "sha256-0000000000000000000000000000000000000000000000000000000000000000",
+        ),
+        NormValidationPolicy::Generic
+    );
 }
 
 // ---------- Extended validation tests ----------
