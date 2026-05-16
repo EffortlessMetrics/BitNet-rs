@@ -13318,7 +13318,7 @@ mod tests {
         assert_eq!(slm_warm_session_artifact_kind("cpu"), "slm_cpu_warm_session");
         assert_eq!(slm_warm_session_prompt_artifact_kind("cpu"), "slm_cpu_warm_session_prompt");
         assert_eq!(
-            warm_session_allocation_scope("cpu"),
+            crate::allocation_audit::warm_session_allocation_scope("cpu"),
             "selected generic CPU SLM warm-session prompt hot path"
         );
         assert!(!allocation_audit_backend_supported(&RunBackendIdentity {
