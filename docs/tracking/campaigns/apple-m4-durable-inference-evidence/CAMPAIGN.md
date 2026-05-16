@@ -43,7 +43,7 @@ model-free.
 | M4-DURABLE-002 | merged | PR #4988 refreshed dense SLM benchmark reports for every supported M4 model, including `resident_100`; strict regression against the previous baseline is blocked by the expected profile-set mismatch. |
 | M4-DURABLE-003 | merged | PR #5001 refreshed BitNet eval, benchmark, and variable warm-session reports for the accepted artifact/tokenizer identity. |
 | M4-DURABLE-004 | merged | PR #5009 regenerated report-refresh and regression-dashboard artifacts with real comparable history groups and explicit insufficient-history boundaries. |
-| M4-DURABLE-005 | in_progress | Publishing operator envelope v3 from the durable evidence run. |
+| M4-DURABLE-005 | pr_open | PR #5025 publishes operator envelope v3 from the durable evidence run. |
 
 ## Review Policy
 

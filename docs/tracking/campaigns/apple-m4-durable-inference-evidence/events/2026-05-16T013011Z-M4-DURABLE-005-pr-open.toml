@@ -1,0 +1,13 @@
+timestamp = "2026-05-16T01:30:11Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-005"
+event = "pr_open"
+pr = 5025
+head_sha = "a4d632a0f959a077c15c3bce328bf37141ed76ff"
+actor = "codex"
+
+notes = [
+  "Opened the durable M4 operator-envelope-v3 PR.",
+  "The PR publishes refresh cadence, matching-history regression thresholds, resident_100 dense status, BitNet durable status, disk/cache guidance, and claim boundaries from committed reports.",
+  "Scope remains docs/tracking only: no live model run, model download, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]
