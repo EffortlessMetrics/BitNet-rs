@@ -128,6 +128,41 @@ outlier handling
 threshold derivation
 ```
 
+## Drift Thresholds
+
+`M4-EXCELLENCE-004` publishes the current family-specific drift policy in the
+operator envelope. Thresholds are only meaningful for dashboard groups whose
+identity context is `ready`; identity mismatches start a new baseline instead
+of creating a trend.
+
+The published policy separates:
+
+```text
+identity mismatches and missing required fields: comparison blockers
+quality and timeout regressions: zero-tolerance release blockers
+timing drift: advisory warnings unless the lane uses --fail-on-drift
+memory drift: advisory warnings unless the lane uses --fail-on-drift
+unsupported claim flags: claim blockers
+```
+
+Dense SLM and BitNet share the same timing envelope shape where the receipt
+families expose comparable fields: 20% higher load or sampling overhead, 15%
+higher latency or lower input/output throughput, 12.5% lower decode throughput,
+10% higher peak memory, and 15% higher memory drift. Quality thresholds stay
+family-specific and strict: dense SLM eval v2 and BitNet eval allow no lower
+mechanical pass counts and no higher timeout, failed, or not-run counts before
+the release claim must stop for investigation.
+
+These thresholds document the existing regression/dashboard behavior. They do
+not add a live model run, prove new runtime quality, enable BitNet chat or
+serve, or broaden Apple backend claims.
+
+One boundary remains explicit: BitNet variable warm has matching-history
+dashboard evidence and receipt validation, but direct `bitnet mac regression`
+does not yet accept `bitnet_apple_m4_warm_session` as a baseline kind. Warm
+session thresholds remain a documented readiness boundary until direct
+warm-regression support lands in a later item.
+
 ## Reproducibility
 
 Excellent M4 evidence needs enough identity to rerun or reject a comparison.

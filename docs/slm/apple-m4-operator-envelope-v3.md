@@ -176,6 +176,72 @@ peak_memory_mb
 memory_drift_mb
 ```
 
+### Published Drift Thresholds
+
+`bitnet mac regression` is advisory by default. Use `--fail-on-drift` when a
+scheduled or release lane needs any warning to fail the gate. These thresholds
+only apply after the dashboard reports `ready` for a matching identity; an
+identity mismatch starts a new baseline and must not be called a trend.
+
+Hard comparison blockers:
+
+| Class | Blocker | Operator action |
+|---|---|---|
+| Identity | artifact kind, evidence family, model ID/SHA, tokenizer authority/SHA, prompt template or profile set, backend, runtime API, fallback state, or machine mismatch | Start a new baseline or rerun with the intended identity. |
+| Claim boundary | a receipt claims BitNet chat/serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup outside its proven lane | Block the public claim and file a follow-up. |
+| Required fields | missing generated text, token IDs, timing, memory, fallback, tokenizer, or quality fields required by the receipt validator | Fix the receipt producer before comparing drift. |
+
+Quality and timeout thresholds:
+
+| Family | Fields | Threshold | Severity |
+|---|---|---:|---|
+| Dense SLM eval v2 | `cases_passed`, exact/normalized/schema/numeric/keyword/token pass counts, scoring summary, task-family pass counts | 0% lower allowed | warning by default; blocks release quality claims until explained |
+| Dense SLM eval v2 | timeouts, `not_run`, scoring failures, `quality_passed=false` | 0% higher allowed or boolean mismatch | block release quality claims |
+| BitNet eval | quality/scoring passed counts, task-family passed counts, reference matched/text/token-ID match counts | 0% lower allowed | warning by default; blocks BitNet quality claims until explained |
+| BitNet eval | failed, timeout, `not_run`, reference mismatch/not-run/partial counts | 0% higher allowed | block BitNet quality claims |
+| BitNet benchmark paths | prompt count, generated token count, model/tokenizer-loaded-once flags, timeout-boundary flags, quality flags | exact match required | comparison blocker if mismatched |
+| BitNet variable warm | accepted artifact/tokenizer, backend, fallback state, repeated-prompt quality, per-turn receipts, and aggregate receipt validity | exact match or receipt validation required | dashboard-comparable only until direct warm-session `mac regression` support lands |
+
+Timing drift thresholds:
+
+| Family | Metric class | Direction | Advisory threshold |
+|---|---|---|---:|
+| Dense SLM eval v2 | `cold_load_ms_p50`, `tokenizer_load_ms_p50` | higher is worse | 20% |
+| Dense SLM eval v2 | prompt tokenization, prefill, TTFT p50/p90, total wall p50 | higher is worse | 15% |
+| Dense SLM eval v2 | sampling ms/token p50 | higher is worse | 20% |
+| Dense SLM eval v2 | input/output throughput p50 | lower is worse | 15% |
+| Dense SLM eval v2 | decode throughput p50 | lower is worse | 12.5% |
+| Dense SLM benchmark v2 | load metrics p50/p90/p99 | higher is worse | 20% |
+| Dense SLM benchmark v2 | prompt tokenization, prefill, TTFT, decode total, total wall p50/p90/p99 | higher is worse | 15% |
+| Dense SLM benchmark v2 | sampling ms/token p50/p90/p99 | higher is worse | 20% |
+| Dense SLM benchmark v2 | input/output throughput p50/p90/p99 | lower is worse | 15% |
+| Dense SLM benchmark v2 | decode throughput p50/p90/p99 | lower is worse | 12.5% |
+| Dense SLM warm/performance sessions | TTFT and total session | higher is worse | 15% |
+| Dense SLM warm/performance sessions | warm-prompt throughput | lower is worse | 15% |
+| Dense SLM warm/performance sessions | decode throughput | lower is worse | 12.5% |
+| BitNet benchmark | cold/model/tokenizer load p50/p90/p99 | higher is worse | 20% |
+| BitNet benchmark | prompt tokenization, prefill, TTFT, decode total, total wall p50/p90/p99 | higher is worse | 15% |
+| BitNet benchmark | sampling ms/token p50/p90/p99 | higher is worse | 20% |
+| BitNet benchmark | input/output throughput p50/p90/p99 | lower is worse | 15% |
+| BitNet benchmark | decode throughput p50/p90/p99 | lower is worse | 12.5% |
+
+Memory drift thresholds:
+
+| Family | Metric | Direction | Advisory threshold |
+|---|---|---|---:|
+| Dense SLM eval v2 | peak memory | higher is worse | 10% |
+| Dense SLM benchmark v2 | peak memory p50/p90/p99 | higher is worse | 10% |
+| Dense SLM benchmark v2 | memory drift p50/p90/p99 | higher is worse | 15% |
+| Dense SLM warm/performance sessions | peak memory | higher is worse | 10% |
+| BitNet benchmark | peak memory p50/p90/p99 | higher is worse | 10% |
+| BitNet benchmark | memory drift p50/p90/p99 and process peak drift | higher is worse | 15% |
+
+BitNet variable warm currently has matching-history dashboard status and
+receipt validation, but not direct `bitnet mac regression --baseline` support
+for `bitnet_apple_m4_warm_session`. Treat the generated dashboard comparison as
+history/readiness evidence, and use direct warm-session threshold enforcement
+only after a future item adds that receipt kind to the regression command.
+
 The current BitNet benchmark comparison reports five advisory warnings, all on
 sub-ms prompt-tokenize timing fields. Identity, fallback, prompt count, and
 generation fields still validate.
