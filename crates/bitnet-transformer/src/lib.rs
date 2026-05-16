@@ -1485,6 +1485,29 @@ impl TransformerBlock {
             });
         }
 
+        #[cfg(feature = "trace")]
+        if self.attention.layer_idx == trace_target_layer() {
+            let dims = x.dims();
+            if dims.len() == 3 && dims[0] == 1 {
+                let seq_len = dims[1];
+                let hidden = dims[2];
+                let history =
+                    x.reshape(&[seq_len, hidden])?.transpose(0, 1)?.to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_norm_input_history_ref_layout",
+                    self.attention.layer_idx
+                );
+                trace_tensor_record(
+                    &trace_name,
+                    &history,
+                    trace_seq,
+                    Some(self.attention.layer_idx as isize),
+                    "attention_norm_input_history_ref_layout",
+                )?;
+            }
+        }
+
         let x = norm_forward(&self.attention_norm, x, self.norm_eps, self.norm_type)?;
 
         // Probe A2: LayerNorm gamma RMS + LN output RMS (layer 0, step 0 only)

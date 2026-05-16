@@ -103,6 +103,7 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_value_cache_head0_ref_layout", "attention_v_cache_head0_ref_layout_padded"),
     ("attention_value_cache_kv_head_live", "attention_v_cache_kv_head"),
     ("attention_value_cache_f16_roundtrip", "attention_v_cache_f16_roundtrip_kv_head"),
+    ("attention_norm_input_history", "attention_norm_input_history_ref_layout"),
     ("attention_value_projection_input_history", "attention_v_input_history_ref_layout"),
     ("attention_value_mix_f16_cache_head_lanes", "attention_value_mix_f16_cache_head"),
     ("attention_value_mix_f16_cache_merged", "attention_value_mix_f16_cache_merged"),
@@ -5115,6 +5116,8 @@ fn compare_reference_to_rust_with_records(
         layer_output_history_delta(reference_records, rust_record_list);
     report["layer_1_operation_boundary_delta"] =
         layer_operation_boundary_delta(reference_records, rust_record_list, 1);
+    report["attention_norm_input_history_delta"] =
+        attention_norm_input_history_delta(reference_records, rust_records);
     report
 }
 
@@ -9868,6 +9871,58 @@ fn attention_norm_history_delta(
     })
 }
 
+fn attention_norm_input_history_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference = reference_records
+        .iter()
+        .find(|record| record.stage == "attn_norm_input_history_ref_layout")
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let rust = rust_records
+        .get("attention_norm_input_history_ref_layout")
+        .filter(|record| !record.first_values.is_empty());
+
+    let delta = reference.zip(rust).and_then(|(reference, rust)| {
+        let dim_count = dim_major_dim_count(reference).ok()?;
+        let token_count = dim_major_token_count(reference).ok()?;
+        Some(dim_major_token_value_delta(
+            &reference.first_values,
+            &rust.first_values,
+            dim_count,
+            token_count,
+        ))
+    });
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference.is_none() {
+        blocked_reasons.push("reference_attn_norm_input_history_ref_layout_missing".to_string());
+    }
+    if rust.is_none() {
+        blocked_reasons.push("rust_attention_norm_input_history_ref_layout_missing".to_string());
+    }
+    if reference.is_some() && rust.is_some() && delta.is_none() {
+        blocked_reasons.push("attention_norm_input_history_delta_unavailable".to_string());
+    }
+    if delta.as_ref().is_some_and(delta_has_material_numeric_delta) {
+        blocked_reasons.push("attention_norm_input_history_delta_present".to_string());
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "attention-norm input history delta is diagnostic-only evidence for whether layer input history already differs before attention RMSNorm; it does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "reference_stage": "attn_norm_input_history_ref_layout",
+        "rust_stage": "attention_norm_input_history_ref_layout",
+        "reference_present": reference.is_some(),
+        "rust_present": rust.is_some(),
+        "reference": reference.map(reference_record_summary).unwrap_or(Value::Null),
+        "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+        "delta": delta.unwrap_or(Value::Null),
+        "current_blocked_reasons": blocked_reasons,
+    })
+}
+
 fn reference_dim_major_token(record: &ReferenceTraceRecord, token: usize) -> Result<Vec<f32>> {
     let dim_count = dim_major_dim_count(record)?;
     let token_count = dim_major_token_count(record)?;
@@ -12109,11 +12164,12 @@ mod tests {
         assert!(patch.contains(
             "bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer)"
         ));
+        assert!(patch.contains("bitnet_rs_history_layer == bitnet_rs_requested_history_layer"));
         assert!(patch.contains(
-            "bitnet_rs_history_layer == bitnet_rs_reference_layer_trace_requested_layer()"
+            "history_record_name << (bitnet_rs_history_is_attn_norm ? \"attn_norm_history_ref_layout-\" : (bitnet_rs_history_is_attn_norm_input ? \"attn_norm_input_history_ref_layout-\" : \"vcur_history_ref_layout-\")) << bitnet_rs_effective_history_layer"
         ));
         assert!(patch.contains(
-            "history_record_name << (bitnet_rs_history_is_attn_norm ? \"attn_norm_history_ref_layout-\" : \"vcur_history_ref_layout-\") << bitnet_rs_history_layer"
+            "strcmp(bitnet_rs_history_stage, \"l_out\") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer"
         ));
         assert!(!patch.contains(
             "const bool bitnet_rs_history_is_attn_norm = strcmp(name, \"attn_norm-0\") == 0"
@@ -15381,6 +15437,46 @@ mod tests {
         assert_eq!(input_history.pointer("/delta/first_mismatch_layout/dim"), Some(&json!(0)));
         assert_eq!(input_history.pointer("/delta/first_mismatch_layout/token"), Some(&json!(2)));
         assert_eq!(input_history.pointer("/delta/token_mismatch_counts/0/token"), Some(&json!(2)));
+    }
+
+    #[test]
+    fn compare_reports_attention_norm_input_history_delta() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+            ..test_reference_trace_record(
+                "attn_norm_input_history_ref_layout",
+                vec![1.0, 1.1, 1.2, 2.0, 2.1, 2.2],
+            )
+        }];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_norm_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                ..test_rust_trace_record(
+                    "attention_norm_input_history_ref_layout",
+                    vec![1.0, 1.1, 1.25, 2.0, 2.1, 2.2],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let input_history = report.pointer("/attention_norm_input_history_delta").unwrap();
+        let reasons =
+            input_history.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(input_history.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(input_history.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(input_history.pointer("/reference_present"), Some(&json!(true)));
+        assert_eq!(input_history.pointer("/rust_present"), Some(&json!(true)));
+        assert_eq!(input_history.pointer("/delta/layout"), Some(&json!("dim_major_token_minor")));
+        assert_eq!(input_history.pointer("/delta/first_mismatch_layout/dim"), Some(&json!(0)));
+        assert_eq!(input_history.pointer("/delta/first_mismatch_layout/token"), Some(&json!(2)));
+        assert!(reasons.contains(&json!("attention_norm_input_history_delta_present")));
     }
 
     #[test]
