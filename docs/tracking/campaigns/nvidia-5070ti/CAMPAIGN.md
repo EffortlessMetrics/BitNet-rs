@@ -259,7 +259,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |
 | CUDA-SERVER-001 | merged | PR #4820 added claim-safe strict dense Qwen server receipt classification without promoting server readiness or speed. |
 | CUDA-SERVER-002 | merged | PR #4854 committed the exact bounded dense Qwen strict RTX 5070 Ti server-smoke receipt before any server-ready coverage promotion. |
-| CUDA-STATUS-001 | in progress | Add a user-facing CUDA capability matrix page backed by model coverage and campaign proof state without promoting model, speed, server, or residency claims. |
+| CUDA-STATUS-001 | pr open | PR #5158 adds a user-facing CUDA capability matrix page backed by model coverage and campaign proof state without promoting model, speed, server, or residency claims. |
 
 ## Review Policy
 

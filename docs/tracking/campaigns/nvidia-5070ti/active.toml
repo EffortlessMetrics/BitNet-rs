@@ -1702,8 +1702,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-STATUS-001"
-status = "in_progress"
+status = "pr_open"
 branch = "docs/cuda-capability-matrix"
+pr = 5158
+head_sha = "a2b40e3ea6f2cec6470a1d81443b21b07c1cc5c7"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
