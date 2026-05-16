@@ -2042,7 +2042,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-021"
-status = "in_progress"
+status = "pr_open"
+pr = 5133
+head_sha = "6e280e129ac810442ba51543e9d781b398b4ba4c"
 branch = "model/slm-cpu-021-smollm2-wrong-token-diagnosis"
 stackable = false
 review_mode = "codex_premerge"
