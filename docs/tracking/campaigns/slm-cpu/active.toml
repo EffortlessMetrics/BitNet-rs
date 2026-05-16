@@ -1883,8 +1883,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-018"
-status = "ready"
-branch = "docs/slm-cpu-018-smollm2-normalization-policy"
+status = "pr_open"
+pr = 5067
+head_sha = "1198f6407fedee83db0c5a4ce62e543c7b858601"
+branch = "docs/slm-cpu-018-smollm2-normalization-policy-linear"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
