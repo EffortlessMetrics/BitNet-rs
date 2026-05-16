@@ -77,7 +77,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-002-bitnet-warm-refresh"
 stackable = false
 review_mode = "codex_premerge"
