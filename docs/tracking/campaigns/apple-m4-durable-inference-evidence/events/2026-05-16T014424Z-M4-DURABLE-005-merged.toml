@@ -1,0 +1,27 @@
+timestamp = "2026-05-16T01:44:24Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-005"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+pr = 5025
+merge_sha = "e6c7573e9ccb35197eeeff4f83dd594068d6448e"
+branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-005-operator-envelope-v3"
+summary = "Closed M4-DURABLE-005 after PR #5025 published the durable M4 operator envelope v3."
+
+artifacts = [
+  "docs/slm/apple-m4-operator-envelope-v3.md",
+  "docs/slm/apple-m4-durable-inference-evidence.md",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-durable-inference-evidence/generated/status.md",
+  "docs/tracking/generated/active-prs.md",
+  "docs/tracking/generated/blocked-items.md",
+  "docs/tracking/generated/global-dashboard.md",
+]
+
+notes = [
+  "The operator envelope v3 records refresh cadence, matching-history thresholds, resident_100 dense status, BitNet durable status, disk/cache guidance, and claim boundaries.",
+  "The closeout keeps the insufficient_history boundary explicit for dense SLM eval v2 and BitNet variable warm; no trend is claimed for those groups.",
+  "No live model run, model download, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is made.",
+]

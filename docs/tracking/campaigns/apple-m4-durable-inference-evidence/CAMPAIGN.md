@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-durable-inference-evidence`
 
-Status: active
+Status: complete
 
 ## Objective
 
@@ -28,10 +28,13 @@ model-free.
 - `bitnet mac benchmark` includes a bounded `resident_100` dense SLM profile.
 - Dense SLM benchmark v2 reports have matching-history pairs for each supported
   model identity.
-- BitNet eval, benchmark, and variable warm-session reports have matching
-  history for the accepted artifact/tokenizer identity.
-- `bitnet mac regression-dashboard` has comparable dense SLM and BitNet groups
-  instead of only `insufficient_history`.
+- BitNet eval and benchmark reports have matching history for the accepted
+  artifact/tokenizer identity.
+- BitNet variable warm-session reports are receipt-valid and explicitly marked
+  `insufficient_history` until another matching refresh exists.
+- `bitnet mac regression-dashboard` has comparable dense SLM benchmark, BitNet
+  eval, and BitNet benchmark groups, with explicit `insufficient_history`
+  boundaries for dense SLM eval v2 and BitNet variable warm.
 - The operator envelope records refresh cadence, thresholds, and boundaries
   from matching-identity comparisons.
 
@@ -43,7 +46,7 @@ model-free.
 | M4-DURABLE-002 | merged | PR #4988 refreshed dense SLM benchmark reports for every supported M4 model, including `resident_100`; strict regression against the previous baseline is blocked by the expected profile-set mismatch. |
 | M4-DURABLE-003 | merged | PR #5001 refreshed BitNet eval, benchmark, and variable warm-session reports for the accepted artifact/tokenizer identity. |
 | M4-DURABLE-004 | merged | PR #5009 regenerated report-refresh and regression-dashboard artifacts with real comparable history groups and explicit insufficient-history boundaries. |
-| M4-DURABLE-005 | pr_open | PR #5025 publishes operator envelope v3 from the durable evidence run. |
+| M4-DURABLE-005 | merged | PR #5025 published operator envelope v3 from the durable evidence run. |
 
 ## Review Policy
 
