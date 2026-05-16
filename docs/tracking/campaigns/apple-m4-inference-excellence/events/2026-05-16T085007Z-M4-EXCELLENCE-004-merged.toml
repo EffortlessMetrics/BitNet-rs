@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T08:50:07Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5089
+merge_sha = "38706c2f8ca57d2b0fb332ee1bca2bb4bc1e2ec4"
+
+notes = [
+  "Merged PR #5089, publishing M4 dense SLM and BitNet drift threshold docs.",
+  "The thresholds separate identity and required-field blockers, zero-tolerance quality and timeout regressions, advisory timing warnings, advisory memory warnings, and unsupported claim boundaries.",
+  "The docs explicitly preserve the BitNet variable-warm boundary: dashboard matching-history evidence exists, but direct `bitnet mac regression --baseline` does not yet support `bitnet_apple_m4_warm_session`.",
+  "M4-EXCELLENCE-004 is tracker-closed as docs/tracking only; no runtime behavior change, live model run, model download, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
