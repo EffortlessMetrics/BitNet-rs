@@ -2607,7 +2607,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-SMOLLM2-001"
-status = "ready"
+status = "in_progress"
 branch = "model/cuda-smollm2-360m-artifact-contract"
 stackable = false
 review_mode = "codex_premerge"
