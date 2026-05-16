@@ -5128,6 +5128,8 @@ fn compare_reference_to_rust_with_records(
         layer_history_boundary_delta(reference_records, rust_record_list, 0);
     report["layer_0_attention_output_history_boundary_delta"] =
         layer_attention_output_history_boundary_delta(reference_records, rust_record_list, 0);
+    report["attention_value_mix_head_history_delta"] =
+        attention_value_mix_head_history_delta(reference_records, rust_records);
     report["attention_norm_input_history_delta"] =
         attention_norm_input_history_delta(reference_records, rust_records);
     report
@@ -5616,6 +5618,87 @@ fn attention_value_mix_f16_cache_head_lane_best_matches(
         "attention_value_mix_f16_cache_head",
         "F16-cache value-mix head-lane best matches are diagnostic alternate-path evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, resident KV, selected attention, or any support claim",
     )
+}
+
+fn attention_value_mix_head_history_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kqv_head").map(|head| (head, record)))
+        .filter(|(_, record)| {
+            record.stage.ends_with("_history_ref_layout")
+                && record.values_available
+                && !record.first_values.is_empty()
+        })
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_value_mix_head").map(|head| (head, record))
+        })
+        .filter(|(head, record)| {
+            record.stage.as_deref().unwrap_or("")
+                == format!("attention_value_mix_head{head}_history_ref_layout")
+                && !record.first_values.is_empty()
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_rust_head_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut first_material_head = Value::Null;
+
+    for (&head, reference) in &reference_heads {
+        let rust = rust_heads.get(&head).copied();
+        if rust.is_none() {
+            missing_rust_head_count += 1;
+        }
+
+        let mut status = if rust.is_some() { "summary_match" } else { "missing_rust_head" };
+        let mut delta = Value::Null;
+        let mut material_mismatch = false;
+        if let Some(rust) = rust {
+            compared_head_count += 1;
+            delta = dim_major_history_record_delta(reference, rust);
+            material_mismatch = delta_has_material_numeric_delta(&delta);
+            if material_mismatch {
+                status = "material_mismatch";
+                material_mismatch_count += 1;
+            }
+        }
+
+        let row = json!({
+            "head": head,
+            "status": status,
+            "reference_stage": reference.stage,
+            "rust_stage": format!("attention_value_mix_head{head}_history_ref_layout"),
+            "reference": reference_record_summary(reference),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "delta": delta,
+            "material_mismatch": material_mismatch,
+        });
+        if material_mismatch && first_material_head.is_null() {
+            first_material_head = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Per-head value-mix full-history deltas are diagnostic-only evidence for locating which head introduces merged value-mix history drift; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_rust_head_count": missing_rust_head_count,
+        "material_mismatch_count": material_mismatch_count,
+        "first_material_head": first_material_head,
+        "rows": rows,
+    })
 }
 
 fn attention_value_mix_reference_scalar_recompute(
@@ -11323,6 +11406,13 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
             "scope": format!("layer0 value-mix sampled token head{head}"),
         }));
     }
+    for head in 0..20 {
+        stage_mapping.push(json!({
+            "reference": format!("kqv_head{head}_history_ref_layout"),
+            "rust": format!("attention_value_mix_head{head}_history_ref_layout"),
+            "scope": format!("layer0 full-prefix value-mix history head{head}"),
+        }));
+    }
     stage_mapping.extend([
         json!({"reference": "kqv_merged", "rust": "attention_value_mix_merged", "scope": "layer0 non-contiguous all-token value-mix merge view"}),
         json!({"reference": "attn_value_mix", "rust": "attention_value_mix_merged", "scope": "layer0 contiguous merged value-mix before subnorm"}),
@@ -13680,6 +13770,66 @@ mod tests {
         assert_eq!(f16_matches.pointer("/identity_best_count"), Some(&json!(1)));
         assert_eq!(f16_matches.pointer("/non_identity_best_count"), Some(&json!(1)));
         assert_eq!(f16_matches.pointer("/rows/1/best_rust_head"), Some(&json!(2)));
+    }
+
+    #[test]
+    fn compare_reports_attention_value_mix_head_history_delta() {
+        let mut reference_head0 =
+            test_reference_trace_record("kqv_head0_history_ref_layout", vec![1.0, 1.1, 2.0, 2.1]);
+        reference_head0.shape = vec![2, 2, 1, 1];
+        reference_head0.nelements = 4;
+        reference_head0.layer = Some(0);
+        let mut reference_head1 =
+            test_reference_trace_record("kqv_head1_history_ref_layout", vec![3.0, 3.1, 4.0, 4.1]);
+        reference_head1.shape = vec![2, 2, 1, 1];
+        reference_head1.nelements = 4;
+        reference_head1.layer = Some(0);
+        let reference_records = vec![reference_head0, reference_head1];
+
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_value_mix_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 1.1, 2.0, 2.1],
+                ..test_rust_trace_record(
+                    "attention_value_mix_head0_history_ref_layout",
+                    vec![1.0, 1.1, 2.0, 2.1],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_value_mix_head1_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![3.0, 3.1, 4.0, 4.6],
+                ..test_rust_trace_record(
+                    "attention_value_mix_head1_history_ref_layout",
+                    vec![3.0, 3.1, 4.0, 4.6],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let history = report.pointer("/attention_value_mix_head_history_delta").unwrap();
+
+        assert_eq!(history.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(history.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(history.pointer("/reference_head_count"), Some(&json!(2)));
+        assert_eq!(history.pointer("/rust_head_count"), Some(&json!(2)));
+        assert_eq!(history.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(history.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(history.pointer("/first_material_head/head"), Some(&json!(1)));
+        assert_eq!(
+            history.pointer("/first_material_head/delta/first_mismatch_layout/dim"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            history.pointer("/first_material_head/delta/first_mismatch_layout/token"),
+            Some(&json!(1))
+        );
     }
 
     #[test]

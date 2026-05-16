@@ -1132,6 +1132,24 @@ impl MultiHeadAttention {
         if self.layer_idx == trace_target_layer() {
             for head_idx in 0..self.n_heads {
                 let head = attn_value_mix.narrow(1, head_idx, 1)?;
+                let history = head
+                    .reshape(&[seq_len, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_value_mix_head{head_idx}_history_ref_layout",
+                    self.layer_idx
+                );
+                let history_stage =
+                    format!("attention_value_mix_head{head_idx}_history_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &history,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &history_stage,
+                )?;
                 let suffix = format!("blk{}/attention_value_mix_head{head_idx}", self.layer_idx);
                 let stage = format!("attention_value_mix_head{head_idx}");
                 trace_tensor_token_axis_record(
