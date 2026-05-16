@@ -9855,6 +9855,8 @@ fn layer_attention_norm_f64_downstream_effect(
         &frontier,
         layer,
     );
+    let f64_probability_history =
+        layer_attention_norm_f64_probability_history_effect(reference_records, f64_rust_records);
     let f64_ffn_history = layer_ffn_history_drift(reference_records, f64_rust_record_list, layer);
     let f64_layer_operation =
         layer_operation_boundary_delta(reference_records, f64_rust_record_list, layer);
@@ -9884,6 +9886,12 @@ fn layer_attention_norm_f64_downstream_effect(
             .unwrap_or(0)
             + value_u64(&f64_value_mix_attribution, "/value_cache_source_delta_material_count")
                 .unwrap_or(0);
+    let f64_probability_history_material_count =
+        value_u64(&f64_probability_history, "/probability_history_material_count").unwrap_or(0);
+    let f64_score_raw_history_material_count =
+        value_u64(&f64_probability_history, "/score_raw_history_material_count").unwrap_or(0);
+    let f64_score_raw_live_material_count =
+        value_u64(&f64_probability_history, "/score_raw_live_material_count").unwrap_or(0);
     let f64_ffn_history_material_count =
         value_u64(&f64_ffn_history, "/history/material_stage_count").unwrap_or(0);
     let f64_ffn_current_material_count =
@@ -9912,6 +9920,10 @@ fn layer_attention_norm_f64_downstream_effect(
                 .unwrap_or(0)
             + value_u64(&f64_value_mix_attribution, "/value_cache_source_delta_missing_count")
                 .unwrap_or(0);
+    let f64_probability_history_missing_count =
+        value_u64(&f64_probability_history, "/probability_history_missing_count").unwrap_or(0);
+    let f64_score_raw_history_missing_count =
+        value_u64(&f64_probability_history, "/score_raw_history_missing_count").unwrap_or(0);
     let f64_ffn_missing_count = value_u64(&f64_ffn_history, "/history/missing_stage_count")
         .unwrap_or(0)
         + value_u64(&f64_ffn_history, "/current_token/missing_stage_count").unwrap_or(0);
@@ -9947,6 +9959,16 @@ fn layer_attention_norm_f64_downstream_effect(
     if f64_value_mix_source_material_count > 0 {
         blocked_reasons.push("f64_value_mix_history_source_delta_present".to_string());
     }
+    if f64_probability_history_material_count > 0 {
+        blocked_reasons.push("f64_probability_history_material_mismatch_present".to_string());
+    }
+    if f64_score_raw_history_material_count > 0 {
+        blocked_reasons.push("f64_score_raw_history_material_mismatch_present".to_string());
+    }
+    if f64_score_raw_live_material_count > 0 {
+        blocked_reasons
+            .push("f64_score_raw_history_live_tail_material_mismatch_present".to_string());
+    }
     if f64_ffn_history_material_count > 0 {
         blocked_reasons.push("f64_ffn_history_material_mismatch_present".to_string());
     }
@@ -9968,6 +9990,12 @@ fn layer_attention_norm_f64_downstream_effect(
     if f64_value_mix_attribution_missing_count > 0 {
         blocked_reasons.push("f64_value_mix_history_attribution_coverage_incomplete".to_string());
     }
+    if f64_probability_history_missing_count > 0 {
+        blocked_reasons.push("f64_probability_history_coverage_incomplete".to_string());
+    }
+    if f64_score_raw_history_missing_count > 0 {
+        blocked_reasons.push("f64_score_raw_history_coverage_incomplete".to_string());
+    }
     if f64_ffn_missing_count > 0 {
         blocked_reasons.push("f64_ffn_history_coverage_incomplete".to_string());
     }
@@ -9984,6 +10012,9 @@ fn layer_attention_norm_f64_downstream_effect(
         && f64_value_mix_target_material_count == 0
         && f64_value_mix_rust_self_material_count == 0
         && f64_value_mix_source_material_count == 0
+        && f64_probability_history_material_count == 0
+        && f64_score_raw_history_material_count == 0
+        && f64_score_raw_live_material_count == 0
         && f64_ffn_history_material_count == 0
         && f64_ffn_current_material_count == 0
         && f64_layer_operation_material_count == 0
@@ -9992,6 +10023,8 @@ fn layer_attention_norm_f64_downstream_effect(
         && f64_layer_output_missing_count == 0
         && f64_attention_output_history_missing_count == 0
         && f64_value_mix_attribution_missing_count == 0
+        && f64_probability_history_missing_count == 0
+        && f64_score_raw_history_missing_count == 0
         && f64_ffn_missing_count == 0
         && f64_layer_operation_missing_count == 0;
     let next_action = if !f64_capture_cleared {
@@ -10021,11 +10054,89 @@ fn layer_attention_norm_f64_downstream_effect(
             "layer_output_history_delta": f64_layer_output,
             "attention_output_history_boundary_delta": f64_attention_output_history,
             "value_mix_history_attribution": f64_value_mix_attribution,
+            "probability_history_effect": f64_probability_history,
             "ffn_history_drift": f64_ffn_history,
             "layer_operation_boundary_delta": f64_layer_operation,
             "next_layer_operation_boundary_delta": f64_next_layer_operation,
         },
         "f64_downstream_clear": f64_downstream_clear,
+        "current_blocked_reasons": blocked_reasons,
+        "next_action": next_action,
+    })
+}
+
+fn layer_attention_norm_f64_probability_history_effect(
+    reference_records: &[ReferenceTraceRecord],
+    f64_rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let score_raw_history = attention_score_raw_history_delta(reference_records, f64_rust_records);
+    let score_raw_live_tail =
+        attention_score_raw_history_live_tail_delta(reference_records, f64_rust_records);
+    let probability_history =
+        attention_probability_history_delta(reference_records, f64_rust_records);
+
+    let score_raw_history_material_count =
+        value_u64(&score_raw_history, "/material_mismatch_count").unwrap_or(0);
+    let score_raw_history_missing_count =
+        value_u64(&score_raw_history, "/missing_rust_head_count").unwrap_or(0);
+    let score_raw_live_material_count =
+        value_u64(&score_raw_live_tail, "/live_material_mismatch_count").unwrap_or(0);
+    let probability_history_material_count =
+        value_u64(&probability_history, "/material_mismatch_count").unwrap_or(0);
+    let probability_history_missing_count =
+        value_u64(&probability_history, "/missing_rust_head_count").unwrap_or(0);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if score_raw_history_material_count > 0 {
+        blocked_reasons.push("f64_score_raw_history_material_mismatch_present".to_string());
+    }
+    if score_raw_live_material_count > 0 {
+        blocked_reasons
+            .push("f64_score_raw_history_live_tail_material_mismatch_present".to_string());
+    }
+    if probability_history_material_count > 0 {
+        blocked_reasons.push("f64_probability_history_material_mismatch_present".to_string());
+    }
+    if score_raw_history_missing_count > 0 {
+        blocked_reasons.push("f64_score_raw_history_coverage_incomplete".to_string());
+    }
+    if probability_history_missing_count > 0 {
+        blocked_reasons.push("f64_probability_history_coverage_incomplete".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let next_action = if probability_history_material_count == 0
+        && score_raw_history_material_count == 0
+        && score_raw_live_material_count == 0
+        && probability_history_missing_count == 0
+        && score_raw_history_missing_count == 0
+    {
+        "f64 probability history is clean; inspect value-mix arithmetic or history serialization"
+    } else if score_raw_history_missing_count > 0 || probability_history_missing_count > 0 {
+        "capture missing f64 score/probability history heads before attributing probability drift"
+    } else if probability_history_material_count > 0 && score_raw_history_material_count > 0 {
+        "probability-history drift follows raw score-history drift; localize score formation before changing softmax"
+    } else if probability_history_material_count > 0 {
+        "raw score history is clean while probability history drifts; inspect softmax probability formation or trace serialization"
+    } else if score_raw_history_material_count > 0 || score_raw_live_material_count > 0 {
+        "raw score history drifts without probability drift; inspect score-history scope before changing value mix"
+    } else {
+        "probability history effect is inconclusive; inspect source rows before changing runtime math"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 probability-history effect is diagnostic-only evidence for deciding whether f64 value-mix probability-source drift is inherited from raw score history or introduced at probability formation; it does not promote runtime math changes, reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "score_raw_history_material_count": score_raw_history_material_count,
+        "score_raw_history_missing_count": score_raw_history_missing_count,
+        "score_raw_live_material_count": score_raw_live_material_count,
+        "probability_history_material_count": probability_history_material_count,
+        "probability_history_missing_count": probability_history_missing_count,
+        "score_raw_history_delta": score_raw_history,
+        "score_raw_history_live_tail_delta": score_raw_live_tail,
+        "probability_history_delta": probability_history,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
     })
@@ -22423,6 +22534,13 @@ mod tests {
         reference_value_mix_head.shape = vec![2, 2, 1, 1];
         reference_value_mix_head.full_shape = vec![2, 2, 1, 1];
         reference_value_mix_head.nelements = 4;
+        let mut reference_score =
+            test_reference_trace_record("kq_head0_history_ref_layout", vec![4.0, 3.0, 1.0, 2.0]);
+        reference_score.name = "kq_head0_history_ref_layout-0".to_string();
+        reference_score.layer = Some(0);
+        reference_score.shape = vec![2, 2, 1, 1];
+        reference_score.full_shape = vec![2, 2, 1, 1];
+        reference_score.nelements = 4;
         let mut rust_ffn_history = test_rust_trace_record(
             "post_attention_residual_history_ref_layout",
             vec![1.0, 2.5, 3.0, 4.0],
@@ -22457,6 +22575,14 @@ mod tests {
         rust_value_mix_head.layer = Some(0);
         rust_value_mix_head.shape = vec![2, 2];
         rust_value_mix_head.num_elements = 4;
+        let mut rust_score = test_rust_trace_record(
+            "attention_scores_raw_head0_history_ref_layout",
+            vec![4.0, 3.0, 1.0, 2.0],
+        );
+        rust_score.name = "t0/blk0/attention_scores_raw_head0_history_ref_layout".to_string();
+        rust_score.layer = Some(0);
+        rust_score.shape = vec![2, 2];
+        rust_score.num_elements = 4;
         let rust_records = vec![
             rust_layer0.clone(),
             rust_attention.clone(),
@@ -22464,6 +22590,7 @@ mod tests {
             rust_probability.clone(),
             rust_value_cache.clone(),
             rust_value_mix_head.clone(),
+            rust_score.clone(),
         ];
         let mut rust_map = BTreeMap::new();
         rust_map.insert("post_layer".to_string(), rust_layer0);
@@ -22479,6 +22606,7 @@ mod tests {
             "attention_value_mix_head0_history_ref_layout".to_string(),
             rust_value_mix_head,
         );
+        rust_map.insert("attention_scores_raw_head0_history_ref_layout".to_string(), rust_score);
         let baseline = json!({
             "first_material_mismatch": {
                 "reference_stage": "attn_norm",
@@ -22519,6 +22647,7 @@ mod tests {
                 reference_probability,
                 reference_value_cache,
                 reference_value_mix_head,
+                reference_score,
             ],
             &rust_records,
             &rust_map,
@@ -22564,12 +22693,22 @@ mod tests {
             report.pointer("/f64/value_mix_history_attribution/rust_self_recompute_material_count"),
             Some(&json!(0))
         );
+        assert_eq!(
+            report.pointer("/f64/probability_history_effect/probability_history_material_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            report.pointer("/f64/probability_history_effect/score_raw_history_material_count"),
+            Some(&json!(0))
+        );
         let reasons = report.pointer("/current_blocked_reasons").unwrap().as_array().unwrap();
         assert!(reasons.contains(&json!("f64_capture_residual_numeric_delta_present")));
         assert!(reasons.contains(&json!("f64_attention_output_history_material_mismatch_present")));
         assert!(reasons.contains(&json!("f64_attention_output_history_coverage_incomplete")));
         assert!(reasons.contains(&json!("f64_value_mix_history_target_mismatch_present")));
         assert!(reasons.contains(&json!("f64_value_mix_history_source_delta_present")));
+        assert!(reasons.contains(&json!("f64_probability_history_material_mismatch_present")));
+        assert!(!reasons.contains(&json!("f64_score_raw_history_material_mismatch_present")));
         assert!(reasons.contains(&json!("f64_ffn_history_material_mismatch_present")));
         assert!(reasons.contains(&json!("f64_ffn_history_coverage_incomplete")));
         assert!(reasons.contains(&json!("f64_layer_output_material_mismatch_present")));
