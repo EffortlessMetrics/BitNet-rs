@@ -9840,6 +9840,11 @@ fn layer_attention_norm_f64_downstream_effect(
     let f64_stage_summary =
         first_material_mismatch_summary(reference_records, f64_rust_records, &stage_mapping);
     let f64_layer_output = layer_output_history_delta(reference_records, f64_rust_record_list);
+    let f64_attention_output_history = layer_attention_output_history_boundary_delta(
+        reference_records,
+        f64_rust_record_list,
+        layer,
+    );
     let f64_ffn_history = layer_ffn_history_drift(reference_records, f64_rust_record_list, layer);
     let f64_layer_operation =
         layer_operation_boundary_delta(reference_records, f64_rust_record_list, layer);
@@ -9858,6 +9863,8 @@ fn layer_attention_norm_f64_downstream_effect(
         value_u64(&f64_stage_summary, "/material_mismatch_count").unwrap_or(0);
     let f64_layer_output_material_count =
         value_u64(&f64_layer_output, "/material_mismatch_count").unwrap_or(0);
+    let f64_attention_output_history_material_count =
+        value_u64(&f64_attention_output_history, "/material_mismatch_count").unwrap_or(0);
     let f64_ffn_history_material_count =
         value_u64(&f64_ffn_history, "/history/material_stage_count").unwrap_or(0);
     let f64_ffn_current_material_count =
@@ -9871,6 +9878,9 @@ fn layer_attention_norm_f64_downstream_effect(
         + value_u64(&f64_stage_summary, "/missing_rust_count").unwrap_or(0);
     let f64_layer_output_missing_count =
         value_u64(&f64_layer_output, "/missing_rust_count").unwrap_or(0);
+    let f64_attention_output_history_missing_count =
+        value_u64(&f64_attention_output_history, "/missing_reference_count").unwrap_or(0)
+            + value_u64(&f64_attention_output_history, "/missing_rust_count").unwrap_or(0);
     let f64_ffn_missing_count = value_u64(&f64_ffn_history, "/history/missing_stage_count")
         .unwrap_or(0)
         + value_u64(&f64_ffn_history, "/current_token/missing_stage_count").unwrap_or(0);
@@ -9893,6 +9903,9 @@ fn layer_attention_norm_f64_downstream_effect(
     if f64_layer_output_material_count > 0 {
         blocked_reasons.push("f64_layer_output_material_mismatch_present".to_string());
     }
+    if f64_attention_output_history_material_count > 0 {
+        blocked_reasons.push("f64_attention_output_history_material_mismatch_present".to_string());
+    }
     if f64_ffn_history_material_count > 0 {
         blocked_reasons.push("f64_ffn_history_material_mismatch_present".to_string());
     }
@@ -9908,6 +9921,9 @@ fn layer_attention_norm_f64_downstream_effect(
     if f64_layer_output_missing_count > 0 {
         blocked_reasons.push("f64_layer_output_history_coverage_incomplete".to_string());
     }
+    if f64_attention_output_history_missing_count > 0 {
+        blocked_reasons.push("f64_attention_output_history_coverage_incomplete".to_string());
+    }
     if f64_ffn_missing_count > 0 {
         blocked_reasons.push("f64_ffn_history_coverage_incomplete".to_string());
     }
@@ -9920,12 +9936,14 @@ fn layer_attention_norm_f64_downstream_effect(
     let f64_downstream_clear = f64_capture_cleared
         && f64_stage_material_count == 0
         && f64_layer_output_material_count == 0
+        && f64_attention_output_history_material_count == 0
         && f64_ffn_history_material_count == 0
         && f64_ffn_current_material_count == 0
         && f64_layer_operation_material_count == 0
         && f64_next_layer_operation_material_count == 0
         && f64_missing_stage_count == 0
         && f64_layer_output_missing_count == 0
+        && f64_attention_output_history_missing_count == 0
         && f64_ffn_missing_count == 0
         && f64_layer_operation_missing_count == 0;
     let next_action = if !f64_capture_cleared {
@@ -9953,6 +9971,7 @@ fn layer_attention_norm_f64_downstream_effect(
         "f64": {
             "stage_summary": f64_stage_summary,
             "layer_output_history_delta": f64_layer_output,
+            "attention_output_history_boundary_delta": f64_attention_output_history,
             "ffn_history_drift": f64_ffn_history,
             "layer_operation_boundary_delta": f64_layer_operation,
             "next_layer_operation_boundary_delta": f64_next_layer_operation,
@@ -22312,6 +22331,19 @@ mod tests {
         rust_layer0.name = "t0/blk0/post_layer".to_string();
         rust_layer0.layer = Some(0);
         rust_layer0.num_elements = 2;
+        let mut reference_attention =
+            test_reference_trace_record("attn_o_out_history_ref_layout", vec![0.5, 1.0, 1.5, 2.0]);
+        reference_attention.name = "attn_o_out_history_ref_layout-0".to_string();
+        reference_attention.layer = Some(0);
+        reference_attention.shape = vec![2, 2, 1, 1];
+        reference_attention.full_shape = vec![2, 2, 1, 1];
+        reference_attention.nelements = 4;
+        let mut rust_attention =
+            test_rust_trace_record("post_o_proj_history_ref_layout", vec![0.5, 1.5, 1.5, 2.0]);
+        rust_attention.name = "t0/blk0/post_o_proj_history_ref_layout".to_string();
+        rust_attention.layer = Some(0);
+        rust_attention.shape = vec![2, 2];
+        rust_attention.num_elements = 4;
         let mut reference_ffn_history =
             test_reference_trace_record("ffn_inp_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0]);
         reference_ffn_history.name = "ffn_inp_history_ref_layout-0".to_string();
@@ -22327,9 +22359,11 @@ mod tests {
         rust_ffn_history.layer = Some(0);
         rust_ffn_history.shape = vec![2, 2];
         rust_ffn_history.num_elements = 4;
-        let rust_records = vec![rust_layer0.clone(), rust_ffn_history.clone()];
+        let rust_records =
+            vec![rust_layer0.clone(), rust_attention.clone(), rust_ffn_history.clone()];
         let mut rust_map = BTreeMap::new();
         rust_map.insert("post_layer".to_string(), rust_layer0);
+        rust_map.insert("post_o_proj_history_ref_layout".to_string(), rust_attention);
         rust_map.insert("post_attention_residual_history_ref_layout".to_string(), rust_ffn_history);
         let baseline = json!({
             "first_material_mismatch": {
@@ -22355,7 +22389,7 @@ mod tests {
         });
 
         let report = layer_attention_norm_f64_downstream_effect(
-            &[reference_layer0, reference_ffn_history],
+            &[reference_layer0, reference_attention, reference_ffn_history],
             &rust_records,
             &rust_map,
             &baseline,
@@ -22377,11 +22411,19 @@ mod tests {
             Some(&json!(0.5))
         );
         assert_eq!(
+            report.pointer(
+                "/f64/attention_output_history_boundary_delta/first_material_boundary/boundary"
+            ),
+            Some(&json!("attention_output_projection_history"))
+        );
+        assert_eq!(
             report.pointer("/f64/ffn_history_drift/history/first_material_stage/boundary"),
             Some(&json!("ffn_input_history"))
         );
         let reasons = report.pointer("/current_blocked_reasons").unwrap().as_array().unwrap();
         assert!(reasons.contains(&json!("f64_capture_residual_numeric_delta_present")));
+        assert!(reasons.contains(&json!("f64_attention_output_history_material_mismatch_present")));
+        assert!(reasons.contains(&json!("f64_attention_output_history_coverage_incomplete")));
         assert!(reasons.contains(&json!("f64_ffn_history_material_mismatch_present")));
         assert!(reasons.contains(&json!("f64_ffn_history_coverage_incomplete")));
         assert!(reasons.contains(&json!("f64_layer_output_material_mismatch_present")));
