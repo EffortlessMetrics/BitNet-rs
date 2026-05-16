@@ -25,6 +25,7 @@ bitnet receipts explain --latest
 | User quickstart | `docs/tutorials/9950x3d-5070ti-cuda-quickstart.md` |
 | BitNet CUDA guide | `docs/tutorials/rtx5070ti-bitnet-cuda.md` |
 | Dense Qwen CUDA guide | `docs/tutorials/rtx5070ti-dense-qwen-cuda.md` |
+| Receipt triage guide | `docs/tutorials/cuda-receipt-triage.md` |
 
 ## Current CUDA Rows
 
