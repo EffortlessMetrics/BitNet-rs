@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T10:09:53Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-001-dense-100"
+summary = "Started dense 100-case corpus evidence closeout."
+
+notes = [
+  "The dense SLM eval-v2 corpus already contains 120 deterministic mechanically scored cases across the required task families from seed 777331.",
+  "This closeout records the existing corpus evidence rather than adding duplicate prompts; it does not run live models, download models, or claim broad dense quality, BitNet behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad performance, or speedup.",
+]
