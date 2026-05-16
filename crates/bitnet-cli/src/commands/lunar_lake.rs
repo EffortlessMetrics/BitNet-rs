@@ -42,6 +42,8 @@ const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
 const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
 const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
+const COLD_WARM_PROFILE_BENCHMARK: &str =
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -254,6 +256,34 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the diagnosis cannot safely classify the committed corpus receipt.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Qualify cold/warm profile timing evidence without running inference or changing routes.
+    #[command(alias = "bench")]
+    Benchmark {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Route profile comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: PathBuf,
+
+        /// Dense SLM phase comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
+        phase_comparison: PathBuf,
+
+        /// Output JSON cold/warm benchmark qualification receipt to file.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the benchmark qualification surface cannot safely gate route promotion.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -757,6 +787,66 @@ pub struct ProfileTimingSummary {
     pub known_gaps: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeColdWarmBenchmark {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub route_profile_comparison_receipt: String,
+    pub phase_comparison_receipt: String,
+    pub benchmark_gate_ready: bool,
+    pub profiles: Vec<ColdWarmProfileBenchmark>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: BenchmarkClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ColdWarmProfileBenchmark {
+    pub profile_id: String,
+    pub promoted_route: Option<String>,
+    pub candidate_routes: Vec<String>,
+    pub routes: Vec<ColdWarmRouteBenchmark>,
+    pub profile_gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ColdWarmRouteBenchmark {
+    pub route_id: String,
+    pub route_status: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub phase_timing_present: Option<bool>,
+    pub timing: ProfileTimingSummary,
+    pub telemetry: BenchmarkTelemetry,
+    pub critical_timing_present: bool,
+    pub benchmark_qualified_advantage: bool,
+    pub promotion_blocked: bool,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BenchmarkTelemetry {
+    pub memory_context: String,
+    pub power_context: String,
+    pub thermal_context: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BenchmarkClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub acceleration_claim: bool,
+    pub hidden_fallback_allowed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+}
+
 impl LunarLakeCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
@@ -907,6 +997,33 @@ impl LunarLakeCommand {
                 if *strict && !receipt.diagnosis_ready {
                     bail!(
                         "Lunar Lake dense Qwen CPU corpus-v2 diagnosis failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::Benchmark {
+                artifact_root,
+                route_profile_comparison,
+                phase_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cold_warm_benchmark_with_created_utc(
+                    artifact_root,
+                    route_profile_comparison,
+                    phase_comparison,
+                    created_utc,
+                )?;
+                write_or_print_cold_warm_benchmark(&receipt, Some(json_out))?;
+                if *strict && !receipt.benchmark_gate_ready {
+                    bail!(
+                        "Lunar Lake cold/warm benchmark qualification failed: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -1827,6 +1944,181 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     })
 }
 
+pub fn build_cold_warm_benchmark_with_created_utc(
+    root: &Path,
+    route_profile_comparison: &Path,
+    phase_comparison: &Path,
+    created_utc: String,
+) -> Result<LunarLakeColdWarmBenchmark> {
+    let route_profile_comparison_path = resolve_receipt_path(root, route_profile_comparison);
+    let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
+    let comparison: LunarLakeRouteProfileComparison =
+        read_json_receipt(&route_profile_comparison_path)?;
+    let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
+
+    let mut gaps = Vec::new();
+    if !comparison.profile_comparison_ready {
+        gaps.push(format!("route profile comparison is not ready: {}", comparison.gaps.join("; ")));
+    }
+    if comparison.claim_boundary.hidden_fallback_allowed {
+        gaps.push("benchmark qualification refuses hidden fallback".to_string());
+    }
+    if comparison.claim_boundary.arc_bitnet_full_inference_claimed
+        || comparison.claim_boundary.npu_bitnet_full_inference_claimed
+        || comparison.claim_boundary.qk256_accelerator_decode_claimed
+    {
+        gaps.push("benchmark qualification refuses accelerator BitNet/QK256 claims".to_string());
+    }
+    if string_at(&phase_comparison_json, "artifact_kind").is_none() {
+        gaps.push("phase comparison receipt is missing artifact_kind".to_string());
+    }
+    if fallback_used(&phase_comparison_json) == Some(true) {
+        gaps.push("phase comparison receipt observed fallback_used=true".to_string());
+    }
+
+    let profiles = comparison
+        .profiles
+        .iter()
+        .map(|profile| cold_warm_profile_benchmark(profile, &mut gaps))
+        .collect::<Vec<_>>();
+
+    let benchmark_gate_ready = gaps.is_empty();
+    Ok(LunarLakeColdWarmBenchmark {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cold_warm_profile_benchmark".to_string(),
+        proof_stage: "profile_timing_qualification_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: comparison.machine_id,
+        artifact_root: path_string(root),
+        route_profile_comparison_receipt: path_string(&route_profile_comparison_path),
+        phase_comparison_receipt: path_string(&phase_comparison_path),
+        benchmark_gate_ready,
+        profiles,
+        gaps,
+        claim_boundary: BenchmarkClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            acceleration_claim: false,
+            hidden_fallback_allowed: false,
+            dense_slm_as_bitnet_proof: false,
+        },
+    })
+}
+
+fn cold_warm_profile_benchmark(
+    profile: &WorkloadProfileEvaluation,
+    global_gaps: &mut Vec<String>,
+) -> ColdWarmProfileBenchmark {
+    let mut profile_gaps = Vec::new();
+    let routes = profile
+        .route_evidence
+        .iter()
+        .map(|route| cold_warm_route_benchmark(profile, route, global_gaps, &mut profile_gaps))
+        .collect::<Vec<_>>();
+    if profile.promoted_route.is_none() && routes.iter().all(|route| route.promotion_blocked) {
+        profile_gaps.push(format!(
+            "{} has no benchmark-qualified promoted route; candidate evidence remains indexed only",
+            profile.profile_id
+        ));
+    }
+    ColdWarmProfileBenchmark {
+        profile_id: profile.profile_id.clone(),
+        promoted_route: profile.promoted_route.clone(),
+        candidate_routes: profile.candidate_routes.clone(),
+        routes,
+        profile_gaps,
+    }
+}
+
+fn cold_warm_route_benchmark(
+    profile: &WorkloadProfileEvaluation,
+    route: &ProfileRouteEvidence,
+    global_gaps: &mut Vec<String>,
+    profile_gaps: &mut Vec<String>,
+) -> ColdWarmRouteBenchmark {
+    let mut blockers = route.blockers.clone();
+    blockers.extend(route.timing.known_gaps.iter().cloned());
+
+    let timing_required = route.route_id != "bitnet_reference_cpu";
+    let critical_timing_present = !timing_required
+        || (route.timing.cold_load_ms.is_some()
+            && route.timing.first_token_ms.is_some()
+            && route.timing.decode_total_ms.is_some()
+            && route.timing.throughput_tokens_per_s.is_some());
+    if !critical_timing_present {
+        blockers.push("cold/warm critical timing is incomplete".to_string());
+    }
+    if timing_required && route.timing.total_response_ms.is_none() {
+        blockers.push("total response latency is missing".to_string());
+    }
+    if !timing_required {
+        blockers.push(
+            "BitNet route uses separate CPU reference and I2_S performance receipts".to_string(),
+        );
+    }
+    if profile.profile_id == "low_power" {
+        blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+    }
+    blockers.sort();
+    blockers.dedup();
+
+    if route.fallback_used == Some(true) {
+        global_gaps.push(format!(
+            "{} route {} observed fallback_used=true",
+            profile.profile_id, route.route_id
+        ));
+    }
+    if route.route_status == "promoted" && !critical_timing_present {
+        global_gaps.push(format!(
+            "{} promoted route {} is missing critical cold/warm timing",
+            profile.profile_id, route.route_id
+        ));
+    }
+    if route.route_status != "promoted" && route.benchmark_qualified_advantage {
+        global_gaps.push(format!(
+            "{} candidate route {} claims benchmark-qualified advantage outside route promotion",
+            profile.profile_id, route.route_id
+        ));
+    }
+    if route.route_status != "promoted" && !blockers.is_empty() {
+        profile_gaps.push(format!(
+            "{} route {} remains blocked: {}",
+            profile.profile_id,
+            route.route_id,
+            blockers.join("; ")
+        ));
+    }
+
+    let benchmark_qualified_advantage =
+        route.benchmark_qualified_advantage && critical_timing_present && blockers.is_empty();
+    let promotion_blocked = route.route_status != "promoted" && !benchmark_qualified_advantage;
+    ColdWarmRouteBenchmark {
+        route_id: route.route_id.clone(),
+        route_status: route.route_status.clone(),
+        selected_backend: route.selected_backend.clone(),
+        runtime_api: route.runtime_api.clone(),
+        fallback_used: route.fallback_used,
+        answer_gate_passed: route.answer_gate_passed,
+        phase_timing_present: route.phase_timing_present,
+        timing: route.timing.clone(),
+        telemetry: BenchmarkTelemetry {
+            memory_context: "not_normalized_in_current_profile_benchmark".to_string(),
+            power_context: if profile.profile_id == "low_power" {
+                "required_for_promotion_but_not_recorded".to_string()
+            } else {
+                "not_normalized_in_current_profile_benchmark".to_string()
+            },
+            thermal_context: "not_normalized_in_current_profile_benchmark".to_string(),
+        },
+        critical_timing_present,
+        benchmark_qualified_advantage,
+        promotion_blocked,
+        blockers,
+    }
+}
+
 pub fn build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
     root: &Path,
     cpu_corpus_v2: &Path,
@@ -2517,6 +2809,25 @@ fn write_or_print_qwen_cpu_corpus_v2_diagnosis(
         }
         fs::write(path, json)?;
         println!("Lunar Lake Qwen CPU corpus-v2 diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cold_warm_benchmark(
+    receipt: &LunarLakeColdWarmBenchmark,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake cold/warm profile benchmark written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -4343,6 +4654,122 @@ mod tests {
         assert!(gpu_route.blockers.iter().any(|blocker| {
             blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn cold_warm_benchmark_indexes_profile_timing_without_promoting_candidates() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            "2026-05-16T07:30:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+
+        let benchmark = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-16T18:00:00Z".to_string(),
+        )?;
+
+        assert!(benchmark.benchmark_gate_ready, "{:?}", benchmark.gaps);
+        assert_eq!(benchmark.artifact_kind, "lunar_lake_cold_warm_profile_benchmark");
+        let Some(ask_normal) =
+            benchmark.profiles.iter().find(|profile| profile.profile_id == "ask_normal")
+        else {
+            bail!("missing ask_normal benchmark");
+        };
+        let cpu = ask_normal
+            .routes
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing CPU route benchmark")?;
+        assert!(cpu.critical_timing_present);
+        assert!(!cpu.promotion_blocked);
+        let gpu = ask_normal
+            .routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing GPU route benchmark")?;
+        assert!(gpu.promotion_blocked);
+        assert!(!gpu.benchmark_qualified_advantage);
+        let Some(low_power) =
+            benchmark.profiles.iter().find(|profile| profile.profile_id == "low_power")
+        else {
+            bail!("missing low_power benchmark");
+        };
+        assert!(low_power.routes.iter().any(|route| {
+            route.route_id == "dense_slm_openvino_npu_candidate"
+                && route.blockers.contains(
+                    &"power telemetry receipt missing for low_power promotion".to_string(),
+                )
+        }));
+        assert!(!benchmark.claim_boundary.speedup_claim);
+        assert!(!benchmark.claim_boundary.route_promotion_changed);
         Ok(())
     }
 

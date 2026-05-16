@@ -4270,6 +4270,66 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-BENCH-001"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-BENCH-001-cold-warm"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OP-004", "LNL258V-ROUTE-003", "LNL258V-QUAL-006"]
+acceptance = "Add a Lunar Lake cold/warm profile benchmark qualification artifact that reads the committed route-profile comparison and dense SLM phase comparison receipts, indexes cold load, tokenize, prefill, first-token, decode, total-response, throughput, telemetry gaps, and profile blockers for promoted CPU, OpenVINO GPU/NPU candidates, and BitNet CPU reference routes, while preserving no-new-inference, no-route-promotion, no-speedup, no-acceleration, and no BitNet QK256/I2_S behavior-change boundaries."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::cold_warm_benchmark_indexes_profile_timing_without_promoting_candidates -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake benchmark --artifact-root ci/hardware/intel-258v/2026-05-08 --route-profile-comparison lunar-lake-route-profile-comparison.json --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json --created-utc 2026-05-16T18:05:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+]
+may_claim = [
+  "Lunar Lake cold/warm profile timing evidence is indexed from existing receipts for promoted CPU, OpenVINO GPU/NPU candidate, and BitNet CPU reference routes.",
+  "Benchmark blockers are recorded for missing total-response, telemetry, profile-split, or benchmark-qualified advantage evidence.",
+  "OpenVINO GPU/NPU remain candidates and no route promotion changes in this PR.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ASK-003"
 status = "merged"
 pr = 4668
