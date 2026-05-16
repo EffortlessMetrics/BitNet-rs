@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T15:51:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-005"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-005-failure-taxonomy"
+summary = "Started dense SLM mechanical failure-category taxonomy work."
+
+notes = [
+  "Scope is additive answer-corpus receipt fields and parser tests for deterministic dense SLM failure categories: formatting, factual/table, extraction, refusal, timeout, schema, and normalization.",
+  "No live model run, 500-case pass-rate refresh, BitNet proof, BitNet chat or serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim is included.",
+]

@@ -116,6 +116,29 @@ Per-case receipts expose `quality.failure_taxonomy` and
 `quality.scoring.failure_taxonomy`; aggregate receipts expose
 `scoring_summary.failure_taxonomy` counts.
 
+`M4-ACCURACY-005` adds explicit mechanical failure-category fields alongside
+those legacy labels. Per-case receipts expose
+`quality.failure_category_labels`, `quality.failure_categories`,
+`quality.scoring.failure_category_labels`, and
+`quality.scoring.failure_categories`; aggregate receipts expose category counts
+under `quality_summary.failure_categories`,
+`scoring_summary.failure_categories`, task-family summaries, and profile
+summaries.
+
+| Category field | Mechanical trigger |
+|---|---|
+| `formatting` | Raw special-token/template tails, malformed shape, fenced JSON parse issues, non-text output, or other format-only failures. |
+| `factual_table` | A failed fixed-table or factual QA family case. |
+| `extraction` | A failed synthetic extraction family case. |
+| `refusal` | A failed answer containing deterministic refusal phrases such as `I cannot`, `can't answer`, or `unable to answer`. |
+| `timeout` | A timed-out child run or timeout failure rule. |
+| `schema` | A JSON/schema scoring failure, including parse/type/required/additional/const/enum rules. |
+| `normalization` | Strict exact-match failed while normalized punctuation/case/spacing would match. |
+
+These fields are deterministic triage signals only. They do not replace
+`failed_rules`, do not judge broad semantic quality, and do not make dense SLM
+evidence apply to BitNet.
+
 ## Published M4 Reports
 
 `M4-SLM-EVAL2-003` publishes 2026-05-14 reports for every supported dense M4
