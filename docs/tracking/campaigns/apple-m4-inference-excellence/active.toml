@@ -161,13 +161,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-004"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-004-drift-thresholds"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-003"]
+pr = 5089
 acceptance = "Publish model-family drift thresholds for M4 dense SLM and BitNet reports, separating identity mismatches, quality failures, timing warnings, memory drift warnings, timeout failures, and unsupported claim boundaries."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",

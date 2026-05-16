@@ -86,7 +86,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-EXCELLENCE-001 | merged | Add a second dense SLM eval-v2 refresh so dense eval groups can become comparable. |
 | M4-EXCELLENCE-002 | merged | Add a second BitNet variable warm refresh so the warm group can become comparable. |
 | M4-EXCELLENCE-003 | merged | Regenerate dashboard trend validation after the second matching-history receipts land. |
-| M4-EXCELLENCE-004 | proposed | Publish drift thresholds by dense SLM and BitNet family. |
+| M4-EXCELLENCE-004 | pr_open | Publish drift thresholds by dense SLM and BitNet family. |
 | M4-ACCURACY-000 | proposed | Freeze corpus/scorer version, seed, normalization, and expected-output contracts. |
 | M4-ACCURACY-001 | proposed | Expand the seeded dense SLM corpus to 100 deterministic mechanically scored cases. |
 | M4-ACCURACY-002 | proposed | Expand the dense SLM corpus to 500 deterministic cases once scoring is stable. |
