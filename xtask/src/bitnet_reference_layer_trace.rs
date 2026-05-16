@@ -5727,9 +5727,13 @@ fn score_row_from_query_key_values(
 #[derive(Debug, Clone, Copy)]
 struct ScoreInputAttributionCandidate<'a> {
     id: &'static str,
+    base_candidate: &'static str,
+    score_input_variant: &'static str,
     query_source: &'static str,
     key_source: &'static str,
     key_layout: ScoreKeyLayout,
+    query_f16_roundtrip: bool,
+    key_f16_roundtrip: bool,
     query_values: &'a [f32],
     key_values: &'a [f32],
 }
@@ -5749,8 +5753,8 @@ fn score_input_candidate_delta(
         head_dim,
         live_token_count,
         candidate.key_layout,
-        true,
-        false,
+        candidate.query_f16_roundtrip,
+        candidate.key_f16_roundtrip,
         ReferenceScoreAccumPolicy::F32,
     )?;
     let values = reference_score_variant_values(
@@ -5763,10 +5767,15 @@ fn score_input_candidate_delta(
     Some(compare_vectors(&values, target))
 }
 
-fn score_input_best_candidate<'a>(
-    candidate_deltas: impl Iterator<Item = (&'a str, &'a Value)>,
-) -> Option<&'a str> {
-    candidate_deltas
+fn score_input_best_candidate_ordered<'a>(
+    candidates: &'a [ScoreInputAttributionCandidate<'_>],
+    candidate_deltas: &BTreeMap<&str, Value>,
+) -> Option<&'static str> {
+    candidates
+        .iter()
+        .filter_map(|candidate| {
+            candidate_deltas.get(candidate.id).map(|delta| (candidate.id, delta))
+        })
         .min_by(|(_, left), (_, right)| {
             let left_rank = (
                 delta_metric(left, "/rms_abs_delta"),
@@ -5781,6 +5790,14 @@ fn score_input_best_candidate<'a>(
             left_rank.partial_cmp(&right_rank).unwrap_or(std::cmp::Ordering::Equal)
         })
         .map(|(id, _)| id)
+}
+
+fn score_input_candidate_by_id<'a>(
+    candidates: &'a [ScoreInputAttributionCandidate<'_>],
+    id: Option<&str>,
+) -> Option<&'a ScoreInputAttributionCandidate<'a>> {
+    let id = id?;
+    candidates.iter().find(|candidate| candidate.id == id)
 }
 
 fn attention_score_input_attribution(
@@ -5844,6 +5861,10 @@ fn attention_score_input_attribution(
     let mut missing_input_count = 0usize;
     let mut reference_best_counts = BTreeMap::<String, usize>::new();
     let mut rust_best_counts = BTreeMap::<String, usize>::new();
+    let mut reference_best_score_input_variant_counts = BTreeMap::<String, usize>::new();
+    let mut rust_best_score_input_variant_counts = BTreeMap::<String, usize>::new();
+    let mut reference_best_key_f16_roundtrip_count = 0usize;
+    let mut rust_best_key_f16_roundtrip_count = 0usize;
     let mut max_reference_best_abs_delta = 0.0f64;
     let mut max_reference_best_rms_delta = 0.0f64;
     let mut max_rust_best_abs_delta = 0.0f64;
@@ -5884,34 +5905,98 @@ fn attention_score_input_attribution(
                 .min(rust_score.first_values.len());
             let candidates = [
                 ScoreInputAttributionCandidate {
-                    id: "reference_q_reference_k",
+                    id: "reference_q_reference_k_q_f16_k_f32",
+                    base_candidate: "reference_q_reference_k",
+                    score_input_variant: "q_f16_k_f32",
                     query_source: "reference_Qcur",
                     key_source: "reference_k_kv_head",
                     key_layout: ScoreKeyLayout::TokenMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
                     query_values: &reference_query.first_values,
                     key_values: &reference_key.first_values,
                 },
                 ScoreInputAttributionCandidate {
-                    id: "rust_q_reference_k",
+                    id: "reference_q_reference_k_q_f16_k_f16",
+                    base_candidate: "reference_q_reference_k",
+                    score_input_variant: "q_f16_k_f16",
+                    query_source: "reference_Qcur",
+                    key_source: "reference_k_kv_head",
+                    key_layout: ScoreKeyLayout::TokenMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: true,
+                    query_values: &reference_query.first_values,
+                    key_values: &reference_key.first_values,
+                },
+                ScoreInputAttributionCandidate {
+                    id: "rust_q_reference_k_q_f16_k_f32",
+                    base_candidate: "rust_q_reference_k",
+                    score_input_variant: "q_f16_k_f32",
                     query_source: "rust_attention_q_rope",
                     key_source: "reference_k_kv_head",
                     key_layout: ScoreKeyLayout::TokenMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
                     query_values: &rust_query.first_values,
                     key_values: &reference_key.first_values,
                 },
                 ScoreInputAttributionCandidate {
-                    id: "reference_q_rust_k",
+                    id: "rust_q_reference_k_q_f16_k_f16",
+                    base_candidate: "rust_q_reference_k",
+                    score_input_variant: "q_f16_k_f16",
+                    query_source: "rust_attention_q_rope",
+                    key_source: "reference_k_kv_head",
+                    key_layout: ScoreKeyLayout::TokenMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: true,
+                    query_values: &rust_query.first_values,
+                    key_values: &reference_key.first_values,
+                },
+                ScoreInputAttributionCandidate {
+                    id: "reference_q_rust_k_q_f16_k_f32",
+                    base_candidate: "reference_q_rust_k",
+                    score_input_variant: "q_f16_k_f32",
                     query_source: "reference_Qcur",
                     key_source: rust_key_source,
                     key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
                     query_values: &reference_query.first_values,
                     key_values: &rust_key.first_values,
                 },
                 ScoreInputAttributionCandidate {
-                    id: "rust_q_rust_k",
+                    id: "reference_q_rust_k_q_f16_k_f16",
+                    base_candidate: "reference_q_rust_k",
+                    score_input_variant: "q_f16_k_f16",
+                    query_source: "reference_Qcur",
+                    key_source: rust_key_source,
+                    key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: true,
+                    query_values: &reference_query.first_values,
+                    key_values: &rust_key.first_values,
+                },
+                ScoreInputAttributionCandidate {
+                    id: "rust_q_rust_k_q_f16_k_f32",
+                    base_candidate: "rust_q_rust_k",
+                    score_input_variant: "q_f16_k_f32",
                     query_source: "rust_attention_q_rope",
                     key_source: rust_key_source,
                     key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                    query_values: &rust_query.first_values,
+                    key_values: &rust_key.first_values,
+                },
+                ScoreInputAttributionCandidate {
+                    id: "rust_q_rust_k_q_f16_k_f16",
+                    base_candidate: "rust_q_rust_k",
+                    score_input_variant: "q_f16_k_f16",
+                    query_source: "rust_attention_q_rope",
+                    key_source: rust_key_source,
+                    key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: true,
                     query_values: &rust_query.first_values,
                     key_values: &rust_key.first_values,
                 },
@@ -5920,10 +6005,10 @@ fn attention_score_input_attribution(
             let mut candidate_rows = Vec::new();
             let mut reference_deltas = BTreeMap::<&str, Value>::new();
             let mut rust_deltas = BTreeMap::<&str, Value>::new();
-            for candidate in candidates {
+            for candidate in &candidates {
                 if let (Some(reference_delta), Some(rust_delta)) = (
                     score_input_candidate_delta(
-                        candidate,
+                        *candidate,
                         head,
                         head_dim,
                         live_token_count,
@@ -5931,7 +6016,7 @@ fn attention_score_input_attribution(
                         ReferenceScoreLengthPolicy::PaddedTailZeroed,
                     ),
                     score_input_candidate_delta(
-                        candidate,
+                        *candidate,
                         head,
                         head_dim,
                         live_token_count,
@@ -5941,12 +6026,14 @@ fn attention_score_input_attribution(
                 ) {
                     candidate_rows.push(json!({
                         "candidate": candidate.id,
+                        "base_candidate": candidate.base_candidate,
+                        "score_input_variant": candidate.score_input_variant,
                         "query_source": candidate.query_source,
                         "key_source": candidate.key_source,
                         "key_layout": candidate.key_layout.label(),
                         "accum_policy": "f32_sequential",
-                        "query_f16_roundtrip": true,
-                        "key_f16_roundtrip": false,
+                        "query_f16_roundtrip": candidate.query_f16_roundtrip,
+                        "key_f16_roundtrip": candidate.key_f16_roundtrip,
                         "reference_score_delta": reference_delta,
                         "rust_score_delta": rust_delta,
                     }));
@@ -5966,26 +6053,45 @@ fn attention_score_input_attribution(
                 continue;
             }
 
-            let reference_best =
-                score_input_best_candidate(reference_deltas.iter().map(|(id, delta)| (*id, delta)));
-            let rust_best =
-                score_input_best_candidate(rust_deltas.iter().map(|(id, delta)| (*id, delta)));
-            if let Some(reference_best) = reference_best {
-                *reference_best_counts.entry(reference_best.to_string()).or_insert(0) += 1;
-                if let Some(delta) = reference_deltas.get(reference_best) {
-                    max_reference_best_abs_delta =
-                        max_reference_best_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
-                    max_reference_best_rms_delta =
-                        max_reference_best_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
+            let reference_best = score_input_best_candidate_ordered(&candidates, &reference_deltas);
+            let rust_best = score_input_best_candidate_ordered(&candidates, &rust_deltas);
+            let reference_best_info = score_input_candidate_by_id(&candidates, reference_best);
+            let rust_best_info = score_input_candidate_by_id(&candidates, rust_best);
+            if let Some(reference_best_info) = reference_best_info {
+                *reference_best_counts
+                    .entry(reference_best_info.base_candidate.to_string())
+                    .or_insert(0) += 1;
+                *reference_best_score_input_variant_counts
+                    .entry(reference_best_info.score_input_variant.to_string())
+                    .or_insert(0) += 1;
+                if reference_best_info.key_f16_roundtrip {
+                    reference_best_key_f16_roundtrip_count += 1;
+                }
+                if let Some(reference_best) = reference_best {
+                    if let Some(delta) = reference_deltas.get(reference_best) {
+                        max_reference_best_abs_delta =
+                            max_reference_best_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
+                        max_reference_best_rms_delta =
+                            max_reference_best_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
+                    }
                 }
             }
-            if let Some(rust_best) = rust_best {
-                *rust_best_counts.entry(rust_best.to_string()).or_insert(0) += 1;
-                if let Some(delta) = rust_deltas.get(rust_best) {
-                    max_rust_best_abs_delta =
-                        max_rust_best_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
-                    max_rust_best_rms_delta =
-                        max_rust_best_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
+            if let Some(rust_best_info) = rust_best_info {
+                *rust_best_counts.entry(rust_best_info.base_candidate.to_string()).or_insert(0) +=
+                    1;
+                *rust_best_score_input_variant_counts
+                    .entry(rust_best_info.score_input_variant.to_string())
+                    .or_insert(0) += 1;
+                if rust_best_info.key_f16_roundtrip {
+                    rust_best_key_f16_roundtrip_count += 1;
+                }
+                if let Some(rust_best) = rust_best {
+                    if let Some(delta) = rust_deltas.get(rust_best) {
+                        max_rust_best_abs_delta =
+                            max_rust_best_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
+                        max_rust_best_rms_delta =
+                            max_rust_best_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
+                    }
                 }
             }
 
@@ -5999,8 +6105,14 @@ fn attention_score_input_attribution(
                 "rust_score_token_count": rust_score.first_values.len(),
                 "rust_key_source": rust_key_source,
                 "rust_key_source_kind": rust_key_source_kind,
-                "reference_best_candidate": reference_best,
-                "rust_best_candidate": rust_best,
+                "reference_best_candidate": reference_best_info.map(|candidate| candidate.base_candidate),
+                "reference_best_candidate_id": reference_best,
+                "reference_best_score_input_variant": reference_best_info.map(|candidate| candidate.score_input_variant),
+                "reference_best_key_f16_roundtrip": reference_best_info.map(|candidate| candidate.key_f16_roundtrip),
+                "rust_best_candidate": rust_best_info.map(|candidate| candidate.base_candidate),
+                "rust_best_candidate_id": rust_best,
+                "rust_best_score_input_variant": rust_best_info.map(|candidate| candidate.score_input_variant),
+                "rust_best_key_f16_roundtrip": rust_best_info.map(|candidate| candidate.key_f16_roundtrip),
                 "candidates": candidate_rows,
             }));
         } else {
@@ -6025,7 +6137,9 @@ fn attention_score_input_attribution(
         "diagnostic_only": true,
         "claim_allowed": false,
         "policy": "score input attribution is diagnostic-only evidence for whether raw attention score drift follows reference or Rust Q/K score inputs; it does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, or any support claim",
-        "formula": "f32_accum_q_f16_k_f32",
+        "formula": "f32_accum_q_f16_k_variants",
+        "query_f16_roundtrip_variants": [true],
+        "key_f16_roundtrip_variants": [false, true],
         "reference_score_length_policy": "padded_tail_zeroed",
         "rust_score_length_policy": "live_key_count_only",
         "reference_query_stage_present": reference_query.is_some(),
@@ -6052,6 +6166,10 @@ fn attention_score_input_attribution(
         "missing_input_count": missing_input_count,
         "reference_best_candidate_counts": reference_best_counts,
         "rust_best_candidate_counts": rust_best_counts,
+        "reference_best_score_input_variant_counts": reference_best_score_input_variant_counts,
+        "rust_best_score_input_variant_counts": rust_best_score_input_variant_counts,
+        "reference_best_key_f16_roundtrip_count": reference_best_key_f16_roundtrip_count,
+        "rust_best_key_f16_roundtrip_count": rust_best_key_f16_roundtrip_count,
         "max_reference_best_abs_delta": max_reference_best_abs_delta,
         "max_reference_best_rms_delta": max_reference_best_rms_delta,
         "max_rust_best_abs_delta": max_rust_best_abs_delta,
@@ -10840,14 +10958,33 @@ mod tests {
         );
         assert_eq!(report.pointer("/rows/0/rust_best_candidate"), Some(&json!("rust_q_rust_k")));
         assert_eq!(
+            report.pointer("/rows/0/reference_best_score_input_variant"),
+            Some(&json!("q_f16_k_f32"))
+        );
+        assert_eq!(report.pointer("/rows/0/reference_best_key_f16_roundtrip"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/rows/0/rust_best_score_input_variant"),
+            Some(&json!("q_f16_k_f32"))
+        );
+        assert_eq!(report.pointer("/rows/0/rust_best_key_f16_roundtrip"), Some(&json!(false)));
+        assert_eq!(
             report.pointer("/rows/0/rust_key_source_kind"),
             Some(&json!("fallback_f16_cache_proxy"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/candidates").and_then(Value::as_array).map(Vec::len),
+            Some(8)
         );
         assert_eq!(
             report.pointer("/reference_best_candidate_counts/reference_q_reference_k"),
             Some(&json!(1))
         );
         assert_eq!(report.pointer("/rust_best_candidate_counts/rust_q_rust_k"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rust_best_score_input_variant_counts/q_f16_k_f32"),
+            Some(&json!(1))
+        );
+        assert_eq!(report.pointer("/rust_best_key_f16_roundtrip_count"), Some(&json!(0)));
 
         let compare_report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
         assert_eq!(
@@ -10947,8 +11084,91 @@ mod tests {
         assert_eq!(report.pointer("/rows/0/rust_best_candidate"), Some(&json!("rust_q_rust_k")));
         assert_eq!(
             report.pointer("/rows/0/candidates/3/key_source"),
-            Some(&json!("rust_attention_k_score_input_head"))
+            Some(&json!("reference_k_kv_head"))
         );
+        let has_actual_k_f16_candidate =
+            report.pointer("/rows/0/candidates").and_then(Value::as_array).unwrap().iter().any(
+                |candidate| {
+                    candidate.pointer("/base_candidate") == Some(&json!("rust_q_rust_k"))
+                        && candidate.pointer("/score_input_variant") == Some(&json!("q_f16_k_f16"))
+                        && candidate.pointer("/key_source")
+                            == Some(&json!("rust_attention_k_score_input_head"))
+                },
+            );
+        assert!(has_actual_k_f16_candidate);
+    }
+
+    #[test]
+    fn score_input_attribution_reports_key_f16_roundtrip_score_input_variant() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![1, 1],
+                nelements: 1,
+                first_values: vec![2.0],
+                ..test_reference_trace_record("Qcur", vec![2.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![1, 2],
+                nelements: 2,
+                first_values: vec![7.0, 11.0],
+                ..test_reference_trace_record("k_kv_head0", vec![7.0, 11.0])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2],
+                nelements: 2,
+                first_values: vec![14.0, 22.0],
+                ..test_reference_trace_record("kq_head0", vec![14.0, 22.0])
+            },
+        ];
+        let rust_key = vec![1.0003, 2.0007];
+        let rust_target = rust_key.iter().copied().map(f16_roundtrip).collect::<Vec<_>>();
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_q_rope".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 1, 1, 1],
+                num_elements: 1,
+                first_values: vec![1.0],
+                ..test_rust_trace_record("attention_q_rope", vec![1.0])
+            },
+        );
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![1, 2],
+                num_elements: 2,
+                first_values: rust_key,
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![1.0003, 2.0007],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head0".to_string(),
+            RustTraceRecord {
+                shape: vec![2],
+                num_elements: 2,
+                first_values: rust_target,
+                ..test_rust_trace_record("attention_scores_raw_head0", vec![])
+            },
+        );
+
+        let report = attention_score_input_attribution(&reference_records, &rust_records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rows/0/rust_best_candidate"), Some(&json!("rust_q_rust_k")));
+        assert_eq!(
+            report.pointer("/rows/0/rust_best_score_input_variant"),
+            Some(&json!("q_f16_k_f16"))
+        );
+        assert_eq!(report.pointer("/rows/0/rust_best_key_f16_roundtrip"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/rust_best_score_input_variant_counts/q_f16_k_f16"),
+            Some(&json!(1))
+        );
+        assert_eq!(report.pointer("/rust_best_key_f16_roundtrip_count"), Some(&json!(1)));
     }
 
     #[test]
