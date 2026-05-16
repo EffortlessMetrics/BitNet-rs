@@ -76,13 +76,11 @@ artifacts to separate strict proof items.
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 | M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
 | M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
-| M3MBA-018 | in_progress | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; PR #5225 is open. |
+| M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
 
-Current focus: `M3MBA-018` reconciles the roadmap after `M3MBA-017` merged, so
-operators do not follow stale instructions to merge already completed setup
-items. After that cleanup lands, `M3MBA-007` is the next bounded M3 Air artifact
-work surface, with `M3MBA-008` reserved for accepted-artifact handoff or
-explicit no-accepted-artifact closure. `M3MBA-006` remains blocked until an
+Current focus: `M3MBA-007` is the next bounded M3 Air artifact work surface for
+3B TL1/TL2 diagnostics, with `M3MBA-008` reserved for accepted-artifact handoff
+or explicit no-accepted-artifact closure. `M3MBA-006` remains blocked until an
 official GGUF, reproducible conversion path, or explicitly approved third-party
 artifact path exists for the 0.7B candidate. `M3MBA-010` permits another large
 candidate only as serialized work with fresh disk preflight, before/after

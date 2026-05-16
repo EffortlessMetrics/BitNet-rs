@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T22:53:29Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-018"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-018-roadmap-state-refresh"
+pr = 5225
+head_sha = "e4a69b024599d8b2ce5186462a2250a150f4fd30"
+merge_sha = "fd6bd1fd7c606a21d8a25d5432597c2eb8015b07"
+summary = "Merged the M3 Air roadmap and selected-lane evidence refresh."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5225",
+  ".github/workflows/apple-m3-air-dense-slm.yml",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/apple-silicon/macbook-lane.md",
+]
+
+notes = [
+  "The merged work refreshes the post-M3MBA-017 roadmap state so the next stack points at M3MBA-007 diagnostic work and M3MBA-008 handoff or closure.",
+  "The staged M3 workflow exposes comparison-profile inputs and uploads preflight/model-fetch phase evidence before expensive validation work.",
+  "No model inference was run, no BitNet artifact was downloaded or accepted, and the PR makes no M4 Mac mini performance, Metal/MPSGraph model inference, Neural Engine, QK256, or broad Apple Silicon claim.",
+]
