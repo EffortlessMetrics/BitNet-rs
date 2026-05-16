@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-16T16:07:00Z",
+  "created_utc": "2026-05-16T19:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -78,11 +78,52 @@
     "regression_ready": true,
     "gaps": []
   },
+  "cold_warm_benchmark": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+    "benchmark_gate_ready": true,
+    "profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal",
+      "prefill_heavy",
+      "decode_heavy",
+      "structured",
+      "low_power",
+      "bitnet_strict_reference"
+    ],
+    "promoted_routes_have_critical_timing": true,
+    "candidate_routes_remain_unpromoted": true,
+    "fallback_observed": false,
+    "benchmark_qualified_advantage_claimed": false,
+    "telemetry_gaps": [
+      "ask_normal:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark",
+      "ask_normal:dense_slm_openvino_gpu_candidate=not_normalized_in_current_profile_benchmark",
+      "ask_normal:dense_slm_openvino_npu_candidate=not_normalized_in_current_profile_benchmark",
+      "ask_short:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark",
+      "ask_short:dense_slm_openvino_gpu_candidate=not_normalized_in_current_profile_benchmark",
+      "ask_short:dense_slm_openvino_npu_candidate=not_normalized_in_current_profile_benchmark",
+      "bitnet_strict_reference:bitnet_reference_cpu=not_normalized_in_current_profile_benchmark",
+      "decode_heavy:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark",
+      "decode_heavy:dense_slm_openvino_gpu_candidate=not_normalized_in_current_profile_benchmark",
+      "decode_heavy:dense_slm_openvino_npu_candidate=not_normalized_in_current_profile_benchmark",
+      "low_power:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark",
+      "low_power:dense_slm_openvino_gpu_candidate=not_normalized_in_current_profile_benchmark",
+      "low_power:dense_slm_openvino_npu_candidate=not_normalized_in_current_profile_benchmark",
+      "prefill_heavy:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate=not_normalized_in_current_profile_benchmark",
+      "prefill_heavy:dense_slm_openvino_npu_candidate=not_normalized_in_current_profile_benchmark",
+      "regression_tiny:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark",
+      "structured:dense_slm_default_cpu=not_normalized_in_current_profile_benchmark"
+    ],
+    "regression_ready": true,
+    "gaps": []
+  },
   "regression_surface": {
     "surface_id": "lunar_lake_regression_v2",
     "strict_default": true,
     "answer_corpus_v2_indexed": true,
     "route_profile_comparison_indexed": true,
+    "cold_warm_benchmark_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -117,6 +158,7 @@
     "fallback_observed": false,
     "candidate_routes_remain_unpromoted": true,
     "benchmark_qualified_advantage_claimed": false,
+    "cold_warm_benchmark_ready": true,
     "strict_ready": true,
     "gaps": []
   },
@@ -223,6 +265,22 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=false",
         "fallback_observed=false"
+      ]
+    },
+    {
+      "check_id": "cold_warm_benchmark_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json"
+      ],
+      "notes": [
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "benchmark_gate_ready=true",
+        "promoted_routes_have_critical_timing=true",
+        "candidate_routes_remain_unpromoted=true",
+        "benchmark_qualified_advantage_claimed=false",
+        "fallback_observed=false",
+        "telemetry_gap_count=18"
       ]
     }
   ],

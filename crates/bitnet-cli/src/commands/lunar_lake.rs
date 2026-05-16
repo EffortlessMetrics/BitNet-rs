@@ -44,6 +44,7 @@ const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
 const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
 const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
+const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -123,6 +124,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
         route_profile_comparison: Option<PathBuf>,
+
+        /// Optional cold/warm profile benchmark qualification receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
+        cold_warm_benchmark: Option<PathBuf>,
 
         /// Output JSON regression bundle to file.
         #[arg(long)]
@@ -414,6 +420,8 @@ pub struct LunarLakeRegressionBundle {
     pub answer_corpus_v2: Option<AnswerCorpusV2Summary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub route_profile_comparison: Option<RouteProfileRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cold_warm_benchmark: Option<ColdWarmRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -428,12 +436,14 @@ pub struct RegressionSurfaceSummary {
     pub strict_default: bool,
     pub answer_corpus_v2_indexed: bool,
     pub route_profile_comparison_indexed: bool,
+    pub cold_warm_benchmark_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
     pub fallback_observed: bool,
     pub candidate_routes_remain_unpromoted: bool,
     pub benchmark_qualified_advantage_claimed: bool,
+    pub cold_warm_benchmark_ready: bool,
     pub strict_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -445,6 +455,7 @@ impl Default for RegressionSurfaceSummary {
             strict_default: true,
             answer_corpus_v2_indexed: false,
             route_profile_comparison_indexed: false,
+            cold_warm_benchmark_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -460,10 +471,12 @@ impl Default for RegressionSurfaceSummary {
             fallback_observed: false,
             candidate_routes_remain_unpromoted: false,
             benchmark_qualified_advantage_claimed: false,
+            cold_warm_benchmark_ready: false,
             strict_ready: false,
             gaps: vec![
                 "answer corpus v2 is not indexed".to_string(),
                 "route profile comparison is not indexed".to_string(),
+                "cold/warm benchmark qualification is not indexed".to_string(),
             ],
         }
     }
@@ -505,6 +518,20 @@ pub struct RouteProfileRegressionSummary {
     pub benchmark_qualified_advantage_claimed: bool,
     pub fallback_observed: bool,
     pub gpu_npu_promotion_blockers: Vec<String>,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ColdWarmRegressionSummary {
+    pub path: String,
+    pub benchmark_gate_ready: bool,
+    pub profiles: Vec<String>,
+    pub promoted_routes_have_critical_timing: bool,
+    pub candidate_routes_remain_unpromoted: bool,
+    pub fallback_observed: bool,
+    pub benchmark_qualified_advantage_claimed: bool,
+    pub telemetry_gaps: Vec<String>,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -872,6 +899,7 @@ impl LunarLakeCommand {
                 operator_receipt,
                 answer_corpus_v2,
                 route_profile_comparison,
+                cold_warm_benchmark,
                 json_out,
                 created_utc,
                 strict,
@@ -885,6 +913,7 @@ impl LunarLakeCommand {
                     operator_receipt,
                     answer_corpus_v2.as_deref(),
                     route_profile_comparison.as_deref(),
+                    cold_warm_benchmark.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -1233,6 +1262,7 @@ pub fn build_regression_bundle_with_created_utc(
         operator_receipt,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -1242,6 +1272,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     operator_receipt: &Path,
     answer_corpus_v2: Option<&Path>,
     route_profile_comparison: Option<&Path>,
+    cold_warm_benchmark: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -1367,6 +1398,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     } else {
         None
     };
+    let cold_warm_benchmark = if let Some(path) = cold_warm_benchmark {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_cold_warm_regression(&path)?;
+        checks.push(regression_check_owned(
+            "cold_warm_benchmark_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            cold_warm_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -1375,6 +1419,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     let regression_surface = build_regression_surface_summary(
         answer_corpus_v2.as_ref(),
         route_profile_comparison.as_ref(),
+        cold_warm_benchmark.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -1387,6 +1432,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         operator_receipt: path_string(&operator_receipt_path),
         answer_corpus_v2,
         route_profile_comparison,
+        cold_warm_benchmark,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -1398,18 +1444,27 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
 fn build_regression_surface_summary(
     answer_corpus_v2: Option<&AnswerCorpusV2Summary>,
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
+    cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
+        cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
         benchmark_qualified_advantage_claimed: route_profile_comparison
             .map(|summary| summary.benchmark_qualified_advantage_claimed)
-            .unwrap_or(false),
+            .unwrap_or(false)
+            || cold_warm_benchmark
+                .map(|summary| summary.benchmark_qualified_advantage_claimed)
+                .unwrap_or(false),
         fallback_observed: route_profile_comparison
             .map(|summary| summary.fallback_observed)
+            .unwrap_or(false)
+            || cold_warm_benchmark.map(|summary| summary.fallback_observed).unwrap_or(false),
+        cold_warm_benchmark_ready: cold_warm_benchmark
+            .map(|summary| summary.regression_ready)
             .unwrap_or(false),
         gaps: Vec::new(),
         ..RegressionSurfaceSummary::default()
@@ -1445,6 +1500,33 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("route profile comparison is not indexed".to_string());
+    }
+
+    if let Some(benchmark) = cold_warm_benchmark {
+        if !benchmark.regression_ready {
+            summary.gaps.push(format!(
+                "cold/warm benchmark qualification is not regression-ready: {}",
+                benchmark.gaps.join("; ")
+            ));
+        }
+        if benchmark.fallback_observed {
+            summary.gaps.push("cold/warm benchmark observed fallback_used=true".to_string());
+        }
+        if benchmark.benchmark_qualified_advantage_claimed {
+            summary.gaps.push(
+                "cold/warm benchmark recorded benchmark-qualified route advantage".to_string(),
+            );
+        }
+        if !benchmark.candidate_routes_remain_unpromoted {
+            summary
+                .gaps
+                .push("cold/warm benchmark shows OpenVINO candidate route promotion".to_string());
+        }
+        if !benchmark.promoted_routes_have_critical_timing {
+            summary.gaps.push("promoted routes are missing critical cold/warm timing".to_string());
+        }
+    } else {
+        summary.gaps.push("cold/warm benchmark qualification is not indexed".to_string());
     }
 
     summary.gaps.sort();
@@ -1658,6 +1740,93 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     })
 }
 
+fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary> {
+    let benchmark: LunarLakeColdWarmBenchmark = read_json_receipt(path)?;
+    let profiles =
+        benchmark.profiles.iter().map(|profile| profile.profile_id.clone()).collect::<Vec<_>>();
+    let mut gaps = Vec::new();
+    if !benchmark.benchmark_gate_ready {
+        gaps.push(format!("cold/warm benchmark gate not ready: {}", benchmark.gaps.join("; ")));
+    }
+    if let Some(missing) = first_missing(&profiles, REQUIRED_ROUTE_PROFILES) {
+        gaps.push(format!("cold/warm benchmark missing profile {missing}"));
+    }
+    if benchmark.claim_boundary.new_inference_executed {
+        gaps.push("cold/warm benchmark executed new inference".to_string());
+    }
+    if benchmark.claim_boundary.route_promotion_changed {
+        gaps.push("cold/warm benchmark changed route promotion".to_string());
+    }
+    if benchmark.claim_boundary.speedup_claim || benchmark.claim_boundary.acceleration_claim {
+        gaps.push("cold/warm benchmark claimed speedup or acceleration".to_string());
+    }
+    if benchmark.claim_boundary.hidden_fallback_allowed {
+        gaps.push("cold/warm benchmark allows hidden fallback".to_string());
+    }
+    if benchmark.claim_boundary.dense_slm_as_bitnet_proof {
+        gaps.push("cold/warm benchmark treats dense SLM evidence as BitNet proof".to_string());
+    }
+
+    let mut fallback_observed = false;
+    let mut benchmark_qualified_advantage_claimed = false;
+    let mut promoted_routes_have_critical_timing = true;
+    let mut candidate_routes_remain_unpromoted = true;
+    let mut telemetry_gaps = BTreeSet::new();
+    for profile in &benchmark.profiles {
+        for route in &profile.routes {
+            if route.fallback_used == Some(true) {
+                fallback_observed = true;
+            }
+            if route.benchmark_qualified_advantage {
+                benchmark_qualified_advantage_claimed = true;
+            }
+            if route.route_status == "promoted" && !route.critical_timing_present {
+                promoted_routes_have_critical_timing = false;
+            }
+            if is_openvino_candidate_route(&route.route_id) && route.route_status == "promoted" {
+                candidate_routes_remain_unpromoted = false;
+            }
+            for value in [
+                &route.telemetry.memory_context,
+                &route.telemetry.power_context,
+                &route.telemetry.thermal_context,
+            ] {
+                if value.contains("not_normalized") || value.contains("missing") {
+                    telemetry_gaps
+                        .insert(format!("{}:{}={}", profile.profile_id, route.route_id, value));
+                }
+            }
+        }
+    }
+    if fallback_observed {
+        gaps.push("cold/warm benchmark observed fallback_used=true".to_string());
+    }
+    if benchmark_qualified_advantage_claimed {
+        gaps.push("cold/warm benchmark recorded benchmark-qualified route advantage".to_string());
+    }
+    if !promoted_routes_have_critical_timing {
+        gaps.push("promoted routes are missing critical cold/warm timing".to_string());
+    }
+    if !candidate_routes_remain_unpromoted {
+        gaps.push(
+            "OpenVINO GPU/NPU candidate route was promoted in cold/warm benchmark".to_string(),
+        );
+    }
+
+    Ok(ColdWarmRegressionSummary {
+        path: path_string(path),
+        benchmark_gate_ready: benchmark.benchmark_gate_ready,
+        profiles,
+        promoted_routes_have_critical_timing,
+        candidate_routes_remain_unpromoted,
+        fallback_observed,
+        benchmark_qualified_advantage_claimed,
+        telemetry_gaps: telemetry_gaps.into_iter().collect(),
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -1681,6 +1850,29 @@ fn route_profile_regression_notes(summary: &RouteProfileRegressionSummary) -> Ve
             summary.benchmark_qualified_advantage_claimed
         ),
         format!("fallback_observed={}", summary.fallback_observed),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn cold_warm_regression_notes(summary: &ColdWarmRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profiles={}", summary.profiles.join(",")),
+        format!("benchmark_gate_ready={}", summary.benchmark_gate_ready),
+        format!(
+            "promoted_routes_have_critical_timing={}",
+            summary.promoted_routes_have_critical_timing
+        ),
+        format!(
+            "candidate_routes_remain_unpromoted={}",
+            summary.candidate_routes_remain_unpromoted
+        ),
+        format!(
+            "benchmark_qualified_advantage_claimed={}",
+            summary.benchmark_qualified_advantage_claimed
+        ),
+        format!("fallback_observed={}", summary.fallback_observed),
+        format!("telemetry_gap_count={}", summary.telemetry_gaps.len()),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -4866,12 +5058,20 @@ mod tests {
             temp.path().join(ROUTE_PROFILE_COMPARISON),
             serde_json::to_vec_pretty(&profiles)?,
         )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-14T17:45:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new("cold-warm.json")),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -4897,6 +5097,13 @@ mod tests {
         assert!(bundle.regression_surface.strict_ready, "{:?}", bundle.regression_surface.gaps);
         assert!(bundle.regression_surface.answer_corpus_v2_indexed);
         assert!(bundle.regression_surface.route_profile_comparison_indexed);
+        assert!(bundle.regression_surface.cold_warm_benchmark_indexed);
+        assert!(bundle.regression_surface.cold_warm_benchmark_ready);
+        let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
+            bail!("missing cold_warm_benchmark summary");
+        };
+        assert!(cold_warm.promoted_routes_have_critical_timing);
+        assert!(cold_warm.candidate_routes_remain_unpromoted);
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }
@@ -4976,12 +5183,20 @@ mod tests {
             temp.path().join(ROUTE_PROFILE_COMPARISON),
             serde_json::to_vec_pretty(&profiles)?,
         )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-14T17:45:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new("cold-warm.json")),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
