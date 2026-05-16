@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T23:27:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-007"
+event = "blocked"
+from = "pr_open"
+to = "blocked"
+actor = "codex"
+pr = 5235
+branch = "codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic"
+head_sha = "13c783bcec22406f42b8306e4042fbdd87683b12"
+merge_sha = "a987d7c5607cd9026da006e292a617b287a49ac0"
+summary = "Closed M3MBA-007 as blocked after the 3B TL diagnostic preflight PR merged."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5235",
+  "ci/hardware/apple-silicon-macbook/2026-05-16/m3-air/1bitllm-3b-tl-diagnostic-preflight.json",
+  "docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md",
+]
+notes = [
+  "PR #5235 merged the source preflight showing no official 3B GGUF for TL1/TL2 diagnostics.",
+  "The lane remains blocked until an official GGUF, reproducible conversion path, or explicitly approved third-party TL diagnostic artifact exists and local storage can absorb the large-candidate work safely.",
+  "No model binary was committed and no inference was run.",
+]
