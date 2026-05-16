@@ -3555,15 +3555,18 @@ fn build_ffn_norm_prefix_replay_body(
         None => Value::Null,
     };
     let runtime_arithmetic_boundary = ffn_norm_runtime_arithmetic_boundary(
+        &reference_input_token,
+        rust_input_token.as_deref(),
         reference_core_token.as_deref(),
         &weight.values,
+        &variants,
         &reference_target_token,
         rust_target_token.as_deref(),
         reference_input_vs_rust.as_ref(),
         &reference_input_replay,
         &reference_core_replay,
         &rust_input_replay,
-    );
+    )?;
     let scope = ffn_norm_prefix_replay_scope(
         layer,
         token,
@@ -3607,15 +3610,18 @@ fn build_ffn_norm_prefix_replay_body(
 }
 
 fn ffn_norm_runtime_arithmetic_boundary(
+    reference_input_token: &[f32],
+    rust_input_token: Option<&[f32]>,
     reference_core_token: Option<&[f32]>,
     weight: &[f32],
+    variants: &[RmsNormReplayVariant],
     reference_target_token: &[f32],
     rust_target_token: Option<&[f32]>,
     reference_input_vs_rust: Option<&Value>,
     reference_input_replay: &Value,
     reference_core_replay: &Value,
     rust_input_replay: &Value,
-) -> Value {
+) -> Result<Value> {
     let mut blocked_reasons = Vec::<String>::new();
     let mut reference_core_weighted_vs_reference = Value::Null;
     let mut reference_core_weighted_vs_rust = Value::Null;
@@ -3671,10 +3677,31 @@ fn ffn_norm_runtime_arithmetic_boundary(
     if !reference_rust_input_bit_exact {
         blocked_reasons.push("reference_rust_ffn_norm_input_not_bit_exact".to_string());
     }
+    let input_sensitivity = ffn_norm_input_sensitivity_boundary(
+        reference_input_token,
+        rust_input_token,
+        weight,
+        variants,
+        rust_target_token,
+    )?;
+    if input_sensitivity
+        .pointer("/classification/input_substitution_crosses_runtime_threshold")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        blocked_reasons.push("ffn_norm_input_substitution_crosses_runtime_threshold".to_string());
+    }
+    if input_sensitivity
+        .pointer("/classification/rust_runtime_arithmetic_separate_mismatch")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        blocked_reasons.push("rust_runtime_arithmetic_separate_mismatch".to_string());
+    }
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
-    json!({
+    Ok(json!({
         "policy": "diagnostic-only boundary between GGML FFN norm core-weight output and Rust runtime FFN norm arithmetic; this does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
         "claim_allowed": false,
         "diagnostic_only": true,
@@ -3690,6 +3717,7 @@ fn ffn_norm_runtime_arithmetic_boundary(
             .cloned()
             .unwrap_or(Value::Null),
         "rust_scalar_replay_best_vs_rust_runtime_target": rust_scalar_best,
+        "input_sensitivity": input_sensitivity,
         "denominators": {
             "reference_scalar_target_fit": reference_input_replay
                 .pointer("/target_fit/reference_target/denominator")
@@ -3713,7 +3741,93 @@ fn ffn_norm_runtime_arithmetic_boundary(
             "rust_runtime_differs_from_reference_core_weight": rust_runtime_differs_from_reference_core_weight,
             "current_blocked_reasons": blocked_reasons,
         },
-    })
+    }))
+}
+
+fn ffn_norm_input_sensitivity_boundary(
+    reference_input_token: &[f32],
+    rust_input_token: Option<&[f32]>,
+    weight: &[f32],
+    variants: &[RmsNormReplayVariant],
+    rust_target_token: Option<&[f32]>,
+) -> Result<Value> {
+    let Some(rust_input_token) = rust_input_token else {
+        return Ok(json!({
+            "available": false,
+            "reason": "rust_ffn_norm_input_missing",
+            "claim_allowed": false,
+            "diagnostic_only": true,
+        }));
+    };
+    let Some(rust_target_token) = rust_target_token else {
+        return Ok(json!({
+            "available": false,
+            "reason": "rust_ffn_norm_target_missing",
+            "claim_allowed": false,
+            "diagnostic_only": true,
+        }));
+    };
+    let Some((variant, rust_input_output, rust_output_vs_target)) =
+        select_rmsnorm_variant_for_target(rust_input_token, weight, variants, rust_target_token)?
+    else {
+        return Ok(json!({
+            "available": false,
+            "reason": "no_rmsnorm_variants_available",
+            "claim_allowed": false,
+            "diagnostic_only": true,
+        }));
+    };
+    let reference_input_output = replay_rmsnorm_variant(reference_input_token, weight, &variant)?;
+    let input_substitution_output_delta =
+        compare_vectors(&reference_input_output, &rust_input_output);
+    let reference_input_output_vs_rust_target =
+        compare_vectors(&reference_input_output, rust_target_token);
+    let input_substitution_crosses_runtime_threshold =
+        delta_metric(&input_substitution_output_delta, "/max_abs_delta") > 1.0e-6;
+    let rust_runtime_arithmetic_separate_mismatch =
+        delta_metric(&rust_output_vs_target, "/max_abs_delta") > 1.0e-6;
+
+    Ok(json!({
+        "available": true,
+        "policy": "diagnostic-only substitution of reference and Rust FFN norm inputs through the selected Rust-runtime scalar RMSNorm replay rule; this identifies input sensitivity and does not promote runtime math changes or hardware claims",
+        "claim_allowed": false,
+        "diagnostic_only": true,
+        "selected_rust_runtime_rule": {
+            "id": variant.id,
+            "eps": variant.eps,
+            "eps_source": variant.eps_source,
+            "accumulation": variant.accumulation.as_str(),
+            "output_rounding": variant.output_rounding.as_str(),
+        },
+        "rust_input_output_vs_rust_runtime_target": rust_output_vs_target,
+        "reference_input_output_vs_rust_runtime_target": reference_input_output_vs_rust_target,
+        "reference_input_output_vs_rust_input_output": input_substitution_output_delta,
+        "classification": {
+            "input_substitution_crosses_runtime_threshold": input_substitution_crosses_runtime_threshold,
+            "rust_runtime_arithmetic_separate_mismatch": rust_runtime_arithmetic_separate_mismatch,
+        },
+    }))
+}
+
+fn select_rmsnorm_variant_for_target(
+    input: &[f32],
+    weight: &[f32],
+    variants: &[RmsNormReplayVariant],
+    target: &[f32],
+) -> Result<Option<(RmsNormReplayVariant, Vec<f32>, Value)>> {
+    let mut best = None::<(f64, f64, RmsNormReplayVariant, Vec<f32>, Value)>;
+    for variant in variants {
+        let output = replay_rmsnorm_variant(input, weight, variant)?;
+        let delta = compare_vectors(&output, target);
+        let max_abs_delta = delta_metric(&delta, "/max_abs_delta");
+        let rms_abs_delta = delta_metric(&delta, "/rms_abs_delta");
+        if best.as_ref().is_none_or(|(best_max, best_rms, _, _, _)| {
+            max_abs_delta < *best_max || (max_abs_delta == *best_max && rms_abs_delta < *best_rms)
+        }) {
+            best = Some((max_abs_delta, rms_abs_delta, variant.clone(), output, delta));
+        }
+    }
+    Ok(best.map(|(_, _, variant, output, delta)| (variant, output, delta)))
 }
 
 fn build_final_norm_replay_body(
@@ -22442,10 +22556,19 @@ mod tests {
 
     #[test]
     fn ffn_norm_runtime_arithmetic_boundary_reports_core_weight_vs_rust_runtime() {
+        let reference_input = vec![1.0f32, 2.0];
+        let rust_input = vec![1.0f32, 2.0000005];
         let reference_core = vec![1.0f32, 2.0];
-        let weight = vec![2.0f32, 3.0];
-        let reference_target = vec![2.0f32, 6.0];
-        let rust_target = vec![2.0f32, 6.00001];
+        let weight = vec![2.0f32, 1000.0];
+        let reference_target = vec![2.0f32, 2000.0];
+        let variants = vec![RmsNormReplayVariant {
+            id: "runtime_rule".to_string(),
+            eps: 0.0,
+            eps_source: "test".to_string(),
+            accumulation: RmsNormAccumulation::F32Sequential,
+            output_rounding: RmsNormOutputRounding::F32,
+        }];
+        let rust_target = replay_rmsnorm_variant(&rust_input, &weight, &variants[0]).unwrap();
         let input_delta = json!({
             "max_abs_delta": 9.5367431640625e-7,
             "sha256_match": false,
@@ -22476,15 +22599,19 @@ mod tests {
         });
 
         let boundary = ffn_norm_runtime_arithmetic_boundary(
+            &reference_input,
+            Some(&rust_input),
             Some(&reference_core),
             &weight,
+            &variants,
             &reference_target,
             Some(&rust_target),
             Some(&input_delta),
             &reference_input_replay,
             &reference_core_replay,
             &rust_input_replay,
-        );
+        )
+        .unwrap();
 
         assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
@@ -22509,8 +22636,21 @@ mod tests {
             Some(&json!(true))
         );
         assert_eq!(
+            boundary.pointer(
+                "/input_sensitivity/classification/input_substitution_crosses_runtime_threshold"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            boundary.pointer(
+                "/input_sensitivity/classification/rust_runtime_arithmetic_separate_mismatch"
+            ),
+            Some(&json!(false))
+        );
+        assert_eq!(
             boundary.pointer("/classification/current_blocked_reasons"),
             Some(&json!([
+                "ffn_norm_input_substitution_crosses_runtime_threshold",
                 "reference_rust_ffn_norm_input_not_bit_exact",
                 "rust_runtime_differs_from_reference_core_weight"
             ]))
