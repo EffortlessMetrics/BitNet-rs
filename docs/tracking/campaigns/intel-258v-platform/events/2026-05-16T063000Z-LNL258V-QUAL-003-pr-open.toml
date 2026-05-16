@@ -1,0 +1,21 @@
+timestamp = "2026-05-16T06:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5055
+head_sha = "de3c817bbdd53d691ea4feb46768f4997a662a78"
+branch = "codex/lunar-lake/LNL258V-QUAL-003-openvino-corpus-v2"
+summary = "Opened LNL258V-QUAL-003 to commit bounded answer corpus v2 evidence for OpenVINO CPU, GPU.0, and NPU dense SLM candidate routes."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5055",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+]
+
+notes = [
+  "The committed receipt records 36 total candidate-route cases across OpenVINO CPU, GPU.0, and NPU, with 21 passed, 15 quality_failed, and fallback_used=false.",
+  "The PR records evidence only; it does not claim broad dense SLM quality, speedup, accelerator promotion, native OpenCL/NPU execution, or BitNet QK256/I2_S proof.",
+]
