@@ -149,6 +149,45 @@ kind. The warm-session refresh is therefore receipt-validated and
 identity-matched, but not compared by the strict regression command in this
 item.
 
+## Dashboard History Results
+
+`M4-DURABLE-004` regenerated the model-free report-refresh manifest and
+regression dashboard from committed receipts only:
+
+```text
+target/apple-m4-durable-inference-evidence/report-refresh-manifest.json
+target/apple-m4-durable-inference-evidence/regression-dashboard.json
+target/apple-m4-durable-inference-evidence/regression-dashboard.md
+```
+
+The report-refresh manifest found five M4 evidence families and 14 committed
+reports. It kept dense SLM and BitNet evidence separated, selected
+`apple-m4-cpu-neon`, recorded `fallback_used=false`, and made no live model run
+or model download.
+
+The dashboard has nine matching-identity groups across those five families. Five
+groups are comparable today:
+
+| Family | Evidence | Comparable groups | Status |
+|---|---|---:|---|
+| `dense_slm_benchmark_v2` | dense SLM | 3 | `ready` |
+| `bitnet_eval` | BitNet | 1 | `ready` |
+| `bitnet_benchmark` | BitNet | 1 | `ready` |
+
+Four groups still have insufficient matching history and must not be described
+as trend-ready:
+
+| Family | Evidence | Groups | Status |
+|---|---|---:|---|
+| `dense_slm_eval_v2` | dense SLM | 3 | `insufficient_history` |
+| `bitnet_variable_warm` | BitNet | 1 | `insufficient_history` |
+
+`bitnet mac receipts-check` passes for the regenerated dashboard receipt. The
+dashboard may claim only that comparable matching-history groups now exist for
+dense benchmark, BitNet eval, and BitNet benchmark reports; it must not claim a
+trend for dense eval v2 or BitNet variable warm until another matching report is
+committed for those identities.
+
 ## Claim Boundary
 
 This lane may claim only that the tooling and committed receipts support durable
