@@ -403,7 +403,7 @@ to registered candidate state.
 
 ## Work item: CUDA-MODEL-SMOLLM2-002
 
-Status: pr_open
+Status: merged
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
