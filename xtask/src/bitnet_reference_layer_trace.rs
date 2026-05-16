@@ -3595,6 +3595,13 @@ fn build_ffn_norm_prefix_replay_body(
             "rust": rust_input_token.as_ref().map(|values| row_report(values)).unwrap_or(Value::Null),
             "reference_vs_rust": reference_input_vs_rust.unwrap_or(Value::Null),
             "token_attribution": input_attribution,
+            "attention_subnorm_sensitivity": ffn_norm_attention_subnorm_sensitivity(
+                model_path,
+                layer,
+                token,
+                reference_records,
+                rust_records,
+            )?,
             "attention_output_projection_sensitivity": ffn_norm_attention_output_projection_sensitivity(
                 model_path,
                 layer,
@@ -3782,6 +3789,145 @@ fn ffn_norm_input_token_attribution(
         "current_blocked_reasons": current_blocked_reasons,
         "rows": rows,
     })
+}
+
+fn ffn_norm_attention_subnorm_sensitivity(
+    model_path: &Path,
+    layer: usize,
+    token: usize,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: Option<&[RustTraceRecord]>,
+) -> Result<Value> {
+    let reference_input = find_reference_trace_record(
+        reference_records,
+        "attn_value_mix_history_ref_layout",
+        Some(layer),
+    );
+    let reference_target = find_reference_trace_record(
+        reference_records,
+        "attn_sub_norm_history_ref_layout",
+        Some(layer),
+    );
+    let rust_input = rust_records.and_then(|records| {
+        find_rust_trace_record(
+            records,
+            "attention_value_mix_merged_history_ref_layout",
+            Some(layer),
+        )
+    });
+    let rust_target = rust_records.and_then(|records| {
+        find_rust_trace_record(records, "post_attention_subnorm_history_ref_layout", Some(layer))
+    });
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference_input.is_none() {
+        blocked_reasons.push("reference_attention_value_mix_history_missing".to_string());
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push("reference_attention_subnorm_history_missing".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push("rust_attention_value_mix_history_missing".to_string());
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push("rust_attention_subnorm_history_missing".to_string());
+    }
+    if !blocked_reasons.is_empty() {
+        return Ok(json!({
+            "available": false,
+            "claim_allowed": false,
+            "diagnostic_only": true,
+            "current_blocked_reasons": blocked_reasons,
+        }));
+    }
+
+    let reference_input_token =
+        reference_dim_major_token(reference_input.expect("checked above"), token)?;
+    let reference_target_token =
+        reference_dim_major_token(reference_target.expect("checked above"), token)?;
+    let rust_input_token = rust_dim_major_token(rust_input.expect("checked above"), token)?;
+    let rust_target_token = rust_dim_major_token(rust_target.expect("checked above"), token)?;
+    let hidden = reference_input_token.len();
+    let weight_name = format!("blk.{layer}.attn_sub_norm.weight");
+    let weight = load_rmsnorm_weight(model_path, &weight_name, hidden)?;
+    let variants = rmsnorm_replay_variants(weight.eps, &weight.eps_source);
+    let reference_input_replay = rmsnorm_replay_section(
+        "reference_attention_value_mix_history_token",
+        &reference_input_token,
+        &weight.values,
+        &variants,
+        Some(&reference_target_token),
+        Some(&rust_target_token),
+    )?;
+    let rust_input_replay = rmsnorm_replay_section(
+        "rust_attention_value_mix_merged_history_token",
+        &rust_input_token,
+        &weight.values,
+        &variants,
+        Some(&reference_target_token),
+        Some(&rust_target_token),
+    )?;
+    let Some((variant, rust_input_output, rust_output_vs_target)) =
+        select_rmsnorm_variant_for_target(
+            &rust_input_token,
+            &weight.values,
+            &variants,
+            &rust_target_token,
+        )?
+    else {
+        return Ok(json!({
+            "available": false,
+            "reason": "no_rmsnorm_variants_available",
+            "claim_allowed": false,
+            "diagnostic_only": true,
+        }));
+    };
+    let reference_input_output =
+        replay_rmsnorm_variant(&reference_input_token, &weight.values, &variant)?;
+    let input_substitution_output_delta =
+        compare_vectors(&reference_input_output, &rust_input_output);
+    let reference_input_output_vs_rust_target =
+        compare_vectors(&reference_input_output, &rust_target_token);
+    let rust_runtime_arithmetic_separate_mismatch =
+        delta_metric(&rust_output_vs_target, "/max_abs_delta") > 1.0e-6;
+    let input_substitution_crosses_runtime_threshold =
+        delta_metric(&input_substitution_output_delta, "/max_abs_delta") > 1.0e-6;
+    let reference_best_delta =
+        delta_metric(&reference_input_replay, "/best_vs_reference_target/max_abs_delta");
+
+    Ok(json!({
+        "available": true,
+        "policy": "Selected-token attention subnorm sensitivity replays attention subnorm history from value-mix input through blk.N.attn_sub_norm.weight. It is diagnostic-only evidence and does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention/value residency, full residency, performance, or completion",
+        "claim_allowed": false,
+        "diagnostic_only": true,
+        "layer": layer,
+        "token": token,
+        "weight": weight.weight_report,
+        "reference_input_stage": "attn_value_mix_history_ref_layout",
+        "rust_input_stage": "attention_value_mix_merged_history_ref_layout",
+        "reference_target_stage": "attn_sub_norm_history_ref_layout",
+        "rust_target_stage": "post_attention_subnorm_history_ref_layout",
+        "reference_input_vs_rust_input": compare_vectors(&reference_input_token, &rust_input_token),
+        "reference_target_vs_rust_target": compare_vectors(&reference_target_token, &rust_target_token),
+        "reference_input_replay": reference_input_replay,
+        "rust_input_replay": rust_input_replay,
+        "selected_rust_runtime_rule": {
+            "id": variant.id,
+            "eps": variant.eps,
+            "eps_source": variant.eps_source,
+            "accumulation": variant.accumulation.as_str(),
+            "output_rounding": variant.output_rounding.as_str(),
+        },
+        "rust_input_output_vs_rust_runtime_target": rust_output_vs_target,
+        "reference_input_output_vs_rust_runtime_target": reference_input_output_vs_rust_target,
+        "reference_input_output_vs_rust_input_output": input_substitution_output_delta,
+        "classification": {
+            "reference_replay_explains_reference_target": reference_best_delta <= 1.0e-6,
+            "rust_replay_explains_rust_target": !rust_runtime_arithmetic_separate_mismatch,
+            "input_substitution_crosses_runtime_threshold": input_substitution_crosses_runtime_threshold,
+            "rust_runtime_arithmetic_separate_mismatch": rust_runtime_arithmetic_separate_mismatch,
+        },
+    }))
 }
 
 fn ffn_norm_attention_residual_sensitivity(
@@ -23038,6 +23184,22 @@ mod tests {
         assert!(reasons.contains(&json!("reference_attention_output_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_subnorm_history_missing")));
         assert!(reasons.contains(&json!("rust_attention_output_history_missing")));
+    }
+
+    #[test]
+    fn ffn_norm_attention_subnorm_sensitivity_reports_missing_inputs() {
+        let report =
+            ffn_norm_attention_subnorm_sensitivity(Path::new("missing.gguf"), 0, 0, &[], None)
+                .unwrap();
+        let reasons = report.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(report.pointer("/available"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert!(reasons.contains(&json!("reference_attention_value_mix_history_missing")));
+        assert!(reasons.contains(&json!("reference_attention_subnorm_history_missing")));
+        assert!(reasons.contains(&json!("rust_attention_value_mix_history_missing")));
+        assert!(reasons.contains(&json!("rust_attention_subnorm_history_missing")));
     }
 
     #[test]
