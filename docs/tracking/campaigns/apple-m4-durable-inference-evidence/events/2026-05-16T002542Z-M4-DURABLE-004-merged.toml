@@ -1,0 +1,27 @@
+timestamp = "2026-05-16T00:25:42Z"
+campaign = "apple-m4-durable-inference-evidence"
+item = "M4-DURABLE-004"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+pr = 5009
+merge_sha = "c9eecb6475c03e9d9432d98b314ddfda1fa0cce2"
+branch = "codex/apple-m4-durable-inference-evidence/M4-DURABLE-004-dashboard-history"
+summary = "Closed M4-DURABLE-004 after PR #5009 regenerated the durable M4 report-refresh manifest and regression dashboard from committed receipts only."
+
+artifacts = [
+  "docs/slm/apple-m4-durable-inference-evidence.md",
+  "docs/tracking/campaigns/apple-m4-durable-inference-evidence/generated/status.md",
+  "docs/tracking/generated/active-prs.md",
+  "docs/tracking/generated/blocked-items.md",
+  "docs/tracking/generated/global-dashboard.md",
+]
+
+notes = [
+  "The regenerated report-refresh manifest found five M4 evidence families and 14 committed reports.",
+  "The regression dashboard found nine matching-identity groups and five comparable groups: three dense SLM benchmark groups, one BitNet eval group, and one BitNet benchmark group.",
+  "Dense SLM eval v2 and BitNet variable warm remain insufficient_history and are not trend-ready.",
+  "The dashboard receipt validated with fallback_used=false and no live model run or model download.",
+  "No BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is made.",
+]
