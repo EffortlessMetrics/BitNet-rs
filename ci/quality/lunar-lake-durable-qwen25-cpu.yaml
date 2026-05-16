@@ -1,0 +1,63 @@
+schema: 1
+artifact_kind: slm_cpu_warm_session_corpus
+name: lunar-lake-qwen25-cpu-durability
+description: Deterministic Lunar Lake Qwen2.5 CPU warm-session durability corpus for promoted profiles.
+metadata:
+  campaign: intel-258v-platform
+  work_item: LNL258V-DURABLE-002
+  route_scope: dense_slm_default_cpu
+  model_role: promoted_control_route
+  prompt_template: qwen2.5
+  durability_policy: repeated-warm-session-stability
+  profiles:
+    - regression_tiny
+    - ask_short
+    - ask_normal
+  claim_boundary:
+    broad_quality_claim: false
+    speedup_claim: false
+    arc_execution_claim: false
+    npu_execution_claim: false
+    bitnet_qk256_claim: false
+model:
+  repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q8_0.gguf
+  sha256: ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen2.5
+  max_new_tokens: 24
+  greedy: true
+  deterministic: true
+  temperature: 0.0
+  top_k: 1
+  repeat_runs: 10
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 1
+cases:
+  - id: regression_tiny_math_2_plus_2_brief
+    question: "What is 2+2? Answer briefly."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "4"
+        - "four"
+
+  - id: ask_short_capital_france
+    question: "Name the capital of France."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: ask_normal_instruction_rust
+    question: "Write one short sentence about Rust."
+    min_generated_tokens: 3
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Rust"
+        - "rust"

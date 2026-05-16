@@ -4465,6 +4465,70 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-DURABLE-002"
+status = "pr_open"
+pr = 5227
+branch = "codex/lunar-lake/LNL258V-DURABLE-002-repeated-stability"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-DURABLE-001", "LNL258V-QUAL-002", "LNL258V-BENCH-001"]
+acceptance = "Record a live repeated Lunar Lake Qwen2.5 CPU warm-session durability receipt for the promoted dense SLM CPU route across regression_tiny, ask_short, and ask_normal representative profiles, with 10 attempts per case, fallback_used=false, deterministic identical generated token IDs/text, answer gates passing, and timing/telemetry context preserved while avoiding route promotion, speedup/acceleration, OpenVINO GPU/NPU stability, broad quality, BitNet proof, or QK256/I2_S behavior claims."
+commands = [
+  "target/debug/bitnet.exe --device cpu slm-warm-session --model C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci\\quality\\lunar-lake-durable-qwen25-cpu.yaml --corpus-repeat-runs 10 --strict-loader --strict-tokenizer --greedy --deterministic --require-determinism --fail-on-quality --quiet --json-out ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-durable-qwen25-cpu-warm-session.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/lunar-lake-durable-qwen25-cpu.yaml",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session-prompts/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+]
+may_claim = [
+  "The promoted dense Qwen CPU route completed a live 10x repeated warm-session durability run for regression_tiny, ask_short, and ask_normal representative prompts.",
+  "The committed receipt records fallback_used=false, answer gates passing, deterministic identical generated token IDs/text, and timing/telemetry context for the repeated run.",
+  "The receipt is limited to the dense Qwen CPU route and does not change route promotion.",
+]
+must_not_claim = [
+  "Broad dense SLM answer quality is proven.",
+  "Qwen CPU speedup or sustained throughput is proven.",
+  "OpenVINO GPU or NPU stability is proven.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ASK-003"
 status = "merged"
 pr = 4668
