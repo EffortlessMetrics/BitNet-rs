@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T22:59:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5227
+branch = "codex/lunar-lake/LNL258V-DURABLE-002-repeated-stability"
+merge_sha = "92d9b25850073de4e6ab4beaab3fb90cbf05b68e"
+summary = "Merged LNL258V-DURABLE-002 after CI passed to record live repeated Qwen CPU warm-session durability evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5227",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session-prompts/",
+]
+
+notes = [
+  "The merged receipt records 10 repeated attempts for each of three promoted dense Qwen CPU representative prompts with deterministic identical generated token IDs/text.",
+  "No route promotion, speedup, acceleration, broad quality, BitNet proof, or QK256/I2_S behavior change is claimed.",
+]
