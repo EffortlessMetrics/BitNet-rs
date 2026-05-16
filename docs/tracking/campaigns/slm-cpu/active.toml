@@ -1987,7 +1987,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-020"
-status = "in_progress"
+status = "pr_open"
+pr = 5108
+head_sha = "526ca4c27b379759cdc9be4324278bbfcc6a5868"
 branch = "model/slm-cpu-020-smollm2-cpu-sanity"
 stackable = false
 review_mode = "codex_premerge"
