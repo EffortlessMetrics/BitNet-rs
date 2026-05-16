@@ -12078,6 +12078,28 @@ mod tests {
     }
 
     #[test]
+    fn reference_patch_history_records_follow_requested_trace_layer() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        assert!(patch.contains(
+            "bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer)"
+        ));
+        assert!(patch.contains(
+            "bitnet_rs_history_layer == bitnet_rs_reference_layer_trace_requested_layer()"
+        ));
+        assert!(patch.contains(
+            "history_record_name << (bitnet_rs_history_is_attn_norm ? \"attn_norm_history_ref_layout-\" : \"vcur_history_ref_layout-\") << bitnet_rs_history_layer"
+        ));
+        assert!(!patch.contains(
+            "const bool bitnet_rs_history_is_attn_norm = strcmp(name, \"attn_norm-0\") == 0"
+        ));
+        assert!(
+            !patch.contains("const bool bitnet_rs_history_is_vcur = strcmp(name, \"Vcur-0\") == 0")
+        );
+    }
+
+    #[test]
     fn final_norm_trace_record_lookup_selects_expected_layer_inputs() {
         let mut reference_layer0 = test_reference_trace_record("l_out", vec![1.0, 2.0]);
         reference_layer0.name = "l_out-0".to_string();

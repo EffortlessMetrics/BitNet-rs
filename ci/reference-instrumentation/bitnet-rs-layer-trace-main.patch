@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1089 @@ struct llama_context {
+@@ -3441,6 +3444,1092 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -600,10 +600,13 @@ index 666fcc4d..23ee29ff 100644
 +        bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) sample_offset + i]);
 +    }
 +    out << "]}";
-+    const bool bitnet_rs_history_is_attn_norm = strcmp(name, "attn_norm-0") == 0;
-+    const bool bitnet_rs_history_is_vcur = strcmp(name, "Vcur-0") == 0;
-+    if ((bitnet_rs_history_is_attn_norm || bitnet_rs_history_is_vcur) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens) {
-+        const char * history_record_name = bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout-0" : "vcur_history_ref_layout-0";
++    int bitnet_rs_history_layer = -1;
++    const char * bitnet_rs_history_stage = bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer);
++    const bool bitnet_rs_history_is_attn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_norm") == 0;
++    const bool bitnet_rs_history_is_vcur = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "Vcur") == 0;
++    if ((bitnet_rs_history_is_attn_norm || bitnet_rs_history_is_vcur) && bitnet_rs_history_layer == bitnet_rs_reference_layer_trace_requested_layer() && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens) {
++        std::ostringstream history_record_name;
++        history_record_name << (bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout-" : "vcur_history_ref_layout-") << bitnet_rs_history_layer;
 +        const char * history_stage_name = bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout" : "vcur_history_ref_layout";
 +        const int64_t hidden = tensor->ne[0];
 +        const int64_t token_count = (int64_t) n_tokens;
@@ -631,7 +634,7 @@ index 666fcc4d..23ee29ff 100644
 +        out << ",{";
 +        out << "\"graph_index\":" << graph_index;
 +        out << ",\"name\":";
-+        bitnet_rs_reference_layer_trace_json_string(out, history_record_name);
++        bitnet_rs_reference_layer_trace_json_string(out, history_record_name.str().c_str());
 +        out << ",\"stage\":";
 +        bitnet_rs_reference_layer_trace_json_string(out, history_stage_name);
 +        out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
