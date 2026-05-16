@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T09:12:39Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-000"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-000-corpus-scorer-contract"
+summary = "Started freezing the Apple M4 dense SLM and BitNet eval corpus/scorer contract."
+
+notes = [
+  "The work records corpus IDs, seed generation rules, expected-output provenance, normalization rules, scoring schema, scorer self-tests, and aggregate receipt contract fields before larger corpus expansion.",
+  "The change is additive corpus/scorer metadata and dry-run receipt validation only; it does not run live models, download models, enable BitNet chat/serve, or claim Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup.",
+]

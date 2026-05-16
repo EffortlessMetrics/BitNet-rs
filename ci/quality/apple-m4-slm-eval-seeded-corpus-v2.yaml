@@ -10,6 +10,18 @@ metadata:
   case_count_target: 120
   prompt_template: qwen2.5
   scoring_status: deterministic_fixture_scoring
+  corpus_contract:
+    contract_version: m4-eval-corpus-scorer-contract-v1
+    corpus_id: apple-m4-slm-eval-seeded-corpus-v2
+    corpus_version: "2.0.0"
+    seed_generation_rules: "Static deterministic fixtures generated from seed=777331; every case ID and seed_material records family, operation, index, and fixture inputs. Any prompt, expected-output, scoring, or family-count change requires a corpus_version bump."
+    expected_output_provenance: "Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority."
+    normalization_rules: "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; known stop markers are stripped before scoring while exact_match remains strict after trim."
+    scoring_schema: answer_corpus_mechanical_scoring_v1
+    scorer_self_tests:
+      - "cargo test --locked -p bitnet-cli slm_eval_scoring"
+      - "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval_v2_dry_run_pins_supported_dense_model_identity"
+    receipt_contract: answer_corpus_aggregate_receipt_v1
   claim_boundary:
     runtime_proof: false
     broad_quality_claim: false
