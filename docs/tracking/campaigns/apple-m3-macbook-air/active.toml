@@ -379,10 +379,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-017"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-017-device-help-alignment"
 pr = 5148
 head_sha = "8e058b725bacbf3d09e23a20175f86a157d68dd8"
+merge_sha = "cd03ab9aba7bc57c4f5d155fd5c696a8993bcf97"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
