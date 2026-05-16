@@ -1,0 +1,21 @@
+timestamp = "2026-05-16T02:02:41Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5030
+branch = "codex/lunar-lake/LNL258V-REG-003-strict-v2"
+head_sha = "a9a78c5e538b5568c95d2541b6d0cef464c97ff5"
+summary = "Opened LNL258V-REG-003 to make strict Lunar Lake regression fail closed on the v2 corpus/profile surface."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5030",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The PR adds a regression_surface summary and strict fail-closed checks for corpus v2 plus route-profile evidence.",
+  "No model inference, broad quality claim, speedup claim, GPU/NPU promotion, Arc/NPU acceleration, full accelerator BitNet inference, or BitNet QK256/I2_S behavior change is claimed.",
+]
