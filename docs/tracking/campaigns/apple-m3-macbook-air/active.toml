@@ -787,9 +787,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-007"
-status = "pr_open"
+status = "blocked"
 pr = 5235
-head_sha = "fdcadee0f0c5d0e98c36deb487163ecb0b124300"
+merge_sha = "a987d7c5607cd9026da006e292a617b287a49ac0"
+head_sha = "13c783bcec22406f42b8306e4042fbdd87683b12"
 branch = "codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic"
 stackable = false
 review_mode = "codex_premerge"
