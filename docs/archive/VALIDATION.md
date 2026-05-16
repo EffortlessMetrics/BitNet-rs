@@ -31,9 +31,12 @@ scripts/validate_all.sh
 DELTA_NLL_MAX=2e-2 scripts/validate_all.sh
 ```
 
-### 2. Greedy Argmax Checker (`scripts/check_greedy_argmax.py`)
+### 2. Greedy Argmax Checker (`xtask check-greedy-argmax`)
 
 Validates that greedy decoding always selects the argmax token from logits.
+Implemented as a native Rust xtask subcommand
+(`xtask/src/check_greedy_argmax.rs`). Exits with code `7` if any step's chosen
+token does not match the argmax of its recorded top logits.
 
 **Usage:**
 ```bash
@@ -41,7 +44,7 @@ bitnet run --model model.gguf --tokenizer tokenizer.json \
   --prompt "Test" --greedy --dump-logit-steps 10 \
   --json-out output.json
 
-python3 scripts/check_greedy_argmax.py output.json
+cargo run --locked --no-default-features -p xtask -- check-greedy-argmax output.json
 ```
 
 ### 3. Decode Throughput Benchmark (`scripts/bench-decode.sh`)

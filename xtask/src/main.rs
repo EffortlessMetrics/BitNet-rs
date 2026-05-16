@@ -38,6 +38,7 @@ use walkdir::WalkDir;
 mod apple_m4;
 mod bench_receipt;
 mod campaign;
+mod check_greedy_argmax;
 mod ci;
 mod claims;
 mod cpp_setup_auto;
@@ -383,6 +384,26 @@ enum Cmd {
         rs_dir: PathBuf,
         /// C++ trace directory
         cpp_dir: PathBuf,
+    },
+
+    /// Verify greedy argmax invariant from CLI JSON output
+    ///
+    /// Native Rust port of `scripts/check_greedy_argmax.py`. Reads the JSON
+    /// produced by `bitnet run --json-out ... --dump-logit-steps ...` and
+    /// confirms that the chosen token at every recorded step matches the
+    /// argmax of the recorded top logits.
+    ///
+    /// Exit codes:
+    ///   0 — invariant holds for every step
+    ///   7 — invariant violated for at least one step
+    ///   non-zero anyhow error — JSON file missing or malformed
+    ///
+    /// Usage:
+    ///   cargo run -p xtask -- check-greedy-argmax path/to/cli-output.json
+    #[command(name = "check-greedy-argmax")]
+    CheckGreedyArgmax {
+        /// Path to the JSON file produced by `bitnet run --json-out`
+        json_file: PathBuf,
     },
 
     /// Check C++ backend availability for cross-validation
@@ -1809,6 +1830,7 @@ fn real_main() -> Result<()> {
             trace_diff::run(&rs_dir, &cpp_dir)?;
             Ok(())
         }
+        Cmd::CheckGreedyArgmax { json_file } => check_greedy_argmax::run(&json_file),
         #[cfg(any(feature = "crossval", feature = "crossval-all"))]
         Cmd::Preflight { backend, verbose, repair, no_repair } => {
             cpp_backend_preflight_cmd(backend, verbose, repair, no_repair)?;
