@@ -176,6 +176,7 @@ struct AttnOutputSameInputArgs {
     reference: PathBuf,
     model: Option<PathBuf>,
     weight: String,
+    layer: Option<usize>,
     output: Option<PathBuf>,
     format: String,
 }
@@ -496,7 +497,7 @@ fn print_embedding_row_authority_help() {
 
 fn print_attn_output_same_input_help() {
     println!(
-        "Project the reference attn_sub_norm vector through Rust-loaded blk.0.attn_output.weight and compare with reference attn_o_out\n\nUsage: xtask.exe bitnet-reference-attn-output-same-input-parity [OPTIONS]\n\nOptions:\n      --reference <PATH>  Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --model <PATH>      GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>     GGUF QK256 attention output weight [default: blk.0.attn_output.weight]\n      --output <PATH>     Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-attn-output-same-input-parity.json]\n      --format <FORMAT>   Output format: human or json [default: human]\n  -h, --help              Print help"
+        "Project the reference attn_sub_norm vector through Rust-loaded blk.N.attn_output.weight and compare with reference attn_o_out\n\nUsage: xtask.exe bitnet-reference-attn-output-same-input-parity [OPTIONS]\n\nOptions:\n      --reference <PATH>  Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --model <PATH>      GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>     GGUF QK256 attention output weight [default: blk.0.attn_output.weight]\n      --layer <N>         Reference/Rust layer to compare [default: inferred from --weight or 0]\n      --output <PATH>     Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-attn-output-same-input-parity.json]\n      --format <FORMAT>   Output format: human or json [default: human]\n  -h, --help              Print help"
     );
 }
 
@@ -717,6 +718,7 @@ fn parse_attn_output_same_input_args(args: &[String]) -> Result<AttnOutputSameIn
     let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
     let mut model = None::<PathBuf>;
     let mut weight = DEFAULT_ATTN_OUTPUT_WEIGHT.to_string();
+    let mut layer = None::<usize>;
     let mut output = Some(PathBuf::from(DEFAULT_ATTN_OUTPUT_SAME_INPUT_OUTPUT));
     let mut format = "human".to_string();
     let mut i = 2usize;
@@ -732,12 +734,19 @@ fn parse_attn_output_same_input_args(args: &[String]) -> Result<AttnOutputSameIn
             "--reference" => reference = PathBuf::from(value()?),
             "--model" => model = Some(PathBuf::from(value()?)),
             "--weight" => weight = value()?,
+            "--layer" => layer = Some(value()?.parse().context("--layer must be an integer")?),
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
             other => bail!("unknown bitnet-reference-attn-output-same-input-parity option {other}"),
         }
     }
-    Ok(AttnOutputSameInputArgs { reference, model, weight, output, format })
+    Ok(AttnOutputSameInputArgs { reference, model, weight, layer, output, format })
+}
+
+fn layer_index_from_blk_weight(weight: &str) -> Option<usize> {
+    let rest = weight.strip_prefix("blk.")?;
+    let layer = rest.split('.').next()?;
+    layer.parse().ok()
 }
 
 fn parse_value_projection_same_input_args(args: &[String]) -> Result<ValueProjectionSameInputArgs> {
@@ -1563,13 +1572,18 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
         })
         .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
     let model_path = normalize_path(&model_path)?;
+    let weight_layer = layer_index_from_blk_weight(&args.weight);
+    let layer = args.layer.or(weight_layer).unwrap_or(0);
+    let layer_source = if args.layer.is_some() {
+        "--layer"
+    } else if weight_layer.is_some() {
+        "weight_name"
+    } else {
+        "default_layer0"
+    };
 
-    let input = reference_records
-        .iter()
-        .find(|record| record.stage == "attn_sub_norm" && record.layer == Some(0));
-    let target = reference_records
-        .iter()
-        .find(|record| record.stage == "attn_o_out" && record.layer == Some(0));
+    let input = find_reference_trace_record(&reference_records, "attn_sub_norm", Some(layer));
+    let target = find_reference_trace_record(&reference_records, "attn_o_out", Some(layer));
 
     let mut blocked_reasons = Vec::<String>::new();
     if !reference_path.is_file() {
@@ -1578,11 +1592,18 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
     if !model_path.is_file() {
         blocked_reasons.push("model_gguf_missing".to_string());
     }
+    if args.layer.is_some() && weight_layer.is_some() && args.layer != weight_layer {
+        blocked_reasons.push(format!(
+            "attn_output_same_input_layer_mismatch:requested_layer{}_weight_layer{}",
+            layer,
+            weight_layer.expect("checked above")
+        ));
+    }
     if input.is_none() {
-        blocked_reasons.push("reference_attn_sub_norm_layer0_missing".to_string());
+        blocked_reasons.push(format!("reference_attn_sub_norm_layer{layer}_missing"));
     }
     if target.is_none() {
-        blocked_reasons.push("reference_attn_o_out_layer0_missing".to_string());
+        blocked_reasons.push(format!("reference_attn_o_out_layer{layer}_missing"));
     }
 
     let input_count = input.map(|record| record.first_values.len()).unwrap_or(0);
@@ -1622,6 +1643,7 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
                 );
                 projection = json!({
                     "kernel": "rust_qk256_activation_quantized_scaled_same_input_cpu_oracle",
+                    "layer": layer,
                     "input_stage": "attn_sub_norm",
                     "target_stage": "attn_o_out",
                     "input": row_report(&input.first_values),
@@ -1677,6 +1699,10 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
             "reference": path_to_string(&reference_path),
             "model": path_to_string(&model_path),
             "weight": args.weight,
+            "requested_layer": args.layer,
+            "inferred_weight_layer": weight_layer,
+            "selected_layer": layer,
+            "layer_source": layer_source,
         },
         "reference_trace": {
             "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
@@ -1694,6 +1720,7 @@ fn build_attn_output_same_input_parity(args: &AttnOutputSameInputArgs) -> Result
         "decision": {
             "same_input_projection_available": same_input_projection_available,
             "same_input_projection_matches_reference": same_input_projection_matches_reference,
+            "selected_layer": layer,
             "input_first_values_count": input_count,
             "target_first_values_count": target_count,
             "current_blocked_reasons": current_blocked_reasons,
@@ -15525,6 +15552,7 @@ mod tests {
         assert_eq!(defaults.reference, PathBuf::from(DEFAULT_RUN_OUTPUT));
         assert_eq!(defaults.model, None);
         assert_eq!(defaults.weight, DEFAULT_ATTN_OUTPUT_WEIGHT);
+        assert_eq!(defaults.layer, None);
         assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_ATTN_OUTPUT_SAME_INPUT_OUTPUT)));
         assert_eq!(defaults.format, "human");
 
@@ -15537,6 +15565,8 @@ mod tests {
             "model.gguf".to_string(),
             "--weight".to_string(),
             "blk.1.attn_output.weight".to_string(),
+            "--layer".to_string(),
+            "1".to_string(),
             "--output".to_string(),
             "out.json".to_string(),
             "--format".to_string(),
@@ -15546,8 +15576,16 @@ mod tests {
         assert_eq!(parsed.reference, PathBuf::from("ref.json"));
         assert_eq!(parsed.model, Some(PathBuf::from("model.gguf")));
         assert_eq!(parsed.weight, "blk.1.attn_output.weight");
+        assert_eq!(parsed.layer, Some(1));
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn attn_output_same_input_infers_layer_from_weight_name() {
+        assert_eq!(layer_index_from_blk_weight("blk.0.attn_output.weight"), Some(0));
+        assert_eq!(layer_index_from_blk_weight("blk.12.attn_output.weight"), Some(12));
+        assert_eq!(layer_index_from_blk_weight("layers.12.attention.o_proj.weight"), None);
     }
 
     #[test]
@@ -15839,6 +15877,7 @@ mod tests {
             reference,
             model: Some(model),
             weight: DEFAULT_ATTN_OUTPUT_WEIGHT.to_string(),
+            layer: None,
             output: None,
             format: "json".to_string(),
         })
@@ -15859,6 +15898,128 @@ mod tests {
         assert!(reasons.contains(&json!("model_gguf_missing")));
         assert!(reasons.contains(&json!("reference_attn_sub_norm_first_values_missing")));
         assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn attn_output_same_input_selects_layer_inferred_from_weight() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let model = dir.path().join("missing.gguf");
+        write_file(
+            &reference,
+            &serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "attn_sub_norm-1",
+                        "stage": "attn_sub_norm",
+                        "graph_index": 1,
+                        "layer": 1,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [1.0, 2.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    },
+                    {
+                        "name": "attn_o_out-1",
+                        "stage": "attn_o_out",
+                        "graph_index": 2,
+                        "layer": 1,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [3.0, 4.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    }
+                ]
+            }))
+            .unwrap(),
+        );
+
+        let report = build_attn_output_same_input_parity(&AttnOutputSameInputArgs {
+            reference,
+            model: Some(model),
+            weight: "blk.1.attn_output.weight".to_string(),
+            layer: None,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(report.pointer("/inputs/selected_layer"), Some(&json!(1)));
+        assert_eq!(report.pointer("/inputs/layer_source"), Some(&json!("weight_name")));
+        assert_eq!(report.pointer("/decision/selected_layer"), Some(&json!(1)));
+        assert!(reasons.contains(&json!("model_gguf_missing")));
+        assert!(!reasons.contains(&json!("reference_attn_sub_norm_layer1_missing")));
+        assert!(!reasons.contains(&json!("reference_attn_o_out_layer1_missing")));
+    }
+
+    #[test]
+    fn attn_output_same_input_blocks_explicit_layer_weight_mismatch() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let model = dir.path().join("missing.gguf");
+        write_file(
+            &reference,
+            &serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "attn_sub_norm-1",
+                        "stage": "attn_sub_norm",
+                        "graph_index": 1,
+                        "layer": 1,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [1.0, 2.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    },
+                    {
+                        "name": "attn_o_out-1",
+                        "stage": "attn_o_out",
+                        "graph_index": 2,
+                        "layer": 1,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [3.0, 4.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.0}
+                    }
+                ]
+            }))
+            .unwrap(),
+        );
+
+        let report = build_attn_output_same_input_parity(&AttnOutputSameInputArgs {
+            reference,
+            model: Some(model),
+            weight: "blk.0.attn_output.weight".to_string(),
+            layer: Some(1),
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(report.pointer("/inputs/selected_layer"), Some(&json!(1)));
+        assert_eq!(report.pointer("/inputs/layer_source"), Some(&json!("--layer")));
+        assert!(reasons.contains(&json!(
+            "attn_output_same_input_layer_mismatch:requested_layer1_weight_layer0"
+        )));
+        assert_eq!(
+            report.pointer("/decision/same_input_projection_available"),
+            Some(&json!(false))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
