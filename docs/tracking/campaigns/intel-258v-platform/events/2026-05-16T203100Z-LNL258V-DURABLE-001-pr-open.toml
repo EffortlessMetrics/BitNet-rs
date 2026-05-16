@@ -1,0 +1,21 @@
+timestamp = "2026-05-16T20:31:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5206
+branch = "codex/lunar-lake/LNL258V-DURABLE-001-stability"
+head_sha = "b6e306aed5a41f44e6e7cdaae107c31d882abee2"
+summary = "Opened LNL258V-DURABLE-001 to add a Lunar Lake repeated-run durability index."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5206",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+]
+
+notes = [
+  "The PR indexes repeated-run durability requirements for the promoted dense Qwen CPU route without running inference.",
+  "The durability bundle explicitly records stability_proven=false until repeated-run receipts exist.",
+]
