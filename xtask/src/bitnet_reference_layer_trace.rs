@@ -1074,18 +1074,33 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
 
     let reference_json = read_json(&reference_path)?;
     let reference_records = read_reference_records(&reference_json)?;
-    let cpu_records = read_rust_trace_dir(&cpu_trace_dir)?;
-    let a770_records = match &a770_trace_dir {
-        Some(dir) => Some(read_rust_trace_dir(dir)?),
-        None => None,
+    let cpu_record_list = read_rust_trace_records(&cpu_trace_dir)?;
+    let cpu_records = rust_trace_stage_map(cpu_record_list.clone());
+    let (a770_record_list, a770_records) = match &a770_trace_dir {
+        Some(dir) => {
+            let records = read_rust_trace_records(dir)?;
+            let map = rust_trace_stage_map(records.clone());
+            (Some(records), Some(map))
+        }
+        None => (None, None),
     };
 
     let stage_mapping = reference_stage_mapping();
-    let cpu_comparison =
-        compare_reference_to_rust(&reference_records, &cpu_records, &stage_mapping);
-    let a770_comparison = a770_records
-        .as_ref()
-        .map(|records| compare_reference_to_rust(&reference_records, records, &stage_mapping));
+    let cpu_comparison = compare_reference_to_rust_with_records(
+        &reference_records,
+        &cpu_records,
+        &cpu_record_list,
+        &stage_mapping,
+    );
+    let a770_comparison =
+        a770_records.as_ref().zip(a770_record_list.as_ref()).map(|(records, record_list)| {
+            compare_reference_to_rust_with_records(
+                &reference_records,
+                records,
+                record_list,
+                &stage_mapping,
+            )
+        });
 
     let mut blocked_reasons = Vec::<String>::new();
     let cpu_scope_mismatch_count =
@@ -4173,8 +4188,12 @@ fn read_rust_trace_records(dir: &Path) -> Result<Vec<RustTraceRecord>> {
 }
 
 fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
+    Ok(rust_trace_stage_map(read_rust_trace_records(dir)?))
+}
+
+fn rust_trace_stage_map(record_list: Vec<RustTraceRecord>) -> BTreeMap<String, RustTraceRecord> {
     let mut records = BTreeMap::new();
-    for record in read_rust_trace_records(dir)? {
+    for record in record_list {
         let stage = rust_trace_stage(&record);
         let should_insert = records.get(&stage).is_none_or(|existing| {
             rust_trace_preference(&record) < rust_trace_preference(existing)
@@ -4183,7 +4202,7 @@ fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> 
             records.insert(stage, record);
         }
     }
-    Ok(records)
+    records
 }
 
 fn rust_trace_stage(record: &RustTraceRecord) -> String {
@@ -4362,9 +4381,25 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
+#[cfg(test)]
 fn compare_reference_to_rust(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
+    mapping: &[(&str, &str)],
+) -> Value {
+    let rust_record_list = rust_records.values().cloned().collect::<Vec<_>>();
+    compare_reference_to_rust_with_records(
+        reference_records,
+        rust_records,
+        &rust_record_list,
+        mapping,
+    )
+}
+
+fn compare_reference_to_rust_with_records(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    rust_record_list: &[RustTraceRecord],
     mapping: &[(&str, &str)],
 ) -> Value {
     let mut stages = Vec::new();
@@ -4475,7 +4510,7 @@ fn compare_reference_to_rust(
         stages.push(stage);
     }
 
-    json!({
+    let mut report = json!({
         "trace_record_count": rust_records.len(),
         "compared_stage_count": compared_count,
         "material_mismatch_count": material_mismatch_count,
@@ -4517,6 +4552,109 @@ fn compare_reference_to_rust(
         "attention_value_mix_f16_cache_head_lane_best_matches": attention_value_mix_f16_cache_head_lane_best_matches(reference_records, rust_records),
         "attention_value_mix_head_lane_best_matches": attention_value_mix_head_lane_best_matches(reference_records, rust_records),
         "stages": stages,
+    });
+    report["layer_output_history_delta"] =
+        layer_output_history_delta(reference_records, rust_record_list);
+    report
+}
+
+fn layer_output_history_delta(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &[RustTraceRecord],
+) -> Value {
+    let mut reference_layers = reference_records
+        .iter()
+        .filter(|record| record.stage == "l_out")
+        .filter_map(|record| {
+            let layer = usize::try_from(record.layer?).ok()?;
+            Some((layer, record))
+        })
+        .collect::<Vec<_>>();
+    reference_layers.sort_by_key(|(layer, _)| *layer);
+
+    let mut rust_by_layer = BTreeMap::<usize, &RustTraceRecord>::new();
+    for record in rust_records.iter().filter(|record| rust_trace_stage(record) == "post_layer") {
+        let Some(layer) = record.layer.and_then(|value| usize::try_from(value).ok()) else {
+            continue;
+        };
+        let replace = rust_by_layer.get(&layer).is_none_or(|existing| {
+            record.first_values.len() > existing.first_values.len()
+                || (record.first_values.len() == existing.first_values.len()
+                    && rust_trace_preference(record) < rust_trace_preference(existing))
+        });
+        if replace {
+            rust_by_layer.insert(layer, record);
+        }
+    }
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_rust_count = 0usize;
+    let mut material_mismatch_count = 0usize;
+    let mut first_material_layer = Value::Null;
+
+    for (layer, reference) in reference_layers {
+        let rust = rust_by_layer.get(&layer).copied();
+        if rust.is_none() {
+            missing_rust_count += 1;
+        }
+        let mut status = if rust.is_some() { "summary_match" } else { "missing_rust" };
+        let mut first_values_delta = Value::Null;
+        let mut material_mismatch = false;
+        let mut full_first_values_match = false;
+
+        if let Some(rust) = rust {
+            compared_count += 1;
+            if !reference.first_values.is_empty() && !rust.first_values.is_empty() {
+                first_values_delta = compare_prefix(
+                    &reference.first_values,
+                    &rust.first_values,
+                    reference.first_values.len().min(rust.first_values.len()),
+                );
+                full_first_values_match = reference.first_values.len() as u64
+                    == reference.nelements
+                    && rust.first_values.len() == rust.num_elements
+                    && first_values_delta
+                        .pointer("/count_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                    && first_values_delta
+                        .pointer("/sha256_match")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+                let max_abs_delta = delta_metric(&first_values_delta, "/max_abs_delta");
+                material_mismatch = !full_first_values_match && max_abs_delta > 1.0e-4;
+            }
+            if material_mismatch {
+                status = "material_mismatch";
+                material_mismatch_count += 1;
+            }
+        }
+
+        let row = json!({
+            "layer": layer,
+            "status": status,
+            "reference": reference_record_summary(reference),
+            "rust": rust.map(rust_record_summary).unwrap_or(Value::Null),
+            "first_values_delta": first_values_delta,
+            "full_first_values_match": full_first_values_match,
+            "material_mismatch": material_mismatch,
+        });
+        if material_mismatch && first_material_layer.is_null() {
+            first_material_layer = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "policy": "Layer-output history deltas are diagnostic-only evidence for locating the first l_out/post_layer drift; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, full residency, performance, or completion",
+        "reference_layer_count": rows.len(),
+        "rust_layer_count": rust_by_layer.len(),
+        "compared_count": compared_count,
+        "missing_rust_count": missing_rust_count,
+        "material_mismatch_count": material_mismatch_count,
+        "first_material_layer": first_material_layer,
+        "rows": rows,
     })
 }
 
@@ -11139,6 +11277,42 @@ mod tests {
         let selected = find_rust_trace_record(&records, "post_layer", Some(2)).unwrap();
         assert_eq!(selected.layer, Some(2));
         assert_eq!(selected.first_values, vec![3.0, 4.0]);
+    }
+
+    #[test]
+    fn compare_reports_layer_output_history_first_material_layer() {
+        let mut reference_layer0 = test_reference_trace_record("l_out", vec![1.0, 2.0]);
+        reference_layer0.name = "l_out-0".to_string();
+        reference_layer0.layer = Some(0);
+        let mut reference_layer1 = test_reference_trace_record("l_out", vec![3.0, 4.0]);
+        reference_layer1.name = "l_out-1".to_string();
+        reference_layer1.layer = Some(1);
+        let reference_records = vec![reference_layer0, reference_layer1];
+
+        let mut rust_layer0 = test_rust_trace_record("post_layer", vec![1.0, 2.0]);
+        rust_layer0.layer = Some(0);
+        let mut rust_layer1 = test_rust_trace_record("post_layer", vec![3.0, 4.5]);
+        rust_layer1.name = "t0/blk1/post_layer".to_string();
+        rust_layer1.layer = Some(1);
+        let rust_records = vec![rust_layer0, rust_layer1];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let history = report.pointer("/layer_output_history_delta").unwrap();
+
+        assert_eq!(history.pointer("/compared_count"), Some(&json!(2)));
+        assert_eq!(history.pointer("/material_mismatch_count"), Some(&json!(1)));
+        assert_eq!(history.pointer("/first_material_layer/layer"), Some(&json!(1)));
+        assert_eq!(
+            history.pointer("/first_material_layer/first_values_delta/max_abs_delta"),
+            Some(&json!(0.5))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), None);
     }
 
     #[test]

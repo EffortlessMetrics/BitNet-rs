@@ -1549,7 +1549,17 @@ impl TransformerBlock {
         let x = self.feed_forward.forward(&x, raw_tensors, _trace_base_seq)?;
         let x = (x + residual)?;
         #[cfg(feature = "trace")]
-        trace_layer0_tensor(self.attention.layer_idx, _trace_base_seq, 1, "post_layer", &x)?;
+        {
+            let suffix = format!("blk{}/post_layer", self.attention.layer_idx);
+            trace_tensor_token_axis_record(
+                &suffix,
+                &x,
+                _trace_base_seq,
+                1,
+                Some(self.attention.layer_idx as isize),
+                "post_layer",
+            )?;
+        }
 
         // Debug post-FFN activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -2014,19 +2024,6 @@ impl TransformerModel {
             {
                 eprintln!("[norm] layer {i}: {:.6e}", norm);
             }
-        }
-
-        #[cfg(feature = "trace")]
-        if let Some(final_layer_idx) = self.layers.len().checked_sub(1) {
-            let suffix = format!("blk{final_layer_idx}/post_layer");
-            trace_tensor_token_axis_record(
-                &suffix,
-                &x,
-                _trace_base_seq,
-                1,
-                Some(final_layer_idx as isize),
-                "post_layer",
-            )?;
         }
 
         let eps = self.config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
