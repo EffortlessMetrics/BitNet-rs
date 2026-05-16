@@ -3832,6 +3832,7 @@ fn compare_reference_to_rust(
         "attention_score_input_attribution": attention_score_input_attribution(reference_records, rust_records),
         "attention_key_score_input_delta": attention_key_score_input_delta(reference_records, rust_records),
         "attention_key_current_projection_rope_boundary": attention_key_current_projection_rope_boundary(reference_records, rust_records),
+        "attention_key_kcur_history_boundary": attention_key_kcur_history_boundary(reference_records, rust_records),
         "attention_key_cache_store_readback_boundary": attention_key_cache_store_readback_boundary(reference_records, rust_records),
         "attention_score_rust_scalar_recompute": attention_score_rust_scalar_recompute(rust_records),
         "attention_score_raw_head_lane_best_matches": attention_score_raw_head_lane_best_matches(reference_records, rust_records),
@@ -7208,6 +7209,108 @@ fn reference_rope_key_head(
         return None;
     }
     Some(record.first_values[start..end].to_vec())
+}
+
+fn attention_key_kcur_history_boundary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kcur_history_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_stage_prefix = "attention_k_before_cache_store_kv_head";
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, rust_stage_prefix).map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut total_bucket_mismatch_count = 0usize;
+    let mut max_bucket_mismatch_count = 0usize;
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+    let mut blocked_reasons = Vec::<String>::new();
+
+    if reference_heads.is_empty() {
+        blocked_reasons.push("reference_kcur_history_records_missing".to_string());
+    }
+    if rust_heads.is_empty() {
+        blocked_reasons.push("rust_attention_k_before_cache_store_records_missing".to_string());
+    }
+
+    for (&head, reference) in &reference_heads {
+        if let Some(rust) = rust_heads.get(&head) {
+            let delta = dim_major_history_delta(reference, rust);
+            let bucket_mismatch_count =
+                delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0)
+                    as usize;
+            total_bucket_mismatch_count += bucket_mismatch_count;
+            max_bucket_mismatch_count = max_bucket_mismatch_count.max(bucket_mismatch_count);
+            max_abs_delta = max_abs_delta.max(delta_metric(&delta, "/max_abs_delta"));
+            max_rms_delta = max_rms_delta.max(delta_metric(&delta, "/rms_abs_delta"));
+            compared_head_count += 1;
+            rows.push(json!({
+                "kv_head": head,
+                "status": "compared",
+                "delta": delta,
+            }));
+        } else {
+            missing_head_count += 1;
+            rows.push(json!({
+                "kv_head": head,
+                "status": "missing_rust_kcur_history_stage",
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "post-RoPE Kcur history boundary comparison is diagnostic-only evidence for whether historical K drift appears before Rust cache storage; it compares reference kcur_history_kv_head records against Rust attention_k_before_cache_store_kv_head records and does not promote reference parity, A770 semantic quality, attention score residency, resident KV, selected attention, full residency, performance, or any support claim",
+        "reference_stage_prefix": "kcur_history_kv_head",
+        "reference_layout": "dim_major_token_minor",
+        "rust_stage_prefix": rust_stage_prefix,
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "total_f16_bucket_mismatch_count": total_bucket_mismatch_count,
+        "max_head_f16_bucket_mismatch_count": max_bucket_mismatch_count,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !reference_heads.is_empty() && missing_head_count == 0,
+        "blocked_reasons": blocked_reasons,
+        "rows": rows,
+    })
+}
+
+fn dim_major_history_delta(reference: &ReferenceTraceRecord, rust: &RustTraceRecord) -> Value {
+    let dim_count = reference.shape.first().and_then(|dim| usize::try_from(*dim).ok());
+    let token_count = reference.shape.get(1).and_then(|dim| usize::try_from(*dim).ok());
+    match (dim_count, token_count) {
+        (Some(dim_count), Some(token_count))
+            if dim_count > 0
+                && token_count > 0
+                && reference.first_values.len() >= dim_count.saturating_mul(token_count) =>
+        {
+            f16_bucket_delta_dim_major(
+                &reference.first_values,
+                &rust.first_values,
+                dim_count,
+                token_count,
+            )
+        }
+        _ => f16_bucket_delta(&reference.first_values, &rust.first_values),
+    }
 }
 
 fn attention_key_cache_store_readback_boundary(
@@ -11321,6 +11424,83 @@ mod tests {
         assert!(boundary.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
             |reasons| reasons.contains(&json!("rust_attention_k_before_cache_store_head_missing"))
         ));
+    }
+
+    #[test]
+    fn compare_reports_key_kcur_history_boundary() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![1.0, 2.0, 3.0, 10.0, 20.0, 30.0],
+            ..test_reference_trace_record(
+                "kcur_history_kv_head0_ref_layout",
+                vec![1.0, 2.0, 3.0, 10.0, 20.0, 30.0],
+            )
+        }];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_k_before_cache_store_kv_head0_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 3],
+                num_elements: 6,
+                first_values: vec![1.0, 2.25, 3.0, 10.0, 20.0, 30.0],
+                ..test_rust_trace_record(
+                    "attention_k_before_cache_store_kv_head0_ref_layout",
+                    vec![1.0, 2.25, 3.0, 10.0, 20.0, 30.0],
+                )
+            },
+        );
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_key_kcur_history_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            boundary.pointer("/reference_stage_prefix"),
+            Some(&json!("kcur_history_kv_head"))
+        );
+        assert_eq!(boundary.pointer("/reference_layout"), Some(&json!("dim_major_token_minor")));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/all_compared"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/rows/0/status"), Some(&json!("compared")));
+        assert_eq!(boundary.pointer("/rows/0/delta/layout"), Some(&json!("dim_major_token_minor")));
+        assert_eq!(
+            boundary.pointer("/rows/0/delta/first_f16_bucket_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+    }
+
+    #[test]
+    fn compare_reports_key_kcur_history_boundary_missing_stages_as_diagnostic() {
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 3, 1, 1],
+            nelements: 6,
+            first_values: vec![1.0, 2.0, 3.0, 10.0, 20.0, 30.0],
+            ..test_reference_trace_record(
+                "kcur_history_kv_head0_ref_layout",
+                vec![1.0, 2.0, 3.0, 10.0, 20.0, 30.0],
+            )
+        }];
+        let rust_records = BTreeMap::new();
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_key_kcur_history_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/all_compared"), Some(&json!(false)));
+        assert!(boundary.pointer("/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| {
+                reasons.contains(&json!("rust_attention_k_before_cache_store_records_missing"))
+            }
+        ));
+        assert_eq!(
+            boundary.pointer("/rows/0/status"),
+            Some(&json!("missing_rust_kcur_history_stage"))
+        );
     }
 
     #[test]
