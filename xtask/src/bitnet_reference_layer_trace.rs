@@ -143,6 +143,7 @@ struct LayerTraceRunArgs {
     plan: PathBuf,
     sidecar: PathBuf,
     trace_layer: Option<usize>,
+    first_values_limit: Option<usize>,
     output: Option<PathBuf>,
     format: String,
 }
@@ -164,6 +165,7 @@ struct LayerTraceRustCaptureArgs {
     skip_a770: bool,
     diag_rmsnorm_f64_accum: bool,
     trace_layer: Option<usize>,
+    first_values_limit: Option<usize>,
     overwrite: bool,
     output: Option<PathBuf>,
     format: String,
@@ -508,7 +510,7 @@ fn print_help() {
 
 fn print_run_help() {
     println!(
-        "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>  BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>        llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>           Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>         Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --trace-layer <N>        Capture layer-specific reference stages for layer N instead of layer 0\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>  BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>        llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>           Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>         Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --trace-layer <N>        Capture layer-specific reference stages for layer N instead of layer 0\n      --first-values-limit <N> Set reference first_values sample limit for this run\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -520,7 +522,7 @@ fn print_compare_help() {
 
 fn print_rust_capture_help() {
     println!(
-        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --diag-rmsnorm-f64-accum Capture Rust traces with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --trace-layer <N>        Capture layer-specific Rust trace stages for layer N instead of layer 0\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --diag-rmsnorm-f64-accum Capture Rust traces with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --trace-layer <N>        Capture layer-specific Rust trace stages for layer N instead of layer 0\n      --first-values-limit <N> Set Rust first_values sample limit for this capture\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -606,6 +608,7 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
     let mut plan = PathBuf::from(DEFAULT_REFERENCE_PLAN);
     let mut sidecar = PathBuf::from(DEFAULT_SIDECAR);
     let mut trace_layer = None::<usize>;
+    let mut first_values_limit = None::<usize>;
     let mut output = Some(PathBuf::from(DEFAULT_RUN_OUTPUT));
     let mut format = "human".to_string();
     let mut i = 2usize;
@@ -626,6 +629,10 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
             "--trace-layer" => {
                 trace_layer = Some(value()?.parse().context("--trace-layer must be an integer")?)
             }
+            "--first-values-limit" => {
+                first_values_limit =
+                    Some(value()?.parse().context("--first-values-limit must be an integer")?)
+            }
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
             other => bail!("unknown bitnet-reference-layer-trace-run option {other}"),
@@ -638,6 +645,7 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
         plan,
         sidecar,
         trace_layer,
+        first_values_limit,
         output,
         format,
     })
@@ -684,6 +692,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
     let mut skip_a770 = false;
     let mut diag_rmsnorm_f64_accum = false;
     let mut trace_layer = None::<usize>;
+    let mut first_values_limit = None::<usize>;
     let mut overwrite = false;
     let mut output = Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT));
     let mut format = "human".to_string();
@@ -705,6 +714,10 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
             "--trace-layer" => {
                 trace_layer = Some(value()?.parse().context("--trace-layer must be an integer")?)
             }
+            "--first-values-limit" => {
+                first_values_limit =
+                    Some(value()?.parse().context("--first-values-limit must be an integer")?)
+            }
             "--overwrite" => overwrite = true,
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
@@ -718,6 +731,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
         skip_a770,
         diag_rmsnorm_f64_accum,
         trace_layer,
+        first_values_limit,
         overwrite,
         output,
         format,
@@ -1057,7 +1071,12 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
         } else {
             let mut argv = reference_argv.clone();
             argv[0] = path_to_string(&selected_exe);
-            run_capture = Some(run_reference_with_sidecar(&argv, &sidecar, args.trace_layer)?);
+            run_capture = Some(run_reference_with_sidecar(
+                &argv,
+                &sidecar,
+                args.trace_layer,
+                args.first_values_limit,
+            )?);
             if !run_capture.as_ref().is_some_and(|capture| capture.success) {
                 blocked_reasons.push("reference_layer_trace_run_failed".to_string());
             }
@@ -1140,6 +1159,10 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
             "reference_status_before": capture_json(reference_status_before.as_ref()),
             "cpp_status_before": capture_json(cpp_status_before.as_ref()),
             "first_values_limit_env": std::env::var("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT").ok(),
+            "first_values_limit_arg": args.first_values_limit,
+            "first_values_limit_effective": args
+                .first_values_limit
+                .or_else(|| std::env::var("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT").ok().and_then(|value| value.parse().ok())),
             "trace_layer": args.trace_layer,
         },
         "kernel_codegen": capture_json(codegen_capture.as_ref()),
@@ -1351,6 +1374,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             &cpu_trace_dir,
             trace_target_seq,
             args.trace_layer,
+            args.first_values_limit,
             args.diag_rmsnorm_f64_accum,
         )?
     } else {
@@ -1365,6 +1389,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             &a770_trace_dir,
             trace_target_seq,
             args.trace_layer,
+            args.first_values_limit,
             args.diag_rmsnorm_f64_accum,
         )?
     } else {
@@ -1403,6 +1428,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "skip_a770": args.skip_a770,
             "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
             "trace_layer": args.trace_layer,
+            "first_values_limit": args.first_values_limit,
             "overwrite": args.overwrite,
         },
         "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
@@ -1428,6 +1454,10 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "cpu_trace_dir_prepare": cpu_prepare,
             "a770_trace_dir_prepare": a770_prepare,
             "first_values_limit_env": std::env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok(),
+            "first_values_limit_arg": args.first_values_limit,
+            "first_values_limit_effective": args
+                .first_values_limit
+                .or_else(|| std::env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok().and_then(|value| value.parse().ok())),
         },
         "cpu": cpu,
         "a770": a770,
@@ -13458,12 +13488,19 @@ fn run_reference_with_sidecar(
     argv: &[String],
     sidecar: &Path,
     trace_layer: Option<usize>,
+    first_values_limit: Option<usize>,
 ) -> Result<CommandCapture> {
     let executable = argv.first().context("empty reference command")?;
     let mut command = Command::new(executable);
     command.args(&argv[1..]).env("BITNET_RS_REFERENCE_LAYER_TRACE", sidecar).stdin(Stdio::null());
     if let Some(trace_layer) = trace_layer {
         command.env("BITNET_RS_REFERENCE_LAYER_TRACE_LAYER", trace_layer.to_string());
+    }
+    if let Some(first_values_limit) = first_values_limit {
+        command.env(
+            "BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT",
+            first_values_limit.to_string(),
+        );
     }
     run_command(&mut command)
 }
@@ -13474,6 +13511,7 @@ fn run_rust_trace_capture(
     trace_dir: &Path,
     trace_target_seq: Option<usize>,
     trace_layer: Option<usize>,
+    first_values_limit: Option<usize>,
     diag_rmsnorm_f64_accum: bool,
 ) -> Result<Value> {
     let executable = argv.first().context("empty Rust trace command")?;
@@ -13493,6 +13531,9 @@ fn run_rust_trace_capture(
     if let Some(trace_layer) = trace_layer {
         command.env("BITNET_TRACE_LAYER", trace_layer.to_string());
     }
+    if let Some(first_values_limit) = first_values_limit {
+        command.env("BITNET_TRACE_FIRST_VALUES_LIMIT", first_values_limit.to_string());
+    }
     let capture = run_command(&mut command)?;
     let trace = summarize_rust_trace_dir(trace_dir);
     Ok(json!({
@@ -13503,6 +13544,9 @@ fn run_rust_trace_capture(
         "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
         "trace_layer": trace_layer,
         "trace_layer_env": trace_layer.map(|layer| format!("BITNET_TRACE_LAYER={layer}")),
+        "first_values_limit": first_values_limit,
+        "first_values_limit_env": first_values_limit
+            .map(|limit| format!("BITNET_TRACE_FIRST_VALUES_LIMIT={limit}")),
         "diag_rmsnorm_f64_accum": diag_rmsnorm_f64_accum,
         "diag_rmsnorm_f64_accum_env": diag_rmsnorm_f64_accum
             .then_some("BITNET_DIAG_RMSNORM_F64_ACCUM=1"),
@@ -14217,6 +14261,16 @@ mod tests {
         assert!(
             !patch.contains("const bool bitnet_rs_history_is_vcur = strcmp(name, \"Vcur-0\") == 0")
         );
+    }
+
+    #[test]
+    fn reference_patch_allows_full_prefix_ffn_history_samples() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        assert!(patch.contains("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT"));
+        assert!(patch.contains("const size_t max_limit = 262144"));
+        assert!(!patch.contains("const size_t max_limit = 65536"));
     }
 
     #[test]
@@ -15189,6 +15243,8 @@ mod tests {
             "sidecar.json".to_string(),
             "--trace-layer".to_string(),
             "1".to_string(),
+            "--first-values-limit".to_string(),
+            "124416".to_string(),
             "--output".to_string(),
             "out.json".to_string(),
             "--format".to_string(),
@@ -15203,6 +15259,7 @@ mod tests {
         assert_eq!(parsed.plan, PathBuf::from("plan.json"));
         assert_eq!(parsed.sidecar, PathBuf::from("sidecar.json"));
         assert_eq!(parsed.trace_layer, Some(1));
+        assert_eq!(parsed.first_values_limit, Some(124416));
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
     }
@@ -15217,6 +15274,7 @@ mod tests {
             plan: dir.path().join("missing-plan.json"),
             sidecar: dir.path().join("sidecar.json"),
             trace_layer: None,
+            first_values_limit: None,
             output: None,
             format: "json".to_string(),
         })
@@ -15241,6 +15299,7 @@ mod tests {
             skip_a770: false,
             diag_rmsnorm_f64_accum: false,
             trace_layer: None,
+            first_values_limit: None,
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -15269,6 +15328,7 @@ mod tests {
         assert!(!defaults.skip_a770);
         assert!(!defaults.diag_rmsnorm_f64_accum);
         assert_eq!(defaults.trace_layer, None);
+        assert_eq!(defaults.first_values_limit, None);
         assert!(!defaults.overwrite);
         assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT)));
         assert_eq!(defaults.format, "human");
@@ -15286,6 +15346,8 @@ mod tests {
             "--diag-rmsnorm-f64-accum".to_string(),
             "--trace-layer".to_string(),
             "1".to_string(),
+            "--first-values-limit".to_string(),
+            "124416".to_string(),
             "--overwrite".to_string(),
             "--output".to_string(),
             "out.json".to_string(),
@@ -15299,6 +15361,7 @@ mod tests {
         assert!(parsed.skip_a770);
         assert!(parsed.diag_rmsnorm_f64_accum);
         assert_eq!(parsed.trace_layer, Some(1));
+        assert_eq!(parsed.first_values_limit, Some(124416));
         assert!(parsed.overwrite);
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
@@ -15351,6 +15414,7 @@ mod tests {
             skip_a770: true,
             diag_rmsnorm_f64_accum: true,
             trace_layer: Some(1),
+            first_values_limit: Some(124416),
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -15361,8 +15425,11 @@ mod tests {
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(true)));
         assert_eq!(report.pointer("/inputs/trace_layer"), Some(&json!(1)));
+        assert_eq!(report.pointer("/inputs/first_values_limit"), Some(&json!(124416)));
         assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(true)));
         assert_eq!(report.pointer("/preflight/trace_layer"), Some(&json!(1)));
+        assert_eq!(report.pointer("/preflight/first_values_limit_arg"), Some(&json!(124416)));
+        assert_eq!(report.pointer("/preflight/first_values_limit_effective"), Some(&json!(124416)));
         assert_eq!(
             report.pointer("/preflight/diag_rmsnorm_f64_accum_env"),
             Some(&json!("BITNET_DIAG_RMSNORM_F64_ACCUM=1"))
@@ -15387,6 +15454,7 @@ mod tests {
             skip_a770: false,
             diag_rmsnorm_f64_accum: false,
             trace_layer: None,
+            first_values_limit: None,
             overwrite: false,
             output: None,
             format: "json".to_string(),
