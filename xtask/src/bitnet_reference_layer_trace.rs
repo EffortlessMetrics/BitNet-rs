@@ -2250,6 +2250,7 @@ fn compare_reference_to_rust(
         "attention_value_cache_rust_layout_best_matches": attention_value_cache_rust_layout_best_matches(reference_records, rust_records),
         "attention_value_cache_f16_roundtrip_best_matches": attention_value_cache_f16_roundtrip_best_matches(reference_records, rust_records),
         "attention_value_mix_reference_scalar_recompute": attention_value_mix_reference_scalar_recompute(reference_records),
+        "attention_value_mix_reference_numeric_variants": attention_value_mix_reference_numeric_variants(reference_records),
         "attention_value_mix_rust_scalar_recompute": attention_value_mix_rust_scalar_recompute(rust_records),
         "attention_value_mix_input_attribution": attention_value_mix_input_attribution(reference_records, rust_records),
         "attention_value_mix_f16_cache_head_lane_best_matches": attention_value_mix_f16_cache_head_lane_best_matches(reference_records, rust_records),
@@ -2411,6 +2412,345 @@ fn attention_value_mix_reference_scalar_recompute(
         "max_abs_delta": max_abs_delta,
         "max_rms_delta": max_rms_delta,
         "all_compared": !value_mix_heads.is_empty() && missing_input_count == 0,
+        "rows": rows,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ReferenceValueMixNumericVariantSpec {
+    id: &'static str,
+    probability_f16_roundtrip: bool,
+    value_f16_roundtrip: bool,
+    output_f16_roundtrip: bool,
+    accum_policy: ReferenceScoreAccumPolicy,
+}
+
+fn reference_value_mix_numeric_variant_specs() -> [ReferenceValueMixNumericVariantSpec; 10] {
+    [
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f64_accum_p_f32_v_f32",
+            probability_f16_roundtrip: false,
+            value_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F64,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f32_v_f32",
+            probability_f16_roundtrip: false,
+            value_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_mul_add_p_f32_v_f32",
+            probability_f16_roundtrip: false,
+            value_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32MulAdd,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f16_v_f32",
+            probability_f16_roundtrip: true,
+            value_f16_roundtrip: false,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f32_v_f16",
+            probability_f16_roundtrip: false,
+            value_f16_roundtrip: true,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f16_v_f16",
+            probability_f16_roundtrip: true,
+            value_f16_roundtrip: true,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_mul_add_p_f16_v_f16",
+            probability_f16_roundtrip: true,
+            value_f16_roundtrip: true,
+            output_f16_roundtrip: false,
+            accum_policy: ReferenceScoreAccumPolicy::F32MulAdd,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f32_v_f32_out_f16",
+            probability_f16_roundtrip: false,
+            value_f16_roundtrip: false,
+            output_f16_roundtrip: true,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f32_v_f16_out_f16",
+            probability_f16_roundtrip: false,
+            value_f16_roundtrip: true,
+            output_f16_roundtrip: true,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+        ReferenceValueMixNumericVariantSpec {
+            id: "reference_value_mix_numeric_f32_accum_p_f16_v_f16_out_f16",
+            probability_f16_roundtrip: true,
+            value_f16_roundtrip: true,
+            output_f16_roundtrip: true,
+            accum_policy: ReferenceScoreAccumPolicy::F32,
+        },
+    ]
+}
+
+fn reference_value_mix_row_numeric(
+    probability: &ReferenceTraceRecord,
+    value_cache: &ReferenceTraceRecord,
+    value_dim: usize,
+    token_count: usize,
+    variant: ReferenceValueMixNumericVariantSpec,
+) -> Option<Vec<f32>> {
+    if value_dim == 0 || token_count == 0 {
+        return None;
+    }
+    if probability.first_values.len() < token_count
+        || value_cache.first_values.len() < value_dim.checked_mul(token_count)?
+    {
+        return None;
+    }
+
+    let mut values = Vec::with_capacity(value_dim);
+    for dim in 0..value_dim {
+        let value = match variant.accum_policy {
+            ReferenceScoreAccumPolicy::F64 => {
+                let mut sum = 0.0f64;
+                for token in 0..token_count {
+                    let probability = numeric_variant_value(
+                        probability.first_values[token],
+                        variant.probability_f16_roundtrip,
+                    ) as f64;
+                    let value = numeric_variant_value(
+                        value_cache.first_values[dim * token_count + token],
+                        variant.value_f16_roundtrip,
+                    ) as f64;
+                    sum += probability * value;
+                }
+                sum as f32
+            }
+            ReferenceScoreAccumPolicy::F32 => {
+                let mut sum = 0.0f32;
+                for token in 0..token_count {
+                    let probability = numeric_variant_value(
+                        probability.first_values[token],
+                        variant.probability_f16_roundtrip,
+                    );
+                    let value = numeric_variant_value(
+                        value_cache.first_values[dim * token_count + token],
+                        variant.value_f16_roundtrip,
+                    );
+                    sum += probability * value;
+                }
+                sum
+            }
+            ReferenceScoreAccumPolicy::F32MulAdd => {
+                let mut sum = 0.0f32;
+                for token in 0..token_count {
+                    let probability = numeric_variant_value(
+                        probability.first_values[token],
+                        variant.probability_f16_roundtrip,
+                    );
+                    let value = numeric_variant_value(
+                        value_cache.first_values[dim * token_count + token],
+                        variant.value_f16_roundtrip,
+                    );
+                    sum = probability.mul_add(value, sum);
+                }
+                sum
+            }
+        };
+        values.push(if variant.output_f16_roundtrip { f16_roundtrip(value) } else { value });
+    }
+    Some(values)
+}
+
+fn attention_value_mix_reference_numeric_variants(
+    reference_records: &[ReferenceTraceRecord],
+) -> Value {
+    let probability_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kq_soft_max_ext_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let value_cache_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "v_cache_rust_layout_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let value_mix_heads = reference_records
+        .iter()
+        .filter_map(|record| parse_stage_head(&record.stage, "kqv_head").map(|head| (head, record)))
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let variants = reference_value_mix_numeric_variant_specs();
+
+    let group_size = if value_cache_heads.is_empty()
+        || value_mix_heads.is_empty()
+        || !value_mix_heads.len().is_multiple_of(value_cache_heads.len())
+    {
+        None
+    } else {
+        Some(value_mix_heads.len() / value_cache_heads.len())
+    };
+
+    let mut rows = Vec::new();
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut unexplained_head_count = 0usize;
+    let mut max_best_abs_delta = 0.0f64;
+    let mut max_best_rms_delta = 0.0f64;
+    let mut best_variant_counts = BTreeMap::<String, usize>::new();
+
+    for (&head, value_mix) in &value_mix_heads {
+        let kv_head = group_size.map(|group_size| head / group_size);
+        let probability = probability_heads.get(&head).copied();
+        let value_cache = kv_head.and_then(|kv_head| value_cache_heads.get(&kv_head).copied());
+        let value_dim = usize::try_from(value_mix.nelements).ok();
+        let token_count = value_cache.and_then(|value_cache| {
+            value_cache.shape.get(1).and_then(|dim| usize::try_from(*dim).ok()).or_else(|| {
+                value_dim
+                    .and_then(|dim| usize::try_from(value_cache.nelements).ok().map(|n| n / dim))
+            })
+        });
+
+        if let (Some(probability), Some(value_cache), Some(value_dim), Some(token_count)) =
+            (probability, value_cache, value_dim, token_count)
+        {
+            let mut variant_rows = Vec::new();
+            let mut best_variant_id = "";
+            let mut best_delta = Value::Null;
+            let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+            let mut best_accum_policy = "";
+            let mut best_probability_f16_roundtrip = false;
+            let mut best_value_f16_roundtrip = false;
+            let mut best_output_f16_roundtrip = false;
+
+            for variant in variants {
+                if let Some(values) = reference_value_mix_row_numeric(
+                    probability,
+                    value_cache,
+                    value_dim,
+                    token_count,
+                    variant,
+                ) {
+                    let delta = compare_vectors(&values, &value_mix.first_values);
+                    let rms = delta_metric(&delta, "/rms_abs_delta");
+                    let max_abs = delta_metric(&delta, "/max_abs_delta");
+                    let count_mismatch =
+                        !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false);
+                    let rank = (rms, max_abs, count_mismatch);
+                    if rank < best_rank {
+                        best_rank = rank;
+                        best_variant_id = variant.id;
+                        best_delta = delta.clone();
+                        best_accum_policy = variant.accum_policy.label();
+                        best_probability_f16_roundtrip = variant.probability_f16_roundtrip;
+                        best_value_f16_roundtrip = variant.value_f16_roundtrip;
+                        best_output_f16_roundtrip = variant.output_f16_roundtrip;
+                    }
+                    variant_rows.push(json!({
+                        "variant": variant.id,
+                        "head": head,
+                        "kv_head": kv_head,
+                        "token_count": token_count,
+                        "value_dim": value_dim,
+                        "accum_policy": variant.accum_policy.label(),
+                        "probability_f16_roundtrip": variant.probability_f16_roundtrip,
+                        "value_f16_roundtrip": variant.value_f16_roundtrip,
+                        "output_f16_roundtrip": variant.output_f16_roundtrip,
+                        "max_abs_delta": max_abs,
+                        "rms_delta": rms,
+                        "delta": delta,
+                    }));
+                }
+            }
+
+            if variant_rows.is_empty() {
+                missing_input_count += 1;
+                rows.push(json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "status": "missing_input",
+                    "probability_stage_present": true,
+                    "value_cache_stage_present": true,
+                    "value_mix_stage_present": true,
+                }));
+                continue;
+            }
+
+            let head_explained = reference_score_variant_explained(&best_delta);
+            if !head_explained {
+                unexplained_head_count += 1;
+            }
+            max_best_abs_delta =
+                max_best_abs_delta.max(delta_metric(&best_delta, "/max_abs_delta"));
+            max_best_rms_delta =
+                max_best_rms_delta.max(delta_metric(&best_delta, "/rms_abs_delta"));
+            *best_variant_counts.entry(best_variant_id.to_string()).or_insert(0) += 1;
+            compared_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "compared",
+                "token_count": token_count,
+                "value_dim": value_dim,
+                "best_variant": best_variant_id,
+                "accum_policy": best_accum_policy,
+                "probability_f16_roundtrip": best_probability_f16_roundtrip,
+                "value_f16_roundtrip": best_value_f16_roundtrip,
+                "output_f16_roundtrip": best_output_f16_roundtrip,
+                "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+                "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+                "best_delta": best_delta,
+                "head_explained": head_explained,
+                "variants": variant_rows,
+            }));
+        } else {
+            missing_input_count += 1;
+            rows.push(json!({
+                "head": head,
+                "kv_head": kv_head,
+                "status": "missing_input",
+                "probability_stage_present": probability.is_some(),
+                "value_cache_stage_present": value_cache.is_some(),
+                "value_mix_stage_present": true,
+                "token_count": token_count,
+                "value_dim": value_dim,
+            }));
+        }
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "reference numeric value-mix variants are diagnostic arithmetic evidence only; they do not promote reference parity, A770 semantic quality, value mix residency, selected attention, resident KV, or any support claim",
+        "probability_head_count": probability_heads.len(),
+        "value_cache_head_count": value_cache_heads.len(),
+        "value_mix_head_count": value_mix_heads.len(),
+        "group_size": group_size,
+        "variant_count": variants.len(),
+        "variants_tested": variants.iter().map(|variant| variant.id).collect::<Vec<_>>(),
+        "explanation_abs_threshold": 1.0e-4,
+        "explanation_rms_threshold": 1.0e-4,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "unexplained_head_count": unexplained_head_count,
+        "max_best_abs_delta": max_best_abs_delta,
+        "max_best_rms_delta": max_best_rms_delta,
+        "best_variant_counts": best_variant_counts,
+        "all_heads_explained": !value_mix_heads.is_empty()
+            && missing_input_count == 0
+            && unexplained_head_count == 0,
         "rows": rows,
     })
 }
@@ -6171,6 +6511,65 @@ mod tests {
         assert_eq!(
             report.pointer("/rows/1/recomputed_first_values"),
             Some(&json!([3.0, 12.0, 0.0]))
+        );
+    }
+
+    #[test]
+    fn reference_value_mix_numeric_variants_pin_value_f16_roundtrip_policy() {
+        let reference_records = vec![
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![0.25, 0.75],
+                ..test_reference_trace_record("kq_soft_max_ext_head0", vec![0.25, 0.75])
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 2, 1, 1],
+                nelements: 4,
+                token_axis: Some(-1),
+                first_values: vec![1.0003, 2.0007, 3.1259, -4.2509],
+                ..test_reference_trace_record(
+                    "v_cache_rust_layout_head0_live",
+                    vec![1.0003, 2.0007, 3.1259, -4.2509],
+                )
+            },
+            ReferenceTraceRecord {
+                shape: vec![2, 1, 1, 1],
+                nelements: 2,
+                first_values: vec![1.75, -2.40625],
+                ..test_reference_trace_record("kqv_head0", vec![1.75, -2.40625])
+            },
+        ];
+
+        let report = attention_value_mix_reference_numeric_variants(&reference_records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/missing_input_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/all_heads_explained"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/rows/0/best_variant"),
+            Some(&json!("reference_value_mix_numeric_f32_accum_p_f32_v_f16"))
+        );
+        assert_eq!(report.pointer("/rows/0/probability_f16_roundtrip"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rows/0/value_f16_roundtrip"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rows/0/output_f16_roundtrip"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rows/0/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(
+            report.pointer("/variants_tested/0"),
+            Some(&json!("reference_value_mix_numeric_f64_accum_p_f32_v_f32"))
+        );
+
+        let compare_report = compare_reference_to_rust(&reference_records, &BTreeMap::new(), &[]);
+        assert_eq!(
+            compare_report.pointer("/attention_value_mix_reference_numeric_variants/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            compare_report
+                .pointer("/attention_value_mix_reference_numeric_variants/all_heads_explained"),
+            Some(&json!(true))
         );
     }
 
