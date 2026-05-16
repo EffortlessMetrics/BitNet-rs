@@ -16577,6 +16577,12 @@ fn attention_key_current_projection_rope_boundary(
         .zip(rust_projection)
         .map(|(reference, rust)| compare_vectors(&reference.first_values, &rust.first_values))
         .unwrap_or(Value::Null);
+    let projection_f16_bucket_delta = reference_projection
+        .zip(rust_projection)
+        .map(|(reference, rust)| f16_bucket_delta(&reference.first_values, &rust.first_values))
+        .unwrap_or(Value::Null);
+    let projection_f16_bucket_mismatch_count =
+        f16_bucket_mismatch_count(&projection_f16_bucket_delta);
 
     let (head_dim, kv_head_count) =
         reference_rope.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
@@ -16664,6 +16670,8 @@ fn attention_key_current_projection_rope_boundary(
         "reference_rope_head_count": kv_head_count,
         "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
         "projection_delta": projection_delta,
+        "projection_f16_bucket_delta": projection_f16_bucket_delta,
+        "projection_f16_bucket_mismatch_count": projection_f16_bucket_mismatch_count,
         "compared_head_count": compared_head_count,
         "missing_head_count": missing_head_count,
         "max_abs_delta": max_abs_delta,
@@ -25205,6 +25213,11 @@ mod tests {
         assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(boundary.pointer("/selected_token"), Some(&json!(2)));
         assert_eq!(boundary.pointer("/projection_delta/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(boundary.pointer("/projection_f16_bucket_mismatch_count"), Some(&json!(0)));
+        assert_eq!(
+            boundary.pointer("/projection_f16_bucket_delta/f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
         assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(2)));
         assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(0)));
         assert_eq!(boundary.pointer("/all_compared"), Some(&json!(true)));
@@ -25215,6 +25228,59 @@ mod tests {
             Some(&json!(0))
         );
         assert_eq!(boundary.pointer("/rows/1/delta/max_abs_delta"), Some(&json!(0.0)));
+    }
+
+    #[test]
+    fn compare_reports_key_projection_f16_bucket_crossing_before_rope() {
+        let left = 0.1092529296875f32;
+        let right = 0.1092223525f32;
+        let mut reference_projection =
+            test_reference_trace_record("Kcur", vec![left, 2.0, 3.0, 4.0]);
+        reference_projection.shape = vec![4, 1, 1, 1];
+        reference_projection.full_shape = vec![4, 3, 1, 1];
+        reference_projection.nelements = 4;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some(8);
+
+        let mut reference_rope = test_reference_trace_record("Kcur", vec![10.0, 20.0, 30.0, 40.0]);
+        reference_rope.shape = vec![2, 2, 1, 1];
+        reference_rope.full_shape = vec![2, 2, 3, 1];
+        reference_rope.nelements = 4;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some(8);
+
+        let mut rust_projection = test_rust_trace_record("attention_k", vec![right, 2.0, 3.0, 4.0]);
+        rust_projection.shape = vec![1, 1, 4];
+        let mut rust_head0 = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head0_ref_layout",
+            vec![0.0, 0.0, 10.0, 0.0, 0.0, 20.0],
+        );
+        rust_head0.shape = vec![2, 3];
+        let mut rust_head1 = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head1_ref_layout",
+            vec![0.0, 0.0, 30.0, 0.0, 0.0, 40.0],
+        );
+        rust_head1.shape = vec![2, 3];
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert("attention_k".to_string(), rust_projection);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head0_ref_layout".to_string(), rust_head0);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head1_ref_layout".to_string(), rust_head1);
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_key_current_projection_rope_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/projection_f16_bucket_mismatch_count"), Some(&json!(1)));
+        assert_eq!(
+            boundary.pointer("/projection_f16_bucket_delta/first_f16_bucket_mismatch/index"),
+            Some(&json!(0))
+        );
+        assert_eq!(boundary.pointer("/total_f16_bucket_mismatch_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(2)));
     }
 
     #[test]
