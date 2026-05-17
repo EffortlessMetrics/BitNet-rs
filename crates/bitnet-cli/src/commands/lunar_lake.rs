@@ -57,6 +57,7 @@ const CPU_SLM_PHASE_ATTRIBUTION: &str = "lunar-lake-cpu-slm-phase-attribution.js
 const CPU_SLM_RESIDENT_SESSION: &str = "lunar-lake-cpu-slm-resident-session.json";
 const CPU_SLM_RUNTIME_COMPARISON: &str = "lunar-lake-cpu-slm-runtime-comparison.json";
 const OPENVINO_GPU_CORPUS_V2_DIAGNOSIS: &str = "lunar-lake-openvino-gpu-corpus-v2-diagnosis.json";
+const OPENVINO_NPU_COLD_START_DIAGNOSIS: &str = "lunar-lake-openvino-npu-cold-start-diagnosis.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -446,6 +447,45 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the diagnosis cannot classify the requested OpenVINO route.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Decompose OpenVINO NPU cold-start evidence from committed receipts.
+    NpuColdStartDiagnosis {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU phase-runner receipt to inspect for NPU load and hot-path metrics.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_PHASE)]
+        openvino_phase_runner: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU phase-comparison receipt to inspect for indexed NPU timing.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
+        phase_comparison: PathBuf,
+
+        /// OpenVINO NPU operator-ask receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_NPU_OPERATOR_ASK)]
+        operator_ask: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 receipt to inspect for NPU quality/profile context.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: PathBuf,
+
+        /// Output JSON cold-start diagnosis receipt to file.
+        #[arg(long, default_value = OPENVINO_NPU_COLD_START_DIAGNOSIS)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the NPU cold-start evidence cannot be classified.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -1445,6 +1485,121 @@ pub struct OpenVinoGeneratedTokenVisibility {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeNpuColdStartDiagnosis {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: NpuColdStartSources,
+    pub route: NpuColdStartRouteIdentity,
+    pub cold_start: NpuColdStartEvidence,
+    pub hot_path: NpuHotPathEvidence,
+    pub corpus_v2_context: NpuCorpusV2Context,
+    pub diagnosis_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: NpuColdStartClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuColdStartSources {
+    pub openvino_phase_runner_receipt: String,
+    pub phase_comparison_receipt: String,
+    pub operator_ask_receipt: String,
+    pub openvino_corpus_v2_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuColdStartRouteIdentity {
+    pub route_id: String,
+    pub requested_backend: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+    pub resolved_device: Option<String>,
+    pub backend_lane: Option<String>,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub promotion_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NpuColdStartEvidence {
+    pub classification: String,
+    pub cold_load_dominant: bool,
+    pub samples: Vec<NpuTimingSample>,
+    pub pipeline_or_load_ms: CpuSlmResidentMetricSummary,
+    pub generation_wall_ms: CpuSlmResidentMetricSummary,
+    pub first_token_or_text_chunk_ms: CpuSlmResidentMetricSummary,
+    pub throughput_tokens_per_s: CpuSlmResidentMetricSummary,
+    pub operator_load_to_generation_ratio: Option<f64>,
+    pub phase_runner_load_to_generation_ratio: Option<f64>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NpuTimingSample {
+    pub source: String,
+    pub evidence_scope: String,
+    pub pipeline_construct_wall_ms: Option<f64>,
+    pub openvino_load_time_ms: Option<f64>,
+    pub generation_wall_ms: Option<f64>,
+    pub case_elapsed_ms_sum: Option<f64>,
+    pub first_streamed_text_chunk_ms: Option<f64>,
+    pub openvino_time_to_first_token_ms: Option<f64>,
+    pub openvino_generate_ms: Option<f64>,
+    pub openvino_inference_ms: Option<f64>,
+    pub openvino_tokenization_ms: Option<f64>,
+    pub throughput_tokens_per_s: Option<f64>,
+    pub generated_tokens: Option<u64>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NpuHotPathEvidence {
+    pub bounded_answer_gate_passed: Option<bool>,
+    pub fallback_used: Option<bool>,
+    pub generation_wall_ms: CpuSlmResidentMetricSummary,
+    pub first_text_chunk_ms: CpuSlmResidentMetricSummary,
+    pub openvino_time_to_first_token_ms: CpuSlmResidentMetricSummary,
+    pub throughput_tokens_per_s: CpuSlmResidentMetricSummary,
+    pub generated_tokens: CpuSlmResidentMetricSummary,
+    pub hot_path_interesting: bool,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuCorpusV2Context {
+    pub cases_total: Option<u64>,
+    pub passed: Option<u64>,
+    pub failed: Option<u64>,
+    pub route_blocked_by_quality: bool,
+    pub failed_profiles: Vec<String>,
+    pub failed_categories: Vec<String>,
+    pub direct_generated_token_ids_available: bool,
+    pub generated_token_id_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuColdStartClaimBoundary {
+    pub diagnostic_only: bool,
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub native_npu_inference_claim: bool,
+    pub npu_dynamic_decode_claim: bool,
+    pub beam_or_parallel_sampling_claim: bool,
+    pub bitnet_qk256_i2s_behavior_changed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeTelemetryContext {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -1868,6 +2023,38 @@ impl LunarLakeCommand {
                 if *strict && !receipt.diagnosis_ready {
                     bail!(
                         "Lunar Lake OpenVINO corpus-v2 diagnosis failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::NpuColdStartDiagnosis {
+                artifact_root,
+                openvino_phase_runner,
+                phase_comparison,
+                operator_ask,
+                openvino_corpus_v2,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_npu_cold_start_diagnosis_with_created_utc(
+                    artifact_root,
+                    openvino_phase_runner,
+                    phase_comparison,
+                    operator_ask,
+                    openvino_corpus_v2,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_npu_cold_start_diagnosis(&receipt, Some(&json_out))?;
+                if *strict && !receipt.diagnosis_ready {
+                    bail!(
+                        "Lunar Lake OpenVINO NPU cold-start diagnosis failed: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -4433,6 +4620,481 @@ fn openvino_device_by_runtime<'a>(json: &'a Value, runtime_device: &str) -> Opti
     })
 }
 
+pub fn build_npu_cold_start_diagnosis_with_created_utc(
+    root: &Path,
+    openvino_phase_runner: &Path,
+    phase_comparison: &Path,
+    operator_ask: &Path,
+    openvino_corpus_v2: &Path,
+    created_utc: String,
+) -> Result<LunarLakeNpuColdStartDiagnosis> {
+    let phase_runner_path = resolve_receipt_path(root, openvino_phase_runner);
+    let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
+    let operator_ask_path = resolve_receipt_path(root, operator_ask);
+    let corpus_v2_path = resolve_receipt_path(root, openvino_corpus_v2);
+    let phase_runner: Value = read_json_receipt(&phase_runner_path)?;
+    let phase_comparison: Value = read_json_receipt(&phase_comparison_path)?;
+    let operator_ask: Value = read_json_receipt(&operator_ask_path)?;
+    let corpus_v2: Value = read_json_receipt(&corpus_v2_path)?;
+
+    let mut gaps = Vec::new();
+    if string_at(&phase_runner, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_runner")
+    {
+        gaps.push("OpenVINO phase-runner receipt has unexpected artifact_kind".to_string());
+    }
+    if string_at(&phase_comparison, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_comparison")
+    {
+        gaps.push("OpenVINO phase-comparison receipt has unexpected artifact_kind".to_string());
+    }
+    if string_at(&operator_ask, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_operator_ask")
+    {
+        gaps.push("OpenVINO NPU operator-ask receipt has unexpected artifact_kind".to_string());
+    }
+    if string_at(&corpus_v2, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_corpus_v2")
+    {
+        gaps.push("OpenVINO corpus-v2 receipt has unexpected artifact_kind".to_string());
+    }
+
+    let phase_npu = openvino_device_by_runtime(&phase_runner, "NPU")
+        .context("OpenVINO phase-runner receipt is missing NPU device evidence")?;
+    let corpus_npu = openvino_device_by_runtime(&corpus_v2, "NPU")
+        .context("OpenVINO corpus-v2 receipt is missing NPU device evidence")?;
+    if fallback_used(&phase_runner) != Some(false) || fallback_used(phase_npu) != Some(false) {
+        gaps.push("OpenVINO phase-runner NPU evidence must record fallback_used=false".to_string());
+    }
+    if fallback_used(&operator_ask) != Some(false) {
+        gaps.push("OpenVINO NPU operator ask must record fallback_used=false".to_string());
+    }
+    if fallback_used(&corpus_v2) != Some(false) || fallback_used(corpus_npu) != Some(false) {
+        gaps.push("OpenVINO corpus-v2 NPU evidence must record fallback_used=false".to_string());
+    }
+    if bool_at_any(corpus_npu, &["route_promotion_changed"]) == Some(true) {
+        gaps.push("OpenVINO NPU corpus-v2 evidence changed route promotion".to_string());
+    }
+    if bool_at_any(&operator_ask, &["route.acceleration_claim", "acceleration_claim"]) == Some(true)
+    {
+        gaps.push("OpenVINO NPU operator ask must not claim acceleration".to_string());
+    }
+
+    let route = NpuColdStartRouteIdentity {
+        route_id: string_at(&operator_ask, "route_id")
+            .unwrap_or_else(|| "dense_slm_openvino_npu_candidate".to_string()),
+        requested_backend: string_at(&operator_ask, "requested_backend"),
+        selected_backend: string_at(&operator_ask, "selected_backend"),
+        runtime_api: string_at(&operator_ask, "runtime_api"),
+        runtime_device: string_at(&operator_ask, "runtime_device"),
+        resolved_device: string_at(&operator_ask, "resolved_device"),
+        backend_lane: string_at(&operator_ask, "backend_lane"),
+        selected_kernel_or_runtime: string_at(&operator_ask, "selected_kernel_or_runtime"),
+        fallback_used: fallback_used(&operator_ask),
+        promotion_status: string_at(corpus_npu, "promotion_status"),
+    };
+
+    let samples = vec![
+        npu_operator_timing_sample(&operator_ask, path_string(&operator_ask_path)),
+        npu_phase_runner_timing_sample(phase_npu, path_string(&phase_runner_path)),
+        npu_phase_comparison_timing_sample(&phase_comparison, path_string(&phase_comparison_path)),
+        npu_corpus_v2_timing_sample(corpus_npu, path_string(&corpus_v2_path)),
+    ];
+    let cold_loads = samples
+        .iter()
+        .filter_map(|sample| sample.openvino_load_time_ms.or(sample.pipeline_construct_wall_ms))
+        .collect::<Vec<_>>();
+    let generations = samples
+        .iter()
+        .filter_map(|sample| sample.generation_wall_ms.or(sample.case_elapsed_ms_sum))
+        .collect::<Vec<_>>();
+    let first_tokens = samples
+        .iter()
+        .filter_map(|sample| {
+            sample.first_streamed_text_chunk_ms.or(sample.openvino_time_to_first_token_ms)
+        })
+        .collect::<Vec<_>>();
+    let throughputs =
+        samples.iter().filter_map(|sample| sample.throughput_tokens_per_s).collect::<Vec<_>>();
+    let operator_ratio = npu_load_to_generation_ratio(&samples[0]);
+    let phase_runner_ratio = npu_load_to_generation_ratio(&samples[1]);
+    if cold_loads.is_empty() {
+        gaps.push(
+            "NPU cold-start diagnosis requires at least one load or pipeline construct timing"
+                .to_string(),
+        );
+    }
+    if generations.is_empty() {
+        gaps.push(
+            "NPU cold-start diagnosis requires at least one generation/hot-path timing".to_string(),
+        );
+    }
+    let cold_load_dominant =
+        [operator_ratio, phase_runner_ratio].into_iter().flatten().any(|ratio| ratio >= 10.0)
+            || cold_loads.iter().any(|value| *value >= 30_000.0);
+    let classification = if cold_load_dominant {
+        "openvino_pipeline_load_or_device_compile_dominated".to_string()
+    } else if cold_loads.is_empty() || generations.is_empty() {
+        "insufficient_cold_hot_timing_evidence".to_string()
+    } else {
+        "not_load_dominated_from_current_receipts".to_string()
+    };
+    let cold_notes = vec![
+        "Diagnosis is derived from committed receipts only; it does not run OpenVINO or inference"
+            .to_string(),
+        "OpenVINO NPU load_time_ms/pipeline_construct_wall_ms is treated as pipeline load, device compile, model transfer, or cache-miss time until cache/resident experiments split it further"
+            .to_string(),
+        "Hot-path timings remain candidate-route evidence and do not promote NPU".to_string(),
+    ];
+    let cold_start = NpuColdStartEvidence {
+        classification,
+        cold_load_dominant,
+        samples,
+        pipeline_or_load_ms: resident_metric_summary(&cold_loads),
+        generation_wall_ms: resident_metric_summary(&generations),
+        first_token_or_text_chunk_ms: resident_metric_summary(&first_tokens),
+        throughput_tokens_per_s: resident_metric_summary(&throughputs),
+        operator_load_to_generation_ratio: operator_ratio,
+        phase_runner_load_to_generation_ratio: phase_runner_ratio,
+        notes: cold_notes,
+    };
+
+    let hot_path = npu_hot_path_evidence(&cold_start.samples, phase_npu, &operator_ask);
+    let corpus_v2_context = npu_corpus_v2_context(corpus_npu);
+    let mut findings = Vec::new();
+    if let Some(mean) = cold_start.pipeline_or_load_ms.mean {
+        findings.push(format!("npu_pipeline_or_load_mean_ms={mean:.3}"));
+    }
+    if let Some(max) = cold_start.pipeline_or_load_ms.max {
+        findings.push(format!("npu_pipeline_or_load_max_ms={max:.3}"));
+    }
+    if let Some(mean) = cold_start.generation_wall_ms.mean {
+        findings.push(format!("npu_generation_wall_mean_ms={mean:.3}"));
+    }
+    if let Some(mean) = hot_path.throughput_tokens_per_s.mean {
+        findings.push(format!("npu_hot_path_throughput_mean_tokens_per_s={mean:.3}"));
+    }
+    if let Some(ratio) = cold_start.operator_load_to_generation_ratio {
+        findings.push(format!("operator_load_to_generation_ratio={ratio:.3}"));
+    }
+    if corpus_v2_context.route_blocked_by_quality {
+        findings.push(format!(
+            "npu_corpus_v2_blocked_by_{}_failed_cases",
+            corpus_v2_context.failed.unwrap_or(0)
+        ));
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-NPU-CACHE-001: run OpenVINO cache hit/miss experiment with a stable cache directory".to_string(),
+        "LNL258V-NPU-RESIDENT-001: measure same-process resident NPU warm asks and drift".to_string(),
+        "LNL258V-NPU-QUAL-001: classify NPU corpus-v2 failures before any profile promotion".to_string(),
+        "LNL258V-POWER-001: collect AC/battery or energy-proxy evidence before low-power promotion".to_string(),
+    ];
+    let diagnosis_ready = gaps.is_empty();
+
+    Ok(LunarLakeNpuColdStartDiagnosis {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_openvino_npu_cold_start_diagnosis".to_string(),
+        proof_stage: "candidate_route_cold_start_diagnosis_no_inference_no_promotion".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: NpuColdStartSources {
+            openvino_phase_runner_receipt: path_string(&phase_runner_path),
+            phase_comparison_receipt: path_string(&phase_comparison_path),
+            operator_ask_receipt: path_string(&operator_ask_path),
+            openvino_corpus_v2_receipt: path_string(&corpus_v2_path),
+        },
+        route,
+        cold_start,
+        hot_path,
+        corpus_v2_context,
+        diagnosis_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: NpuColdStartClaimBoundary {
+            diagnostic_only: true,
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            native_npu_inference_claim: false,
+            npu_dynamic_decode_claim: false,
+            beam_or_parallel_sampling_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+            dense_slm_as_bitnet_proof: false,
+        },
+    })
+}
+
+fn npu_operator_timing_sample(json: &Value, source: String) -> NpuTimingSample {
+    let timing = value_at(json, "timing").unwrap_or(json);
+    NpuTimingSample {
+        source,
+        evidence_scope: "single_operator_ask".to_string(),
+        pipeline_construct_wall_ms: number_at_any(timing, &["pipeline_construct_wall_ms"]),
+        openvino_load_time_ms: number_at_any(timing, &["openvino_perf_metrics.load_time_ms"]),
+        generation_wall_ms: number_at_any(timing, &["generation_wall_ms"]),
+        case_elapsed_ms_sum: None,
+        first_streamed_text_chunk_ms: number_at_any(
+            timing,
+            &["first_streamed_text_chunk_ms", "streaming.first_text_chunk_ms"],
+        ),
+        openvino_time_to_first_token_ms: number_at_any(
+            timing,
+            &["openvino_perf_metrics.time_to_first_token.mean_ms"],
+        ),
+        openvino_generate_ms: number_at_any(timing, &["openvino_perf_metrics.generate.mean_ms"]),
+        openvino_inference_ms: number_at_any(timing, &["openvino_perf_metrics.inference.mean_ms"]),
+        openvino_tokenization_ms: number_at_any(
+            timing,
+            &["openvino_perf_metrics.tokenization.mean_ms"],
+        ),
+        throughput_tokens_per_s: number_at_any(
+            timing,
+            &["openvino_perf_metrics.throughput.mean_ms"],
+        ),
+        generated_tokens: u64_at(timing, "openvino_perf_metrics.num_generated_tokens"),
+        notes: vec![
+            "Operator ask includes OpenVINO PerfMetrics and wall timings for one bounded prompt"
+                .to_string(),
+        ],
+    }
+}
+
+fn npu_phase_runner_timing_sample(device: &Value, source: String) -> NpuTimingSample {
+    let cases = device.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    let load_times = collect_case_numbers(
+        &cases,
+        &["openvino_perf_metrics.load_time_ms", "timing.openvino_perf_metrics.load_time_ms"],
+    );
+    let generation =
+        collect_case_numbers(&cases, &["generation_wall_ms", "timing.generation_wall_ms"]);
+    let first_chunks = collect_case_numbers(
+        &cases,
+        &["first_streamed_text_chunk_ms", "timing.first_streamed_text_chunk_ms"],
+    );
+    let ttft = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.time_to_first_token.mean_ms",
+            "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+        ],
+    );
+    let generate = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.generate.mean_ms",
+            "timing.openvino_perf_metrics.generate.mean_ms",
+        ],
+    );
+    let inference = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.inference.mean_ms",
+            "timing.openvino_perf_metrics.inference.mean_ms",
+        ],
+    );
+    let tokenization = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.tokenization.mean_ms",
+            "timing.openvino_perf_metrics.tokenization.mean_ms",
+        ],
+    );
+    let throughput = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.throughput.mean_ms",
+            "timing.openvino_perf_metrics.throughput.mean_ms",
+        ],
+    );
+    let generated_tokens = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.num_generated_tokens",
+            "timing.openvino_perf_metrics.num_generated_tokens",
+        ],
+    );
+    NpuTimingSample {
+        source,
+        evidence_scope: "three_case_phase_runner".to_string(),
+        pipeline_construct_wall_ms: number_at_any(device, &["pipeline_construct_wall_ms"]),
+        openvino_load_time_ms: mean_f64(&load_times),
+        generation_wall_ms: mean_f64(&generation),
+        case_elapsed_ms_sum: sum_f64(&generation),
+        first_streamed_text_chunk_ms: mean_f64(&first_chunks),
+        openvino_time_to_first_token_ms: mean_f64(&ttft),
+        openvino_generate_ms: mean_f64(&generate),
+        openvino_inference_ms: mean_f64(&inference),
+        openvino_tokenization_ms: mean_f64(&tokenization),
+        throughput_tokens_per_s: mean_f64(&throughput),
+        generated_tokens: sum_f64(&generated_tokens).map(|value| value as u64),
+        notes: vec![
+            "Phase runner averages per-case OpenVINO PerfMetrics for the NPU device".to_string(),
+        ],
+    }
+}
+
+fn npu_phase_comparison_timing_sample(json: &Value, source: String) -> NpuTimingSample {
+    let npu = value_at(json, "openvino_paths.npu").unwrap_or(json);
+    let timing = value_at(npu, "timing").unwrap_or(npu);
+    NpuTimingSample {
+        source,
+        evidence_scope: "indexed_phase_comparison".to_string(),
+        pipeline_construct_wall_ms: number_at_any(timing, &["pipeline_load_ms"]),
+        openvino_load_time_ms: number_at_any(timing, &["pipeline_load_ms"]),
+        generation_wall_ms: None,
+        case_elapsed_ms_sum: number_at_any(timing, &["case_elapsed_ms_sum"]),
+        first_streamed_text_chunk_ms: None,
+        openvino_time_to_first_token_ms: None,
+        openvino_generate_ms: None,
+        openvino_inference_ms: None,
+        openvino_tokenization_ms: None,
+        throughput_tokens_per_s: None,
+        generated_tokens: None,
+        notes: vec![
+            "Phase comparison indexes smoke-level pipeline load and per-case elapsed sums only"
+                .to_string(),
+        ],
+    }
+}
+
+fn npu_corpus_v2_timing_sample(device: &Value, source: String) -> NpuTimingSample {
+    let cases = device.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    let generation = collect_case_numbers(&cases, &["timing.generation_wall_ms"]);
+    let first_chunks = collect_case_numbers(&cases, &["timing.first_streamed_text_chunk_ms"]);
+    let load_times = collect_case_numbers(&cases, &["timing.openvino_perf_metrics.load_time_ms"]);
+    let ttft =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.time_to_first_token.mean_ms"]);
+    let generate = collect_case_numbers(&cases, &["timing.openvino_perf_metrics.generate.mean_ms"]);
+    let inference =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.inference.mean_ms"]);
+    let tokenization =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.tokenization.mean_ms"]);
+    let throughput =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.throughput.mean_ms"]);
+    let generated_tokens =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.num_generated_tokens"]);
+    NpuTimingSample {
+        source,
+        evidence_scope: "corpus_v2_profile_quality_receipt".to_string(),
+        pipeline_construct_wall_ms: number_at_any(device, &["pipeline_construct_wall_ms"]),
+        openvino_load_time_ms: mean_f64(&load_times),
+        generation_wall_ms: mean_f64(&generation),
+        case_elapsed_ms_sum: sum_f64(&generation),
+        first_streamed_text_chunk_ms: mean_f64(&first_chunks),
+        openvino_time_to_first_token_ms: mean_f64(&ttft),
+        openvino_generate_ms: mean_f64(&generate),
+        openvino_inference_ms: mean_f64(&inference),
+        openvino_tokenization_ms: mean_f64(&tokenization),
+        throughput_tokens_per_s: mean_f64(&throughput),
+        generated_tokens: sum_f64(&generated_tokens).map(|value| value as u64),
+        notes: vec![
+            "Corpus-v2 timing is profile-quality context; failed cases still block promotion"
+                .to_string(),
+        ],
+    }
+}
+
+fn collect_case_numbers(cases: &[Value], paths: &[&str]) -> Vec<f64> {
+    cases.iter().filter_map(|case| number_at_any(case, paths)).collect()
+}
+
+fn npu_load_to_generation_ratio(sample: &NpuTimingSample) -> Option<f64> {
+    let load = sample.openvino_load_time_ms.or(sample.pipeline_construct_wall_ms)?;
+    let generation = sample.generation_wall_ms.or(sample.case_elapsed_ms_sum)?;
+    (generation > 0.0).then_some(load / generation)
+}
+
+fn npu_hot_path_evidence(
+    samples: &[NpuTimingSample],
+    phase_npu: &Value,
+    operator_ask: &Value,
+) -> NpuHotPathEvidence {
+    let generation =
+        samples.iter().filter_map(|sample| sample.generation_wall_ms).collect::<Vec<_>>();
+    let first_chunks =
+        samples.iter().filter_map(|sample| sample.first_streamed_text_chunk_ms).collect::<Vec<_>>();
+    let ttft = samples
+        .iter()
+        .filter_map(|sample| sample.openvino_time_to_first_token_ms)
+        .collect::<Vec<_>>();
+    let throughput =
+        samples.iter().filter_map(|sample| sample.throughput_tokens_per_s).collect::<Vec<_>>();
+    let generated_tokens = samples
+        .iter()
+        .filter_map(|sample| sample.generated_tokens.map(|value| value as f64))
+        .collect::<Vec<_>>();
+    let hot_path_interesting = throughput.iter().any(|value| *value >= 8.0)
+        || generation.iter().any(|value| *value <= 1500.0);
+    NpuHotPathEvidence {
+        bounded_answer_gate_passed: answer_gate_passed(phase_npu)
+            .or_else(|| answer_gate_passed(operator_ask)),
+        fallback_used: fallback_used(phase_npu).or_else(|| fallback_used(operator_ask)),
+        generation_wall_ms: resident_metric_summary(&generation),
+        first_text_chunk_ms: resident_metric_summary(&first_chunks),
+        openvino_time_to_first_token_ms: resident_metric_summary(&ttft),
+        throughput_tokens_per_s: resident_metric_summary(&throughput),
+        generated_tokens: resident_metric_summary(&generated_tokens),
+        hot_path_interesting,
+        notes: vec![
+            "Hot-path evidence is bounded and candidate-only until resident/corpus/power gates pass"
+                .to_string(),
+            "Cold-start policy remains unresolved for one-off interactive asks".to_string(),
+        ],
+    }
+}
+
+fn npu_corpus_v2_context(device: &Value) -> NpuCorpusV2Context {
+    let quality = value_at(device, "quality_summary");
+    let cases_total = quality.and_then(|value| u64_at(value, "cases_total"));
+    let passed = quality.and_then(|value| u64_at(value, "passed"));
+    let failed = quality.and_then(|value| u64_at(value, "failed"));
+    let mut failed_profiles = Vec::new();
+    if let Some(summary) =
+        value_at(device, "quality_summary.profile_summary").and_then(Value::as_object)
+    {
+        for (profile, value) in summary {
+            if u64_at(value, "failed").unwrap_or(0) > 0 {
+                failed_profiles.push(profile.clone());
+            }
+        }
+    }
+    let mut failed_categories = Vec::new();
+    if let Some(summary) =
+        value_at(device, "quality_summary.category_summary").and_then(Value::as_object)
+    {
+        for (category, value) in summary {
+            if u64_at(value, "failed").unwrap_or(0) > 0 {
+                failed_categories.push(category.clone());
+            }
+        }
+    }
+    let cases = device.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    let direct_generated_token_ids_available = cases.iter().any(|case| {
+        bool_at_any(case, &["generated_token_ids_available_from_pipeline"]) == Some(true)
+    });
+    let generated_token_id_source = cases
+        .iter()
+        .filter_map(|case| string_at(case, "generated_token_ids_source"))
+        .next()
+        .unwrap_or_else(|| "not_reported".to_string());
+    NpuCorpusV2Context {
+        cases_total,
+        passed,
+        failed,
+        route_blocked_by_quality: failed.unwrap_or(0) > 0,
+        failed_profiles,
+        failed_categories,
+        direct_generated_token_ids_available,
+        generated_token_id_source,
+    }
+}
+
 fn summarize_openvino_device_quality(
     device: &Value,
     failed_cases: &[CorpusV2FailedCaseDiagnosis],
@@ -6441,6 +7103,25 @@ fn write_or_print_openvino_corpus_v2_diagnosis(
         }
         fs::write(path, json)?;
         println!("Lunar Lake OpenVINO corpus-v2 diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_npu_cold_start_diagnosis(
+    receipt: &LunarLakeNpuColdStartDiagnosis,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake OpenVINO NPU cold-start diagnosis written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -10138,6 +10819,159 @@ mod tests {
 
         assert!(err.contains("requested --device `openvino-npu`"), "got: {err}");
         assert!(err.contains("explicit accelerator devices are not auto-routed"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn npu_cold_start_diagnosis_classifies_load_dominated_startup() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            DENSE_OV_PHASE,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_runner",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [{
+                        "runtime_device": "NPU",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "pipeline_construct_wall_ms": 37652.0,
+                        "passed": 3,
+                        "failed": 0,
+                        "cases": [{
+                            "generation_wall_ms": 1000.0,
+                            "first_streamed_text_chunk_ms": 300.0,
+                            "openvino_perf_metrics": {
+                                "load_time_ms": 37651.0,
+                                "time_to_first_token": {"mean_ms": 320.0},
+                                "generate": {"mean_ms": 990.0},
+                                "inference": {"mean_ms": 980.0},
+                                "tokenization": {"mean_ms": 15.0},
+                                "throughput": {"mean_ms": 12.5},
+                                "num_generated_tokens": 9
+                            }
+                        }]
+                    }]
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "openvino_paths": {
+                    "npu": {
+                        "timing": {
+                            "pipeline_load_ms": 35469.0,
+                            "case_elapsed_ms_sum": 2116.0
+                        }
+                    }
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_OV_NPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_operator_ask",
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "requested_backend": "openvino-npu",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "runtime_device": "NPU",
+                "resolved_device": "Intel(R) AI Boost",
+                "backend_lane": "dense_slm_openvino_npu",
+                "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+                "fallback_used": false,
+                "route": {"acceleration_claim": false},
+                "answer_gate": {"passed": true},
+                "timing": {
+                    "pipeline_construct_wall_ms": 40312.0,
+                    "generation_wall_ms": 943.0,
+                    "openvino_perf_metrics": {
+                        "load_time_ms": 40263.0,
+                        "time_to_first_token": {"mean_ms": 323.0},
+                        "generate": {"mean_ms": 942.0},
+                        "inference": {"mean_ms": 919.0},
+                        "tokenization": {"mean_ms": 17.0},
+                        "throughput": {"mean_ms": 12.9},
+                        "num_generated_tokens": 9
+                    }
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_OV_CORPUS_V2,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [{
+                        "runtime_device": "NPU",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "promotion_status": "candidate",
+                        "route_promotion_changed": false,
+                        "pipeline_construct_wall_ms": 32127.0,
+                        "quality_summary": {
+                            "cases_total": 12,
+                            "passed": 7,
+                            "failed": 5,
+                            "profile_summary": {
+                                "ask_short": {"total": 2, "passed": 1, "failed": 1}
+                            },
+                            "category_summary": {
+                                "yes_no": {"total": 1, "passed": 0, "failed": 1}
+                            }
+                        },
+                        "cases": [{
+                            "generated_token_ids_available_from_pipeline": false,
+                            "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+                            "timing": {
+                                "generation_wall_ms": 876.0,
+                                "first_streamed_text_chunk_ms": 680.0,
+                                "openvino_perf_metrics": {
+                                    "load_time_ms": 32127.0,
+                                    "time_to_first_token": {"mean_ms": 406.0},
+                                    "generate": {"mean_ms": 874.0},
+                                    "inference": {"mean_ms": 857.0},
+                                    "tokenization": {"mean_ms": 13.0},
+                                    "throughput": {"mean_ms": 14.9},
+                                    "num_generated_tokens": 8
+                                }
+                            }
+                        }]
+                    }]
+                }
+            }),
+        )?;
+
+        let receipt = build_npu_cold_start_diagnosis_with_created_utc(
+            temp.path(),
+            Path::new(DENSE_OV_PHASE),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Path::new(DENSE_OV_NPU_OPERATOR_ASK),
+            Path::new(DENSE_OV_CORPUS_V2),
+            "2026-05-17T10:00:00Z".to_string(),
+        )?;
+
+        assert!(receipt.diagnosis_ready, "{:?}", receipt.gaps);
+        assert!(receipt.cold_start.cold_load_dominant);
+        assert_eq!(
+            receipt.cold_start.classification,
+            "openvino_pipeline_load_or_device_compile_dominated"
+        );
+        assert!(receipt.cold_start.operator_load_to_generation_ratio.unwrap() > 40.0);
+        assert!(receipt.hot_path.hot_path_interesting);
+        assert!(receipt.corpus_v2_context.route_blocked_by_quality);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.acceleration_claim);
         Ok(())
     }
 

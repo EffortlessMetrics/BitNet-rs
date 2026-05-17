@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_openvino_npu_cold_start_diagnosis",
+  "proof_stage": "candidate_route_cold_start_diagnosis_no_inference_no_promotion",
+  "created_utc": "2026-05-17T12:00:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "source_receipts": {
+    "openvino_phase_runner_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json",
+    "phase_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+    "operator_ask_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-npu-math-brief.json",
+    "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
+  },
+  "route": {
+    "route_id": "dense_slm_openvino_npu_candidate",
+    "requested_backend": "openvino-npu",
+    "selected_backend": "openvino-npu",
+    "runtime_api": "openvino_genai",
+    "runtime_device": "NPU",
+    "resolved_device": "Intel(R) AI Boost",
+    "backend_lane": "dense_slm_openvino_npu",
+    "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+    "fallback_used": false,
+    "promotion_status": "candidate_only_not_promoted"
+  },
+  "cold_start": {
+    "classification": "openvino_pipeline_load_or_device_compile_dominated",
+    "cold_load_dominant": true,
+    "samples": [
+      {
+        "source": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-npu-math-brief.json",
+        "evidence_scope": "single_operator_ask",
+        "pipeline_construct_wall_ms": 40312.40950000938,
+        "openvino_load_time_ms": 40263.0,
+        "generation_wall_ms": 943.2322999928148,
+        "case_elapsed_ms_sum": null,
+        "first_streamed_text_chunk_ms": null,
+        "openvino_time_to_first_token_ms": 323.50177001953125,
+        "openvino_generate_ms": 942.9669799804688,
+        "openvino_inference_ms": 919.8629760742188,
+        "openvino_tokenization_ms": 17.43000030517578,
+        "throughput_tokens_per_s": 12.93805694580078,
+        "generated_tokens": 9,
+        "notes": [
+          "Operator ask includes OpenVINO PerfMetrics and wall timings for one bounded prompt"
+        ]
+      },
+      {
+        "source": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json",
+        "evidence_scope": "three_case_phase_runner",
+        "pipeline_construct_wall_ms": 37652.005700045265,
+        "openvino_load_time_ms": 37651.0,
+        "generation_wall_ms": 856.3618333234141,
+        "case_elapsed_ms_sum": 2569.0854999702424,
+        "first_streamed_text_chunk_ms": 492.73573331690085,
+        "openvino_time_to_first_token_ms": 325.6900990804036,
+        "openvino_generate_ms": 856.2116495768229,
+        "openvino_inference_ms": 835.2863362630209,
+        "openvino_tokenization_ms": 16.684000333150227,
+        "throughput_tokens_per_s": 18.50960318247477,
+        "generated_tokens": 32,
+        "notes": [
+          "Phase runner averages per-case OpenVINO PerfMetrics for the NPU device"
+        ]
+      },
+      {
+        "source": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+        "evidence_scope": "indexed_phase_comparison",
+        "pipeline_construct_wall_ms": 35469.77,
+        "openvino_load_time_ms": 35469.77,
+        "generation_wall_ms": null,
+        "case_elapsed_ms_sum": 2116.417,
+        "first_streamed_text_chunk_ms": null,
+        "openvino_time_to_first_token_ms": null,
+        "openvino_generate_ms": null,
+        "openvino_inference_ms": null,
+        "openvino_tokenization_ms": null,
+        "throughput_tokens_per_s": null,
+        "generated_tokens": null,
+        "notes": [
+          "Phase comparison indexes smoke-level pipeline load and per-case elapsed sums only"
+        ]
+      },
+      {
+        "source": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+        "evidence_scope": "corpus_v2_profile_quality_receipt",
+        "pipeline_construct_wall_ms": 32127.467700000125,
+        "openvino_load_time_ms": 32127.0,
+        "generation_wall_ms": 799.9175249994247,
+        "case_elapsed_ms_sum": 9599.010299993097,
+        "first_streamed_text_chunk_ms": 329.4919833336583,
+        "openvino_time_to_first_token_ms": 246.4651870727539,
+        "openvino_generate_ms": 799.6993408203125,
+        "openvino_inference_ms": 783.8103256225586,
+        "openvino_tokenization_ms": 11.62500011920929,
+        "throughput_tokens_per_s": 24.76148223876953,
+        "generated_tokens": 177,
+        "notes": [
+          "Corpus-v2 timing is profile-quality context; failed cases still block promotion"
+        ]
+      }
+    ],
+    "pipeline_or_load_ms": {
+      "sample_count": 4,
+      "min": 32127.0,
+      "mean": 36377.6925,
+      "max": 40263.0
+    },
+    "generation_wall_ms": {
+      "sample_count": 4,
+      "min": 799.9175249994247,
+      "mean": 1178.9821645789134,
+      "max": 2116.417
+    },
+    "first_token_or_text_chunk_ms": {
+      "sample_count": 3,
+      "min": 323.50177001953125,
+      "mean": 381.90982889003016,
+      "max": 492.73573331690085
+    },
+    "throughput_tokens_per_s": {
+      "sample_count": 3,
+      "min": 12.93805694580078,
+      "mean": 18.736380789015026,
+      "max": 24.76148223876953
+    },
+    "operator_load_to_generation_ratio": 42.686197239329815,
+    "phase_runner_load_to_generation_ratio": 43.966228450282536,
+    "notes": [
+      "Diagnosis is derived from committed receipts only; it does not run OpenVINO or inference",
+      "OpenVINO NPU load_time_ms/pipeline_construct_wall_ms is treated as pipeline load, device compile, model transfer, or cache-miss time until cache/resident experiments split it further",
+      "Hot-path timings remain candidate-route evidence and do not promote NPU"
+    ]
+  },
+  "hot_path": {
+    "bounded_answer_gate_passed": false,
+    "fallback_used": false,
+    "generation_wall_ms": {
+      "sample_count": 3,
+      "min": 799.9175249994247,
+      "mean": 866.5038861052179,
+      "max": 943.2322999928148
+    },
+    "first_text_chunk_ms": {
+      "sample_count": 2,
+      "min": 329.4919833336583,
+      "mean": 411.1138583252796,
+      "max": 492.73573331690085
+    },
+    "openvino_time_to_first_token_ms": {
+      "sample_count": 3,
+      "min": 246.4651870727539,
+      "mean": 298.5523520575629,
+      "max": 325.6900990804036
+    },
+    "throughput_tokens_per_s": {
+      "sample_count": 3,
+      "min": 12.93805694580078,
+      "mean": 18.736380789015026,
+      "max": 24.76148223876953
+    },
+    "generated_tokens": {
+      "sample_count": 3,
+      "min": 9.0,
+      "mean": 72.66666666666667,
+      "max": 177.0
+    },
+    "hot_path_interesting": true,
+    "notes": [
+      "Hot-path evidence is bounded and candidate-only until resident/corpus/power gates pass",
+      "Cold-start policy remains unresolved for one-off interactive asks"
+    ]
+  },
+  "corpus_v2_context": {
+    "cases_total": 12,
+    "passed": 7,
+    "failed": 5,
+    "route_blocked_by_quality": true,
+    "failed_profiles": [
+      "ask_normal",
+      "ask_short",
+      "decode_heavy",
+      "prefill_heavy",
+      "regression_tiny"
+    ],
+    "failed_categories": [
+      "decode_heavy",
+      "long_prompt_summarization",
+      "short_reasoning",
+      "stop_and_eos",
+      "yes_no"
+    ],
+    "direct_generated_token_ids_available": false,
+    "generated_token_id_source": "retokenized_generated_text_not_pipeline_internal_ids"
+  },
+  "diagnosis_ready": true,
+  "findings": [
+    "npu_pipeline_or_load_mean_ms=36377.692",
+    "npu_pipeline_or_load_max_ms=40263.000",
+    "npu_generation_wall_mean_ms=1178.982",
+    "npu_hot_path_throughput_mean_tokens_per_s=18.736",
+    "operator_load_to_generation_ratio=42.686",
+    "npu_corpus_v2_blocked_by_5_failed_cases"
+  ],
+  "recommended_next_items": [
+    "LNL258V-NPU-CACHE-001: run OpenVINO cache hit/miss experiment with a stable cache directory",
+    "LNL258V-NPU-RESIDENT-001: measure same-process resident NPU warm asks and drift",
+    "LNL258V-NPU-QUAL-001: classify NPU corpus-v2 failures before any profile promotion",
+    "LNL258V-POWER-001: collect AC/battery or energy-proxy evidence before low-power promotion"
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "diagnostic_only": true,
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "broad_quality_claim": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_npu_inference_claim": false,
+    "npu_dynamic_decode_claim": false,
+    "beam_or_parallel_sampling_claim": false,
+    "bitnet_qk256_i2s_behavior_changed": false,
+    "dense_slm_as_bitnet_proof": false
+  }
+}
