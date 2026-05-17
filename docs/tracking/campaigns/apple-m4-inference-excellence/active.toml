@@ -1182,8 +1182,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-008"
-status = "pr_open"
+status = "merged"
 pr = 5371
+merge_sha = "850ad7073f5318ccc4d28188c9082fb1fa3e527a"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
 stackable = false
 review_mode = "codex_premerge"
@@ -1222,7 +1223,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-009"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-009-eval-history"
 stackable = false
 review_mode = "codex_premerge"
@@ -1232,7 +1233,7 @@ blocked_by = ["M4-BITNET-EX-008", "M4-BITNET-REG-001"]
 acceptance = "Run a second matching BitNet deterministic eval refresh for the accepted artifact/tokenizer identity and decide, with recorded evidence, whether to stage a larger 250/500-case BitNet corpus before any broader BitNet quality envelope claim."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/<bitnet-corpus>.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json",
-  "bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/summary.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-eval/summary.json",
+  "bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-eval/answer-corpus.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

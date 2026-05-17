@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T14:05:59Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-008"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
+pr = 5371
+merge_sha = "850ad7073f5318ccc4d28188c9082fb1fa3e527a"
+
+notes = [
+  "Merged PR #5371 for the M4-BITNET-EX-008 BitNet task-family and failure-taxonomy rollup.",
+  "The merge publishes ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json as a BitNet-only derived report with 75/100 Rust M4 passes, mechanical failure taxonomy, and reference-vs-Rust deltas.",
+  "M4-BITNET-EX-009 is now ready as the matching BitNet deterministic eval refresh and larger-corpus decision item.",
+  "No fresh runtime run, dense Qwen evidence reuse, BitNet chat or serve expansion, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]
