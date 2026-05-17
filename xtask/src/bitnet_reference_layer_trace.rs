@@ -18663,6 +18663,7 @@ fn score_position_qk_recompute_row(
     let mut best_rust_abs_delta = f64::INFINITY;
     let mut best_reference_accumulation_probe = Value::Null;
     let mut best_rust_accumulation_probe = Value::Null;
+    let mut best_candidate_product_delta = Value::Null;
 
     if blocked_reasons.is_empty() {
         let reference_key = reference_key.expect("checked above");
@@ -18940,6 +18941,20 @@ fn score_position_qk_recompute_row(
                 )
             })
             .unwrap_or(Value::Null);
+        best_candidate_product_delta = best_reference_candidate_info
+            .zip(best_rust_candidate_info)
+            .and_then(|(reference_candidate, rust_candidate)| {
+                score_position_candidate_product_delta(
+                    reference_candidate,
+                    rust_candidate,
+                    head,
+                    head_dim,
+                    key_slot,
+                    query_token,
+                    selected_current_token,
+                )
+            })
+            .unwrap_or(Value::Null);
     }
 
     let status = if !blocked_reasons.is_empty() {
@@ -18976,6 +18991,7 @@ fn score_position_qk_recompute_row(
         "best_rust_candidate": best_rust_candidate,
         "best_reference_accumulation_probe": best_reference_accumulation_probe,
         "best_rust_accumulation_probe": best_rust_accumulation_probe,
+        "best_candidate_product_delta": best_candidate_product_delta,
         "candidates": candidates,
     })
 }
@@ -19123,6 +19139,137 @@ fn score_position_candidate_query_key_pairs(
         pairs.push((query, key));
     }
     Some(pairs)
+}
+
+fn score_position_candidate_product_delta(
+    reference_candidate: ScorePositionInputCandidate<'_>,
+    rust_candidate: ScorePositionInputCandidate<'_>,
+    head: usize,
+    head_dim: usize,
+    key_slot: usize,
+    query_token: usize,
+    selected_current_token: Option<usize>,
+) -> Option<Value> {
+    let reference_pairs = score_position_candidate_query_key_pairs(
+        reference_candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
+    let rust_pairs = score_position_candidate_query_key_pairs(
+        rust_candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
+    if reference_pairs.is_empty() || reference_pairs.len() != rust_pairs.len() {
+        return None;
+    }
+
+    let mut query_l1_delta = 0.0f64;
+    let mut key_l1_delta = 0.0f64;
+    let mut product_signed_delta_sum = 0.0f64;
+    let mut product_abs_delta_sum = 0.0f64;
+    let mut max_abs_product_delta = 0.0f64;
+    let mut query_changed_dim_count = 0usize;
+    let mut key_changed_dim_count = 0usize;
+    let mut material_product_delta_count = 0usize;
+    let mut first_material_dim = None::<usize>;
+    let mut contributors = Vec::<Value>::new();
+
+    for (dim, ((reference_query, reference_key), (rust_query, rust_key))) in
+        reference_pairs.into_iter().zip(rust_pairs).enumerate()
+    {
+        let reference_query = f64::from(reference_query);
+        let reference_key = f64::from(reference_key);
+        let rust_query = f64::from(rust_query);
+        let rust_key = f64::from(rust_key);
+        let query_delta = reference_query - rust_query;
+        let key_delta = reference_key - rust_key;
+        let reference_product = reference_query * reference_key;
+        let rust_product = rust_query * rust_key;
+        let signed_product_delta = reference_product - rust_product;
+        let abs_product_delta = signed_product_delta.abs();
+
+        query_l1_delta += query_delta.abs();
+        key_l1_delta += key_delta.abs();
+        product_signed_delta_sum += signed_product_delta;
+        product_abs_delta_sum += abs_product_delta;
+        max_abs_product_delta = max_abs_product_delta.max(abs_product_delta);
+        if query_delta != 0.0 {
+            query_changed_dim_count += 1;
+        }
+        if key_delta != 0.0 {
+            key_changed_dim_count += 1;
+        }
+        if abs_product_delta > 0.0 {
+            material_product_delta_count += 1;
+            if first_material_dim.is_none() {
+                first_material_dim = Some(dim);
+            }
+            contributors.push(json!({
+                "dim": dim,
+                "reference_query": reference_query,
+                "rust_query": rust_query,
+                "query_delta": query_delta,
+                "reference_key": reference_key,
+                "rust_key": rust_key,
+                "key_delta": key_delta,
+                "reference_product": reference_product,
+                "rust_product": rust_product,
+                "signed_product_delta": signed_product_delta,
+                "abs_product_delta": abs_product_delta,
+            }));
+        }
+    }
+
+    contributors.sort_by(|left, right| {
+        let left_delta = left.pointer("/abs_product_delta").and_then(Value::as_f64).unwrap_or(0.0);
+        let right_delta =
+            right.pointer("/abs_product_delta").and_then(Value::as_f64).unwrap_or(0.0);
+        right_delta.total_cmp(&left_delta).then_with(|| {
+            let left_dim = left.pointer("/dim").and_then(Value::as_u64).unwrap_or(u64::MAX);
+            let right_dim = right.pointer("/dim").and_then(Value::as_u64).unwrap_or(u64::MAX);
+            left_dim.cmp(&right_dim)
+        })
+    });
+    contributors.truncate(5);
+
+    let dominant_input = match (query_changed_dim_count > 0, key_changed_dim_count > 0) {
+        (true, true) => "query_and_key",
+        (true, false) => "query",
+        (false, true) => "key",
+        (false, false) => "none",
+    };
+
+    Some(json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected score-position product-delta attribution is diagnostic-only evidence for which q/k dimensions contribute to side-specific score drift; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "reference_candidate": reference_candidate.id,
+        "rust_candidate": rust_candidate.id,
+        "reference_base_candidate": reference_candidate.base_candidate,
+        "rust_base_candidate": rust_candidate.base_candidate,
+        "reference_score_input_variant": reference_candidate.score_input_variant,
+        "rust_score_input_variant": rust_candidate.score_input_variant,
+        "head_dim": head_dim,
+        "compared_dim_count": head_dim,
+        "material_product_delta_count": material_product_delta_count,
+        "first_material_dim": first_material_dim,
+        "dominant_input": dominant_input,
+        "query_changed_dim_count": query_changed_dim_count,
+        "key_changed_dim_count": key_changed_dim_count,
+        "query_l1_delta": query_l1_delta,
+        "key_l1_delta": key_l1_delta,
+        "product_signed_delta_sum": product_signed_delta_sum,
+        "product_abs_delta_sum": product_abs_delta_sum,
+        "max_abs_product_delta": max_abs_product_delta,
+        "top_abs_product_delta_contributors": contributors,
+    }))
 }
 
 fn score_position_candidate_input_residual_sensitivity(
@@ -28514,6 +28661,14 @@ mod tests {
             report.pointer("/rows/0/best_reference_candidate/reference_abs_delta"),
             Some(&json!(0.0))
         );
+        assert_eq!(
+            report.pointer("/rows/0/best_candidate_product_delta/diagnostic_only"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/best_candidate_product_delta/claim_allowed"),
+            Some(&json!(false))
+        );
         assert_eq!(report.pointer("/rows/0/candidate_count"), Some(&json!(2)));
     }
 
@@ -28843,6 +28998,69 @@ mod tests {
         assert_eq!(q_f32_value, 1.0001_f32);
         assert_eq!(q_f16_value, f16_roundtrip(1.0001_f32));
         assert_ne!(q_f32_value, q_f16_value);
+    }
+
+    #[test]
+    fn score_position_candidate_product_delta_reports_top_contributors() {
+        let reference_query_values = vec![2.0_f32, 3.0, 4.0];
+        let reference_key_values = vec![5.0_f32, 7.0, 11.0];
+        let rust_query_values = vec![2.0_f32, 10.0, 4.0];
+        let rust_key_values = vec![5.0_f32, 7.0, 1.0];
+        let reference_candidate = ScorePositionInputCandidate {
+            id: "reference_q_history_reference_k_q_f16_k_trace",
+            base_candidate: "reference_q_history_reference_k",
+            score_input_variant: "q_f16_k_trace",
+            query_source: "reference_q_score_input_head",
+            key_source: "reference_k_score_input_head",
+            query_layout: ScoreQueryLayout::DimMajorHistory,
+            key_layout: ScoreKeyLayout::DimMajor,
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            query_values: &reference_query_values,
+            key_values: &reference_key_values,
+        };
+        let rust_candidate = ScorePositionInputCandidate {
+            id: "rust_q_history_rust_k_q_f16_k_trace",
+            base_candidate: "rust_q_history_rust_k",
+            score_input_variant: "q_f16_k_trace",
+            query_source: "rust_attention_q_score_input_head",
+            key_source: "rust_attention_k_score_input_head",
+            query_layout: ScoreQueryLayout::DimMajorHistory,
+            key_layout: ScoreKeyLayout::DimMajor,
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            query_values: &rust_query_values,
+            key_values: &rust_key_values,
+        };
+
+        let delta = score_position_candidate_product_delta(
+            reference_candidate,
+            rust_candidate,
+            0,
+            3,
+            0,
+            0,
+            Some(0),
+        )
+        .expect("product delta");
+
+        assert_eq!(delta.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(delta.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(delta.pointer("/dominant_input"), Some(&json!("query_and_key")));
+        assert_eq!(delta.pointer("/compared_dim_count"), Some(&json!(3)));
+        assert_eq!(delta.pointer("/material_product_delta_count"), Some(&json!(2)));
+        assert_eq!(delta.pointer("/first_material_dim"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/query_changed_dim_count"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/key_changed_dim_count"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/product_signed_delta_sum"), Some(&json!(-9.0)));
+        assert_eq!(delta.pointer("/product_abs_delta_sum"), Some(&json!(89.0)));
+        assert_eq!(delta.pointer("/max_abs_product_delta"), Some(&json!(49.0)));
+        assert_eq!(delta.pointer("/top_abs_product_delta_contributors/0/dim"), Some(&json!(1)));
+        assert_eq!(
+            delta.pointer("/top_abs_product_delta_contributors/0/signed_product_delta"),
+            Some(&json!(-49.0))
+        );
+        assert_eq!(delta.pointer("/top_abs_product_delta_contributors/1/dim"), Some(&json!(2)));
     }
 
     #[test]
