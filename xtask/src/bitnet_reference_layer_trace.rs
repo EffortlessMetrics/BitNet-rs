@@ -12065,6 +12065,10 @@ fn layer_attention_norm_f64_probability_history_effect(
             &selected_key_score_input_source,
             &selected_key_historical_projection_rope_source,
         );
+    let selected_historical_k_rope_source_frontier =
+        attention_norm_f64_selected_historical_k_rope_source_frontier(
+            &selected_key_bucket_source_frontier,
+        );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12150,6 +12154,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "query_rope_delta": query_rope_delta,
         "score_qk_bucket_frontier": score_qk_bucket_frontier,
         "selected_key_bucket_source_frontier": selected_key_bucket_source_frontier,
+        "selected_historical_k_rope_source_frontier": selected_historical_k_rope_source_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -12685,6 +12690,137 @@ fn compact_probe_bucket(bucket: &Value) -> Value {
         "right_f16_value": bucket.pointer("/right_f16_value").cloned().unwrap_or(Value::Null),
         "left_minus_midpoint": bucket.pointer("/left_minus_midpoint").cloned().unwrap_or(Value::Null),
         "right_minus_midpoint": bucket.pointer("/right_minus_midpoint").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn attention_norm_f64_selected_historical_k_rope_source_frontier(
+    selected_key_bucket_source_frontier: &Value,
+) -> Value {
+    let source_classification =
+        selected_key_bucket_source_frontier.pointer("/classification").and_then(Value::as_str);
+    let historical_row = selected_key_bucket_source_frontier
+        .pointer("/first_historical_source_row")
+        .unwrap_or(&Value::Null);
+    let historical_classification =
+        historical_row.pointer("/classification").and_then(Value::as_str);
+    let probe = historical_row.pointer("/post_rope_epsilon_probe").unwrap_or(&Value::Null);
+    let post_rope_bucket =
+        probe.pointer("/post_rope_bucket/f16_bucket_match").and_then(Value::as_bool);
+    let projection_bucket =
+        probe.pointer("/projection_bucket/f16_bucket_match").and_then(Value::as_bool);
+    let paired_projection_bucket =
+        probe.pointer("/paired_projection_bucket/f16_bucket_match").and_then(Value::as_bool);
+    let replay_bucket = probe.pointer("/replay_bucket/f16_bucket_match").and_then(Value::as_bool);
+    let capture_delta = probe.pointer("/post_rope/capture_delta").and_then(Value::as_f64);
+    let runtime_replay_delta =
+        probe.pointer("/post_rope/runtime_replay_delta").and_then(Value::as_f64);
+    let reference_replay_minus_capture =
+        probe.pointer("/post_rope/reference_replay_minus_capture").and_then(Value::as_f64);
+    let rust_replay_minus_capture =
+        probe.pointer("/post_rope/rust_replay_minus_capture").and_then(Value::as_f64);
+    let projection_buckets_stable =
+        projection_bucket == Some(true) && paired_projection_bucket == Some(true);
+    let replay_bucket_stable = replay_bucket == Some(true);
+    let tiny_capture_delta = capture_delta.is_some_and(|delta| delta.abs() <= 1.0e-6);
+    let runtime_replay_clean = runtime_replay_delta.is_some_and(|delta| delta.abs() <= 1.0e-12);
+    let rust_replay_capture_clean =
+        rust_replay_minus_capture.is_some_and(|delta| delta.abs() <= 1.0e-12);
+    let reference_replay_capture_delta_present =
+        reference_replay_minus_capture.is_some_and(|delta| delta.abs() > 0.0);
+
+    let classification = if source_classification
+        != Some("f64_selected_key_bucket_source_projection_rope_boundary")
+    {
+        "f64_selected_historical_k_rope_source_no_projection_rope_boundary"
+    } else if historical_row.is_null() || probe.is_null() {
+        "f64_selected_historical_k_rope_source_missing_probe"
+    } else if historical_classification == Some("selected_key_historical_reference_rope_delta")
+        && projection_buckets_stable
+        && replay_bucket_stable
+        && post_rope_bucket == Some(false)
+        && tiny_capture_delta
+        && runtime_replay_clean
+        && rust_replay_capture_clean
+        && reference_replay_capture_delta_present
+    {
+        "f64_selected_historical_k_rope_source_reference_capture_midpoint"
+    } else if !projection_buckets_stable {
+        "f64_selected_historical_k_rope_source_projection_bucket_crossing"
+    } else if !replay_bucket_stable {
+        "f64_selected_historical_k_rope_source_runtime_replay_bucket_crossing"
+    } else if post_rope_bucket == Some(false) {
+        "f64_selected_historical_k_rope_source_post_rope_bucket_crossing"
+    } else if historical_classification
+        == Some("selected_key_historical_projection_rope_source_clean")
+    {
+        "f64_selected_historical_k_rope_source_clean"
+    } else {
+        "f64_selected_historical_k_rope_source_unpinned"
+    };
+
+    let next_diagnostic = match classification {
+        "f64_selected_historical_k_rope_source_reference_capture_midpoint" => {
+            "inspect reference post-RoPE capture/serialization precision for the selected historical K row before changing runtime math"
+        }
+        "f64_selected_historical_k_rope_source_projection_bucket_crossing" => {
+            "localize selected historical K pre-RoPE projection bucket drift before changing RoPE or score math"
+        }
+        "f64_selected_historical_k_rope_source_runtime_replay_bucket_crossing" => {
+            "pin selected historical K RoPE replay arithmetic before changing runtime math"
+        }
+        "f64_selected_historical_k_rope_source_post_rope_bucket_crossing" => {
+            "pin selected historical K post-RoPE capture policy before changing runtime math"
+        }
+        "f64_selected_historical_k_rope_source_clean" => {
+            "move downstream because the selected historical K RoPE source is clean"
+        }
+        "f64_selected_historical_k_rope_source_missing_probe" => {
+            "capture selected historical K post-RoPE epsilon probe before runtime changes"
+        }
+        "f64_selected_historical_k_rope_source_no_projection_rope_boundary" => {
+            "localize selected key bucket source before historical K RoPE attribution"
+        }
+        _ => {
+            "keep selected historical K RoPE source diagnostic-only until the exact capture policy is pinned"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 selected historical K RoPE source frontier is compact diagnostic-only evidence for whether the selected key bucket drift is projection input drift, RoPE replay arithmetic, or post-RoPE capture/serialization near an F16 midpoint; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "selected_key_bucket_source_classification": source_classification,
+        "historical_source_classification": historical_classification,
+        "head": historical_row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": historical_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "key_slot": historical_row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "query_token": historical_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "contributor_dim": historical_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+        "variant_id": probe.pointer("/variant_id").cloned().unwrap_or(Value::Null),
+        "probe_dim": probe.pointer("/probe_dim").cloned().unwrap_or(Value::Null),
+        "paired_dim": probe.pointer("/paired_dim").cloned().unwrap_or(Value::Null),
+        "output_component": probe.pointer("/output_component").cloned().unwrap_or(Value::Null),
+        "projection_buckets_stable": projection_buckets_stable,
+        "projection_bucket_match": projection_bucket,
+        "paired_projection_bucket_match": paired_projection_bucket,
+        "replay_bucket_stable": replay_bucket_stable,
+        "replay_bucket_match": replay_bucket,
+        "post_rope_bucket_match": post_rope_bucket,
+        "tiny_capture_delta": tiny_capture_delta,
+        "runtime_replay_clean": runtime_replay_clean,
+        "rust_replay_capture_clean": rust_replay_capture_clean,
+        "reference_replay_capture_delta_present": reference_replay_capture_delta_present,
+        "capture_delta": capture_delta,
+        "runtime_replay_delta": runtime_replay_delta,
+        "reference_replay_minus_capture": reference_replay_minus_capture,
+        "rust_replay_minus_capture": rust_replay_minus_capture,
+        "post_rope_bucket": probe.pointer("/post_rope_bucket").cloned().unwrap_or(Value::Null),
+        "projection_bucket": probe.pointer("/projection_bucket").cloned().unwrap_or(Value::Null),
+        "paired_projection_bucket": probe.pointer("/paired_projection_bucket").cloned().unwrap_or(Value::Null),
+        "replay_bucket": probe.pointer("/replay_bucket").cloned().unwrap_or(Value::Null),
+        "selected_dim_values": historical_row.pointer("/selected_dim_values").cloned().unwrap_or(Value::Null),
+        "next_diagnostic": next_diagnostic,
     })
 }
 
@@ -40257,6 +40393,84 @@ mod tests {
             frontier.pointer("/next_diagnostic"),
             Some(&json!(
                 "localize selected key score-input expansion or capture policy before changing score math"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_historical_k_rope_source_frontier_reports_capture_midpoint() {
+        let selected_key_frontier = json!({
+            "classification": "f64_selected_key_bucket_source_projection_rope_boundary",
+            "first_historical_source_row": {
+                "status": "compared",
+                "classification": "selected_key_historical_reference_rope_delta",
+                "head": 5,
+                "kv_head": 1,
+                "key_slot": 2,
+                "query_token": 10,
+                "contributor_dim": 40,
+                "post_rope_epsilon_probe": {
+                    "diagnostic_only": true,
+                    "claim_allowed": false,
+                    "variant_id": "bitnet_500000_ggml_f32_iterative_theta_f32_arithmetic",
+                    "probe_dim": 40,
+                    "paired_dim": 104,
+                    "output_component": "lower_x0_cos_minus_x1_sin",
+                    "post_rope": {
+                        "capture_delta": 4.76837158203125e-7_f64,
+                        "runtime_replay_delta": 0.0_f64,
+                        "reference_replay_minus_capture": 4.76837158203125e-7_f64,
+                        "rust_replay_minus_capture": 0.0_f64,
+                    },
+                    "post_rope_bucket": {
+                        "f16_bucket_match": false,
+                        "delta": 4.76837158203125e-7_f64,
+                        "left_f16_bits": "0xc426",
+                        "right_f16_bits": "0xc425",
+                        "left_minus_midpoint": 0.0_f64,
+                        "right_minus_midpoint": 4.76837158203125e-7_f64,
+                    },
+                    "projection_bucket": {
+                        "f16_bucket_match": true,
+                    },
+                    "paired_projection_bucket": {
+                        "f16_bucket_match": true,
+                    },
+                    "replay_bucket": {
+                        "f16_bucket_match": true,
+                    },
+                },
+                "selected_dim_values": {
+                    "reference_post_rope": -4.146484375_f64,
+                    "rust_post_rope": -4.146483898162842_f64,
+                }
+            }
+        });
+
+        let frontier =
+            attention_norm_f64_selected_historical_k_rope_source_frontier(&selected_key_frontier);
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_historical_k_rope_source_reference_capture_midpoint"))
+        );
+        assert_eq!(frontier.pointer("/head"), Some(&json!(5)));
+        assert_eq!(frontier.pointer("/key_slot"), Some(&json!(2)));
+        assert_eq!(frontier.pointer("/query_token"), Some(&json!(10)));
+        assert_eq!(frontier.pointer("/contributor_dim"), Some(&json!(40)));
+        assert_eq!(frontier.pointer("/projection_buckets_stable"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/replay_bucket_stable"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/post_rope_bucket_match"), Some(&json!(false)));
+        assert_eq!(frontier.pointer("/tiny_capture_delta"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/runtime_replay_clean"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/rust_replay_capture_clean"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/reference_replay_capture_delta_present"), Some(&json!(true)));
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect reference post-RoPE capture/serialization precision for the selected historical K row before changing runtime math"
             ))
         );
     }
