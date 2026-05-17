@@ -293,16 +293,15 @@ fn generate_unsafe_report(analyses: &[FileUnsafeAnalysis], crate_info: Value) ->
                 "unsafe_impls": 0,
             })
         });
-        let object = entry.as_object_mut().expect("by_crate entry must be object");
-        object
-            .get_mut("files")
-            .and_then(Value::as_array_mut)
-            .expect("files must be an array")
-            .push(json!(analysis));
-        increment_field(object, "unsafe_blocks", analysis.unsafe_blocks.len());
-        increment_field(object, "unsafe_functions", analysis.unsafe_functions.len());
-        increment_field(object, "unsafe_traits", analysis.unsafe_traits.len());
-        increment_field(object, "unsafe_impls", analysis.unsafe_impls.len());
+        if let Some(object) = entry.as_object_mut() {
+            if let Some(files) = object.get_mut("files").and_then(Value::as_array_mut) {
+                files.push(json!(analysis));
+            }
+            increment_field(object, "unsafe_blocks", analysis.unsafe_blocks.len());
+            increment_field(object, "unsafe_functions", analysis.unsafe_functions.len());
+            increment_field(object, "unsafe_traits", analysis.unsafe_traits.len());
+            increment_field(object, "unsafe_impls", analysis.unsafe_impls.len());
+        }
     }
 
     let unsafe_percentage = if analyses.is_empty() {
@@ -420,10 +419,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn detects_unsafe_constructs_without_counting_comments() {
-        let root = tempfile::tempdir().expect("tempdir");
+    fn detects_unsafe_constructs_without_counting_comments()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let root = tempfile::tempdir()?;
         let src = root.path().join("src");
-        fs::create_dir_all(&src).expect("src dir");
+        fs::create_dir_all(&src)?;
         let file = src.join("lib.rs");
         fs::write(
             &file,
@@ -436,14 +436,14 @@ pub fn call() {
     unsafe { unchecked(); }
 }
 "#,
-        )
-        .expect("write fixture");
+        )?;
 
         let analysis = analyze_unsafe_usage(root.path(), &file);
         assert_eq!(analysis.unsafe_blocks.len(), 1);
         assert_eq!(analysis.unsafe_functions[0].name.as_deref(), Some("unchecked"));
         assert_eq!(analysis.unsafe_traits[0].name.as_deref(), Some("Marker"));
         assert_eq!(analysis.unsafe_impls.len(), 1);
+        Ok(())
     }
 
     #[test]
