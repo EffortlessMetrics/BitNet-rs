@@ -7438,6 +7438,8 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_score_raw_history_live_tail_delta(reference_records, rust_records);
     report["attention_score_raw_history_token_drift"] =
         attention_score_raw_history_token_drift(reference_records, rust_records);
+    report["attention_score_raw_history_position_drilldown"] =
+        attention_score_raw_history_position_drilldown(reference_records, rust_records);
     report["attention_score_raw_history_source_summary"] =
         attention_score_raw_history_source_summary(reference_records, rust_records);
     report["attention_probability_history_delta"] =
@@ -17255,6 +17257,213 @@ fn attention_score_raw_history_token_drift(
     attention_score_raw_history_token_drift_from_live_tail(&live_tail)
 }
 
+fn attention_score_raw_history_position_drilldown(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if !record.stage.ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(&record.stage, "kq_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if !record.stage.as_deref().unwrap_or("").ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(stage, "attention_scores_raw_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::<Value>::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_rust_head_count = 0usize;
+    let mut material_head_count = 0usize;
+    let mut material_position_count = 0usize;
+    let mut first_any_position = Value::Null;
+    let mut first_material_position = Value::Null;
+    let mut max_material_position = Value::Null;
+    let mut max_material_abs_delta = 0.0f64;
+
+    for (&head, reference) in &reference_heads {
+        let Some(rust) = rust_heads.get(&head).copied() else {
+            missing_rust_head_count += 1;
+            rows.push(json!({
+                "head": head,
+                "status": "missing_rust_head",
+                "reference_stage": format!("kq_head{head}_history_ref_layout"),
+                "rust_stage": format!("attention_scores_raw_head{head}_history_ref_layout"),
+            }));
+            continue;
+        };
+
+        compared_head_count += 1;
+        let mut row_status = "clean";
+        let mut row_material_position_count = 0usize;
+        let mut row_first_any_position = Value::Null;
+        let mut row_first_material_position = Value::Null;
+        let mut row_max_material_position = Value::Null;
+        let mut row_max_material_abs_delta = 0.0f64;
+
+        match (
+            dim_major_dim_count(reference),
+            dim_major_token_count(reference),
+            rust_dim_major_shape_counts(rust),
+        ) {
+            (
+                Ok(reference_dim_count),
+                Ok(reference_token_count),
+                Some((rust_dim_count, rust_token_count)),
+            ) => {
+                let live_dim_count = reference_dim_count.min(rust_dim_count);
+                let live_token_count = reference_token_count.min(rust_token_count);
+                for dim in 0..live_dim_count {
+                    for token in 0..live_token_count {
+                        let reference_index = dim * reference_token_count + token;
+                        let rust_index = dim * rust_token_count + token;
+                        let Some(&left) = reference.first_values.get(reference_index) else {
+                            continue;
+                        };
+                        let Some(&right) = rust.first_values.get(rust_index) else {
+                            continue;
+                        };
+                        let abs_delta = (right - left).abs() as f64;
+                        if abs_delta > 0.0 && first_any_position.is_null() {
+                            first_any_position = json!({
+                                "head": head,
+                                "dim": dim,
+                                "token": token,
+                                "reference_index": reference_index,
+                                "rust_index": rust_index,
+                                "left": left,
+                                "right": right,
+                                "abs_delta": abs_delta,
+                            });
+                        }
+                        if abs_delta > 0.0 && row_first_any_position.is_null() {
+                            row_first_any_position = json!({
+                                "dim": dim,
+                                "token": token,
+                                "reference_index": reference_index,
+                                "rust_index": rust_index,
+                                "left": left,
+                                "right": right,
+                                "abs_delta": abs_delta,
+                            });
+                        }
+                        if abs_delta <= 1.0e-6 {
+                            continue;
+                        }
+                        row_status = "material_mismatch";
+                        row_material_position_count += 1;
+                        material_position_count += 1;
+                        let position = json!({
+                            "head": head,
+                            "dim": dim,
+                            "token": token,
+                            "reference_index": reference_index,
+                            "rust_index": rust_index,
+                            "left": left,
+                            "right": right,
+                            "abs_delta": abs_delta,
+                        });
+                        if first_material_position.is_null() {
+                            first_material_position = position.clone();
+                        }
+                        if row_first_material_position.is_null() {
+                            row_first_material_position = position.clone();
+                        }
+                        if abs_delta > row_max_material_abs_delta {
+                            row_max_material_abs_delta = abs_delta;
+                            row_max_material_position = position.clone();
+                        }
+                        if abs_delta > max_material_abs_delta {
+                            max_material_abs_delta = abs_delta;
+                            max_material_position = position;
+                        }
+                    }
+                }
+                if row_material_position_count > 0 {
+                    material_head_count += 1;
+                }
+                rows.push(json!({
+                    "head": head,
+                    "status": row_status,
+                    "reference_stage": format!("kq_head{head}_history_ref_layout"),
+                    "rust_stage": format!("attention_scores_raw_head{head}_history_ref_layout"),
+                    "reference_dim_count": reference_dim_count,
+                    "reference_token_count": reference_token_count,
+                    "rust_dim_count": rust_dim_count,
+                    "rust_token_count": rust_token_count,
+                    "live_dim_count": live_dim_count,
+                    "live_token_count": live_token_count,
+                    "material_position_count": row_material_position_count,
+                    "first_any_position": row_first_any_position,
+                    "first_material_position": row_first_material_position,
+                    "max_material_position": row_max_material_position,
+                    "max_material_abs_delta": row_max_material_abs_delta,
+                }));
+            }
+            _ => {
+                rows.push(json!({
+                    "head": head,
+                    "status": "shape_unavailable",
+                    "reference_stage": format!("kq_head{head}_history_ref_layout"),
+                    "rust_stage": format!("attention_scores_raw_head{head}_history_ref_layout"),
+                    "reference_shape": reference.shape,
+                    "rust_shape": rust.shape,
+                }));
+            }
+        }
+    }
+
+    let classification = if missing_rust_head_count > 0 {
+        "missing_inputs"
+    } else if material_position_count == 0 {
+        "score_positions_clean"
+    } else if material_head_count == compared_head_count {
+        "score_position_drift_spans_all_compared_heads"
+    } else {
+        "score_position_drift_localized_to_some_heads"
+    };
+    let next_diagnostic = match classification {
+        "missing_inputs" => "capture missing raw score-history heads before position drilldown",
+        "score_positions_clean" => {
+            "raw score positions are clean; inspect downstream probability or value-mix rows"
+        }
+        _ => {
+            "recompute the first and max raw score positions from Q/K inputs before changing score, softmax, or value-mix math"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Raw score-history position drilldown is diagnostic-only evidence for exact head/dim/token score slots that drift; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "classification": classification,
+        "reference_head_count": reference_heads.len(),
+        "rust_head_count": rust_heads.len(),
+        "compared_head_count": compared_head_count,
+        "missing_rust_head_count": missing_rust_head_count,
+        "material_head_count": material_head_count,
+        "material_position_count": material_position_count,
+        "first_any_position": first_any_position,
+        "first_material_position": first_material_position,
+        "max_material_position": max_material_position,
+        "max_material_abs_delta": max_material_abs_delta,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_score_raw_history_token_drift_from_live_tail(live_tail: &Value) -> Value {
     let rows = live_tail.pointer("/rows").and_then(Value::as_array);
     let missing_rust_head_count = value_u64(live_tail, "/missing_rust_head_count").unwrap_or(0);
@@ -25911,6 +26120,67 @@ mod tests {
         assert_eq!(report.pointer("/classification"), Some(&json!("score_token_drift_clean")));
         assert_eq!(report.pointer("/material_head_count"), Some(&json!(0)));
         assert_eq!(report.pointer("/token_rows").and_then(Value::as_array).map(Vec::len), Some(0));
+    }
+
+    #[test]
+    fn attention_score_raw_history_position_drilldown_reports_exact_slots() {
+        let mut reference_head0 =
+            test_reference_trace_record("kq_head0_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0]);
+        reference_head0.shape = vec![2, 2, 1, 1];
+        reference_head0.nelements = 4;
+        let mut reference_head1 =
+            test_reference_trace_record("kq_head1_history_ref_layout", vec![5.0, 6.0, 7.0, 8.0]);
+        reference_head1.shape = vec![2, 2, 1, 1];
+        reference_head1.nelements = 4;
+        let reference_records = vec![reference_head0, reference_head1];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t1/blk0/attention_scores_raw_head0_history_ref_layout".to_string(),
+                stage: Some("attention_scores_raw_head0_history_ref_layout".to_string()),
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![1.0, 2.000002, 3.0, 4.5],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head0_history_ref_layout",
+                    vec![1.0, 2.000002, 3.0, 4.5],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head1_history_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t1/blk0/attention_scores_raw_head1_history_ref_layout".to_string(),
+                stage: Some("attention_scores_raw_head1_history_ref_layout".to_string()),
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![5.0, 6.0, 7.0, 8.0],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head1_history_ref_layout",
+                    vec![5.0, 6.0, 7.0, 8.0],
+                )
+            },
+        );
+        let report =
+            attention_score_raw_history_position_drilldown(&reference_records, &rust_records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("score_position_drift_localized_to_some_heads"))
+        );
+        assert_eq!(report.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/material_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/material_position_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/first_any_position/head"), Some(&json!(0)));
+        assert_eq!(report.pointer("/first_any_position/dim"), Some(&json!(0)));
+        assert_eq!(report.pointer("/first_any_position/token"), Some(&json!(1)));
+        assert_eq!(report.pointer("/max_material_position/dim"), Some(&json!(1)));
+        assert_eq!(report.pointer("/max_material_position/token"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rows/0/material_position_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/rows/1/status"), Some(&json!("clean")));
     }
 
     #[test]
