@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T08:19:29Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-002-reference-vs-rust"
+pr = 5306
+head_sha = "f789f7918d1d5f6664d79c2621ff33523b560e41"
+
+notes = [
+  "Opened PR #5306 with M4-BITNET-EX-002 reference-vs-Rust evidence for the accepted BitNet I2_S artifact and external tokenizer authority.",
+  "The PR records 100 BitNet.cpp reference prompts, compares them against the existing Rust M4 eval receipt, and records text matches, Rust token IDs, reference token-ID unavailability, and mechanical scoring deltas.",
+  "The PR remains evidence-only: no fresh Rust runtime run, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim.",
+]

@@ -1,0 +1,2578 @@
+{
+  "artifact_kind": "bitnet_apple_m4_reference_runner_output_v1",
+  "campaign": "apple-m4-inference-excellence",
+  "cases": [
+    {
+      "case_id": "bitnet_arithmetic_seed912587_add_001",
+      "duration_ms": 529.942,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 3 + 8. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 3 + 8. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "11",
+          "kind": "exact_match",
+          "observed": "11"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "11",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=add index=1 a=3 b=8",
+      "task_family": "arithmetic_exact",
+      "text": "11",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_add_002",
+      "duration_ms": 530.339,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 6 + 7. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 6 + 7. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "13",
+          "kind": "exact_match",
+          "observed": "13"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "13",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=add index=2 a=6 b=7",
+      "task_family": "arithmetic_exact",
+      "text": "13",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_add_003",
+      "duration_ms": 538.719,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 9 + 5. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 9 + 5. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "14",
+          "kind": "exact_match",
+          "observed": "14"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "14",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=add index=3 a=9 b=5",
+      "task_family": "arithmetic_exact",
+      "text": "14",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_add_004",
+      "duration_ms": 522.074,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 12 + 4. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 12 + 4. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "16",
+          "kind": "exact_match",
+          "observed": "16"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "16",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=add index=4 a=12 b=4",
+      "task_family": "arithmetic_exact",
+      "text": "16",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_add_005",
+      "duration_ms": 531.687,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 15 + 6. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 15 + 6. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "21",
+          "kind": "exact_match",
+          "observed": "21"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "21",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=add index=5 a=15 b=6",
+      "task_family": "arithmetic_exact",
+      "text": "21",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_sub_006",
+      "duration_ms": 526.412,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 18 - 7. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 18 - 7. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "11",
+          "kind": "exact_match",
+          "observed": "11"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "11",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=sub index=6 a=18 b=7",
+      "task_family": "arithmetic_exact",
+      "text": "11",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_sub_007",
+      "duration_ms": 534.022,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 25 - 9. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 25 - 9. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "16",
+          "kind": "exact_match",
+          "observed": "16"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "16",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=sub index=7 a=25 b=9",
+      "task_family": "arithmetic_exact",
+      "text": "16",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_mul_008",
+      "duration_ms": 526.54,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 4 x 6. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 4 x 6. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "24",
+          "kind": "exact_match",
+          "observed": "24"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "24",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=mul index=8 a=4 b=6",
+      "task_family": "arithmetic_exact",
+      "text": "24",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_mul_009",
+      "duration_ms": 536.016,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute 7 x 3. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute 7 x 3. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "21",
+          "kind": "exact_match",
+          "observed": "21"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "21",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=mul index=9 a=7 b=3",
+      "task_family": "arithmetic_exact",
+      "text": "21",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_arithmetic_seed912587_mix_010",
+      "duration_ms": 533.762,
+      "generated_token_ids": null,
+      "max_new_tokens": 4,
+      "prompt": "User: Compute (5 + 4) x 2. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Compute (5 + 4) x 2. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "18",
+          "kind": "exact_match",
+          "observed": "18"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "18",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=arithmetic op=mix index=10 expr=(5+4)*2",
+      "task_family": "arithmetic_exact",
+      "text": "18",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_div_001",
+      "duration_ms": 624.121,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Compute 7 divided by 2. Answer with a decimal number only.<|eot_id|>Assistant:",
+      "question": "Compute 7 divided by 2. Answer with a decimal number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 3.5,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": 7.0
+        },
+        "failed_rules": [
+          "numeric_tolerance"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To compute \\( 7 \\div",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=divide index=1 numerator=7 denominator=2",
+      "task_family": "numeric_tolerance",
+      "text": "To compute \\( 7 \\div",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_div_002",
+      "duration_ms": 626.517,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Compute 9 divided by 4. Answer with a decimal number only.<|eot_id|>Assistant:",
+      "question": "Compute 9 divided by 4. Answer with a decimal number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 2.25,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": 9.0
+        },
+        "failed_rules": [
+          "numeric_tolerance"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To compute \\(9 \\div 4",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=divide index=2 numerator=9 denominator=4",
+      "task_family": "numeric_tolerance",
+      "text": "To compute \\(9 \\div 4",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_div_003",
+      "duration_ms": 632.222,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Compute 11 divided by 5. Answer with a decimal number only.<|eot_id|>Assistant:",
+      "question": "Compute 11 divided by 5. Answer with a decimal number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 2.2,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": 11.0
+        },
+        "failed_rules": [
+          "numeric_tolerance"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To compute \\( \\frac{11}{",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=divide index=3 numerator=11 denominator=5",
+      "task_family": "numeric_tolerance",
+      "text": "To compute \\( \\frac{11}{",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_percent_004",
+      "duration_ms": 630.675,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: What is 20 percent of 25? Answer with a number only.<|eot_id|>Assistant:",
+      "question": "What is 20 percent of 25? Answer with a number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 5,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": 20.0
+        },
+        "failed_rules": [
+          "numeric_tolerance"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To find 20 percent of 25",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=percent index=4 value=25 percent=20",
+      "task_family": "numeric_tolerance",
+      "text": "To find 20 percent of 25",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_percent_005",
+      "duration_ms": 632.626,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: What is 12.5 percent of 80? Answer with a number only.<|eot_id|>Assistant:",
+      "question": "What is 12.5 percent of 80? Answer with a number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 10,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": 12.5
+        },
+        "failed_rules": [
+          "numeric_tolerance"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To find 12.5 percent of",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=percent index=5 value=80 percent=12.5",
+      "task_family": "numeric_tolerance",
+      "text": "To find 12.5 percent of",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_average_006",
+      "duration_ms": 625.544,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: What is the average of 4, 8, and 10? Answer with a decimal number only.<|eot_id|>Assistant:",
+      "question": "What is the average of 4, 8, and 10? Answer with a decimal number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 7.33,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.02,
+          "observed_number": null
+        },
+        "failed_rules": [
+          "numeric_observed_missing"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To find the average of the numbers",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=average index=6 values=4,8,10",
+      "task_family": "numeric_tolerance",
+      "text": "To find the average of the numbers",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_average_007",
+      "duration_ms": 627.952,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: What is the average of 6, 9, and 12? Answer with a number only.<|eot_id|>Assistant:",
+      "question": "What is the average of 6, 9, and 12? Answer with a number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 9,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": null
+        },
+        "failed_rules": [
+          "numeric_observed_missing"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To find the average of the numbers",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=average index=7 values=6,9,12",
+      "task_family": "numeric_tolerance",
+      "text": "To find the average of the numbers",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_fraction_008",
+      "duration_ms": 622.73,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Convert 3/8 to a decimal. Answer with a decimal number only.<|eot_id|>Assistant:",
+      "question": "Convert 3/8 to a decimal. Answer with a decimal number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 0.375,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.001,
+          "observed_number": null
+        },
+        "failed_rules": [
+          "numeric_observed_missing"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To convert the fraction \\(\\frac{",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=fraction index=8 value=3/8",
+      "task_family": "numeric_tolerance",
+      "text": "To convert the fraction \\(\\frac{",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_fraction_009",
+      "duration_ms": 628.387,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Convert 5/8 to a decimal. Answer with a decimal number only.<|eot_id|>Assistant:",
+      "question": "Convert 5/8 to a decimal. Answer with a decimal number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 0.625,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.001,
+          "observed_number": null
+        },
+        "failed_rules": [
+          "numeric_observed_missing"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To convert the fraction \\(\\frac{",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=fraction index=9 value=5/8",
+      "task_family": "numeric_tolerance",
+      "text": "To convert the fraction \\(\\frac{",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_numeric_seed912587_ratio_010",
+      "duration_ms": 630.236,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Simplify the ratio 18 to 6 into one number for 18/6. Answer with a number only.<|eot_id|>Assistant:",
+      "question": "Simplify the ratio 18 to 6 into one number for 18/6. Answer with a number only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected_number": 3,
+          "kind": "numeric_tolerance",
+          "numeric_tolerance": 0.01,
+          "observed_number": 18.0
+        },
+        "failed_rules": [
+          "numeric_tolerance"
+        ],
+        "kind": "numeric_tolerance",
+        "normalized_answer": "To simplify the ratio 18 to",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=numeric op=ratio index=10 values=18:6",
+      "task_family": "numeric_tolerance",
+      "text": "To simplify the ratio 18 to",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_001",
+      "duration_ms": 522.006,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: Ada=red, Ben=blue, Cyd=green. What color is Ben? Answer with one word.<|eot_id|>Assistant:",
+      "question": "Table: Ada=red, Ben=blue, Cyd=green. What color is Ben? Answer with one word.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "blue",
+          "kind": "normalized_match",
+          "observed": "blue"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Blue",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=1",
+      "task_family": "fixed_table_qa",
+      "text": "Blue",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_002",
+      "duration_ms": 529.566,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: Ada=red, Ben=blue, Cyd=green. Who has green? Answer with one name.<|eot_id|>Assistant:",
+      "question": "Table: Ada=red, Ben=blue, Cyd=green. Who has green? Answer with one name.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "cyd",
+          "kind": "normalized_match",
+          "observed": "cyd"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Cyd",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=2",
+      "task_family": "fixed_table_qa",
+      "text": "Cyd",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_003",
+      "duration_ms": 570.972,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: item A costs 4, item B costs 9, item C costs 12. What does item C cost? Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Table: item A costs 4, item B costs 9, item C costs 12. What does item C cost? Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "12",
+          "kind": "exact_match",
+          "observed": "12"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "12",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=3",
+      "task_family": "fixed_table_qa",
+      "text": "12",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_004",
+      "duration_ms": 553.935,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: item A costs 4, item B costs 9, item C costs 12. Which item costs 9? Answer with the item letter only.<|eot_id|>Assistant:",
+      "question": "Table: item A costs 4, item B costs 9, item C costs 12. Which item costs 9? Answer with the item letter only.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "b",
+          "kind": "normalized_match",
+          "observed": "a"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "A",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=fixed_table index=4",
+      "task_family": "fixed_table_qa",
+      "text": "A",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_005",
+      "duration_ms": 503.613,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: north=12, south=7, east=5. Which direction has value 7? Answer with one word.<|eot_id|>Assistant:",
+      "question": "Table: north=12, south=7, east=5. Which direction has value 7? Answer with one word.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "south",
+          "kind": "normalized_match",
+          "observed": "south"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "South",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=5",
+      "task_family": "fixed_table_qa",
+      "text": "South",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_006",
+      "duration_ms": 546.814,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: north=12, south=7, east=5. What value is north? Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Table: north=12, south=7, east=5. What value is north? Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "12",
+          "kind": "exact_match",
+          "observed": "12"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "12",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=6",
+      "task_family": "fixed_table_qa",
+      "text": "12",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_007",
+      "duration_ms": 513.724,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: R1=open, R2=closed, R3=open. What is R2? Answer with one word.<|eot_id|>Assistant:",
+      "question": "Table: R1=open, R2=closed, R3=open. What is R2? Answer with one word.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "closed",
+          "kind": "normalized_match",
+          "observed": "closed"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Closed",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=7",
+      "task_family": "fixed_table_qa",
+      "text": "Closed",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_008",
+      "duration_ms": 618.535,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: R1=open, R2=closed, R3=open. Which row is closed? Answer with the row id.<|eot_id|>Assistant:",
+      "question": "Table: R1=open, R2=closed, R3=open. Which row is closed? Answer with the row id.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "r2",
+          "kind": "normalized_match",
+          "observed": "based on the given table configuration: -"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Based on the given table configuration: -",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=fixed_table index=8",
+      "task_family": "fixed_table_qa",
+      "text": "Based on the given table configuration:\n\n-",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_009",
+      "duration_ms": 518.335,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: cat=mammal, trout=fish, robin=bird. What type is trout? Answer with one word.<|eot_id|>Assistant:",
+      "question": "Table: cat=mammal, trout=fish, robin=bird. What type is trout? Answer with one word.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "fish",
+          "kind": "normalized_match",
+          "observed": "fish"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Fish",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=9",
+      "task_family": "fixed_table_qa",
+      "text": "Fish",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_table_seed912587_city_010",
+      "duration_ms": 511.675,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Table: cat=mammal, trout=fish, robin=bird. Which animal is a bird? Answer with one word.<|eot_id|>Assistant:",
+      "question": "Table: cat=mammal, trout=fish, robin=bird. Which animal is a bird? Answer with one word.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "robin",
+          "kind": "normalized_match",
+          "observed": "robin"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "robin",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=fixed_table index=10",
+      "task_family": "fixed_table_qa",
+      "text": "robin",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_001",
+      "duration_ms": 666.719,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"status\":\"ready\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"status\":\"ready\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"status\":\"ready\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=1",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"status\":\"ready\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_002",
+      "duration_ms": 659.241,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"route\":\"ask\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"route\":\"ask\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"route\":\"ask\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=2",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"route\":\"ask\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_003",
+      "duration_ms": 671.623,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"backend\":\"cpu\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"backend\":\"cpu\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"backend\":\"cpu\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=3",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"backend\":\"cpu\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_004",
+      "duration_ms": 685.999,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"family\":\"bitnet\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"family\":\"bitnet\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"family\":\"bitnet\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=4",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"family\":\"bitnet\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_005",
+      "duration_ms": 664.723,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"mode\":\"local\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"mode\":\"local\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"mode\":\"local\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=5",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"mode\":\"local\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_006",
+      "duration_ms": 668.573,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"cache\":\"warm\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"cache\":\"warm\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"cache\":\"warm\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=6",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"cache\":\"warm\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_007",
+      "duration_ms": 686.698,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"result\":\"pass\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"result\":\"pass\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"result\":\"pass\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=7",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"result\":\"pass\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_008",
+      "duration_ms": 679.495,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"device\":\"m4\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"device\":\"m4\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"device\":\"m4\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=8",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"device\":\"m4\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_009",
+      "duration_ms": 670.509,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"state\":\"ok\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"state\":\"ok\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"state\":\"ok\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=9",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"state\":\"ok\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_json_seed912587_010",
+      "duration_ms": 693.574,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Return exactly this JSON object and no other text: {\"eval\":\"seeded\"}<|eot_id|>Assistant:",
+      "question": "Return exactly this JSON object and no other text: {\"eval\":\"seeded\"}",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "failed_rules": [],
+          "json_source": "fenced_json",
+          "kind": "json_schema"
+        },
+        "failed_rules": [],
+        "kind": "json_schema",
+        "normalized_answer": "```json {\"eval\":\"seeded\"} ```",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=json index=10",
+      "task_family": "format_constrained_json",
+      "text": "```json\n{\"eval\":\"seeded\"}\n```",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_001",
+      "duration_ms": 516.241,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify sentiment as positive, negative, or neutral: The install completed successfully. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify sentiment as positive, negative, or neutral: The install completed successfully. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "positive",
+          "kind": "normalized_match",
+          "observed": "neutral"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Neutral",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=closed_label index=1",
+      "task_family": "closed_label_classification",
+      "text": "Neutral",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_002",
+      "duration_ms": 517.225,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify sentiment as positive, negative, or neutral: The command failed twice. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify sentiment as positive, negative, or neutral: The command failed twice. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "negative",
+          "kind": "normalized_match",
+          "observed": "negative"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Negative",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=closed_label index=2",
+      "task_family": "closed_label_classification",
+      "text": "Negative",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_003",
+      "duration_ms": 517.432,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify sentiment as positive, negative, or neutral: The report is available. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify sentiment as positive, negative, or neutral: The report is available. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "neutral",
+          "kind": "normalized_match",
+          "observed": "neutral"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Neutral",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=closed_label index=3",
+      "task_family": "closed_label_classification",
+      "text": "Neutral",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_004",
+      "duration_ms": 633.575,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify size as small, medium, or large: 3 millimeters. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify size as small, medium, or large: 3 millimeters. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "small",
+          "kind": "normalized_match",
+          "observed": "to classify the size of 3 mill"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "To classify the size of 3 mill",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=closed_label index=4",
+      "task_family": "closed_label_classification",
+      "text": "To classify the size of 3 mill",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_005",
+      "duration_ms": 650.012,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify size as small, medium, or large: 3 meters. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify size as small, medium, or large: 3 meters. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "medium",
+          "kind": "normalized_match",
+          "observed": "to classify the size of 3 meters"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "To classify the size of 3 meters",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=closed_label index=5",
+      "task_family": "closed_label_classification",
+      "text": "To classify the size of 3 meters",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_006",
+      "duration_ms": 518.177,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify size as small, medium, or large: 3 kilometers. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify size as small, medium, or large: 3 kilometers. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "large",
+          "kind": "normalized_match",
+          "observed": "small"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "small",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=closed_label index=6",
+      "task_family": "closed_label_classification",
+      "text": "small",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_007",
+      "duration_ms": 514.709,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify route as local or remote: The request stays on this Mac. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify route as local or remote: The request stays on this Mac. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "local",
+          "kind": "normalized_match",
+          "observed": "local"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Local",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=closed_label index=7",
+      "task_family": "closed_label_classification",
+      "text": "Local",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_008",
+      "duration_ms": 531.345,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify route as local or remote: The request goes to a cloud API. Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify route as local or remote: The request goes to a cloud API. Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "remote",
+          "kind": "normalized_match",
+          "observed": "remote"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Remote",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=closed_label index=8",
+      "task_family": "closed_label_classification",
+      "text": "Remote",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_009",
+      "duration_ms": 510.348,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify answer as yes or no: Is ice frozen water? Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify answer as yes or no: Is ice frozen water? Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "yes",
+          "kind": "normalized_match",
+          "observed": "yes"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Yes",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=closed_label index=9",
+      "task_family": "closed_label_classification",
+      "text": "Yes",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_label_seed912587_010",
+      "duration_ms": 521.297,
+      "generated_token_ids": null,
+      "max_new_tokens": 8,
+      "prompt": "User: Classify answer as yes or no: Is the sun made of ice? Answer with one label.<|eot_id|>Assistant:",
+      "question": "Classify answer as yes or no: Is the sun made of ice? Answer with one label.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "no",
+          "kind": "normalized_match",
+          "observed": "no"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "No",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=closed_label index=10",
+      "task_family": "closed_label_classification",
+      "text": "No",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_001",
+      "duration_ms": 712.27,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the code from this text: 'ticket code is AX-14 and owner is Mia'. Answer with only the code.<|eot_id|>Assistant:",
+      "question": "Extract the code from this text: 'ticket code is AX-14 and owner is Mia'. Answer with only the code.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "ax-14",
+          "kind": "normalized_match",
+          "observed": "```python ticket_code = \"ax-14\" owner"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "```python ticket_code = \"AX-14\" owner",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=extraction index=1",
+      "task_family": "synthetic_extraction",
+      "text": "```python\nticket_code = \"AX-14\"\nowner",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_002",
+      "duration_ms": 535.331,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the owner from this text: 'ticket code is AX-14 and owner is Mia'. Answer with only the owner.<|eot_id|>Assistant:",
+      "question": "Extract the owner from this text: 'ticket code is AX-14 and owner is Mia'. Answer with only the owner.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "mia",
+          "kind": "normalized_match",
+          "observed": "mia"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "Mia",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=extraction index=2",
+      "task_family": "synthetic_extraction",
+      "text": "Mia",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_003",
+      "duration_ms": 572.682,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the port from this text: 'server host alpha uses port 8080'. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Extract the port from this text: 'server host alpha uses port 8080'. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "8080",
+          "kind": "exact_match",
+          "observed": "8080"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "8080",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=extraction index=3",
+      "task_family": "synthetic_extraction",
+      "text": "8080",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_004",
+      "duration_ms": 558.42,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the host from this text: 'server host alpha uses port 8080'. Answer with only the host.<|eot_id|>Assistant:",
+      "question": "Extract the host from this text: 'server host alpha uses port 8080'. Answer with only the host.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "alpha",
+          "kind": "normalized_match",
+          "observed": "server host alpha"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "server host alpha",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=extraction index=4",
+      "task_family": "synthetic_extraction",
+      "text": "server host alpha",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_005",
+      "duration_ms": 648.085,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the date from this text: 'backup date is 2026-05-15 and status is ok'. Answer with only the date.<|eot_id|>Assistant:",
+      "question": "Extract the date from this text: 'backup date is 2026-05-15 and status is ok'. Answer with only the date.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "2026-05-15",
+          "kind": "normalized_match",
+          "observed": "2026-05-15"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "2026-05-15",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=extraction index=5",
+      "task_family": "synthetic_extraction",
+      "text": "2026-05-15",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_006",
+      "duration_ms": 560.474,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the status from this text: 'backup date is 2026-05-15 and status is ok'. Answer with only the status.<|eot_id|>Assistant:",
+      "question": "Extract the status from this text: 'backup date is 2026-05-15 and status is ok'. Answer with only the status.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "ok",
+          "kind": "normalized_match",
+          "observed": "ok"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "ok",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=extraction index=6",
+      "task_family": "synthetic_extraction",
+      "text": "ok",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_007",
+      "duration_ms": 581.781,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the SKU from this text: 'SKU Z9Q and quantity 17 were shipped'. Answer with only the SKU.<|eot_id|>Assistant:",
+      "question": "Extract the SKU from this text: 'SKU Z9Q and quantity 17 were shipped'. Answer with only the SKU.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "z9q",
+          "kind": "normalized_match",
+          "observed": "sku z9q"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "SKU Z9Q",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=extraction index=7",
+      "task_family": "synthetic_extraction",
+      "text": "SKU Z9Q",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_008",
+      "duration_ms": 535.996,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the quantity from this text: 'SKU Z9Q and quantity 17 were shipped'. Answer with only the number.<|eot_id|>Assistant:",
+      "question": "Extract the quantity from this text: 'SKU Z9Q and quantity 17 were shipped'. Answer with only the number.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "17",
+          "kind": "exact_match",
+          "observed": "17"
+        },
+        "failed_rules": [],
+        "kind": "exact_match",
+        "normalized_answer": "17",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=extraction index=8",
+      "task_family": "synthetic_extraction",
+      "text": "17",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_009",
+      "duration_ms": 517.557,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the region from this text: 'region west, priority high, owner Lee'. Answer with only the region.<|eot_id|>Assistant:",
+      "question": "Extract the region from this text: 'region west, priority high, owner Lee'. Answer with only the region.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "west",
+          "kind": "normalized_match",
+          "observed": "west"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "west",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=extraction index=9",
+      "task_family": "synthetic_extraction",
+      "text": "west",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_extract_seed912587_010",
+      "duration_ms": 555.273,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Extract the priority from this text: 'region west, priority high, owner Lee'. Answer with only the priority.<|eot_id|>Assistant:",
+      "question": "Extract the priority from this text: 'region west, priority high, owner Lee'. Answer with only the priority.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "high",
+          "kind": "normalized_match",
+          "observed": "priority high"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Priority high",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=extraction index=10",
+      "task_family": "synthetic_extraction",
+      "text": "Priority high",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_001",
+      "duration_ms": 654.286,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Sort these numbers ascending: 9, 2, 5. Answer as comma-separated numbers.<|eot_id|>Assistant:",
+      "question": "Sort these numbers ascending: 9, 2, 5. Answer as comma-separated numbers.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "2, 5, 9",
+          "kind": "normalized_match",
+          "observed": "2, 5, 9"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "2, 5, 9",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=1",
+      "task_family": "ordering_sorting",
+      "text": "2, 5, 9",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_002",
+      "duration_ms": 646.766,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Sort these numbers ascending: 4, 1, 7. Answer as comma-separated numbers.<|eot_id|>Assistant:",
+      "question": "Sort these numbers ascending: 4, 1, 7. Answer as comma-separated numbers.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "1, 4, 7",
+          "kind": "normalized_match",
+          "observed": "1, 4, 7"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "1, 4, 7",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=2",
+      "task_family": "ordering_sorting",
+      "text": "1, 4, 7",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_003",
+      "duration_ms": 597.298,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Sort these words alphabetically: pear, apple, lime. Answer as comma-separated words.<|eot_id|>Assistant:",
+      "question": "Sort these words alphabetically: pear, apple, lime. Answer as comma-separated words.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "apple, lime, pear",
+          "kind": "normalized_match",
+          "observed": "apple, lime, pear"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "apple, lime, pear",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=3",
+      "task_family": "ordering_sorting",
+      "text": "apple, lime, pear",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_004",
+      "duration_ms": 598.683,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Sort these words alphabetically: beta, alpha, gamma. Answer as comma-separated words.<|eot_id|>Assistant:",
+      "question": "Sort these words alphabetically: beta, alpha, gamma. Answer as comma-separated words.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "alpha, beta, gamma",
+          "kind": "normalized_match",
+          "observed": "alpha, beta, gamma"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "alpha, beta, gamma",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=4",
+      "task_family": "ordering_sorting",
+      "text": "alpha, beta, gamma",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_005",
+      "duration_ms": 622.236,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Order these steps from first to last: finish, start, middle. Answer as comma-separated words.<|eot_id|>Assistant:",
+      "question": "Order these steps from first to last: finish, start, middle. Answer as comma-separated words.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "start, middle, finish",
+          "kind": "normalized_match",
+          "observed": "finish, start, middle"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Finish, start, middle.",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=sorting index=5",
+      "task_family": "ordering_sorting",
+      "text": "Finish, start, middle.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_006",
+      "duration_ms": 600.841,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Order these sizes from smallest to largest: large, small, medium. Answer as comma-separated words.<|eot_id|>Assistant:",
+      "question": "Order these sizes from smallest to largest: large, small, medium. Answer as comma-separated words.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "small, medium, large",
+          "kind": "normalized_match",
+          "observed": "small, medium, large"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "small, medium, large",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=6",
+      "task_family": "ordering_sorting",
+      "text": "small, medium, large",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_007",
+      "duration_ms": 649.424,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Sort these numbers descending: 3, 8, 1. Answer as comma-separated numbers.<|eot_id|>Assistant:",
+      "question": "Sort these numbers descending: 3, 8, 1. Answer as comma-separated numbers.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "8, 3, 1",
+          "kind": "normalized_match",
+          "observed": "8, 3, 1"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "8, 3, 1",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=7",
+      "task_family": "ordering_sorting",
+      "text": "8, 3, 1",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_008",
+      "duration_ms": 653.701,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Sort these numbers descending: 10, 4, 6. Answer as comma-separated numbers.<|eot_id|>Assistant:",
+      "question": "Sort these numbers descending: 10, 4, 6. Answer as comma-separated numbers.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "10, 6, 4",
+          "kind": "normalized_match",
+          "observed": "10, 6, 4"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "10, 6, 4",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=sorting index=8",
+      "task_family": "ordering_sorting",
+      "text": "10, 6, 4",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_009",
+      "duration_ms": 609.637,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Order these days from earliest to latest in a week: Friday, Monday, Wednesday. Answer as comma-separated words.<|eot_id|>Assistant:",
+      "question": "Order these days from earliest to latest in a week: Friday, Monday, Wednesday. Answer as comma-separated words.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "monday, wednesday, friday",
+          "kind": "normalized_match",
+          "observed": "friday, monday, wednesday"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Friday, Monday, Wednesday",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=sorting index=9",
+      "task_family": "ordering_sorting",
+      "text": "Friday, Monday, Wednesday",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_sort_seed912587_010",
+      "duration_ms": 602.473,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Order these months from earliest to latest: March, January, February. Answer as comma-separated words.<|eot_id|>Assistant:",
+      "question": "Order these months from earliest to latest: March, January, February. Answer as comma-separated words.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "january, february, march",
+          "kind": "normalized_match",
+          "observed": "january, march, february"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "January, March, February",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=sorting index=10",
+      "task_family": "ordering_sorting",
+      "text": "January, March, February",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_001",
+      "duration_ms": 541.055,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Rewrite in lowercase only: LOCAL MODEL<|eot_id|>Assistant:",
+      "question": "Rewrite in lowercase only: LOCAL MODEL",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "local model",
+          "kind": "normalized_match",
+          "observed": "local model"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "local model",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=1",
+      "task_family": "rewrite_normalized",
+      "text": "local model",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_002",
+      "duration_ms": 541.338,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Rewrite in uppercase only: local model<|eot_id|>Assistant:",
+      "question": "Rewrite in uppercase only: local model",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "local model",
+          "kind": "normalized_match",
+          "observed": "local model"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "LOCAL MODEL",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=2",
+      "task_family": "rewrite_normalized",
+      "text": "LOCAL MODEL",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_003",
+      "duration_ms": 702.766,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Remove extra spaces and repeat: alpha   beta   gamma<|eot_id|>Assistant:",
+      "question": "Remove extra spaces and repeat: alpha   beta   gamma",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "alpha beta gamma",
+          "kind": "normalized_match",
+          "observed": "sure, here is the text with the extra spaces removed and"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Sure, here is the text with the extra spaces removed and",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=rewrite index=3",
+      "task_family": "rewrite_normalized",
+      "text": "Sure, here is the text with the extra spaces removed and",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_004",
+      "duration_ms": 646.224,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Correct the casing and answer with only the phrase: biTnEt runNeR<|eot_id|>Assistant:",
+      "question": "Correct the casing and answer with only the phrase: biTnEt runNeR",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "bitnet runner",
+          "kind": "normalized_match",
+          "observed": "bitnet runner"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "biTnEt runNeR",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=4",
+      "task_family": "rewrite_normalized",
+      "text": "biTnEt runNeR",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_005",
+      "duration_ms": 549.935,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Rewrite as two words without punctuation: fast, local.<|eot_id|>Assistant:",
+      "question": "Rewrite as two words without punctuation: fast, local.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "fast local",
+          "kind": "normalized_match",
+          "observed": "fast, local"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "Fast, local",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=rewrite index=5",
+      "task_family": "rewrite_normalized",
+      "text": "Fast, local",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_006",
+      "duration_ms": 581.652,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Change this sentence to present tense: The model loaded. Answer with only the sentence.<|eot_id|>Assistant:",
+      "question": "Change this sentence to present tense: The model loaded. Answer with only the sentence.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "the model loads",
+          "kind": "normalized_match",
+          "observed": "the model loads"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "The model loads.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=6",
+      "task_family": "rewrite_normalized",
+      "text": "The model loads.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_007",
+      "duration_ms": 602.169,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Change this sentence to past tense: The cache warms. Answer with only the sentence.<|eot_id|>Assistant:",
+      "question": "Change this sentence to past tense: The cache warms. Answer with only the sentence.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "the cache warmed",
+          "kind": "normalized_match",
+          "observed": "the cache was warmed"
+        },
+        "failed_rules": [
+          "normalized_match"
+        ],
+        "kind": "normalized_match",
+        "normalized_answer": "The cache was warmed.",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=rewrite index=7",
+      "task_family": "rewrite_normalized",
+      "text": "The cache was warmed.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_008",
+      "duration_ms": 601.71,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Replace the word slow with fast: The run is slow. Answer with only the new sentence.<|eot_id|>Assistant:",
+      "question": "Replace the word slow with fast: The run is slow. Answer with only the new sentence.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "the run is fast",
+          "kind": "normalized_match",
+          "observed": "the run is fast"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "The run is fast.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=8",
+      "task_family": "rewrite_normalized",
+      "text": "The run is fast.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_009",
+      "duration_ms": 602.68,
+      "generated_token_ids": null,
+      "max_new_tokens": 16,
+      "prompt": "User: Replace the word remote with local: The route is remote. Answer with only the new sentence.<|eot_id|>Assistant:",
+      "question": "Replace the word remote with local: The route is remote. Answer with only the new sentence.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "the route is local",
+          "kind": "normalized_match",
+          "observed": "the route is local"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "The route is local.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=9",
+      "task_family": "rewrite_normalized",
+      "text": "The route is local.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_rewrite_seed912587_010",
+      "duration_ms": 544.134,
+      "generated_token_ids": null,
+      "max_new_tokens": 12,
+      "prompt": "User: Repeat exactly without quotes: receipt ready<|eot_id|>Assistant:",
+      "question": "Repeat exactly without quotes: receipt ready",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "expected": "receipt ready",
+          "kind": "normalized_match",
+          "observed": "receipt ready"
+        },
+        "failed_rules": [],
+        "kind": "normalized_match",
+        "normalized_answer": "receipt ready",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=rewrite index=10",
+      "task_family": "rewrite_normalized",
+      "text": "receipt ready",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_001",
+      "duration_ms": 796.726,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word local: The model runs on the Mac without sending data elsewhere.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word local: The model runs on the Mac without sending data elsewhere.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "The local model operates on the Mac, ensuring data remains within the system.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=1",
+      "task_family": "constrained_summary",
+      "text": "The local model operates on the Mac, ensuring data remains within the system.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_002",
+      "duration_ms": 909.769,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word receipt: The run records timing, model hash, and generated tokens.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word receipt: The run records timing, model hash, and generated tokens.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "The run records timing, model hash, and generated tokens were verified using the receipt for accuracy.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=2",
+      "task_family": "constrained_summary",
+      "text": "The run records timing, model hash, and generated tokens were verified using the receipt for accuracy.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_003",
+      "duration_ms": 768.453,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word cache: Reusing a loaded model can reduce repeated setup work.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word cache: Reusing a loaded model can reduce repeated setup work.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "Reusing a loaded model minimizes setup time by leveraging existing cache.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=3",
+      "task_family": "constrained_summary",
+      "text": "Reusing a loaded model minimizes setup time by leveraging existing cache.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_004",
+      "duration_ms": 810.68,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word token: The system records the IDs produced by generation.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word token: The system records the IDs produced by generation.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": [
+            "token"
+          ]
+        },
+        "failed_rules": [
+          "required_keywords"
+        ],
+        "kind": "required_keywords",
+        "normalized_answer": "The system records the tokens produced by generation to track and analyze the output.",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=summary index=4",
+      "task_family": "constrained_summary",
+      "text": "The system records the tokens produced by generation to track and analyze the output.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_005",
+      "duration_ms": 836.036,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word fallback: The run must say whether it used another backend.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word fallback: The run must say whether it used another backend.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "The run must indicate if it employed a fallback backend due to unavailability.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=5",
+      "task_family": "constrained_summary",
+      "text": "The run must indicate if it employed a fallback backend due to unavailability.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_006",
+      "duration_ms": 874.697,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word timeout: A slow run should explain where it stopped.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word timeout: A slow run should explain where it stopped.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "The slow run came to a halt after a timeout, indicating a need to reassess progress.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=6",
+      "task_family": "constrained_summary",
+      "text": "The slow run came to a halt after a timeout, indicating a need to reassess progress.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_007",
+      "duration_ms": 820.316,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word backend: The selected runtime path must be written into the receipt.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word backend: The selected runtime path must be written into the receipt.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "The backend system processes the runtime path selection into the receipt for further distribution.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=7",
+      "task_family": "constrained_summary",
+      "text": "The backend system processes the runtime path selection into the receipt for further distribution.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_008",
+      "duration_ms": 810.587,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word prompt: The input is rendered through a fixed template before generation.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word prompt: The input is rendered through a fixed template before generation.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": [
+            "prompt"
+          ]
+        },
+        "failed_rules": [
+          "required_keywords"
+        ],
+        "kind": "required_keywords",
+        "normalized_answer": "The input is processed using a fixed template before being transformed into a coherent output.",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=summary index=8",
+      "task_family": "constrained_summary",
+      "text": "The input is processed using a fixed template before being transformed into a coherent output.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_009",
+      "duration_ms": 893.891,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word memory: Benchmarks should report peak resident size.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word memory: Benchmarks should report peak resident size.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "Benchmarks should report peak resident size, ensuring accurate memory of occupancy levels for effective resource management.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=9",
+      "task_family": "constrained_summary",
+      "text": "Benchmarks should report peak resident size, ensuring accurate memory of occupancy levels for effective resource management.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_summary_seed912587_010",
+      "duration_ms": 875.331,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Summarize in one short sentence and include the word warm: A reused session should avoid reloading the model each turn.<|eot_id|>Assistant:",
+      "question": "Summarize in one short sentence and include the word warm: A reused session should avoid reloading the model each turn.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "kind": "required_keywords",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_keywords",
+        "normalized_answer": "A reused session should avoid reloading the model each turn, ensuring a warm start for consistent performance.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=summary index=10",
+      "task_family": "constrained_summary",
+      "text": "A reused session should avoid reloading the model each turn, ensuring a warm start for consistent performance.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_001",
+      "duration_ms": 960.971,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include local. Do not use cloud.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include local. Do not use cloud.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The local farmers' market is happening this Saturday at the town square, offering fresh produce and handmade crafts.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=1",
+      "task_family": "required_forbidden_tokens",
+      "text": "The local farmers' market is happening this Saturday at the town square, offering fresh produce and handmade crafts.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_002",
+      "duration_ms": 790.677,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include receipt. Do not use hidden.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include receipt. Do not use hidden.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The receipt for the purchase of a new laptop is attached to this email.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=2",
+      "task_family": "required_forbidden_tokens",
+      "text": "The receipt for the purchase of a new laptop is attached to this email.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_003",
+      "duration_ms": 943.611,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include hash. Do not use unknown.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include hash. Do not use unknown.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The hash of the sentence \"The quick brown fox jumps over the lazy dog\" is 5e8d6f",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=3",
+      "task_family": "required_forbidden_tokens",
+      "text": "The hash of the sentence \"The quick brown fox jumps over the lazy dog\" is 5e8d6f",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_004",
+      "duration_ms": 923.513,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include tokenizer. Do not use default.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include tokenizer. Do not use default.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The tokenizer successfully segmented the input text into meaningful tokens, ensuring accurate word boundaries and context preservation.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=4",
+      "task_family": "required_forbidden_tokens",
+      "text": "The tokenizer successfully segmented the input text into meaningful tokens, ensuring accurate word boundaries and context preservation.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_005",
+      "duration_ms": 966.86,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include cpu. Do not use gpu.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include cpu. Do not use gpu.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [
+            "gpu"
+          ],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [
+          "forbidden_tokens"
+        ],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The CPU is the primary component responsible for executing instructions and processing data in a computer, without relying on a GPU.",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=5",
+      "task_family": "required_forbidden_tokens",
+      "text": "The CPU is the primary component responsible for executing instructions and processing data in a computer, without relying on a GPU.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_006",
+      "duration_ms": 950.806,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include strict. Do not use loose.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include strict. Do not use loose.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The strict answer is: The strict answer is that the strict answer is that the strict answer is that the strict answer is",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=6",
+      "task_family": "required_forbidden_tokens",
+      "text": "The strict answer is: The strict answer is that the strict answer is that the strict answer is that the strict answer is",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_007",
+      "duration_ms": 766.25,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include timing. Do not use instant.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include timing. Do not use instant.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": [
+            "timing"
+          ]
+        },
+        "failed_rules": [
+          "required_keywords"
+        ],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The first light of dawn breaks at approximately 6:00 AM.",
+        "passed": false
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=7",
+      "task_family": "required_forbidden_tokens",
+      "text": "The first light of dawn breaks at approximately 6:00 AM.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_008",
+      "duration_ms": 772.497,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include warm. Do not use chat.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include warm. Do not use chat.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "Your warm smile brightens my day and makes everything feel more enjoyable.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=8",
+      "task_family": "required_forbidden_tokens",
+      "text": "Your warm smile brightens my day and makes everything feel more enjoyable.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_009",
+      "duration_ms": 660.504,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include ask. Do not use serve.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include ask. Do not use serve.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "Can you ask me a question?",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=9",
+      "task_family": "required_forbidden_tokens",
+      "text": "Can you ask me a question?",
+      "token_id_status": "not_exposed_by_reference_runner"
+    },
+    {
+      "case_id": "bitnet_required_forbidden_seed912587_010",
+      "duration_ms": 742.429,
+      "generated_token_ids": null,
+      "max_new_tokens": 24,
+      "prompt": "User: Answer in one sentence. Include measured. Do not use magic.<|eot_id|>Assistant:",
+      "question": "Answer in one sentence. Include measured. Do not use magic.",
+      "return_code": 0,
+      "scoring": {
+        "details": {
+          "forbidden_tokens_observed": [],
+          "kind": "required_forbidden_tokens",
+          "required_keywords_missing": []
+        },
+        "failed_rules": [],
+        "kind": "required_forbidden_tokens",
+        "normalized_answer": "The measured distance between the two cities is 150 kilometers.",
+        "passed": true
+      },
+      "seed_material": "seed=912587 family=required_forbidden index=10",
+      "task_family": "required_forbidden_tokens",
+      "text": "The measured distance between the two cities is 150 kilometers.",
+      "token_id_status": "not_exposed_by_reference_runner"
+    }
+  ],
+  "claim_boundary": {
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "broad_performance_claim": false,
+    "broad_quality_claim": false,
+    "dense_slm_evidence_used": false,
+    "fresh_rust_runtime_run": false,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence_used_for_m4_rust": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "reference_runner_context_only": true,
+    "rust_m4_receipt_reused": true,
+    "speedup_claim": false
+  },
+  "corpus": {
+    "case_count": 100,
+    "contract": {
+      "contract_version": "m4-eval-corpus-scorer-contract-v1",
+      "corpus_id": "apple-m4-bitnet-eval-seeded-corpus",
+      "corpus_version": "1.0.0",
+      "expected_output_provenance": "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority.",
+      "normalization_rules": "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim.",
+      "receipt_contract": "answer_corpus_aggregate_receipt_v1",
+      "scorer_self_tests": [
+        "cargo test --locked -p bitnet-cli slm_eval_scoring",
+        "cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema"
+      ],
+      "scoring_schema": "answer_corpus_mechanical_scoring_v1",
+      "seed_generation_rules": "Static deterministic fixtures generated from seed=912587; every case ID and seed_material records family, operation, index, and fixture inputs. Any prompt, expected-output, scoring, or family-count change requires a corpus_version bump."
+    },
+    "generator_policy": "deterministic-static-fixture-bitnet-v1",
+    "name": "apple-m4-bitnet-eval-seeded-corpus",
+    "path": "ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml",
+    "seed": 912587
+  },
+  "model": {
+    "answer_ready": {
+      "evidence": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+      "gate": "MODEL-ARTIFACT-007",
+      "manifest": "ci/model-artifacts/artifact-manifest.toml",
+      "state": "answer_ready"
+    },
+    "architecture": "bitnet_b1_58",
+    "bytes": 1187801280,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "quant_format": "I2_S",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "repo_revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer_authority": {
+      "ggml_pre": "llama-bpe",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "source": "external_tokenizer_json"
+    }
+  },
+  "prompt_template": "bitnetcpp-answer",
+  "recorded_at": "2026-05-17T08:16:23.769067Z",
+  "runner": {
+    "command_shape": "$HOME/.cache/bitnet_cpp/build/bin/llama-cli -m models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -n <case.max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p 'User: <case.question><|eot_id|>Assistant:'",
+    "generated_token_ids_available": false,
+    "generated_token_ids_status": "not_exposed_by_reference_runner",
+    "git_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "git_describe": "01eb415",
+    "name": "Microsoft BitNet.cpp llama-cli",
+    "path": "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli",
+    "prompt_template": "bitnetcpp-answer",
+    "sampler": {
+      "min_p": 0,
+      "seed_argument": 42,
+      "temperature": 0,
+      "top_k": 1,
+      "top_p": 1
+    },
+    "stderr_excerpt_first_prompt": [
+      "build: 3962 (1f86f058) with Apple clang version 21.0.0 (clang-2100.0.123.102) for arm64-apple-darwin25.4.0",
+      "llm_load_tensors: offloaded 31/31 layers to GPU",
+      "ggml_metal_init: found device: Apple M4",
+      "sampler seed: 4294967295",
+      "sampler chain: logits -> logit-bias -> penalties -> greedy "
+    ]
+  },
+  "schema_version": "1.0.0",
+  "summary": {
+    "completed": 100,
+    "failed": 0,
+    "generated_token_ids_available": 0,
+    "generated_token_ids_unavailable": 100,
+    "reference_passed_mechanical_scoring": 70,
+    "total": 100,
+    "total_wall_ms": 64101.393
+  },
+  "tokenizer_authority": {
+    "ggml_pre": "llama-bpe",
+    "repo": "microsoft/bitnet-b1.58-2B-4T",
+    "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "source": "external_tokenizer_json"
+  },
+  "work_item": "M4-BITNET-EX-002"
+}

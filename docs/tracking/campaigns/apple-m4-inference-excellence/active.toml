@@ -937,17 +937,19 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-002"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-002-reference-vs-rust"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-001"]
+pr = 5306
 acceptance = "Compare reference-runner and Rust M4 BitNet answers for the accepted artifact/tokenizer identity, recording prompt template, token IDs where available, generated text, and mechanical scoring deltas."
 commands = [
-  "Reference runner prompt-suite command for the accepted artifact/tokenizer identity",
-  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/<bitnet-corpus>.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json",
+  "$HOME/.cache/bitnet_cpp/build/bin/llama-cli -m models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -n <case.max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p 'User: <case.question><|eot_id|>Assistant:'",
+  "cargo run --locked -p bitnet-cli -- mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/answer-corpus-reference-comparison.json --json",
+  "cargo test --locked -p bitnet-cli bitnet_reference_comparison_records_matched_text_and_tokens",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
