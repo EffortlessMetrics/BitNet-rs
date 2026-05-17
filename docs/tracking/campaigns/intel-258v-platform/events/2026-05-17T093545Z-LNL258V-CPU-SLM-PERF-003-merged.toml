@@ -1,0 +1,22 @@
+timestamp = "2026-05-17T09:35:45Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5324
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-003-openvino-cpu-compare"
+head_sha = "f77bccd64c47e61b823cbfaaeeec51a00953fdb4"
+merge_sha = "8037d9e4844c0b1bc84d78a4e16b931a5a4dab5a"
+summary = "Merged LNL258V-CPU-SLM-PERF-003 Rust GGUF CPU versus OpenVINO CPU runtime comparison."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-runtime-comparison.json",
+]
+
+notes = [
+  "PR #5324 merged the no-new-inference CPU runtime-comparison command and receipt.",
+  "The receipt compares Rust GGUF CPU resident timing with OpenVINO CPU corpus-v2 and phase-runner evidence.",
+  "OpenVINO CPU remains unpromoted because profile quality failures and phase-coverage gaps block benchmark-qualified promotion.",
+]
