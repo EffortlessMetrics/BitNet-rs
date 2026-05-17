@@ -577,162 +577,6 @@ callee = "unwrap"
 receiver_fingerprint = "texts.iter().map(|t| tok.encode(black_box(t), true, true).unwrap()).collect();"
 
 [[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'assert_eq!(std::fs::read(&path).expect("read v1"), b"v1");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'assert_eq!(std::fs::read(&path).expect("read v1"), b"v1");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'assert_eq!(std::fs::read(&path).expect("read v2"), b"v2");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'assert_eq!(std::fs::read(&path).expect("read v2"), b"v2");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'assert_eq!(std::fs::read(&path).expect("read"), b"new");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'assert_eq!(std::fs::read(&path).expect("read"), b"new");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'atomic_write(&path, &payload).expect("write");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'atomic_write(&path, &payload).expect("write");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'atomic_write(&path, b"").expect("write empty");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'atomic_write(&path, b"").expect("write empty");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'atomic_write(&path, b"new").expect("overwrite");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'atomic_write(&path, b"new").expect("overwrite");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'atomic_write(&path, b"v1").expect("first write");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'atomic_write(&path, b"v1").expect("first write");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'atomic_write(&path, b"v2").expect("second write");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'atomic_write(&path, b"v2").expect("second write");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'atomic_write(&path, b"{}").expect("write");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'atomic_write(&path, b"{}").expect("write");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'let data = std::fs::read(&path).expect("read");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let data = std::fs::read(&path).expect("read");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
-count = 6
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let dir = tempfile::tempdir().expect("tempdir");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'let read_back = std::fs::read(&path).expect("read");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let read_back = std::fs::read(&path).expect("read");'
-
-[[baseline]]
-path = "crates/bitnet-atomic-file-core/src/lib.rs"
-family = "expect"
-snippet = 'std::fs::write(&path, b"old").expect("seed");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'std::fs::write(&path, b"old").expect("seed");'
-
-[[baseline]]
 path = "crates/bitnet-bdd-grid-core/tests/bdd_grid_core_edge_cases.rs"
 family = "unwrap"
 snippet = 'assert_eq!(found.unwrap().intent, "b");'
@@ -1573,31 +1417,7 @@ callee = "expect"
 receiver_fingerprint = 'let object = summary.as_object_mut().expect("summary object");'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
-family = "expect"
-snippet = 'let object = run.as_object_mut().expect("run object");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let object = run.as_object_mut().expect("run object");'
-
-[[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
-family = "expect"
-snippet = 'let object = summary.as_object_mut().expect("summary object");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let object = summary.as_object_mut().expect("summary object");'
-
-[[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/receipt.rs"
 family = "expect"
 snippet = 'serde_json::to_string(self).expect("BenchReceipt is always serializable")'
 count = 1
@@ -1609,7 +1429,31 @@ callee = "expect"
 receiver_fingerprint = 'serde_json::to_string(self).expect("BenchReceipt is always serializable")'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
+family = "expect"
+snippet = 'let object = run.as_object_mut().expect("run object");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let object = run.as_object_mut().expect("run object");'
+
+[[baseline]]
+path = "crates/bitnet-bench-receipts/src/tests.rs"
+family = "expect"
+snippet = 'let object = summary.as_object_mut().expect("summary object");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let object = summary.as_object_mut().expect("summary object");'
+
+[[baseline]]
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = ".unwrap()"
 count = 1
@@ -1621,7 +1465,7 @@ callee = "unwrap"
 receiver_fingerprint = ".unwrap()"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "ReceiptStore::append(&path, &r1).unwrap();"
 count = 1
@@ -1633,7 +1477,7 @@ callee = "unwrap"
 receiver_fingerprint = "ReceiptStore::append(&path, &r1).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "ReceiptStore::append(&path, &r2).unwrap();"
 count = 1
@@ -1645,7 +1489,7 @@ callee = "unwrap"
 receiver_fingerprint = "ReceiptStore::append(&path, &r2).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'ReceiptStore::append(&path, &sample_receipt("k", 1)).unwrap();'
 count = 1
@@ -1657,7 +1501,7 @@ callee = "unwrap"
 receiver_fingerprint = 'ReceiptStore::append(&path, &sample_receipt("k", 1)).unwrap();'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'for profile in receipt["evidence_summary"].as_object_mut().unwrap().values_mut() {'
 count = 1
@@ -1669,7 +1513,7 @@ callee = "unwrap"
 receiver_fingerprint = 'for profile in receipt["evidence_summary"].as_object_mut().unwrap().values_mut() {'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'for profile in receipt["profile_reviews"].as_array_mut().unwrap() {'
 count = 1
@@ -1681,7 +1525,7 @@ callee = "unwrap"
 receiver_fingerprint = 'for profile in receipt["profile_reviews"].as_array_mut().unwrap() {'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'for requirement in receipt["qualification_requirements"].as_array_mut().unwrap() {'
 count = 1
@@ -1693,7 +1537,7 @@ callee = "unwrap"
 receiver_fingerprint = 'for requirement in receipt["qualification_requirements"].as_array_mut().unwrap() {'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "let dir = tempfile::tempdir().unwrap();"
 count = 4
@@ -1705,7 +1549,7 @@ callee = "unwrap"
 receiver_fingerprint = "let dir = tempfile::tempdir().unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "let loaded = ReceiptStore::load(&path).unwrap();"
 count = 3
@@ -1717,7 +1561,7 @@ callee = "unwrap"
 receiver_fingerprint = "let loaded = ReceiptStore::load(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "let mut f = std::fs::File::create(&path).unwrap();"
 count = 1
@@ -1729,7 +1573,7 @@ callee = "unwrap"
 receiver_fingerprint = "let mut f = std::fs::File::create(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();"
 count = 1
@@ -1741,7 +1585,7 @@ callee = "unwrap"
 receiver_fingerprint = "let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "let r2 = BenchReceipt::from_json(&json).unwrap();"
 count = 1
@@ -1753,7 +1597,7 @@ callee = "unwrap"
 receiver_fingerprint = "let r2 = BenchReceipt::from_json(&json).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "let r2 = BenchReceipt::from_json(&r.to_json()).unwrap();"
 count = 1
@@ -1765,7 +1609,7 @@ callee = "unwrap"
 receiver_fingerprint = "let r2 = BenchReceipt::from_json(&r.to_json()).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'receipt["profile_reviews"][0].as_object_mut().unwrap().remove("host_to_device_ms_scope");'
 count = 1
@@ -1777,7 +1621,7 @@ callee = "unwrap"
 receiver_fingerprint = 'receipt["profile_reviews"][0].as_object_mut().unwrap().remove("host_to_device_ms_scope");'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'requirement.as_object_mut().unwrap().remove("blocker");'
 count = 1
@@ -1789,7 +1633,7 @@ callee = "unwrap"
 receiver_fingerprint = 'requirement.as_object_mut().unwrap().remove("blocker");'
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "std::fs::File::create(&path).unwrap();"
 count = 1
@@ -1801,7 +1645,7 @@ callee = "unwrap"
 receiver_fingerprint = "std::fs::File::create(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt).unwrap();"
 count = 2
@@ -1813,7 +1657,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_file(&path).unwrap();"
 count = 1
@@ -1825,7 +1669,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1837,7 +1681,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_qwen_repeated_comparator_receipt_file(&path).unwrap();"
 count = 1
@@ -1849,7 +1693,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_qwen_repeated_comparator_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_qwen_repeated_comparator_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1861,7 +1705,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_qwen_repeated_comparator_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_rtx5070ti_cuda_benchmark_receipt_file(&path).unwrap();"
 count = 1
@@ -1873,7 +1717,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_rtx5070ti_cuda_benchmark_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1885,7 +1729,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_bitnet_cuda_benchmark_receipt_file(&path).unwrap();"
 count = 1
@@ -1897,7 +1741,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_bitnet_cuda_benchmark_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_bitnet_cuda_benchmark_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1909,7 +1753,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_bitnet_cuda_benchmark_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1921,7 +1765,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cuda_answer_path_benchmark_receipt_file(&path).unwrap();"
 count = 1
@@ -1933,7 +1777,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cuda_answer_path_benchmark_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1945,7 +1789,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cuda_repeated_ask_benchmark_receipt_file(&path).unwrap();"
 count = 1
@@ -1957,7 +1801,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cuda_repeated_ask_benchmark_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1969,7 +1813,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cuda_warm_session_benchmark_receipt_file(&path).unwrap();"
 count = 1
@@ -1981,7 +1825,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cuda_warm_session_benchmark_receipt_file(&path).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt).unwrap();"
 count = 1
@@ -1993,7 +1837,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = "writeln!(f).unwrap();"
 count = 1
@@ -2005,7 +1849,7 @@ callee = "unwrap"
 receiver_fingerprint = "writeln!(f).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-bench-receipts/src/lib.rs"
+path = "crates/bitnet-bench-receipts/src/tests.rs"
 family = "unwrap"
 snippet = 'writeln!(f, "{}", r.to_json()).unwrap();'
 count = 2
@@ -2017,208 +1861,16 @@ callee = "unwrap"
 receiver_fingerprint = 'writeln!(f, "{}", r.to_json()).unwrap();'
 
 [[baseline]]
-path = "crates/bitnet-build-info-core/src/lib.rs"
-family = "expect"
-snippet = 'let json: serde_json::Value = serde_json::to_value(&metadata).expect("serialize");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let json: serde_json::Value = serde_json::to_value(&metadata).expect("serialize");'
-
-[[baseline]]
-path = "crates/bitnet-build-info-core/src/lib.rs"
-family = "expect"
-snippet = 'let obj = json.as_object().expect("object");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let obj = json.as_object().expect("object");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = '.expect("build");'
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = '.expect("build");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'ConfigBuilder::from_file(&path).expect("from_file").build().expect("build");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'ConfigBuilder::from_file(&path).expect("from_file").build().expect("build");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'config.validate().expect("default config validates");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'config.validate().expect("default config validates");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'let config = CliConfig::load_from_file(&path).expect("missing file is non-fatal");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let config = CliConfig::load_from_file(&path).expect("missing file is non-fatal");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
-count = 4
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let dir = tempfile::tempdir().expect("tempdir");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'let loaded = CliConfig::load_from_file(&path).expect("load");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let loaded = CliConfig::load_from_file(&path).expect("load");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'let path = CliConfig::default_config_path().expect("config dir");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let path = CliConfig::default_config_path().expect("config dir");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'original.save_to_file(&path).expect("save");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'original.save_to_file(&path).expect("save");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'std::fs::write(&path, "this is = not = toml").expect("write");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'std::fs::write(&path, "this is = not = toml").expect("write");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "expect"
-snippet = 'written.save_to_file(&path).expect("save");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'written.save_to_file(&path).expect("save");'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'config.validate().unwrap_or_else(|err| panic!("{device} should validate: {err}"));'
+path = "crates/bitnet-bench-regression-core/src/lib.rs"
+family = "unreachable"
+snippet = '(None, None) => unreachable!("benchmark set is built from existing keys"),'
 count = 1
 
 [baseline.selector]
 kind = "macro_call"
 container = ""
-callee = "panic"
-receiver_fingerprint = 'config.validate().unwrap_or_else(|err| panic!("{device} should validate: {err}"));'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'config.validate().unwrap_or_else(|e| panic!("{fmt} should validate: {e}"));'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = 'config.validate().unwrap_or_else(|e| panic!("{fmt} should validate: {e}"));'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'config.validate().unwrap_or_else(|e| panic!("{level} should validate: {e}"));'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = 'config.validate().unwrap_or_else(|e| panic!("{level} should validate: {e}"));'
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "unwrap"
-snippet = "config.validate().unwrap();"
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = "config.validate().unwrap();"
-
-[[baseline]]
-path = "crates/bitnet-cli-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build().unwrap();'
+callee = "unreachable"
+receiver_fingerprint = '(None, None) => unreachable!("benchmark set is built from existing keys"),'
 
 [[baseline]]
 path = "crates/bitnet-cli/src/commands/answer_parity.rs"
@@ -2353,7 +2005,7 @@ callee = "unwrap"
 receiver_fingerprint = 'pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("MLP activation fixture");'
 count = 2
@@ -2365,7 +2017,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("MLP activation fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("attention V-mix fixture");'
 count = 2
@@ -2377,7 +2029,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("attention V-mix fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("attention score fixture");'
 count = 2
@@ -2389,7 +2041,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("attention score fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("attention softmax fixture");'
 count = 2
@@ -2401,7 +2053,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("attention softmax fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("attention_scores op");'
 count = 1
@@ -2413,7 +2065,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("attention_scores op");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("attention_softmax op");'
 count = 1
@@ -2425,7 +2077,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("attention_softmax op");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("attention_v_mix op");'
 count = 1
@@ -2437,7 +2089,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("attention_v_mix op");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("extract fixture");'
 count = 2
@@ -2449,7 +2101,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("extract fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("mlp_activation op");'
 count = 1
@@ -2461,7 +2113,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("mlp_activation op");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("model-boundary fixtures");'
 count = 1
@@ -2473,7 +2125,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("model-boundary fixtures");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("one-layer CPU reference");'
 count = 2
@@ -2485,7 +2137,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("one-layer CPU reference");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("rope fixture");'
 count = 1
@@ -2497,7 +2149,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("rope fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = '.expect("sampling policy");'
 count = 1
@@ -2509,7 +2161,7 @@ callee = "expect"
 receiver_fingerprint = '.expect("sampling policy");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'dense_gguf_kv_cache_policy_from_reader(&reader, &inspection, 4, 1).expect("kv policy");'
 count = 1
@@ -2521,7 +2173,7 @@ callee = "expect"
 receiver_fingerprint = 'dense_gguf_kv_cache_policy_from_reader(&reader, &inspection, 4, 1).expect("kv policy");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'extract_dense_gguf_linear_fixture(&reader, *role).expect("extract fixture");'
 count = 1
@@ -2533,7 +2185,7 @@ callee = "expect"
 receiver_fingerprint = 'extract_dense_gguf_linear_fixture(&reader, *role).expect("extract fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'extract_dense_gguf_norm_fixture(&reader, *role).expect("extract norm fixture")'
 count = 1
@@ -2545,7 +2197,7 @@ callee = "expect"
 receiver_fingerprint = 'extract_dense_gguf_norm_fixture(&reader, *role).expect("extract norm fixture")'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'extract_dense_gguf_norm_fixture(&reader, *role).expect("extract norm fixture");'
 count = 1
@@ -2557,7 +2209,7 @@ callee = "expect"
 receiver_fingerprint = 'extract_dense_gguf_norm_fixture(&reader, *role).expect("extract norm fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'kernel_fixture_from_extracted(&extracted).expect("kernel fixture conversion");'
 count = 3
@@ -2569,7 +2221,7 @@ callee = "expect"
 receiver_fingerprint = 'kernel_fixture_from_extracted(&extracted).expect("kernel fixture conversion");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'kernel_rmsnorm_fixture_from_extracted(&extracted).expect("kernel fixture");'
 count = 1
@@ -2581,7 +2233,7 @@ callee = "expect"
 receiver_fingerprint = 'kernel_rmsnorm_fixture_from_extracted(&extracted).expect("kernel fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let defaults = parse_role_sweep(&[]).expect("default role sweep");'
 count = 1
@@ -2593,7 +2245,7 @@ callee = "expect"
 receiver_fingerprint = 'let defaults = parse_role_sweep(&[]).expect("default role sweep");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");'
 count = 18
@@ -2605,7 +2257,7 @@ callee = "expect"
 receiver_fingerprint = 'let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse KV policy qwen fixture");'
 count = 1
@@ -2617,7 +2269,7 @@ callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse KV policy qwen fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse integrated qwen fixture");'
 count = 2
@@ -2629,7 +2281,7 @@ callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse integrated qwen fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse model-boundary qwen fixture");'
 count = 1
@@ -2641,7 +2293,7 @@ callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse model-boundary qwen fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse qwen fixture");'
 count = 15
@@ -2653,7 +2305,7 @@ callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse qwen fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse sampling policy qwen fixture");'
 count = 1
@@ -2665,7 +2317,7 @@ callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse sampling policy qwen fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse two-layer qwen fixture");'
 count = 1
@@ -2677,7 +2329,7 @@ callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse two-layer qwen fixture");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "expect"
 snippet = 'tensor_types.iter().next().expect("one tensor type")'
 count = 1
@@ -2689,7 +2341,7 @@ callee = "expect"
 receiver_fingerprint = 'tensor_types.iter().next().expect("one tensor type")'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "panic_macro"
 snippet = 'other => panic!("unsupported test GGUF value: {other:?}"),'
 count = 1
@@ -2701,7 +2353,7 @@ callee = "panic"
 receiver_fingerprint = 'other => panic!("unsupported test GGUF value: {other:?}"),'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = ".unwrap()"
 count = 4
@@ -2713,7 +2365,7 @@ callee = "unwrap"
 receiver_fingerprint = ".unwrap()"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = ".unwrap(),"
 count = 1
@@ -2725,7 +2377,7 @@ callee = "unwrap"
 receiver_fingerprint = ".unwrap(),"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = ".unwrap();"
 count = 10
@@ -2737,7 +2389,7 @@ callee = "unwrap"
 receiver_fingerprint = ".unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert!(receipt["all_layer_plan"]["layer_differences"].as_array().unwrap().is_empty());'
 count = 1
@@ -2749,7 +2401,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert!(receipt["all_layer_plan"]["layer_differences"].as_array().unwrap().is_empty());'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert!(receipt["all_layer_plan"]["missing_layer_indices"].as_array().unwrap().is_empty());'
 count = 1
@@ -2761,7 +2413,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert!(receipt["all_layer_plan"]["missing_layer_indices"].as_array().unwrap().is_empty());'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert!(receipt["attention_v_mix_fixture"]["max_context_abs"].as_f64().unwrap() > 0.0);'
 count = 1
@@ -2773,7 +2425,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert!(receipt["attention_v_mix_fixture"]["max_context_abs"].as_f64().unwrap() > 0.0);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert!(receipt["mlp_activation_fixture"]["max_activation_abs"].as_f64().unwrap() > 0.0);'
 count = 1
@@ -2785,7 +2437,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert!(receipt["mlp_activation_fixture"]["max_activation_abs"].as_f64().unwrap() > 0.0);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(parse_dense_linear_role("attn-q").unwrap(), DenseGgufTensorRole::AttentionQ);'
 count = 1
@@ -2797,7 +2449,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(parse_dense_linear_role("attn-q").unwrap(), DenseGgufTensorRole::AttentionQ);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(parse_dense_linear_role("mlp_down").unwrap(), DenseGgufTensorRole::MlpDown);'
 count = 1
@@ -2809,7 +2461,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(parse_dense_linear_role("mlp_down").unwrap(), DenseGgufTensorRole::MlpDown);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(receipt["gap_audit"]["unsupported_ops"].as_array().unwrap().len(), 0);'
 count = 1
@@ -2821,7 +2473,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(receipt["gap_audit"]["unsupported_ops"].as_array().unwrap().len(), 0);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(receipt["model_boundary_gaps"]["gaps"].as_array().unwrap().len(), 5);'
 count = 1
@@ -2833,7 +2485,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(receipt["model_boundary_gaps"]["gaps"].as_array().unwrap().len(), 5);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(receipt["one_layer_plan"]["operations"].as_array().unwrap().len(), 14);'
 count = 1
@@ -2845,7 +2497,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(receipt["one_layer_plan"]["operations"].as_array().unwrap().len(), 14);'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(reference.phases.first().unwrap().name, "deterministic_input");'
 count = 1
@@ -2857,7 +2509,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(reference.phases.first().unwrap().name, "deterministic_input");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'assert_eq!(reference.phases.last().unwrap().name, "second_residual");'
 count = 1
@@ -2869,7 +2521,7 @@ callee = "unwrap"
 receiver_fingerprint = 'assert_eq!(reference.phases.last().unwrap().name, "second_residual");'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'let finite_scores = receipt["attention_score_fixture"]["finite_scores"].as_u64().unwrap();'
 count = 1
@@ -2881,7 +2533,7 @@ callee = "unwrap"
 receiver_fingerprint = 'let finite_scores = receipt["attention_score_fixture"]["finite_scores"].as_u64().unwrap();'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'let score_count = receipt["attention_score_fixture"]["score_count"].as_u64().unwrap();'
 count = 1
@@ -2893,7 +2545,7 @@ callee = "unwrap"
 receiver_fingerprint = 'let score_count = receipt["attention_score_fixture"]["score_count"].as_u64().unwrap();'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'parse_dense_linear_role("attention_q").unwrap(),'
 count = 1
@@ -2905,7 +2557,7 @@ callee = "unwrap"
 receiver_fingerprint = 'parse_dense_linear_role("attention_q").unwrap(),'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "parse_norm_roles(&[]).unwrap(),"
 count = 1
@@ -2917,7 +2569,7 @@ callee = "unwrap"
 receiver_fingerprint = "parse_norm_roles(&[]).unwrap(),"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = 'receipt["attention_score_fixture"]["causal_masked_scores"].as_u64().unwrap();'
 count = 1
@@ -2929,7 +2581,7 @@ callee = "unwrap"
 receiver_fingerprint = 'receipt["attention_score_fixture"]["causal_masked_scores"].as_u64().unwrap();'
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt).unwrap();"
 count = 1
@@ -2941,7 +2593,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_attention_score_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -2953,7 +2605,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_attention_score_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_attention_score_fixture_receipt_json(&receipt).unwrap();"
 count = 1
@@ -2965,7 +2617,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_attention_score_fixture_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_attention_softmax_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -2977,7 +2629,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_attention_softmax_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_attention_softmax_fixture_receipt_json(&receipt).unwrap();"
 count = 1
@@ -2989,7 +2641,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_attention_softmax_fixture_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_attention_v_mix_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3001,7 +2653,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_attention_v_mix_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_attention_v_mix_fixture_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3013,7 +2665,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_attention_v_mix_fixture_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3025,7 +2677,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3037,7 +2689,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3049,7 +2701,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_mlp_activation_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3061,7 +2713,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_mlp_activation_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_mlp_activation_fixture_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3073,7 +2725,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_mlp_activation_fixture_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3085,7 +2737,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_norm_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3097,7 +2749,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_norm_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3109,7 +2761,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_one_layer_cpu_reference_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3121,7 +2773,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_one_layer_cpu_reference_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3133,7 +2785,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3145,7 +2797,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_rope_cuda_parity_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3157,7 +2809,7 @@ callee = "unwrap"
 receiver_fingerprint = "validate_dense_gguf_rope_cuda_parity_receipt_json(&receipt).unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity.rs"
+path = "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs"
 family = "unwrap"
 snippet = "validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap();"
 count = 1
@@ -3239,6 +2891,18 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = 'pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());'
+
+[[baseline]]
+path = "crates/bitnet-cli/src/commands/lunar_lake.rs"
+family = "unwrap"
+snippet = "assert!(receipt.cold_start.operator_load_to_generation_ratio.unwrap() > 40.0);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert!(receipt.cold_start.operator_load_to_generation_ratio.unwrap() > 40.0);"
 
 [[baseline]]
 path = "crates/bitnet-cli/src/commands/receipts.rs"
@@ -4816,7 +4480,7 @@ receiver_fingerprint = '.expect("json prompt receipt");'
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = '.expect("json"),'
-count = 12
+count = 11
 
 [baseline.selector]
 kind = "method_call"
@@ -4888,7 +4552,7 @@ receiver_fingerprint = '.expect("write current");'
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = '.expect("write receipt");'
-count = 17
+count = 15
 
 [baseline.selector]
 kind = "method_call"
@@ -5080,7 +4744,7 @@ receiver_fingerprint = 'let cmd = parse(&["test"]).expect("no-args must parse");
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
-count = 42
+count = 39
 
 [baseline.selector]
 kind = "method_call"
@@ -5248,7 +4912,7 @@ receiver_fingerprint = 'std::fs::write(&receipt, b"{}").expect("write receipt pl
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = 'std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))'
-count = 4
+count = 3
 
 [baseline.selector]
 kind = "method_call"
@@ -12013,342 +11677,6 @@ callee = "unwrap"
 receiver_fingerprint = "let tmp = TempDir::new().unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = '"apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap(),'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = '"apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap(),'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = '"apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap(),'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = '"apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap(),'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = '"nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap(),'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = '"nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap(),'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = '"nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap(),'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = '"nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap(),'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("apple-m4-metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::AppleM4Metal);'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("apple-m4-metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::AppleM4Metal);'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("auto".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("auto".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("cpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("cpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("intel-npu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(1));'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("intel-npu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(1));'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("mpsgraph".parse::<DeviceConfig>().unwrap(), DeviceConfig::MpsGraph);'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("mpsgraph".parse::<DeviceConfig>().unwrap(), DeviceConfig::MpsGraph);'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(0));'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(0));'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("openvino-npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::OpenVinoNpu);'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("openvino-npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::OpenVinoNpu);'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let apple_cpu = "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let apple_cpu = "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let apple_metal = "apple-m4-metal".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let apple_metal = "apple-m4-metal".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let apple_mpsgraph = "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let apple_mpsgraph = "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let cpu = "cpu".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let cpu = "cpu".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let generic_cuda = "cuda".parse::<DeviceConfig>().unwrap();'
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let generic_cuda = "cuda".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let generic_gpu = "gpu".parse::<DeviceConfig>().unwrap();'
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let generic_gpu = "gpu".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let indexed_npu = "intel-npu:1".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let indexed_npu = "intel-npu:1".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let metal = "metal".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let metal = "metal".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let mpsgraph = "mpsgraph".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let mpsgraph = "mpsgraph".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let npu = "npu".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let npu = "npu".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let openvino_npu = "openvino-npu".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let openvino_npu = "openvino-npu".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let rtx_cuda = "nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let rtx_cuda = "nvidia-rtx-5070-ti-cuda".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-device-config-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let rtx_wgpu = "nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let rtx_wgpu = "nvidia-rtx-5070-ti-wgpu".parse::<DeviceConfig>().unwrap();'
-
-[[baseline]]
 path = "crates/bitnet-device-probe/src/intel_arc.rs"
 family = "unwrap"
 snippet = 'let caps = detect_intel_arc("Arc A310").unwrap();'
@@ -14797,90 +14125,6 @@ callee = "unwrap"
 receiver_fingerprint = "let rust_config = rust_config.unwrap();"
 
 [[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "expect"
-snippet = 'let json = serde_json::to_string(&original).expect("serialize");'
-count = 3
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let json = serde_json::to_string(&original).expect("serialize");'
-
-[[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "expect"
-snippet = 'let parsed: StreamEvent = serde_json::from_str(&json).expect("deserialize");'
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let parsed: StreamEvent = serde_json::from_str(&json).expect("deserialize");'
-
-[[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "expect"
-snippet = 'let parsed: TokenEvent = serde_json::from_str(&json).expect("deserialize");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let parsed: TokenEvent = serde_json::from_str(&json).expect("deserialize");'
-
-[[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'StreamEvent::Done { .. } => panic!("expected Token after round-trip"),'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = 'StreamEvent::Done { .. } => panic!("expected Token after round-trip"),'
-
-[[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'StreamEvent::Done { .. } => panic!("expected Token event"),'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = 'StreamEvent::Done { .. } => panic!("expected Token event"),'
-
-[[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'StreamEvent::Token { .. } => panic!("expected Done after round-trip"),'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = 'StreamEvent::Token { .. } => panic!("expected Done after round-trip"),'
-
-[[baseline]]
-path = "crates/bitnet-generation-events-core/src/lib.rs"
-family = "panic_macro"
-snippet = 'StreamEvent::Token { .. } => panic!("expected Done event"),'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = 'StreamEvent::Token { .. } => panic!("expected Done event"),'
-
-[[baseline]]
 path = "crates/bitnet-generation-events-core/tests/events_core_tests.rs"
 family = "panic_macro"
 snippet = 'StreamEvent::Token(_) => panic!("expected done event"),'
@@ -14915,66 +14159,6 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "let json = serde_json::to_string(&ev).unwrap();"
-
-[[baseline]]
-path = "crates/bitnet-generation-stop-core/src/lib.rs"
-family = "expect"
-snippet = 'let json = serde_json::to_string(&reason).expect("serialize");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let json = serde_json::to_string(&reason).expect("serialize");'
-
-[[baseline]]
-path = "crates/bitnet-generation-stop-core/src/lib.rs"
-family = "expect"
-snippet = 'let json = serde_json::to_string(r).expect("serialize stop reason");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let json = serde_json::to_string(r).expect("serialize stop reason");'
-
-[[baseline]]
-path = "crates/bitnet-generation-stop-core/src/lib.rs"
-family = "expect"
-snippet = 'let parsed: StopReason = serde_json::from_str(&json).expect("deserialize");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let parsed: StopReason = serde_json::from_str(&json).expect("deserialize");'
-
-[[baseline]]
-path = "crates/bitnet-generation-stop-core/src/lib.rs"
-family = "expect"
-snippet = 'serde_json::from_str(&json).expect("deserialize stop reason");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'serde_json::from_str(&json).expect("deserialize stop reason");'
-
-[[baseline]]
-path = "crates/bitnet-generation-stop-core/src/lib.rs"
-family = "unwrap"
-snippet = "let generated: Vec<u32> = (0..u32::try_from(generated_len).unwrap()).collect();"
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = "let generated: Vec<u32> = (0..u32::try_from(generated_len).unwrap()).collect();"
 
 [[baseline]]
 path = "crates/bitnet-generation/tests/bdd_scenarios.rs"
@@ -167857,186 +167041,6 @@ callee = "panic"
 receiver_fingerprint = '.unwrap_or_else(|| panic!("kernel void {fn_name}( not found in source"));'
 
 [[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse("  \n {\"k\":\"v\"}\t ").unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse("  \n {\"k\":\"v\"}\t ").unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse("{   }").unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse("{   }").unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse("{}").unwrap();'
-count = 3
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse("{}").unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"a":"x","b":2,"c":true}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"a":"x","b":2,"c":true}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"arr":[1,2,3,4],"tail":"end"}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"arr":[1,2,3,4],"tail":"end"}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"b":false}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"b":false}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"b":true}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"b":true}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"f":0.7}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"f":0.7}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"flag":"yes"}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"flag":"yes"}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"k":"a,b,c","n":3}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"k":"a,b,c","n":3}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"k":"abc"}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"k":"abc"}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"k":"not-a-number"}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"k":"not-a-number"}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"key":"value"}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"key":"value"}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"n":42}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"n":42}"#).unwrap();'
-
-[[baseline]]
-path = "crates/bitnet-minimal-json-core/src/lib.rs"
-family = "unwrap"
-snippet = 'let j = MinimalJson::parse(r#"{"obj":{"a":1},"arr":[1,2,3]}"#).unwrap();'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'let j = MinimalJson::parse(r#"{"obj":{"a":1},"arr":[1,2,3]}"#).unwrap();'
-
-[[baseline]]
 path = "crates/bitnet-models/src/catalog.rs"
 family = "expect"
 snippet = 'let entry = catalog.get("bitnet-b1.58-2b").expect("bitnet entry should exist");'
@@ -168059,66 +167063,6 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'let entry = catalog.get("phi-4-14b").expect("phi-4-14b should exist");'
-
-[[baseline]]
-path = "crates/bitnet-models/src/checkpoint.rs"
-family = "expect"
-snippet = '.expect("lock poisoned")'
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = '.expect("lock poisoned")'
-
-[[baseline]]
-path = "crates/bitnet-models/src/checkpoint.rs"
-family = "expect"
-snippet = 'let mut inv = self.inventory.write().expect("lock poisoned");'
-count = 2
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'let mut inv = self.inventory.write().expect("lock poisoned");'
-
-[[baseline]]
-path = "crates/bitnet-models/src/checkpoint.rs"
-family = "expect"
-snippet = 'self.inventory.read().expect("lock poisoned").get(&key).cloned()'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'self.inventory.read().expect("lock poisoned").get(&key).cloned()'
-
-[[baseline]]
-path = "crates/bitnet-models/src/checkpoint.rs"
-family = "expect"
-snippet = 'self.inventory.read().expect("lock poisoned").len()'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'self.inventory.read().expect("lock poisoned").len()'
-
-[[baseline]]
-path = "crates/bitnet-models/src/checkpoint.rs"
-family = "expect"
-snippet = 'self.inventory.read().expect("lock poisoned").values().cloned().collect()'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "expect"
-receiver_fingerprint = 'self.inventory.read().expect("lock poisoned").values().cloned().collect()'
 
 [[baseline]]
 path = "crates/bitnet-models/src/checkpoint.rs"
@@ -168431,6 +167375,66 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = 'std::fs::write(&p, b"tampered").unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-models/src/checkpoint/manager.rs"
+family = "expect"
+snippet = '.expect("lock poisoned")'
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("lock poisoned")'
+
+[[baseline]]
+path = "crates/bitnet-models/src/checkpoint/manager.rs"
+family = "expect"
+snippet = 'let mut inv = self.inventory.write().expect("lock poisoned");'
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let mut inv = self.inventory.write().expect("lock poisoned");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/checkpoint/manager.rs"
+family = "expect"
+snippet = 'self.inventory.read().expect("lock poisoned").get(&key).cloned()'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'self.inventory.read().expect("lock poisoned").get(&key).cloned()'
+
+[[baseline]]
+path = "crates/bitnet-models/src/checkpoint/manager.rs"
+family = "expect"
+snippet = 'self.inventory.read().expect("lock poisoned").len()'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'self.inventory.read().expect("lock poisoned").len()'
+
+[[baseline]]
+path = "crates/bitnet-models/src/checkpoint/manager.rs"
+family = "expect"
+snippet = 'self.inventory.read().expect("lock poisoned").values().cloned().collect()'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'self.inventory.read().expect("lock poisoned").values().cloned().collect()'
 
 [[baseline]]
 path = "crates/bitnet-models/src/comparison.rs"
