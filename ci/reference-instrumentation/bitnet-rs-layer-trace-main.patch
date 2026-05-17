@@ -1834,7 +1834,7 @@ diff --git a/ggml/src/ggml.c b/ggml/src/ggml.c
 index 121f72da..02ddfd91 100644
 --- a/ggml/src/ggml.c
 +++ b/ggml/src/ggml.c
-@@ -14940,6 +14940,110 @@ void ggml_rope_yarn_corr_dims(
+@@ -14940,6 +14940,124 @@ void ggml_rope_yarn_corr_dims(
      dims[1] = MIN(n_dims - 1, end);
  }
  
@@ -1919,9 +1919,13 @@ index 121f72da..02ddfd91 100644
 +        : (strcmp(component, "lower_x0_cos_minus_x1_sin") == 0 ? i0 + 1 : i0 - 1);
 +    const intptr_t dst_offset = (const char *) dst_data - (const char *) dst->data;
 +    const intptr_t src_offset = (const char *) src - (const char *) dst->src[0]->data;
++    const bool lower_component = strcmp(component, "lower_x0_cos_minus_x1_sin") == 0;
++    const float term0 = lower_component ? x0*cos_theta : x0*sin_theta;
++    const float term1 = lower_component ? x1*sin_theta : x1*cos_theta;
++    const float arithmetic_replay = lower_component ? term0 - term1 : term0 + term1;
 +    fprintf(
 +        file,
-+        "{\"stage\":\"kcur_rope_scalar_probe\",\"tensor_name\":\"%s\",\"layer\":%d,\"kv_head\":%" PRId64 ",\"token\":%" PRId64 ",\"dim\":%" PRId64 ",\"paired_dim\":%" PRId64 ",\"component\":\"%s\",\"x0\":%.9g,\"x1\":%.9g,\"cos_theta\":%.9g,\"sin_theta\":%.9g,\"before_store_f32\":%.9g,\"before_store_bits_u32\":%" PRIu32 ",\"after_store_f32\":%.9g,\"after_store_bits_u32\":%" PRIu32 ",\"dst_offset_bytes\":%" PRIdPTR ",\"src_offset_bytes\":%" PRIdPTR "}\n",
++        "{\"stage\":\"kcur_rope_scalar_probe\",\"tensor_name\":\"%s\",\"layer\":%d,\"kv_head\":%" PRId64 ",\"token\":%" PRId64 ",\"dim\":%" PRId64 ",\"paired_dim\":%" PRId64 ",\"component\":\"%s\",\"x0\":%.9g,\"x0_bits_u32\":%" PRIu32 ",\"x1\":%.9g,\"x1_bits_u32\":%" PRIu32 ",\"cos_theta\":%.9g,\"cos_theta_bits_u32\":%" PRIu32 ",\"sin_theta\":%.9g,\"sin_theta_bits_u32\":%" PRIu32 ",\"term0_f32\":%.9g,\"term0_bits_u32\":%" PRIu32 ",\"term1_f32\":%.9g,\"term1_bits_u32\":%" PRIu32 ",\"arithmetic_replay_f32\":%.9g,\"arithmetic_replay_bits_u32\":%" PRIu32 ",\"before_store_f32\":%.9g,\"before_store_bits_u32\":%" PRIu32 ",\"after_store_f32\":%.9g,\"after_store_bits_u32\":%" PRIu32 ",\"dst_offset_bytes\":%" PRIdPTR ",\"src_offset_bytes\":%" PRIdPTR "}\n",
 +        tensor_name,
 +        layer,
 +        i1,
@@ -1930,9 +1934,19 @@ index 121f72da..02ddfd91 100644
 +        paired_dim,
 +        component,
 +        x0,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(x0),
 +        x1,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(x1),
 +        cos_theta,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(cos_theta),
 +        sin_theta,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(sin_theta),
++        term0,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(term0),
++        term1,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(term1),
++        arithmetic_replay,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(arithmetic_replay),
 +        before_store,
 +        bitnet_rs_reference_rope_scalar_trace_f32_bits(before_store),
 +        after_store,
