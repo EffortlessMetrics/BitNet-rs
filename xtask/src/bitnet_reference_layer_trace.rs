@@ -9323,8 +9323,10 @@ fn layer_prefix_value_mix_history_attribution(
         rust_numeric_variant_compared_count,
         rust_numeric_variant_unexplained_count,
         probability_source_delta_compared_count,
+        probability_source_delta_missing_count,
         probability_source_delta_material_count,
         value_cache_source_delta_compared_count,
+        value_cache_source_delta_missing_count,
         value_cache_source_delta_material_count,
         max_rust_self_recompute_abs_delta,
         max_probability_source_abs_delta,
@@ -9830,8 +9832,10 @@ fn prefix_value_mix_history_source_summary(
     rust_numeric_variant_compared_count: usize,
     rust_numeric_variant_unexplained_count: usize,
     probability_source_delta_compared_count: usize,
+    probability_source_delta_missing_count: usize,
     probability_source_delta_material_count: usize,
     value_cache_source_delta_compared_count: usize,
+    value_cache_source_delta_missing_count: usize,
     value_cache_source_delta_material_count: usize,
     max_rust_self_recompute_abs_delta: f64,
     max_probability_source_abs_delta: f64,
@@ -9851,14 +9855,20 @@ fn prefix_value_mix_history_source_summary(
     let rust_self_recompute_explained_by_numeric_variants = rust_self_recompute_drift_present
         && rust_numeric_variant_compared_count > 0
         && rust_numeric_variant_unexplained_count == 0;
-    let probability_source_clean =
-        probability_source_delta_compared_count > 0 && !probability_source_drift_present;
-    let value_cache_source_clean =
-        value_cache_source_delta_compared_count > 0 && !value_cache_source_drift_present;
+    let probability_source_clean = probability_source_delta_compared_count > 0
+        && probability_source_delta_missing_count == 0
+        && !probability_source_drift_present;
+    let value_cache_source_clean = value_cache_source_delta_compared_count > 0
+        && value_cache_source_delta_missing_count == 0
+        && !value_cache_source_drift_present;
 
     let classification = if token_targets_missing {
         "prefix_targets_missing"
-    } else if missing_input_count > 0 || rust_self_recompute_missing_count > 0 {
+    } else if missing_input_count > 0
+        || rust_self_recompute_missing_count > 0
+        || probability_source_delta_missing_count > 0
+        || value_cache_source_delta_missing_count > 0
+    {
         "missing_inputs"
     } else if rust_self_recompute_drift_present
         && rust_self_recompute_explained_by_numeric_variants
@@ -9965,8 +9975,10 @@ fn prefix_value_mix_history_source_summary(
         "rust_self_recompute_missing_count": rust_self_recompute_missing_count,
         "rust_self_recompute_material_count": rust_self_recompute_material_count,
         "probability_source_delta_compared_count": probability_source_delta_compared_count,
+        "probability_source_delta_missing_count": probability_source_delta_missing_count,
         "probability_source_delta_material_count": probability_source_delta_material_count,
         "value_cache_source_delta_compared_count": value_cache_source_delta_compared_count,
+        "value_cache_source_delta_missing_count": value_cache_source_delta_missing_count,
         "value_cache_source_delta_material_count": value_cache_source_delta_material_count,
         "max_rust_self_recompute_abs_delta": max_rust_self_recompute_abs_delta,
         "max_probability_source_abs_delta": max_probability_source_abs_delta,
@@ -31319,7 +31331,9 @@ mod tests {
             0,
             2,
             0,
+            0,
             2,
+            0,
             0,
             0.0,
             0.0,
@@ -31356,8 +31370,10 @@ mod tests {
             2,
             0,
             2,
+            0,
             1,
             2,
+            0,
             0,
             0.000001,
             0.00001,
@@ -31383,6 +31399,47 @@ mod tests {
             ))
         );
         assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn prefix_value_mix_history_source_summary_does_not_mark_missing_sources_clean() {
+        let summary = prefix_value_mix_history_source_summary(
+            false,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0.0,
+            0.0,
+            0.0,
+            &json!({"source": "target_delta"}),
+            &Value::Null,
+            &Value::Null,
+            &Value::Null,
+        );
+
+        assert_eq!(summary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(summary.pointer("/classification"), Some(&json!("missing_inputs")));
+        assert_eq!(summary.pointer("/probability_source_delta_missing_count"), Some(&json!(1)));
+        assert_eq!(summary.pointer("/value_cache_source_delta_missing_count"), Some(&json!(1)));
+        assert_eq!(summary.pointer("/probability_source_clean"), Some(&json!(false)));
+        assert_eq!(summary.pointer("/value_cache_source_clean"), Some(&json!(false)));
+        assert_eq!(
+            summary.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture missing Rust/reference probability, value-cache, and value-mix history inputs"
+            ))
+        );
     }
 
     #[test]
