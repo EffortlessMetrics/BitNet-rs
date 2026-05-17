@@ -905,6 +905,26 @@ impl MultiHeadAttention {
                 &q_for_scores,
             )?;
             for head_idx in 0..self.n_heads {
+                let query_head = q_for_scores
+                    .narrow(1, head_idx, 1)?
+                    .reshape(&[seq_len, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_q_score_input_head{head_idx}_history_ref_layout",
+                    self.layer_idx
+                );
+                let stage = format!("attention_q_score_input_head{head_idx}_history_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &query_head,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
+            }
+            for head_idx in 0..self.n_heads {
                 let key_head = k_for_scores
                     .narrow(1, head_idx, 1)?
                     .reshape(&[t_k, self.head_dim])?
