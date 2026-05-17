@@ -3364,9 +3364,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-GPU-QUAL-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-GPU-QUAL-001-openvino-gpu-diagnosis"
 pr = 5327
+merge_sha = "13cff0850da71e543825ef6454bb65dd5d6b1e64"
 head_sha = "da091657aa2ce96a7a73c5a88ff406a98ed8e233"
 stackable = false
 review_mode = "codex_premerge"
