@@ -47,24 +47,26 @@ fn computes_canonical_geometry_from_rows_cols() {
 }
 
 #[test]
-fn block_rounding_covers_zero_exact_and_partial_column_counts() {
+fn block_rounding_covers_zero_exact_and_partial_column_counts() -> Result<(), Qk256LayoutError> {
     assert_eq!(qk256_blocks_per_row(0), 0);
     assert_eq!(qk256_blocks_per_row(1), 1);
     assert_eq!(qk256_blocks_per_row(QK256_BLOCK_COLS), 1);
     assert_eq!(qk256_blocks_per_row(QK256_BLOCK_COLS + 1), 2);
-    assert_eq!(qk256_row_stride_bytes(0).unwrap(), 0);
-    assert_eq!(qk256_row_stride_bytes(QK256_BLOCK_COLS + 1).unwrap(), 128);
+    assert_eq!(qk256_row_stride_bytes(0)?, 0);
+    assert_eq!(qk256_row_stride_bytes(QK256_BLOCK_COLS + 1)?, 128);
+    Ok(())
 }
 
 #[test]
-fn from_rows_stride_recovers_multi_block_shape() {
-    let layout = Qk256Layout::from_rows_stride(2, QK256_PACKED_BYTES_PER_BLOCK * 3).unwrap();
+fn from_rows_stride_recovers_multi_block_shape() -> Result<(), Qk256LayoutError> {
+    let layout = Qk256Layout::from_rows_stride(2, QK256_PACKED_BYTES_PER_BLOCK * 3)?;
 
     assert_eq!(layout.rows, 2);
     assert_eq!(layout.cols, QK256_BLOCK_COLS * 3);
     assert_eq!(layout.blocks_per_row, 3);
     assert_eq!(layout.row_stride_bytes, QK256_PACKED_BYTES_PER_BLOCK * 3);
     assert_eq!(layout.packed_len_bytes, QK256_PACKED_BYTES_PER_BLOCK * 6);
+    Ok(())
 }
 
 #[test]
@@ -79,8 +81,8 @@ fn reports_row_and_block_ranges() {
 }
 
 #[test]
-fn rejects_out_of_bounds_row_and_block_indices() {
-    let layout = Qk256Layout::from_rows_cols(2, QK256_BLOCK_COLS * 2).unwrap();
+fn rejects_out_of_bounds_row_and_block_indices() -> Result<(), Qk256LayoutError> {
+    let layout = Qk256Layout::from_rows_cols(2, QK256_BLOCK_COLS * 2)?;
 
     assert_eq!(
         layout.row_range(2).unwrap_err(),
@@ -90,12 +92,14 @@ fn rejects_out_of_bounds_row_and_block_indices() {
         layout.block_range(0, 2).unwrap_err(),
         Qk256LayoutError::BlockOutOfBounds { block: 2, blocks_per_row: 2 }
     );
+    Ok(())
 }
 
 #[test]
-fn validates_exact_packed_length() {
-    let layout = Qk256Layout::from_rows_cols(2, 512).expect("layout");
-    layout.validate_packed_len(256).expect("exact length");
+fn validates_exact_packed_length() -> Result<(), Qk256LayoutError> {
+    let layout = Qk256Layout::from_rows_cols(2, 512)?;
+    layout.validate_packed_len(256)?;
+    Ok(())
 }
 
 #[test]
@@ -116,19 +120,20 @@ fn rejects_packed_length_mismatch_with_expected_length() {
 }
 
 #[test]
-fn pack_unpack_fixture_is_byte_exact() {
+fn pack_unpack_fixture_is_byte_exact() -> Result<(), Qk256LayoutError> {
     let mut codes = [0u8; QK256_BLOCK_COLS];
     for (offset, code) in codes.iter_mut().enumerate() {
         *code = (offset % 4) as u8;
     }
 
-    let packed = pack_qk256_codes(&codes).expect("pack");
+    let packed = pack_qk256_codes(&codes)?;
     assert_eq!(packed, [0b11_10_01_00u8; QK256_PACKED_BYTES_PER_BLOCK]);
     assert_eq!(unpack_qk256_codes(&packed), codes);
+    Ok(())
 }
 
 #[test]
-fn pack_qk256_codes_places_two_bit_values_in_little_endian_slots() {
+fn pack_qk256_codes_places_two_bit_values_in_little_endian_slots() -> Result<(), Qk256LayoutError> {
     let mut codes = [0u8; QK256_BLOCK_COLS];
     codes[0] = 3;
     codes[1] = 2;
@@ -139,11 +144,12 @@ fn pack_qk256_codes_places_two_bit_values_in_little_endian_slots() {
     codes[6] = 2;
     codes[7] = 2;
 
-    let packed = pack_qk256_codes(&codes).expect("pack");
+    let packed = pack_qk256_codes(&codes)?;
 
     assert_eq!(packed[0], 0b00_01_10_11);
     assert_eq!(packed[1], 0b10_10_01_01);
     assert_eq!(unpack_qk256_codes(&packed), codes);
+    Ok(())
 }
 
 #[test]
@@ -166,11 +172,12 @@ fn parses_2d_input_shape() {
 }
 
 #[test]
-fn parses_3d_input_shape_with_sequence_length() {
+fn parses_3d_input_shape_with_sequence_length() -> Result<(), Qk256LayoutError> {
     assert_eq!(
-        parse_input_shape(&[2, 8, 1024]).expect("shape"),
+        parse_input_shape(&[2, 8, 1024])?,
         Qk256InputShape { batch_size: 2, seq_len: 8, cols: 1024, input_rank: 3 }
     );
+    Ok(())
 }
 
 #[test]
