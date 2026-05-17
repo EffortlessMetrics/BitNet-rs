@@ -6749,6 +6749,8 @@ fn compare_reference_to_rust_with_records_with_model(
     });
     report["attention_key_rope_numeric_variant_replay"] =
         attention_key_rope_numeric_variant_replay(reference_records, rust_records);
+    report["attention_key_rope_input_attribution"] =
+        attention_key_rope_input_attribution(reference_records, rust_records);
     report["attention_key_score_input_history_delta"] =
         attention_key_score_input_history_delta(reference_records, rust_records);
     report["attention_score_key_history_effect"] =
@@ -16765,6 +16767,12 @@ const ROPE_NUMERIC_VARIANTS: &[RopeNumericVariantSpec] = &[
     },
 ];
 
+const RUNTIME_ROPE_VARIANT_ID: &str = "bitnet_500000_ggml_f32_iterative_theta_f32_arithmetic";
+
+fn runtime_rope_variant() -> Option<RopeNumericVariantSpec> {
+    ROPE_NUMERIC_VARIANTS.iter().copied().find(|variant| variant.id == RUNTIME_ROPE_VARIANT_ID)
+}
+
 fn attention_key_rope_numeric_variant_replay(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
@@ -16949,8 +16957,244 @@ fn attention_key_rope_numeric_variant_replay(
     })
 }
 
-fn reference_projection_key_head(
-    record: &ReferenceTraceRecord,
+fn attention_key_rope_input_attribution(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_projection = reference_key_projection_record(reference_records);
+    let reference_rope = reference_rope_key_record(reference_records);
+    let rust_projection =
+        rust_records.get("attention_k").filter(|record| !record.first_values.is_empty());
+    let rust_before_store_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_before_cache_store_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let selected_token = reference_rope
+        .and_then(reference_sampled_token_index)
+        .or_else(|| reference_projection.and_then(reference_sampled_token_index));
+    let (head_dim, kv_head_count) =
+        reference_rope.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
+    let runtime_variant = runtime_rope_variant();
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut total_actual_post_rope_bucket_mismatch_count = 0usize;
+    let mut total_runtime_replay_input_shift_bucket_mismatch_count = 0usize;
+    let mut total_rust_runtime_replay_to_actual_bucket_mismatch_count = 0usize;
+    let mut total_reference_runtime_replay_to_reference_bucket_mismatch_count = 0usize;
+    let mut attribution_counts = BTreeMap::<String, usize>::new();
+
+    for kv_head in 0..kv_head_count {
+        let reference_input = reference_projection
+            .and_then(|record| reference_projection_key_head(record, kv_head, head_dim));
+        let rust_input =
+            rust_projection.and_then(|record| rust_projection_key_head(record, kv_head, head_dim));
+        let reference_output =
+            reference_rope.and_then(|record| reference_rope_key_head(record, kv_head, head_dim));
+        let rust_head = rust_before_store_heads.get(&kv_head).copied();
+
+        let mut blocked_reasons = Vec::<String>::new();
+        if reference_projection.is_none() {
+            blocked_reasons.push("reference_k_projection_stage_missing".to_string());
+        }
+        if reference_input.is_none() {
+            blocked_reasons.push("reference_k_projection_head_missing".to_string());
+        }
+        if rust_projection.is_none() {
+            blocked_reasons.push("rust_attention_k_projection_stage_missing".to_string());
+        }
+        if rust_input.is_none() {
+            blocked_reasons.push("rust_attention_k_projection_head_missing".to_string());
+        }
+        if reference_rope.is_none() {
+            blocked_reasons.push("reference_rope_kcur_stage_missing".to_string());
+        }
+        if reference_output.is_none() {
+            blocked_reasons.push("reference_rope_kcur_head_missing".to_string());
+        }
+        if rust_head.is_none() {
+            blocked_reasons.push("rust_attention_k_before_cache_store_head_missing".to_string());
+        }
+        if selected_token.is_none() {
+            blocked_reasons.push("sampled_token_unavailable".to_string());
+        }
+        if runtime_variant.is_none() {
+            blocked_reasons.push("runtime_rope_variant_missing".to_string());
+        }
+
+        let mut status = "missing_input";
+        let mut attribution = "missing_input";
+        let mut input_delta = Value::Null;
+        let mut input_f16_bucket_delta = Value::Null;
+        let mut actual_post_rope_delta = Value::Null;
+        let mut actual_post_rope_f16_bucket_delta = Value::Null;
+        let mut runtime_replay_input_shift_delta = Value::Null;
+        let mut runtime_replay_input_shift_f16_bucket_delta = Value::Null;
+        let mut rust_runtime_replay_to_actual_delta = Value::Null;
+        let mut rust_runtime_replay_to_actual_f16_bucket_delta = Value::Null;
+        let mut reference_runtime_replay_to_reference_delta = Value::Null;
+        let mut reference_runtime_replay_to_reference_f16_bucket_delta = Value::Null;
+
+        if let (
+            Some(reference_input),
+            Some(rust_input),
+            Some(reference_output),
+            Some(rust_head),
+            Some(token),
+            Some(runtime_variant),
+        ) = (
+            reference_input.as_ref(),
+            rust_input.as_ref(),
+            reference_output.as_ref(),
+            rust_head,
+            selected_token,
+            runtime_variant,
+        ) {
+            match usize::try_from(token).ok().and_then(|token| {
+                rust_dim_major_token(rust_head, token).ok().map(|values| (token, values))
+            }) {
+                Some((token, rust_output)) => {
+                    let reference_runtime_replay = apply_rope_split_head(
+                        reference_input,
+                        token,
+                        head_dim,
+                        runtime_variant.base,
+                        runtime_variant.arithmetic,
+                    );
+                    let rust_runtime_replay = apply_rope_split_head(
+                        rust_input,
+                        token,
+                        head_dim,
+                        runtime_variant.base,
+                        runtime_variant.arithmetic,
+                    );
+
+                    if let (Some(reference_runtime_replay), Some(rust_runtime_replay)) =
+                        (reference_runtime_replay, rust_runtime_replay)
+                    {
+                        input_delta = compare_vectors(reference_input, rust_input);
+                        input_f16_bucket_delta = f16_bucket_delta(reference_input, rust_input);
+                        actual_post_rope_delta = compare_vectors(reference_output, &rust_output);
+                        actual_post_rope_f16_bucket_delta =
+                            f16_bucket_delta(reference_output, &rust_output);
+                        runtime_replay_input_shift_delta =
+                            compare_vectors(&reference_runtime_replay, &rust_runtime_replay);
+                        runtime_replay_input_shift_f16_bucket_delta =
+                            f16_bucket_delta(&reference_runtime_replay, &rust_runtime_replay);
+                        rust_runtime_replay_to_actual_delta =
+                            compare_vectors(&rust_runtime_replay, &rust_output);
+                        rust_runtime_replay_to_actual_f16_bucket_delta =
+                            f16_bucket_delta(&rust_runtime_replay, &rust_output);
+                        reference_runtime_replay_to_reference_delta =
+                            compare_vectors(&reference_runtime_replay, reference_output);
+                        reference_runtime_replay_to_reference_f16_bucket_delta =
+                            f16_bucket_delta(&reference_runtime_replay, reference_output);
+
+                        let actual_post_rope_bucket_count =
+                            f16_bucket_mismatch_count(&actual_post_rope_f16_bucket_delta);
+                        let input_bucket_count = f16_bucket_mismatch_count(&input_f16_bucket_delta);
+                        let replay_input_shift_bucket_count =
+                            f16_bucket_mismatch_count(&runtime_replay_input_shift_f16_bucket_delta);
+                        let rust_replay_to_actual_bucket_count = f16_bucket_mismatch_count(
+                            &rust_runtime_replay_to_actual_f16_bucket_delta,
+                        );
+                        let reference_replay_to_reference_bucket_count = f16_bucket_mismatch_count(
+                            &reference_runtime_replay_to_reference_f16_bucket_delta,
+                        );
+
+                        total_actual_post_rope_bucket_mismatch_count +=
+                            actual_post_rope_bucket_count;
+                        total_runtime_replay_input_shift_bucket_mismatch_count +=
+                            replay_input_shift_bucket_count;
+                        total_rust_runtime_replay_to_actual_bucket_mismatch_count +=
+                            rust_replay_to_actual_bucket_count;
+                        total_reference_runtime_replay_to_reference_bucket_mismatch_count +=
+                            reference_replay_to_reference_bucket_count;
+
+                        attribution = if actual_post_rope_bucket_count == 0 {
+                            "no_post_rope_bucket_drift"
+                        } else if input_bucket_count > 0 {
+                            "input_bucket_drift_before_rope"
+                        } else if replay_input_shift_bucket_count > 0 {
+                            "input_float_drift_amplified_by_runtime_rope"
+                        } else if rust_replay_to_actual_bucket_count > 0 {
+                            "rust_runtime_rope_implementation_delta"
+                        } else if reference_replay_to_reference_bucket_count > 0 {
+                            "reference_rope_arithmetic_differs_from_runtime_variant"
+                        } else {
+                            "unattributed_post_rope_bucket_drift"
+                        };
+                        *attribution_counts.entry(attribution.to_string()).or_insert(0) += 1;
+                        compared_head_count += 1;
+                        status = "compared";
+                    } else {
+                        blocked_reasons.push("runtime_rope_replay_failed".to_string());
+                    }
+                }
+                None => {
+                    blocked_reasons
+                        .push("rust_attention_k_before_cache_store_token_missing".to_string());
+                }
+            }
+        }
+
+        if status == "missing_input" {
+            missing_head_count += 1;
+        }
+        rows.push(json!({
+            "kv_head": kv_head,
+            "status": status,
+            "blocked_reasons": blocked_reasons,
+            "attribution": attribution,
+            "input_delta": input_delta,
+            "input_f16_bucket_delta": input_f16_bucket_delta,
+            "actual_post_rope_delta": actual_post_rope_delta,
+            "actual_post_rope_f16_bucket_delta": actual_post_rope_f16_bucket_delta,
+            "runtime_replay_input_shift_delta": runtime_replay_input_shift_delta,
+            "runtime_replay_input_shift_f16_bucket_delta": runtime_replay_input_shift_f16_bucket_delta,
+            "rust_runtime_replay_to_actual_delta": rust_runtime_replay_to_actual_delta,
+            "rust_runtime_replay_to_actual_f16_bucket_delta": rust_runtime_replay_to_actual_f16_bucket_delta,
+            "reference_runtime_replay_to_reference_delta": reference_runtime_replay_to_reference_delta,
+            "reference_runtime_replay_to_reference_f16_bucket_delta": reference_runtime_replay_to_reference_f16_bucket_delta,
+        }));
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "RoPE input attribution is diagnostic-only evidence for whether residual current-token K bucket drift is explained by pre-RoPE input drift or by runtime RoPE arithmetic; it does not promote reference parity, A770 semantic quality, attention score residency, resident KV, selected attention, full residency, performance, or any support claim",
+        "reference_projection_stage": "Kcur_pre_rope",
+        "reference_rope_stage": "Kcur_post_rope",
+        "rust_projection_stage": "attention_k",
+        "rust_rope_stage_prefix": "attention_k_before_cache_store_kv_head",
+        "runtime_variant_id": runtime_variant.map(|variant| variant.id),
+        "runtime_variant_arithmetic": runtime_variant.map(|variant| variant.arithmetic.label()),
+        "selected_token": selected_token,
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "reference_projection_present": reference_projection.is_some(),
+        "reference_rope_present": reference_rope.is_some(),
+        "rust_projection_present": rust_projection.is_some(),
+        "rust_rope_head_count": rust_before_store_heads.len(),
+        "reference_rope_head_count": kv_head_count,
+        "compared_head_count": compared_head_count,
+        "missing_head_count": missing_head_count,
+        "all_compared": kv_head_count > 0 && missing_head_count == 0,
+        "total_actual_post_rope_bucket_mismatch_count": total_actual_post_rope_bucket_mismatch_count,
+        "total_runtime_replay_input_shift_bucket_mismatch_count": total_runtime_replay_input_shift_bucket_mismatch_count,
+        "total_rust_runtime_replay_to_actual_bucket_mismatch_count": total_rust_runtime_replay_to_actual_bucket_mismatch_count,
+        "total_reference_runtime_replay_to_reference_bucket_mismatch_count": total_reference_runtime_replay_to_reference_bucket_mismatch_count,
+        "attribution_counts": attribution_counts,
+        "rows": rows,
+    })
+}
+
+fn projection_key_head_from_values(
+    values: &[f32],
     kv_head: usize,
     head_dim: usize,
 ) -> Option<Vec<f32>> {
@@ -16959,10 +17203,26 @@ fn reference_projection_key_head(
     }
     let start = kv_head.checked_mul(head_dim)?;
     let end = start.checked_add(head_dim)?;
-    if record.first_values.len() < end {
+    if values.len() < end {
         return None;
     }
-    Some(record.first_values[start..end].to_vec())
+    Some(values[start..end].to_vec())
+}
+
+fn reference_projection_key_head(
+    record: &ReferenceTraceRecord,
+    kv_head: usize,
+    head_dim: usize,
+) -> Option<Vec<f32>> {
+    projection_key_head_from_values(&record.first_values, kv_head, head_dim)
+}
+
+fn rust_projection_key_head(
+    record: &RustTraceRecord,
+    kv_head: usize,
+    head_dim: usize,
+) -> Option<Vec<f32>> {
+    projection_key_head_from_values(&record.first_values, kv_head, head_dim)
 }
 
 fn apply_rope_split_head(
@@ -25891,6 +26151,166 @@ mod tests {
         assert_eq!(replay[lane].to_bits(), expected_cos.to_bits());
         assert_eq!(replay[lane + head_dim / 2].to_bits(), expected_sin.to_bits());
         assert_ne!(replay[lane].to_bits(), powf_replay[lane].to_bits());
+    }
+
+    #[test]
+    fn compare_reports_key_rope_input_attribution_for_input_bucket_drift() {
+        let token = 0usize;
+        let head_dim = 4usize;
+        let token_count = 3usize;
+        let reference_head = vec![0.1092529296875, 0.25, -0.5, 1.25];
+        let rust_head = vec![0.1092223525, 0.25, -0.5, 1.25];
+        let clean_head = vec![0.5, -0.25, 0.125, -0.75];
+        let runtime_variant = runtime_rope_variant().expect("runtime variant");
+        let reference_output = apply_rope_split_head(
+            &reference_head,
+            token,
+            head_dim,
+            runtime_variant.base,
+            runtime_variant.arithmetic,
+        )
+        .expect("reference replay");
+        let rust_output = apply_rope_split_head(
+            &rust_head,
+            token,
+            head_dim,
+            runtime_variant.base,
+            runtime_variant.arithmetic,
+        )
+        .expect("rust replay");
+        let clean_output = apply_rope_split_head(
+            &clean_head,
+            token,
+            head_dim,
+            runtime_variant.base,
+            runtime_variant.arithmetic,
+        )
+        .expect("clean replay");
+
+        let mut reference_projection = test_reference_trace_record(
+            "Kcur",
+            [reference_head.clone(), clean_head.clone()].concat(),
+        );
+        reference_projection.shape = vec![(head_dim * 2) as i64, 1, 1, 1];
+        reference_projection.full_shape = vec![(head_dim * 2) as i64, token_count as i64, 1, 1];
+        reference_projection.nelements = (head_dim * 2) as u64;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some((head_dim * token) as u64);
+
+        let mut reference_rope = test_reference_trace_record(
+            "Kcur",
+            [reference_output.clone(), clean_output.clone()].concat(),
+        );
+        reference_rope.shape = vec![head_dim as i64, 2, 1, 1];
+        reference_rope.full_shape = vec![head_dim as i64, 2, token_count as i64, 1];
+        reference_rope.nelements = (head_dim * 2) as u64;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some((head_dim * token) as u64);
+
+        let mut rust_projection =
+            test_rust_trace_record("attention_k", [rust_head, clean_head].concat());
+        rust_projection.shape = vec![1, 1, head_dim * 2];
+        let mut rust_head_values = vec![0.0; head_dim * token_count];
+        for dim in 0..head_dim {
+            rust_head_values[dim * token_count + token] = rust_output[dim];
+        }
+        let mut rust_rope = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head0_ref_layout",
+            rust_head_values,
+        );
+        rust_rope.shape = vec![head_dim, token_count];
+        let mut clean_head_values = vec![0.0; head_dim * token_count];
+        for dim in 0..head_dim {
+            clean_head_values[dim * token_count + token] = clean_output[dim];
+        }
+        let mut clean_rope = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head1_ref_layout",
+            clean_head_values,
+        );
+        clean_rope.shape = vec![head_dim, token_count];
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert("attention_k".to_string(), rust_projection);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head0_ref_layout".to_string(), rust_rope);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head1_ref_layout".to_string(), clean_rope);
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let attribution = report.pointer("/attention_key_rope_input_attribution").unwrap();
+
+        assert_eq!(attribution.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(attribution.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            attribution.pointer("/runtime_variant_id"),
+            Some(&json!("bitnet_500000_ggml_f32_iterative_theta_f32_arithmetic"))
+        );
+        assert_eq!(attribution.pointer("/compared_head_count"), Some(&json!(2)));
+        assert_eq!(attribution.pointer("/missing_head_count"), Some(&json!(0)));
+        assert_eq!(attribution.pointer("/rows/0/status"), Some(&json!("compared")));
+        assert_eq!(
+            attribution.pointer("/rows/0/attribution"),
+            Some(&json!("input_bucket_drift_before_rope"))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/input_f16_bucket_delta/f16_bucket_mismatch_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            attribution.pointer(
+                "/rows/0/rust_runtime_replay_to_actual_f16_bucket_delta/f16_bucket_mismatch_count"
+            ),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            attribution.pointer("/attribution_counts/input_bucket_drift_before_rope"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            attribution.pointer("/attribution_counts/no_post_rope_bucket_drift"),
+            Some(&json!(1))
+        );
+    }
+
+    #[test]
+    fn compare_reports_key_rope_input_attribution_missing_stages_as_diagnostic() {
+        let mut reference_projection =
+            test_reference_trace_record("Kcur", vec![1.0, 2.0, 3.0, 4.0]);
+        reference_projection.shape = vec![4, 1, 1, 1];
+        reference_projection.full_shape = vec![4, 3, 1, 1];
+        reference_projection.nelements = 4;
+        reference_projection.token_axis = Some(1);
+        reference_projection.sample_offset = Some(8);
+
+        let mut reference_rope = test_reference_trace_record("Kcur", vec![10.0, 20.0, 30.0, 40.0]);
+        reference_rope.shape = vec![2, 2, 1, 1];
+        reference_rope.full_shape = vec![2, 2, 3, 1];
+        reference_rope.nelements = 4;
+        reference_rope.token_axis = Some(2);
+        reference_rope.sample_offset = Some(8);
+
+        let reference_records = vec![reference_projection, reference_rope];
+        let rust_records = BTreeMap::new();
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let attribution = report.pointer("/attention_key_rope_input_attribution").unwrap();
+
+        assert_eq!(attribution.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(attribution.pointer("/compared_head_count"), Some(&json!(0)));
+        assert_eq!(attribution.pointer("/missing_head_count"), Some(&json!(2)));
+        assert!(
+            attribution.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+                |reasons| reasons.contains(&json!("rust_attention_k_projection_stage_missing"))
+            )
+        );
+        assert!(
+            attribution
+                .pointer("/rows/0/blocked_reasons")
+                .and_then(Value::as_array)
+                .is_some_and(|reasons| reasons
+                    .contains(&json!("rust_attention_k_before_cache_store_head_missing")))
+        );
     }
 
     #[test]
