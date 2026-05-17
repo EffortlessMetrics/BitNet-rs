@@ -18710,6 +18710,42 @@ fn score_position_qk_recompute_row(
                 key_values: &reference_key.first_values,
             });
             score_candidates.push(ScorePositionInputCandidate {
+                id: "reference_q_history_reference_k_q_f16_k_trace",
+                base_candidate: if reference_score_query.is_some() || reference_score_key.is_some()
+                {
+                    "reference_q_score_input_reference_k_score_input"
+                } else {
+                    "reference_q_history_reference_k"
+                },
+                score_input_variant: "q_f16_k_trace",
+                query_source: reference_query_history_source,
+                key_source: reference_key_source,
+                query_layout: ScoreQueryLayout::DimMajorHistory,
+                key_layout: reference_key_layout,
+                query_f16_roundtrip: true,
+                key_f16_roundtrip: false,
+                query_values: &reference_query_history.first_values,
+                key_values: &reference_key.first_values,
+            });
+            score_candidates.push(ScorePositionInputCandidate {
+                id: "reference_q_history_reference_k_q_f16_k_f16",
+                base_candidate: if reference_score_query.is_some() || reference_score_key.is_some()
+                {
+                    "reference_q_score_input_reference_k_score_input"
+                } else {
+                    "reference_q_history_reference_k"
+                },
+                score_input_variant: "q_f16_k_f16",
+                query_source: reference_query_history_source,
+                key_source: reference_key_source,
+                query_layout: ScoreQueryLayout::DimMajorHistory,
+                key_layout: reference_key_layout,
+                query_f16_roundtrip: true,
+                key_f16_roundtrip: true,
+                query_values: &reference_query_history.first_values,
+                key_values: &reference_key.first_values,
+            });
+            score_candidates.push(ScorePositionInputCandidate {
                 id: "reference_q_history_rust_k_q_trace_k_f32",
                 base_candidate: if reference_score_query.is_some() {
                     "reference_q_score_input_rust_k"
@@ -18722,6 +18758,23 @@ fn score_position_qk_recompute_row(
                 query_layout: ScoreQueryLayout::DimMajorHistory,
                 key_layout: ScoreKeyLayout::DimMajor,
                 query_f16_roundtrip: false,
+                key_f16_roundtrip: false,
+                query_values: &reference_query_history.first_values,
+                key_values: &rust_key.first_values,
+            });
+            score_candidates.push(ScorePositionInputCandidate {
+                id: "reference_q_history_rust_k_q_f16_k_trace",
+                base_candidate: if reference_score_query.is_some() {
+                    "reference_q_score_input_rust_k"
+                } else {
+                    "reference_q_history_rust_k"
+                },
+                score_input_variant: "q_f16_k_trace",
+                query_source: reference_query_history_source,
+                key_source: rust_key_source,
+                query_layout: ScoreQueryLayout::DimMajorHistory,
+                key_layout: ScoreKeyLayout::DimMajor,
+                query_f16_roundtrip: true,
                 key_f16_roundtrip: false,
                 query_values: &reference_query_history.first_values,
                 key_values: &rust_key.first_values,
@@ -18742,6 +18795,19 @@ fn score_position_qk_recompute_row(
                 key_values: &reference_key.first_values,
             });
             score_candidates.push(ScorePositionInputCandidate {
+                id: "rust_q_history_reference_k_q_f16_k_trace",
+                base_candidate: "rust_q_history_reference_k",
+                score_input_variant: "q_f16_k_trace",
+                query_source: "rust_attention_q_score_input_head",
+                key_source: reference_key_source,
+                query_layout: ScoreQueryLayout::DimMajorHistory,
+                key_layout: reference_key_layout,
+                query_f16_roundtrip: true,
+                key_f16_roundtrip: false,
+                query_values: &rust_query_history.first_values,
+                key_values: &reference_key.first_values,
+            });
+            score_candidates.push(ScorePositionInputCandidate {
                 id: "rust_q_history_rust_k_q_trace_k_f32",
                 base_candidate: "rust_q_history_rust_k",
                 score_input_variant: "q_trace_k_f32",
@@ -18750,6 +18816,19 @@ fn score_position_qk_recompute_row(
                 query_layout: ScoreQueryLayout::DimMajorHistory,
                 key_layout: ScoreKeyLayout::DimMajor,
                 query_f16_roundtrip: false,
+                key_f16_roundtrip: false,
+                query_values: &rust_query_history.first_values,
+                key_values: &rust_key.first_values,
+            });
+            score_candidates.push(ScorePositionInputCandidate {
+                id: "rust_q_history_rust_k_q_f16_k_trace",
+                base_candidate: "rust_q_history_rust_k",
+                score_input_variant: "q_f16_k_trace",
+                query_source: "rust_attention_q_score_input_head",
+                key_source: rust_key_source,
+                query_layout: ScoreQueryLayout::DimMajorHistory,
+                key_layout: ScoreKeyLayout::DimMajor,
+                query_f16_roundtrip: true,
                 key_f16_roundtrip: false,
                 query_values: &rust_query_history.first_values,
                 key_values: &rust_key.first_values,
@@ -28730,6 +28809,40 @@ mod tests {
             Some(&json!(false))
         );
         assert_eq!(probe.pointer("/reference_residual_improved_over_f32"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn score_position_candidate_value_roundtrips_history_query_for_vec_dot_type() {
+        let query_values = vec![1.0001_f32, 2.0];
+        let key_values = vec![1.0, 0.0];
+        let q_f32_candidate = ScorePositionInputCandidate {
+            id: "reference_q_history_reference_k_q_trace_k_f32",
+            base_candidate: "reference_q_score_input_reference_k_score_input",
+            score_input_variant: "q_trace_k_f32",
+            query_source: "reference_q_score_input_head",
+            key_source: "reference_k_score_input_head",
+            query_layout: ScoreQueryLayout::DimMajorHistory,
+            key_layout: ScoreKeyLayout::DimMajor,
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            query_values: &query_values,
+            key_values: &key_values,
+        };
+        let q_f16_candidate = ScorePositionInputCandidate {
+            id: "reference_q_history_reference_k_q_f16_k_trace",
+            score_input_variant: "q_f16_k_trace",
+            query_f16_roundtrip: true,
+            ..q_f32_candidate
+        };
+
+        let q_f32_value = score_position_candidate_value(q_f32_candidate, 0, 2, 0, 0, Some(0))
+            .expect("q f32 score");
+        let q_f16_value = score_position_candidate_value(q_f16_candidate, 0, 2, 0, 0, Some(0))
+            .expect("q f16 score");
+
+        assert_eq!(q_f32_value, 1.0001_f32);
+        assert_eq!(q_f16_value, f16_roundtrip(1.0001_f32));
+        assert_ne!(q_f32_value, q_f16_value);
     }
 
     #[test]
