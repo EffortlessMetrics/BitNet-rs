@@ -8,7 +8,7 @@ use anyhow::{Result, anyhow, bail};
 use bitnet_models::dense_gguf_descriptors::DenseGgufTensorRole;
 use std::collections::BTreeSet;
 
-const DEFAULT_ROLE_SWEEP: &[DenseGgufTensorRole] = &[
+pub(super) const DEFAULT_ROLE_SWEEP: &[DenseGgufTensorRole] = &[
     DenseGgufTensorRole::AttentionQ,
     DenseGgufTensorRole::AttentionK,
     DenseGgufTensorRole::AttentionV,

@@ -3447,22 +3447,22 @@ impl DenseQwenOneTokenPrerequisites {
         let (all_layer_plan_value, all_layer_plan_sha256) =
             read_and_validate_receipt_for_qwen_model(
                 all_layer_plan,
-                |receipt| validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt),
+                validate_dense_gguf_all_layer_execution_plan_receipt_json,
                 proof_model,
             )?;
         let (_, model_boundary_fixtures_sha256) = read_and_validate_receipt_for_qwen_model(
             model_boundary_fixtures,
-            |receipt| validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt),
+            validate_dense_gguf_model_boundary_fixtures_receipt_json,
             proof_model,
         )?;
         let (_, kv_cache_policy_sha256) = read_and_validate_receipt_for_qwen_model(
             kv_cache_policy,
-            |receipt| validate_dense_gguf_kv_cache_policy_receipt_json(receipt),
+            validate_dense_gguf_kv_cache_policy_receipt_json,
             proof_model,
         )?;
         let (_, sampling_policy_sha256) = read_and_validate_receipt_for_qwen_model(
             sampling_policy,
-            |receipt| validate_dense_gguf_sampling_policy_receipt_json(receipt),
+            validate_dense_gguf_sampling_policy_receipt_json,
             proof_model,
         )?;
 
@@ -3494,7 +3494,7 @@ impl DenseQwenShortDecodePrerequisites {
         )?;
         let (_, one_token_proof_sha256) = read_and_validate_receipt_for_qwen_model(
             one_token_proof,
-            |receipt| validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(receipt),
+            validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
             proof_model,
         )?;
 
@@ -3522,7 +3522,7 @@ impl DenseQwenWarmSessionPrerequisites {
         )?;
         let (_, short_decode_proof_sha256) = read_and_validate_receipt_for_qwen_model(
             short_decode_proof,
-            |receipt| validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(receipt),
+            validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
             proof_model,
         )?;
 
@@ -6937,8 +6937,8 @@ fn dense_gguf_norm_fixture_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
-            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "required_roles_present": dense_transformer_block_descriptor_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_transformer_block_descriptor_coverage_complete(inspection),
             "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
             "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
@@ -7154,8 +7154,8 @@ fn dense_gguf_norm_cuda_parity_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
-            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "required_roles_present": dense_transformer_block_descriptor_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_transformer_block_descriptor_coverage_complete(inspection),
             "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
             "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
@@ -7300,8 +7300,8 @@ fn dense_gguf_rope_cuda_parity_receipt_json(
             "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
             "tensor_count": inspection.tensor_count,
             "metadata_count": inspection.metadata_count as u64,
-            "required_roles_present": dense_model_boundary_fixture_coverage_complete(inspection),
-            "strict_descriptor_complete": dense_model_boundary_fixture_coverage_complete(inspection),
+            "required_roles_present": dense_transformer_block_descriptor_coverage_complete(inspection),
+            "strict_descriptor_complete": dense_transformer_block_descriptor_coverage_complete(inspection),
             "dense_cuda_route_status": dense_model_boundary_route_status(inspection),
             "model_boundary_lm_head_source": dense_model_boundary_lm_head_source(inspection),
             "quantization_families": inspection.quantization_families,
@@ -12937,6 +12937,7 @@ fn checked_u64_mul(left: u64, right: u64, label: &str) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::dense_gguf_linear_parity::roles::DEFAULT_ROLE_SWEEP;
     use bitnet_kernels::cuda::{
         CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID, CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
         CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND, CUDA_DENSE_ATTENTION_SCORE_TOLERANCE,

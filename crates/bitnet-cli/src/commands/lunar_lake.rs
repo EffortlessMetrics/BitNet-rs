@@ -6433,7 +6433,7 @@ fn evaluate_profile_route(
         blockers.push("timing coverage has missing profile fields".to_string());
     }
     if profile.profile_id == "low_power" {
-        if telemetry_context.is_some_and(|context| power_context_is_recorded(context)) {
+        if telemetry_context.is_some_and(power_context_is_recorded) {
             blockers.push("power advantage evidence missing for low_power promotion".to_string());
         } else {
             blockers.push("power telemetry receipt missing for low_power promotion".to_string());
