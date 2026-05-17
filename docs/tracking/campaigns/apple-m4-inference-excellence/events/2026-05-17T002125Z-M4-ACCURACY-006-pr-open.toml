@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T00:21:25Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-006"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5243
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-006-dense-500-live"
+head_sha = "0d6f140d419ccc48fb88929e20368651828dc2af"
+summary = "Opened PR #5243 for full 500-case dense SLM eval-v2 receipts."
+
+notes = [
+  "PR #5243 records full 500-case answer-corpus receipts, summary receipts, and a task-family pass-rate rollup for every supported dense M4 model identity.",
+  "The receipts preserve model SHA256, tokenizer authority, prompt template, apple-m4-cpu-neon backend, fallback_used=false, generated text, generated token IDs, task-family pass rates, and deterministic failure categories.",
+  "The PR does not claim BitNet behavior, BitNet chat or serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, broad model quality, broad performance, or speedup.",
+]

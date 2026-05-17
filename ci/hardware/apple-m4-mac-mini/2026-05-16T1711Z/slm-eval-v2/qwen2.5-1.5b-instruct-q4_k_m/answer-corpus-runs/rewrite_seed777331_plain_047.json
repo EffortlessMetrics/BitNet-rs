@@ -1,0 +1,563 @@
+{
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "inference_result",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed777331_plain_047.json",
+  "counts": {
+    "n_kv": 26,
+    "n_tensors": 339,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "dense_slm": {
+    "architecture": "qwen2",
+    "claim_scope": "strict dense SLM CPU answer smoke only",
+    "execution_phase": "decode",
+    "kernel_family": "dense_qwen",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q4_k_m",
+    "layout_source": "gguf_dense_q4_k_m_reference",
+    "model_family": "qwen",
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q4_K_M"
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 8,
+    "phase": "decode",
+    "prompt_tokens": 42,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "dense_slm_layers_on_cpu": null,
+    "dense_slm_layers_total": null,
+    "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": true,
+    "family": "dense_qwen",
+    "implementation": "cpu-reference",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q4_k_m"
+  },
+  "latency": {
+    "cmd_to_first_ms": 7919,
+    "decode_first_ms": 7919,
+    "total_ms": 9347
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata"
+  },
+  "logits_dump": null,
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 151936,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": null,
+    "observed_logits_vector_length": null,
+    "observed_logits_vector_length_source": "not_available"
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "model": {
+    "architecture": "qwen2",
+    "context_length": 32768,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "output.weight",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "quant_format": "Q4_K_M",
+    "repo": "local",
+    "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+    "tie_word_embeddings": false,
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 8,
+        "max_ms": 0.011,
+        "mean_ms": 0.005,
+        "min_ms": 0.003,
+        "p50_ms": 0.003,
+        "p95_ms": 0.011,
+        "total_ms": 0.04
+      },
+      "first_token_decode_ms": 303.6,
+      "forward_ms": {
+        "count": 8,
+        "max_ms": 188.321,
+        "mean_ms": 173.248,
+        "min_ms": 168.216,
+        "p50_ms": 168.473,
+        "p95_ms": 188.321,
+        "total_ms": 1385.985
+      },
+      "generated_tokens": 8,
+      "logits_ms": {
+        "count": 8,
+        "max_ms": 133.451,
+        "mean_ms": 42.882,
+        "min_ms": 29.552,
+        "p50_ms": 29.565,
+        "p95_ms": 133.451,
+        "total_ms": 343.054
+      },
+      "per_token_ms": {
+        "count": 8,
+        "max_ms": 303.6,
+        "mean_ms": 216.367,
+        "min_ms": 197.937,
+        "p50_ms": 198.204,
+        "p95_ms": 303.6,
+        "total_ms": 1730.936
+      },
+      "sample_ms": {
+        "count": 8,
+        "max_ms": 0.091,
+        "mean_ms": 0.069,
+        "min_ms": 0.065,
+        "p50_ms": 0.065,
+        "p95_ms": 0.091,
+        "total_ms": 0.548
+      },
+      "steady_per_token_ms": {
+        "count": 7,
+        "max_ms": 218.07,
+        "mean_ms": 203.905,
+        "min_ms": 197.937,
+        "p50_ms": 198.204,
+        "p95_ms": 218.07,
+        "total_ms": 1427.336
+      },
+      "steady_state_tok_s": 4.904,
+      "steady_state_tokens": 7,
+      "token_decode_ms": {
+        "count": 8,
+        "max_ms": 0.029,
+        "mean_ms": 0.008,
+        "min_ms": 0.002,
+        "p50_ms": 0.006,
+        "p95_ms": 0.029,
+        "total_ms": 0.064
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 6043.427,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 7616.063,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 41
+    },
+    "prompt_tokenize_ms": 38.374,
+    "requested": false,
+    "tokenizer_load_ms": 51.609
+  },
+  "prompt": "Rewrite as a short plain sentence: The benchmark stored timing data.",
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 42,
+    "prompt_token_ids_sha256": "5ab10b2bfe5ad3b6d4a777cabbe8cb729b70fd08afcbe076f3f279eafcec445c",
+    "rendered_prompt_sha256": "9e3be91a59f557ebaf7936e537ed165349898821f7adfb303bbc3ce0481e818b",
+    "template": "qwen25-chat"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "9e3be91a59f557ebaf7936e537ed165349898821f7adfb303bbc3ce0481e818b",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nRewrite as a short plain sentence: The benchmark stored timing data.<|im_end|>\n<|im_start|>assistant",
+    "stop_sequences": [
+      "<|im_end|>",
+      "<|im_start|>"
+    ],
+    "stop_token_ids": [
+      151645,
+      151644
+    ],
+    "template_family": "qwen25-chat"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "apple-m4-cpu-neon",
+    "execution_backend_matched": true,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_device": "apple-m4-cpu-neon",
+    "route_declared": false,
+    "selected_backend": "apple-m4-cpu-neon",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "strict_provenance": {
+    "cpu_features": [
+      "neon"
+    ],
+    "cpu_model": "unknown-cpu",
+    "decode_tokens": 8,
+    "decode_tps": 0.8558895902428587,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "qwen",
+    "phase": "decode",
+    "prompt_tokens": 42,
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q4_K_M",
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_kernel": "dense-qwen-cpu-reference",
+    "selected_backend": "apple-m4-cpu-neon",
+    "selected_kernel": "dense-qwen-cpu-reference",
+    "thread_count": 1,
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true
+  },
+  "text": " The benchmark is storing timing data.<|im_end|>",
+  "throughput": {
+    "decoded_tokens": 8,
+    "tokens_per_second": 0.8558895902428587
+  },
+  "timestamp": "2026-05-16T23:47:46.683352+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 4.904,
+    "decode_total_ms": 1730.936,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 303.6,
+    "first_token_ms": 7919,
+    "host_to_device_bytes": null,
+    "model_load_ms": 6043.427,
+    "prefill_ms": 7616.063,
+    "sampling_ms_per_token": 0.069,
+    "tokenize_ms": 38.374,
+    "tokenizer_load_ms": 51.609
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "origin": "embedded",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  },
+  "tokens": {
+    "generated": 8,
+    "generated_ids": [
+      576,
+      28431,
+      374,
+      27572,
+      18405,
+      821,
+      13,
+      151645
+    ],
+    "ids": [
+      576,
+      28431,
+      374,
+      27572,
+      18405,
+      821,
+      13,
+      151645
+    ],
+    "prompt": 42,
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      58465,
+      1247,
+      438,
+      264,
+      2805,
+      14396,
+      11652,
+      25,
+      576,
+      28431,
+      9768,
+      18405,
+      821,
+      13,
+      151645,
+      198,
+      151644,
+      77091
+    ],
+    "total": 50
+  }
+}
