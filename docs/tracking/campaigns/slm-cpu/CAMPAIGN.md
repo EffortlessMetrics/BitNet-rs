@@ -74,6 +74,11 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-021 | merged | #5133 merged the SmolLM2 wrong-first-token diagnosis from committed reference-runner, prompt/tokenizer, and strict CPU retry evidence; CPU answer readiness and CUDA planning remain blocked until a reference-compatible first-token/top-k or checkpoint comparator localizes the fault. |
 | SLM-CPU-022 | merged | #5140 merged the SmolLM2 comparator contract and `reference-compare` fixture coverage for the first-token/top-k artifact shape. This is support only; a fresh same-prompt external reference comparator remains required before CPU answer readiness or CUDA planning. |
 | SLM-CPU-023 | merged | #5312 formalized the Kaby Lake Qwen3 Q8_0 performance-dashboard baseline from existing 1/2/4/8-thread envelope and operator-profile receipts; this is a baseline/decision surface only, not a new runtime optimization or sustained-throughput claim. |
+| SLM-CPU-024 | merged | #5342 added the guarded greedy no-penalty sampler fast path while preserving the Qwen3 Q8_0 4-thread warm-session behavior oracle. |
+| SLM-CPU-025 | merged | #5357 isolated deterministic greedy logits extraction so exact no-penalty steps use direct tensor argmax; default repetition-penalty vector extraction remained explicit. |
+| SLM-CPU-026 | merged | #5369 reused a host logits scratch buffer for default repetition-penalty decode steps, reducing fresh logits Vec extraction while preserving generated IDs, strict tokenizer authority, cpu-rust, and fallback=false. |
+| SLM-CPU-027 | blocked | Duplicate second-model item blocked because SLM-CPU-017 and SLM-CPU-017A already recorded the SmolLM2 blocker and positive Qwen2.5 Q8_0 second-model sanity evidence. |
+| SLM-CPU-028 | pr_open | #5384 defines the bounded Q4_K_M/Q4_K_S expansion plan: candidate artifact identity, metadata, tokenizer, strict CPU, fallback, corpus, multi-token, warm-session, and operator-profile gates before any Q4 runtime support claim. |
 
 ## Review Policy
 

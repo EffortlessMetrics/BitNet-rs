@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T13:49:13Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-008"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
+summary = "Started M3MBA-008 M4 strict-proof handoff after M3MBA-007 closed as blocked."
+artifacts = [
+  "docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md",
+]
+notes = [
+  "The Microsoft 2B I2_S artifact is the only handoff-ready M3 Air BitNet candidate because M3MBA-005C accepted it for the recorded M3 Air BitNet.cpp reference-runner context.",
+  "The 0.7B and 3B 1bitLLM candidates remain blocked and are not handoff targets.",
+  "This item does not run or claim M4 proof; it preserves source, hash, tokenizer authority, route, and claim boundaries for separate M4 work.",
+]

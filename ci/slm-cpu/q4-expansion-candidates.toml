@@ -1,0 +1,77 @@
+schema = 1
+artifact_kind = "slm_cpu_q4_expansion_candidates"
+lane = "intel-i5-8250u-dense-slm"
+status = "planning_only"
+claim_boundary = "candidate identity and gates only; no Q4 runtime support claim"
+
+[[candidate]]
+id = "qwen2_5_0_5b_instruct_q4_k_m"
+priority = 1
+family = "qwen"
+expected_architecture = "qwen2"
+target_role = "first Q4_K_M sanity target after Qwen3 Q8 appliance and Qwen2.5 Q8 second-model sanity"
+quant_format = "Q4_K_M"
+artifact_status = "candidate_pinned_not_supported"
+repo = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+file = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+sha256 = "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db"
+size_bytes = 491400032
+source_url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/blob/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+metadata_source = "Hugging Face model card and artifact-linked digest"
+notes = "Official Qwen GGUF candidate. Q4 runtime support is not claimed until strict preflight, corpus, multi-token, warm-session, and operator-profile receipts pass on the i5-8250U."
+
+[candidate.requirements]
+sha256_required = true
+local_hash_match_required = true
+gguf_architecture_required = true
+quant_format_required = true
+tokenizer_metadata_required = true
+strict_tokenizer_required = true
+tensor_name_audit_required = true
+chat_template_required = true
+fallback_false_required = true
+constrained_corpus_required = true
+multi_token_determinism_required = true
+warm_session_required = true
+operator_profile_required = true
+
+[[candidate]]
+id = "qwen3_0_6b_q4_k_m_lmstudio"
+priority = 2
+family = "qwen"
+expected_architecture = "qwen3"
+target_role = "optional Qwen3 Q4_K_M comparison candidate"
+quant_format = "Q4_K_M"
+artifact_status = "community_candidate_pinned_not_supported"
+repo = "lmstudio-community/Qwen3-0.6B-GGUF"
+file = "Qwen3-0.6B-Q4_K_M.gguf"
+sha256 = "cd47557a67d7e8f2891d98b5e1dbf2988544569fdf4f1bdb30e92b71aa61b548"
+size_bytes = 484219808
+source_url = "https://huggingface.co/lmstudio-community/Qwen3-0.6B-GGUF/blob/main/Qwen3-0.6B-Q4_K_M.gguf"
+metadata_source = "Hugging Face artifact-linked digest"
+notes = "Community GGUF candidate. It cannot replace the official Qwen3 Q8_0 appliance profile unless exact local metadata, tokenizer authority, and generated-ID behavior pass the same gates."
+
+[candidate.requirements]
+sha256_required = true
+local_hash_match_required = true
+gguf_architecture_required = true
+quant_format_required = true
+tokenizer_metadata_required = true
+strict_tokenizer_required = true
+tensor_name_audit_required = true
+chat_template_required = true
+fallback_false_required = true
+constrained_corpus_required = true
+multi_token_determinism_required = true
+warm_session_required = true
+operator_profile_required = true
+
+[[candidate]]
+id = "q4_k_s_unselected"
+priority = 99
+family = "unknown"
+expected_architecture = "unknown"
+target_role = "placeholder showing Q4_K_S remains fail-closed"
+quant_format = "Q4_K_S"
+artifact_status = "no_accepted_candidate"
+notes = "No Q4_K_S artifact is accepted for this lane until an exact repo, file, SHA256, GGUF architecture, tokenizer metadata, tensor policy, and local hash are pinned."

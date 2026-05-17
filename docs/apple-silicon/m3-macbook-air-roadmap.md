@@ -125,27 +125,27 @@ cache-retention audit, dense SLM cross-lane synthesis, and distinct M3 Air
 Metal/MPSGraph device identities with operator-facing help and rejection
 surfaces aligned.
 
-The active stack is now a secondary-candidate and handoff stack. `M3MBA-018`
-keeps the roadmap and campaign state current after the device-model work.
-After that, `M3MBA-007` is the next bounded M3 Air artifact surface for 3B
-TL1/TL2 diagnostics, and `M3MBA-008` either opens separate M4 strict-proof work
-for accepted artifacts or closes the lane with explicit no-accepted-artifact
-evidence. `M3MBA-006` is blocked until the 0.7B control candidate has an
-official GGUF, reproducible conversion path, or explicitly approved third-party
-artifact path. `M3MBA-007` is blocked until the 3B candidate has an official
-TL1/TL2 GGUF, reproducible conversion path, or explicitly approved third-party
+The handoff stack is now closed. `M3MBA-018` kept the roadmap and campaign
+state current after the device-model work, `M3MBA-007` closed as blocked for
+the 3B TL diagnostic surface, and `M3MBA-008` handed the accepted Microsoft 2B
+I2_S M3 Air BitNet.cpp reference-runner evidence to separate M4 strict-proof
+work. `M3MBA-006` is blocked until the 0.7B control candidate has an official
+GGUF, reproducible conversion path, or explicitly approved third-party artifact
+path. `M3MBA-007` is blocked until the 3B candidate has an official TL1/TL2
+GGUF, reproducible conversion path, or explicitly approved third-party
 diagnostic artifact and enough local free space for safe large-candidate work.
-Any new large candidate remains serialized behind fresh disk preflight and
-cleanup/retention evidence.
+The blocked secondary candidates are not handoff targets. Any new large
+candidate remains serialized behind fresh disk preflight and cleanup/retention
+evidence.
 
 The next sequence should stay as small PRs, with each PR either merging evidence
 or naming a blocker:
 
 | Stack position | Item | PR shape | Blocks |
 |---:|---|---|---|
-| 1 | `M3MBA-018` | Refresh the roadmap and campaign state after M3MBA-017. | Prevents stale instructions from sending operators back through merged setup work. |
+| 1 | `M3MBA-018` | Refresh the roadmap and campaign state after M3MBA-017. | Merged; prevents stale instructions from sending operators back through merged setup work. |
 | 2 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Blocked until an official/approved TL diagnostic artifact and safe storage state exist. |
-| 3 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts and secondary-candidate state. | Separate M4 proof work, or explicit no-accepted-artifact closure. |
+| 3 | `M3MBA-008` | Hand accepted Microsoft 2B I2_S evidence to separate M4 strict-proof work. | Merged; fresh M4 receipts remain required before proof claims. |
 
 ## 2026-05-13 Tactical Plan
 
