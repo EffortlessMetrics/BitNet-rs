@@ -11189,7 +11189,7 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
 /// Returns true when the data was copied directly from contiguous/non-contiguous
 /// CPU F32 storage without allocating a fresh `Vec<f32>`. Non-CPU or non-F32
 /// tensors fall back to the compatibility extractor.
-#[cfg(feature = "full-cli")]
+#[cfg(any(test, feature = "full-cli"))]
 fn extract_logits_2d_into(
     tensor: &bitnet_common::ConcreteTensor,
     scratch: &mut Vec<f32>,
