@@ -1381,17 +1381,17 @@ impl QuantizedLinear {
             .into());
         }
 
-        let n = a.len() as f32;
-        let mean_a = a.iter().sum::<f32>() / n;
-        let mean_b = b.iter().sum::<f32>() / n;
+        let n = a.len() as f64;
+        let mean_a = a.iter().map(|&value| f64::from(value)).sum::<f64>() / n;
+        let mean_b = b.iter().map(|&value| f64::from(value)).sum::<f64>() / n;
 
-        let mut num = 0.0;
-        let mut den_a = 0.0;
-        let mut den_b = 0.0;
+        let mut num = 0.0f64;
+        let mut den_a = 0.0f64;
+        let mut den_b = 0.0f64;
 
         for (&a_val, &b_val) in a.iter().zip(b.iter()) {
-            let da = a_val - mean_a;
-            let db = b_val - mean_b;
+            let da = f64::from(a_val) - mean_a;
+            let db = f64::from(b_val) - mean_b;
             num += da * db;
             den_a += da * da;
             den_b += db * db;
@@ -1399,10 +1399,10 @@ impl QuantizedLinear {
 
         let denominator = (den_a * den_b).sqrt();
         if denominator == 0.0 {
-            return Ok(0.0); // Handle degenerate case
+            return Ok(if a == b { 1.0 } else { 0.0 });
         }
 
-        Ok(num / denominator)
+        Ok((num / denominator).clamp(-1.0, 1.0) as f32)
     }
 }
 

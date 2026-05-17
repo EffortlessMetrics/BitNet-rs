@@ -12,12 +12,12 @@ pub fn renormalize_in_place(probs: &mut [f32]) -> bool {
         return false;
     }
 
-    let sum: f32 = probs.iter().sum();
+    let sum: f64 = probs.iter().map(|&p| f64::from(p)).sum();
     if sum <= 0.0 || !sum.is_finite() {
         return false;
     }
 
-    let inv_sum = 1.0 / sum;
+    let inv_sum = (1.0 / sum) as f32;
     for p in probs.iter_mut() {
         *p *= inv_sum;
     }
@@ -36,11 +36,11 @@ pub fn sample_categorical(probabilities: &[f32], random_value: f32) -> Option<us
         return None;
     }
 
-    let rv = random_value.clamp(0.0, 1.0 - f32::EPSILON);
+    let rv = f64::from(random_value.clamp(0.0, 1.0 - f32::EPSILON));
 
-    let mut cumulative = 0.0_f32;
+    let mut cumulative = 0.0_f64;
     for (i, &prob) in probabilities.iter().enumerate() {
-        cumulative += prob;
+        cumulative += f64::from(prob);
         if rv <= cumulative {
             return Some(i);
         }
@@ -61,6 +61,15 @@ mod tests {
         assert!(renormalize_in_place(&mut probs));
         let sum: f32 = probs.iter().sum();
         assert!((sum - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn renormalize_large_distribution_uses_accurate_sum() {
+        let mut probs = vec![1.0e-5_f32; 100_000];
+        assert!(renormalize_in_place(&mut probs));
+
+        let sum: f64 = probs.iter().map(|&p| f64::from(p)).sum();
+        assert!((sum - 1.0).abs() < 1e-7, "renormalized sum = {sum}");
     }
 
     #[test]
