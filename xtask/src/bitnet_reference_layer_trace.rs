@@ -12089,6 +12089,10 @@ fn layer_attention_norm_f64_probability_history_effect(
         &selected_k_json_precision_frontier,
         reference_json_text,
     );
+    let selected_k_graph_producer_frontier = attention_norm_f64_selected_k_graph_producer_frontier(
+        &selected_k_capture_path_frontier,
+        reference_records,
+    );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12178,6 +12182,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "selected_k_capture_precision_frontier": selected_k_capture_precision_frontier,
         "selected_k_json_precision_frontier": selected_k_json_precision_frontier,
         "selected_k_capture_path_frontier": selected_k_capture_path_frontier,
+        "selected_k_graph_producer_frontier": selected_k_graph_producer_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -13393,6 +13398,7 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
         "stage": stage,
         "dtype": dtype,
         "graph_op": graph_op,
+        "graph_index": record.pointer("/graph_index").cloned().unwrap_or(Value::Null),
         "shape": record.pointer("/shape").cloned().unwrap_or(Value::Null),
         "full_shape": record.pointer("/full_shape").cloned().unwrap_or(Value::Null),
         "sample_offset": record.pointer("/sample_offset").cloned().unwrap_or(Value::Null),
@@ -13438,6 +13444,124 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
         );
     }
     result
+}
+
+fn attention_norm_f64_selected_k_graph_producer_frontier(
+    selected_k_capture_path_frontier: &Value,
+    reference_records: &[ReferenceTraceRecord],
+) -> Value {
+    let source_classification =
+        selected_k_capture_path_frontier.pointer("/classification").and_then(Value::as_str);
+    let graph_index = selected_k_capture_path_frontier
+        .pointer("/reference_post_rope_record/graph_index")
+        .or_else(|| selected_k_capture_path_frontier.pointer("/graph_index"))
+        .and_then(Value::as_i64);
+    let graph_op = selected_k_capture_path_frontier.pointer("/graph_op").and_then(Value::as_str);
+    let kcur_rope_record = graph_index.and_then(|graph_index| {
+        reference_records.iter().find(|record| {
+            record.stage == "Kcur"
+                && record.graph_index == Some(graph_index)
+                && record.graph_op.as_deref() == graph_op
+                && reference_record_has_graph_sources(record)
+        })
+    });
+    let kcur_rope_source_names =
+        kcur_rope_record.map(reference_graph_source_names).unwrap_or_default();
+    let pre_rope_projection_record = reference_records.iter().find(|record| {
+        record.stage == "Kcur"
+            && record.graph_op.as_deref() == Some("MUL_MAT")
+            && reference_record_has_graph_sources(record)
+            && reference_graph_source_names(record).iter().any(|name| name == "blk.0.attn_k.weight")
+    });
+    let pre_rope_source_names =
+        pre_rope_projection_record.map(reference_graph_source_names).unwrap_or_default();
+    let rope_sources_include_reshaped_kcur =
+        kcur_rope_source_names.iter().any(|name| name == "Kcur-0 (reshaped)");
+    let rope_sources_include_inp_pos = kcur_rope_source_names.iter().any(|name| name == "inp_pos");
+    let pre_rope_sources_include_attn_k_weight =
+        pre_rope_source_names.iter().any(|name| name == "blk.0.attn_k.weight");
+    let pre_rope_sources_include_attn_norm =
+        pre_rope_source_names.iter().any(|name| name == "attn_norm-0");
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if source_classification
+        != Some("f64_selected_k_reference_storage_source_value_preserves_midpoint_capture")
+    {
+        blocked_reasons.push("selected_k_storage_source_frontier_not_pinned".to_string());
+    }
+    if graph_index.is_none() {
+        blocked_reasons.push("reference_post_rope_graph_index_missing".to_string());
+    }
+    if graph_op != Some("ROPE") {
+        blocked_reasons.push("reference_post_rope_graph_op_not_rope".to_string());
+    }
+    if kcur_rope_record.is_none() {
+        blocked_reasons.push("reference_kcur_rope_graph_record_missing".to_string());
+    }
+    if kcur_rope_record.is_some() && kcur_rope_source_names.is_empty() {
+        blocked_reasons.push("reference_kcur_rope_graph_sources_missing".to_string());
+    }
+    if !rope_sources_include_reshaped_kcur {
+        blocked_reasons.push("reference_kcur_rope_reshaped_kcur_source_missing".to_string());
+    }
+    if !rope_sources_include_inp_pos {
+        blocked_reasons.push("reference_kcur_rope_inp_pos_source_missing".to_string());
+    }
+    if pre_rope_projection_record.is_none() {
+        blocked_reasons.push("reference_kcur_pre_rope_projection_record_missing".to_string());
+    }
+    if !pre_rope_sources_include_attn_k_weight {
+        blocked_reasons.push("reference_kcur_pre_rope_weight_source_missing".to_string());
+    }
+    if !pre_rope_sources_include_attn_norm {
+        blocked_reasons.push("reference_kcur_pre_rope_attn_norm_source_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if source_classification
+        != Some("f64_selected_k_reference_storage_source_value_preserves_midpoint_capture")
+    {
+        "f64_selected_k_graph_producer_not_active_frontier"
+    } else if blocked_reasons.is_empty() {
+        "f64_selected_k_reference_graph_producer_pinned_to_rope_and_projection_sources"
+    } else {
+        "f64_selected_k_reference_graph_producer_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "f64_selected_k_reference_graph_producer_pinned_to_rope_and_projection_sources" => {
+            "inspect the selected pre-RoPE K projection source value and RoPE numeric policy, because Kcur storage is produced from pinned ROPE and K projection graph sources"
+        }
+        "f64_selected_k_graph_producer_not_active_frontier" => {
+            "pin selected K storage-source bits before graph-producer attribution"
+        }
+        _ => "attach missing Kcur graph producer provenance before changing Rust runtime math",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected K graph-producer frontier is diagnostic-only provenance for the reference Kcur tensor that already contains the selected midpoint storage bits; it does not change reference instrumentation, Rust runtime math, or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "source_classification": source_classification,
+        "selected_record_name": selected_k_capture_path_frontier.pointer("/record_name").cloned().unwrap_or(Value::Null),
+        "selected_graph_index": graph_index,
+        "selected_graph_op": graph_op,
+        "kcur_rope_record_present": kcur_rope_record.is_some(),
+        "kcur_rope_graph_index": kcur_rope_record.and_then(|record| record.graph_index),
+        "kcur_rope_graph_source_count": kcur_rope_source_names.len(),
+        "kcur_rope_graph_source_names": kcur_rope_source_names,
+        "rope_sources_include_reshaped_kcur": rope_sources_include_reshaped_kcur,
+        "rope_sources_include_inp_pos": rope_sources_include_inp_pos,
+        "pre_rope_projection_record_present": pre_rope_projection_record.is_some(),
+        "pre_rope_projection_graph_index": pre_rope_projection_record.and_then(|record| record.graph_index),
+        "pre_rope_projection_graph_source_count": pre_rope_source_names.len(),
+        "pre_rope_projection_graph_source_names": pre_rope_source_names,
+        "pre_rope_sources_include_attn_k_weight": pre_rope_sources_include_attn_k_weight,
+        "pre_rope_sources_include_attn_norm": pre_rope_sources_include_attn_norm,
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": next_diagnostic,
+    })
 }
 
 fn json_array_u64(value: &Value, pointer: &str, index: usize) -> Option<u64> {
@@ -41541,6 +41665,96 @@ mod tests {
                 "reference_storage_source_bits_missing",
                 "reference_storage_source_offset_missing",
                 "source_tensor_flat_index_unavailable"
+            ]))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_graph_producer_frontier_pins_rope_sources() {
+        let selected_capture_path = json!({
+            "classification": "f64_selected_k_reference_storage_source_value_preserves_midpoint_capture",
+            "record_name": "kcur_history_kv_head1_ref_layout-0",
+            "reference_post_rope_record": {
+                "graph_index": 8,
+            },
+            "graph_op": "ROPE",
+        });
+        let mut kcur_rope = test_reference_trace_record("Kcur", vec![1.0, 2.0]);
+        kcur_rope.graph_index = Some(8);
+        kcur_rope.graph_op = Some("ROPE".to_string());
+        kcur_rope.graph_sources = json!([
+            { "name": "Kcur-0 (reshaped)", "op": "RESHAPE" },
+            { "name": "inp_pos", "op": "NONE" }
+        ]);
+        let mut kcur_pre_rope = test_reference_trace_record("Kcur", vec![1.0, 2.0]);
+        kcur_pre_rope.graph_index = Some(6);
+        kcur_pre_rope.graph_op = Some("MUL_MAT".to_string());
+        kcur_pre_rope.graph_sources = json!([
+            { "name": "blk.0.attn_k.weight", "op": "NONE" },
+            { "name": "attn_norm-0", "op": "MUL" }
+        ]);
+
+        let frontier = attention_norm_f64_selected_k_graph_producer_frontier(
+            &selected_capture_path,
+            &[kcur_pre_rope, kcur_rope],
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!(
+                "f64_selected_k_reference_graph_producer_pinned_to_rope_and_projection_sources"
+            ))
+        );
+        assert_eq!(frontier.pointer("/kcur_rope_record_present"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/kcur_rope_graph_index"), Some(&json!(8)));
+        assert_eq!(
+            frontier.pointer("/kcur_rope_graph_source_names"),
+            Some(&json!(["Kcur-0 (reshaped)", "inp_pos"]))
+        );
+        assert_eq!(frontier.pointer("/rope_sources_include_reshaped_kcur"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/rope_sources_include_inp_pos"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/pre_rope_projection_record_present"), Some(&json!(true)));
+        assert_eq!(
+            frontier.pointer("/pre_rope_projection_graph_source_names"),
+            Some(&json!(["blk.0.attn_k.weight", "attn_norm-0"]))
+        );
+        assert_eq!(frontier.pointer("/blocked_reasons"), Some(&json!([])));
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect the selected pre-RoPE K projection source value and RoPE numeric policy, because Kcur storage is produced from pinned ROPE and K projection graph sources"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_graph_producer_frontier_blocks_without_sources() {
+        let selected_capture_path = json!({
+            "classification": "f64_selected_k_reference_storage_source_value_preserves_midpoint_capture",
+            "reference_post_rope_record": {
+                "graph_index": 8,
+            },
+            "graph_op": "ROPE",
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_graph_producer_frontier(&selected_capture_path, &[]);
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_k_reference_graph_producer_unpinned"))
+        );
+        assert_eq!(
+            frontier.pointer("/blocked_reasons"),
+            Some(&json!([
+                "reference_kcur_pre_rope_attn_norm_source_missing",
+                "reference_kcur_pre_rope_projection_record_missing",
+                "reference_kcur_pre_rope_weight_source_missing",
+                "reference_kcur_rope_graph_record_missing",
+                "reference_kcur_rope_inp_pos_source_missing",
+                "reference_kcur_rope_reshaped_kcur_source_missing"
             ]))
         );
     }
