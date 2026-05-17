@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-17T05:50:00Z",
+  "created_utc": "2026-05-17T07:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -42,11 +42,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -63,7 +64,8 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": false,
           "blockers": [
-            "bounded math ask only; not expanded profile regression corpus"
+            "bounded math ask only; not expanded profile regression corpus",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         }
       ],
@@ -105,11 +107,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -126,7 +129,8 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": false,
           "blockers": [
-            "bounded math ask only; not expanded profile regression corpus"
+            "bounded math ask only; not expanded profile regression corpus",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         },
         {
@@ -293,11 +297,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -314,7 +319,8 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": false,
           "blockers": [
-            "bounded math ask only; not expanded profile regression corpus"
+            "bounded math ask only; not expanded profile regression corpus",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         },
         {
@@ -482,11 +488,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -504,7 +511,8 @@
           "promotion_blocked": false,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile prefill_heavy"
+            "route not promoted for profile prefill_heavy",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         },
         {
@@ -672,11 +680,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -694,7 +703,8 @@
           "promotion_blocked": false,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile decode_heavy"
+            "route not promoted for profile decode_heavy",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         },
         {
@@ -860,11 +870,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -882,7 +893,8 @@
           "promotion_blocked": false,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile structured"
+            "route not promoted for profile structured",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         }
       ],
@@ -925,11 +937,12 @@
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
             ]
           },
           "telemetry": {
@@ -948,7 +961,9 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "corpus_v2 profile quality evidence missing",
-            "route not promoted for profile low_power"
+            "power advantage evidence missing for low_power promotion",
+            "route not promoted for profile low_power",
+            "thermal sensor context unavailable in telemetry receipt"
           ]
         },
         {
@@ -1006,6 +1021,7 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "power advantage evidence missing for low_power promotion",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
@@ -1067,6 +1083,7 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "power advantage evidence missing for low_power promotion",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
@@ -1075,8 +1092,8 @@
         }
       ],
       "profile_gaps": [
-        "low_power route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
-        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
+        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
       ]
     },
     {

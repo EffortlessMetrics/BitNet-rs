@@ -235,6 +235,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
         openvino_corpus_v2: Option<PathBuf>,
 
+        /// Optional power/thermal context receipt to normalize profile telemetry evidence.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long)]
+        telemetry_context: Option<PathBuf>,
+
         /// Output JSON profile comparison to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -769,6 +774,8 @@ pub struct LunarLakeRouteProfileComparison {
     pub cpu_corpus_v2_receipt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub openvino_corpus_v2_receipt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry_context_receipt: Option<String>,
     pub profile_comparison_ready: bool,
     pub default_route_id: String,
     pub profiles: Vec<WorkloadProfileEvaluation>,
@@ -804,6 +811,8 @@ pub struct ProfileRouteEvidence {
     pub promotion_eligible_for_profile: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile_quality: Option<ProfileQualityEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<BenchmarkTelemetry>,
     pub evidence: Vec<String>,
     pub blockers: Vec<String>,
 }
@@ -1223,6 +1232,7 @@ impl LunarLakeCommand {
                 phase_comparison,
                 cpu_corpus_v2,
                 openvino_corpus_v2,
+                telemetry_context,
                 json_out,
                 created_utc,
                 strict,
@@ -1237,6 +1247,7 @@ impl LunarLakeCommand {
                     phase_comparison,
                     cpu_corpus_v2.as_deref(),
                     openvino_corpus_v2.as_deref(),
+                    telemetry_context.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
@@ -2536,6 +2547,7 @@ pub fn build_route_profile_comparison_with_created_utc(
         phase_comparison,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -2546,6 +2558,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     phase_comparison: &Path,
     cpu_corpus_v2: Option<&Path>,
     openvino_corpus_v2: Option<&Path>,
+    telemetry_context: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
     let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
@@ -2555,6 +2568,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     let quality_index = load_profile_quality_index(root, cpu_corpus_v2, openvino_corpus_v2)?;
 
     let mut gaps = Vec::new();
+    let telemetry_context = load_benchmark_telemetry_context(root, telemetry_context, &mut gaps)?;
     if !ledger.promotion_ready {
         gaps.push(format!("promotion ledger not ready: {}", ledger.gaps.join("; ")));
     }
@@ -2581,6 +2595,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
                 &ledger,
                 &phase_comparison_json,
                 &quality_index,
+                telemetry_context.as_ref(),
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -2621,6 +2636,9 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
         phase_comparison_receipt: path_string(&phase_comparison_path),
         cpu_corpus_v2_receipt: quality_index.cpu_source.clone(),
         openvino_corpus_v2_receipt: quality_index.openvino_source.clone(),
+        telemetry_context_receipt: telemetry_context
+            .as_ref()
+            .map(|context| context.receipt.clone()),
         profile_comparison_ready,
         default_route_id: ledger.default_route_id,
         profiles,
@@ -3282,6 +3300,25 @@ fn benchmark_telemetry_for_route(
         thermal_context: "not_normalized_in_current_profile_benchmark".to_string(),
         telemetry_gaps: Vec::new(),
     }
+}
+
+fn telemetry_for_profile_route(context: &BenchmarkTelemetryContext) -> BenchmarkTelemetry {
+    BenchmarkTelemetry {
+        telemetry_receipt: Some(context.receipt.clone()),
+        memory_context: context.memory_context.clone(),
+        power_context: context.power_context.clone(),
+        thermal_context: context.thermal_context.clone(),
+        telemetry_gaps: context.telemetry_gaps.clone(),
+    }
+}
+
+fn power_context_is_recorded(context: &BenchmarkTelemetryContext) -> bool {
+    let value = context.power_context.to_ascii_lowercase();
+    !(value.contains("not_recorded")
+        || value.contains("not_normalized")
+        || value.contains("missing")
+        || value.contains("unavailable")
+        || value.contains("required_for_promotion_but_not_recorded"))
 }
 
 fn power_context_is_promotion_evidence(telemetry: &BenchmarkTelemetry) -> bool {
@@ -5221,6 +5258,7 @@ fn evaluate_workload_profile(
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
     quality_index: &ProfileQualityIndex,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
     if let Some(route_id) = &profile.promoted_route {
@@ -5235,7 +5273,15 @@ fn evaluate_workload_profile(
     let route_evidence = route_ids
         .iter()
         .map(|route_id| {
-            evaluate_profile_route(root, profile, route_id, ledger, phase_comparison, quality_index)
+            evaluate_profile_route(
+                root,
+                profile,
+                route_id,
+                ledger,
+                phase_comparison,
+                quality_index,
+                telemetry_context,
+            )
         })
         .collect::<Result<Vec<_>>>()?;
 
@@ -5306,15 +5352,17 @@ fn evaluate_profile_route(
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
     quality_index: &ProfileQualityIndex,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
         .routes
         .iter()
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("route `{route_id}` not found in promotion ledger"))?;
-    let timing = profile_timing_for_route(root, route_id, phase_comparison)?;
+    let timing = profile_timing_for_route(root, route_id, phase_comparison, telemetry_context)?;
     let mut blockers = route.missing_evidence.clone();
     let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
+    let telemetry = telemetry_context.map(telemetry_for_profile_route);
     if route.status != "promoted" || !route.promoted_for.contains(&profile.profile_id) {
         blockers.push(format!("route not promoted for profile {}", profile.profile_id));
     }
@@ -5325,7 +5373,11 @@ fn evaluate_profile_route(
         blockers.push("timing coverage has missing profile fields".to_string());
     }
     if profile.profile_id == "low_power" {
-        blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+        if telemetry_context.is_some_and(|context| power_context_is_recorded(context)) {
+            blockers.push("power advantage evidence missing for low_power promotion".to_string());
+        } else {
+            blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+        }
     }
     if route.speedup_claim {
         blockers.push("route source claims speedup before profile promotion".to_string());
@@ -5373,6 +5425,7 @@ fn evaluate_profile_route(
         benchmark_qualified_advantage: false,
         promotion_eligible_for_profile,
         profile_quality,
+        telemetry,
         evidence,
         blockers,
     })
@@ -5382,9 +5435,10 @@ fn profile_timing_for_route(
     root: &Path,
     route_id: &str,
     phase_comparison: &Value,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
 ) -> Result<ProfileTimingSummary> {
     match route_id {
-        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison),
+        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison, telemetry_context),
         "dense_slm_openvino_gpu_candidate" => {
             openvino_profile_timing(root, DENSE_OV_GPU_OPERATOR_ASK, "openvino_gpu_operator_ask")
         }
@@ -5430,7 +5484,11 @@ fn profile_timing_for_route(
     }
 }
 
-fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<ProfileTimingSummary> {
+fn dense_cpu_profile_timing(
+    root: &Path,
+    phase_comparison: &Value,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+) -> Result<ProfileTimingSummary> {
     let ask_path = root.join(DENSE_CPU_OPERATOR_ASK);
     let ask: Value = read_json_receipt(&ask_path)?;
     let cold_load_ms = number_at_any(&ask, &["timing.model_load_ms"]);
@@ -5465,6 +5523,19 @@ fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<Pro
     if decode_128 {
         phase_coverage.push("warm_decode_128".to_string());
     }
+    let mut known_gaps =
+        vec!["bounded math ask only; not expanded profile regression corpus".to_string()];
+    if let Some(context) = telemetry_context {
+        phase_coverage.push("telemetry_context_indexed".to_string());
+        if context.thermal_context.to_ascii_lowercase().contains("unavailable") {
+            known_gaps.push("thermal sensor context unavailable in telemetry receipt".to_string());
+        }
+        if !power_context_is_recorded(context) {
+            known_gaps.push("power context unavailable in telemetry receipt".to_string());
+        }
+    } else {
+        known_gaps.push("power and thermal context not normalized in this comparison".to_string());
+    }
 
     Ok(ProfileTimingSummary {
         timing_scope: "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts".to_string(),
@@ -5483,10 +5554,7 @@ fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<Pro
         output_tokens,
         throughput_tokens_per_s,
         phase_coverage,
-        known_gaps: vec![
-            "bounded math ask only; not expanded profile regression corpus".to_string(),
-            "power and thermal context not normalized in this comparison".to_string(),
-        ],
+        known_gaps,
     })
 }
 
@@ -6332,6 +6400,94 @@ mod tests {
                     &"power telemetry receipt missing for low_power promotion".to_string(),
                 )
         }));
+
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": "live_telemetry_context_captured_no_promotion_change",
+                "created_utc": "2026-05-17T05:45:00Z",
+                "machine_id": "intel-258v",
+                "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+                "power_context": "source=os_power_probe;active_scheme=Balanced;battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+                "thermal_context": "thermal_context_unavailable",
+                "gaps": [
+                    "thermal sensor context is not available from the current OS telemetry probe",
+                    "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+                ],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_measurement_executed": true,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        let profiles_with_telemetry = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            None,
+            Some(Path::new(POWER_THERMAL_CONTEXT_FILE)),
+            "2026-05-17T06:55:00Z".to_string(),
+        )?;
+        assert!(
+            profiles_with_telemetry.profile_comparison_ready,
+            "{:?}",
+            profiles_with_telemetry.gaps
+        );
+        assert_eq!(
+            profiles_with_telemetry.telemetry_context_receipt.as_deref(),
+            Some(path_string(&temp.path().join(POWER_THERMAL_CONTEXT_FILE)).as_str())
+        );
+        let Some(ask_normal_with_telemetry) = profiles_with_telemetry
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_normal")
+        else {
+            bail!("missing ask_normal profile with telemetry");
+        };
+        let Some(cpu_route_with_telemetry) = ask_normal_with_telemetry
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        else {
+            bail!("missing CPU route evidence with telemetry");
+        };
+        assert!(cpu_route_with_telemetry.telemetry.is_some());
+        assert!(
+            !cpu_route_with_telemetry.timing.known_gaps.contains(
+                &"power and thermal context not normalized in this comparison".to_string()
+            )
+        );
+        assert!(
+            cpu_route_with_telemetry
+                .timing
+                .known_gaps
+                .contains(&"thermal sensor context unavailable in telemetry receipt".to_string())
+        );
+        let Some(low_power_with_telemetry) = profiles_with_telemetry
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "low_power")
+        else {
+            bail!("missing low_power profile with telemetry");
+        };
+        assert!(low_power_with_telemetry.route_evidence.iter().any(|route| {
+            route.route_id == "dense_slm_openvino_npu_candidate"
+                && route.blockers.contains(
+                    &"power advantage evidence missing for low_power promotion".to_string(),
+                )
+                && !route.blockers.contains(
+                    &"power telemetry receipt missing for low_power promotion".to_string(),
+                )
+        }));
         Ok(())
     }
 
@@ -6423,6 +6579,7 @@ mod tests {
             Path::new(DENSE_PHASE_COMPARISON),
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
             "2026-05-16T07:30:00Z".to_string(),
         )?;
 
@@ -6546,6 +6703,7 @@ mod tests {
             Path::new(DENSE_PHASE_COMPARISON),
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
             "2026-05-16T07:30:00Z".to_string(),
         )?;
         fs::write(
@@ -6745,6 +6903,7 @@ mod tests {
             Path::new(DENSE_PHASE_COMPARISON),
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
             "2026-05-16T07:30:00Z".to_string(),
         )?;
         fs::write(
