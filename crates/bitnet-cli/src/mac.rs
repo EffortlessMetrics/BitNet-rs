@@ -5771,6 +5771,7 @@ struct MacServeEndpoint {
     port: u16,
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_mac_serve(
     model_family: MacServeModelFamily,
     model_id: String,

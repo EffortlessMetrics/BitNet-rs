@@ -14,6 +14,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Operator profile | `ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-operator-profile.json` | Default operator evidence with process memory, storage/free-space, warm-session timing, and unsupported-path fields |
 | Greedy sampler fast path | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json` | Validates that the guarded greedy no-penalty sampler fast path preserves the 4-thread generated IDs/text while sampler decode allocations remain zero |
 | Logits extraction isolation | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json` | Validates that direct tensor argmax bypasses full logits Vec extraction only where the sampler fast path is exact, while preserving generated IDs/text |
+| Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
 
 All rows use:
 
@@ -105,10 +106,10 @@ logits_buffer_reuse_claimed = false
 The next safe optimization slices should start from these known remaining costs:
 
 1. Reuse or isolate KV-cache buffers without changing prompt independence.
-2. Continue isolating logits extraction allocation. SLM-CPU-025 bypasses the
-   full logits Vec only for exact deterministic greedy no-penalty steps; the
-   default repetition-penalty steps still use the vector path to preserve
-   count-aware penalty semantics.
+2. Continue reducing `model.logits` tensor allocation and output-head costs.
+   SLM-CPU-026 removes fresh full logits Vec allocation from default
+   repetition-penalty decode steps by reusing a host scratch buffer, but the
+   model still produces logits tensors per token.
 3. Keep sampler and stop policy work out of the per-token hot loop where doing
    so preserves deterministic generated IDs.
 4. Improve Q8_0 dense linear locality only with before/after receipts proving
@@ -167,6 +168,32 @@ This is an isolation slice, not a full logits-buffer reuse claim. The remaining
 vector extraction steps are explicit in the receipt and should only be removed
 after the repetition-penalty path has an allocation-safe equivalent that
 preserves generated IDs.
+
+## Repetition-Penalty Logits Reuse
+
+SLM-CPU-026 adds that allocation-safe repetition-penalty equivalent for the
+warm-session path. Count-aware repetition penalties are still applied before
+greedy selection, but default decode steps now copy CPU F32 logits into a
+caller-owned scratch buffer and sample in place instead of materializing a fresh
+host `Vec<f32>` per token.
+
+```text
+baseline = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse.json
+after = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json
+generated_outputs_match_baseline = true
+direct_greedy_logits_steps = 6
+logits_scratch_reuse_steps = 40
+logits_vec_extraction_steps = 0
+logits_vec_extraction_bypassed_for_all_steps = true
+fallback_used = false
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+This still does not claim sustained throughput or dense math acceleration. It
+only narrows the host allocation boundary for the existing Qwen3 Q8_0 CPU
+behavior oracle.
 
 ## Claim Boundary
 
