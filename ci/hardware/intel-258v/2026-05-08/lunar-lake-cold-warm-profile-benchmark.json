@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-16T18:05:00Z",
+  "created_utc": "2026-05-17T03:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -35,7 +35,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -59,8 +59,7 @@
           "promotion_blocked": false,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "power and thermal context not normalized in this comparison",
-            "total response latency is missing"
+            "power and thermal context not normalized in this comparison"
           ]
         }
       ],
@@ -95,7 +94,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -119,8 +118,7 @@
           "promotion_blocked": false,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "power and thermal context not normalized in this comparison",
-            "total response latency is missing"
+            "power and thermal context not normalized in this comparison"
           ]
         },
         {
@@ -270,7 +268,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -294,8 +292,7 @@
           "promotion_blocked": false,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "power and thermal context not normalized in this comparison",
-            "total response latency is missing"
+            "power and thermal context not normalized in this comparison"
           ]
         },
         {
@@ -446,7 +443,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -471,8 +468,7 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "power and thermal context not normalized in this comparison",
-            "route not promoted for profile prefill_heavy",
-            "total response latency is missing"
+            "route not promoted for profile prefill_heavy"
           ]
         },
         {
@@ -623,7 +619,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -648,8 +644,7 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "power and thermal context not normalized in this comparison",
-            "route not promoted for profile decode_heavy",
-            "total response latency is missing"
+            "route not promoted for profile decode_heavy"
           ]
         },
         {
@@ -798,7 +793,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -823,8 +818,7 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "power and thermal context not normalized in this comparison",
-            "route not promoted for profile structured",
-            "total response latency is missing"
+            "route not promoted for profile structured"
           ]
         }
       ],
@@ -860,7 +854,7 @@
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
@@ -887,8 +881,7 @@
             "corpus_v2 profile quality evidence missing",
             "power and thermal context not normalized in this comparison",
             "power telemetry receipt missing for low_power promotion",
-            "route not promoted for profile low_power",
-            "total response latency is missing"
+            "route not promoted for profile low_power"
           ]
         },
         {
