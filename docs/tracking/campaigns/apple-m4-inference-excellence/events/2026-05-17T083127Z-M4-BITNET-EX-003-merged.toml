@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T08:31:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5309
+merge_sha = "1d1e98c890dd18ee328b4258de055d590692a50c"
+
+notes = [
+  "Merged PR #5309, adding M4-BITNET-EX-003 BitNet one-shot benchmark envelope evidence for the accepted Microsoft BitNet I2_S artifact and external tokenizer authority.",
+  "The recorded artifacts include the benchmark summary, one-shot `mac ask` receipt, fixed warm-session aggregate receipt, and three fixed warm per-prompt receipts under `ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/`.",
+  "The summary validates as `bitnet_apple_m4_benchmark_v1` with `apple-m4-cpu-neon`, `fallback_used=false`, four prompts, eight generated tokens, generated text and token IDs, timing percentiles, memory percentiles, and chat/serve disabled.",
+  "M4-BITNET-EX-003 is tracker-closed as benchmark-envelope evidence only; it does not claim BitNet quality, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance.",
+]
