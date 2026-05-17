@@ -5,7 +5,7 @@
 |---|---|---:|---|---|---|
 | amd-cpu-baselines | AMD5700X-003 | TBD | ready | AMD9950X3D-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-bitnet-artifact-sweep | ABAS-001 | TBD | proposed | ABAS-002 | Use MacBook first for larger artifact sweeps; do not manufacture MacBook receipts from the M4 Mac mini. |
-| apple-m3-macbook-air | M3MBA-019 | #5388 | pr_open | none | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
+| apple-m3-macbook-air | M3MBA-006 | TBD | blocked | M3MBA-007 | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | apple-m4-bitnet-eval-and-benchmark | M4-BITNET-EVAL-005 | #4942 | merged | none | This is an M4 Mac mini BitNet campaign. |
 | apple-m4-bitnet-productization | M4-BITNET-PROD-004 | #4957 | merged | none | This is an M4 Mac mini BitNet campaign. |
@@ -37,6 +37,6 @@
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-028 | #5384 | pr_open | none | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-029 | TBD | ready | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-002 | TBD | ready | WASM-003 | WASM detection is not inference. |

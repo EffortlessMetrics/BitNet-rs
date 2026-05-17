@@ -26,7 +26,7 @@
 | apple-m3-macbook-air | M3MBA-008 | M3MBA-005C, M3MBA-006, M3MBA-007 | merged |
 | apple-m3-macbook-air | M3MBA-009 | M3MBA-004B | merged |
 | apple-m3-macbook-air | M3MBA-010 | M3MBA-005A | merged |
-| apple-m3-macbook-air | M3MBA-019 | M3MBA-008 | pr_open |
+| apple-m3-macbook-air | M3MBA-019 | M3MBA-008 | merged |
 | apple-m4 | M4-002 | M4-001 | merged |
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | merged |
@@ -498,7 +498,8 @@
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |
 | slm-cpu | SLM-CPU-027 | SLM-CPU-026 | blocked |
-| slm-cpu | SLM-CPU-028 | SLM-CPU-026 | pr_open |
+| slm-cpu | SLM-CPU-028 | SLM-CPU-026 | merged |
+| slm-cpu | SLM-CPU-029 | SLM-CPU-028 | ready |
 | slm-cpu | SLM-CPU-023 | SLM-CPU-016, SLM-CPU-017A, SLM-CPU-022 | merged |
 | slm-cpu | SLM-CPU-022 | SLM-CPU-021 | merged |
 | slm-cpu | SLM-CPU-021 | SLM-CPU-020 | merged |
