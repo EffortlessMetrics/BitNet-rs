@@ -22637,6 +22637,9 @@ fn attention_selected_key_historical_projection_rope_source(
         "selected_key_historical_projection_rope_source_clean" => {
             "inspect selected score/key expansion despite clean historical projection/RoPE source"
         }
+        "selected_key_historical_projection_rope_source_unpinned" => {
+            "probe selected historical post-RoPE F16 bucket drift with both projection inputs present"
+        }
         "no_selected_key_source_rows" => {
             "localize selected key score-input source before historical projection attribution"
         }
@@ -27352,6 +27355,40 @@ mod tests {
         assert!(
             !patch.contains("head_name << \"kcur_history_kv_head\" << head << \"_ref_layout-0\"")
         );
+    }
+
+    #[test]
+    fn reference_patch_k_projection_history_records_follow_requested_trace_layer() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        assert!(
+            patch.contains("bitnet_rs_reference_layer_trace_write_key_projection_history_records")
+        );
+        assert!(patch.contains("k_projection_history_kv_head"));
+        assert!(
+            patch.contains("bitnet_rs_kcur_history_layer == bitnet_rs_requested_history_layer")
+        );
+        assert!(patch.contains("strcmp(ggml_op_name(tensor->op), \"MUL_MAT\") == 0"));
+        assert!(patch.contains("const auto & hparams = lctx.model.hparams"));
+        assert!(patch.contains("const int64_t head_dim = hparams.n_embd_head_k"));
+        assert!(patch.contains(
+            "const int64_t kv_head_count = hparams.n_head_kv((uint32_t) bitnet_rs_kcur_history_layer)"
+        ));
+        assert!(patch.contains(
+            "const int64_t kv_dim = hparams.n_embd_k_gqa((uint32_t) bitnet_rs_kcur_history_layer)"
+        ));
+        assert!(patch.contains(
+            "head_name << \"k_projection_history_kv_head\" << head << \"_ref_layout-\" << layer"
+        ));
+        assert!(
+            patch.contains("const int64_t source_index = head * head_dim + dim + kv_dim * token")
+        );
+        assert!(patch.contains("out << \",\\\"layout\\\":\\\"dim_major_token_minor\\\""));
+        assert!(patch.contains("source_tensor_name"));
+        assert!(!patch.contains(
+            "head_name << \"k_projection_history_kv_head\" << head << \"_ref_layout-0\""
+        ));
     }
 
     #[test]
