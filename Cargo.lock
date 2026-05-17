@@ -476,6 +476,8 @@ name = "bitnet-bench-regression-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -10037,6 +10039,7 @@ dependencies = [
  "assert_cmd",
  "bitnet",
  "bitnet-bdd-grid",
+ "bitnet-bench-regression-core",
  "bitnet-common",
  "bitnet-crossval",
  "bitnet-download",

@@ -1,4 +1,7 @@
 use anyhow::{Context, Result, anyhow, bail};
+use bitnet_bench_regression_core::{
+    compare_performance_metrics, extract_legacy_benchmark_metrics, merge_benchmark_metrics,
+};
 use bitnet_common::Device;
 use bitnet_download::{
     atomic_write, exp_backoff_ms, offline_enabled as bitnet_offline_enabled,
@@ -976,6 +979,28 @@ enum Cmd {
         /// Output format (human, json)
         #[arg(long, default_value = "human")]
         format: String,
+    },
+
+    /// Compare legacy release-validation performance JSON files.
+    ///
+    /// Rust replacement for scripts/compare_performance.py. Accepts the same
+    /// four-file benchmark layout and optional JSON output.
+    #[command(name = "compare-performance")]
+    ComparePerformance {
+        /// Baseline inference benchmark results
+        baseline_inference: PathBuf,
+        /// Current inference benchmark results
+        current_inference: PathBuf,
+        /// Baseline kernels benchmark results
+        baseline_kernels: PathBuf,
+        /// Current kernels benchmark results
+        current_kernels: PathBuf,
+        /// Output comparison results to JSON file
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Performance threshold ratio (0.95 = allow about 5% regression)
+        #[arg(long, default_value_t = 0.95)]
+        threshold: f64,
     },
 
     /// Compare benchmark results against baseline with regression thresholds
@@ -2011,6 +2036,21 @@ fn real_main() -> Result<()> {
             auto_download,
             deterministic,
             &format,
+        ),
+        Cmd::ComparePerformance {
+            baseline_inference,
+            current_inference,
+            baseline_kernels,
+            current_kernels,
+            output,
+            threshold,
+        } => compare_performance_cmd(
+            &baseline_inference,
+            &current_inference,
+            &baseline_kernels,
+            &current_kernels,
+            output.as_deref(),
+            threshold,
         ),
         Cmd::BenchCompare {
             current,
@@ -3719,6 +3759,57 @@ fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
 }
 
 /// Load benchmark results from JSON file
+fn compare_performance_cmd(
+    baseline_inference: &Path,
+    current_inference: &Path,
+    baseline_kernels: &Path,
+    current_kernels: &Path,
+    output: Option<&Path>,
+    threshold: f64,
+) -> Result<()> {
+    if !(0.0..=1.0).contains(&threshold) || threshold == 0.0 {
+        bail!("threshold must be greater than 0 and less than or equal to 1");
+    }
+
+    let baseline_inference = load_benchmark_results(baseline_inference)?;
+    let current_inference = load_benchmark_results(current_inference)?;
+    let baseline_kernels = load_benchmark_results(baseline_kernels)?;
+    let current_kernels = load_benchmark_results(current_kernels)?;
+
+    let baseline_metrics = merge_benchmark_metrics(
+        extract_legacy_benchmark_metrics(&baseline_inference),
+        extract_legacy_benchmark_metrics(&baseline_kernels),
+    );
+    let current_metrics = merge_benchmark_metrics(
+        extract_legacy_benchmark_metrics(&current_inference),
+        extract_legacy_benchmark_metrics(&current_kernels),
+    );
+
+    let comparison = compare_performance_metrics(&baseline_metrics, &current_metrics, threshold);
+    let report = comparison.to_markdown();
+    println!("{report}");
+
+    if let Some(path) = output {
+        let mut value = serde_json::to_value(&comparison)?;
+        if let Value::Object(ref mut object) = value {
+            object.insert("report".to_string(), Value::String(report));
+        }
+        fs::write(path, serde_json::to_string_pretty(&value)?)
+            .with_context(|| format!("Failed to write comparison results to {}", path.display()))?;
+        println!("\nComparison results saved to: {}", path.display());
+    }
+
+    if !comparison.passed {
+        bail!(
+            "Performance validation failed: {} regressions detected",
+            comparison.regressions.len()
+        );
+    }
+
+    println!("\n✅ Performance validation passed");
+    Ok(())
+}
+
 fn load_benchmark_results(path: &Path) -> Result<Value> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read benchmark file: {}", path.display()))?;

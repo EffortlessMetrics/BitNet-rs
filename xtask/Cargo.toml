@@ -41,6 +41,7 @@ xtask-build-helper = { path = "../xtask-build-helper", version = "0.2.1-dev" }
 bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", default-features = false, optional = true }
 bitnet-sys = { path = "../crates/bitnet-sys", version = "0.2.1-dev", default-features = false, optional = true }
 bitnet-bdd-grid = { path = "../crates/bitnet-bdd-grid", version = "0.2.1-dev" }
+bitnet-bench-regression-core = { path = "../crates/bitnet-bench-regression-core" }
 scopeguard = "1.2.0"
 thiserror = "2.0.17"
 
