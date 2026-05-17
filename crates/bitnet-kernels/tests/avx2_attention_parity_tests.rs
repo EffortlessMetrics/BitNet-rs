@@ -11,6 +11,13 @@ use bitnet_kernels::cpu::quantized_attention::{
     QuantBits, QuantizedAttentionConfig, quantized_dot_product_attention,
 };
 
+#[path = "common/avx2_i8_parity.rs"]
+mod avx2_i8_parity;
+#[path = "common/avx2_parity.rs"]
+mod avx2_parity;
+use avx2_i8_parity::pseudo_rand_i8;
+use avx2_parity::{assert_vec_parity, pseudo_rand};
+
 // ── Tolerance constants ────────────────────────────────────────────────
 
 /// Absolute tolerance for f32 attention kernels.
@@ -22,50 +29,6 @@ const ATTN_REL_TOL: f32 = 1e-4;
 const QUANT_ATTN_ABS_TOL: f32 = 1e-4;
 /// Relative tolerance for quantized (i8) attention kernels.
 const QUANT_ATTN_REL_TOL: f32 = 1e-3;
-
-// ── Helpers (copied from avx2_scalar_parity_tests.rs) ──────────────────
-
-fn close(a: f32, b: f32, abs_tol: f32, rel_tol: f32) -> bool {
-    let diff = (a - b).abs();
-    diff <= abs_tol || diff <= rel_tol * a.abs().max(b.abs())
-}
-
-fn assert_vec_parity(actual: &[f32], expected: &[f32], abs_tol: f32, rel_tol: f32, ctx: &str) {
-    assert_eq!(actual.len(), expected.len(), "{ctx}: length mismatch");
-    for (i, (&a, &e)) in actual.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            close(a, e, abs_tol, rel_tol),
-            "{ctx}[{i}]: scalar={e}, dispatched={a} (diff={}, abs_tol={abs_tol}, rel_tol={rel_tol})",
-            (a - e).abs()
-        );
-    }
-}
-
-/// Deterministic pseudo-random f32 values in [-1, 1] for reproducibility.
-fn pseudo_rand(len: usize, seed: u64) -> Vec<f32> {
-    let mut state = seed;
-    (0..len)
-        .map(|_| {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            (state as f32 / u64::MAX as f32) * 2.0 - 1.0
-        })
-        .collect()
-}
-
-/// Deterministic pseudo-random i8 values in [-127, 127].
-fn pseudo_rand_i8(len: usize, seed: u64) -> Vec<i8> {
-    let mut state = seed;
-    (0..len)
-        .map(|_| {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            ((state % 255) as i8).wrapping_sub(127)
-        })
-        .collect()
-}
 
 // ── Scalar reference implementations ───────────────────────────────────
 
