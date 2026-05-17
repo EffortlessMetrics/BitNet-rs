@@ -3008,7 +3008,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-005"
-status = "pr_open"
+status = "merged"
+pr = 5410
+head_sha = "746f148ec34fbd90d7e3ca9f7efa51cd93bdd97c"
+merge_sha = "7923c9fce06ab14bf5d0da6796f003b38c085755"
 branch = "docs/dense-qwen-exact-server-readiness"
 stackable = false
 review_mode = "codex_premerge"
