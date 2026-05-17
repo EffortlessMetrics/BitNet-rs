@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T16:42:50Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-009"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-009-eval-history"
+pr = 5386
+merge_sha = "86dc319569946cd3896b5e8eacfbc5b155e9ed28"
+
+notes = [
+  "Merged PR #5386 for the M4-BITNET-EX-009 matching BitNet deterministic eval refresh and larger-corpus decision.",
+  "The merged evidence records a fresh 100-case accepted-artifact M4 BitNet run with 79/100 mechanical passes, zero timeouts, fallback_used=false, matched-context regression against 2026-05-15T2214Z, and four advisory warnings isolated to constrained_summary.",
+  "The larger-corpus decision stages a 250-case BitNet corpus before any 500-case expansion or broad BitNet quality envelope.",
+  "No dense Qwen evidence reuse, BitNet chat or serve expansion, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]
