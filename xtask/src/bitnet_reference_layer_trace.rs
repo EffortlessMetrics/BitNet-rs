@@ -12069,6 +12069,10 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_norm_f64_selected_historical_k_rope_source_frontier(
             &selected_key_bucket_source_frontier,
         );
+    let selected_k_capture_precision_frontier =
+        attention_norm_f64_selected_k_capture_precision_frontier(
+            &selected_historical_k_rope_source_frontier,
+        );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12155,6 +12159,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "score_qk_bucket_frontier": score_qk_bucket_frontier,
         "selected_key_bucket_source_frontier": selected_key_bucket_source_frontier,
         "selected_historical_k_rope_source_frontier": selected_historical_k_rope_source_frontier,
+        "selected_k_capture_precision_frontier": selected_k_capture_precision_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -12640,6 +12645,10 @@ fn compact_selected_historical_key_source_row(row: &Value) -> Value {
         "post_rope_f16_bucket_sensitivity": row.pointer("/post_rope_f16_bucket_sensitivity").cloned().unwrap_or(Value::Null),
         "post_rope_epsilon_probe": compact_post_rope_epsilon_probe(row.pointer("/post_rope_epsilon_probe").unwrap_or(&Value::Null)),
         "selected_dim_values": row.pointer("/selected_dim_values").cloned().unwrap_or(Value::Null),
+        "reference_projection_record": row.pointer("/reference_projection_record").cloned().unwrap_or(Value::Null),
+        "reference_post_rope_record": row.pointer("/reference_post_rope_record").cloned().unwrap_or(Value::Null),
+        "rust_projection_record": row.pointer("/rust_projection_record").cloned().unwrap_or(Value::Null),
+        "rust_post_rope_record": row.pointer("/rust_post_rope_record").cloned().unwrap_or(Value::Null),
     })
 }
 
@@ -12820,6 +12829,139 @@ fn attention_norm_f64_selected_historical_k_rope_source_frontier(
         "paired_projection_bucket": probe.pointer("/paired_projection_bucket").cloned().unwrap_or(Value::Null),
         "replay_bucket": probe.pointer("/replay_bucket").cloned().unwrap_or(Value::Null),
         "selected_dim_values": historical_row.pointer("/selected_dim_values").cloned().unwrap_or(Value::Null),
+        "reference_projection_record": historical_row.pointer("/reference_projection_record").cloned().unwrap_or(Value::Null),
+        "reference_post_rope_record": historical_row.pointer("/reference_post_rope_record").cloned().unwrap_or(Value::Null),
+        "rust_projection_record": historical_row.pointer("/rust_projection_record").cloned().unwrap_or(Value::Null),
+        "rust_post_rope_record": historical_row.pointer("/rust_post_rope_record").cloned().unwrap_or(Value::Null),
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn attention_norm_f64_selected_k_capture_precision_frontier(
+    selected_historical_k_rope_source_frontier: &Value,
+) -> Value {
+    let source_classification = selected_historical_k_rope_source_frontier
+        .pointer("/classification")
+        .and_then(Value::as_str);
+    let reference_post_rope_record = selected_historical_k_rope_source_frontier
+        .pointer("/reference_post_rope_record")
+        .unwrap_or(&Value::Null);
+    let rust_post_rope_record = selected_historical_k_rope_source_frontier
+        .pointer("/rust_post_rope_record")
+        .unwrap_or(&Value::Null);
+    let reference_capture = value_f64(
+        selected_historical_k_rope_source_frontier,
+        "/selected_dim_values/reference_post_rope",
+    );
+    let rust_capture = value_f64(
+        selected_historical_k_rope_source_frontier,
+        "/selected_dim_values/rust_post_rope",
+    );
+    let midpoint = value_f64(
+        selected_historical_k_rope_source_frontier,
+        "/post_rope_bucket/f16_bucket_midpoint",
+    );
+    let left_minus_midpoint = value_f64(
+        selected_historical_k_rope_source_frontier,
+        "/post_rope_bucket/left_minus_midpoint",
+    );
+    let right_minus_midpoint = value_f64(
+        selected_historical_k_rope_source_frontier,
+        "/post_rope_bucket/right_minus_midpoint",
+    );
+    let reference_replay_minus_capture =
+        value_f64(selected_historical_k_rope_source_frontier, "/reference_replay_minus_capture");
+    let rust_replay_minus_capture =
+        value_f64(selected_historical_k_rope_source_frontier, "/rust_replay_minus_capture");
+    let post_rope_bucket_match =
+        value_bool(selected_historical_k_rope_source_frontier, "/post_rope_bucket_match");
+    let runtime_replay_clean =
+        value_bool(selected_historical_k_rope_source_frontier, "/runtime_replay_clean");
+    let rust_replay_capture_clean =
+        value_bool(selected_historical_k_rope_source_frontier, "/rust_replay_capture_clean");
+    let reference_record_present =
+        reference_post_rope_record.pointer("/present").and_then(Value::as_bool).unwrap_or(false);
+    let rust_record_present =
+        rust_post_rope_record.pointer("/present").and_then(Value::as_bool).unwrap_or(false);
+    let reference_capture_minus_midpoint =
+        reference_capture.zip(midpoint).map(|(capture, midpoint)| capture - midpoint);
+    let rust_capture_minus_midpoint =
+        rust_capture.zip(midpoint).map(|(capture, midpoint)| capture - midpoint);
+    let reference_capture_is_midpoint =
+        reference_capture_minus_midpoint.is_some_and(|delta| delta.abs() <= 1.0e-12);
+    let rust_capture_is_above_midpoint =
+        rust_capture_minus_midpoint.is_some_and(|delta| delta > 0.0 && delta <= 1.0e-6);
+    let reference_replay_capture_delta_present =
+        reference_replay_minus_capture.is_some_and(|delta| delta.abs() > 0.0);
+    let rust_capture_matches_replay =
+        rust_replay_minus_capture.is_some_and(|delta| delta.abs() <= 1.0e-12);
+
+    let classification = if source_classification
+        != Some("f64_selected_historical_k_rope_source_reference_capture_midpoint")
+    {
+        "f64_selected_k_capture_precision_not_midpoint_frontier"
+    } else if !reference_record_present || !rust_record_present {
+        "f64_selected_k_capture_precision_metadata_missing"
+    } else if reference_capture_is_midpoint
+        && rust_capture_is_above_midpoint
+        && post_rope_bucket_match == Some(false)
+        && runtime_replay_clean == Some(true)
+        && rust_replay_capture_clean == Some(true)
+        && reference_replay_capture_delta_present
+    {
+        "f64_selected_k_reference_capture_midpoint_with_trace_metadata"
+    } else if post_rope_bucket_match == Some(false) {
+        "f64_selected_k_capture_precision_bucket_crossing_unpinned"
+    } else {
+        "f64_selected_k_capture_precision_clean_or_unrelated"
+    };
+
+    let next_diagnostic = match classification {
+        "f64_selected_k_reference_capture_midpoint_with_trace_metadata" => {
+            "inspect the reference post-RoPE trace capture path or capture pre-serialization values before changing Rust runtime math"
+        }
+        "f64_selected_k_capture_precision_metadata_missing" => {
+            "attach reference and Rust post-RoPE trace metadata before interpreting the midpoint capture"
+        }
+        "f64_selected_k_capture_precision_bucket_crossing_unpinned" => {
+            "pin whether the selected post-RoPE bucket crossing is capture precision, source tensor dtype, or view layout"
+        }
+        "f64_selected_k_capture_precision_not_midpoint_frontier" => {
+            "localize selected historical K RoPE source before capture precision attribution"
+        }
+        _ => "move downstream because selected K capture precision is not the active bucket source",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 selected K capture precision frontier is diagnostic-only evidence for whether the selected historical K post-RoPE bucket drift is tied to reference trace capture at an F16 midpoint; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "source_classification": source_classification,
+        "head": selected_historical_k_rope_source_frontier.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": selected_historical_k_rope_source_frontier.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "key_slot": selected_historical_k_rope_source_frontier.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "query_token": selected_historical_k_rope_source_frontier.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "contributor_dim": selected_historical_k_rope_source_frontier.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+        "reference_capture": reference_capture,
+        "rust_capture": rust_capture,
+        "f16_midpoint": midpoint,
+        "reference_capture_minus_midpoint": reference_capture_minus_midpoint,
+        "rust_capture_minus_midpoint": rust_capture_minus_midpoint,
+        "reference_capture_is_midpoint": reference_capture_is_midpoint,
+        "rust_capture_is_above_midpoint": rust_capture_is_above_midpoint,
+        "left_minus_midpoint": left_minus_midpoint,
+        "right_minus_midpoint": right_minus_midpoint,
+        "reference_replay_minus_capture": reference_replay_minus_capture,
+        "rust_replay_minus_capture": rust_replay_minus_capture,
+        "reference_replay_capture_delta_present": reference_replay_capture_delta_present,
+        "rust_capture_matches_replay": rust_capture_matches_replay,
+        "post_rope_bucket_match": post_rope_bucket_match,
+        "post_rope_bucket": selected_historical_k_rope_source_frontier.pointer("/post_rope_bucket").cloned().unwrap_or(Value::Null),
+        "reference_post_rope_record": reference_post_rope_record.clone(),
+        "rust_post_rope_record": rust_post_rope_record.clone(),
+        "reference_projection_record": selected_historical_k_rope_source_frontier.pointer("/reference_projection_record").cloned().unwrap_or(Value::Null),
+        "rust_projection_record": selected_historical_k_rope_source_frontier.pointer("/rust_projection_record").cloned().unwrap_or(Value::Null),
         "next_diagnostic": next_diagnostic,
     })
 }
@@ -19254,6 +19396,25 @@ fn reference_stage_provenance_summary(
     }
 }
 
+fn rust_trace_metadata_summary(record: Option<&RustTraceRecord>) -> Value {
+    match record {
+        Some(record) => json!({
+            "present": true,
+            "name": record.name,
+            "stage": record.stage,
+            "seq": record.seq,
+            "layer": record.layer,
+            "shape": record.shape,
+            "dtype": record.dtype,
+            "num_elements": record.num_elements,
+            "first_values_len": record.first_values.len(),
+        }),
+        None => json!({
+            "present": false,
+        }),
+    }
+}
+
 fn reference_parent_with_graph_sources<'a>(
     reference_records: &'a [ReferenceTraceRecord],
     record: &ReferenceTraceRecord,
@@ -23822,6 +23983,10 @@ fn attention_selected_key_historical_projection_rope_source(
                 "post_rope_f16_bucket_sensitivity": post_rope_f16_bucket_sensitivity,
                 "post_rope_epsilon_probe": post_rope_epsilon_probe,
                 "selected_dim_values": selected_dim_values,
+                "reference_projection_record": reference_stage_provenance_summary(reference_projection, None),
+                "reference_post_rope_record": reference_stage_provenance_summary(reference_post_rope, None),
+                "rust_projection_record": rust_trace_metadata_summary(rust_projection),
+                "rust_post_rope_record": rust_trace_metadata_summary(rust_post_rope),
             }));
         }
     }
@@ -38953,6 +39118,19 @@ mod tests {
             Some(&json!(false))
         );
         assert_eq!(
+            report.pointer("/rows/0/reference_post_rope_record/present"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/reference_post_rope_record/stage"),
+            Some(&json!("kcur_history_kv_head0_ref_layout"))
+        );
+        assert_eq!(report.pointer("/rows/0/rust_post_rope_record/present"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/rows/0/rust_post_rope_record/stage"),
+            Some(&json!("attention_k_before_cache_store_kv_head0_ref_layout"))
+        );
+        assert_eq!(
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "evaluate selected historical RoPE epsilon materiality against score-position contribution before changing runtime math"
@@ -40471,6 +40649,79 @@ mod tests {
             frontier.pointer("/next_diagnostic"),
             Some(&json!(
                 "inspect reference post-RoPE capture/serialization precision for the selected historical K row before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_capture_precision_frontier_reports_trace_metadata() {
+        let selected_rope_frontier = json!({
+            "classification": "f64_selected_historical_k_rope_source_reference_capture_midpoint",
+            "head": 5,
+            "kv_head": 1,
+            "key_slot": 2,
+            "query_token": 10,
+            "contributor_dim": 40,
+            "runtime_replay_clean": true,
+            "rust_replay_capture_clean": true,
+            "post_rope_bucket_match": false,
+            "reference_replay_minus_capture": 4.76837158203125e-7_f64,
+            "rust_replay_minus_capture": 0.0_f64,
+            "selected_dim_values": {
+                "reference_post_rope": -4.146484375_f64,
+                "rust_post_rope": -4.146483898162842_f64,
+            },
+            "post_rope_bucket": {
+                "f16_bucket_match": false,
+                "f16_bucket_midpoint": -4.146484375_f64,
+                "left_f16_bits": "0xc426",
+                "right_f16_bits": "0xc425",
+                "left_minus_midpoint": 0.0_f64,
+                "right_minus_midpoint": 4.76837158203125e-7_f64,
+            },
+            "reference_post_rope_record": {
+                "present": true,
+                "stage": "kcur_history_kv_head1_ref_layout",
+                "dtype": "f32",
+                "graph_op": "ROPE",
+                "graph_source_count": 1,
+                "shape": [128, 16, 1, 1],
+                "values_available": true,
+            },
+            "rust_post_rope_record": {
+                "present": true,
+                "stage": "attention_k_before_cache_store_kv_head1_ref_layout",
+                "dtype": "F32",
+                "shape": [128, 16],
+                "first_values_len": 2048,
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_capture_precision_frontier(&selected_rope_frontier);
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_k_reference_capture_midpoint_with_trace_metadata"))
+        );
+        assert_eq!(frontier.pointer("/head"), Some(&json!(5)));
+        assert_eq!(frontier.pointer("/contributor_dim"), Some(&json!(40)));
+        assert_eq!(frontier.pointer("/reference_capture_is_midpoint"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/rust_capture_is_above_midpoint"), Some(&json!(true)));
+        assert_eq!(
+            frontier.pointer("/reference_post_rope_record/stage"),
+            Some(&json!("kcur_history_kv_head1_ref_layout"))
+        );
+        assert_eq!(
+            frontier.pointer("/rust_post_rope_record/stage"),
+            Some(&json!("attention_k_before_cache_store_kv_head1_ref_layout"))
+        );
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect the reference post-RoPE trace capture path or capture pre-serialization values before changing Rust runtime math"
             ))
         );
     }
