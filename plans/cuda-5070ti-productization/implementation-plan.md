@@ -534,7 +534,7 @@ Revert the status/docs/server-smoke PR and demote the server row if needed.
 
 ## Work items: CUDA-SERVER-003 through CUDA-SERVER-006
 
-Status: CUDA-SERVER-003 merged; CUDA-SERVER-004, CUDA-SERVER-005, and CUDA-SERVER-006 proposed
+Status: CUDA-SERVER-003 and CUDA-SERVER-004 merged; CUDA-SERVER-005 and CUDA-SERVER-006 proposed
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004

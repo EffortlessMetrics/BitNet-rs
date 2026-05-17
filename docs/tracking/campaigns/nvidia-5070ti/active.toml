@@ -2957,7 +2957,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-004"
-status = "proposed"
+status = "merged"
 branch = "server/dense-qwen-receipt-fields"
 stackable = false
 review_mode = "codex_premerge"
