@@ -1829,3 +1829,156 @@ index 666fcc4d..23ee29ff 100644
          // update the kv ring buffer
          {
              kv_self.head += n_tokens;
+
+diff --git a/ggml/src/ggml.c b/ggml/src/ggml.c
+index 121f72da..02ddfd91 100644
+--- a/ggml/src/ggml.c
++++ b/ggml/src/ggml.c
+@@ -14940,6 +14940,110 @@ void ggml_rope_yarn_corr_dims(
+     dims[1] = MIN(n_dims - 1, end);
+ }
+ 
++static uint32_t bitnet_rs_reference_rope_scalar_trace_f32_bits(float value) {
++    uint32_t bits = 0;
++    memcpy(&bits, &value, sizeof(bits));
++    return bits;
++}
++
++static bool bitnet_rs_reference_rope_scalar_trace_parse_i64(const char * value, int64_t * parsed) {
++    if (value == NULL || value[0] == '\0' || parsed == NULL) {
++        return false;
++    }
++    char * end = NULL;
++    const int64_t result = strtoll(value, &end, 10);
++    if (end == value || end == NULL || *end != '\0') {
++        return false;
++    }
++    *parsed = result;
++    return true;
++}
++
++static int bitnet_rs_reference_rope_scalar_trace_layer_from_name(const char * name) {
++    if (name == NULL) {
++        return -1;
++    }
++    const char * dash = strrchr(name, '-');
++    if (dash == NULL || dash[1] == '\0') {
++        return -1;
++    }
++    int64_t parsed = -1;
++    if (!bitnet_rs_reference_rope_scalar_trace_parse_i64(dash + 1, &parsed)) {
++        return -1;
++    }
++    return (int) parsed;
++}
++
++static void bitnet_rs_reference_rope_scalar_trace_emit(
++        struct ggml_tensor * dst,
++        const float * src,
++        const float * dst_data,
++        int64_t i0,
++        int64_t i1,
++        int64_t i2,
++        int64_t n_dims,
++        bool neox,
++        const char * component,
++        float x0,
++        float x1,
++        float cos_theta,
++        float sin_theta,
++        float before_store,
++        float after_store) {
++    const char * path = getenv("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE");
++    if (path == NULL || path[0] == '\0') {
++        return;
++    }
++
++    int64_t wanted_layer = -1;
++    int64_t wanted_head = -1;
++    int64_t wanted_token = -1;
++    int64_t wanted_dim = -1;
++    if (!bitnet_rs_reference_rope_scalar_trace_parse_i64(getenv("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_LAYER"), &wanted_layer)
++            || !bitnet_rs_reference_rope_scalar_trace_parse_i64(getenv("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_KV_HEAD"), &wanted_head)
++            || !bitnet_rs_reference_rope_scalar_trace_parse_i64(getenv("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_TOKEN"), &wanted_token)
++            || !bitnet_rs_reference_rope_scalar_trace_parse_i64(getenv("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_DIM"), &wanted_dim)) {
++        return;
++    }
++
++    const char * tensor_name = ggml_get_name(dst);
++    const int layer = bitnet_rs_reference_rope_scalar_trace_layer_from_name(tensor_name);
++    if (layer != wanted_layer || i1 != wanted_head || i2 != wanted_token || i0 != wanted_dim) {
++        return;
++    }
++
++    FILE * file = fopen(path, "ab");
++    if (file == NULL) {
++        return;
++    }
++    const int64_t paired_dim = neox
++        ? (strcmp(component, "lower_x0_cos_minus_x1_sin") == 0 ? i0 + n_dims/2 : i0 - n_dims/2)
++        : (strcmp(component, "lower_x0_cos_minus_x1_sin") == 0 ? i0 + 1 : i0 - 1);
++    const intptr_t dst_offset = (const char *) dst_data - (const char *) dst->data;
++    const intptr_t src_offset = (const char *) src - (const char *) dst->src[0]->data;
++    fprintf(
++        file,
++        "{\"stage\":\"kcur_rope_scalar_probe\",\"tensor_name\":\"%s\",\"layer\":%d,\"kv_head\":%" PRId64 ",\"token\":%" PRId64 ",\"dim\":%" PRId64 ",\"paired_dim\":%" PRId64 ",\"component\":\"%s\",\"x0\":%.9g,\"x1\":%.9g,\"cos_theta\":%.9g,\"sin_theta\":%.9g,\"before_store_f32\":%.9g,\"before_store_bits_u32\":%" PRIu32 ",\"after_store_f32\":%.9g,\"after_store_bits_u32\":%" PRIu32 ",\"dst_offset_bytes\":%" PRIdPTR ",\"src_offset_bytes\":%" PRIdPTR "}\n",
++        tensor_name,
++        layer,
++        i1,
++        i2,
++        i0,
++        paired_dim,
++        component,
++        x0,
++        x1,
++        cos_theta,
++        sin_theta,
++        before_store,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(before_store),
++        after_store,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(after_store),
++        dst_offset,
++        src_offset);
++    fclose(file);
++}
++
+ static void ggml_compute_forward_rope_f32(
+         const struct ggml_compute_params * params,
+         struct ggml_tensor * dst,
+@@ -15032,8 +15136,16 @@ static void ggml_compute_forward_rope_f32(
+                         const float x0 = src[0];
+                         const float x1 = src[1];
+ 
+-                        dst_data[0] = x0*cos_theta - x1*sin_theta;
+-                        dst_data[1] = x0*sin_theta + x1*cos_theta;
++                        const float out0 = x0*cos_theta - x1*sin_theta;
++                        const float out1 = x0*sin_theta + x1*cos_theta;
++                        dst_data[0] = out0;
++                        dst_data[1] = out1;
++                        bitnet_rs_reference_rope_scalar_trace_emit(
++                            dst, src, dst_data + 0, i0 + 0, i1, i2, n_dims, is_neox,
++                            "lower_x0_cos_minus_x1_sin", x0, x1, cos_theta, sin_theta, out0, dst_data[0]);
++                        bitnet_rs_reference_rope_scalar_trace_emit(
++                            dst, src, dst_data + 1, i0 + 1, i1, i2, n_dims, is_neox,
++                            "upper_x0_sin_plus_x1_cos", x0, x1, cos_theta, sin_theta, out1, dst_data[1]);
+                     }
+                 } else {
+                     for (int64_t i0 = 0; i0 < n_dims; i0 += 2) {
+@@ -15048,7 +15160,15 @@ static void ggml_compute_forward_rope_f32(
+                         const float x0 = src[0];
+                         const float x1 = src[n_dims/2];
+ 
+-                        dst_data[0]        = x0*cos_theta - x1*sin_theta;
+-                        dst_data[n_dims/2] = x0*sin_theta + x1*cos_theta;
++                        const float out0 = x0*cos_theta - x1*sin_theta;
++                        const float out1 = x0*sin_theta + x1*cos_theta;
++                        dst_data[0]        = out0;
++                        dst_data[n_dims/2] = out1;
++                        bitnet_rs_reference_rope_scalar_trace_emit(
++                            dst, src, dst_data + 0, ic, i1, i2, n_dims, is_neox,
++                            "lower_x0_cos_minus_x1_sin", x0, x1, cos_theta, sin_theta, out0, dst_data[0]);
++                        bitnet_rs_reference_rope_scalar_trace_emit(
++                            dst, src, dst_data + n_dims/2, ic + n_dims/2, i1, i2, n_dims, is_neox,
++                            "upper_x0_sin_plus_x1_cos", x0, x1, cos_theta, sin_theta, out1, dst_data[n_dims/2]);
+                     }
+                 }
