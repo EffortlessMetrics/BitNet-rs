@@ -12027,6 +12027,18 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_key_kcur_cache_boundary(reference_records, f64_rust_records);
     let query_rope_delta =
         attention_query_rope_ref_layout_delta(reference_records, f64_rust_records);
+    let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
+        &score_raw_history,
+        &score_raw_live_tail,
+        &score_input_attribution,
+        &key_score_input_delta,
+        &key_score_input_history_delta,
+        &query_score_input_history_delta,
+        &score_key_history_effect,
+        &score_kcur_f16_effect,
+        &key_kcur_cache_boundary,
+        &query_rope_delta,
+    );
 
     let score_raw_history_material_count =
         value_u64(&score_raw_history, "/material_mismatch_count").unwrap_or(0);
@@ -12098,8 +12110,166 @@ fn layer_attention_norm_f64_probability_history_effect(
         "score_kcur_f16_effect": score_kcur_f16_effect,
         "key_kcur_cache_boundary": key_kcur_cache_boundary,
         "query_rope_delta": query_rope_delta,
+        "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
+    })
+}
+
+fn attention_norm_f64_score_history_residual_frontier(
+    score_raw_history: &Value,
+    score_raw_live_tail: &Value,
+    score_input_attribution: &Value,
+    key_score_input_delta: &Value,
+    key_score_input_history_delta: &Value,
+    query_score_input_history_delta: &Value,
+    score_key_history_effect: &Value,
+    score_kcur_f16_effect: &Value,
+    key_kcur_cache_boundary: &Value,
+    query_rope_delta: &Value,
+) -> Value {
+    let raw_material_count = value_u64(score_raw_history, "/material_mismatch_count").unwrap_or(0);
+    let raw_missing_count = value_u64(score_raw_history, "/missing_rust_head_count").unwrap_or(0);
+    let raw_live_material_count =
+        value_u64(score_raw_live_tail, "/live_material_mismatch_count").unwrap_or(0);
+    let score_input_missing_count =
+        value_u64(score_input_attribution, "/missing_input_count").unwrap_or(0);
+    let score_input_compared_count =
+        value_u64(score_input_attribution, "/compared_count").unwrap_or(0);
+    let key_current_missing_count =
+        value_u64(key_score_input_delta, "/missing_head_count").unwrap_or(0);
+    let key_history_missing_count =
+        value_u64(key_score_input_history_delta, "/missing_head_count").unwrap_or(0);
+    let query_history_missing_count =
+        value_u64(query_score_input_history_delta, "/missing_head_count").unwrap_or(0);
+    let key_history_bucket_mismatch_count =
+        value_u64(key_score_input_history_delta, "/total_f16_bucket_mismatch_count").unwrap_or(0);
+    let query_history_bucket_mismatch_count =
+        value_u64(query_score_input_history_delta, "/total_f16_bucket_mismatch_count").unwrap_or(0);
+    let key_history_max_abs =
+        value_f64(key_score_input_history_delta, "/max_abs_delta").unwrap_or(0.0);
+    let query_history_max_abs =
+        value_f64(query_score_input_history_delta, "/max_abs_delta").unwrap_or(0.0);
+    let key_current_max_abs = value_f64(key_score_input_delta, "/max_abs_delta").unwrap_or(0.0);
+    let score_key_best_abs =
+        value_f64(score_key_history_effect, "/max_best_abs_delta").unwrap_or(0.0);
+    let score_key_actual_abs =
+        value_f64(score_key_history_effect, "/max_actual_score_delta_abs").unwrap_or(0.0);
+    let score_kcur_shift_abs =
+        value_f64(score_kcur_f16_effect, "/max_shift_explanation_abs_delta").unwrap_or(0.0);
+    let score_kcur_actual_abs =
+        value_f64(score_kcur_f16_effect, "/max_actual_score_delta_abs").unwrap_or(0.0);
+    let key_kcur_boundary_clean =
+        key_kcur_cache_boundary.pointer("/classification").and_then(Value::as_str)
+            == Some("key_kcur_cache_boundary_clean");
+    let query_rope_max_abs = value_f64(query_rope_delta, "/delta/max_abs_delta")
+        .or_else(|| value_f64(query_rope_delta, "/max_abs_delta"))
+        .unwrap_or(0.0);
+    let score_history_drift_present = raw_material_count > 0 || raw_live_material_count > 0;
+    let missing_inputs = raw_missing_count
+        + score_input_missing_count
+        + key_current_missing_count
+        + key_history_missing_count
+        + query_history_missing_count;
+    let qk_history_bucket_drift =
+        key_history_bucket_mismatch_count > 0 || query_history_bucket_mismatch_count > 0;
+    let qk_history_numeric_drift = key_history_max_abs > 1.0e-6 || query_history_max_abs > 1.0e-6;
+    let current_key_numeric_drift = key_current_max_abs > 1.0e-6;
+    let score_key_effect_residual = score_key_best_abs > 1.0e-6;
+    let score_kcur_effect_residual = score_kcur_shift_abs > 1.0e-6;
+
+    let classification = if missing_inputs > 0 || score_input_compared_count == 0 {
+        "f64_score_history_frontier_missing_inputs"
+    } else if !score_history_drift_present {
+        "f64_score_history_frontier_clean"
+    } else if qk_history_bucket_drift {
+        "f64_score_history_frontier_qk_score_input_history_bucket_drift"
+    } else if qk_history_numeric_drift {
+        "f64_score_history_frontier_qk_score_input_history_numeric_drift"
+    } else if current_key_numeric_drift {
+        "f64_score_history_frontier_current_key_score_input_drift"
+    } else if score_key_effect_residual || score_kcur_effect_residual {
+        "f64_score_history_frontier_qk_f16_probe_residual"
+    } else {
+        "f64_score_history_frontier_raw_score_residual_unpinned"
+    };
+
+    let next_diagnostic = match classification {
+        "f64_score_history_frontier_missing_inputs" => {
+            "capture missing f64 score, Q/K score-input, and score-effect rows before changing score math"
+        }
+        "f64_score_history_frontier_clean" => {
+            "raw f64 score history is clean; inspect probability formation or value-mix source rows"
+        }
+        "f64_score_history_frontier_qk_score_input_history_bucket_drift" => {
+            "localize selected f64 score row Q/K score-input bucket drift before changing score accumulation or softmax"
+        }
+        "f64_score_history_frontier_qk_score_input_history_numeric_drift" => {
+            "localize selected f64 score row Q/K score-input numeric drift before changing score accumulation or softmax"
+        }
+        "f64_score_history_frontier_current_key_score_input_drift" => {
+            "localize current key score-input drift before changing raw score math"
+        }
+        "f64_score_history_frontier_qk_f16_probe_residual" => {
+            "pin the remaining Q/K F16 score-input residual before changing production score math"
+        }
+        _ => {
+            "drill into the first material f64 raw score row before changing score, softmax, or value-mix math"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 raw score-history residual frontier is diagnostic-only evidence for choosing the next score-formation optic after f64 attention RMSNorm clears the selected K bucket; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "score_history_drift_present": score_history_drift_present,
+        "missing_inputs": missing_inputs,
+        "raw_material_mismatch_count": raw_material_count,
+        "raw_live_material_mismatch_count": raw_live_material_count,
+        "raw_missing_rust_head_count": raw_missing_count,
+        "score_input_compared_count": score_input_compared_count,
+        "score_input_missing_count": score_input_missing_count,
+        "key_current_missing_count": key_current_missing_count,
+        "key_history_missing_count": key_history_missing_count,
+        "query_history_missing_count": query_history_missing_count,
+        "key_history_f16_bucket_mismatch_count": key_history_bucket_mismatch_count,
+        "query_history_f16_bucket_mismatch_count": query_history_bucket_mismatch_count,
+        "key_history_max_abs_delta": key_history_max_abs,
+        "query_history_max_abs_delta": query_history_max_abs,
+        "key_current_max_abs_delta": key_current_max_abs,
+        "score_key_history_best_variant_counts": score_key_history_effect.pointer("/best_variant_counts").cloned().unwrap_or(Value::Null),
+        "score_key_history_max_actual_score_delta_abs": score_key_actual_abs,
+        "score_key_history_max_best_abs_delta": score_key_best_abs,
+        "score_kcur_f16_reference_best_counts": score_kcur_f16_effect.pointer("/reference_best_counts").cloned().unwrap_or(Value::Null),
+        "score_kcur_f16_rust_best_counts": score_kcur_f16_effect.pointer("/rust_best_counts").cloned().unwrap_or(Value::Null),
+        "score_kcur_f16_max_actual_score_delta_abs": score_kcur_actual_abs,
+        "score_kcur_f16_max_shift_explanation_abs_delta": score_kcur_shift_abs,
+        "key_kcur_cache_boundary_clean": key_kcur_boundary_clean,
+        "query_rope_max_abs_delta": query_rope_max_abs,
+        "first_material_score_head": compact_head_delta_row(score_raw_history.pointer("/first_material_head").unwrap_or(&Value::Null)),
+        "first_live_material_score_head": compact_head_delta_row(score_raw_live_tail.pointer("/first_live_material_head").unwrap_or(&Value::Null)),
+        "first_material_key_history_head": compact_head_delta_row(key_score_input_history_delta.pointer("/first_material_head").unwrap_or(&Value::Null)),
+        "first_material_query_history_head": compact_head_delta_row(query_score_input_history_delta.pointer("/first_material_head").unwrap_or(&Value::Null)),
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn compact_head_delta_row(row: &Value) -> Value {
+    if row.is_null() {
+        return Value::Null;
+    }
+
+    json!({
+        "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "status": row.pointer("/status").cloned().unwrap_or(Value::Null),
+        "material_mismatch": row.pointer("/material_mismatch").cloned().unwrap_or(Value::Null),
+        "reference_stage": row.pointer("/reference_stage").cloned().unwrap_or(Value::Null),
+        "rust_stage": row.pointer("/rust_stage").cloned().unwrap_or(Value::Null),
+        "delta": row.pointer("/delta").cloned().unwrap_or(Value::Null),
+        "live_delta": row.pointer("/live_delta").cloned().unwrap_or(Value::Null),
+        "scope": row.pointer("/scope").cloned().unwrap_or(Value::Null),
     })
 }
 
@@ -39102,6 +39272,136 @@ mod tests {
             frontier.pointer("/next_diagnostic"),
             Some(&json!(
                 "localize f64 raw score-history drift before changing value-mix, softmax, or RMSNorm production math"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_score_history_residual_frontier_points_to_qk_history_buckets() {
+        let score_raw_history = json!({
+            "material_mismatch_count": 20,
+            "missing_rust_head_count": 0,
+            "first_material_head": {
+                "head": 0,
+                "status": "material_mismatch",
+                "reference_stage": "kq_head0_history_ref_layout",
+                "rust_stage": "attention_scores_raw_head0_history_ref_layout",
+                "reference": {
+                    "first_values": [1.0, 2.0, 3.0]
+                },
+                "rust": {
+                    "first_values": [1.0, 2.0, 3.0]
+                },
+                "delta": {
+                    "max_abs_delta": 0.006005287170410156_f64
+                },
+                "material_mismatch": true
+            }
+        });
+        let score_raw_live_tail = json!({
+            "live_material_mismatch_count": 20,
+            "missing_rust_head_count": 0,
+            "first_live_material_head": {
+                "head": 0,
+                "status": "live_material_mismatch",
+                "live_delta": {
+                    "max_abs_delta": 0.006005287170410156_f64
+                }
+            }
+        });
+        let score_input_attribution = json!({
+            "compared_count": 20,
+            "missing_input_count": 0
+        });
+        let key_score_input_delta = json!({
+            "missing_head_count": 0,
+            "max_abs_delta": 0.00390625_f64
+        });
+        let key_score_input_history_delta = json!({
+            "missing_head_count": 0,
+            "total_f16_bucket_mismatch_count": 8,
+            "max_abs_delta": 0.003902435302734375_f64,
+            "first_material_head": {
+                "head": 0,
+                "kv_head": 0,
+                "status": "compared",
+                "delta": {
+                    "max_abs_delta": 0.003856658935546875_f64,
+                    "first_f16_bucket_mismatch_layout": {
+                        "dim": 64,
+                        "token": 10
+                    }
+                }
+            }
+        });
+        let query_score_input_history_delta = json!({
+            "missing_head_count": 0,
+            "total_f16_bucket_mismatch_count": 3,
+            "max_abs_delta": 0.0039052963256835938_f64,
+            "first_material_head": {
+                "head": 0,
+                "status": "compared",
+                "delta": {
+                    "max_abs_delta": 0.003879547119140625_f64
+                }
+            }
+        });
+        let score_key_history_effect = json!({
+            "best_variant_counts": {
+                "reference_q_key_f16": 20
+            },
+            "max_actual_score_delta_abs": 0.003864288330078125_f64,
+            "max_best_abs_delta": 0.001148223876953125_f64
+        });
+        let score_kcur_f16_effect = json!({
+            "reference_best_counts": {
+                "reference_kcur_key_f16": 20
+            },
+            "rust_best_counts": {
+                "reference_kcur_key_f16": 20
+            },
+            "max_actual_score_delta_abs": 0.003864288330078125_f64,
+            "max_shift_explanation_abs_delta": 0.0335235595703125_f64
+        });
+        let key_kcur_cache_boundary = json!({
+            "classification": "key_kcur_cache_boundary_clean"
+        });
+        let query_rope_delta = json!({
+            "delta": {
+                "max_abs_delta": 0.0
+            }
+        });
+
+        let frontier = attention_norm_f64_score_history_residual_frontier(
+            &score_raw_history,
+            &score_raw_live_tail,
+            &score_input_attribution,
+            &key_score_input_delta,
+            &key_score_input_history_delta,
+            &query_score_input_history_delta,
+            &score_key_history_effect,
+            &score_kcur_f16_effect,
+            &key_kcur_cache_boundary,
+            &query_rope_delta,
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_score_history_frontier_qk_score_input_history_bucket_drift"))
+        );
+        assert_eq!(frontier.pointer("/key_history_f16_bucket_mismatch_count"), Some(&json!(8)));
+        assert_eq!(frontier.pointer("/query_history_f16_bucket_mismatch_count"), Some(&json!(3)));
+        assert_eq!(frontier.pointer("/first_material_score_head/reference/first_values"), None);
+        assert_eq!(
+            frontier.pointer("/first_material_score_head/delta/max_abs_delta"),
+            Some(&json!(0.006005287170410156_f64))
+        );
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize selected f64 score row Q/K score-input bucket drift before changing score accumulation or softmax"
             ))
         );
     }
