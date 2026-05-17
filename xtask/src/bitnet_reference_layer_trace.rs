@@ -7491,6 +7491,12 @@ fn compare_reference_to_rust_with_records_with_model(
         &report["attention_reference_score_input_operand_policy"],
         &report["attention_selected_historical_rope_epsilon_materiality"],
     );
+    report["attention_selected_key_score_input_capture_source"] =
+        attention_selected_key_score_input_capture_source(
+            &report["attention_reference_score_input_operand_policy"],
+            &report["attention_rust_score_input_operand_drift"],
+            &report["attention_selected_historical_rope_epsilon_materiality"],
+        );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
             reference_records,
@@ -23472,6 +23478,202 @@ fn attention_rust_score_input_operand_drift(operand_policy: &Value, materiality:
     })
 }
 
+fn attention_selected_key_score_input_capture_source(
+    operand_policy: &Value,
+    operand_drift: &Value,
+    materiality: &Value,
+) -> Value {
+    let operand_rows = operand_policy.pointer("/rows").and_then(Value::as_array);
+    let drift_rows = operand_drift.pointer("/rows").and_then(Value::as_array);
+    let materiality_rows = materiality.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut raw_capture_count = 0usize;
+    let mut post_rope_f16_view_count = 0usize;
+    let mut f16_bucket_crossing_count = 0usize;
+    let mut score_key_stage_f16_count = 0usize;
+
+    if let Some(drift_rows) = drift_rows {
+        for drift_row in drift_rows {
+            if drift_row.pointer("/classification").and_then(Value::as_str)
+                != Some("selected_score_input_operand_drift_key_bucket_crossing")
+            {
+                continue;
+            }
+            let head = drift_row.pointer("/head").and_then(Value::as_u64);
+            let key_slot = drift_row.pointer("/key_slot").and_then(Value::as_u64);
+            let query_token = drift_row.pointer("/query_token").and_then(Value::as_u64);
+            let operand_row = find_qk_recompute_row(operand_rows, head, key_slot, query_token);
+            let materiality_row =
+                find_qk_recompute_row(materiality_rows, head, key_slot, query_token);
+            let product_source = materiality_row
+                .and_then(|row| row.pointer("/materiality/product_bucket_source"))
+                .unwrap_or(&Value::Null);
+            let source_policy = materiality_row
+                .and_then(|row| row.pointer("/materiality/score_product_source_policy"))
+                .unwrap_or(&Value::Null);
+            let epsilon_probe = materiality_row
+                .and_then(|row| row.pointer("/epsilon_probe"))
+                .unwrap_or(&Value::Null);
+            let key_stage = operand_row
+                .and_then(|row| row.pointer("/reference_stage_provenance/key_stage"))
+                .unwrap_or(&Value::Null);
+            let product_reference_key =
+                product_source.pointer("/product_reference_key").and_then(Value::as_f64);
+            let product_rust_key =
+                product_source.pointer("/product_rust_key").and_then(Value::as_f64);
+            let reference_post_rope_raw =
+                epsilon_probe.pointer("/post_rope/reference_capture").and_then(Value::as_f64);
+            let rust_post_rope_raw =
+                epsilon_probe.pointer("/post_rope/rust_capture").and_then(Value::as_f64);
+            let reference_post_rope_f16 =
+                epsilon_probe.pointer("/post_rope_bucket/left_f16_value").and_then(Value::as_f64);
+            let rust_post_rope_f16 =
+                epsilon_probe.pointer("/post_rope_bucket/right_f16_value").and_then(Value::as_f64);
+            let bucket_crossing = epsilon_probe
+                .pointer("/post_rope_bucket/f16_bucket_match")
+                .and_then(Value::as_bool)
+                == Some(false);
+            let reference_matches_raw = product_reference_key
+                .zip(reference_post_rope_raw)
+                .is_some_and(|(product, raw)| (product - raw).abs() <= 1.0e-9);
+            let rust_matches_raw = product_rust_key
+                .zip(rust_post_rope_raw)
+                .is_some_and(|(product, raw)| (product - raw).abs() <= 1.0e-9);
+            let reference_matches_f16 = product_reference_key
+                .zip(reference_post_rope_f16)
+                .is_some_and(|(product, bucket)| (product - bucket).abs() <= 1.0e-9);
+            let rust_matches_f16 = product_rust_key
+                .zip(rust_post_rope_f16)
+                .is_some_and(|(product, bucket)| (product - bucket).abs() <= 1.0e-9);
+            let score_key_stage_is_f16 =
+                key_stage.pointer("/dtype").and_then(Value::as_str) == Some("f16");
+            let mut blocked_reasons = Vec::<String>::new();
+            if operand_row.is_none() {
+                blocked_reasons.push("reference_operand_policy_row_missing".to_string());
+            }
+            if materiality_row.is_none() {
+                blocked_reasons.push("selected_materiality_row_missing".to_string());
+            }
+            if product_reference_key.is_none() || product_rust_key.is_none() {
+                blocked_reasons.push("selected_product_key_values_missing".to_string());
+            }
+            if reference_post_rope_raw.is_none() || rust_post_rope_raw.is_none() {
+                blocked_reasons.push("selected_post_rope_raw_capture_missing".to_string());
+            }
+            if reference_post_rope_f16.is_none() || rust_post_rope_f16.is_none() {
+                blocked_reasons.push("selected_post_rope_f16_bucket_missing".to_string());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                "selected_key_score_input_capture_source_missing"
+            } else if reference_matches_raw && rust_matches_raw {
+                "selected_key_score_input_capture_source_raw_post_rope"
+            } else if reference_matches_f16 && rust_matches_f16 && score_key_stage_is_f16 {
+                "selected_key_score_input_capture_source_post_rope_f16_view"
+            } else if reference_matches_f16 && rust_matches_f16 {
+                "selected_key_score_input_capture_source_post_rope_f16_value"
+            } else {
+                "selected_key_score_input_capture_source_unpinned"
+            };
+
+            compared_count += 1;
+            match row_classification {
+                "selected_key_score_input_capture_source_missing" => missing_context_count += 1,
+                "selected_key_score_input_capture_source_raw_post_rope" => raw_capture_count += 1,
+                "selected_key_score_input_capture_source_post_rope_f16_view"
+                | "selected_key_score_input_capture_source_post_rope_f16_value" => {
+                    post_rope_f16_view_count += 1;
+                }
+                _ => {}
+            }
+            if bucket_crossing {
+                f16_bucket_crossing_count += 1;
+            }
+            if score_key_stage_is_f16 {
+                score_key_stage_f16_count += 1;
+            }
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": head,
+                "kv_head": drift_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": query_token,
+                "contributor_dim": drift_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "operand_row_present": operand_row.is_some(),
+                "materiality_row_present": materiality_row.is_some(),
+                "score_key_stage_is_f16": score_key_stage_is_f16,
+                "score_key_stage": key_stage.clone(),
+                "f16_bucket_crossing": bucket_crossing,
+                "product_reference_key": product_reference_key,
+                "product_rust_key": product_rust_key,
+                "reference_post_rope_raw": reference_post_rope_raw,
+                "rust_post_rope_raw": rust_post_rope_raw,
+                "reference_post_rope_f16": reference_post_rope_f16,
+                "rust_post_rope_f16": rust_post_rope_f16,
+                "reference_product_matches_raw_post_rope": reference_matches_raw,
+                "rust_product_matches_raw_post_rope": rust_matches_raw,
+                "reference_product_matches_post_rope_f16": reference_matches_f16,
+                "rust_product_matches_post_rope_f16": rust_matches_f16,
+                "product_bucket_source": product_source.clone(),
+                "score_product_source_policy": source_policy.clone(),
+            }));
+        }
+    }
+
+    let classification = if compared_count == 0 {
+        "no_selected_key_bucket_crossing_operand_rows"
+    } else if missing_context_count == compared_count {
+        "selected_key_score_input_capture_source_missing"
+    } else if raw_capture_count == compared_count {
+        "selected_key_score_input_capture_source_raw_post_rope"
+    } else if post_rope_f16_view_count == compared_count
+        && score_key_stage_f16_count == compared_count
+    {
+        "selected_key_score_input_capture_source_post_rope_f16_view"
+    } else if post_rope_f16_view_count == compared_count {
+        "selected_key_score_input_capture_source_post_rope_f16_value"
+    } else {
+        "selected_key_score_input_capture_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_key_score_input_capture_source_post_rope_f16_view" => {
+            "pin whether Rust and reference should both feed score products from post-RoPE F16 key views before changing runtime math"
+        }
+        "selected_key_score_input_capture_source_post_rope_f16_value" => {
+            "pin score key capture dtype/provenance before changing runtime math"
+        }
+        "selected_key_score_input_capture_source_raw_post_rope" => {
+            "move upstream from score-input capture to post-RoPE raw key generation before changing runtime math"
+        }
+        "selected_key_score_input_capture_source_missing" => {
+            "capture selected key score-input and post-RoPE source values before changing runtime math"
+        }
+        "no_selected_key_bucket_crossing_operand_rows" => {
+            "classify selected Rust/reference score-input operand drift before inspecting key capture source"
+        }
+        _ => "keep selected key score-input capture source diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected key score-input capture source is diagnostic-only evidence for whether the score product consumes raw post-RoPE key values or an F16 score-input view around the selected bucket crossing; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "compared_count": compared_count,
+        "missing_context_count": missing_context_count,
+        "raw_capture_count": raw_capture_count,
+        "post_rope_f16_view_count": post_rope_f16_view_count,
+        "f16_bucket_crossing_count": f16_bucket_crossing_count,
+        "score_key_stage_f16_count": score_key_stage_f16_count,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -36276,6 +36478,103 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "inspect selected key score-input capture source around the post-RoPE F16 bucket boundary before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_key_score_input_capture_source_reports_post_rope_f16_view() {
+        let operand_policy = json!({
+            "rows": [
+                {
+                    "classification": "reference_score_input_capture_tolerance_pinned_operand",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "reference_stage_provenance": {
+                        "key_stage": {
+                            "present": true,
+                            "stage": "k_score_input_head0_history_ref_layout",
+                            "dtype": "f16",
+                        }
+                    }
+                }
+            ]
+        });
+        let operand_drift = json!({
+            "rows": [
+                {
+                    "classification": "selected_score_input_operand_drift_key_bucket_crossing",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+        let materiality = json!({
+            "rows": [
+                {
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "epsilon_probe": {
+                        "post_rope": {
+                            "reference_capture": 1.4809578657150269_f64,
+                            "rust_capture": 1.4809563159942627_f64,
+                        },
+                        "post_rope_bucket": {
+                            "f16_bucket_match": false,
+                            "left_f16_value": 1.4814453125_f64,
+                            "right_f16_value": 1.48046875_f64,
+                        }
+                    },
+                    "materiality": {
+                        "product_bucket_source": {
+                            "product_reference_key": 1.4814453125_f64,
+                            "product_rust_key": 1.48046875_f64,
+                        },
+                        "score_product_source_policy": {
+                            "score_input_capture_uses_post_rope_f16_bucket_values": true,
+                        }
+                    }
+                }
+            ]
+        });
+
+        let report = attention_selected_key_score_input_capture_source(
+            &operand_policy,
+            &operand_drift,
+            &materiality,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_score_input_capture_source_post_rope_f16_view"))
+        );
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/post_rope_f16_view_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/f16_bucket_crossing_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/score_key_stage_f16_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/reference_product_matches_raw_post_rope"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/reference_product_matches_post_rope_f16"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin whether Rust and reference should both feed score products from post-RoPE F16 key views before changing runtime math"
             ))
         );
     }
