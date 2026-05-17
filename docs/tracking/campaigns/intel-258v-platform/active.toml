@@ -4404,8 +4404,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BENCH-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/lunar-lake/LNL258V-BENCH-002-total-response"
+pr = 5261
+head_sha = "5b2060ee62e001dd95a8d0f966c0d2296f6be9a6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

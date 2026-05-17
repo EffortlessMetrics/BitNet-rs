@@ -1,0 +1,23 @@
+timestamp = "2026-05-17T03:22:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5261
+branch = "codex/lunar-lake/LNL258V-BENCH-002-total-response"
+head_sha = "5b2060ee62e001dd95a8d0f966c0d2296f6be9a6"
+summary = "Opened LNL258V-BENCH-002 to derive dense Qwen CPU total-response timing from existing receipt fields."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The PR removes the missing-total-response blocker from promoted dense Qwen CPU route-profile and cold/warm benchmark timing by deriving total_response_ms from existing timing fields.",
+  "No new inference, route promotion, speedup, acceleration, OpenVINO GPU/NPU promotion, or BitNet QK256/I2_S behavior change is in scope.",
+]
