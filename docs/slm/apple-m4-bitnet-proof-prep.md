@@ -3,10 +3,12 @@
 `M4-CONT-005` prepared the M4 Mac mini side of the BitNet proof path. The same
 command now has two bounded modes: artifact preflight and strict receipt
 validation. Receipt validation can verify a completed Apple M4 BitNet
-`answer-corpus` proof. BitNet is now limited to explicit one-shot
-`bitnet mac ask` and receipt-gated `bitnet mac bitnet-warm` runs with the
-accepted GGUF plus external tokenizer; `bitnet mac chat` and `bitnet mac serve`
-remain disabled for BitNet.
+`answer-corpus` proof. BitNet user routes stay explicit and receipt-gated:
+one-shot `bitnet mac ask`, fixed/variable `bitnet mac bitnet-warm`, gated
+`bitnet mac chat --model-family bitnet`, and gated
+`bitnet mac serve --model-family bitnet` all require the accepted GGUF plus
+external tokenizer, with separate chat and serve gates preserving narrow claim
+boundaries.
 
 ## Command Contract
 
@@ -226,6 +228,14 @@ accepted BitNet M4 CPU/NEON chat route and keeps BitNet serve, full Metal,
 QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, and broad
 Apple Silicon performance claims disabled.
 
+BitNet serve is a separate gate. A ready `bitnet_apple_m4_serve_gate` must
+consume the gated chat receipt plus BitNet serve streaming, timeout/failure,
+and `mac serve-check --completion` receipts before
+`bitnet mac serve --model-family bitnet` can start. The successful route writes
+`bitnet_apple_m4_serve_completion` receipts and remains a local service wrapper
+only: not production hosting, not broad OpenAI compatibility, not full Metal,
+not QK256, and not a broad performance claim.
+
 ## Accepted Artifact Input
 
 The `--accepted-artifact` receipt must come from the Apple BitNet artifact
@@ -303,6 +313,7 @@ Allowed now:
 Not allowed now:
 
 - Broad BitNet local-answer or chat quality works on M4.
-- BitNet `mac chat` or `mac serve` works.
+- Ungated BitNet `mac chat` or `mac serve` works.
+- BitNet serve is production hosting or broad OpenAI compatibility.
 - Apple Metal BitNet inference works.
 - QK256 works on Apple Silicon.

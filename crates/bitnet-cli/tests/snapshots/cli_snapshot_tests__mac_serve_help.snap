@@ -2,46 +2,103 @@
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
 expression: help
 ---
-Serve local M4 dense-SLM health and readiness endpoints without generation
+Serve local M4 health and readiness endpoints plus completions
 
 Usage: bitnet mac serve [OPTIONS]
 
 Options:
   -c, --config <PATH>
           Configuration file path
+
+      --model-family <MODEL_FAMILY>
+          Model family for the local service route. BitNet requires --bitnet-serve-gate-receipt
+
+          Possible values:
+          - dense-slm: Serve the supported dense Qwen SLM route
+          - bitnet:    Serve the gate-required accepted BitNet M4 CPU/NEON route
+
+          [default: dense-slm]
+
       --model-id <MODEL_ID>
-          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
-      --cache-dir <PATH>
-          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
-      --device <DEVICE>
-          M4 server device route. Only apple-m4-cpu-neon is supported for full answers [default: apple-m4-cpu-neon]
+          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact
+
+          [default: qwen2.5-0.5b-instruct-q8_0]
+
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)
-      --host <HOST>
-          Host to bind. Defaults to loopback for local appliance use [default: 127.0.0.1]
+
+      --model-path <PATH>
+          Explicit accepted BitNet GGUF path. Only used with --model-family bitnet
+
       --threads <N>
           Number of CPU threads
+
+      --tokenizer <PATH>
+          Explicit accepted external BitNet tokenizer path. Only used with --model-family bitnet
+
       --batch-size <SIZE>
           Batch size for processing
+
+      --bitnet-serve-gate-receipt <PATH>
+          Ready BitNet serve gate receipt required before --model-family bitnet can run
+
+      --cache-dir <PATH>
+          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
+
+      --device <DEVICE>
+          M4 server device route. Only apple-m4-cpu-neon is supported for full answers
+
+          [default: apple-m4-cpu-neon]
+
+      --host <HOST>
+          Host to bind. Defaults to loopback for local appliance use
+
+          [default: 127.0.0.1]
+
       --port <PORT>
-          Port to bind [default: 8080]
+          Port to bind
+
+          [default: 8080]
+
       --strict
           Require strict cache, tokenizer, backend, and fallback behavior
+
       --stream
           Stream by default for later completion endpoints; health/ready do not generate
+
       --max-new-tokens <MAX_NEW_TOKENS>
-          Default maximum new tokens for completion requests that omit max_tokens [default: 64] [aliases: --max-tokens, --n-predict]
+          Default maximum new tokens for completion requests that omit max_tokens
+
+          [default: 64]
+          [aliases: --max-tokens, --n-predict]
+
       --temperature <TEMPERATURE>
-          Default completion temperature [default: 0]
+          Default completion temperature
+
+          [default: 0]
+
       --top-k <TOP_K>
-          Default top-k setting [default: 1]
+          Default top-k setting
+
+          [default: 1]
+
       --top-p <TOP_P>
-          Default nucleus sampling top-p setting [default: 1]
+          Default nucleus sampling top-p setting
+
+          [default: 1]
+
       --repetition-penalty <REPETITION_PENALTY>
-          Default repetition penalty [default: 1.1]
+          Default repetition penalty
+
+          [default: 1.1]
+
       --seed <SEED>
           Optional deterministic sampling seed
+
       --receipt-dir <PATH>
-          Directory where later request receipts will be exported [default: target/apple-m4-local-server/receipts]
+          Directory where later request receipts will be exported
+
+          [default: target/apple-m4-local-server/receipts]
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')
