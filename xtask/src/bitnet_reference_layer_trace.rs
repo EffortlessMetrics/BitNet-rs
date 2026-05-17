@@ -22400,6 +22400,7 @@ fn attention_selected_key_historical_projection_rope_source(
     let mut before_rope_input_count = 0usize;
     let mut rust_rope_delta_count = 0usize;
     let mut reference_rope_delta_count = 0usize;
+    let mut post_rope_bucket_sensitivity_count = 0usize;
     let mut historical_source_clean_count = 0usize;
     let mut unpinned_count = 0usize;
 
@@ -22486,6 +22487,7 @@ fn attention_selected_key_historical_projection_rope_source(
             let mut reference_replay_to_post_f16 = Value::Null;
             let mut rust_replay_to_post_f16 = Value::Null;
             let mut reference_post_vs_rust_post_f16 = Value::Null;
+            let mut post_rope_f16_bucket_sensitivity = Value::Null;
             let mut selected_dim_values = Value::Null;
             let mut classification = "selected_key_historical_projection_rope_source_missing_input";
             let mut status = "blocked";
@@ -22541,6 +22543,26 @@ fn attention_selected_key_historical_projection_rope_source(
                         f16_bucket_mismatch_count(&reference_replay_to_post_f16);
                     let post_rope_bucket_count =
                         f16_bucket_mismatch_count(&reference_post_vs_rust_post_f16);
+                    if post_rope_bucket_count > 0 {
+                        let first_bucket = reference_post_vs_rust_post_f16
+                            .pointer("/first_f16_bucket_mismatch")
+                            .cloned()
+                            .unwrap_or(Value::Null);
+                        let first_bucket_dim =
+                            first_bucket.pointer("/index").and_then(Value::as_u64);
+                        let selected_contributor_dim =
+                            contributor_dim.and_then(|dim| u64::try_from(dim).ok());
+                        post_rope_f16_bucket_sensitivity = json!({
+                            "projection_f16_bucket_match": projection_bucket_count == 0,
+                            "rust_replay_to_post_f16_bucket_match": rust_replay_bucket_count == 0,
+                            "reference_replay_to_post_f16_bucket_match": reference_replay_bucket_count == 0,
+                            "post_rope_f16_bucket_mismatch_count": post_rope_bucket_count,
+                            "first_post_rope_f16_bucket_mismatch": first_bucket,
+                            "first_post_rope_f16_bucket_mismatch_dim": first_bucket_dim,
+                            "selected_contributor_dim": selected_contributor_dim,
+                            "selected_contributor_dim_matches_first_bucket": first_bucket_dim == selected_contributor_dim,
+                        });
+                    }
 
                     classification =
                         if reference_projection_token.is_none() && post_rope_bucket_count > 0 {
@@ -22558,6 +22580,12 @@ fn attention_selected_key_historical_projection_rope_source(
                         } else if post_rope_bucket_count == 0 {
                             historical_source_clean_count += 1;
                             "selected_key_historical_projection_rope_source_clean"
+                        } else if projection_bucket_count == 0
+                            && rust_replay_bucket_count == 0
+                            && reference_replay_bucket_count == 0
+                        {
+                            post_rope_bucket_sensitivity_count += 1;
+                            "selected_key_historical_post_rope_f16_bucket_sensitivity"
                         } else {
                             unpinned_count += 1;
                             "selected_key_historical_projection_rope_source_unpinned"
@@ -22599,6 +22627,7 @@ fn attention_selected_key_historical_projection_rope_source(
                 "rust_runtime_replay_to_post_rope_f16": rust_replay_to_post_f16,
                 "reference_runtime_replay_to_post_rope_f16": reference_replay_to_post_f16,
                 "reference_post_rope_vs_rust_post_rope_f16": reference_post_vs_rust_post_f16,
+                "post_rope_f16_bucket_sensitivity": post_rope_f16_bucket_sensitivity,
                 "selected_dim_values": selected_dim_values,
             }));
         }
@@ -22616,6 +22645,8 @@ fn attention_selected_key_historical_projection_rope_source(
         "selected_key_historical_reference_rope_delta"
     } else if missing_input_count > 0 {
         "selected_key_historical_projection_rope_source_missing_input"
+    } else if post_rope_bucket_sensitivity_count > 0 {
+        "selected_key_historical_post_rope_f16_bucket_sensitivity"
     } else if historical_source_clean_count == selected_count {
         "selected_key_historical_projection_rope_source_clean"
     } else {
@@ -22633,6 +22664,9 @@ fn attention_selected_key_historical_projection_rope_source(
         }
         "selected_key_historical_reference_rope_delta" => {
             "pin reference historical K RoPE arithmetic before changing runtime math"
+        }
+        "selected_key_historical_post_rope_f16_bucket_sensitivity" => {
+            "probe exact selected historical RoPE epsilon before changing runtime math"
         }
         "selected_key_historical_projection_rope_source_clean" => {
             "inspect selected score/key expansion despite clean historical projection/RoPE source"
@@ -22660,6 +22694,7 @@ fn attention_selected_key_historical_projection_rope_source(
         "before_rope_input_count": before_rope_input_count,
         "rust_rope_delta_count": rust_rope_delta_count,
         "reference_rope_delta_count": reference_rope_delta_count,
+        "post_rope_bucket_sensitivity_count": post_rope_bucket_sensitivity_count,
         "historical_source_clean_count": historical_source_clean_count,
         "unpinned_count": unpinned_count,
         "reference_projection_stage_prefix": "k_projection_history_kv_head",
@@ -34777,6 +34812,136 @@ mod tests {
             Some(&json!(0))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_key_historical_projection_source_reports_post_rope_bucket_sensitivity() {
+        let selected_key_source = json!({
+            "rows": [
+                {
+                    "status": "compared",
+                    "classification": "selected_key_drift_enters_before_cache_store",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+        let key_slot = 13usize;
+        let token_count = 14usize;
+        let head_dim = 128usize;
+        let paired_dim = 13usize;
+        let contributor_dim = 77usize;
+        let runtime_variant = runtime_rope_variant().expect("runtime variant");
+        let mut reference_projection_token = vec![0.0f32; head_dim];
+        let mut rust_projection_token = vec![0.0f32; head_dim];
+        reference_projection_token[paired_dim] = 3.8514514;
+        reference_projection_token[contributor_dim] = -2.501475811;
+        rust_projection_token[paired_dim] = 3.8514478;
+        rust_projection_token[contributor_dim] = -2.501473665;
+        let reference_post_token = apply_rope_split_head(
+            &reference_projection_token,
+            key_slot,
+            head_dim,
+            runtime_variant.base,
+            runtime_variant.arithmetic,
+        )
+        .expect("reference post-rope replay");
+        let rust_post_token = apply_rope_split_head(
+            &rust_projection_token,
+            key_slot,
+            head_dim,
+            runtime_variant.base,
+            runtime_variant.arithmetic,
+        )
+        .expect("rust post-rope replay");
+
+        let mut reference_projection_values = vec![0.0; head_dim * token_count];
+        let mut rust_projection_values = vec![0.0; head_dim * token_count];
+        let mut reference_post_values = vec![0.0; head_dim * token_count];
+        let mut rust_post_values = vec![0.0; head_dim * token_count];
+        for dim in 0..head_dim {
+            reference_projection_values[dim * token_count + key_slot] =
+                reference_projection_token[dim];
+            rust_projection_values[dim * token_count + key_slot] = rust_projection_token[dim];
+            reference_post_values[dim * token_count + key_slot] = reference_post_token[dim];
+            rust_post_values[dim * token_count + key_slot] = rust_post_token[dim];
+        }
+        let mut reference_projection = test_reference_trace_record(
+            "k_projection_history_kv_head0_ref_layout",
+            reference_projection_values,
+        );
+        reference_projection.shape = vec![head_dim as i64, token_count as i64, 1, 1];
+        reference_projection.nelements = (head_dim * token_count) as u64;
+        let mut reference_post =
+            test_reference_trace_record("kcur_history_kv_head0_ref_layout", reference_post_values);
+        reference_post.shape = vec![head_dim as i64, token_count as i64, 1, 1];
+        reference_post.nelements = (head_dim * token_count) as u64;
+        let mut rust_projection = test_rust_trace_record(
+            "attention_k_projection_kv_head0_ref_layout",
+            rust_projection_values,
+        );
+        rust_projection.shape = vec![head_dim, token_count];
+        let mut rust_post = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head0_ref_layout",
+            rust_post_values,
+        );
+        rust_post.shape = vec![head_dim, token_count];
+        let reference_records = vec![reference_projection, reference_post];
+        let mut rust_records = BTreeMap::new();
+        rust_records
+            .insert("attention_k_projection_kv_head0_ref_layout".to_string(), rust_projection);
+        rust_records
+            .insert("attention_k_before_cache_store_kv_head0_ref_layout".to_string(), rust_post);
+
+        let report = attention_selected_key_historical_projection_rope_source(
+            &selected_key_source,
+            &reference_records,
+            &rust_records,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_historical_post_rope_f16_bucket_sensitivity"))
+        );
+        assert_eq!(report.pointer("/post_rope_bucket_sensitivity_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer(
+                "/rows/0/reference_projection_vs_rust_projection_f16/f16_bucket_mismatch_count"
+            ),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            report
+                .pointer("/rows/0/rust_runtime_replay_to_post_rope_f16/f16_bucket_mismatch_count"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/reference_runtime_replay_to_post_rope_f16/f16_bucket_mismatch_count"
+            ),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/post_rope_f16_bucket_sensitivity/projection_f16_bucket_match"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/post_rope_f16_bucket_sensitivity/selected_contributor_dim_matches_first_bucket"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "probe exact selected historical RoPE epsilon before changing runtime math"
+            ))
+        );
     }
 
     #[test]
