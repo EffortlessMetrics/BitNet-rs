@@ -13841,6 +13841,10 @@ fn attention_norm_f64_selected_k_rope_producer_storage_frontier(
     let scalar_record = scalar_trace_records.and_then(|records| {
         records.iter().find(|record| {
             record.pointer("/stage").and_then(Value::as_str) == Some("kcur_rope_scalar_probe")
+                && record
+                    .pointer("/tensor_name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|name| name.starts_with("Kcur"))
                 && record.pointer("/layer").and_then(Value::as_i64) == Some(layer)
                 && record.pointer("/kv_head").and_then(Value::as_i64) == kv_head
                 && record.pointer("/token").and_then(Value::as_i64) == token
@@ -42363,6 +42367,7 @@ mod tests {
         });
         let scalar_records = vec![json!({
             "stage": "kcur_rope_scalar_probe",
+            "tensor_name": "Kcur-0",
             "layer": 0,
             "kv_head": 1,
             "token": 2,
@@ -42407,6 +42412,7 @@ mod tests {
         });
         let scalar_records = vec![json!({
             "stage": "kcur_rope_scalar_probe",
+            "tensor_name": "Kcur-0",
             "layer": 0,
             "kv_head": 1,
             "token": 2,
@@ -42427,6 +42433,58 @@ mod tests {
         );
         assert_eq!(frontier.pointer("/before_store_matches_storage"), Some(&json!(false)));
         assert_eq!(frontier.pointer("/after_store_matches_storage"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_k_rope_producer_storage_frontier_ignores_matching_qcur_scalar_probe() {
+        let capture_policy = json!({
+            "classification": "f64_selected_k_reference_rope_capture_policy_pinned_to_midpoint_storage",
+        });
+        let capture_path = json!({
+            "reference_post_rope_record": {"layer": 0},
+            "kv_head": 1,
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "storage_source_bits_u32": 3229921280u32,
+            "direct_source_bits_u32": 3229921280u32,
+        });
+        let scalar_records = vec![
+            json!({
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Qcur-0",
+                "layer": 0,
+                "kv_head": 1,
+                "token": 2,
+                "dim": 40,
+                "before_store_bits_u32": 1059593234u32,
+                "after_store_bits_u32": 1059593234u32,
+            }),
+            json!({
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "layer": 0,
+                "kv_head": 1,
+                "token": 2,
+                "dim": 40,
+                "before_store_bits_u32": 3229921280u32,
+                "after_store_bits_u32": 3229921280u32,
+            }),
+        ];
+
+        let frontier = attention_norm_f64_selected_k_rope_producer_storage_frontier(
+            &capture_policy,
+            &capture_path,
+            Some(&scalar_records),
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_midpoint_produced_before_store"))
+        );
+        assert_eq!(frontier.pointer("/scalar_record/tensor_name"), Some(&json!("Kcur-0")));
+        assert_eq!(frontier.pointer("/producer_before_store_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/before_store_matches_storage"), Some(&json!(true)));
         assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
