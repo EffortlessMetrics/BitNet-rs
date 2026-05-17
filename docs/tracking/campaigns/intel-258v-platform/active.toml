@@ -3488,8 +3488,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-NPU-QUAL-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/lunar-lake/LNL258V-NPU-QUAL-001-openvino-npu-diagnosis"
+pr = 5335
+head_sha = "9142875928ca56f6efce1eecf91beaa335785db5"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
