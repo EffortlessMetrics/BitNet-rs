@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T08:25:19Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-003-one-shot-benchmark"
+
+notes = [
+  "Started the BitNet one-shot ask benchmark envelope for the accepted Microsoft BitNet I2_S artifact and external tokenizer identity on apple-m4-cpu-neon.",
+  "The run is scoped to the existing benchmark command and should record load, tokenize, prefill, TTFT, decode, total wall, memory, generated text, generated token IDs, and fallback=false where the route completes.",
+  "This item remains benchmark-envelope evidence only; it does not enable BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claims.",
+]

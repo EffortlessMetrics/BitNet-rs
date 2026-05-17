@@ -979,7 +979,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-003"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-003-one-shot-benchmark"
 stackable = false
 review_mode = "codex_premerge"
@@ -988,7 +988,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-001"]
 acceptance = "Publish a BitNet one-shot ask benchmark envelope for the accepted artifact/tokenizer identity, including load, tokenize, prefill, TTFT, decode, total wall, memory, generated text, token IDs, and fallback=false."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

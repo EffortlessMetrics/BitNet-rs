@@ -381,6 +381,52 @@ reference generated token IDs: unavailable from the reference runner
 Rust generated token IDs: recorded in the source M4 eval receipt
 ```
 
+`M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
+the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
+route:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/receipts/bitnet-mac-ask-benchmark.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/receipts/bitnet-mac-bitnet-warm-benchmark.json
+```
+
+The successful run uses explicit authority for both required BitNet artifacts:
+
+```text
+model path: models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+model sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+tokenizer path: models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json
+tokenizer sha256: e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+backend: apple-m4-cpu-neon
+fallback_used: false
+chat_enabled: false
+serve_enabled: false
+```
+
+The benchmark summary records one `mac ask` prompt and a three-prompt fixed
+warm session, all under the same accepted artifact/tokenizer identity. The
+one-shot answer prompt produced text `4` with generated token IDs `[19,
+128009]`. Aggregate summary metrics are:
+
+| Metric | p50 | p90 | p99 |
+|---|---:|---:|---:|
+| Model load | 4133.650 ms | 4154.861 ms | 4154.861 ms |
+| Tokenizer load | 158.859 ms | 174.108 ms | 174.108 ms |
+| Prompt tokenize | 0.056 ms | 0.426 ms | 0.426 ms |
+| Prefill | 7292.154 ms | 8044.345 ms | 8044.345 ms |
+| TTFT | 7794.000 ms | 8531.000 ms | 8531.000 ms |
+| Decode total | 943.894 ms | 949.428 ms | 949.428 ms |
+| Input throughput | 2.468 tok/s | 2.486 tok/s | 2.486 tok/s |
+| Output throughput | 0.242 tok/s | 0.243 tok/s | 0.243 tok/s |
+| Decode throughput | 2.107 tok/s | 2.128 tok/s | 2.128 tok/s |
+| Peak memory | 4245.688 MB | 4320.953 MB | 4320.953 MB |
+
+This is a bounded BitNet benchmark envelope only. It does not claim BitNet
+quality, enable BitNet chat or serve, prove broad Apple Silicon performance,
+claim a speedup, or widen Metal, QK256, Neural Engine, MPSGraph, or MacBook
+support.
+
 BitNet chat and serve stay disabled until their specific receipt gates pass.
 
 ## Stability And Service
