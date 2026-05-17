@@ -7460,6 +7460,11 @@ fn compare_reference_to_rust_with_records_with_model(
             &score_position_qk_recompute,
             &report["attention_query_score_input_boundary"],
         );
+    report["attention_selected_key_score_input_source"] = attention_selected_key_score_input_source(
+        &report["attention_selected_score_mixed_qk_contribution"],
+        &report["attention_key_cache_store_readback_boundary"],
+        &report["attention_key_kcur_cache_boundary"],
+    );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
             reference_records,
@@ -21767,6 +21772,346 @@ fn query_boundary_row_for_head(query_boundary: &Value, head: u64) -> Option<&Val
         .find(|row| row.pointer("/head").and_then(Value::as_u64) == Some(head))
 }
 
+fn attention_selected_key_score_input_source(
+    selected_contribution: &Value,
+    key_cache_boundary: &Value,
+    key_kcur_boundary: &Value,
+) -> Value {
+    let selected_rows = selected_contribution.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut key_relevant_count = 0usize;
+    let mut exact_before_store_count = 0usize;
+    let mut exact_cache_readback_count = 0usize;
+    let mut exact_cache_f16_roundtrip_count = 0usize;
+    let mut exact_score_input_count = 0usize;
+    let mut exact_kcur_before_store_count = 0usize;
+    let mut exact_kcur_score_input_count = 0usize;
+    let mut missing_boundary_count = 0usize;
+    let mut max_abs_delta_at_boundary = 0.0f64;
+    let mut first_exact_boundary_row = Value::Null;
+
+    if let Some(selected_rows) = selected_rows {
+        for row in selected_rows {
+            let row_classification =
+                row.pointer("/classification").and_then(Value::as_str).unwrap_or("unknown");
+            if !matches!(row_classification, "key_dominant" | "mixed_qk_dominant") {
+                continue;
+            }
+            selected_count += 1;
+            key_relevant_count += 1;
+            let head = row.pointer("/head").and_then(Value::as_u64);
+            let kv_head = row.pointer("/kv_head").and_then(Value::as_u64);
+            let key_slot = row.pointer("/key_slot").and_then(Value::as_u64);
+            let contributor = selected_key_contributor(row);
+            let contributor_dim = contributor.pointer("/dim").and_then(Value::as_u64);
+
+            let legacy_before_store = selected_key_boundary_summary(
+                key_cache_boundary.pointer("/before_cache_store"),
+                kv_head,
+                contributor_dim,
+                key_slot,
+            );
+            let legacy_cache_readback = selected_key_boundary_summary(
+                key_cache_boundary.pointer("/cache_readback"),
+                kv_head,
+                contributor_dim,
+                key_slot,
+            );
+            let legacy_cache_f16_roundtrip = selected_key_boundary_summary(
+                key_cache_boundary.pointer("/cache_f16_roundtrip"),
+                kv_head,
+                contributor_dim,
+                key_slot,
+            );
+            let legacy_score_input = selected_key_boundary_summary(
+                key_cache_boundary.pointer("/score_input"),
+                head,
+                contributor_dim,
+                key_slot,
+            );
+            let kcur_before_store = selected_key_boundary_summary(
+                key_kcur_boundary.pointer("/before_cache_store"),
+                kv_head,
+                contributor_dim,
+                key_slot,
+            );
+            let kcur_score_input = selected_key_boundary_summary(
+                key_kcur_boundary.pointer("/score_input"),
+                head,
+                contributor_dim,
+                key_slot,
+            );
+
+            let exact_before_store = boundary_selected_slot_exact(&legacy_before_store);
+            let exact_cache_readback = boundary_selected_slot_exact(&legacy_cache_readback);
+            let exact_cache_f16_roundtrip =
+                boundary_selected_slot_exact(&legacy_cache_f16_roundtrip);
+            let exact_score_input = boundary_selected_slot_exact(&legacy_score_input);
+            let exact_kcur_before_store = boundary_selected_slot_exact(&kcur_before_store);
+            let exact_kcur_score_input = boundary_selected_slot_exact(&kcur_score_input);
+
+            if exact_before_store {
+                exact_before_store_count += 1;
+            }
+            if exact_cache_readback {
+                exact_cache_readback_count += 1;
+            }
+            if exact_cache_f16_roundtrip {
+                exact_cache_f16_roundtrip_count += 1;
+            }
+            if exact_score_input {
+                exact_score_input_count += 1;
+            }
+            if exact_kcur_before_store {
+                exact_kcur_before_store_count += 1;
+            }
+            if exact_kcur_score_input {
+                exact_kcur_score_input_count += 1;
+            }
+
+            let boundary_missing = [
+                &legacy_before_store,
+                &legacy_cache_readback,
+                &legacy_cache_f16_roundtrip,
+                &legacy_score_input,
+                &kcur_before_store,
+                &kcur_score_input,
+            ]
+            .iter()
+            .all(|summary| summary.pointer("/status").and_then(Value::as_str) != Some("compared"));
+            if boundary_missing {
+                missing_boundary_count += 1;
+            }
+            for summary in [
+                &legacy_before_store,
+                &legacy_cache_readback,
+                &legacy_cache_f16_roundtrip,
+                &legacy_score_input,
+                &kcur_before_store,
+                &kcur_score_input,
+            ] {
+                max_abs_delta_at_boundary = max_abs_delta_at_boundary
+                    .max(summary.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0));
+            }
+
+            let boundary_classification = selected_key_boundary_classification(
+                exact_before_store,
+                exact_cache_readback,
+                exact_cache_f16_roundtrip,
+                exact_score_input,
+                exact_kcur_before_store,
+                exact_kcur_score_input,
+                boundary_missing,
+            );
+            if first_exact_boundary_row.is_null()
+                && !matches!(
+                    boundary_classification,
+                    "selected_key_boundary_unpinned" | "selected_key_boundary_missing"
+                )
+            {
+                first_exact_boundary_row = json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "key_slot": key_slot,
+                    "contributor_dim": contributor_dim,
+                    "classification": boundary_classification,
+                });
+            }
+
+            rows.push(json!({
+                "status": if boundary_missing { "missing_boundary" } else { "compared" },
+                "classification": boundary_classification,
+                "selected_score_classification": row_classification,
+                "head": head,
+                "kv_head": kv_head,
+                "key_slot": key_slot,
+                "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": contributor_dim,
+                "contributor": contributor,
+                "legacy_cache_reference_source": "k_kv_head_token_major_reinterpreted",
+                "kcur_reference_source": "kcur_history_kv_head_dim_major",
+                "legacy_before_cache_store": legacy_before_store,
+                "legacy_cache_readback": legacy_cache_readback,
+                "legacy_cache_f16_roundtrip": legacy_cache_f16_roundtrip,
+                "legacy_score_input": legacy_score_input,
+                "kcur_before_cache_store": kcur_before_store,
+                "kcur_score_input": kcur_score_input,
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "no_selected_key_dominant_score_rows"
+    } else if missing_boundary_count == selected_count {
+        "selected_key_score_input_boundary_missing"
+    } else if exact_before_store_count > 0 || exact_kcur_before_store_count > 0 {
+        "selected_key_drift_enters_before_cache_store"
+    } else if exact_cache_readback_count > 0 {
+        "selected_key_drift_enters_cache_readback"
+    } else if exact_cache_f16_roundtrip_count > 0 {
+        "selected_key_drift_follows_cache_f16_roundtrip"
+    } else if exact_score_input_count > 0 || exact_kcur_score_input_count > 0 {
+        "selected_key_drift_visible_at_score_input"
+    } else {
+        "selected_key_score_input_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_key_drift_enters_before_cache_store" => {
+            "localize selected key projection/RoPE input rows before changing score math"
+        }
+        "selected_key_drift_enters_cache_readback"
+        | "selected_key_drift_follows_cache_f16_roundtrip" => {
+            "localize selected key cache storage/readback rounding before changing score math"
+        }
+        "selected_key_drift_visible_at_score_input" => {
+            "localize selected key score-input expansion rows before changing score math"
+        }
+        "selected_key_score_input_boundary_missing" => {
+            "capture missing selected key cache/store/readback boundary rows"
+        }
+        "no_selected_key_dominant_score_rows" => {
+            "classify selected score Q/K contribution before localizing key source"
+        }
+        _ => "add narrower selected key source probes before changing runtime math",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "selected key score-input source is diagnostic-only evidence for where a selected key-dominant score slot appears across key cache/store/readback boundaries; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "key_relevant_count": key_relevant_count,
+        "missing_boundary_count": missing_boundary_count,
+        "exact_before_store_count": exact_before_store_count,
+        "exact_cache_readback_count": exact_cache_readback_count,
+        "exact_cache_f16_roundtrip_count": exact_cache_f16_roundtrip_count,
+        "exact_score_input_count": exact_score_input_count,
+        "exact_kcur_before_store_count": exact_kcur_before_store_count,
+        "exact_kcur_score_input_count": exact_kcur_score_input_count,
+        "max_abs_delta_at_boundary": max_abs_delta_at_boundary,
+        "first_exact_boundary_row": first_exact_boundary_row,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn selected_key_contributor(row: &Value) -> Value {
+    row.pointer("/best_candidate_product_delta/top_abs_product_delta_contributors")
+        .and_then(Value::as_array)
+        .and_then(|contributors| {
+            contributors
+                .iter()
+                .find(|contributor| {
+                    contributor
+                        .pointer("/key_delta")
+                        .and_then(Value::as_f64)
+                        .is_some_and(|delta| delta != 0.0)
+                })
+                .or_else(|| contributors.first())
+        })
+        .cloned()
+        .unwrap_or(Value::Null)
+}
+
+fn selected_key_boundary_summary(
+    section: Option<&Value>,
+    row_head: Option<u64>,
+    selected_dim: Option<u64>,
+    selected_token: Option<u64>,
+) -> Value {
+    let row = row_head.and_then(|head| boundary_section_row_for_head(section, head));
+    let Some(row) = row else {
+        return json!({
+            "status": "missing_boundary_row",
+            "row_head": row_head,
+            "selected_dim": selected_dim,
+            "selected_token": selected_token,
+        });
+    };
+    let status = row.pointer("/status").and_then(Value::as_str).unwrap_or("unknown");
+    let delta = row.pointer("/delta").unwrap_or(&Value::Null);
+    let first_bucket = delta
+        .pointer("/first_f16_bucket_mismatch_layout")
+        .or_else(|| delta.pointer("/first_f16_bucket_mismatch"))
+        .cloned()
+        .unwrap_or(Value::Null);
+    let exact_selected_bucket = selected_dim.is_some()
+        && selected_token.is_some()
+        && first_bucket.pointer("/dim").and_then(Value::as_u64) == selected_dim
+        && first_bucket.pointer("/token").and_then(Value::as_u64) == selected_token;
+    let selected_token_bucket = selected_token.is_some_and(|selected_token| {
+        delta.pointer("/token_mismatch_counts").and_then(Value::as_array).is_some_and(|tokens| {
+            tokens.iter().any(|token| {
+                token.pointer("/token").and_then(Value::as_u64) == Some(selected_token)
+            })
+        })
+    });
+    let bucket_mismatch_count =
+        delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0);
+    let classification = if status != "compared" {
+        "boundary_not_compared"
+    } else if exact_selected_bucket {
+        "selected_slot_is_first_f16_bucket_mismatch"
+    } else if selected_token_bucket {
+        "selected_token_has_f16_bucket_mismatch"
+    } else if bucket_mismatch_count > 0 {
+        "f16_bucket_mismatch_elsewhere"
+    } else {
+        "no_f16_bucket_mismatch"
+    };
+
+    json!({
+        "status": status,
+        "classification": classification,
+        "row_head": row_head,
+        "selected_dim": selected_dim,
+        "selected_token": selected_token,
+        "exact_selected_bucket": exact_selected_bucket,
+        "selected_token_bucket": selected_token_bucket,
+        "bucket_mismatch_count": bucket_mismatch_count,
+        "first_f16_bucket_mismatch_layout": first_bucket,
+        "max_abs_delta": delta.pointer("/max_abs_delta").cloned().unwrap_or(Value::Null),
+        "rms_abs_delta": delta.pointer("/rms_abs_delta").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn boundary_section_row_for_head(section: Option<&Value>, head: u64) -> Option<&Value> {
+    section?.pointer("/rows").and_then(Value::as_array)?.iter().find(|row| {
+        row.pointer("/head").or_else(|| row.pointer("/kv_head")).and_then(Value::as_u64)
+            == Some(head)
+    })
+}
+
+fn boundary_selected_slot_exact(summary: &Value) -> bool {
+    summary.pointer("/exact_selected_bucket").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn selected_key_boundary_classification(
+    exact_before_store: bool,
+    exact_cache_readback: bool,
+    exact_cache_f16_roundtrip: bool,
+    exact_score_input: bool,
+    exact_kcur_before_store: bool,
+    exact_kcur_score_input: bool,
+    boundary_missing: bool,
+) -> &'static str {
+    if boundary_missing {
+        "selected_key_boundary_missing"
+    } else if exact_before_store || exact_kcur_before_store {
+        "selected_key_drift_enters_before_cache_store"
+    } else if exact_cache_readback {
+        "selected_key_drift_enters_cache_readback"
+    } else if exact_cache_f16_roundtrip {
+        "selected_key_drift_follows_cache_f16_roundtrip"
+    } else if exact_score_input || exact_kcur_score_input {
+        "selected_key_drift_visible_at_score_input"
+    } else {
+        "selected_key_boundary_unpinned"
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScoreKeyHistoryEffectVariant<'a> {
     id: &'static str,
@@ -33341,6 +33686,174 @@ mod tests {
         assert_eq!(report.pointer("/unresolved_residual_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/rows/0/classification"), Some(&json!("unresolved_residual")));
         assert_eq!(report.pointer("/first_unresolved_row/key_slot"), Some(&json!(13)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_key_score_input_source_reports_before_store_boundary() {
+        let selected_contribution = json!({
+            "rows": [
+                {
+                    "classification": "key_dominant",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 2,
+                    "query_token": 10,
+                    "best_candidate_product_delta": {
+                        "top_abs_product_delta_contributors": [
+                            {
+                                "dim": 40,
+                                "key_delta": -0.00390625_f64,
+                                "query_delta": 0.0_f64,
+                                "abs_product_delta": 0.006_f64,
+                            }
+                        ],
+                    },
+                }
+            ]
+        });
+        let key_cache_boundary = json!({
+            "before_cache_store": {
+                "rows": [
+                    {
+                        "head": 1,
+                        "status": "compared",
+                        "delta": {
+                            "f16_bucket_mismatch_count": 1,
+                            "max_abs_delta": 0.00390625_f64,
+                            "rms_abs_delta": 0.0006_f64,
+                            "first_f16_bucket_mismatch_layout": {
+                                "dim": 40,
+                                "token": 2,
+                            },
+                            "token_mismatch_counts": [
+                                {
+                                    "token": 2,
+                                    "f16_bucket_mismatch_count": 1,
+                                }
+                            ],
+                        },
+                    }
+                ]
+            },
+            "cache_readback": { "rows": [] },
+            "cache_f16_roundtrip": { "rows": [] },
+            "score_input": { "rows": [] }
+        });
+        let key_kcur_boundary = json!({
+            "before_cache_store": { "rows": [] },
+            "score_input": { "rows": [] }
+        });
+
+        let report = attention_selected_key_score_input_source(
+            &selected_contribution,
+            &key_cache_boundary,
+            &key_kcur_boundary,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_drift_enters_before_cache_store"))
+        );
+        assert_eq!(report.pointer("/exact_before_store_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_key_drift_enters_before_cache_store"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/legacy_before_cache_store/classification"),
+            Some(&json!("selected_slot_is_first_f16_bucket_mismatch"))
+        );
+        assert_eq!(report.pointer("/first_exact_boundary_row/contributor_dim"), Some(&json!(40)));
+    }
+
+    #[test]
+    fn selected_key_score_input_source_reports_score_input_only_boundary() {
+        let selected_contribution = json!({
+            "rows": [
+                {
+                    "classification": "key_dominant",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 2,
+                    "query_token": 10,
+                    "best_candidate_product_delta": {
+                        "top_abs_product_delta_contributors": [
+                            {
+                                "dim": 40,
+                                "key_delta": -0.00390625_f64,
+                                "query_delta": 0.0_f64,
+                            }
+                        ],
+                    },
+                }
+            ]
+        });
+        let key_cache_boundary = json!({
+            "before_cache_store": {
+                "rows": [
+                    {
+                        "head": 1,
+                        "status": "compared",
+                        "delta": {
+                            "f16_bucket_mismatch_count": 0,
+                            "max_abs_delta": 0.0_f64,
+                            "rms_abs_delta": 0.0_f64,
+                            "first_f16_bucket_mismatch_layout": null,
+                            "token_mismatch_counts": [],
+                        },
+                    }
+                ]
+            },
+            "cache_readback": { "rows": [] },
+            "cache_f16_roundtrip": { "rows": [] },
+            "score_input": {
+                "rows": [
+                    {
+                        "head": 5,
+                        "kv_head": 1,
+                        "status": "compared",
+                        "delta": {
+                            "f16_bucket_mismatch_count": 1,
+                            "max_abs_delta": 0.00390625_f64,
+                            "rms_abs_delta": 0.0006_f64,
+                            "first_f16_bucket_mismatch_layout": {
+                                "dim": 40,
+                                "token": 2,
+                            },
+                            "token_mismatch_counts": [
+                                {
+                                    "token": 2,
+                                    "f16_bucket_mismatch_count": 1,
+                                }
+                            ],
+                        },
+                    }
+                ]
+            }
+        });
+        let key_kcur_boundary = json!({
+            "before_cache_store": { "rows": [] },
+            "score_input": { "rows": [] }
+        });
+
+        let report = attention_selected_key_score_input_source(
+            &selected_contribution,
+            &key_cache_boundary,
+            &key_kcur_boundary,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_drift_visible_at_score_input"))
+        );
+        assert_eq!(report.pointer("/exact_score_input_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/legacy_score_input/classification"),
+            Some(&json!("selected_slot_is_first_f16_bucket_mismatch"))
+        );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
