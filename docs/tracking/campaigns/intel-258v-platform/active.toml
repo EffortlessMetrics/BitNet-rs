@@ -3426,8 +3426,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-NPU-COLD-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/lunar-lake/LNL258V-NPU-COLD-001-cold-start-diagnosis"
+pr = 5332
+head_sha = "f17936b99f9e1ae0ae294ab20d6e26050f0bef2a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
