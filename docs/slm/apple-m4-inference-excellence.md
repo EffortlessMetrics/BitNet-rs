@@ -283,11 +283,12 @@ These thresholds document the existing regression/dashboard behavior. They do
 not add a live model run, prove new runtime quality, enable BitNet chat or
 serve, or broaden Apple backend claims.
 
-One boundary remains explicit: BitNet variable warm has matching-history
-dashboard evidence and receipt validation, but direct `bitnet mac regression`
-does not yet accept `bitnet_apple_m4_warm_session` as a baseline kind. Warm
-session thresholds remain a documented readiness boundary until direct
-warm-regression support lands in `M4-BITNET-REG-001`.
+BitNet variable warm has matching-history dashboard evidence, receipt
+validation, and direct `bitnet mac regression --baseline` support for
+`bitnet_apple_m4_warm_session` receipts. The direct comparison remains
+identity-strict: accepted artifact/tokenizer metadata, backend, fallback state,
+prompt set, warm profile, timeout policy, and receipt schema must match before
+timing or memory drift is reported.
 
 ## Reproducibility
 

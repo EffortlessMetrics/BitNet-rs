@@ -201,7 +201,7 @@ Quality and timeout thresholds:
 | BitNet eval | quality/scoring passed counts, task-family passed counts, reference matched/text/token-ID match counts | 0% lower allowed | warning by default; blocks BitNet quality claims until explained |
 | BitNet eval | failed, timeout, `not_run`, reference mismatch/not-run/partial counts | 0% higher allowed | block BitNet quality claims |
 | BitNet benchmark paths | prompt count, generated token count, model/tokenizer-loaded-once flags, timeout-boundary flags, quality flags | exact match required | comparison blocker if mismatched |
-| BitNet variable warm | accepted artifact/tokenizer, backend, fallback state, repeated-prompt quality, per-turn receipts, and aggregate receipt validity | exact match or receipt validation required | dashboard-comparable only until direct warm-session `mac regression` support lands |
+| BitNet variable warm | accepted artifact/tokenizer, backend, fallback state, repeated-prompt quality, per-turn receipts, and aggregate receipt validity | exact match before drift is reported | direct `bitnet mac regression --baseline` support for matching `bitnet_apple_m4_warm_session` receipts |
 
 Timing drift thresholds:
 
@@ -237,11 +237,11 @@ Memory drift thresholds:
 | BitNet benchmark | peak memory p50/p90/p99 | higher is worse | 10% |
 | BitNet benchmark | memory drift p50/p90/p99 and process peak drift | higher is worse | 15% |
 
-BitNet variable warm currently has matching-history dashboard status and
-receipt validation, but not direct `bitnet mac regression --baseline` support
-for `bitnet_apple_m4_warm_session`. Treat the generated dashboard comparison as
-history/readiness evidence, and use direct warm-session threshold enforcement
-only after a future item adds that receipt kind to the regression command.
+BitNet variable warm has matching-history dashboard status, receipt validation,
+and direct `bitnet mac regression --baseline` support for
+`bitnet_apple_m4_warm_session`. The direct command rejects mismatched
+artifact/tokenizer identity, backend, fallback state, prompt set, warm profile,
+timeout policy, or receipt schema before it reports timing or memory drift.
 
 The current BitNet benchmark comparison reports five advisory warnings, all on
 sub-ms prompt-tokenize timing fields. Identity, fallback, prompt count, and

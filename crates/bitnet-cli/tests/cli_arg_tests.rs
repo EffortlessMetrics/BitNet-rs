@@ -1904,6 +1904,106 @@ fn mac_regression_rejects_bitnet_eval_context_mismatch() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn mac_regression_accepts_matching_bitnet_warm_session() -> Result<(), Box<dyn std::error::Error>> {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            receipt_str.as_str(),
+            "--baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_bitnet_warm_session_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-warm.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["speed"]["throughput"]["decode_generated_tok_s"] = serde_json::json!(0.5);
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_bitnet_warm_session_context_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-warm.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["tokenizer"]["pretokenizer_authority"] = serde_json::json!("other-tokenizer");
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("tokenizer.pretokenizer_authority mismatch"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_receipts_check_accepts_bitnet_warm_session_baseline()
+-> Result<(), Box<dyn std::error::Error>> {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            receipt_str.as_str(),
+            "--regression-baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
 fn mac_regression_accepts_matching_bitnet_benchmark_v1() -> Result<(), Box<dyn std::error::Error>> {
     let receipt =
         workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json");
