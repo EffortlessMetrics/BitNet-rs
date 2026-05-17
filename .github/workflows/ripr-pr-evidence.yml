@@ -83,7 +83,7 @@ jobs:
 
       - name: RIPR annotations
         if: always()
-        run: python scripts/ripr-annotations.py
+        run: cargo xtask ripr-annotations
 
       - name: Upload RIPR PR evidence
         if: always()

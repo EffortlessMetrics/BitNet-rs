@@ -1230,6 +1230,14 @@ enum Cmd {
         head: String,
     },
 
+    /// Emit GitHub workflow annotations from RIPR review guidance JSON.
+    #[command(name = "ripr-annotations")]
+    RiprAnnotations {
+        /// RIPR review guidance JSON file to read.
+        #[arg(long, default_value = "target/ripr/review/comments.json")]
+        path: PathBuf,
+    },
+
     /// Lint GitHub workflow files for YAML syntax issues (duplicate keys, etc).
     #[command(name = "lint-workflows")]
     LintWorkflows,
@@ -2081,6 +2089,7 @@ fn real_main() -> Result<()> {
         Cmd::Badges { check } => badges(check),
         Cmd::RiprPr { check } => ripr_pr(check),
         Cmd::RiprReviewComments { check, base, head } => ripr_review_comments(check, &base, &head),
+        Cmd::RiprAnnotations { path } => ripr_annotations(path),
         Cmd::LintWorkflows => xtask::lint_workflows::lint_workflows(),
         Cmd::Ci { command } => match command {
             CiCmd::Actuals {
@@ -2411,6 +2420,140 @@ fn validate_ripr_review_contract(workspace_root: &Path) -> Result<()> {
     }
     println!("ripr-review-comments: output contract is valid");
     Ok(())
+}
+
+fn ripr_annotations(path: PathBuf) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let data = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    let parsed = serde_json::from_str::<Value>(&data)
+        .with_context(|| format!("{} is not valid JSON", path.display()))?;
+
+    emit_ripr_comment_annotations(&parsed);
+    emit_ripr_finding_annotations(&parsed);
+    Ok(())
+}
+
+fn emit_ripr_comment_annotations(data: &Value) {
+    let Some(comments) = data.get("comments").and_then(Value::as_array) else {
+        return;
+    };
+
+    for item in comments {
+        let Some(file) = item.get("path").or_else(|| item.get("file")).and_then(Value::as_str)
+        else {
+            continue;
+        };
+        let Some(line) = github_annotation_line(item.get("line")) else {
+            continue;
+        };
+        let title = item.get("title").and_then(Value::as_str).unwrap_or("RIPR");
+        let body = item
+            .get("body")
+            .or_else(|| item.get("message"))
+            .map(github_annotation_value)
+            .unwrap_or_default();
+
+        print_github_annotation("warning", file, &line, title, &body);
+    }
+}
+
+fn emit_ripr_finding_annotations(data: &Value) {
+    let Some(findings) = data.get("findings").and_then(Value::as_array) else {
+        return;
+    };
+
+    for finding in findings {
+        let Some(probe) = finding.get("probe") else {
+            continue;
+        };
+        let Some(file) = probe.get("file").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(line) = github_annotation_line(probe.get("line")) else {
+            continue;
+        };
+
+        let classification =
+            finding.get("classification").and_then(Value::as_str).unwrap_or("ripr");
+        let severity = finding.get("severity").and_then(Value::as_str).unwrap_or("note");
+        let expression = probe.get("expression").map(github_annotation_value);
+        let confidence = finding.get("confidence").map(github_annotation_value);
+        let next_step = finding
+            .get("suggested_next_action")
+            .or_else(|| finding.get("recommended_next_step"))
+            .map(github_annotation_value)
+            .unwrap_or_else(|| "Review RIPR evidence for this changed line.".to_string());
+
+        let mut body_parts = vec![next_step];
+        if let Some(expression) = expression
+            && !expression.is_empty()
+        {
+            body_parts.push(format!("Expression: {expression}"));
+        }
+        if let Some(confidence) = confidence {
+            body_parts.push(format!("Confidence: {confidence}"));
+        }
+
+        let level = if severity == "warning" { "warning" } else { "notice" };
+        print_github_annotation(
+            level,
+            file,
+            &line,
+            &format!("RIPR {classification}"),
+            &body_parts.join(" | "),
+        );
+    }
+}
+
+fn github_annotation_line(value: Option<&Value>) -> Option<String> {
+    match value? {
+        Value::Number(number) => Some(number.to_string()),
+        Value::String(line) if !line.is_empty() => Some(line.clone()),
+        _ => None,
+    }
+}
+
+fn github_annotation_value(value: &Value) -> String {
+    match value {
+        Value::Null => String::new(),
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
+}
+
+fn print_github_annotation(level: &str, file: &str, line: &str, title: &str, body: &str) {
+    println!(
+        "::{level} file={},line={},title={}::{}",
+        escape_github_annotation_property(&repo_relative_annotation_path(file)),
+        escape_github_annotation_property(line),
+        escape_github_annotation_property(title),
+        escape_github_annotation_message(body),
+    );
+}
+
+fn repo_relative_annotation_path(path: &str) -> String {
+    let path = Path::new(path);
+    if !path.is_absolute() {
+        return path.to_string_lossy().replace('\\', "/");
+    }
+
+    std::env::current_dir()
+        .ok()
+        .and_then(|cwd| path.strip_prefix(cwd).ok().map(Path::to_path_buf))
+        .unwrap_or_else(|| path.to_path_buf())
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
+fn escape_github_annotation_message(value: &str) -> String {
+    value.replace('%', "%25").replace('\r', "%0D").replace('\n', "%0A")
+}
+
+fn escape_github_annotation_property(value: &str) -> String {
+    escape_github_annotation_message(value).replace(',', "%2C")
 }
 
 fn require_nonempty_file(path: &Path) -> Result<()> {
