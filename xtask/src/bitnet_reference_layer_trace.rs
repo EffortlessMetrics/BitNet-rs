@@ -3248,6 +3248,7 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
     let best_rust_delta = replay
         .pointer("/rust_input_replay/best_vs_rust_target/max_abs_delta")
         .and_then(Value::as_f64);
+    let upstream_attribution = ffn_norm_prefix_upstream_attribution(&replay);
 
     let current_blocked_reasons = if blocked_reasons.is_empty() {
         classify_ffn_norm_prefix_replay(
@@ -3304,6 +3305,7 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
         "model": model,
         "weight": weight,
         "replay": replay,
+        "upstream_attribution": upstream_attribution.clone(),
         "decision": {
             "scope_mismatch": scope_mismatch,
             "reference_input_matches_rust_input": reference_input_matches_rust_input,
@@ -3314,6 +3316,8 @@ fn build_ffn_norm_prefix_replay(args: &FfnNormPrefixReplayArgs) -> Result<Value>
             "best_rust_delta": best_rust_delta,
             "selected_layer": layer,
             "token": args.token,
+            "upstream_blocked_reasons": upstream_attribution.pointer("/current_blocked_reasons").cloned().unwrap_or(Value::Null),
+            "upstream_next_action": upstream_attribution.pointer("/next_action").cloned().unwrap_or(Value::Null),
             "current_blocked_reasons": current_blocked_reasons,
             "next_action": next_action,
             "claim_allowed": false,
@@ -5799,6 +5803,167 @@ fn ffn_norm_prefix_replay_next_action(reasons: &[String]) -> &'static str {
         "compare the reference FFN norm core-weight result against Rust runtime arithmetic before changing model math"
     } else {
         "FFN RMSNorm replay explains the prefix token; continue downstream FFN SwiGLU sensitivity"
+    }
+}
+
+fn ffn_norm_prefix_upstream_attribution(replay: &Value) -> Value {
+    if replay.is_null() {
+        return json!({
+            "diagnostic_only": true,
+            "claim_allowed": false,
+            "status": "unavailable",
+            "current_blocked_reasons": ["ffn_norm_prefix_replay_unavailable"],
+            "next_action": "produce an FFN norm prefix replay before attributing upstream FFN input drift",
+        });
+    }
+
+    let ffn_input_delta_max = value_f64(replay, "/inputs/reference_vs_rust/max_abs_delta");
+    let ffn_norm_output_delta_max = value_f64(replay, "/targets/reference_vs_rust/max_abs_delta");
+    let first_runtime_boundary = replay
+        .pointer("/inputs/token_attribution/first_runtime_threshold_boundary/boundary")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let first_runtime_boundary_delta_max = value_f64(
+        replay,
+        "/inputs/token_attribution/first_runtime_threshold_boundary/delta/max_abs_delta",
+    );
+    let attention_value_mix_delta_max =
+        value_f64(replay, "/inputs/token_attribution/rows/0/delta/max_abs_delta");
+    let attention_subnorm_input_delta_max = value_f64(
+        replay,
+        "/inputs/attention_subnorm_sensitivity/reference_input_vs_rust_input/max_abs_delta",
+    );
+    let attention_subnorm_target_delta_max = value_f64(
+        replay,
+        "/inputs/attention_subnorm_sensitivity/reference_target_vs_rust_target/max_abs_delta",
+    );
+    let attention_output_input_delta_max = value_f64(
+        replay,
+        "/inputs/attention_output_projection_sensitivity/reference_input_vs_rust_input/max_abs_delta",
+    );
+    let attention_output_delta_max = value_f64(
+        replay,
+        "/inputs/attention_output_projection_sensitivity/reference_input_output_vs_rust_target/max_abs_delta",
+    );
+    let attention_residual_delta_max = value_f64(
+        replay,
+        "/inputs/attention_residual_sensitivity/reference_target_vs_rust_target/max_abs_delta",
+    );
+
+    let attention_subnorm_explained = value_bool(
+        replay,
+        "/inputs/attention_subnorm_sensitivity/classification/reference_replay_explains_reference_target",
+    ) == Some(true)
+        && value_bool(
+            replay,
+            "/inputs/attention_subnorm_sensitivity/classification/rust_replay_explains_rust_target",
+        ) == Some(true)
+        && value_bool(
+            replay,
+            "/inputs/attention_subnorm_sensitivity/classification/rust_runtime_arithmetic_separate_mismatch",
+        ) != Some(true);
+    let attention_output_projection_explained = value_bool(
+        replay,
+        "/inputs/attention_output_projection_sensitivity/classification/same_input_projection_explains_reference_target",
+    ) == Some(true)
+        && value_bool(
+            replay,
+            "/inputs/attention_output_projection_sensitivity/classification/rust_input_projection_explains_rust_target",
+        ) == Some(true)
+        && value_bool(
+            replay,
+            "/inputs/attention_output_projection_sensitivity/classification/rust_runtime_projection_separate_mismatch",
+        ) != Some(true);
+    let attention_output_input_substitution_crosses = value_bool(
+        replay,
+        "/inputs/attention_output_projection_sensitivity/classification/input_substitution_crosses_runtime_threshold",
+    ) == Some(true);
+    let attention_residual_explained = value_bool(
+        replay,
+        "/inputs/attention_residual_sensitivity/classification/reference_residual_add_explains_reference_target",
+    ) == Some(true)
+        && value_bool(
+            replay,
+            "/inputs/attention_residual_sensitivity/classification/rust_residual_add_explains_rust_target",
+        ) == Some(true)
+        && value_bool(
+            replay,
+            "/inputs/attention_residual_sensitivity/classification/rust_runtime_residual_add_separate_mismatch",
+        ) != Some(true);
+
+    let mut reasons = Vec::<String>::new();
+    if ffn_input_delta_max.is_some_and(|delta| delta > 1.0e-6) {
+        reasons.push("ffn_norm_input_delta_present".to_string());
+    }
+    if first_runtime_boundary.as_deref() == Some("attention_value_mix_merged_history") {
+        reasons.push("attention_value_mix_history_delta_feeds_ffn_input".to_string());
+    }
+    if attention_subnorm_explained {
+        reasons.push("attention_subnorm_arithmetic_explains_subnorm_targets".to_string());
+    }
+    if attention_output_projection_explained && attention_output_input_substitution_crosses {
+        reasons.push(
+            "attention_output_projection_bucket_sensitive_to_subnorm_input_delta".to_string(),
+        );
+    }
+    if attention_residual_explained
+        && attention_residual_delta_max.is_some_and(|delta| delta > 1.0e-6)
+    {
+        reasons.push("attention_residual_carries_attention_output_delta".to_string());
+    }
+    if reasons.is_empty() {
+        reasons.push("ffn_norm_upstream_attribution_inconclusive".to_string());
+    }
+    reasons.sort_unstable();
+    reasons.dedup();
+    let next_action = ffn_norm_prefix_upstream_next_action(&reasons);
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "FFN norm upstream attribution summarizes existing prefix replay sensitivity sections; it is diagnostic-only and does not promote reference parity, A770 semantic quality, selected attention, resident KV, attention/value residency, full residency, performance, or completion",
+        "deltas": {
+            "ffn_input_delta_max": ffn_input_delta_max,
+            "ffn_norm_output_delta_max": ffn_norm_output_delta_max,
+            "first_runtime_boundary": first_runtime_boundary,
+            "first_runtime_boundary_delta_max": first_runtime_boundary_delta_max,
+            "attention_value_mix_delta_max": attention_value_mix_delta_max,
+            "attention_subnorm_input_delta_max": attention_subnorm_input_delta_max,
+            "attention_subnorm_target_delta_max": attention_subnorm_target_delta_max,
+            "attention_output_input_delta_max": attention_output_input_delta_max,
+            "attention_output_delta_max": attention_output_delta_max,
+            "attention_residual_delta_max": attention_residual_delta_max,
+        },
+        "classification": {
+            "attention_subnorm_explained": attention_subnorm_explained,
+            "attention_output_projection_explained": attention_output_projection_explained,
+            "attention_output_input_substitution_crosses_runtime_threshold": attention_output_input_substitution_crosses,
+            "attention_residual_explained": attention_residual_explained,
+        },
+        "current_blocked_reasons": reasons,
+        "next_action": next_action,
+    })
+}
+
+fn value_f64(value: &Value, pointer: &str) -> Option<f64> {
+    value.pointer(pointer).and_then(Value::as_f64)
+}
+
+fn value_bool(value: &Value, pointer: &str) -> Option<bool> {
+    value.pointer(pointer).and_then(Value::as_bool)
+}
+
+fn ffn_norm_prefix_upstream_next_action(reasons: &[String]) -> &'static str {
+    if reasons.iter().any(|reason| reason == "attention_value_mix_history_delta_feeds_ffn_input") {
+        "localize the attention value-mix probability/source drift that feeds FFN input history; do not change FFN up/gate projection math"
+    } else if reasons.iter().any(|reason| {
+        reason == "attention_output_projection_bucket_sensitive_to_subnorm_input_delta"
+    }) {
+        "localize the attention subnorm input delta before changing attention output projection math"
+    } else if reasons.iter().any(|reason| reason == "ffn_norm_input_delta_present") {
+        "localize upstream FFN input prefix drift before changing FFN RMSNorm or projection math"
+    } else {
+        "inspect FFN norm runtime arithmetic only after upstream attribution is conclusive"
     }
 }
 
@@ -30153,6 +30318,80 @@ mod tests {
             ]
         );
         assert!(!reasons.contains(&"rmsnorm_replay_does_not_match_reference_ffn_norm".to_string()));
+    }
+
+    #[test]
+    fn ffn_norm_prefix_upstream_attribution_reports_attention_projection_sensitivity() {
+        let replay = json!({
+            "inputs": {
+                "reference_vs_rust": {"max_abs_delta": 9.572505950927734e-4},
+                "token_attribution": {
+                    "first_runtime_threshold_boundary": {
+                        "boundary": "attention_value_mix_merged_history",
+                        "delta": {"max_abs_delta": 4.1931867599487305e-5}
+                    },
+                    "rows": [
+                        {"boundary": "attention_value_mix_merged_history", "delta": {"max_abs_delta": 4.1931867599487305e-5}}
+                    ]
+                },
+                "attention_subnorm_sensitivity": {
+                    "reference_input_vs_rust_input": {"max_abs_delta": 4.1931867599487305e-5},
+                    "reference_target_vs_rust_target": {"max_abs_delta": 2.00583599507809e-7},
+                    "classification": {
+                        "reference_replay_explains_reference_target": true,
+                        "rust_replay_explains_rust_target": true,
+                        "rust_runtime_arithmetic_separate_mismatch": false
+                    }
+                },
+                "attention_output_projection_sensitivity": {
+                    "reference_input_vs_rust_input": {"max_abs_delta": 2.00583599507809e-7},
+                    "reference_input_output_vs_rust_target": {"max_abs_delta": 9.572505950927734e-4},
+                    "classification": {
+                        "same_input_projection_explains_reference_target": true,
+                        "rust_input_projection_explains_rust_target": true,
+                        "rust_runtime_projection_separate_mismatch": false,
+                        "input_substitution_crosses_runtime_threshold": true
+                    }
+                },
+                "attention_residual_sensitivity": {
+                    "reference_target_vs_rust_target": {"max_abs_delta": 9.572505950927734e-4},
+                    "classification": {
+                        "reference_residual_add_explains_reference_target": true,
+                        "rust_residual_add_explains_rust_target": true,
+                        "rust_runtime_residual_add_separate_mismatch": false
+                    }
+                }
+            },
+            "targets": {
+                "reference_vs_rust": {"max_abs_delta": 2.4881362915039062e-3}
+            }
+        });
+
+        let summary = ffn_norm_prefix_upstream_attribution(&replay);
+        let reasons = summary.pointer("/current_blocked_reasons").unwrap().as_array().unwrap();
+        assert!(reasons.contains(&json!("attention_value_mix_history_delta_feeds_ffn_input")));
+        assert!(reasons.contains(&json!(
+            "attention_output_projection_bucket_sensitive_to_subnorm_input_delta"
+        )));
+        assert!(reasons.contains(&json!("attention_residual_carries_attention_output_delta")));
+        assert_eq!(
+            summary.pointer("/next_action"),
+            Some(&json!(
+                "localize the attention value-mix probability/source drift that feeds FFN input history; do not change FFN up/gate projection math"
+            ))
+        );
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn ffn_norm_prefix_upstream_attribution_blocks_without_replay() {
+        let summary = ffn_norm_prefix_upstream_attribution(&Value::Null);
+        assert_eq!(summary.pointer("/status"), Some(&json!("unavailable")));
+        assert_eq!(
+            summary.pointer("/current_blocked_reasons/0"),
+            Some(&json!("ffn_norm_prefix_replay_unavailable"))
+        );
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
