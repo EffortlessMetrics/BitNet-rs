@@ -7673,6 +7673,10 @@ fn compare_reference_to_rust_with_records_with_model(
         &report["attention_selected_post_rope_raw_key_epsilon"],
         &report["attention_selected_key_historical_projection_rope_source"],
     );
+    report["attention_selected_key_dim_token_slot_probe"] =
+        attention_selected_key_dim_token_slot_probe(
+            &report["attention_post_fix_score_input_frontier"],
+        );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -27636,6 +27640,228 @@ fn selected_key_source_row_has_selected_dim_token_context(row: &Value) -> bool {
     })
 }
 
+fn attention_selected_key_dim_token_slot_probe(post_fix_frontier: &Value) -> Value {
+    let frontier_rows = post_fix_frontier.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut pre_rope_bucket_crossing_count = 0usize;
+    let mut post_rope_bucket_crossing_count = 0usize;
+    let mut score_input_bucket_crossing_count = 0usize;
+    let mut score_input_matches_post_rope_f16_count = 0usize;
+    let mut clean_count = 0usize;
+    let mut max_abs_stage_delta = 0.0f64;
+
+    if let Some(frontier_rows) = frontier_rows {
+        for frontier_row in frontier_rows {
+            let selected_dim_token_context =
+                frontier_row.pointer("/selected_dim_token_context").and_then(Value::as_bool)
+                    == Some(true);
+            let frontier_classification =
+                frontier_row.pointer("/classification").and_then(Value::as_str);
+            if !selected_dim_token_context
+                && frontier_classification
+                    != Some(
+                        "post_fix_score_input_frontier_selected_dim_token_score_history_context",
+                    )
+            {
+                continue;
+            }
+            selected_count += 1;
+            let pre_rope = selected_key_slot_stage_probe(
+                "pre_rope_projection",
+                value_f64(frontier_row, "/pre_rope_k"),
+                value_f64(frontier_row, "/rust_pre_rope_k"),
+            );
+            let post_rope = selected_key_slot_stage_probe(
+                "post_rope_history",
+                value_f64(frontier_row, "/post_rope_k"),
+                value_f64(frontier_row, "/rust_post_rope_k"),
+            );
+            let score_input = selected_key_slot_stage_probe(
+                "score_input_history",
+                value_f64(frontier_row, "/score_input_k"),
+                value_f64(frontier_row, "/rust_score_input_k"),
+            );
+
+            let stage_probes = [&pre_rope, &post_rope, &score_input];
+            let missing_context = stage_probes.iter().any(|probe| {
+                probe.pointer("/values_present").and_then(Value::as_bool) != Some(true)
+            });
+            let pre_rope_bucket_crossing = selected_key_slot_probe_bucket_crossing(&pre_rope);
+            let post_rope_bucket_crossing = selected_key_slot_probe_bucket_crossing(&post_rope);
+            let score_input_bucket_crossing = selected_key_slot_probe_bucket_crossing(&score_input);
+            let reference_score_matches_post_f16 = selected_key_score_matches_post_rope_f16(
+                value_f64(frontier_row, "/score_input_k"),
+                &post_rope,
+                "/bucket/left_f16_value",
+            );
+            let rust_score_matches_post_f16 = selected_key_score_matches_post_rope_f16(
+                value_f64(frontier_row, "/rust_score_input_k"),
+                &post_rope,
+                "/bucket/right_f16_value",
+            );
+            let score_input_matches_post_rope_f16 =
+                reference_score_matches_post_f16 && rust_score_matches_post_f16;
+
+            for probe in stage_probes {
+                if let Some(delta) = value_f64(probe, "/abs_delta") {
+                    max_abs_stage_delta = max_abs_stage_delta.max(delta);
+                }
+            }
+
+            let mut blocked_reasons = Vec::<String>::new();
+            if value_f64(frontier_row, "/pre_rope_k").is_none()
+                || value_f64(frontier_row, "/rust_pre_rope_k").is_none()
+            {
+                blocked_reasons.push("selected_pre_rope_values_missing".to_string());
+            }
+            if value_f64(frontier_row, "/post_rope_k").is_none()
+                || value_f64(frontier_row, "/rust_post_rope_k").is_none()
+            {
+                blocked_reasons.push("selected_post_rope_values_missing".to_string());
+            }
+            if value_f64(frontier_row, "/score_input_k").is_none()
+                || value_f64(frontier_row, "/rust_score_input_k").is_none()
+            {
+                blocked_reasons.push("selected_score_input_values_missing".to_string());
+            }
+
+            let row_classification = if missing_context {
+                missing_context_count += 1;
+                "selected_key_dim_token_slot_probe_missing_context"
+            } else if pre_rope_bucket_crossing {
+                pre_rope_bucket_crossing_count += 1;
+                "selected_key_dim_token_slot_probe_pre_rope_bucket_crossing"
+            } else if post_rope_bucket_crossing {
+                post_rope_bucket_crossing_count += 1;
+                "selected_key_dim_token_slot_probe_post_rope_bucket_crossing"
+            } else if score_input_bucket_crossing {
+                score_input_bucket_crossing_count += 1;
+                "selected_key_dim_token_slot_probe_score_input_bucket_crossing"
+            } else {
+                clean_count += 1;
+                "selected_key_dim_token_slot_probe_clean"
+            };
+            if score_input_matches_post_rope_f16 {
+                score_input_matches_post_rope_f16_count += 1;
+            }
+            rows.push(json!({
+                "classification": row_classification,
+                "head": frontier_row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": frontier_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": frontier_row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                "query_token": frontier_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": frontier_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "frontier_classification": frontier_row.pointer("/classification").cloned().unwrap_or(Value::Null),
+                "pre_rope": pre_rope,
+                "post_rope": post_rope,
+                "score_input": score_input,
+                "reference_score_input_matches_post_rope_f16": reference_score_matches_post_f16,
+                "rust_score_input_matches_post_rope_f16": rust_score_matches_post_f16,
+                "score_input_matches_post_rope_f16": score_input_matches_post_rope_f16,
+                "source": {
+                    "selected_key_source_classification": frontier_row.pointer("/selected_key_source_classification").cloned().unwrap_or(Value::Null),
+                    "capture_source_classification": frontier_row.pointer("/capture_source_classification").cloned().unwrap_or(Value::Null),
+                    "score_key_f16_policy_classification": frontier_row.pointer("/score_key_f16_policy_classification").cloned().unwrap_or(Value::Null),
+                    "post_rope_raw_key_epsilon_classification": frontier_row.pointer("/post_rope_raw_key_epsilon_classification").cloned().unwrap_or(Value::Null),
+                    "historical_projection_rope_classification": frontier_row.pointer("/historical_projection_rope_classification").cloned().unwrap_or(Value::Null),
+                },
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "selected_key_dim_token_slot_probe_no_selected_rows"
+    } else if missing_context_count == selected_count {
+        "selected_key_dim_token_slot_probe_missing_context"
+    } else if pre_rope_bucket_crossing_count > 0 {
+        "selected_key_dim_token_slot_probe_pre_rope_bucket_crossing"
+    } else if post_rope_bucket_crossing_count > 0 {
+        "selected_key_dim_token_slot_probe_post_rope_bucket_crossing"
+    } else if score_input_bucket_crossing_count > 0 {
+        "selected_key_dim_token_slot_probe_score_input_bucket_crossing"
+    } else if clean_count == selected_count {
+        "selected_key_dim_token_slot_probe_clean"
+    } else {
+        "selected_key_dim_token_slot_probe_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_key_dim_token_slot_probe_post_rope_bucket_crossing" => {
+            "localize selected post-RoPE history bucket crossing before changing score-input or runtime math"
+        }
+        "selected_key_dim_token_slot_probe_pre_rope_bucket_crossing" => {
+            "localize selected pre-RoPE K projection bucket crossing before changing RoPE or score math"
+        }
+        "selected_key_dim_token_slot_probe_score_input_bucket_crossing" => {
+            "localize selected post-RoPE to score-input history expansion before changing runtime math"
+        }
+        "selected_key_dim_token_slot_probe_missing_context" => {
+            "capture missing selected key dim/token pre-RoPE, post-RoPE, or score-input values"
+        }
+        "selected_key_dim_token_slot_probe_clean" => {
+            "move downstream from selected key dim/token slot values to score accumulation or probability drift"
+        }
+        "selected_key_dim_token_slot_probe_no_selected_rows" => {
+            "refresh post-fix score-input frontier before probing selected key slots"
+        }
+        _ => "keep selected key dim/token slot probe diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected key dim/token slot probe is diagnostic-only evidence for one remaining post-fix score-input frontier row; it compares pre-RoPE K, post-RoPE K, and score-input K at the selected head/key/query/dim without changing runtime math or promoting reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "compared_count": selected_count.saturating_sub(missing_context_count),
+        "missing_context_count": missing_context_count,
+        "pre_rope_bucket_crossing_count": pre_rope_bucket_crossing_count,
+        "post_rope_bucket_crossing_count": post_rope_bucket_crossing_count,
+        "score_input_bucket_crossing_count": score_input_bucket_crossing_count,
+        "score_input_matches_post_rope_f16_count": score_input_matches_post_rope_f16_count,
+        "clean_count": clean_count,
+        "max_abs_stage_delta": max_abs_stage_delta,
+        "source_frontier_classification": post_fix_frontier.pointer("/classification").cloned().unwrap_or(Value::Null),
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn selected_key_slot_stage_probe(stage: &str, reference: Option<f64>, rust: Option<f64>) -> Value {
+    let bucket = reference
+        .zip(rust)
+        .map(|(reference, rust)| f16_bucket_pair_probe(reference as f32, rust as f32))
+        .unwrap_or(Value::Null);
+    let f16_bucket_crossing =
+        bucket.pointer("/f16_bucket_match").and_then(Value::as_bool) == Some(false);
+    json!({
+        "stage": stage,
+        "values_present": reference.is_some() && rust.is_some(),
+        "reference": reference,
+        "rust": rust,
+        "delta": reference.zip(rust).map(|(reference, rust)| rust - reference),
+        "abs_delta": reference.zip(rust).map(|(reference, rust)| (rust - reference).abs()),
+        "bucket": bucket,
+        "f16_bucket_crossing": f16_bucket_crossing,
+    })
+}
+
+fn selected_key_slot_probe_bucket_crossing(probe: &Value) -> bool {
+    probe.pointer("/f16_bucket_crossing").and_then(Value::as_bool) == Some(true)
+}
+
+fn selected_key_score_matches_post_rope_f16(
+    score_value: Option<f64>,
+    post_rope_probe: &Value,
+    bucket_pointer: &str,
+) -> bool {
+    score_value
+        .zip(post_rope_probe.pointer(bucket_pointer).and_then(Value::as_f64))
+        .is_some_and(|(score, bucket)| (score - bucket).abs() <= 1.0e-9)
+}
+
 fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     post_rope_raw_key_epsilon: &Value,
 ) -> Value {
@@ -42497,6 +42723,95 @@ mod tests {
             frontier.pointer("/rows/0/blocked_reasons/0"),
             Some(&json!("selected_pre_rope_k_value_missing"))
         );
+    }
+
+    #[test]
+    fn selected_key_dim_token_slot_probe_reports_post_rope_bucket_crossing() {
+        let frontier = json!({
+            "classification": "post_fix_score_input_frontier_selected_dim_token_score_history_context",
+            "rows": [
+                {
+                    "classification": "post_fix_score_input_frontier_selected_dim_token_score_history_context",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "selected_dim_token_context": true,
+                    "pre_rope_k": 1.25_f64,
+                    "rust_pre_rope_k": 1.25_f64,
+                    "post_rope_k": 1.4809578657150269_f64,
+                    "rust_post_rope_k": 1.4809563159942627_f64,
+                    "score_input_k": 1.4814453125_f64,
+                    "rust_score_input_k": 1.48046875_f64,
+                    "selected_key_source_classification": "selected_key_score_input_source_unpinned",
+                    "capture_source_classification": "selected_key_score_input_capture_source_post_rope_f16_view",
+                    "score_key_f16_policy_classification": "selected_score_key_f16_policy_aligned_bucket_sensitive",
+                    "post_rope_raw_key_epsilon_classification": "selected_post_rope_raw_key_epsilon_capture_replay_mismatch",
+                    "historical_projection_rope_classification": "selected_key_historical_post_rope_epsilon_reported",
+                }
+            ]
+        });
+
+        let report = attention_selected_key_dim_token_slot_probe(&frontier);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_dim_token_slot_probe_post_rope_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/post_rope_bucket_crossing_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/score_input_bucket_crossing_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/score_input_matches_post_rope_f16_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_key_dim_token_slot_probe_post_rope_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/rows/0/pre_rope/f16_bucket_crossing"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rows/0/post_rope/f16_bucket_crossing"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rows/0/score_input_matches_post_rope_f16"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize selected post-RoPE history bucket crossing before changing score-input or runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_key_dim_token_slot_probe_reports_missing_score_input_context() {
+        let frontier = json!({
+            "rows": [
+                {
+                    "classification": "post_fix_score_input_frontier_selected_dim_token_score_history_context",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "selected_dim_token_context": true,
+                    "pre_rope_k": 1.25_f64,
+                    "rust_pre_rope_k": 1.25_f64,
+                    "post_rope_k": 1.4809578657150269_f64,
+                    "rust_post_rope_k": 1.4809563159942627_f64,
+                }
+            ]
+        });
+
+        let report = attention_selected_key_dim_token_slot_probe(&frontier);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_dim_token_slot_probe_missing_context"))
+        );
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/0"),
+            Some(&json!("selected_score_input_values_missing"))
+        );
+        assert_eq!(report.pointer("/rows/0/score_input/values_present"), Some(&json!(false)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
