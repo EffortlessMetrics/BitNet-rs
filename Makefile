@@ -13,7 +13,7 @@ RED := $(shell tput setaf 1 2>/dev/null || echo "")
 NC := $(shell tput sgr0 2>/dev/null || echo "")
 
 # Declare phony targets
-.PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup \
+.PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt fmt-check lint check fix docs ci ci-local setup \
         build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
         watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
         guards preflight docs-check \
@@ -51,7 +51,7 @@ help:
 	@echo "$(BLUE)BitNet-rs One-Click Commands$(NC)"
 	@echo ""
 	@echo "$(GREEN)Primary Commands:$(NC)"
-	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z0-9_ -]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
+	@awk 'BEGIN {FS = ": "}; /^## [a-zA-Z0-9_-]+: / {name=$$1; sub(/^## /, "", name); printf "  %-20s %s\n", name, $$2}' $(MAKEFILE_LIST) | sort
 	@echo ""
 	@echo "$(YELLOW)Quick Examples:$(NC)"
 	@echo "  make              # Quick start (builds and tests)"
@@ -158,13 +158,19 @@ fmt:
 	@$(CARGO) fmt --all
 	@echo "$(GREEN)✓ Code formatted$(NC)"
 
-## lint: Run clippy lints
-lint:
-	@echo "$(GREEN)Running clippy...$(NC)"
-	@$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
+## fmt-check: Verify formatting without changing files
+fmt-check:
+	@echo "$(GREEN)Checking code formatting...$(NC)"
+	@$(CARGO) fmt --all -- --check
+	@echo "$(GREEN)✓ Code formatting is clean$(NC)"
 
-## check: Run all checks (fmt, lint, test)
-check: fmt lint test
+## lint: Run clippy lints with detected features
+lint:
+	@echo "$(GREEN)Running clippy with $(FEATURES) features...$(NC)"
+	@$(CARGO) clippy --locked --workspace --all-targets --no-default-features --features $(FEATURES) -- -D warnings
+
+## check: Run all checks (fmt-check, lint, test)
+check: fmt-check lint test
 	@echo "$(GREEN)✓ All checks passed$(NC)"
 
 ## fix: Auto-fix issues
@@ -227,9 +233,13 @@ setup:
 ci:
 	@echo "$(GREEN)Running CI checks...$(NC)"
 	@$(CARGO) fmt --all -- --check
-	@$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
+	@$(CARGO) clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
 	@$(CARGO) test --locked --workspace --no-default-features --features cpu
 	@echo "$(GREEN)✓ CI checks passed$(NC)"
+
+## ci-local: Run the focused local CI reproducer used before PRs
+ci-local:
+	@./ci/local.sh
 
 ## guards: Run local preflight guards (floating refs, MSRV, --locked flags)
 guards:

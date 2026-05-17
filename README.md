@@ -218,13 +218,13 @@ Near-term work is focused on:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR:
+See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR, run the focused local CI reproducer:
 
 ```bash
-./ci/local.sh
+make ci-local
 ```
 
-New internal maintenance commands belong in `xtask`. `bitnet-task` exists only to preserve legacy `scripts/*.sh` entrypoints while that migration is in flight.
+For faster edit/format feedback, use `make fmt-check`; for the feature-aware local check chain, use `make check`. New internal maintenance commands belong in `xtask`. `bitnet-task` exists only to preserve legacy `scripts/*.sh` entrypoints while that migration is in flight.
 
 See [ROADMAP.md](ROADMAP.md) for project direction.
 

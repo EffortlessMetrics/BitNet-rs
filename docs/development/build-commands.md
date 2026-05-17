@@ -233,9 +233,12 @@ cargo test --no-default-features --features cpu -p bitnet-wasm --target wasm32-u
 # Quick WASM build with enhanced debugging
 cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features "browser,debug"
 
-# Quick lint check
-cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
+# Quick lint check (CPU/default developer lane)
+make fmt-check
+make lint
+
+# Focused local CI reproduction before opening a PR
+make ci-local
 ```
 
 For more detailed information on specific testing strategies, see:
