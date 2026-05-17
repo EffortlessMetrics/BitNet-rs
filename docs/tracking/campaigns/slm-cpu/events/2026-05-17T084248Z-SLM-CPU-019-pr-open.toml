@@ -1,0 +1,19 @@
+timestamp = "2026-05-17T08:42:48Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-019"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 5312
+branch = "codex/slm-cpu-019-kaby-performance-dashboard"
+actor = "codex"
+summary = "Opened #5312 to formalize the Kaby Lake Qwen3 Q8_0 performance-dashboard baseline."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5312",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+]
+notes = [
+  "The PR summarizes the existing 1/2/4/8-thread envelope and 4-thread operator-profile receipt evidence.",
+  "The dashboard preserves generated-ID, tokenizer, backend, model SHA, fallback=false, and unsupported-path boundaries.",
+  "This is a docs/tracker baseline slice only; it does not implement runtime optimization or claim sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 support.",
+]

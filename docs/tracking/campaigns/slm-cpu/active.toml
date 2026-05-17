@@ -1928,3 +1928,44 @@ must_not_claim = [
   "CUDA planning or CUDA execution is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
+
+[[work_item]]
+id = "SLM-CPU-019"
+status = "pr_open"
+pr = 5312
+branch = "codex/slm-cpu-019-kaby-performance-dashboard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-016", "SLM-CPU-017A", "SLM-CPU-018"]
+acceptance = "Formalize the Kaby Lake Qwen3 Q8_0 CPU performance dashboard from existing 1/2/4/8-thread envelope and operator-profile receipts. The dashboard must record cold load, warm-session load-once, prefill, first-token latency, steady decode, per-prompt timing boundaries, allocation or buffer-reuse counters where available, memory footprint, storage/free-space context, and thermal/power fields as measured or explicitly unavailable. It may choose an operator default thread count only from recorded evidence and must preserve generated-ID, tokenizer, backend, model SHA, and fallback=false claim boundaries without adding runtime optimization or sustained-throughput claims."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The Kaby Lake Qwen3 Q8_0 strict CPU performance dashboard exists after merge.",
+  "The current operator-profile default thread count is evidence-scoped to the recorded thread envelope and operator-profile receipt.",
+  "The dashboard identifies remaining hot-loop allocation and buffer-reuse boundaries for future optimization slices.",
+]
+must_not_claim = [
+  "A new runtime optimization is implemented.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
