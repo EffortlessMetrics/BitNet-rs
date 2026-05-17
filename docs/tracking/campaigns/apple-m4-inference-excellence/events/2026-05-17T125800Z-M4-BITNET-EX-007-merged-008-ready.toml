@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T12:58:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-007"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-007-serve-gate"
+pr = 5339
+merge_sha = "8590563daaeb00decd6fe8fdc3570e141c69933c"
+
+notes = [
+  "Merged PR #5339 for the Apple M4 BitNet serve gate route.",
+  "The merge adds the bitnet mac bitnet-serve-gate surface, gates BitNet serve on ready chat, streaming, failure, serve-check, completion, and per-request receipt evidence, and preserves local Apple M4 CPU/NEON claim boundaries.",
+  "M4-BITNET-EX-008 is now ready as the next BitNet task-family taxonomy item.",
+  "No production hosting, broad OpenAI compatibility, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook evidence, speedup, broad BitNet quality, broad Apple Silicon performance, or unsupported backend claim changes.",
+]
