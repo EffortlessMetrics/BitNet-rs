@@ -1,0 +1,20 @@
+timestamp = "2026-05-17T20:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-029"
+event = "merged"
+actor = "codex"
+pr = 5405
+branch = "codex/slm-cpu-029-kv-temp-reuse"
+head_sha = "025b87143b272561f15235c5c4be31f824121a3d"
+merge_sha = "62258e8688211f9dd4ed0f4678bdb54d4734c5c8"
+summary = "Merged the bounded Qwen3 Q8_0 warm-session sampler reuse slice. The receipt evidence preserves generated IDs/text, strict GGUF tokenizer authority, cpu-rust backend selection, and fallback=false while keeping sustained-throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, and BitNet QK256 claims out of scope."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5405",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json",
+]
+notes = [
+  "Merged the bounded Qwen3 Q8_0 warm-session sampler reuse slice.",
+  "Policy initially failed on a new expect in the sampler path; the merged head replaces it with an explicit error path.",
+  "No ripr issue was filed because ripr and ripr static exposure passed.",
+]
