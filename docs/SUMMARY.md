@@ -5,6 +5,7 @@
 - [Quickstart](quickstart.md)
 - [Architecture Overview](architecture-overview.md)
 - [Configuration Guide](configuration.md)
+- [Roadmap](../ROADMAP.md)
 
 ## Development
 - [Development](development.md)
