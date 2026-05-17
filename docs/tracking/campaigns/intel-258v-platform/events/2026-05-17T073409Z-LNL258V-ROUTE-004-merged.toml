@@ -1,0 +1,27 @@
+timestamp = "2026-05-17T07:34:09Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5297
+branch = "codex/lunar-lake/LNL258V-ROUTE-004-telemetry-profiles"
+head_sha = "6ce74ab22cabb5f03d034d364f9d3e90d8d03425"
+merge_sha = "d3911d53b627f93da6942d517179410dbc0899f1"
+summary = "Merged LNL258V-ROUTE-004 telemetry-aware route-profile comparison evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The merged PR makes route-profile comparison consume the live Lunar Lake telemetry-context receipt.",
+  "Profile rows now carry memory and power context while preserving unavailable thermal context as an explicit gap.",
+  "Low-power blockers distinguish recorded power context from missing power-advantage evidence.",
+  "OpenVINO GPU/NPU routes remain candidates and unpromoted; no inference, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior change is claimed.",
+]
