@@ -8049,6 +8049,7 @@ async fn run_slm_warm_session(
     let mut session_buffers = WarmSessionPromptBuffers::default();
     let mut aggregate_direct_greedy_logits_steps = 0usize;
     let mut aggregate_logits_vec_extraction_steps = 0usize;
+    let mut aggregate_logits_scratch_reuse_steps = 0usize;
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -8075,8 +8076,13 @@ async fn run_slm_warm_session(
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
-        let buffer_reuse_evidence =
-            session_buffers.reset(encoded_prompt_tokens.len(), max_new_tokens, max_stop_len);
+        let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
+        let buffer_reuse_evidence = session_buffers.reset(
+            encoded_prompt_tokens.len(),
+            max_new_tokens,
+            max_stop_len,
+            logits_capacity,
+        );
         session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
         ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
         let tokens = &mut session_buffers.tokens;
@@ -8097,6 +8103,7 @@ async fn run_slm_warm_session(
         let token_decode_step_allocs = &mut session_buffers.token_decode_step_allocs;
         let stop_tail_update_allocs = &mut session_buffers.stop_tail_update_allocs;
         let stop_tail = &mut session_buffers.stop_tail;
+        let logits_scratch = &mut session_buffers.logits_scratch;
         let prompt_token_count = tokens.len();
         let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
         let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
@@ -8107,12 +8114,12 @@ async fn run_slm_warm_session(
             repetition_penalty,
             seed,
         });
-        sampler.reserve_logits_capacity(config.model.vocab_size.max(tokenizer.vocab_size()));
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
         let mut direct_greedy_logits_steps = 0usize;
         let mut logits_vec_extraction_steps = 0usize;
+        let mut logits_scratch_reuse_steps = 0usize;
 
         let prefill_start = std::time::Instant::now();
         let mut prefill_token_count = 0usize;
@@ -8164,11 +8171,13 @@ async fn run_slm_warm_session(
                 direct_greedy_logits_steps += 1;
                 Some(greedy_argmax_token_2d(&logits)?)
             } else {
-                logits_vec_extraction_steps += 1;
+                if extract_logits_2d_into(&logits, logits_scratch)? {
+                    logits_scratch_reuse_steps += 1;
+                } else {
+                    logits_vec_extraction_steps += 1;
+                }
                 None
             };
-            let logits_vec =
-                if use_direct_greedy_logits { None } else { Some(extract_logits_2d(&logits)?) };
             if allocation_audit_enabled {
                 logits_step_allocs.push(AllocationAuditSnapshot::delta_since(logits_alloc_start));
             }
@@ -8176,10 +8185,9 @@ async fn run_slm_warm_session(
 
             let sample_start = std::time::Instant::now();
             let sample_alloc_start = AllocationAuditSnapshot::current();
-            let next_token = match (direct_next_token, logits_vec.as_deref()) {
-                (Some(token), None) => token,
-                (None, Some(logits_vec)) => sampler.sample(logits_vec, generated_tokens)?,
-                _ => anyhow::bail!("inconsistent warm-session logits extraction state"),
+            let next_token = match direct_next_token {
+                Some(token) => token,
+                None => sampler.sample_in_place(logits_scratch, generated_tokens)?,
             };
             if allocation_audit_enabled {
                 sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
@@ -8430,12 +8438,13 @@ async fn run_slm_warm_session(
                 "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
                 "logits_buffer_reuse_policy": if logits_vec_extraction_steps == 0 {
-                    "full logits Vec extraction bypassed for guarded deterministic greedy no-penalty decode; model.logits tensor allocation still measured"
+                    "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
                 } else {
-                    "model.logits extraction still allocates tensor/vector outputs for non-direct-greedy steps; sampler logits scratch is preallocated separately"
+                    "model.logits extraction still falls back to allocating a vector for non-F32 or non-CPU logits; sampler logits scratch is preallocated separately"
                 },
                 "logits_vec_extraction_bypassed": logits_vec_extraction_steps == 0,
                 "direct_greedy_logits_steps": direct_greedy_logits_steps,
+                "logits_scratch_reuse_steps": logits_scratch_reuse_steps,
                 "logits_vec_extraction_steps": logits_vec_extraction_steps,
                 "stop_policy_precomputed_once": true,
                 "stop_sequence_count": all_stop_sequences.len(),
@@ -8542,6 +8551,7 @@ async fn run_slm_warm_session(
         }
         aggregate_direct_greedy_logits_steps += direct_greedy_logits_steps;
         aggregate_logits_vec_extraction_steps += logits_vec_extraction_steps;
+        aggregate_logits_scratch_reuse_steps += logits_scratch_reuse_steps;
         output.status(format!(
             "warm-session: prompt {}/{} completed; first_token_ms={:?}, generated_tokens={}",
             index + 1,
@@ -8605,12 +8615,13 @@ async fn run_slm_warm_session(
             "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
             "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
             "logits_buffer_reuse_policy": if aggregate_logits_vec_extraction_steps == 0 {
-                "full logits Vec extraction bypassed for guarded deterministic greedy no-penalty decode; model.logits tensor allocation still measured"
+                "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
             } else {
-                "model.logits extraction still allocates tensor/vector outputs for non-direct-greedy steps; sampler logits scratch is preallocated separately"
+                "model.logits extraction still falls back to allocating a vector for non-F32 or non-CPU logits; sampler logits scratch is preallocated separately"
             },
             "logits_vec_extraction_bypassed": aggregate_logits_vec_extraction_steps == 0,
             "direct_greedy_logits_steps": aggregate_direct_greedy_logits_steps,
+            "logits_scratch_reuse_steps": aggregate_logits_scratch_reuse_steps,
             "logits_vec_extraction_steps": aggregate_logits_vec_extraction_steps,
             "stop_policy_precomputed_once": true,
             "stop_sequence_count": all_stop_sequences.len(),
@@ -9019,6 +9030,7 @@ struct WarmSessionPromptBuffers {
     token_decode_step_allocs: Vec<AllocationAuditSnapshot>,
     stop_tail_update_allocs: Vec<AllocationAuditSnapshot>,
     stop_tail: String,
+    logits_scratch: Vec<f32>,
 }
 
 #[cfg(feature = "full-cli")]
@@ -9028,6 +9040,7 @@ impl WarmSessionPromptBuffers {
         prompt_token_capacity: usize,
         max_new_tokens: usize,
         max_stop_len: usize,
+        logits_capacity: usize,
     ) -> serde_json::Value {
         let token_capacity = prompt_token_capacity.saturating_add(max_new_tokens);
         let evidence_before = WarmSessionPromptBufferReuseEvidence::capture_before(
@@ -9035,6 +9048,7 @@ impl WarmSessionPromptBuffers {
             token_capacity,
             max_new_tokens,
             max_stop_len,
+            logits_capacity,
         );
         reserve_total_capacity(&mut self.tokens, token_capacity);
         reserve_total_capacity(&mut self.generated_tokens, max_new_tokens);
@@ -9057,6 +9071,7 @@ impl WarmSessionPromptBuffers {
         reserve_total_capacity(&mut self.token_decode_step_allocs, max_new_tokens);
         reserve_total_capacity(&mut self.stop_tail_update_allocs, max_new_tokens);
         reserve_string_total_capacity(&mut self.stop_tail, max_stop_len.saturating_add(16));
+        reserve_total_capacity(&mut self.logits_scratch, logits_capacity);
 
         self.tokens.clear();
         self.generated_tokens.clear();
@@ -9076,6 +9091,7 @@ impl WarmSessionPromptBuffers {
         self.token_decode_step_allocs.clear();
         self.stop_tail_update_allocs.clear();
         self.stop_tail.clear();
+        self.logits_scratch.clear();
 
         evidence_before.capture_after(self)
     }
@@ -9087,15 +9103,18 @@ struct WarmSessionPromptBufferReuseEvidence {
     token_capacity_needed: usize,
     generated_token_capacity_needed: usize,
     stop_tail_capacity_needed: usize,
+    logits_capacity_needed: usize,
     previous_token_capacity: usize,
     previous_generated_token_capacity: usize,
     previous_stop_tail_capacity: usize,
+    previous_logits_capacity: usize,
     token_capacity: usize,
     generated_token_capacity: usize,
     decode_timing_capacity: usize,
     prefill_allocation_sample_capacity: usize,
     decode_allocation_sample_capacity: usize,
     stop_tail_capacity: usize,
+    logits_capacity: usize,
 }
 
 #[cfg(feature = "full-cli")]
@@ -9105,20 +9124,24 @@ impl WarmSessionPromptBufferReuseEvidence {
         token_capacity_needed: usize,
         generated_token_capacity_needed: usize,
         max_stop_len: usize,
+        logits_capacity_needed: usize,
     ) -> Self {
         Self {
             token_capacity_needed,
             generated_token_capacity_needed,
             stop_tail_capacity_needed: max_stop_len.saturating_add(16),
+            logits_capacity_needed,
             previous_token_capacity: buffers.tokens.capacity(),
             previous_generated_token_capacity: buffers.generated_tokens.capacity(),
             previous_stop_tail_capacity: buffers.stop_tail.capacity(),
+            previous_logits_capacity: buffers.logits_scratch.capacity(),
             token_capacity: buffers.tokens.capacity(),
             generated_token_capacity: buffers.generated_tokens.capacity(),
             decode_timing_capacity: buffers.decode_step_ms.capacity(),
             prefill_allocation_sample_capacity: buffers.prefill_step_allocs.capacity(),
             decode_allocation_sample_capacity: buffers.decode_step_allocs.capacity(),
             stop_tail_capacity: buffers.stop_tail.capacity(),
+            logits_capacity: buffers.logits_scratch.capacity(),
         }
     }
 
@@ -9129,6 +9152,7 @@ impl WarmSessionPromptBufferReuseEvidence {
         self.prefill_allocation_sample_capacity = buffers.prefill_step_allocs.capacity();
         self.decode_allocation_sample_capacity = buffers.decode_step_allocs.capacity();
         self.stop_tail_capacity = buffers.stop_tail.capacity();
+        self.logits_capacity = buffers.logits_scratch.capacity();
         self.to_json()
     }
 
@@ -9137,14 +9161,21 @@ impl WarmSessionPromptBufferReuseEvidence {
         let generated_token_capacity_grew =
             self.generated_token_capacity > self.previous_generated_token_capacity;
         let stop_tail_capacity_grew = self.stop_tail_capacity > self.previous_stop_tail_capacity;
-        let reset_reused_existing_capacity =
-            !(token_capacity_grew || generated_token_capacity_grew || stop_tail_capacity_grew);
+        let logits_capacity_grew = self.logits_capacity > self.previous_logits_capacity;
+        let reset_reused_existing_capacity = !(token_capacity_grew
+            || generated_token_capacity_grew
+            || stop_tail_capacity_grew
+            || logits_capacity_grew);
 
         serde_json::json!({
             "token_capacity_needed": self.token_capacity_needed,
             "token_capacity": self.token_capacity,
             "previous_token_capacity": self.previous_token_capacity,
             "token_capacity_grew": token_capacity_grew,
+            "logits_capacity_needed": self.logits_capacity_needed,
+            "logits_capacity": self.logits_capacity,
+            "previous_logits_capacity": self.previous_logits_capacity,
+            "logits_capacity_grew": logits_capacity_grew,
             "generated_token_capacity_needed": self.generated_token_capacity_needed,
             "generated_token_capacity": self.generated_token_capacity,
             "previous_generated_token_capacity": self.previous_generated_token_capacity,
@@ -9158,7 +9189,8 @@ impl WarmSessionPromptBufferReuseEvidence {
             "stop_tail_capacity_grew": stop_tail_capacity_grew,
             "capacity_sufficient_for_prompt": self.token_capacity >= self.token_capacity_needed
                 && self.generated_token_capacity >= self.generated_token_capacity_needed
-                && self.stop_tail_capacity >= self.stop_tail_capacity_needed,
+                && self.stop_tail_capacity >= self.stop_tail_capacity_needed
+                && self.logits_capacity >= self.logits_capacity_needed,
             "reset_reused_existing_capacity": reset_reused_existing_capacity,
             "buffers_cleared_without_reallocation": reset_reused_existing_capacity,
         })
@@ -11148,6 +11180,60 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
         ConcreteTensor::Mock(_) => {
             // Return mock logits for testing
             Ok(vec![0.1; 50257])
+        }
+    }
+}
+
+/// Extract 2D logits \[B,V\] into a caller-owned host scratch buffer.
+///
+/// Returns true when the data was copied directly from contiguous/non-contiguous
+/// CPU F32 storage without allocating a fresh `Vec<f32>`. Non-CPU or non-F32
+/// tensors fall back to the compatibility extractor.
+#[cfg(feature = "full-cli")]
+fn extract_logits_2d_into(
+    tensor: &bitnet_common::ConcreteTensor,
+    scratch: &mut Vec<f32>,
+) -> Result<bool> {
+    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
+
+    let shape = tensor.shape();
+    if shape.len() != 2 {
+        return Err(BitNetError::Validation("Expected 2D tensor".into()).into());
+    }
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.as_candle();
+            let batch_0 = candle.i(0)?;
+            if batch_0.dtype() != DType::F32 {
+                scratch.clear();
+                scratch.extend(extract_logits_2d(tensor)?);
+                return Ok(false);
+            }
+
+            let (storage, layout) = batch_0.storage_and_layout();
+            let candle_core::Storage::Cpu(cpu_storage) = &*storage else {
+                scratch.clear();
+                scratch.extend(extract_logits_2d(tensor)?);
+                return Ok(false);
+            };
+            let data = cpu_storage.as_slice::<f32>()?;
+
+            scratch.clear();
+            if let Some((start, end)) = layout.contiguous_offsets() {
+                scratch.extend_from_slice(&data[start..end]);
+            } else {
+                scratch.reserve(batch_0.elem_count());
+                for index in batch_0.strided_index() {
+                    scratch.push(data[index]);
+                }
+            }
+            Ok(true)
+        }
+        ConcreteTensor::Mock(_) => {
+            scratch.clear();
+            scratch.resize(50257, 0.1);
+            Ok(true)
         }
     }
 }
@@ -13218,7 +13304,7 @@ mod tests {
     fn warm_session_prompt_buffers_report_capacity_reuse() {
         let mut buffers = WarmSessionPromptBuffers::default();
 
-        let first = buffers.reset(8, 4, 3);
+        let first = buffers.reset(8, 4, 3, 16);
         assert_eq!(first["capacity_sufficient_for_prompt"], true);
         assert_eq!(first["reset_reused_existing_capacity"], false);
         assert_eq!(first["token_capacity_grew"], true);
@@ -13227,16 +13313,19 @@ mod tests {
         buffers.tokens.extend_from_slice(&[1, 2, 3]);
         buffers.generated_tokens.extend_from_slice(&[4, 5]);
         buffers.stop_tail.push_str("tail");
+        buffers.logits_scratch.extend_from_slice(&[0.1, 0.2, 0.3]);
 
-        let second = buffers.reset(4, 2, 2);
+        let second = buffers.reset(4, 2, 2, 8);
         assert!(buffers.tokens.is_empty());
         assert!(buffers.generated_tokens.is_empty());
         assert!(buffers.stop_tail.is_empty());
+        assert!(buffers.logits_scratch.is_empty());
         assert_eq!(second["capacity_sufficient_for_prompt"], true);
         assert_eq!(second["reset_reused_existing_capacity"], true);
         assert_eq!(second["token_capacity_grew"], false);
         assert_eq!(second["generated_token_capacity_grew"], false);
         assert_eq!(second["stop_tail_capacity_grew"], false);
+        assert_eq!(second["logits_capacity_grew"], false);
     }
 
     #[test]
@@ -13255,6 +13344,22 @@ mod tests {
             bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(logits));
 
         assert_eq!(greedy_argmax_token_2d(&tensor)?, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn extract_logits_2d_into_reuses_host_scratch() -> Result<()> {
+        let logits =
+            candle_core::Tensor::new(&[[0.25f32, 1.0, 0.5, 1.5]], &candle_core::Device::Cpu)?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(logits));
+        let mut scratch = Vec::with_capacity(8);
+
+        let reused = extract_logits_2d_into(&tensor, &mut scratch)?;
+
+        assert!(reused);
+        assert_eq!(scratch, vec![0.25, 1.0, 0.5, 1.5]);
+        assert!(scratch.capacity() >= 8);
         Ok(())
     }
 

@@ -171,18 +171,38 @@ impl SamplingStrategy {
         let mut buf = std::mem::take(&mut self.logits_buffer);
         buf.clear();
         buf.extend_from_slice(logits);
+        let token = self.sample_in_place(&mut buf, context_tokens)?;
+        self.logits_buffer = buf;
+        debug!("Sampled token: {}", token);
+        Ok(token)
+    }
+
+    /// Sample the next token from a reusable logits buffer.
+    ///
+    /// This preserves [`sample`](Self::sample) semantics while allowing decode
+    /// loops that already own a host logits buffer to avoid a second
+    /// `vocab_size` copy. The input buffer is modified in-place.
+    pub fn sample_in_place(&mut self, logits: &mut [f32], context_tokens: &[u32]) -> Result<u32> {
+        debug!("Sampling in-place from {} logits", logits.len());
+
+        if logits.is_empty() {
+            return Err(anyhow::anyhow!("Empty logits slice"));
+        }
+
+        if self.config.temperature == 0.0
+            && (self.config.repetition_penalty == 1.0 || context_tokens.is_empty())
+        {
+            return greedy_sample(logits);
+        }
 
         // Count-aware penalty: applies penalty^count per token (distinct from
         // the flat single-occurrence version in bitnet-logits).
-        self.penalize_repeated_tokens(&mut buf, context_tokens);
+        self.penalize_repeated_tokens(logits, context_tokens);
 
         // Greedy path: temperature == 0.0 → greedy_sample (handles empty input
         // as Err and breaks ties by lowest token ID for llama.cpp compatibility).
         if self.config.temperature == 0.0 {
-            let token = greedy_sample(&buf)?;
-            // Restore buffer
-            self.logits_buffer = buf;
-            return Ok(token);
+            return greedy_sample(logits);
         }
 
         // Stochastic path:
@@ -191,28 +211,22 @@ impl SamplingStrategy {
         //  3. softmax (NEG_INFINITY → 0.0 probability)
         //  4. top-p filtering (probability domain — zero for filtered entries)
         //  5. renormalize (top-p may leave sum < 1.0)
-        apply_temperature(&mut buf, self.config.temperature);
+        apply_temperature(logits, self.config.temperature);
 
         if self.config.top_k > 0 {
-            apply_top_k(&mut buf, self.config.top_k as usize);
+            apply_top_k(logits, self.config.top_k as usize);
         }
 
-        softmax_in_place(&mut buf);
+        softmax_in_place(logits);
 
         if self.config.top_p < 1.0 {
-            apply_top_p(&mut buf, self.config.top_p);
+            apply_top_p(logits, self.config.top_p);
         }
 
         // Re-normalize after top-p (top-p zeroes entries without renormalizing).
-        let _ = renormalize_in_place(&mut buf);
+        let _ = renormalize_in_place(logits);
 
-        let token = self.sample_from_distribution(&buf)?;
-
-        // Restore buffer
-        self.logits_buffer = buf;
-
-        debug!("Sampled token: {}", token);
-        Ok(token)
+        self.sample_from_distribution(logits)
     }
 
     /// Count-aware repetition penalty applied in-place.
@@ -632,6 +646,30 @@ mod property_tests {
 
         assert_eq!(token, 2);
         assert!(strategy.logits_buffer_capacity() >= 3);
+        Ok(())
+    }
+
+    #[test]
+    fn sample_in_place_matches_count_aware_repetition_penalty() -> Result<()> {
+        let config = SamplingConfig {
+            temperature: 0.0,
+            repetition_penalty: 2.0,
+            seed: Some(7),
+            ..Default::default()
+        };
+        let logits = [0.1, 0.8, 0.5, 0.7];
+        let context = [1, 1, 3];
+
+        let mut by_copy = SamplingStrategy::new(config.clone());
+        let expected = by_copy.sample(&logits, &context)?;
+
+        let mut in_place_logits = logits;
+        let mut in_place = SamplingStrategy::new(config);
+        let actual = in_place.sample_in_place(&mut in_place_logits, &context)?;
+
+        assert_eq!(actual, expected);
+        assert_eq!(actual, 2);
+        assert!(in_place_logits[1] < in_place_logits[3]);
         Ok(())
     }
 }
