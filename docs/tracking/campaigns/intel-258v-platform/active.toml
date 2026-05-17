@@ -3487,6 +3487,64 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-NPU-QUAL-001"
+status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-NPU-QUAL-001-openvino-npu-diagnosis"
+pr = 5335
+head_sha = "9142875928ca56f6efce1eecf91beaa335785db5"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-QUAL-003", "LNL258V-NPU-COLD-001"]
+acceptance = "Add a no-new-inference Lunar Lake OpenVINO NPU corpus-v2 diagnosis artifact that reads the existing OpenVINO CPU/GPU/NPU corpus-v2 receipt, selects runtime_device=NPU, classifies failed NPU cases by profile/category/failure class, records direct-versus-retokenized generated-token visibility, explains why the OpenVINO NPU route remains blocked for promotion, and preserves no route-promotion, no speedup, no power-advantage, no NPU acceleration, no native NPU inference outside OpenVINO GenAI, no dynamic decode/beam/parallel sampling, and no BitNet QK256/I2_S behavior-change boundaries."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake open-vino-quality-diagnose --artifact-root ci/hardware/intel-258v/2026-05-08 --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --runtime-device NPU --json-out lunar-lake-openvino-npu-corpus-v2-diagnosis.json --created-utc 2026-05-17T12:30:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Existing OpenVINO NPU corpus-v2 evidence is diagnosed by profile, category, and failure class.",
+  "The OpenVINO NPU candidate remains blocked because corpus-v2 quality failures and generated-token visibility gaps remain.",
+  "The diagnosis records direct-versus-retokenized generated-token evidence without claiming token-ID parity.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "Broad dense SLM answer quality is proven.",
+  "OpenVINO NPU speedup is proven.",
+  "OpenVINO NPU power advantage is proven.",
+  "OpenVINO NPU is promoted for any route profile.",
+  "Intel NPU acceleration is proven.",
+  "Native NPU inference outside OpenVINO GenAI is proven.",
+  "NPU dynamic decode, beam search, or parallel sampling is supported.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ROUTE-004"
 status = "merged"
 branch = "codex/lunar-lake/LNL258V-ROUTE-004-telemetry-profiles"
