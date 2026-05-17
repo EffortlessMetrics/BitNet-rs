@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::Args;
 use serde_json::json;
 use std::{fs, path::PathBuf, sync::Arc, time::Instant};
@@ -41,6 +41,8 @@ pub struct ScoreArgs {
 }
 
 pub async fn run_score(args: &ScoreArgs) -> Result<()> {
+    validate_score_args(args)?;
+
     // Read GGUF (counts for JSON)
     let gguf_bytes =
         fs::read(&args.model).with_context(|| format!("read {}", args.model.display()))?;
@@ -151,4 +153,43 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&out)?);
     }
     Ok(())
+}
+
+fn validate_score_args(args: &ScoreArgs) -> Result<()> {
+    if args.batch_size == 0 {
+        bail!("--batch-size must be greater than 0");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn score_args_with_batch_size(batch_size: usize) -> ScoreArgs {
+        ScoreArgs {
+            model: PathBuf::from("model.gguf"),
+            tokenizer: None,
+            file: PathBuf::from("prompts.txt"),
+            max_tokens: 0,
+            device: "cpu".to_string(),
+            batch_size,
+            json_out: None,
+        }
+    }
+
+    #[test]
+    fn validate_score_args_rejects_zero_batch_size() {
+        let err = validate_score_args(&score_args_with_batch_size(0)).unwrap_err();
+        assert!(
+            err.to_string().contains("--batch-size must be greater than 0"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_score_args_accepts_positive_batch_size() -> Result<()> {
+        validate_score_args(&score_args_with_batch_size(1))?;
+        Ok(())
+    }
 }
