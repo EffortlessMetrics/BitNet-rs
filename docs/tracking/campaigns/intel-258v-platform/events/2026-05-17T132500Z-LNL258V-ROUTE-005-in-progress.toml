@@ -1,0 +1,23 @@
+timestamp = "2026-05-17T13:25:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-005"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-005-npu-gpu-diagnostics"
+summary = "Started route-profile diagnosis wiring for OpenVINO GPU/NPU quality and NPU cold-start blockers."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The item reads existing GPU/NPU diagnosis receipts without running new inference.",
+  "Candidate route rows will carry diagnosis-derived blockers for corpus-v2 failures, token-visibility gaps, and NPU cold-start dominance.",
+  "The work preserves no route promotion, no speedup, no power-advantage, no acceleration, and no BitNet QK256/I2_S behavior-change boundaries.",
+]
