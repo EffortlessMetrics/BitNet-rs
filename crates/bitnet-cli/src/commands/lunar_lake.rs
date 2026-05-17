@@ -56,6 +56,7 @@ const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-
 const CPU_SLM_PHASE_ATTRIBUTION: &str = "lunar-lake-cpu-slm-phase-attribution.json";
 const CPU_SLM_RESIDENT_SESSION: &str = "lunar-lake-cpu-slm-resident-session.json";
 const CPU_SLM_RUNTIME_COMPARISON: &str = "lunar-lake-cpu-slm-runtime-comparison.json";
+const OPENVINO_GPU_CORPUS_V2_DIAGNOSIS: &str = "lunar-lake-openvino-gpu-corpus-v2-diagnosis.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -417,6 +418,34 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the runtime comparison cannot classify Rust CPU vs OpenVINO CPU evidence.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Diagnose OpenVINO dense-SLM corpus-v2 failures for one candidate route.
+    OpenVinoQualityDiagnose {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 receipt to diagnose.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: PathBuf,
+
+        /// Runtime device to diagnose from the corpus receipt.
+        #[arg(long, default_value = "GPU.0")]
+        runtime_device: String,
+
+        /// Output JSON diagnosis receipt to file.
+        #[arg(long, default_value = OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the diagnosis cannot classify the requested OpenVINO route.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -1380,6 +1409,42 @@ pub struct CpuSlmRuntimeProfileEvidence {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeOpenVinoCorpusV2Diagnosis {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub openvino_corpus_v2_receipt: String,
+    pub requested_runtime_device: String,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+    pub backend_lane: Option<String>,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub promotion_status: Option<String>,
+    pub quality_summary: CorpusV2QualitySummary,
+    pub profile_diagnoses: Vec<CorpusV2ProfileDiagnosis>,
+    pub failed_cases: Vec<CorpusV2FailedCaseDiagnosis>,
+    pub generated_token_visibility: OpenVinoGeneratedTokenVisibility,
+    pub route_blocked: bool,
+    pub blocker_summary: Vec<String>,
+    pub recommended_next_actions: Vec<String>,
+    pub diagnosis_ready: bool,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CorpusV2DiagnosisClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OpenVinoGeneratedTokenVisibility {
+    pub direct_generated_token_ids_available: bool,
+    pub retokenized_generated_ids_used: bool,
+    pub sources: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeTelemetryContext {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -1775,6 +1840,34 @@ impl LunarLakeCommand {
                 if *strict && !receipt.comparison_ready {
                     bail!(
                         "Lunar Lake CPU dense SLM runtime comparison failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::OpenVinoQualityDiagnose {
+                artifact_root,
+                openvino_corpus_v2,
+                runtime_device,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_openvino_corpus_v2_diagnosis_with_created_utc(
+                    artifact_root,
+                    openvino_corpus_v2,
+                    runtime_device,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_openvino_corpus_v2_diagnosis(&receipt, Some(&json_out))?;
+                if *strict && !receipt.diagnosis_ready {
+                    bail!(
+                        "Lunar Lake OpenVINO corpus-v2 diagnosis failed: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -4240,6 +4333,204 @@ fn mean_f64(values: &[f64]) -> Option<f64> {
     Some(sum / values.len() as f64)
 }
 
+pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
+    root: &Path,
+    openvino_corpus_v2: &Path,
+    runtime_device: &str,
+    created_utc: String,
+) -> Result<LunarLakeOpenVinoCorpusV2Diagnosis> {
+    let openvino_corpus_path = resolve_receipt_path(root, openvino_corpus_v2);
+    let corpus: Value = read_json_receipt(&openvino_corpus_path)?;
+    let mut gaps = Vec::new();
+    if string_at(&corpus, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_corpus_v2")
+    {
+        gaps.push(
+            "OpenVINO diagnosis requires the dense SLM OpenVINO corpus-v2 receipt".to_string(),
+        );
+    }
+    if fallback_used(&corpus) != Some(false) {
+        gaps.push("OpenVINO corpus-v2 top-level fallback_used must be false".to_string());
+    }
+    let device = openvino_device_by_runtime(&corpus, runtime_device)
+        .with_context(|| format!("OpenVINO corpus-v2 device `{runtime_device}` is missing"))?;
+    if fallback_used(device) != Some(false) {
+        gaps.push(format!("OpenVINO device `{runtime_device}` did not record fallback_used=false"));
+    }
+    if bool_at_any(device, &["route_promotion_changed"]) == Some(true) {
+        gaps.push(format!("OpenVINO device `{runtime_device}` changed route promotion"));
+    }
+
+    let failed_cases = device
+        .get("cases")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|case| !case_passed(case))
+        .map(diagnose_corpus_v2_failed_case)
+        .collect::<Vec<_>>();
+    let quality_summary = summarize_openvino_device_quality(device, &failed_cases);
+    let profile_diagnoses = diagnose_openvino_device_profiles(device, &failed_cases);
+    let generated_token_visibility = openvino_generated_token_visibility(device);
+    let route_blocked = quality_summary.failed > 0 || fallback_used(device) != Some(false);
+    let mut blocker_summary = corpus_v2_blocker_summary(&quality_summary, fallback_used(device));
+    if !generated_token_visibility.direct_generated_token_ids_available {
+        blocker_summary.push(
+            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
+                .to_string(),
+        );
+    }
+    blocker_summary.sort();
+    blocker_summary.dedup();
+    let recommended_next_actions = vec![
+        "Keep OpenVINO GPU/NPU routes unpromoted until failed corpus-v2 cases are cleanly rerun or intentionally re-gated".to_string(),
+        "Classify yes/no, stop/EOS, long-prefill, short-reasoning, and decode-heavy failures separately before profile promotion".to_string(),
+        "Preserve direct-vs-retokenized generated-token visibility in every OpenVINO candidate receipt".to_string(),
+    ];
+    let diagnosis_ready = gaps.is_empty();
+
+    Ok(LunarLakeOpenVinoCorpusV2Diagnosis {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_openvino_corpus_v2_diagnosis".to_string(),
+        proof_stage: "openvino_candidate_quality_diagnosis_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        openvino_corpus_v2_receipt: path_string(&openvino_corpus_path),
+        requested_runtime_device: runtime_device.to_string(),
+        selected_backend: string_at(device, "selected_backend"),
+        runtime_api: string_at(device, "runtime_api"),
+        runtime_device: string_at(device, "runtime_device"),
+        backend_lane: string_at(device, "backend_lane"),
+        selected_kernel_or_runtime: string_at(device, "selected_kernel_or_runtime"),
+        fallback_used: fallback_used(device),
+        promotion_status: string_at(device, "promotion_status"),
+        quality_summary,
+        profile_diagnoses,
+        failed_cases,
+        generated_token_visibility,
+        route_blocked,
+        blocker_summary,
+        recommended_next_actions,
+        diagnosis_ready,
+        gaps,
+        claim_boundary: CorpusV2DiagnosisClaimBoundary {
+            diagnostic_only: true,
+            new_inference_executed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            route_promotion_changed: false,
+            arc_or_npu_execution_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+        },
+    })
+}
+
+fn openvino_device_by_runtime<'a>(json: &'a Value, runtime_device: &str) -> Option<&'a Value> {
+    json.pointer("/generation/devices").and_then(Value::as_array)?.iter().find(|device| {
+        string_at(device, "runtime_device").as_deref() == Some(runtime_device)
+            || string_at(device, "selected_backend").as_deref() == Some(runtime_device)
+    })
+}
+
+fn summarize_openvino_device_quality(
+    device: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+) -> CorpusV2QualitySummary {
+    let quality = value_at(device, "quality_summary");
+    let failed_profiles = failed_cases
+        .iter()
+        .map(|case| case.profile.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let failed_categories = failed_cases
+        .iter()
+        .map(|case| case.category.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let mut failure_classes = BTreeMap::<String, u64>::new();
+    for case in failed_cases {
+        *failure_classes.entry(case.classification.clone()).or_default() += 1;
+    }
+    CorpusV2QualitySummary {
+        total: quality.and_then(|value| u64_at(value, "cases_total")).unwrap_or(0),
+        passed: quality.and_then(|value| u64_at(value, "passed")).unwrap_or(0),
+        failed: quality
+            .and_then(|value| u64_at(value, "failed"))
+            .unwrap_or(failed_cases.len() as u64),
+        timeout: 0,
+        not_run: 0,
+        failed_profiles,
+        failed_categories,
+        failure_classes,
+    }
+}
+
+fn diagnose_openvino_device_profiles(
+    device: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+) -> Vec<CorpusV2ProfileDiagnosis> {
+    let mut profile_ids = BTreeSet::<String>::new();
+    if let Some(summary) =
+        value_at(device, "quality_summary.profile_summary").and_then(Value::as_object)
+    {
+        profile_ids.extend(summary.keys().cloned());
+    }
+    profile_ids.extend(failed_cases.iter().map(|case| case.profile.clone()));
+    profile_ids
+        .into_iter()
+        .map(|profile_id| {
+            let summary = value_at(device, "quality_summary.profile_summary")
+                .and_then(|value| value.get(&profile_id))
+                .unwrap_or(&Value::Null);
+            let failed_case_ids = failed_cases
+                .iter()
+                .filter(|case| case.profile == profile_id)
+                .map(|case| case.id.clone())
+                .collect::<Vec<_>>();
+            let failed = u64_at(summary, "failed").unwrap_or(failed_case_ids.len() as u64);
+            let mut route_blockers = Vec::new();
+            if failed > 0 {
+                route_blockers.push(format!(
+                    "OpenVINO candidate profile has {failed} answer-gate failure(s)"
+                ));
+            }
+            CorpusV2ProfileDiagnosis {
+                profile_id,
+                total: u64_at(summary, "total").unwrap_or(0),
+                passed: u64_at(summary, "passed").unwrap_or(0),
+                failed,
+                blocked: failed > 0,
+                failed_case_ids,
+                route_profile_status: Some("candidate_blocked_by_quality".to_string()),
+                route_blockers,
+            }
+        })
+        .collect()
+}
+
+fn openvino_generated_token_visibility(device: &Value) -> OpenVinoGeneratedTokenVisibility {
+    let mut direct = false;
+    let mut retokenized = false;
+    let mut sources = BTreeSet::<String>::new();
+    for case in device.get("cases").and_then(Value::as_array).into_iter().flatten() {
+        direct |= bool_at_any(case, &["generated_token_ids_available_from_pipeline"]) == Some(true);
+        if let Some(source) = string_at(case, "generated_token_ids_source") {
+            retokenized |= source.contains("retokenized");
+            sources.insert(source);
+        }
+    }
+    OpenVinoGeneratedTokenVisibility {
+        direct_generated_token_ids_available: direct,
+        retokenized_generated_ids_used: retokenized,
+        sources: sources.into_iter().collect(),
+    }
+}
+
 pub fn build_telemetry_context_with_created_utc(
     _root: &Path,
     created_utc: String,
@@ -6137,6 +6428,25 @@ fn write_or_print_cpu_slm_runtime_comparison(
     Ok(())
 }
 
+fn write_or_print_openvino_corpus_v2_diagnosis(
+    receipt: &LunarLakeOpenVinoCorpusV2Diagnosis,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake OpenVINO corpus-v2 diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
 fn write_or_print_telemetry_context(
     receipt: &LunarLakeTelemetryContext,
     path: Option<&Path>,
@@ -6488,12 +6798,17 @@ fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
     let forbidden_tokens_observed = details
         .map(|value| string_array_at(value, "forbidden_tokens_observed"))
         .unwrap_or_default();
-    let answer = string_at(case, "answer").unwrap_or_default();
+    let answer = string_at(case, "answer")
+        .or_else(|| string_at(case, "generated_text"))
+        .or_else(|| string_at(case, "decoded_preview"))
+        .or_else(|| string_at(case, "normalized_output"))
+        .unwrap_or_default();
     let failed_rules = string_array_at(case, "quality.failed_rules");
     let scoring_passed = scoring.and_then(|value| value.get("passed")).and_then(Value::as_bool);
     let gate_kind = string_at(case, "quality.gate_kind");
-    let generated_tokens =
-        u64_at(case, "quality.generated_tokens").or_else(|| u64_at(case, "tokens.generated"));
+    let generated_tokens = u64_at(case, "quality.generated_tokens")
+        .or_else(|| u64_at(case, "tokens.generated"))
+        .or_else(|| u64_at(case, "generated_token_count"));
     let classification = classify_corpus_v2_failure(
         &answer,
         gate_kind.as_deref(),
@@ -6521,7 +6836,7 @@ fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
         observed_normalized: details.and_then(|value| string_at(value, "observed_normalized")),
         answer_preview: answer_preview(&answer),
         generated_tokens,
-        prompt_tokens: u64_at(case, "tokens.prompt"),
+        prompt_tokens: u64_at(case, "tokens.prompt").or_else(|| u64_at(case, "prompt_token_count")),
         run_receipt_path: string_at(case, "run_receipt_path").map(|path| path.replace('\\', "/")),
         fallback_used: bool_at_any(case, &["fallback_used", "backend.fallback_used"]),
         classification,
@@ -8840,6 +9155,110 @@ mod tests {
         assert!(!receipt.claim_boundary.speedup_claim);
         assert!(!receipt.claim_boundary.arc_npu_execution_claim);
         assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn openvino_quality_diagnosis_classifies_gpu_corpus_failures() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            "ov-corpus.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "selected_backend": "openvino-gpu",
+                            "runtime_api": "openvino_genai",
+                            "runtime_device": "GPU.0",
+                            "backend_lane": "dense_slm_openvino_gpu",
+                            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu",
+                            "fallback_used": false,
+                            "promotion_status": "candidate_only_not_promoted",
+                            "quality_summary": {
+                                "cases_total": 2,
+                                "passed": 1,
+                                "failed": 1,
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 1, "failed": 1}
+                                },
+                                "category_summary": {
+                                    "yes_no": {"total": 1, "passed": 0, "failed": 1}
+                                }
+                            },
+                            "cases": [
+                                {
+                                    "id": "yes_no_clear_sky",
+                                    "profile": "ask_short",
+                                    "category": "yes_no",
+                                    "status": "failed",
+                                    "prompt_token_count": 40,
+                                    "generated_token_count": 6,
+                                    "generated_text": "Yes, the sky on a clear day",
+                                    "generated_token_ids_available_from_pipeline": false,
+                                    "generated_token_ids_source": "retokenized_decoded_text",
+                                    "fallback_used": false,
+                                    "quality": {
+                                        "passed": false,
+                                        "gate_kind": "normalized_match",
+                                        "failed_rules": ["normalized_match_failed"],
+                                        "failure_taxonomy": ["normalized_match_failed"],
+                                        "scoring": {
+                                            "kind": "normalized_match",
+                                            "passed": false,
+                                            "details": {
+                                                "expected_normalized": "yes",
+                                                "observed_normalized": "yes the sky on a clear day"
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "math_2_plus_2_brief",
+                                    "profile": "ask_short",
+                                    "category": "math",
+                                    "status": "passed",
+                                    "generated_token_ids_available_from_pipeline": false,
+                                    "generated_token_ids_source": "retokenized_decoded_text",
+                                    "fallback_used": false,
+                                    "quality": {"passed": true}
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )?;
+
+        let receipt = build_openvino_corpus_v2_diagnosis_with_created_utc(
+            temp.path(),
+            Path::new("ov-corpus.json"),
+            "GPU.0",
+            "2026-05-17T09:55:00Z".to_string(),
+        )?;
+
+        assert!(receipt.diagnosis_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_openvino_corpus_v2_diagnosis");
+        assert_eq!(receipt.runtime_device.as_deref(), Some("GPU.0"));
+        assert!(receipt.route_blocked);
+        assert_eq!(receipt.quality_summary.failed, 1);
+        assert_eq!(receipt.failed_cases.len(), 1);
+        assert_eq!(receipt.failed_cases[0].answer_preview, "Yes, the sky on a clear day");
+        assert!(!receipt.generated_token_visibility.direct_generated_token_ids_available);
+        assert!(receipt.generated_token_visibility.retokenized_generated_ids_used);
+        assert!(
+            receipt
+                .blocker_summary
+                .iter()
+                .any(|blocker| blocker.contains("generated token IDs are not directly available"))
+        );
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.arc_or_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_behavior_changed);
         Ok(())
     }
 
