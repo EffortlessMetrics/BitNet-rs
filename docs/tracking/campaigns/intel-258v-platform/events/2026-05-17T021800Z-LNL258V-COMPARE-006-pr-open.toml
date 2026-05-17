@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T02:18:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-006"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5251
+branch = "codex/lunar-lake/LNL258V-COMPARE-006-regression-v2-compare"
+head_sha = "7f85bc02f9545c39b5f540dc082d96490d1b6c03"
+summary = "Opened LNL258V-COMPARE-006 to make operator comparison consume strict regression-v2 evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The PR makes `lunar-lake compare` default to the strict regression-v2 bundle and exposes its surface summary in the comparison receipt.",
+  "No inference, route promotion, quality claim, speedup claim, accelerator stability claim, or BitNet QK256/I2_S behavior change is in scope.",
+]
