@@ -157,6 +157,12 @@ See [docs/hardware/HARDWARE_MATRIX.md](docs/hardware/HARDWARE_MATRIX.md).
 
 ## Building
 
+Before building, run the local environment doctor to confirm the pinned Rust toolchain, Cargo metadata, default feature detection, and optional helper tools:
+
+```bash
+make doctor
+```
+
 ```bash
 cargo build --locked --no-default-features --features cpu
 cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli
