@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T08:00:40Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-001"
+event = "merged"
+actor = "codex"
+previous_status = "proposed"
+new_status = "merged"
+merge_sha = "17c25469420d92bc0fee8e10b1fdafc407ffa4fb"
+
+notes = [
+  "Closed M4-BITNET-EX-001 against the existing `ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml` corpus from PR #4895 instead of duplicating an already merged BitNet 100-case corpus.",
+  "The corpus records the accepted Microsoft I2_S GGUF SHA, external tokenizer authority, `bitnetcpp-answer` prompt template, deterministic seed 912587, 100 mechanically scored cases, and dense SLM evidence disabled in the claim boundary.",
+  "The existing live M4 BitNet eval receipt at `ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json` validates with `bitnet mac receipts-check` for the accepted artifact/tokenizer/backend and 100 prompt receipts.",
+  "This is tracker/docs closeout only; no new runtime proof, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim was made.",
+]
