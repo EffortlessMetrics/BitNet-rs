@@ -40,6 +40,7 @@ const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trac
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 const DEFAULT_ATTN_OUTPUT_WEIGHT: &str = "blk.0.attn_output.weight";
+const DEFAULT_KEY_PROJECTION_WEIGHT: &str = "blk.0.attn_k.weight";
 const DEFAULT_VALUE_PROJECTION_WEIGHT: &str = "blk.0.attn_v.weight";
 const DEFAULT_ATTN_NORM_WEIGHT: &str = "blk.0.attn_norm.weight";
 const DEFAULT_ATTN_SUBNORM_WEIGHT: &str = "blk.0.attn_sub_norm.weight";
@@ -6146,6 +6147,50 @@ fn slice_dim_major_token(
     Ok(out)
 }
 
+fn dim_major_value(
+    values: &[f32],
+    dim_count: usize,
+    token_count: usize,
+    dim: usize,
+    token: usize,
+) -> Option<f32> {
+    if dim >= dim_count || token >= token_count {
+        return None;
+    }
+    values.get(dim.checked_mul(token_count)?.checked_add(token)?).copied()
+}
+
+fn scalar_f16_bucket_delta(left: Option<f32>, right: Option<f32>) -> Value {
+    match (left, right) {
+        (Some(left), Some(right)) => {
+            let left_bits = f32_to_f16_bits_nearest_even(left);
+            let right_bits = f32_to_f16_bits_nearest_even(right);
+            json!({
+                "present": true,
+                "left": left,
+                "right": right,
+                "delta": right as f64 - left as f64,
+                "abs_delta": (right as f64 - left as f64).abs(),
+                "left_f16_bits": format!("0x{left_bits:04x}"),
+                "right_f16_bits": format!("0x{right_bits:04x}"),
+                "left_f16_value": f16_bits_to_f32(left_bits),
+                "right_f16_value": f16_bits_to_f32(right_bits),
+                "f16_bucket_match": left_bits == right_bits,
+            })
+        }
+        _ => json!({
+            "present": false,
+            "left": left,
+            "right": right,
+            "f16_bucket_match": Value::Null,
+        }),
+    }
+}
+
+fn scalar_delta_abs(left: Option<f32>, right: Option<f32>) -> Option<f64> {
+    left.zip(right).map(|(left, right)| (right as f64 - left as f64).abs())
+}
+
 fn dim_major_dim_count(record: &ReferenceTraceRecord) -> Result<usize> {
     record
         .shape
@@ -7510,6 +7555,13 @@ fn compare_reference_to_rust_with_records_with_model(
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
+        );
+    report["attention_selected_historical_k_projection_replay_source"] =
+        attention_selected_historical_k_projection_replay_source(
+            &report["attention_selected_historical_k_projection_subbucket_epsilon_source"],
+            reference_records,
+            rust_records,
+            model_path,
         );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
@@ -24340,6 +24392,407 @@ fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     })
 }
 
+fn attention_selected_historical_k_projection_replay_source(
+    projection_epsilon_source: &Value,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    model_path: Option<&Path>,
+) -> Value {
+    let source_rows = projection_epsilon_source.pointer("/rows").and_then(Value::as_array);
+    let reference_input = reference_records.iter().find(|record| {
+        record.stage == "attn_norm_history_ref_layout"
+            && record.values_available
+            && !record.first_values.is_empty()
+    });
+    let rust_input = rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| !record.first_values.is_empty());
+    let reference_projection_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_projection_history_kv_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_projection_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_projection_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut compared_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut reference_replay_mismatch_count = 0usize;
+    let mut rust_replay_mismatch_count = 0usize;
+    let mut replay_delta_unpinned_count = 0usize;
+    let mut replay_explained_count = 0usize;
+    let mut max_abs_target_delta = 0.0f64;
+    let mut max_abs_replay_delta = 0.0f64;
+    let mut model_report = json!({
+        "path": model_path.map(|path| json!(path_to_string(path))).unwrap_or(Value::Null),
+        "exists": model_path.is_some_and(|path| path.is_file()),
+    });
+    let mut weight_report = json!({
+        "name": DEFAULT_KEY_PROJECTION_WEIGHT,
+    });
+    let mut weight_load_error = Value::Null;
+
+    let projection = match model_path {
+        Some(path) if path.is_file() => {
+            match reference_input.map(dim_major_dim_count).transpose().and_then(|input_dim| {
+                load_qk256_same_input_projection(
+                    path,
+                    DEFAULT_KEY_PROJECTION_WEIGHT,
+                    input_dim.unwrap_or(0),
+                    None,
+                )
+            }) {
+                Ok(projection) => {
+                    model_report = projection.model_report.clone();
+                    weight_report = projection.weight_report.clone();
+                    Some(projection)
+                }
+                Err(err) => {
+                    weight_load_error = json!(err.to_string());
+                    None
+                }
+            }
+        }
+        _ => None,
+    };
+
+    let (reference_replay, reference_replay_error) = match (reference_input, projection.as_ref()) {
+        (Some(input), Some(projection)) => match dim_major_dim_count(input).and_then(|input_dim| {
+            let token_count = dim_major_token_count(input)?;
+            replay_qk256_dim_major_history(&input.first_values, input_dim, token_count, projection)
+        }) {
+            Ok(values) => (Some(values), Value::Null),
+            Err(err) => (None, json!(err.to_string())),
+        },
+        _ => (None, Value::Null),
+    };
+    let (rust_replay, rust_replay_error) = match (rust_input, reference_input, projection.as_ref())
+    {
+        (Some(input), Some(reference_input), Some(projection)) => {
+            match dim_major_dim_count(reference_input).and_then(|input_dim| {
+                let token_count = dim_major_token_count(reference_input)?;
+                replay_qk256_dim_major_history(
+                    &input.first_values,
+                    input_dim,
+                    token_count,
+                    projection,
+                )
+            }) {
+                Ok(values) => (Some(values), Value::Null),
+                Err(err) => (None, json!(err.to_string())),
+            }
+        }
+        _ => (None, Value::Null),
+    };
+
+    if let Some(source_rows) = source_rows {
+        for source_row in source_rows {
+            if source_row.pointer("/classification").and_then(Value::as_str)
+                != Some(
+                    "selected_historical_k_projection_subbucket_epsilon_source_raw_projection_pair",
+                )
+            {
+                continue;
+            }
+            selected_count += 1;
+
+            let kv_head = source_row
+                .pointer("/kv_head")
+                .and_then(Value::as_u64)
+                .and_then(|value| usize::try_from(value).ok());
+            let key_slot = source_row
+                .pointer("/key_slot")
+                .and_then(Value::as_u64)
+                .and_then(|value| usize::try_from(value).ok());
+            let dominant_dim = source_row
+                .pointer("/dominant_projection_input_dim")
+                .and_then(Value::as_u64)
+                .and_then(|value| usize::try_from(value).ok());
+            let reference_target =
+                kv_head.and_then(|head| reference_projection_heads.get(&head).copied());
+            let rust_target = kv_head.and_then(|head| rust_projection_heads.get(&head).copied());
+            let mut blocked_reasons = Vec::<String>::new();
+
+            if model_path.is_none() {
+                blocked_reasons.push("model_path_missing_for_k_projection_replay".to_string());
+            } else if model_path.is_some_and(|path| !path.is_file()) {
+                blocked_reasons.push("model_gguf_missing_for_k_projection_replay".to_string());
+            }
+            if weight_load_error != Value::Null {
+                blocked_reasons.push("k_projection_weight_load_failed".to_string());
+            }
+            if reference_input.is_none() {
+                blocked_reasons.push("reference_attn_norm_history_missing".to_string());
+            }
+            if rust_input.is_none() {
+                blocked_reasons.push("rust_attention_v_input_history_missing".to_string());
+            }
+            if reference_replay.is_none() {
+                blocked_reasons.push("reference_k_projection_replay_missing".to_string());
+            }
+            if rust_replay.is_none() {
+                blocked_reasons.push("rust_k_projection_replay_missing".to_string());
+            }
+            if kv_head.is_none() {
+                blocked_reasons.push("selected_kv_head_missing".to_string());
+            }
+            if key_slot.is_none() {
+                blocked_reasons.push("selected_key_slot_missing".to_string());
+            }
+            if dominant_dim.is_none() {
+                blocked_reasons.push("selected_dominant_projection_dim_missing".to_string());
+            }
+            if reference_target.is_none() {
+                blocked_reasons.push("reference_k_projection_target_head_missing".to_string());
+            }
+            if rust_target.is_none() {
+                blocked_reasons.push("rust_k_projection_target_head_missing".to_string());
+            }
+
+            let target_head_dim = reference_target
+                .and_then(|record| dim_major_dim_count(record).ok())
+                .or_else(|| rust_target.and_then(|record| record.shape.first().copied()));
+            let token_count = reference_input
+                .and_then(|record| dim_major_token_count(record).ok())
+                .or_else(|| reference_target.and_then(|record| dim_major_token_count(record).ok()))
+                .or_else(|| rust_target.and_then(|record| record.shape.get(1).copied()));
+            let overall_projection_dim = kv_head
+                .zip(target_head_dim)
+                .zip(dominant_dim)
+                .map(|((head, head_dim), dim)| head.saturating_mul(head_dim).saturating_add(dim));
+            if target_head_dim.is_none() {
+                blocked_reasons.push("k_projection_target_head_dim_missing".to_string());
+            }
+            if token_count.is_none() {
+                blocked_reasons.push("k_projection_token_count_missing".to_string());
+            }
+            if overall_projection_dim.is_none() {
+                blocked_reasons.push("overall_projection_dim_missing".to_string());
+            }
+
+            let reference_replay_value = reference_replay
+                .as_ref()
+                .zip(overall_projection_dim)
+                .zip(token_count)
+                .and_then(|((values, dim), token_count)| {
+                    dim_major_value(values, projection.as_ref()?.rows, token_count, dim, key_slot?)
+                });
+            let rust_replay_value = rust_replay
+                .as_ref()
+                .zip(overall_projection_dim)
+                .zip(token_count)
+                .and_then(|((values, dim), token_count)| {
+                    dim_major_value(values, projection.as_ref()?.rows, token_count, dim, key_slot?)
+                });
+            let reference_target_value = reference_target.zip(dominant_dim).zip(key_slot).and_then(
+                |((record, dim), token)| {
+                    let head_dim = dim_major_dim_count(record).ok()?;
+                    let tokens = dim_major_token_count(record).ok()?;
+                    dim_major_value(&record.first_values, head_dim, tokens, dim, token)
+                },
+            );
+            let rust_target_value =
+                rust_target.zip(dominant_dim).zip(key_slot).and_then(|((record, dim), token)| {
+                    let head_dim = record.shape.first().copied()?;
+                    let tokens = record.shape.get(1).copied()?;
+                    dim_major_value(&record.first_values, head_dim, tokens, dim, token)
+                });
+
+            let reference_replay_vs_reference_target =
+                scalar_f16_bucket_delta(reference_replay_value, reference_target_value);
+            let rust_replay_vs_rust_target =
+                scalar_f16_bucket_delta(rust_replay_value, rust_target_value);
+            let reference_replay_vs_rust_replay =
+                scalar_f16_bucket_delta(reference_replay_value, rust_replay_value);
+            let reference_target_vs_rust_target =
+                scalar_f16_bucket_delta(reference_target_value, rust_target_value);
+
+            let reference_replay_matches_target =
+                scalar_delta_abs(reference_replay_value, reference_target_value)
+                    .is_some_and(|delta| delta <= 1.0e-5);
+            let rust_replay_matches_target = scalar_delta_abs(rust_replay_value, rust_target_value)
+                .is_some_and(|delta| delta <= 1.0e-5);
+            let target_delta = reference_target_value
+                .zip(rust_target_value)
+                .map(|(reference, rust)| rust as f64 - reference as f64);
+            let replay_delta = reference_replay_value
+                .zip(rust_replay_value)
+                .map(|(reference, rust)| rust as f64 - reference as f64);
+            let replay_delta_minus_target_delta =
+                replay_delta.zip(target_delta).map(|(replay, target)| replay - target);
+            let replay_delta_matches_target_delta =
+                replay_delta_minus_target_delta.is_some_and(|delta| delta.abs() <= 1.0e-5);
+            let target_bucket_stable = reference_target_vs_rust_target
+                .pointer("/f16_bucket_match")
+                .and_then(Value::as_bool)
+                == Some(true);
+            let replay_bucket_stable = reference_replay_vs_rust_replay
+                .pointer("/f16_bucket_match")
+                .and_then(Value::as_bool)
+                == Some(true);
+
+            if reference_replay_value.is_none() {
+                blocked_reasons.push("reference_replay_selected_value_missing".to_string());
+            }
+            if rust_replay_value.is_none() {
+                blocked_reasons.push("rust_replay_selected_value_missing".to_string());
+            }
+            if reference_target_value.is_none() {
+                blocked_reasons.push("reference_target_selected_value_missing".to_string());
+            }
+            if rust_target_value.is_none() {
+                blocked_reasons.push("rust_target_selected_value_missing".to_string());
+            }
+
+            if let Some(delta) = target_delta {
+                max_abs_target_delta = max_abs_target_delta.max(delta.abs());
+            }
+            if let Some(delta) = replay_delta {
+                max_abs_replay_delta = max_abs_replay_delta.max(delta.abs());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "selected_historical_k_projection_replay_source_missing_context"
+            } else if !reference_replay_matches_target {
+                reference_replay_mismatch_count += 1;
+                "selected_historical_k_projection_reference_replay_mismatch"
+            } else if !rust_replay_matches_target {
+                rust_replay_mismatch_count += 1;
+                "selected_historical_k_projection_rust_replay_mismatch"
+            } else if !replay_delta_matches_target_delta {
+                replay_delta_unpinned_count += 1;
+                "selected_historical_k_projection_replay_delta_unpinned"
+            } else {
+                replay_explained_count += 1;
+                "selected_historical_k_projection_replay_explains_raw_epsilon"
+            };
+            if blocked_reasons.is_empty() {
+                compared_count += 1;
+            }
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": source_row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": kv_head,
+                "key_slot": key_slot,
+                "query_token": source_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": source_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "dominant_projection_input": source_row.pointer("/dominant_projection_input").cloned().unwrap_or(Value::Null),
+                "dominant_projection_input_dim": dominant_dim,
+                "dominant_linearized_contribution": source_row.pointer("/dominant_linearized_contribution").cloned().unwrap_or(Value::Null),
+                "target_head_dim": target_head_dim,
+                "overall_projection_dim": overall_projection_dim,
+                "blocked_reasons": blocked_reasons,
+                "reference_input_stage": "attn_norm_history_ref_layout",
+                "rust_input_stage": "attention_v_input_history_ref_layout",
+                "reference_replay_error": reference_replay_error,
+                "rust_replay_error": rust_replay_error,
+                "weight": DEFAULT_KEY_PROJECTION_WEIGHT,
+                "reference_replay_value": reference_replay_value,
+                "reference_target_value": reference_target_value,
+                "rust_replay_value": rust_replay_value,
+                "rust_target_value": rust_target_value,
+                "target_delta_rust_minus_reference": target_delta,
+                "replay_delta_rust_minus_reference": replay_delta,
+                "replay_delta_minus_target_delta": replay_delta_minus_target_delta,
+                "reference_replay_matches_target": reference_replay_matches_target,
+                "rust_replay_matches_target": rust_replay_matches_target,
+                "replay_delta_matches_target_delta": replay_delta_matches_target_delta,
+                "target_bucket_stable": target_bucket_stable,
+                "replay_bucket_stable": replay_bucket_stable,
+                "reference_replay_vs_reference_target": reference_replay_vs_reference_target,
+                "rust_replay_vs_rust_target": rust_replay_vs_rust_target,
+                "reference_replay_vs_rust_replay": reference_replay_vs_rust_replay,
+                "reference_target_vs_rust_target": reference_target_vs_rust_target,
+                "runtime_change_candidate": match row_classification {
+                    "selected_historical_k_projection_replay_explains_raw_epsilon" => {
+                        "none_from_k_projection_weight_layout_or_runtime_trace"
+                    }
+                    "selected_historical_k_projection_reference_replay_mismatch" => {
+                        "pin_reference_k_projection_semantics_or_weight_layout"
+                    }
+                    "selected_historical_k_projection_rust_replay_mismatch" => {
+                        "pin_rust_k_projection_runtime_dispatch_or_trace_capture"
+                    }
+                    "selected_historical_k_projection_replay_delta_unpinned" => {
+                        "pin_k_projection_replay_delta_before_runtime_change"
+                    }
+                    _ => "selected_historical_k_projection_replay_context_missing",
+                },
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "no_selected_historical_k_projection_raw_epsilon_rows"
+    } else if missing_context_count == selected_count {
+        "selected_historical_k_projection_replay_source_missing_context"
+    } else if reference_replay_mismatch_count > 0 {
+        "selected_historical_k_projection_reference_replay_mismatch"
+    } else if rust_replay_mismatch_count > 0 {
+        "selected_historical_k_projection_rust_replay_mismatch"
+    } else if replay_delta_unpinned_count > 0 {
+        "selected_historical_k_projection_replay_delta_unpinned"
+    } else if replay_explained_count > 0 {
+        "selected_historical_k_projection_replay_explains_raw_epsilon"
+    } else {
+        "selected_historical_k_projection_replay_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_historical_k_projection_replay_explains_raw_epsilon" => {
+            "localize attention-norm input history epsilon feeding selected K projection before changing QK256 or RoPE runtime math"
+        }
+        "selected_historical_k_projection_reference_replay_mismatch" => {
+            "pin reference K projection semantics or GGUF weight interpretation before changing Rust runtime math"
+        }
+        "selected_historical_k_projection_rust_replay_mismatch" => {
+            "pin Rust K projection dispatch or trace capture before changing runtime math"
+        }
+        "selected_historical_k_projection_replay_delta_unpinned" => {
+            "explain selected K projection replay delta before changing runtime math"
+        }
+        "selected_historical_k_projection_replay_source_missing_context" => {
+            "capture model, attention-norm histories, and selected K projection traces before replay attribution"
+        }
+        "no_selected_historical_k_projection_raw_epsilon_rows" => {
+            "pin selected historical K projection raw epsilon before replay attribution"
+        }
+        _ => "keep selected historical K projection replay source diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected historical K projection replay source is diagnostic-only evidence for whether the dominant raw K projection epsilon is reproduced by replaying reference and Rust attention-norm histories through the loaded blk.0.attn_k.weight; it does not change QK256, RoPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "compared_count": compared_count,
+        "missing_context_count": missing_context_count,
+        "reference_replay_mismatch_count": reference_replay_mismatch_count,
+        "rust_replay_mismatch_count": rust_replay_mismatch_count,
+        "replay_delta_unpinned_count": replay_delta_unpinned_count,
+        "replay_explained_count": replay_explained_count,
+        "max_abs_target_delta": max_abs_target_delta,
+        "max_abs_replay_delta": max_abs_replay_delta,
+        "model": model_report,
+        "weight": weight_report,
+        "weight_load_error": weight_load_error,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -37508,6 +37961,54 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "localize selected historical K projection raw epsilon at the dominant input dim before changing QK256, RoPE, or score-input runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_historical_k_projection_replay_source_blocks_without_model_path() {
+        let projection_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_historical_k_projection_subbucket_epsilon_source_raw_projection_pair",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "dominant_projection_input": "x0",
+                    "dominant_projection_input_dim": 13,
+                    "dominant_linearized_contribution": -2.8110546423931737e-6_f64,
+                }
+            ]
+        });
+
+        let report = attention_selected_historical_k_projection_replay_source(
+            &projection_source,
+            &[],
+            &BTreeMap::new(),
+            None,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_historical_k_projection_replay_source_missing_context"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_historical_k_projection_replay_source_missing_context"))
+        );
+        assert!(report.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| reasons.contains(&json!("model_path_missing_for_k_projection_replay"))
+        ));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture model, attention-norm histories, and selected K projection traces before replay attribution"
             ))
         );
     }
