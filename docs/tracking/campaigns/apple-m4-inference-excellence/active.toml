@@ -1264,7 +1264,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-010"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
 stackable = false
 review_mode = "codex_premerge"
@@ -1273,7 +1273,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-009"]
 acceptance = "Define the deterministic 250-case BitNet corpus expansion staged by M4-BITNET-EX-009, focused on weak or variable families from the 100-case history, with accepted artifact/tokenizer identity metadata, corpus/scorer contract, mechanical scoring only, and no runtime quality claim."
 commands = [
-  "target/release/bitnet answer-corpus --dry-run --device apple-m4-cpu-neon --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out target/apple-m4-inference-excellence/bitnet-250-dry-run.json",
+  "target/release/bitnet answer-corpus --dry-run --device apple-m4-cpu-neon --model missing.gguf --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out target/apple-m4-inference-excellence/bitnet-250-dry-run.json",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema -- --nocapture",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -1281,6 +1281,7 @@ commands = [
 ]
 allowed_paths = [
   "ci/quality/**",
+  "crates/bitnet-cli/tests/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",
   "docs/tracking/generated/**",

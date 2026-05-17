@@ -477,6 +477,19 @@ the next honest step is a 500-case BitNet expansion or corpus/scoring repair.
 Trend and release gates depend on that decision instead of treating the
 100-case larger-corpus recommendation as sufficient.
 
+`M4-BITNET-EX-010` adds
+`ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml`, preserving the
+accepted Microsoft I2_S GGUF identity, external tokenizer authority,
+`bitnetcpp-answer` prompt template, mechanical scorer contract, and false
+runtime/quality/performance/chat/serve claim boundaries. The 250-case
+distribution is weighted toward weak or variable families from the 100-case
+history: arithmetic_exact=15, numeric_tolerance=35, fixed_table_qa=35,
+format_constrained_json=20, closed_label_classification=20,
+synthetic_extraction=25, ordering_sorting=20, rewrite_normalized=20,
+constrained_summary=30, and required_forbidden_tokens=30. This is corpus
+definition and dry-run validation only; runtime pass rates wait for
+`M4-BITNET-EX-011`.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:

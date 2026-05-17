@@ -6635,6 +6635,125 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
     Ok(())
 }
 
+/// `answer-corpus --dry-run` validates the Apple M4 BitNet 250-case corpus contract.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("apple-m4-bitnet-eval-250.json");
+    let corpus = workspace_path("ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
+    assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["backend_lane"], "apple_m4_cpu_neon");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-bitnet-eval-seeded-corpus-250");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus-250");
+    assert_eq!(receipt["corpus"]["case_count"], 250);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 912587);
+    assert_eq!(receipt["corpus"]["metadata"]["work_item"], "M4-BITNET-EX-010");
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-bitnet-v2"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.0.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+    );
+    assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
+    assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
+    assert_eq!(receipt["model"]["bytes"], 1_187_801_280u64);
+    assert_eq!(
+        receipt["model"]["sha256"],
+        "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+    );
+    assert_eq!(receipt["model"]["architecture"], "bitnet_b1_58");
+    assert_eq!(receipt["model"]["quant_format"], "I2_S");
+    assert_eq!(receipt["tokenizer"]["authority"]["source"], "external_tokenizer_json");
+    assert_eq!(receipt["tokenizer"]["authority"]["ggml_pre"], "llama-bpe");
+    assert_eq!(receipt["prompt_template_policy"]["family"], "bitnetcpp-answer");
+    assert_eq!(receipt["scoring_summary"]["enabled"], true);
+    assert_eq!(receipt["scoring_summary"]["total"], 250);
+    assert_eq!(receipt["scoring_summary"]["not_run"], 250);
+
+    for (family, expected_total) in [
+        ("arithmetic_exact", 15),
+        ("closed_label_classification", 20),
+        ("constrained_summary", 30),
+        ("fixed_table_qa", 35),
+        ("format_constrained_json", 20),
+        ("numeric_tolerance", 35),
+        ("ordering_sorting", 20),
+        ("required_forbidden_tokens", 30),
+        ("rewrite_normalized", 20),
+        ("synthetic_extraction", 25),
+    ] {
+        assert_eq!(receipt["task_family_summary"][family]["total"], expected_total);
+        assert_eq!(receipt["task_family_summary"][family]["not_run"], expected_total);
+    }
+
+    assert_eq!(receipt["task_family_summary"]["numeric_tolerance"]["scoring"]["total"], 35);
+    assert_eq!(receipt["task_family_summary"]["fixed_table_qa"]["scoring"]["total"], 35);
+    assert_eq!(receipt["task_family_summary"]["required_forbidden_tokens"]["scoring"]["total"], 30);
+    assert_eq!(receipt["cases"][0]["task_family"], "arithmetic_exact");
+    assert!(
+        receipt["cases"][0]["seed_material"]
+            .as_str()
+            .ok_or("missing seed material")?
+            .contains("seed=912587")
+    );
+    assert_eq!(
+        receipt["cases"][0]["reference_comparison"]["schema"],
+        "bitnet_reference_vs_rust_v1"
+    );
+    assert_eq!(
+        receipt["cases"][0]["reference_comparison"]["comparison"]["status"],
+        "reference_not_supplied"
+    );
+    assert_eq!(receipt["reference_comparison"]["enabled"], true);
+    assert_eq!(receipt["reference_comparison"]["rust_runner"]["fallback_used"], false);
+    assert_eq!(receipt["reference_comparison"]["summary"]["reference_not_supplied"], 250);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["dense_slm_evidence_used"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["serve_enabled"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["performance_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
+    Ok(())
+}
+
 /// `answer-corpus --model-id` pins aggregate SLM receipt identity to a supported M4 model.
 #[cfg(feature = "full-cli")]
 #[test]
