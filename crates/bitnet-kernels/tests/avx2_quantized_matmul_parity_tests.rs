@@ -17,6 +17,13 @@
 use bitnet_kernels::cpu::quantized_matmul;
 use bitnet_kernels::cpu::simd_quantized_matmul;
 
+#[path = "common/avx2_i8_parity.rs"]
+mod avx2_i8_parity;
+#[path = "common/avx2_parity.rs"]
+mod avx2_parity;
+use avx2_i8_parity::pseudo_rand_i8;
+use avx2_parity::{assert_vec_parity, pseudo_rand};
+
 // ── Tolerance constants ────────────────────────────────────────────────
 //
 // AVX2 FMA vs scalar multiply-then-add can differ by up to ~0.5 ULP per
@@ -28,37 +35,6 @@ use bitnet_kernels::cpu::simd_quantized_matmul;
 const ABS_TOL: f32 = 1e-4;
 /// Relative tolerance for matmul accumulation.
 const REL_TOL: f32 = 1e-3;
-
-// ── Helpers ────────────────────────────────────────────────────────────
-
-fn close(a: f32, b: f32, abs_tol: f32, rel_tol: f32) -> bool {
-    let diff = (a - b).abs();
-    diff <= abs_tol || diff <= rel_tol * a.abs().max(b.abs())
-}
-
-fn assert_vec_parity(actual: &[f32], expected: &[f32], abs_tol: f32, rel_tol: f32, ctx: &str) {
-    assert_eq!(actual.len(), expected.len(), "{ctx}: length mismatch");
-    for (i, (&a, &e)) in actual.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            close(a, e, abs_tol, rel_tol),
-            "{ctx}[{i}]: simd={a}, scalar={e} (diff={}, abs_tol={abs_tol}, rel_tol={rel_tol})",
-            (a - e).abs()
-        );
-    }
-}
-
-/// Deterministic pseudo-random f32 values in [-1, 1] for reproducibility.
-fn pseudo_rand(len: usize, seed: u64) -> Vec<f32> {
-    let mut state = seed;
-    (0..len)
-        .map(|_| {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            (state as f32 / u64::MAX as f32) * 2.0 - 1.0
-        })
-        .collect()
-}
 
 /// Deterministic pseudo-random ternary values in {-1, 0, +1}.
 fn pseudo_rand_ternary(len: usize, seed: u64) -> Vec<i8> {
@@ -515,19 +491,6 @@ fn parity_batched_4heads() {
 // int2_int8_matmul takes i8 activations (integer domain), so we compare
 // two runs with the same inputs to verify determinism, and compare against
 // a manual i8-domain reference.
-
-/// Deterministic pseudo-random i8 values in [-127, 127].
-fn pseudo_rand_i8(len: usize, seed: u64) -> Vec<i8> {
-    let mut state = seed;
-    (0..len)
-        .map(|_| {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            ((state % 255) as i8).wrapping_sub(127)
-        })
-        .collect()
-}
 
 /// Manual i8-domain reference matmul for int2_int8 parity.
 fn naive_int2_int8_matmul(

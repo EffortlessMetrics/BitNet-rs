@@ -11181,6 +11181,7 @@ fn extract_last_token_hidden(
     }
 }
 
+#[cfg(any(test, feature = "full-cli"))]
 fn can_use_direct_greedy_logits(
     temperature: f32,
     repetition_penalty: f32,
@@ -11192,6 +11193,7 @@ fn can_use_direct_greedy_logits(
 /// Select the greedy token from 2D logits \[B,V\] without materializing a full
 /// host logits vector. This is only used under the same deterministic
 /// no-penalty guard as `bitnet_sampling::SamplingStrategy`.
+#[cfg(any(test, feature = "full-cli"))]
 fn greedy_argmax_token_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<u32> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
 
