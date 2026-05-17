@@ -16903,6 +16903,38 @@ fn rust_query_head_dim_count(record: &RustTraceRecord) -> Option<(usize, usize)>
     }
 }
 
+fn indexed_head_count<T>(heads: &BTreeMap<usize, T>) -> usize {
+    heads.keys().next_back().map(|head| head + 1).unwrap_or(0)
+}
+
+fn reference_trace_history_head_dim_count(
+    heads: &BTreeMap<usize, &ReferenceTraceRecord>,
+) -> Option<(usize, usize)> {
+    let head_count = indexed_head_count(heads);
+    let head_dim = heads
+        .values()
+        .filter_map(|record| usize::try_from(*record.shape.first()?).ok())
+        .find(|head_dim| *head_dim != 0)?;
+    if head_count == 0 {
+        return None;
+    }
+    Some((head_dim, head_count))
+}
+
+fn rust_trace_history_head_dim_count(
+    heads: &BTreeMap<usize, &RustTraceRecord>,
+) -> Option<(usize, usize)> {
+    let head_count = indexed_head_count(heads);
+    let head_dim = heads
+        .values()
+        .filter_map(|record| record.shape.first().copied())
+        .find(|head_dim| *head_dim != 0)?;
+    if head_count == 0 {
+        return None;
+    }
+    Some((head_dim, head_count))
+}
+
 #[derive(Debug, Clone)]
 struct ReferenceQuerySampleStatus {
     first_values_count: usize,
@@ -17523,6 +17555,13 @@ fn attention_score_raw_history_position_qk_recompute(
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
+    let reference_score_query_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "q_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
     let rust_query_history_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
@@ -17534,6 +17573,13 @@ fn attention_score_raw_history_position_qk_recompute(
         .iter()
         .filter_map(|record| {
             parse_stage_head(&record.stage, "kcur_history_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_score_key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_score_input_head").map(|head| (head, record))
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
@@ -17573,16 +17619,38 @@ fn attention_score_raw_history_position_qk_recompute(
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
 
-    let (reference_head_dim, reference_head_count) =
+    let (reference_current_head_dim, reference_current_head_count) =
         reference_query.and_then(reference_query_head_dim_count).unwrap_or((0, 0));
-    let (rust_head_dim, rust_head_count) =
+    let (reference_score_query_head_dim, reference_score_query_head_count) =
+        reference_trace_history_head_dim_count(&reference_score_query_heads).unwrap_or((0, 0));
+    let (rust_current_head_dim, rust_current_head_count) =
         rust_query.and_then(rust_query_head_dim_count).unwrap_or((0, 0));
-    let head_dim = if reference_head_dim != 0 { reference_head_dim } else { rust_head_dim };
-    let head_count = if reference_head_count != 0 { reference_head_count } else { rust_head_count };
-    let reference_key_head_count = if reference_kcur_history_heads.is_empty() {
-        reference_legacy_key_heads.len()
+    let (rust_history_head_dim, rust_history_head_count) =
+        rust_trace_history_head_dim_count(&rust_query_history_heads).unwrap_or((0, 0));
+    let head_dim = [
+        reference_current_head_dim,
+        reference_score_query_head_dim,
+        rust_current_head_dim,
+        rust_history_head_dim,
+    ]
+    .into_iter()
+    .find(|head_dim| *head_dim != 0)
+    .unwrap_or(0);
+    let head_count = [
+        reference_current_head_count,
+        reference_score_query_head_count,
+        rust_current_head_count,
+        rust_history_head_count,
+    ]
+    .into_iter()
+    .find(|head_count| *head_count != 0)
+    .unwrap_or(0);
+    let reference_key_head_count = if !reference_score_key_heads.is_empty() {
+        indexed_head_count(&reference_score_key_heads)
+    } else if !reference_kcur_history_heads.is_empty() {
+        indexed_head_count(&reference_kcur_history_heads)
     } else {
-        reference_kcur_history_heads.len()
+        indexed_head_count(&reference_legacy_key_heads)
     };
     let group_size = if head_count > 0
         && reference_key_head_count > 0
@@ -17611,8 +17679,10 @@ fn attention_score_raw_history_position_qk_recompute(
             position,
             reference_query,
             rust_query,
+            &reference_score_query_heads,
             &reference_query_history_heads,
             &rust_query_history_heads,
+            &reference_score_key_heads,
             &reference_kcur_history_heads,
             &reference_legacy_key_heads,
             &rust_score_key_heads,
@@ -17690,8 +17760,10 @@ fn attention_score_raw_history_position_qk_recompute(
         "selected_current_token": selected_current_token,
         "reference_query_present": reference_query.is_some(),
         "rust_query_present": rust_query.is_some(),
+        "reference_score_query_head_count": reference_score_query_heads.len(),
         "reference_query_history_head_count": reference_query_history_heads.len(),
         "rust_query_history_head_count": rust_query_history_heads.len(),
+        "reference_score_key_head_count": reference_score_key_heads.len(),
         "reference_kcur_history_head_count": reference_kcur_history_heads.len(),
         "reference_legacy_key_head_count": reference_legacy_key_heads.len(),
         "reference_score_history_head_count": reference_score_history_heads.len(),
@@ -17716,10 +17788,22 @@ fn score_position_reference_input_stage_provenance(
     rows: &[Value],
     reference_records: &[ReferenceTraceRecord],
 ) -> Value {
+    let score_query_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "q_score_input_head").map(|head| (head, record))
+        })
+        .collect::<BTreeMap<_, _>>();
     let query_history_heads = reference_records
         .iter()
         .filter_map(|record| {
             parse_stage_head(&record.stage, "qcur_history_head").map(|head| (head, record))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let score_key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_score_input_head").map(|head| (head, record))
         })
         .collect::<BTreeMap<_, _>>();
     let kcur_history_heads = reference_records
@@ -17775,14 +17859,17 @@ fn score_position_reference_input_stage_provenance(
             residual_row_count += 1;
         }
 
-        let query_stage =
-            head.and_then(|head| query_history_heads.get(&head).copied()).or_else(|| {
+        let query_stage = head
+            .and_then(|head| score_query_heads.get(&head).copied())
+            .or_else(|| head.and_then(|head| query_history_heads.get(&head).copied()))
+            .or_else(|| {
                 reference_records
                     .iter()
                     .find(|record| record.stage == "Qcur" && record.values_available)
             });
         let key_stage = kv_head
-            .and_then(|kv_head| kcur_history_heads.get(&kv_head).copied())
+            .and_then(|kv_head| score_key_heads.get(&kv_head).copied())
+            .or_else(|| kv_head.and_then(|kv_head| kcur_history_heads.get(&kv_head).copied()))
             .or_else(|| kv_head.and_then(|kv_head| legacy_key_heads.get(&kv_head).copied()));
         let score_stage = head.and_then(|head| score_history_heads.get(&head).copied());
 
@@ -17827,10 +17914,16 @@ fn score_position_reference_input_stage_provenance(
         if key_stage.is_none() {
             blockers.push("reference_key_stage_missing");
         }
-        if query_stage.is_some() && !reference_record_has_graph_sources(query_stage.unwrap()) {
+        if query_stage.is_some()
+            && !reference_record_has_graph_sources(query_stage.unwrap())
+            && !query_stage.is_some_and(|record| record.stage.starts_with("q_score_input_head"))
+        {
             blockers.push("reference_query_history_view_graph_sources_missing");
         }
-        if key_stage.is_some() && !reference_record_has_graph_sources(key_stage.unwrap()) {
+        if key_stage.is_some()
+            && !reference_record_has_graph_sources(key_stage.unwrap())
+            && !key_stage.is_some_and(|record| record.stage.starts_with("k_score_input_head"))
+        {
             blockers.push("reference_key_history_view_graph_sources_missing");
         }
         if !parent_source_bound {
@@ -17988,11 +18081,15 @@ fn reference_graph_source_aliases(record: &ReferenceTraceRecord) -> Vec<String> 
         return Vec::new();
     };
     let stage = record.stage.as_str();
-    if stage == "Qcur" || stage.starts_with("qcur_history_head") {
+    if stage == "Qcur"
+        || stage.starts_with("qcur_history_head")
+        || stage.starts_with("q_score_input_head")
+    {
         vec![format!("q-{layer}")]
     } else if stage == "Kcur"
         || stage.starts_with("kcur_history_kv_head")
         || stage.starts_with("k_kv_head")
+        || stage.starts_with("k_score_input_head")
     {
         vec![format!("k-{layer}")]
     } else {
@@ -18356,8 +18453,10 @@ fn score_position_qk_recompute_row(
     position: &Value,
     reference_query: Option<&ReferenceTraceRecord>,
     rust_query: Option<&RustTraceRecord>,
+    reference_score_query_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
     reference_query_history_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
     rust_query_history_heads: &BTreeMap<usize, &RustTraceRecord>,
+    reference_score_key_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
     reference_kcur_history_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
     reference_legacy_key_heads: &BTreeMap<usize, &ReferenceTraceRecord>,
     rust_score_key_heads: &BTreeMap<usize, &RustTraceRecord>,
@@ -18384,9 +18483,6 @@ fn score_position_qk_recompute_row(
     if query_token.is_none() {
         blocked_reasons.push("score_position_query_token_missing".to_string());
     }
-    if selected_current_token.is_none() {
-        blocked_reasons.push("selected_current_token_missing".to_string());
-    }
     if head_dim == 0 {
         blocked_reasons.push("score_head_dim_missing".to_string());
     }
@@ -18394,21 +18490,26 @@ fn score_position_qk_recompute_row(
         blocked_reasons.push("score_group_size_missing".to_string());
     }
 
-    let reference_key = kv_head.and_then(|kv_head| {
-        reference_kcur_history_heads
-            .get(&kv_head)
-            .copied()
-            .or_else(|| reference_legacy_key_heads.get(&kv_head).copied())
+    let reference_score_key =
+        kv_head.and_then(|kv_head| reference_score_key_heads.get(&kv_head).copied());
+    let reference_key = reference_score_key.or_else(|| {
+        kv_head.and_then(|kv_head| {
+            reference_kcur_history_heads
+                .get(&kv_head)
+                .copied()
+                .or_else(|| reference_legacy_key_heads.get(&kv_head).copied())
+        })
     });
-    let reference_key_layout = if kv_head
-        .and_then(|kv_head| reference_kcur_history_heads.get(&kv_head).copied())
-        .is_some()
+    let reference_key_layout = if reference_score_key.is_some()
+        || kv_head.and_then(|kv_head| reference_kcur_history_heads.get(&kv_head).copied()).is_some()
     {
         ScoreKeyLayout::DimMajor
     } else {
         ScoreKeyLayout::TokenMajor
     };
-    let reference_key_source = if matches!(reference_key_layout, ScoreKeyLayout::DimMajor) {
+    let reference_key_source = if reference_score_key.is_some() {
+        "reference_k_score_input_head"
+    } else if matches!(reference_key_layout, ScoreKeyLayout::DimMajor) {
         "reference_kcur_history_kv_head"
     } else {
         "reference_k_kv_head"
@@ -18427,13 +18528,23 @@ fn score_position_qk_recompute_row(
         };
     let rust_key_f16_probe =
         head.and_then(|head| rust_score_key_f16_probe_heads.get(&head).copied());
-    let reference_query_history =
-        head.and_then(|head| reference_query_history_heads.get(&head).copied());
+    let reference_score_query =
+        head.and_then(|head| reference_score_query_heads.get(&head).copied());
+    let reference_query_history = reference_score_query
+        .or_else(|| head.and_then(|head| reference_query_history_heads.get(&head).copied()));
+    let reference_query_history_source = if reference_score_query.is_some() {
+        "reference_q_score_input_head"
+    } else {
+        "reference_qcur_history_head"
+    };
     let rust_query_history = head.and_then(|head| rust_query_history_heads.get(&head).copied());
     let current_query_scope_matches =
         query_token.is_some() && query_token == selected_current_token;
     let query_history_present = reference_query_history.is_some() || rust_query_history.is_some();
 
+    if selected_current_token.is_none() && !query_history_present {
+        blocked_reasons.push("selected_current_token_missing".to_string());
+    }
     if !current_query_scope_matches && !query_history_present {
         blocked_reasons.push("score_position_query_history_missing".to_string());
         blocked_reasons.push("score_position_query_token_not_selected_current_token".to_string());
@@ -18473,9 +18584,14 @@ fn score_position_qk_recompute_row(
         if let Some(reference_query_history) = reference_query_history {
             score_candidates.push(ScorePositionInputCandidate {
                 id: "reference_q_history_reference_k_q_trace_k_f32",
-                base_candidate: "reference_q_history_reference_k",
+                base_candidate: if reference_score_query.is_some() || reference_score_key.is_some()
+                {
+                    "reference_q_score_input_reference_k_score_input"
+                } else {
+                    "reference_q_history_reference_k"
+                },
                 score_input_variant: "q_trace_k_f32",
-                query_source: "reference_qcur_history_head",
+                query_source: reference_query_history_source,
                 key_source: reference_key_source,
                 query_layout: ScoreQueryLayout::DimMajorHistory,
                 key_layout: reference_key_layout,
@@ -18486,9 +18602,14 @@ fn score_position_qk_recompute_row(
             });
             score_candidates.push(ScorePositionInputCandidate {
                 id: "reference_q_history_reference_k_q_trace_k_f16",
-                base_candidate: "reference_q_history_reference_k",
+                base_candidate: if reference_score_query.is_some() || reference_score_key.is_some()
+                {
+                    "reference_q_score_input_reference_k_score_input"
+                } else {
+                    "reference_q_history_reference_k"
+                },
                 score_input_variant: "q_trace_k_f16",
-                query_source: "reference_qcur_history_head",
+                query_source: reference_query_history_source,
                 key_source: reference_key_source,
                 query_layout: ScoreQueryLayout::DimMajorHistory,
                 key_layout: reference_key_layout,
@@ -18499,9 +18620,13 @@ fn score_position_qk_recompute_row(
             });
             score_candidates.push(ScorePositionInputCandidate {
                 id: "reference_q_history_rust_k_q_trace_k_f32",
-                base_candidate: "reference_q_history_rust_k",
+                base_candidate: if reference_score_query.is_some() {
+                    "reference_q_score_input_rust_k"
+                } else {
+                    "reference_q_history_rust_k"
+                },
                 score_input_variant: "q_trace_k_f32",
-                query_source: "reference_qcur_history_head",
+                query_source: reference_query_history_source,
                 key_source: rust_key_source,
                 query_layout: ScoreQueryLayout::DimMajorHistory,
                 key_layout: ScoreKeyLayout::DimMajor,
@@ -24339,6 +24464,16 @@ mod tests {
         assert!(patch.contains(
             "history_name << history_head_stage_prefix << head << \"_history_ref_layout-\""
         ));
+        assert!(patch.contains("{\"q\", \"q\"}"));
+        assert!(patch.contains("\"q-0\""));
+        assert!(patch.contains("q_score_input_head"));
+        assert!(patch.contains("k_score_input_head"));
+        assert!(patch.contains("source_tensor_name"));
+        assert!(
+            patch.contains("bitnet_rs_reference_layer_trace_write_score_input_history_records")
+        );
+        assert!(patch.contains("struct ggml_tensor * source = tensor->src[src_i]"));
+        assert!(patch.contains("dim + head_dim * token + head_dim * token_capacity * head"));
         assert!(patch.contains("bool first_history_source = true"));
         assert!(patch.contains("struct ggml_tensor * source = tensor->src[src_i]"));
         assert!(
@@ -28274,13 +28409,17 @@ mod tests {
 
     #[test]
     fn attention_score_raw_history_position_qk_recompute_binds_reference_score_source_aliases() {
-        let mut reference_query_history =
-            test_reference_trace_record("qcur_history_head0_ref_layout", vec![1.0, 2.0, 3.0]);
+        let mut reference_query_history = test_reference_trace_record(
+            "q_score_input_head0_history_ref_layout",
+            vec![1.0, 2.0, 3.0],
+        );
         reference_query_history.shape = vec![3, 1];
         reference_query_history.nelements = 3;
         reference_query_history.graph_sources = json!([]);
-        let mut reference_key =
-            test_reference_trace_record("kcur_history_kv_head0_ref_layout", vec![1.0, 1.0, 1.0]);
+        let mut reference_key = test_reference_trace_record(
+            "k_score_input_head0_history_ref_layout",
+            vec![1.0, 1.0, 1.0],
+        );
         reference_key.shape = vec![3, 1];
         reference_key.nelements = 3;
         reference_key.graph_sources = json!([]);
@@ -28293,18 +28432,6 @@ mod tests {
         let reference_records = vec![reference_query_history, reference_key, reference_score];
 
         let mut rust_records = BTreeMap::new();
-        rust_records.insert(
-            "attention_q_rope".to_string(),
-            RustTraceRecord {
-                name: "t0/blk0/attention_q_rope".to_string(),
-                stage: Some("attention_q_rope".to_string()),
-                shape: vec![1, 3],
-                num_elements: 3,
-                first_values: vec![1.0, 2.0, 3.0],
-                seq: Some(0),
-                ..test_rust_trace_record("attention_q_rope", vec![1.0, 2.0, 3.0])
-            },
-        );
         rust_records.insert(
             "attention_q_score_input_head0_history_ref_layout".to_string(),
             RustTraceRecord {
@@ -28359,6 +28486,10 @@ mod tests {
             provenance.pointer("/classification"),
             Some(&json!("reference_score_inputs_exact_graph_bound"))
         );
+        assert_eq!(report.pointer("/reference_query_present"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rust_query_present"), Some(&json!(false)));
+        assert_eq!(report.pointer("/reference_score_query_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/reference_score_key_head_count"), Some(&json!(1)));
         assert_eq!(provenance.pointer("/exact_score_graph_source_bound_count"), Some(&json!(1)));
         assert_eq!(provenance.pointer("/missing_score_graph_source_count"), Some(&json!(0)));
         assert_eq!(
@@ -28369,6 +28500,55 @@ mod tests {
         assert_eq!(row.pointer("/parent_source_bound"), Some(&json!(true)));
         assert_eq!(row.pointer("/score_stage/graph_source_names/0"), Some(&json!("k-0")));
         assert_eq!(row.pointer("/score_stage/graph_source_names/1"), Some(&json!("q-0")));
+        assert_eq!(
+            row.pointer("/query_stage/stage"),
+            Some(&json!("q_score_input_head0_history_ref_layout"))
+        );
+        assert_eq!(
+            row.pointer("/key_stage/stage"),
+            Some(&json!("k_score_input_head0_history_ref_layout"))
+        );
+        let missing_reasons = row
+            .pointer("/missing_binding_reasons")
+            .and_then(Value::as_array)
+            .expect("missing binding reasons");
+        assert!(
+            !missing_reasons.contains(&json!("reference_query_history_view_graph_sources_missing"))
+        );
+        assert!(
+            !missing_reasons.contains(&json!("reference_key_history_view_graph_sources_missing"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/best_reference_candidate/base_candidate"),
+            Some(&json!("reference_q_score_input_reference_k_score_input"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/best_reference_candidate/query_source"),
+            Some(&json!("reference_q_score_input_head"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/best_reference_candidate/key_source"),
+            Some(&json!("reference_k_score_input_head"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/best_reference_candidate/reference_abs_delta"),
+            Some(&json!(0.0))
+        );
+        let candidates = report
+            .pointer("/rows/0/candidates")
+            .and_then(Value::as_array)
+            .expect("score candidates");
+        let mixed_reference_q_rust_k = candidates
+            .iter()
+            .find(|candidate| {
+                candidate.pointer("/base_candidate")
+                    == Some(&json!("reference_q_score_input_rust_k"))
+            })
+            .expect("mixed reference q-score input / rust key candidate");
+        assert_eq!(
+            mixed_reference_q_rust_k.pointer("/query_source"),
+            Some(&json!("reference_q_score_input_head"))
+        );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
