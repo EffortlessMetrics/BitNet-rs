@@ -3008,7 +3008,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-005"
-status = "in_progress"
+status = "pr_open"
 branch = "docs/dense-qwen-exact-server-readiness"
 stackable = false
 review_mode = "codex_premerge"
