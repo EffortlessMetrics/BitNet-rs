@@ -12219,6 +12219,11 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_norm_f64_selected_k_rope_direct_expression_frontier(
             &selected_k_rope_scalar_arithmetic_frontier,
         );
+    let selected_k_rope_rust_expression_policy_frontier =
+        attention_norm_f64_selected_k_rope_rust_expression_policy_frontier(
+            &selected_k_rope_direct_expression_frontier,
+            f64_rust_records,
+        );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12313,6 +12318,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "selected_k_rope_producer_storage_frontier": selected_k_rope_producer_storage_frontier,
         "selected_k_rope_scalar_arithmetic_frontier": selected_k_rope_scalar_arithmetic_frontier,
         "selected_k_rope_direct_expression_frontier": selected_k_rope_direct_expression_frontier,
+        "selected_k_rope_rust_expression_policy_frontier": selected_k_rope_rust_expression_policy_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -14249,6 +14255,324 @@ fn attention_norm_f64_selected_k_rope_direct_expression_frontier(
         "blocked_reasons": blocked_reasons,
         "next_diagnostic": next_diagnostic,
     })
+}
+
+fn attention_norm_f64_selected_k_rope_rust_expression_policy_frontier(
+    selected_k_rope_direct_expression_frontier: &Value,
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_classification = selected_k_rope_direct_expression_frontier
+        .pointer("/classification")
+        .and_then(Value::as_str);
+    let scalar_record = selected_k_rope_direct_expression_frontier
+        .pointer("/scalar_record")
+        .filter(|record| !record.is_null());
+    let layer =
+        scalar_record.and_then(|record| value_u64(record, "/layer")).map(|value| value as usize);
+    let kv_head =
+        scalar_record.and_then(|record| value_u64(record, "/kv_head")).map(|value| value as usize);
+    let token =
+        scalar_record.and_then(|record| value_u64(record, "/token")).map(|value| value as usize);
+    let dim =
+        scalar_record.and_then(|record| value_u64(record, "/dim")).map(|value| value as usize);
+    let paired_dim = scalar_record
+        .and_then(|record| value_u64(record, "/paired_dim"))
+        .map(|value| value as usize);
+    let component =
+        scalar_record.and_then(|record| record.pointer("/component")).and_then(Value::as_str);
+    let cos_theta_bits = scalar_record.and_then(|record| value_u64(record, "/cos_theta_bits_u32"));
+    let sin_theta_bits = scalar_record.and_then(|record| value_u64(record, "/sin_theta_bits_u32"));
+    let reference_direct_bits =
+        value_u64(selected_k_rope_direct_expression_frontier, "/direct_expression_bits_u32");
+    let reference_term_split_bits =
+        value_u64(selected_k_rope_direct_expression_frontier, "/term_split_replay_bits_u32");
+    let reference_x0_contracted_bits = value_u64(
+        selected_k_rope_direct_expression_frontier,
+        "/fma_x0_product_contracted_bits_u32",
+    );
+    let reference_x1_contracted_bits = value_u64(
+        selected_k_rope_direct_expression_frontier,
+        "/fma_x1_product_contracted_bits_u32",
+    );
+
+    let projection_stage =
+        kv_head.map(|head| format!("attention_k_projection_kv_head{head}_ref_layout"));
+    let before_store_stage =
+        kv_head.map(|head| format!("attention_k_before_cache_store_kv_head{head}_ref_layout"));
+    let projection_record = projection_stage.as_ref().and_then(|stage| rust_records.get(stage));
+    let before_store_record = before_store_stage.as_ref().and_then(|stage| rust_records.get(stage));
+    let dim_count = projection_record.and_then(|record| record.shape.first().copied());
+    let token_count = projection_record.and_then(|record| record.shape.get(1).copied());
+    let selected_index =
+        dim.zip(token_count).zip(token).map(|((dim, tokens), token)| dim * tokens + token);
+    let paired_index =
+        paired_dim.zip(token_count).zip(token).map(|((dim, tokens), token)| dim * tokens + token);
+    let rust_x0 = projection_record
+        .zip(selected_index)
+        .and_then(|(record, index)| record.first_values.get(index).copied());
+    let rust_x1 = projection_record
+        .zip(paired_index)
+        .and_then(|(record, index)| record.first_values.get(index).copied());
+    let rust_output = before_store_record
+        .zip(selected_index)
+        .and_then(|(record, index)| record.first_values.get(index).copied());
+    let cos_theta = cos_theta_bits.map(|bits| f32::from_bits(bits as u32));
+    let sin_theta = sin_theta_bits.map(|bits| f32::from_bits(bits as u32));
+    let lower_component = component == Some("lower_x0_cos_minus_x1_sin");
+    let upper_component = component == Some("upper_x0_sin_plus_x1_cos");
+
+    let rust_variants =
+        match (rust_x0, rust_x1, cos_theta, sin_theta, lower_component, upper_component) {
+            (Some(x0), Some(x1), Some(cos), Some(sin), true, _) => {
+                let term0 = x0 * cos;
+                let term1 = x1 * sin;
+                Some((term0 - term1, x0.mul_add(cos, -term1), (-x1).mul_add(sin, term0)))
+            }
+            (Some(x0), Some(x1), Some(cos), Some(sin), _, true) => {
+                let term0 = x0 * sin;
+                let term1 = x1 * cos;
+                Some((term0 + term1, x0.mul_add(sin, term1), x1.mul_add(cos, term0)))
+            }
+            _ => None,
+        };
+    let rust_term_split_bits = rust_variants.map(|(term_split, _, _)| term_split.to_bits() as u64);
+    let rust_x0_contracted_bits =
+        rust_variants.map(|(_, x0_contracted, _)| x0_contracted.to_bits() as u64);
+    let rust_x1_contracted_bits =
+        rust_variants.map(|(_, _, x1_contracted)| x1_contracted.to_bits() as u64);
+    let rust_output_bits = rust_output.map(|value| value.to_bits() as u64);
+
+    let rust_output_matches_reference_direct =
+        rust_output_bits.zip(reference_direct_bits).is_some_and(|(left, right)| left == right);
+    let rust_output_matches_term_split =
+        rust_output_bits.zip(rust_term_split_bits).is_some_and(|(left, right)| left == right);
+    let rust_output_matches_x0_contracted =
+        rust_output_bits.zip(rust_x0_contracted_bits).is_some_and(|(left, right)| left == right);
+    let rust_output_matches_x1_contracted =
+        rust_output_bits.zip(rust_x1_contracted_bits).is_some_and(|(left, right)| left == right);
+    let rust_term_split_matches_reference_term_split = rust_term_split_bits
+        .zip(reference_term_split_bits)
+        .is_some_and(|(left, right)| left == right);
+    let rust_x0_contracted_matches_reference_x0 = rust_x0_contracted_bits
+        .zip(reference_x0_contracted_bits)
+        .is_some_and(|(left, right)| left == right);
+    let rust_x1_contracted_matches_reference_x1 = rust_x1_contracted_bits
+        .zip(reference_x1_contracted_bits)
+        .is_some_and(|(left, right)| left == right);
+
+    let active_frontier = matches!(
+        reference_classification,
+        Some("selected_k_rope_direct_expression_matches_x0_product_contracted")
+            | Some("selected_k_rope_direct_expression_matches_x1_product_contracted")
+            | Some("selected_k_rope_direct_expression_matches_term_split")
+    );
+    let mut blocked_reasons = Vec::<String>::new();
+    if !active_frontier {
+        blocked_reasons.push("selected_k_rope_direct_expression_frontier_not_active".to_string());
+    }
+    if scalar_record.is_none() {
+        blocked_reasons.push("selected_k_rope_reference_scalar_record_missing".to_string());
+    }
+    if layer.is_none()
+        || kv_head.is_none()
+        || token.is_none()
+        || dim.is_none()
+        || paired_dim.is_none()
+    {
+        blocked_reasons.push("selected_k_rope_reference_position_identity_missing".to_string());
+    }
+    if component.is_none() || (!lower_component && !upper_component) {
+        blocked_reasons.push("selected_k_rope_reference_component_missing".to_string());
+    }
+    if cos_theta_bits.is_none() || sin_theta_bits.is_none() {
+        blocked_reasons.push("selected_k_rope_reference_trig_bits_missing".to_string());
+    }
+    if projection_record.is_none() {
+        blocked_reasons.push("rust_selected_k_projection_record_missing".to_string());
+    }
+    if before_store_record.is_none() {
+        blocked_reasons.push("rust_selected_k_before_store_record_missing".to_string());
+    }
+    if selected_index.is_none() || paired_index.is_none() {
+        blocked_reasons.push("rust_selected_k_index_missing".to_string());
+    }
+    if rust_x0.is_none() || rust_x1.is_none() {
+        blocked_reasons.push("rust_selected_k_projection_inputs_missing".to_string());
+    }
+    if rust_output.is_none() {
+        blocked_reasons.push("rust_selected_k_before_store_output_missing".to_string());
+    }
+    if rust_variants.is_none() {
+        blocked_reasons.push("rust_selected_k_expression_variants_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if !active_frontier {
+        "rust_selected_k_rope_expression_not_active_frontier"
+    } else if !blocked_reasons.is_empty() {
+        "rust_selected_k_rope_expression_inputs_missing"
+    } else if rust_output_matches_reference_direct && rust_output_matches_x0_contracted {
+        "rust_selected_k_rope_expression_matches_reference_x0_product_contracted"
+    } else if rust_output_matches_reference_direct && rust_output_matches_x1_contracted {
+        "rust_selected_k_rope_expression_matches_reference_x1_product_contracted"
+    } else if rust_output_matches_reference_direct && rust_output_matches_term_split {
+        "rust_selected_k_rope_expression_matches_reference_term_split"
+    } else if rust_output_matches_term_split {
+        "rust_selected_k_rope_expression_matches_term_split_not_reference"
+    } else if rust_output_matches_x0_contracted {
+        "rust_selected_k_rope_expression_matches_x0_product_contracted_not_reference"
+    } else if rust_output_matches_x1_contracted {
+        "rust_selected_k_rope_expression_matches_x1_product_contracted_not_reference"
+    } else {
+        "rust_selected_k_rope_expression_policy_unpinned"
+    };
+
+    let next_diagnostic = match classification {
+        "rust_selected_k_rope_expression_matches_reference_x0_product_contracted"
+        | "rust_selected_k_rope_expression_matches_reference_x1_product_contracted"
+        | "rust_selected_k_rope_expression_matches_reference_term_split" => {
+            "Rust selected-K ROPE expression policy matches the reference direct-expression policy for this scalar; rerun downstream score and probability diagnostics before runtime math changes"
+        }
+        "rust_selected_k_rope_expression_matches_term_split_not_reference"
+        | "rust_selected_k_rope_expression_matches_x0_product_contracted_not_reference"
+        | "rust_selected_k_rope_expression_matches_x1_product_contracted_not_reference" => {
+            "Rust selected-K ROPE expression policy differs from the reference direct-expression policy; pin this scalar in Rust trace capture before any runtime fix"
+        }
+        "rust_selected_k_rope_expression_policy_unpinned" => {
+            "extend Rust selected-K ROPE expression variants before changing runtime math"
+        }
+        "rust_selected_k_rope_expression_inputs_missing" => {
+            "rerun Rust trace capture with full selected K projection and before-store samples"
+        }
+        "rust_selected_k_rope_expression_not_active_frontier" => {
+            "pin reference selected-K direct-expression frontier before comparing Rust policy"
+        }
+        _ => {
+            "keep Rust selected-K ROPE expression policy diagnostic-only until scalar bits are pinned"
+        }
+    };
+
+    let mut object = serde_json::Map::new();
+    object.insert("diagnostic_only".to_string(), json!(true));
+    object.insert("claim_allowed".to_string(), json!(false));
+    object.insert("policy".to_string(), json!("Rust selected-K ROPE expression policy frontier is diagnostic-only evidence comparing existing Rust trace samples against the reference selected-K direct-expression policy; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion"));
+    object.insert("classification".to_string(), json!(classification));
+    object.insert(
+        "reference_direct_expression_classification".to_string(),
+        json!(reference_classification),
+    );
+    object.insert("layer".to_string(), json!(layer));
+    object.insert("kv_head".to_string(), json!(kv_head));
+    object.insert("token".to_string(), json!(token));
+    object.insert("dim".to_string(), json!(dim));
+    object.insert("paired_dim".to_string(), json!(paired_dim));
+    object.insert("component".to_string(), json!(component));
+    object.insert("projection_stage".to_string(), json!(projection_stage));
+    object.insert("before_store_stage".to_string(), json!(before_store_stage));
+    object.insert("dim_count".to_string(), json!(dim_count));
+    object.insert("token_count".to_string(), json!(token_count));
+    object.insert("selected_index".to_string(), json!(selected_index));
+    object.insert("paired_index".to_string(), json!(paired_index));
+    object.insert("rust_x0_bits_u32".to_string(), json!(rust_x0.map(|value| value.to_bits())));
+    object.insert(
+        "rust_x0_bits_hex".to_string(),
+        json!(rust_x0.map(|value| u32_bits_hex(value.to_bits()))),
+    );
+    object.insert("rust_x1_bits_u32".to_string(), json!(rust_x1.map(|value| value.to_bits())));
+    object.insert(
+        "rust_x1_bits_hex".to_string(),
+        json!(rust_x1.map(|value| u32_bits_hex(value.to_bits()))),
+    );
+    object.insert("cos_theta_bits_u32".to_string(), json!(cos_theta_bits));
+    object.insert(
+        "cos_theta_bits_hex".to_string(),
+        json!(cos_theta_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert("sin_theta_bits_u32".to_string(), json!(sin_theta_bits));
+    object.insert(
+        "sin_theta_bits_hex".to_string(),
+        json!(sin_theta_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert("rust_term_split_bits_u32".to_string(), json!(rust_term_split_bits));
+    object.insert(
+        "rust_term_split_bits_hex".to_string(),
+        json!(rust_term_split_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object
+        .insert("rust_x0_product_contracted_bits_u32".to_string(), json!(rust_x0_contracted_bits));
+    object.insert(
+        "rust_x0_product_contracted_bits_hex".to_string(),
+        json!(rust_x0_contracted_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object
+        .insert("rust_x1_product_contracted_bits_u32".to_string(), json!(rust_x1_contracted_bits));
+    object.insert(
+        "rust_x1_product_contracted_bits_hex".to_string(),
+        json!(rust_x1_contracted_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert("rust_before_store_bits_u32".to_string(), json!(rust_output_bits));
+    object.insert(
+        "rust_before_store_bits_hex".to_string(),
+        json!(rust_output_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert("reference_direct_expression_bits_u32".to_string(), json!(reference_direct_bits));
+    object.insert(
+        "reference_direct_expression_bits_hex".to_string(),
+        json!(reference_direct_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert("reference_term_split_bits_u32".to_string(), json!(reference_term_split_bits));
+    object.insert(
+        "reference_term_split_bits_hex".to_string(),
+        json!(reference_term_split_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert(
+        "reference_x0_product_contracted_bits_u32".to_string(),
+        json!(reference_x0_contracted_bits),
+    );
+    object.insert(
+        "reference_x0_product_contracted_bits_hex".to_string(),
+        json!(reference_x0_contracted_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert(
+        "reference_x1_product_contracted_bits_u32".to_string(),
+        json!(reference_x1_contracted_bits),
+    );
+    object.insert(
+        "reference_x1_product_contracted_bits_hex".to_string(),
+        json!(reference_x1_contracted_bits.map(|bits| u32_bits_hex(bits as u32))),
+    );
+    object.insert(
+        "rust_output_matches_reference_direct".to_string(),
+        json!(rust_output_matches_reference_direct),
+    );
+    object.insert(
+        "rust_output_matches_term_split".to_string(),
+        json!(rust_output_matches_term_split),
+    );
+    object.insert(
+        "rust_output_matches_x0_product_contracted".to_string(),
+        json!(rust_output_matches_x0_contracted),
+    );
+    object.insert(
+        "rust_output_matches_x1_product_contracted".to_string(),
+        json!(rust_output_matches_x1_contracted),
+    );
+    object.insert(
+        "rust_term_split_matches_reference_term_split".to_string(),
+        json!(rust_term_split_matches_reference_term_split),
+    );
+    object.insert(
+        "rust_x0_contracted_matches_reference_x0".to_string(),
+        json!(rust_x0_contracted_matches_reference_x0),
+    );
+    object.insert(
+        "rust_x1_contracted_matches_reference_x1".to_string(),
+        json!(rust_x1_contracted_matches_reference_x1),
+    );
+    object.insert("blocked_reasons".to_string(), json!(blocked_reasons));
+    object.insert("next_diagnostic".to_string(), json!(next_diagnostic));
+    Value::Object(object)
 }
 
 fn json_array_u64(value: &Value, pointer: &str, index: usize) -> Option<u64> {
@@ -43094,6 +43418,157 @@ mod tests {
                         .contains(&json!("selected_k_rope_fma_x0_product_contracted_bits_missing"))
                     && reasons
                         .contains(&json!("selected_k_rope_fma_x1_product_contracted_bits_missing"))
+            }
+        ));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn rust_selected_k_rope_expression_frontier_matches_reference_x0_contraction() {
+        let reference_frontier = json!({
+            "classification": "selected_k_rope_direct_expression_matches_x0_product_contracted",
+            "direct_expression_bits_u32": 3229921280u32,
+            "term_split_replay_bits_u32": 3229921279u32,
+            "fma_x0_product_contracted_bits_u32": 3229921280u32,
+            "fma_x1_product_contracted_bits_u32": 3229921279u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "layer": 0,
+                "kv_head": 1,
+                "token": 1,
+                "dim": 1,
+                "paired_dim": 2,
+                "component": "lower_x0_cos_minus_x1_sin",
+                "cos_theta_bits_u32": 1065353213u32,
+                "sin_theta_bits_u32": 974113007u32,
+            },
+        });
+        let mut projection_values = vec![0.0f32; 12];
+        projection_values[4] = f32::from_bits(3229918798u32);
+        projection_values[7] = f32::from_bits(1074407321u32);
+        let mut before_store_values = vec![0.0f32; 12];
+        before_store_values[4] = f32::from_bits(3229921280u32);
+        let mut projection =
+            test_rust_trace_record("attention_k_projection_kv_head1_ref_layout", projection_values);
+        projection.shape = vec![4, 3];
+        let mut before_store = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head1_ref_layout",
+            before_store_values,
+        );
+        before_store.shape = vec![4, 3];
+        let rust_records = BTreeMap::from([
+            ("attention_k_projection_kv_head1_ref_layout".to_string(), projection),
+            ("attention_k_before_cache_store_kv_head1_ref_layout".to_string(), before_store),
+        ]);
+
+        let frontier = attention_norm_f64_selected_k_rope_rust_expression_policy_frontier(
+            &reference_frontier,
+            &rust_records,
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("rust_selected_k_rope_expression_matches_reference_x0_product_contracted"))
+        );
+        assert_eq!(frontier.pointer("/rust_before_store_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/rust_output_matches_reference_direct"), Some(&json!(true)));
+        assert_eq!(
+            frontier.pointer("/rust_output_matches_x0_product_contracted"),
+            Some(&json!(true))
+        );
+        assert_eq!(frontier.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn rust_selected_k_rope_expression_frontier_reports_term_split_not_reference() {
+        let reference_frontier = json!({
+            "classification": "selected_k_rope_direct_expression_matches_x0_product_contracted",
+            "direct_expression_bits_u32": 3229921280u32,
+            "term_split_replay_bits_u32": 3229921279u32,
+            "fma_x0_product_contracted_bits_u32": 3229921280u32,
+            "fma_x1_product_contracted_bits_u32": 3229921279u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "layer": 0,
+                "kv_head": 1,
+                "token": 1,
+                "dim": 1,
+                "paired_dim": 2,
+                "component": "lower_x0_cos_minus_x1_sin",
+                "cos_theta_bits_u32": 1065353213u32,
+                "sin_theta_bits_u32": 974113007u32,
+            },
+        });
+        let mut projection_values = vec![0.0f32; 12];
+        projection_values[4] = f32::from_bits(3229918798u32);
+        projection_values[7] = f32::from_bits(1074407321u32);
+        let mut before_store_values = vec![0.0f32; 12];
+        before_store_values[4] = f32::from_bits(3229921279u32);
+        let mut projection =
+            test_rust_trace_record("attention_k_projection_kv_head1_ref_layout", projection_values);
+        projection.shape = vec![4, 3];
+        let mut before_store = test_rust_trace_record(
+            "attention_k_before_cache_store_kv_head1_ref_layout",
+            before_store_values,
+        );
+        before_store.shape = vec![4, 3];
+        let rust_records = BTreeMap::from([
+            ("attention_k_projection_kv_head1_ref_layout".to_string(), projection),
+            ("attention_k_before_cache_store_kv_head1_ref_layout".to_string(), before_store),
+        ]);
+
+        let frontier = attention_norm_f64_selected_k_rope_rust_expression_policy_frontier(
+            &reference_frontier,
+            &rust_records,
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("rust_selected_k_rope_expression_matches_term_split_not_reference"))
+        );
+        assert_eq!(frontier.pointer("/rust_before_store_bits_hex"), Some(&json!("0xc084afff")));
+        assert_eq!(frontier.pointer("/rust_output_matches_reference_direct"), Some(&json!(false)));
+        assert_eq!(frontier.pointer("/rust_output_matches_term_split"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn rust_selected_k_rope_expression_frontier_blocks_missing_rust_records() {
+        let reference_frontier = json!({
+            "classification": "selected_k_rope_direct_expression_matches_x0_product_contracted",
+            "direct_expression_bits_u32": 3229921280u32,
+            "term_split_replay_bits_u32": 3229921279u32,
+            "fma_x0_product_contracted_bits_u32": 3229921280u32,
+            "fma_x1_product_contracted_bits_u32": 3229921279u32,
+            "scalar_record": {
+                "layer": 0,
+                "kv_head": 1,
+                "token": 1,
+                "dim": 1,
+                "paired_dim": 2,
+                "component": "lower_x0_cos_minus_x1_sin",
+                "cos_theta_bits_u32": 1065353213u32,
+                "sin_theta_bits_u32": 974113007u32,
+            },
+        });
+
+        let frontier = attention_norm_f64_selected_k_rope_rust_expression_policy_frontier(
+            &reference_frontier,
+            &BTreeMap::new(),
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("rust_selected_k_rope_expression_inputs_missing"))
+        );
+        assert!(frontier.pointer("/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| {
+                reasons.contains(&json!("rust_selected_k_projection_record_missing"))
+                    && reasons.contains(&json!("rust_selected_k_before_store_record_missing"))
             }
         ));
         assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
