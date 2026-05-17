@@ -83,6 +83,42 @@ const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
     "resident_50",
     "resident_100",
 ];
+const M4_SLM_BENCHMARK_V2_TIMING_METRICS: &[&str] = &[
+    "cold_load_ms",
+    "tokenizer_load_ms",
+    "prompt_tokenize_ms",
+    "prefill_ms",
+    "time_to_first_token_ms",
+    "decode_total_ms",
+    "sampling_ms_per_token",
+    "total_wall_ms",
+];
+const M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS: &[&str] =
+    &["input_tokens_per_second", "output_tokens_per_second", "decode_tokens_per_second"];
+const M4_SLM_BENCHMARK_V2_MEMORY_METRICS: &[&str] = &["peak_memory_mb", "memory_drift_mb"];
+const M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS: &[&str] = &[
+    "cold_load_ms",
+    "tokenizer_load_ms",
+    "prompt_tokenize_ms",
+    "prefill_ms",
+    "ttft_ms",
+    "sampling_ms_per_token",
+    "input_tok_s",
+    "output_tok_s",
+    "decode_tok_s",
+    "total_wall_ms",
+];
+const M4_SLM_BENCHMARK_V2_LEGACY_AGGREGATE_SPEED_METRICS: &[&str] = &[
+    "cold_load_ms",
+    "tokenizer_load_ms",
+    "prompt_tokenize_ms",
+    "prefill_ms",
+    "ttft_ms",
+    "input_tok_s",
+    "output_tok_s",
+    "decode_tok_s",
+    "total_wall_ms",
+];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 enum MacValidateProfileSet {
@@ -6824,6 +6860,7 @@ struct BenchmarkMetricSamples {
     prompt_tokenize_ms: Vec<f64>,
     prefill_ms: Vec<f64>,
     time_to_first_token_ms: Vec<f64>,
+    sampling_ms_per_token: Vec<f64>,
     input_tokens_per_second: Vec<f64>,
     output_tokens_per_second: Vec<f64>,
     decode_tokens_per_second: Vec<f64>,
@@ -6842,6 +6879,8 @@ impl BenchmarkMetricSamples {
         self.prefill_ms.extend(benchmark_stat_samples(&profile["timing"]["prefill_ms"]));
         self.time_to_first_token_ms
             .extend(benchmark_stat_samples(&profile["timing"]["time_to_first_token_ms"]));
+        self.sampling_ms_per_token
+            .extend(benchmark_stat_samples(&profile["timing"]["sampling_ms_per_token"]));
         self.input_tokens_per_second
             .extend(benchmark_stat_samples(&profile["throughput"]["input_tokens_per_second"]));
         self.output_tokens_per_second
@@ -6860,6 +6899,7 @@ impl BenchmarkMetricSamples {
             ("prompt_tokenize_ms", &self.prompt_tokenize_ms),
             ("prefill_ms", &self.prefill_ms),
             ("ttft_ms", &self.time_to_first_token_ms),
+            ("sampling_ms_per_token", &self.sampling_ms_per_token),
             ("input_tok_s", &self.input_tokens_per_second),
             ("output_tok_s", &self.output_tokens_per_second),
             ("decode_tok_s", &self.decode_tokens_per_second),
@@ -6988,7 +7028,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
     }
 
     let aggregate = serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_slm_benchmark_v2",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
@@ -7023,8 +7063,16 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             "support_note": model.support_note,
         },
         "benchmark_contract": {
+            "contract_version": "1.1.0",
             "scope": "Apple M4 Mac mini dense SLM benchmark v2",
             "profile_execution_model": "one resident warm-session run per named profile",
+            "supported_profiles": M4_SLM_BENCHMARK_V2_PROFILES,
+            "required_metrics": {
+                "timing": M4_SLM_BENCHMARK_V2_TIMING_METRICS,
+                "throughput": M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS,
+                "memory": M4_SLM_BENCHMARK_V2_MEMORY_METRICS,
+                "aggregate_speed": M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+            },
             "profiles_loaded_independently": true,
             "profile_set_model_loads": summaries.len(),
             "cold_load_separated": true,
@@ -12099,7 +12147,14 @@ fn validate_slm_benchmark_v2_receipt(
     path: &Path,
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
-    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    let schema_version = require_non_empty_string_at(path, receipt, &["schema_version"])?;
+    if schema_version != "1.0.0" && schema_version != "1.1.0" {
+        anyhow::bail!(
+            "{} SLM benchmark v2 schema_version must be \"1.0.0\" or \"1.1.0\", got {schema_version:?}",
+            path.display()
+        );
+    }
+    let requires_explicit_contract = schema_version == "1.1.0";
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_slm_benchmark_v2")?;
     require_exact_string_at(path, receipt, &["profile_set"], "slm-benchmark-v2")?;
     require_bool_at(path, receipt, &["build", "release_mode"], true)?;
@@ -12120,22 +12175,55 @@ fn validate_slm_benchmark_v2_receipt(
         );
     }
 
-    for field in [
-        "cold_load_ms",
-        "tokenizer_load_ms",
-        "prompt_tokenize_ms",
-        "prefill_ms",
-        "ttft_ms",
-        "input_tok_s",
-        "output_tok_s",
-        "decode_tok_s",
-        "total_wall_ms",
-    ] {
+    let aggregate_speed_metrics = if requires_explicit_contract {
+        M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS
+    } else {
+        M4_SLM_BENCHMARK_V2_LEGACY_AGGREGATE_SPEED_METRICS
+    };
+    for &field in aggregate_speed_metrics {
         validate_benchmark_percentiles(path, receipt, &["speed"], field, true)?;
     }
     validate_benchmark_percentiles(path, receipt, &["memory"], "peak_memory_mb", true)?;
     validate_benchmark_percentiles(path, receipt, &["memory"], "memory_drift_mb", false)?;
     require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+    if requires_explicit_contract {
+        require_exact_string_at(
+            path,
+            receipt,
+            &["benchmark_contract", "contract_version"],
+            "1.1.0",
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "supported_profiles"],
+            M4_SLM_BENCHMARK_V2_PROFILES,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "timing"],
+            M4_SLM_BENCHMARK_V2_TIMING_METRICS,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "throughput"],
+            M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "memory"],
+            M4_SLM_BENCHMARK_V2_MEMORY_METRICS,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "aggregate_speed"],
+            M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+        )?;
+    }
 
     require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
     require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
@@ -12167,6 +12255,7 @@ fn validate_slm_benchmark_v2_receipt(
     let mut prompt_count_total = 0u64;
     let mut generated_tokens_total = 0u64;
     let mut seen_profiles = std::collections::BTreeSet::new();
+    let mut observed_profile_ids = Vec::with_capacity(profiles.len());
     for profile in profiles {
         let profile_id = require_non_empty_string_at(path, profile, &["profile_id"])?;
         if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
@@ -12181,6 +12270,7 @@ fn validate_slm_benchmark_v2_receipt(
                 path.display()
             );
         }
+        observed_profile_ids.push(profile_id.to_string());
         require_non_empty_string_at(path, profile, &["receipt_path"])?;
         let prompt_count = require_u64_at(path, profile, &["prompt_count"], true)?;
         let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], true)?;
@@ -12191,21 +12281,10 @@ fn validate_slm_benchmark_v2_receipt(
 
         validate_benchmark_stat_object(path, profile, &["prompt_tokens"], true)?;
         validate_benchmark_stat_object(path, profile, &["output_tokens"], true)?;
-        for field in [
-            "cold_load_ms",
-            "tokenizer_load_ms",
-            "prompt_tokenize_ms",
-            "prefill_ms",
-            "time_to_first_token_ms",
-            "decode_total_ms",
-            "sampling_ms_per_token",
-            "total_wall_ms",
-        ] {
+        for &field in M4_SLM_BENCHMARK_V2_TIMING_METRICS {
             validate_benchmark_stat_object(path, profile, &["timing", field], true)?;
         }
-        for field in
-            ["input_tokens_per_second", "output_tokens_per_second", "decode_tokens_per_second"]
-        {
+        for &field in M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS {
             validate_benchmark_stat_object(path, profile, &["throughput", field], true)?;
         }
         validate_benchmark_stat_object(path, profile, &["memory", "peak_memory_mb"], true)?;
@@ -12214,6 +12293,31 @@ fn validate_slm_benchmark_v2_receipt(
 
         prompt_count_total += prompt_count;
         generated_tokens_total += generated_tokens;
+    }
+    if requires_explicit_contract {
+        let profiles_required =
+            json_value_at(receipt, &["profiles_required"]).as_array().ok_or_else(|| {
+                anyhow!("{} SLM benchmark v2 summary is missing profiles_required", path.display())
+            })?;
+        let required_profile_ids = profiles_required
+            .iter()
+            .map(|value| {
+                value.as_str().map(str::to_string).ok_or_else(|| {
+                    anyhow!(
+                        "{} SLM benchmark v2 profiles_required must contain only strings",
+                        path.display()
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if required_profile_ids != observed_profile_ids {
+            anyhow::bail!(
+                "{} SLM benchmark v2 profiles_required must match profiles order {:?}, got {:?}",
+                path.display(),
+                observed_profile_ids,
+                required_profile_ids
+            );
+        }
     }
 
     if receipt["prompt_count"].as_u64() != Some(prompt_count_total) {
@@ -13291,6 +13395,38 @@ fn require_non_empty_string_array_at(
         anyhow::bail!(
             "{} SLM eval summary {label} must contain non-empty strings",
             receipt_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn require_string_array_equals(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    expected: &[&str],
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let values = json_value_at(value, segments).as_array().ok_or_else(|| {
+        anyhow!("{} SLM eval summary is missing array {label}", receipt_path.display())
+    })?;
+    let observed = values
+        .iter()
+        .map(|value| {
+            value.as_str().ok_or_else(|| {
+                anyhow!(
+                    "{} SLM eval summary {label} must contain only strings",
+                    receipt_path.display()
+                )
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if observed != expected {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be {:?}, got {:?}",
+            receipt_path.display(),
+            expected,
+            observed
         );
     }
     Ok(())

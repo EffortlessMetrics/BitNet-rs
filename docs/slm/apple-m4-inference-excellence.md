@@ -226,6 +226,14 @@ supports them. Regression comparisons must match model, tokenizer, backend,
 runtime API, fallback state, corpus or profile set, and machine identity before
 describing drift.
 
+`M4-BENCH-001` tightens the `apple_m4_slm_benchmark_v2` contract for future
+receipts. New dense SLM benchmark summaries use `schema_version=1.1.0`, record
+the supported profile set, require explicit timing / throughput / memory metric
+lists, and include aggregate `sampling_ms_per_token_{p50,p90,p99}` alongside
+the existing load, tokenize, prefill, TTFT, throughput, wall-time, and memory
+fields. This is contract and validation readiness only; it does not add a new
+live M4 benchmark result or publish a speed, memory, variance, or drift claim.
+
 Benchmarkability also needs environment and variance evidence:
 
 ```text

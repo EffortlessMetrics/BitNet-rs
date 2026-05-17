@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T06:04:26Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-001-profile-contract"
+summary = "Started the M4 benchmark profile contract hardening item."
+
+notes = [
+  "This item tightens the apple_m4_slm_benchmark_v2 receipt and validation contract so the supported profile set and required timing, throughput, and memory metrics are explicit.",
+  "Scope is contract and validation only; no new live M4 benchmark receipt, speed result, memory result, BitNet proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is made.",
+]

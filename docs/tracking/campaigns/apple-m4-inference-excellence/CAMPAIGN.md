@@ -98,7 +98,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-CANARY-001 | proposed | Add dense SLM and BitNet golden-token trace canaries. |
 | M4-DENSE-REF-001 | proposed | Add a dense reference-vs-Rust control for supported Qwen identities. |
 | M4-DENSE-CHAT-001 | proposed | Prove dense CLI ask/chat conformance with per-turn receipts. |
-| M4-BENCH-001 | proposed | Ensure benchmark receipts include the full timing and memory metric contract. |
+| M4-BENCH-001 | in_progress | Ensure benchmark receipts include the full timing and memory metric contract. |
 | M4-BENCH-004 | proposed | Add benchmark environment preflight fields and invalid-comparison reasons. |
 | M4-BENCH-002 | proposed | Publish p50/p90/p99 and min/max summaries for the supported dense benchmark matrix. |
 | M4-BENCH-005 | proposed | Publish repeatability and variance envelopes for dense and BitNet timing families. |

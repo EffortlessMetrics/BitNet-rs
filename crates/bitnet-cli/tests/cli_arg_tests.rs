@@ -2757,7 +2757,7 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
     std::fs::write(
         &receipt_path,
         serde_json::to_vec_pretty(&serde_json::json!({
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0",
             "artifact_kind": "apple_m4_slm_benchmark_v2",
             "requested_backend": "apple-m4-cpu-neon",
             "selected_backend": "apple-m4-cpu-neon",
@@ -2782,6 +2782,7 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
             "prompt_count": 3,
             "generated_tokens": 48,
             "speed": benchmark_speed_v2_json(),
+            "benchmark_contract": benchmark_contract_v2_json(),
             "memory": {
                 "peak_memory_mb_p50": 3900.0,
                 "peak_memory_mb_p90": 3950.0,
@@ -2842,6 +2843,40 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"));
+}
+
+#[test]
+fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-benchmark-v2-missing-sampling.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["speed"].as_object_mut().expect("speed object").remove("sampling_ms_per_token_p50");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("sampling_ms_per_token_p50"));
+}
+
+#[test]
+fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-benchmark-v2-profile-mismatch.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["profiles_required"] = serde_json::json!(["resident_100"]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("profiles_required must match profiles order"));
 }
 
 #[test]
@@ -3653,6 +3688,9 @@ fn benchmark_speed_v2_json() -> serde_json::Value {
         "ttft_ms_p50": 1800.0,
         "ttft_ms_p90": 2100.0,
         "ttft_ms_p99": 2300.0,
+        "sampling_ms_per_token_p50": 0.2,
+        "sampling_ms_per_token_p90": 0.3,
+        "sampling_ms_per_token_p99": 0.4,
         "input_tok_s_p50": 118.0,
         "input_tok_s_p90": 130.0,
         "input_tok_s_p99": 140.0,
@@ -3665,6 +3703,58 @@ fn benchmark_speed_v2_json() -> serde_json::Value {
         "total_wall_ms_p50": 5200.0,
         "total_wall_ms_p90": 5600.0,
         "total_wall_ms_p99": 5900.0
+    })
+}
+
+fn benchmark_contract_v2_json() -> serde_json::Value {
+    serde_json::json!({
+        "contract_version": "1.1.0",
+        "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+        "profile_execution_model": "one resident warm-session run per named profile",
+        "supported_profiles": [
+            "short_prompt_16_out",
+            "short_prompt_64_out",
+            "long_prompt_16_out",
+            "long_prompt_128_out",
+            "context_1k",
+            "context_4k",
+            "resident_25",
+            "resident_50",
+            "resident_100"
+        ],
+        "required_metrics": {
+            "timing": [
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "time_to_first_token_ms",
+                "decode_total_ms",
+                "sampling_ms_per_token",
+                "total_wall_ms"
+            ],
+            "throughput": [
+                "input_tokens_per_second",
+                "output_tokens_per_second",
+                "decode_tokens_per_second"
+            ],
+            "memory": [
+                "peak_memory_mb",
+                "memory_drift_mb"
+            ],
+            "aggregate_speed": [
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "ttft_ms",
+                "sampling_ms_per_token",
+                "input_tok_s",
+                "output_tok_s",
+                "decode_tok_s",
+                "total_wall_ms"
+            ]
+        }
     })
 }
 
@@ -3881,7 +3971,7 @@ fn slm_eval_summary_report() -> serde_json::Value {
 
 fn slm_benchmark_v2_summary() -> serde_json::Value {
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_slm_benchmark_v2",
         "requested_backend": "apple-m4-cpu-neon",
         "selected_backend": "apple-m4-cpu-neon",
@@ -3906,6 +3996,7 @@ fn slm_benchmark_v2_summary() -> serde_json::Value {
         "prompt_count": 3,
         "generated_tokens": 48,
         "speed": benchmark_speed_v2_json(),
+        "benchmark_contract": benchmark_contract_v2_json(),
         "memory": {
             "peak_memory_mb_p50": 3900.0,
             "peak_memory_mb_p90": 3950.0,

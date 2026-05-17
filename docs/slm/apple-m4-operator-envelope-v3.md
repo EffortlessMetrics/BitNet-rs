@@ -168,6 +168,7 @@ tokenizer_load_ms
 prompt_tokenize_ms
 prefill_ms
 time_to_first_token_ms
+sampling_ms_per_token
 input_tok_s
 output_tok_s
 decode_tok_s
