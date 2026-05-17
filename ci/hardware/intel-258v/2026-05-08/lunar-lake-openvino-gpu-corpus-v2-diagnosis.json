@@ -2,10 +2,11 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-17T10:00:00Z",
+  "created_utc": "2026-05-17T15:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "answer_corpus_v2_fixture": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
   "requested_runtime_device": "GPU.0",
   "selected_backend": "openvino-gpu",
   "runtime_api": "openvino_genai",
@@ -259,6 +260,22 @@
       "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
     }
   ],
+  "case_alignment": {
+    "fixture_verified": true,
+    "expected_case_count": 12,
+    "observed_case_count": 12,
+    "missing_case_ids": [
+      "short_reasoning_apples_left"
+    ],
+    "stale_or_unexpected_case_ids": [
+      "short_reasoning_heavier_object"
+    ],
+    "aligned_with_active_fixture": false,
+    "blockers": [
+      "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
+      "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]"
+    ]
+  },
   "generated_token_visibility": {
     "direct_generated_token_ids_available": false,
     "retokenized_generated_ids_used": true,
@@ -272,6 +289,8 @@
     "2 failed case(s) classified as answer_content_failed",
     "2 failed case(s) classified as answer_content_missing_required_terms",
     "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
+    "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+    "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
     "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
   ],
   "recommended_next_actions": [
