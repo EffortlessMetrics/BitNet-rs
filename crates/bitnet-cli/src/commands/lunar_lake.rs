@@ -12,6 +12,7 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
 use std::process::Command;
 
 const DEFAULT_ARTIFACT_ROOT: &str = "ci/hardware/intel-258v/2026-05-08";
@@ -2836,6 +2837,11 @@ fn collect_telemetry_thermal_context() -> TelemetryThermalContext {
                 temperatures_celsius,
             };
         }
+        TelemetryThermalContext {
+            source: "windows_msa_cpi_thermal_zone".to_string(),
+            thermal_zones_visible: None,
+            temperatures_celsius: Vec::new(),
+        }
     }
 
     #[cfg(target_os = "linux")]
@@ -2861,10 +2867,13 @@ fn collect_telemetry_thermal_context() -> TelemetryThermalContext {
         };
     }
 
-    TelemetryThermalContext {
-        source: "thermal_probe_unavailable".to_string(),
-        thermal_zones_visible: None,
-        temperatures_celsius: Vec::new(),
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        TelemetryThermalContext {
+            source: "thermal_probe_unavailable".to_string(),
+            thermal_zones_visible: None,
+            temperatures_celsius: Vec::new(),
+        }
     }
 }
 
@@ -2928,6 +2937,7 @@ fn nonzero_u64(value: u64) -> Option<u64> {
     (value > 0).then_some(value)
 }
 
+#[cfg(target_os = "windows")]
 fn command_stdout(command: &str, args: &[&str]) -> Option<String> {
     Command::new(command)
         .args(args)
