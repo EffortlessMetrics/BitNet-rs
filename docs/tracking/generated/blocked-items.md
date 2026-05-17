@@ -502,7 +502,7 @@
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |
 | slm-cpu | SLM-CPU-027 | SLM-CPU-026 | blocked |
 | slm-cpu | SLM-CPU-028 | SLM-CPU-026 | merged |
-| slm-cpu | SLM-CPU-029 | SLM-CPU-028 | ready |
+| slm-cpu | SLM-CPU-029 | SLM-CPU-028 | merged |
 | slm-cpu | SLM-CPU-023 | SLM-CPU-016, SLM-CPU-017A, SLM-CPU-022 | merged |
 | slm-cpu | SLM-CPU-022 | SLM-CPU-021 | merged |
 | slm-cpu | SLM-CPU-021 | SLM-CPU-020 | merged |

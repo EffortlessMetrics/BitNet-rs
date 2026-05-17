@@ -149,7 +149,7 @@ impl ResponseError for AppError {
 
 /// Main server setup and startup
 #[actix_web::main]
-async fn main() -> Result<()> {
+pub async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
