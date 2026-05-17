@@ -7436,6 +7436,8 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_score_raw_history_delta(reference_records, rust_records);
     report["attention_score_raw_history_live_tail_delta"] =
         attention_score_raw_history_live_tail_delta(reference_records, rust_records);
+    report["attention_score_raw_history_token_drift"] =
+        attention_score_raw_history_token_drift(reference_records, rust_records);
     report["attention_score_raw_history_source_summary"] =
         attention_score_raw_history_source_summary(reference_records, rust_records);
     report["attention_probability_history_delta"] =
@@ -17245,6 +17247,161 @@ fn attention_score_raw_history_source_summary(
     )
 }
 
+fn attention_score_raw_history_token_drift(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let live_tail = attention_score_raw_history_live_tail_delta(reference_records, rust_records);
+    attention_score_raw_history_token_drift_from_live_tail(&live_tail)
+}
+
+fn attention_score_raw_history_token_drift_from_live_tail(live_tail: &Value) -> Value {
+    let rows = live_tail.pointer("/rows").and_then(Value::as_array);
+    let missing_rust_head_count = value_u64(live_tail, "/missing_rust_head_count").unwrap_or(0);
+    let compared_head_count = value_u64(live_tail, "/compared_head_count").unwrap_or(0);
+
+    let mut head_rows = Vec::<Value>::new();
+    let mut token_heads = BTreeMap::<u64, u64>::new();
+    let mut token_mismatches = BTreeMap::<u64, u64>::new();
+    let mut token_max_abs = BTreeMap::<u64, f64>::new();
+    let mut material_head_count = 0u64;
+    let mut material_token_position_count = 0u64;
+    let mut first_vector_mismatch_position = Value::Null;
+    let mut first_material_token_position = Value::Null;
+    let mut max_material_token_position = Value::Null;
+    let mut max_material_abs_delta = 0.0f64;
+
+    if let Some(rows) = rows {
+        for row in rows {
+            let head = row.pointer("/head").and_then(Value::as_u64).unwrap_or(0);
+            let status = row.pointer("/status").and_then(Value::as_str).unwrap_or("unknown");
+            let live_delta = row.pointer("/live_delta").unwrap_or(&Value::Null);
+            if first_vector_mismatch_position.is_null()
+                && let Some(position) = live_delta.pointer("/first_mismatch_layout")
+                && !position.is_null()
+            {
+                first_vector_mismatch_position = json!({
+                    "head": head,
+                    "position": position,
+                });
+            }
+
+            let mut head_material_token_count = 0u64;
+            let mut head_first_material_token = Value::Null;
+            let mut head_max_material_token = Value::Null;
+            let mut head_max_material_abs_delta = 0.0f64;
+            if let Some(token_counts) =
+                live_delta.pointer("/token_mismatch_counts").and_then(Value::as_array)
+            {
+                for token_row in token_counts {
+                    let token = token_row.pointer("/token").and_then(Value::as_u64).unwrap_or(0);
+                    let mismatch_count =
+                        token_row.pointer("/mismatch_count").and_then(Value::as_u64).unwrap_or(0);
+                    let max_abs_delta =
+                        token_row.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0);
+                    if max_abs_delta <= 1.0e-6 && mismatch_count == 0 {
+                        continue;
+                    }
+                    if max_abs_delta <= 1.0e-6 {
+                        continue;
+                    }
+
+                    head_material_token_count += 1;
+                    material_token_position_count += 1;
+                    *token_heads.entry(token).or_insert(0) += 1;
+                    *token_mismatches.entry(token).or_insert(0) += mismatch_count;
+                    let entry = token_max_abs.entry(token).or_insert(0.0);
+                    *entry = (*entry).max(max_abs_delta);
+
+                    let position = json!({
+                        "head": head,
+                        "token": token,
+                        "mismatch_count": mismatch_count,
+                        "max_abs_delta": max_abs_delta,
+                    });
+                    if head_first_material_token.is_null() {
+                        head_first_material_token = position.clone();
+                    }
+                    if first_material_token_position.is_null() {
+                        first_material_token_position = position.clone();
+                    }
+                    if max_abs_delta > head_max_material_abs_delta {
+                        head_max_material_abs_delta = max_abs_delta;
+                        head_max_material_token = position.clone();
+                    }
+                    if max_abs_delta > max_material_abs_delta {
+                        max_material_abs_delta = max_abs_delta;
+                        max_material_token_position = position;
+                    }
+                }
+            }
+
+            if head_material_token_count > 0 {
+                material_head_count += 1;
+            }
+            head_rows.push(json!({
+                "head": head,
+                "status": status,
+                "material_token_count": head_material_token_count,
+                "first_material_token": head_first_material_token,
+                "max_material_token": head_max_material_token,
+                "max_material_abs_delta": head_max_material_abs_delta,
+                "live_material_mismatch": row.pointer("/live_material_mismatch").cloned().unwrap_or(Value::Null),
+            }));
+        }
+    }
+
+    let token_rows = token_heads
+        .iter()
+        .map(|(&token, &head_count)| {
+            json!({
+                "token": token,
+                "material_head_count": head_count,
+                "mismatch_count_sum": token_mismatches.get(&token).copied().unwrap_or(0),
+                "max_abs_delta": token_max_abs.get(&token).copied().unwrap_or(0.0),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let classification = if rows.is_none() || missing_rust_head_count > 0 {
+        "missing_inputs"
+    } else if material_head_count == 0 {
+        "score_token_drift_clean"
+    } else if material_head_count == compared_head_count {
+        "score_token_drift_spans_all_compared_heads"
+    } else {
+        "score_token_drift_localized_to_some_heads"
+    };
+    let next_diagnostic = match classification {
+        "missing_inputs" => "capture missing raw score-history heads before token localization",
+        "score_token_drift_clean" => {
+            "raw score token drift is clean; inspect downstream probability or value-mix rows"
+        }
+        _ => {
+            "inspect raw score formation for first/max drifting head-token positions before changing score, softmax, or value-mix math"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Raw score-history token drift localization is diagnostic-only evidence for identifying which head/token score positions drift first and most; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "layout": "dim_major_token_minor",
+        "classification": classification,
+        "compared_head_count": compared_head_count,
+        "missing_rust_head_count": missing_rust_head_count,
+        "material_head_count": material_head_count,
+        "material_token_position_count": material_token_position_count,
+        "first_vector_mismatch_position": first_vector_mismatch_position,
+        "first_material_token_position": first_material_token_position,
+        "max_material_token_position": max_material_token_position,
+        "max_material_abs_delta": max_material_abs_delta,
+        "token_rows": token_rows,
+        "head_rows": head_rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_score_raw_history_source_summary_from_sections(
     raw_history: &Value,
     live_tail: &Value,
@@ -25663,6 +25820,97 @@ mod tests {
         assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(summary.pointer("/classification"), Some(&json!("score_history_clean")));
         assert_eq!(summary.pointer("/score_history_drift_present"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn attention_score_raw_history_token_drift_localizes_head_and_token() {
+        let live_tail = json!({
+            "compared_head_count": 2,
+            "missing_rust_head_count": 0,
+            "rows": [
+                {
+                    "head": 0,
+                    "status": "live_material_mismatch",
+                    "live_material_mismatch": true,
+                    "live_delta": {
+                        "first_mismatch_layout": {
+                            "index": 2,
+                            "dim": 0,
+                            "token": 2,
+                            "left": 1.0,
+                            "right": 1.00001,
+                            "abs_delta": 0.00001
+                        },
+                        "token_mismatch_counts": [
+                            {"token": 0, "mismatch_count": 2, "max_abs_delta": 0.00002},
+                            {"token": 1, "mismatch_count": 1, "max_abs_delta": 0.0},
+                            {"token": 2, "mismatch_count": 3, "max_abs_delta": 0.00003}
+                        ]
+                    }
+                },
+                {
+                    "head": 1,
+                    "status": "live_material_mismatch",
+                    "live_material_mismatch": true,
+                    "live_delta": {
+                        "first_mismatch_layout": {
+                            "index": 0,
+                            "dim": 0,
+                            "token": 0,
+                            "left": 4.0,
+                            "right": 4.1,
+                            "abs_delta": 0.1
+                        },
+                        "token_mismatch_counts": [
+                            {"token": 0, "mismatch_count": 1, "max_abs_delta": 0.00004}
+                        ]
+                    }
+                }
+            ]
+        });
+        let report = attention_score_raw_history_token_drift_from_live_tail(&live_tail);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("score_token_drift_spans_all_compared_heads"))
+        );
+        assert_eq!(report.pointer("/material_head_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/material_token_position_count"), Some(&json!(3)));
+        assert_eq!(
+            report.pointer("/first_vector_mismatch_position/position/token"),
+            Some(&json!(2))
+        );
+        assert_eq!(report.pointer("/first_material_token_position/token"), Some(&json!(0)));
+        assert_eq!(report.pointer("/max_material_token_position/token"), Some(&json!(0)));
+        assert_eq!(report.pointer("/token_rows/0/material_head_count"), Some(&json!(2)));
+    }
+
+    #[test]
+    fn attention_score_raw_history_token_drift_stays_diagnostic_when_clean() {
+        let live_tail = json!({
+            "compared_head_count": 1,
+            "missing_rust_head_count": 0,
+            "rows": [
+                {
+                    "head": 0,
+                    "status": "live_summary_match",
+                    "live_material_mismatch": false,
+                    "live_delta": {
+                        "first_mismatch_layout": Value::Null,
+                        "token_mismatch_counts": []
+                    }
+                }
+            ]
+        });
+        let report = attention_score_raw_history_token_drift_from_live_tail(&live_tail);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/classification"), Some(&json!("score_token_drift_clean")));
+        assert_eq!(report.pointer("/material_head_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/token_rows").and_then(Value::as_array).map(Vec::len), Some(0));
     }
 
     #[test]
