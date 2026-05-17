@@ -44,6 +44,8 @@ Options:
           Random seed for reproducibility
       --threads <THREADS>
           Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+      --timeout-seconds <SECONDS>
+          Optional wall-clock timeout for the explicit BitNet one-shot ask route
       --json-out <PATH>
           Output strict Mac answer receipt [default: target/apple-m4-productization/mac-ask.json]
       --progress

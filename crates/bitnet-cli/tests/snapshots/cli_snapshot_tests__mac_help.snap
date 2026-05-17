@@ -17,9 +17,10 @@ Commands:
   smoke                 Run a compact Apple M4 model-family health smoke with cache and receipt checks
   bitnet-warm           Run BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat
   bitnet-chat-gate      Evaluate the receipt-backed gate for future BitNet Mac chat without enabling chat
+  bitnet-serve-gate     Evaluate the receipt-backed gate for future BitNet Mac serve
   bitnet-benchmark      Benchmark BitNet one-shot ask and fixed warm paths without enabling chat or serve
   doctor                Run one local health verdict for the supported Apple M4 dense-SLM path
-  serve                 Serve local M4 dense-SLM health and readiness endpoints without generation
+  serve                 Serve local M4 health and readiness endpoints plus completions
   serve-check           Check a running M4 local server readiness and optional completion/receipt export
   chat                  Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
   validate              Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session

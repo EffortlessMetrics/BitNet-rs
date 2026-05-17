@@ -1140,7 +1140,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-007"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-007-serve-gate"
 stackable = false
 review_mode = "codex_premerge"
@@ -1150,7 +1150,7 @@ blocked_by = ["M4-BITNET-EX-006"]
 acceptance = "Enable BitNet serve only after BitNet chat, streaming request/response semantics, health/ready endpoints, per-request receipts, timeout behavior, and failure-mode receipts pass on M4."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_serve -- --nocapture",
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-serve-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/gate.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-serve-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --chat-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat/chat-session.json --streaming-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/streaming.json --failure-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/failure.json --serve-check-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/serve-check.json --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/gate.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

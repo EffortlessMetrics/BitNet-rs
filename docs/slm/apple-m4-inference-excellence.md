@@ -550,6 +550,36 @@ It keeps `serve_enabled=false` and does not claim BitNet serve, broad BitNet
 quality, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook
 evidence, speedup, or broad Apple Silicon performance.
 
+`M4-BITNET-EX-007` adds the BitNet serve route behind a stricter service gate.
+`bitnet mac serve --model-family bitnet` refuses before cache lookup or bind
+unless the operator passes `--bitnet-serve-gate-receipt <gate.json>` and that
+receipt validates as `status=ready_to_enable`. The gate consumes a ready
+`bitnet_apple_m4_chat_session`, BitNet serve streaming-semantics evidence,
+BitNet serve timeout/failure evidence, and a `mac serve-check --completion`
+receipt proving `/health`, `/ready`, completion, and `/receipts/{id}` export
+on the gated BitNet route.
+
+The route remains local and gate-scoped:
+
+```bash
+bitnet mac serve \
+  --model-family bitnet \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --bitnet-serve-gate-receipt <bitnet_apple_m4_serve_gate.json> \
+  --host 127.0.0.1 \
+  --port 8080
+```
+
+Successful BitNet server completions write
+`bitnet_apple_m4_serve_completion` receipts with accepted model/tokenizer
+identity, `apple-m4-cpu-neon`, `fallback_used=false`, generated text, token
+IDs, timing, resident-server reuse, and the consumed serve-gate SHA. The route
+does not claim production hosting, broad OpenAI compatibility, broad BitNet
+quality, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook
+evidence, speedup, or broad Apple Silicon performance.
+
 ## Stability And Service
 
 The appliance should prove that it stays useful after the first successful
