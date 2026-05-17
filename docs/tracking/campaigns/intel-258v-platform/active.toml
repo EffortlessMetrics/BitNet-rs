@@ -3622,8 +3622,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-005"
-status = "in_progress"
+status = "pr_open"
+pr = 5338
 branch = "codex/lunar-lake/LNL258V-ROUTE-005-npu-gpu-diagnostics"
+head_sha = "6818f7a063249044ce986598a048b87074caa54f"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
