@@ -77,7 +77,7 @@ artifacts to separate strict proof items.
 | M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
 | M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
 | M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
-| M3MBA-019 | pr_open | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4-sync tracks. |
+| M3MBA-019 | pr_open | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks. |
 
 Current focus: no M3 Air BitNet handoff item is active after `M3MBA-008`
 merged. The Microsoft 2B I2_S artifact is accepted only for the recorded M3 Air
@@ -100,7 +100,7 @@ turning blocked artifact candidates into hidden runtime claims.
 | Storage hygiene | M3MBA-010 | Keep the MacBook lane usable for large artifacts without hiding local cache state. | Artifact ledger audit with retained/deleted state and free-space floor. |
 | Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
-| Post-handoff execution | M3MBA-019 and successors | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4-sync tracks. | Updated roadmap and follow-on item boundaries; no new runtime claim. |
+| Post-handoff execution | M3MBA-019 and successors | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks. | Updated roadmap and follow-on item boundaries; no new runtime claim. |
 
 ## Operating Tracks
 

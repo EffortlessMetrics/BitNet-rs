@@ -6,7 +6,7 @@ timestamp = "2026-05-17T16:31:12Z"
 actor = "codex"
 branch = "codex/apple-m3-macbook-air/M3MBA-019-post-handoff-roadmap"
 
-summary = "Started the post-handoff M3 Air roadmap refresh so the lane continues as explicit device-model, accuracy, performance, artifact-unblock, and M4-sync tracks."
+summary = "Started the post-handoff M3 Air roadmap refresh so the lane continues as explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks."
 
 artifacts = [
   "docs/apple-silicon/m3-macbook-air-roadmap.md",
@@ -17,7 +17,7 @@ artifacts = [
 notes = [
   "The Microsoft 2B I2_S handoff stack is closed, but the M3 Air lane should not collapse into an empty backlog.",
   "The roadmap refresh keeps secondary 1bitLLM candidates blocked until exact artifact authority and storage-safe preflight evidence exist.",
-  "The next M3 support work is split into device-model hardening, accuracy comparison profiles, bounded performance envelopes, artifact unblock preflights, and M4 strict-proof synchronization.",
+  "The next M3 support work is split into device-model hardening, accuracy comparison profiles, bounded performance envelopes, artifact unblock preflights, and M4 strict-proof handoff alignment.",
   "No new M3 inference, artifact download, M4 proof, Metal, MPSGraph, Neural Engine, QK256, or broad Apple Silicon performance claim is made.",
 ]
 

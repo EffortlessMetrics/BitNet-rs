@@ -149,7 +149,7 @@ or naming a blocker. The handoff stack is closed, so the next work is no longer
 | 3 | M3 accuracy comparison | Add a bounded comparison profile that reuses the accepted dense SLM receipt fields and records prompt IDs, generated IDs, decoded text, tokenizer authority, fallback status, and comparable/non-comparable gaps. | Accuracy claims without exact prompt/model/tokenizer/backend context. |
 | 4 | M3 performance envelope | Record only completed-run actuals with power, thermal, storage, thread count, token budget, and cap sizing; use caps with cushion rather than near-completion termination. | Performance claims from cancelled, timed-out, or missing-context jobs. |
 | 5 | Secondary artifact unblock | Re-check 0.7B and 3B candidates only through exact repo/file/revision/size/SHA/tokenizer/storage preflight before any download or run. | Official/approved artifact authority or storage-safe preflight is still missing. |
-| 6 | M4 proof sync | Keep accepted M3 artifact evidence linked to separate M4 strict-proof items and require fresh M4 receipts before any M4 claim. | A handoff would imply M3 reference-runner output is M4 proof. |
+| 6 | M4 proof alignment | Keep accepted M3 artifact evidence linked to separate M4 strict-proof items and require fresh M4 receipts before any M4 claim. | A handoff would imply M3 reference-runner output is M4 proof. |
 
 The follow-on implementation items should be created from these tracks as
 single-purpose work items. M3 accuracy and performance work should prefer dense
@@ -178,7 +178,7 @@ reviewed and merged independently.
 | Accuracy comparison | A bounded dense SLM profile with exact prompt/model/tokenizer/backend fields and comparable/non-comparable decisions against M4 and SLM CPU receipts. | Prompt IDs, generated IDs, decoded text, fallback status, and tokenizer authority are preserved for every comparison case. | Broad answer quality or BitNet behavior. |
 | Performance envelope | Completed M3 Air run actuals with cap sizing, thermal/power context, storage state, thread count, token budget, and repeat policy. | The report separates healthy completed runtimes from timeouts/cancellations and sizes future caps from completed runs plus cushion. | Sustained broad Apple Silicon performance or M4 replacement timing. |
 | Artifact unblock | Exact artifact preflights for blocked 0.7B/3B candidates or an explicit no-go refresh. | Repo, file, revision, size, SHA256, tokenizer authority, route, and free-space floor are known before any large download. | Candidate acceptance before local authority and cleanup evidence. |
-| M4 proof sync | Tracker linkage from accepted M3 artifact evidence to a separate M4 proof item. | The M4 item names the M3 evidence as input and requires fresh M4 backend receipts before proof. | M3 reference-runner output is M4 proof. |
+| M4 proof alignment | Tracker linkage from accepted M3 artifact evidence to a separate M4 proof item. | The M4 item names the M3 evidence as input and requires fresh M4 backend receipts before proof. | M3 reference-runner output is M4 proof. |
 
 For CI design, post-handoff M3 jobs follow the selected-long-job rule already
 encoded by `M3MBA-013`: route irrelevant PRs away, preflight before expensive

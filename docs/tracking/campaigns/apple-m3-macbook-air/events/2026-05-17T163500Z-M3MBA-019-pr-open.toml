@@ -18,7 +18,7 @@ artifacts = [
 ]
 
 notes = [
-  "The roadmap now splits follow-on M3 work into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4-sync tracks.",
+  "The roadmap now splits follow-on M3 work into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks.",
   "The secondary 1bitLLM candidates remain blocked until exact artifact authority and storage-safe preflight evidence exist.",
   "The selected-long-job CI rule remains explicit: route irrelevant PRs away, preflight before expensive work, upload phase evidence, and size caps from healthy completed runs with cushion.",
   "No new M3 inference, artifact download, M4 proof, Metal, MPSGraph, Neural Engine, QK256, or broad Apple Silicon performance claim is made.",

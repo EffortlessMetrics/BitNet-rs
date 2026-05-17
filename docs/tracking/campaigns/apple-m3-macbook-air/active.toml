@@ -970,7 +970,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-008"]
-acceptance = "Refresh the M3 Air roadmap after the Microsoft 2B handoff stack closes so the next lane work is not a vague backlog: define post-handoff tracks for device-model hardening, M3 accuracy comparison profiles, bounded performance evidence from completed runs, secondary artifact unblock preflights, and M4 strict-proof synchronization while preserving M3/M4 claim boundaries."
+acceptance = "Refresh the M3 Air roadmap after the Microsoft 2B handoff stack closes so the next lane work is not a vague backlog: define post-handoff tracks for device-model hardening, M3 accuracy comparison profiles, bounded performance evidence from completed runs, secondary artifact unblock preflights, and M4 strict-proof handoff alignment while preserving M3/M4 claim boundaries."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
@@ -989,7 +989,7 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "The M3 Air lane has a post-handoff roadmap for device-model, accuracy, performance, artifact-unblock, and M4-sync work.",
+  "The M3 Air lane has a post-handoff roadmap for device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment work.",
 ]
 must_not_claim = [
   "Any new M3 Air model inference was run.",
