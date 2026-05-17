@@ -42,8 +42,8 @@ use self::{
     },
     validation::{
         cmd_check_codeowners_teams, cmd_check_coverage, cmd_check_envlock, cmd_check_feature_gates,
-        cmd_check_ignore_annotations, cmd_check_serial_annotations, cmd_check_units,
-        cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
+        cmd_check_ignore_annotations, cmd_check_patch_policy, cmd_check_serial_annotations,
+        cmd_check_units, cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
         cmd_validate_iq2s_build, cmd_validate_strict,
     },
 };
@@ -85,6 +85,15 @@ enum Task {
     CheckIgnoreAnnotations,
     /// Equivalent of scripts/check-envlock.sh
     CheckEnvlock,
+    /// Equivalent of scripts/check-patch-policy.sh
+    CheckPatchPolicy {
+        /// Fail with a critical policy exit when any patch violation is present.
+        #[arg(long)]
+        strict: bool,
+        /// Prepare patch-tracking issue text when patches are present.
+        #[arg(long)]
+        create_issue: bool,
+    },
     /// Equivalent of scripts/check-units-imports.sh
     CheckUnitsImports,
     /// Equivalent of scripts/check-units.sh
@@ -279,6 +288,9 @@ fn main() -> Result<()> {
         Task::BuildCppStatic { cpp_dir } => cmd_build_cpp_static(&root, cpp_dir.as_deref()),
         Task::CheckIgnoreAnnotations => cmd_check_ignore_annotations(&root),
         Task::CheckEnvlock => cmd_check_envlock(&root),
+        Task::CheckPatchPolicy { strict, create_issue } => {
+            cmd_check_patch_policy(&root, strict, create_issue)
+        }
         Task::CheckUnitsImports => cmd_check_units_imports(&root),
         Task::CheckUnits => cmd_check_units(&root),
         Task::ResolveModelPath { model } => cmd_resolve_model_path(&root, &model),

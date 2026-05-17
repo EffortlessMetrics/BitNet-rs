@@ -57,6 +57,151 @@ pub(crate) fn cmd_check_envlock(root: &Path) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn cmd_check_patch_policy(root: &Path, strict: bool, create_issue: bool) -> Result<()> {
+    println!("[INFO] 🔍 Checking patch policy compliance...");
+    let patches_dir = root.join("patches");
+
+    if !patches_dir.is_dir() {
+        println!("[INFO] ✅ No patches directory found - policy compliant");
+        println!("[INFO] ✅ Patch policy compliant - no patches found");
+        return Ok(());
+    }
+
+    let patch_files = collect_patch_files(&patches_dir)?;
+    if patch_files.is_empty() {
+        println!("[INFO] ✅ Patches directory is empty - policy compliant");
+        println!("[INFO] ✅ Patch policy compliant - no patches found");
+        return Ok(());
+    }
+
+    println!("[WARN] Found {} patch file(s) - checking policy compliance...", patch_files.len());
+
+    let mut violations = 0usize;
+    for patch_file in &patch_files {
+        let patch_name =
+            patch_file.file_name().and_then(|name| name.to_str()).unwrap_or("<unknown>");
+        println!("[INFO] Checking patch: {patch_name}");
+
+        let content = fs::read_to_string(patch_file)
+            .with_context(|| format!("failed to read {}", patch_file.display()))?;
+        let content_lower = content.to_ascii_lowercase();
+        if !(content_lower.contains("issue")
+            || content_lower.contains("bug")
+            || content_lower.contains("upstream")
+            || content_lower.contains("microsoft/bitnet"))
+        {
+            println!("[ERROR] ❌ Patch '{patch_name}' does not reference an upstream issue");
+            println!(
+                "[ERROR]    All patches must reference an upstream issue in Microsoft/BitNet repository"
+            );
+            violations += 1;
+        }
+
+        if let Ok(age_days) = patch_age_days(patch_file)
+            && age_days > 90
+        {
+            println!("[WARN] ⚠️  Patch '{patch_name}' is {age_days} days old");
+            println!("[WARN]    Consider checking if upstream issue has been resolved");
+        }
+
+        let patch_lines = content.lines().count();
+        if patch_lines > 100 {
+            println!("[WARN] ⚠️  Patch '{patch_name}' is large ({patch_lines} lines)");
+            println!("[WARN]    Consider if this change should be contributed upstream instead");
+        }
+    }
+
+    violations += check_patch_documentation(root, &patch_files)?;
+
+    if create_issue {
+        prepare_patch_tracking_issue(&patch_files);
+    }
+
+    if violations > 0 {
+        println!("[ERROR] ❌ Found {violations} patch policy violation(s)");
+        if strict {
+            println!("[ERROR] 💥 STRICT MODE: Failing CI due to patch policy violations");
+            println!("[ERROR]");
+            println!("[ERROR] Our policy strongly discourages patches. Consider:");
+            println!("[ERROR]   1. Contributing fixes upstream to Microsoft/BitNet");
+            println!("[ERROR]   2. Using wrapper functions instead of patches");
+            println!("[ERROR]   3. Adapting to existing C++ API in Rust code");
+            std::process::exit(2);
+        }
+        println!("[WARN] ⚠️  Patch policy violations found but not failing CI");
+        println!("[WARN]    Please address these violations as soon as possible");
+        bail!("patch policy violations found");
+    }
+
+    println!("[INFO] ✅ All patch policy checks passed");
+    Ok(())
+}
+
+fn collect_patch_files(patches_dir: &Path) -> Result<Vec<PathBuf>> {
+    fn visit(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+        for entry in
+            fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))?
+        {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                visit(&path, files)?;
+            } else if path.extension().is_some_and(|ext| ext == "patch") {
+                files.push(path);
+            }
+        }
+        Ok(())
+    }
+
+    let mut files = Vec::new();
+    visit(patches_dir, &mut files)?;
+    files.sort();
+    Ok(files)
+}
+
+fn patch_age_days(patch_file: &Path) -> Result<u64> {
+    let modified = fs::metadata(patch_file)?.modified()?;
+    let age = std::time::SystemTime::now().duration_since(modified).unwrap_or_default();
+    Ok(age.as_secs() / 86_400)
+}
+
+fn check_patch_documentation(root: &Path, patch_files: &[PathBuf]) -> Result<usize> {
+    let patches_readme = root.join("patches/README.md");
+    if !patches_readme.is_file() {
+        println!("[ERROR] ❌ patches/README.md not found");
+        println!("[ERROR]    Patches directory must have documentation");
+        return Ok(1);
+    }
+
+    let readme = fs::read_to_string(&patches_readme)
+        .with_context(|| format!("failed to read {}", patches_readme.display()))?;
+    let documented_patches = readme.lines().filter(|line| line.contains(".patch")).count();
+
+    if documented_patches < patch_files.len() {
+        println!("[WARN] ⚠️  Not all patches are documented in README");
+        println!(
+            "[WARN]    Found {} patches but only {documented_patches} documented",
+            patch_files.len()
+        );
+    }
+
+    println!("[INFO] ✅ Patch documentation check complete");
+    Ok(0)
+}
+
+fn prepare_patch_tracking_issue(patch_files: &[PathBuf]) {
+    if env::var_os("GITHUB_TOKEN").is_none() {
+        println!("[WARN] GITHUB_TOKEN not set - cannot create tracking issue");
+        return;
+    }
+    if patch_files.is_empty() {
+        return;
+    }
+
+    println!("[INFO] Creating patch tracking issue...");
+    println!("[INFO] Issue body prepared (GitHub integration would create issue here)");
+}
+
 pub(crate) fn cmd_check_coverage(coverage_file: &Path, threshold: f64) -> Result<()> {
     if !coverage_file.exists() {
         bail!("Coverage file not found: {}", coverage_file.display());
