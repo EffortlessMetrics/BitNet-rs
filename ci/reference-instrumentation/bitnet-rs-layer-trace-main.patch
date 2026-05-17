@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1655 @@ struct llama_context {
+@@ -3441,6 +3444,1676 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -320,6 +320,13 @@ index 666fcc4d..23ee29ff 100644
 +    } else {
 +        out << "null";
 +    }
++}
++
++static uint32_t bitnet_rs_reference_layer_trace_f32_bits(float value) {
++    uint32_t bits = 0;
++    static_assert(sizeof(bits) == sizeof(value), "unexpected float size");
++    std::memcpy(&bits, &value, sizeof(bits));
++    return bits;
 +}
 +
 +static uint64_t bitnet_rs_reference_layer_trace_hash(const std::vector<float> & values) {
@@ -1099,6 +1106,13 @@ index 666fcc4d..23ee29ff 100644
 +                }
 +                bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
 +            }
++            out << "],\"first_value_bits_u32\":[";
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                out << bitnet_rs_reference_layer_trace_f32_bits(head_values[i]);
++            }
 +            out << "]}";
 +        }
 +    }
@@ -1203,6 +1217,13 @@ index 666fcc4d..23ee29ff 100644
 +                    out << ",";
 +                }
 +                bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
++            }
++            out << "],\"first_value_bits_u32\":[";
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                out << bitnet_rs_reference_layer_trace_f32_bits(head_values[i]);
 +            }
 +            out << "]}";
 +        }

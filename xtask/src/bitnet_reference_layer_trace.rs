@@ -13006,6 +13006,16 @@ fn attention_norm_f64_selected_k_json_precision_frontier(
             raw_first_value_decimal_for_record(text, name, usize::try_from(index).ok()?)
         },
     );
+    let raw_source_bits_u32 = reference_json_text.zip(record_name).zip(first_value_index).and_then(
+        |((text, name), index)| {
+            raw_first_value_u32_for_record(
+                text,
+                name,
+                "first_value_bits_u32",
+                usize::try_from(index).ok()?,
+            )
+        },
+    );
     let parsed_f64 = raw_decimal.as_deref().and_then(|raw| raw.parse::<f64>().ok());
     let parsed_f32 = parsed_f64.map(|value| value as f32);
     let reference_capture_f32 = reference_capture.map(|value| value as f32);
@@ -13013,12 +13023,21 @@ fn attention_norm_f64_selected_k_json_precision_frontier(
     let parsed_f32_bits = parsed_f32.map(f32_bits_hex);
     let reference_capture_f32_bits = reference_capture_f32.map(f32_bits_hex);
     let midpoint_f32_bits = midpoint_f32.map(f32_bits_hex);
+    let raw_source_bits_hex = raw_source_bits_u32.map(u32_bits_hex);
     let parsed_matches_reference_capture_bits = parsed_f32
         .zip(reference_capture_f32)
         .is_some_and(|(parsed, capture)| parsed.to_bits() == capture.to_bits());
     let parsed_matches_midpoint_bits = parsed_f32
         .zip(midpoint_f32)
         .is_some_and(|(parsed, midpoint)| parsed.to_bits() == midpoint.to_bits());
+    let source_bits_match_parsed_value =
+        raw_source_bits_u32.zip(parsed_f32).is_some_and(|(bits, parsed)| bits == parsed.to_bits());
+    let source_bits_match_reference_capture = raw_source_bits_u32
+        .zip(reference_capture_f32)
+        .is_some_and(|(bits, capture)| bits == capture.to_bits());
+    let source_bits_match_midpoint = raw_source_bits_u32
+        .zip(midpoint_f32)
+        .is_some_and(|(bits, midpoint)| bits == midpoint.to_bits());
     let decimal_parse_minus_capture =
         parsed_f64.zip(reference_capture).map(|(parsed, capture)| parsed - capture);
     let decimal_parse_minus_midpoint =
@@ -13064,6 +13083,14 @@ fn attention_norm_f64_selected_k_json_precision_frontier(
         "f64_selected_k_json_precision_not_active_frontier"
     } else if !blocked_reasons.is_empty() {
         "f64_selected_k_json_precision_unavailable"
+    } else if raw_source_bits_u32.is_some()
+        && source_bits_match_parsed_value
+        && source_bits_match_reference_capture
+        && source_bits_match_midpoint
+    {
+        "f64_selected_k_reference_source_bits_preserve_midpoint_capture"
+    } else if raw_source_bits_u32.is_some() && !source_bits_match_parsed_value {
+        "f64_selected_k_json_decimal_changes_reference_source_bits"
     } else if parsed_matches_reference_capture_bits && parsed_matches_midpoint_bits {
         "f64_selected_k_json_decimal_preserves_midpoint_capture"
     } else if parsed_matches_reference_capture_bits {
@@ -13074,6 +13101,12 @@ fn attention_norm_f64_selected_k_json_precision_frontier(
     let next_diagnostic = match classification {
         "f64_selected_k_json_decimal_preserves_midpoint_capture" => {
             "inspect reference tensor capture/storage precision before changing Rust runtime math; JSON decimal serialization preserves the selected midpoint capture"
+        }
+        "f64_selected_k_reference_source_bits_preserve_midpoint_capture" => {
+            "inspect the reference tensor capture path before first-value bit emission; source f32 bits and JSON decimal both preserve the selected midpoint capture"
+        }
+        "f64_selected_k_json_decimal_changes_reference_source_bits" => {
+            "fix or bypass reference JSON numeric serialization before interpreting the selected K capture midpoint"
         }
         "f64_selected_k_json_decimal_preserves_reference_capture" => {
             "inspect whether the reference captured value is truly an F16 midpoint or a non-midpoint reference value"
@@ -13106,12 +13139,17 @@ fn attention_norm_f64_selected_k_json_precision_frontier(
         "parsed_f64": parsed_f64,
         "parsed_f32": parsed_f32,
         "parsed_f32_bits": parsed_f32_bits,
+        "reference_source_bits_u32": raw_source_bits_u32,
+        "reference_source_bits_hex": raw_source_bits_hex,
         "reference_capture": reference_capture,
         "reference_capture_f32_bits": reference_capture_f32_bits,
         "f16_midpoint": midpoint,
         "f16_midpoint_f32_bits": midpoint_f32_bits,
         "parsed_matches_reference_capture_bits": parsed_matches_reference_capture_bits,
         "parsed_matches_midpoint_bits": parsed_matches_midpoint_bits,
+        "source_bits_match_parsed_value": source_bits_match_parsed_value,
+        "source_bits_match_reference_capture": source_bits_match_reference_capture,
+        "source_bits_match_midpoint": source_bits_match_midpoint,
         "decimal_parse_minus_capture": decimal_parse_minus_capture,
         "decimal_parse_minus_midpoint": decimal_parse_minus_midpoint,
         "blocked_reasons": blocked_reasons,
@@ -13126,8 +13164,29 @@ fn raw_first_value_decimal_for_record(
 ) -> Option<String> {
     let name_json = serde_json::to_string(record_name).ok()?;
     let name_pos = find_json_key_string_value(text, "name", &name_json)?;
-    let first_values_key = text[name_pos..].find("\"first_values\"")? + name_pos;
-    let array_start = text[first_values_key..].find('[')? + first_values_key + 1;
+    raw_array_value_for_record_at(text, name_pos, "first_values", index)
+}
+
+fn raw_first_value_u32_for_record(
+    text: &str,
+    record_name: &str,
+    key: &str,
+    index: usize,
+) -> Option<u32> {
+    let name_json = serde_json::to_string(record_name).ok()?;
+    let name_pos = find_json_key_string_value(text, "name", &name_json)?;
+    raw_array_value_for_record_at(text, name_pos, key, index)?.parse::<u32>().ok()
+}
+
+fn raw_array_value_for_record_at(
+    text: &str,
+    record_start: usize,
+    key: &str,
+    index: usize,
+) -> Option<String> {
+    let key_json = serde_json::to_string(key).ok()?;
+    let array_key = text[record_start..].find(&key_json)? + record_start;
+    let array_start = text[array_key..].find('[')? + array_key + 1;
     let array_end = text[array_start..].find(']')? + array_start;
     text[array_start..array_end].split(',').nth(index).map(|raw| raw.trim().to_string())
 }
@@ -13161,6 +13220,10 @@ fn skip_ascii_whitespace(text: &str, mut cursor: usize) -> usize {
 
 fn f32_bits_hex(value: f32) -> String {
     format!("0x{:08x}", value.to_bits())
+}
+
+fn u32_bits_hex(bits: u32) -> String {
+    format!("0x{bits:08x}")
 }
 
 fn attention_norm_f64_score_history_residual_frontier(
@@ -31736,6 +31799,10 @@ mod tests {
         assert!(patch.contains(
             "head_name << \"kcur_history_kv_head\" << head << \"_ref_layout-\" << bitnet_rs_kcur_history_layer"
         ));
+        assert!(patch.contains("bitnet_rs_reference_layer_trace_f32_bits"));
+        assert!(patch.contains("out << \"],\\\"first_value_bits_u32\\\":[\""));
+        assert!(patch.matches("out << \"],\\\"first_value_bits_u32\\\":[\"").count() >= 2);
+        assert!(patch.contains("out << bitnet_rs_reference_layer_trace_f32_bits(head_values[i])"));
         assert!(patch.contains("out << \",\\\"layer\\\":\" << bitnet_rs_kcur_history_layer"));
         assert!(!patch.contains("strcmp(name, \"Kcur-0\") == 0 && values_available"));
         assert!(
@@ -40968,6 +41035,52 @@ mod tests {
             frontier.pointer("/next_diagnostic"),
             Some(&json!(
                 "inspect reference tensor capture/storage precision before changing Rust runtime math; JSON decimal serialization preserves the selected midpoint capture"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_json_precision_frontier_uses_source_bits_when_present() {
+        let mut first_values = vec!["0".to_string(); 40 * 18 + 3];
+        let mut first_value_bits = vec!["0".to_string(); 40 * 18 + 3];
+        first_values[40 * 18 + 2] = "-4.14648438".to_string();
+        first_value_bits[40 * 18 + 2] = "3229921280".to_string();
+        let reference_json_text = format!(
+            "{{\"records\":[{{\"name\":\"kcur_history_kv_head1_ref_layout-0\",\"first_values\":[{}],\"first_value_bits_u32\":[{}]}}]}}",
+            first_values.join(","),
+            first_value_bits.join(",")
+        );
+        let selected_capture_frontier = json!({
+            "classification": "f64_selected_k_reference_capture_midpoint_with_trace_metadata",
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "reference_capture": -4.146484375_f64,
+            "f16_midpoint": -4.146484375_f64,
+            "reference_post_rope_record": {
+                "name": "kcur_history_kv_head1_ref_layout-0",
+                "stage": "kcur_history_kv_head1_ref_layout",
+                "shape": [128, 18, 1, 1],
+            },
+        });
+
+        let frontier = attention_norm_f64_selected_k_json_precision_frontier(
+            &selected_capture_frontier,
+            Some(&reference_json_text),
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_k_reference_source_bits_preserve_midpoint_capture"))
+        );
+        assert_eq!(frontier.pointer("/reference_source_bits_u32"), Some(&json!(3229921280u32)));
+        assert_eq!(frontier.pointer("/reference_source_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/source_bits_match_parsed_value"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/source_bits_match_reference_capture"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/source_bits_match_midpoint"), Some(&json!(true)));
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect the reference tensor capture path before first-value bit emission; source f32 bits and JSON decimal both preserve the selected midpoint capture"
             ))
         );
     }
