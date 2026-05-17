@@ -75,14 +75,16 @@ artifacts to separate strict proof items.
 | M3MBA-010 | merged | Audit MacBook model-cache retention and cleanup after the first large BitNet download; merged in #4839. |
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 | M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
+| M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
+| M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
 
-Current focus: `M3MBA-007` is the next bounded M3 Air artifact work surface,
-with `M3MBA-008` reserved for any accepted-artifact handoff. `M3MBA-006` is
-blocked until an official GGUF, reproducible conversion path, or explicitly
-approved third-party artifact path exists for the 0.7B candidate.
-`M3MBA-010` permits another large candidate only as serialized work with fresh
-disk preflight, before/after free-space evidence, hash evidence, and no
-committed model binaries.
+Current focus: `M3MBA-007` is the next bounded M3 Air artifact work surface for
+3B TL1/TL2 diagnostics, with `M3MBA-008` reserved for accepted-artifact handoff
+or explicit no-accepted-artifact closure. `M3MBA-006` remains blocked until an
+official GGUF, reproducible conversion path, or explicitly approved third-party
+artifact path exists for the 0.7B candidate. `M3MBA-010` permits another large
+candidate only as serialized work with fresh disk preflight, before/after
+free-space evidence, hash evidence, and no committed model binaries.
 
 ## Phase Roadmap
 
@@ -205,6 +207,8 @@ Local cache state, terminal output, and downloaded model files are not enough.
 | M3MBA-003 | Receipt validator/test fixture or documented schema evidence proving `apple-m3-air-cpu-neon` support without weakening `apple-m4-cpu-neon`. |
 | M3MBA-012 | Dense harness contract report section in `docs/apple-silicon/m3-macbook-air-roadmap.md`, with synthetic no-model CI receipt expectation. |
 | M3MBA-013 | CI completion policy section in `docs/apple-silicon/m3-macbook-air-roadmap.md` and shared CI policy alignment in `docs/ci/cost-and-verification-policy.md`. |
+| M3MBA-017 | CLI help/error surfaces and roadmap state proving all three M3 Air labels remain distinct while unsupported Metal/MPSGraph model inference is rejected. |
+| M3MBA-018 | Roadmap, campaign, MacBook lane, and staged workflow refresh showing the post-device-model stack, the remaining M3MBA-007/M3MBA-008 sequence, comparison-profile inputs, and selected-long-job phase evidence uploads. |
 | M3MBA-004A | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-smoke.md` |
 | M3MBA-004B | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-operator.md` |
 | M3MBA-005A | `docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md` identity/hash section |

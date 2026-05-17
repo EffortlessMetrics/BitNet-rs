@@ -1,0 +1,18 @@
+timestamp = "2026-05-16T10:03:05Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-017"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-017-device-help-alignment"
+summary = "Started the M3 Air device help and rejection alignment slice."
+artifacts = [
+  "crates/bitnet-cli-config-core/src/lib.rs",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/snapshots/",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+]
+notes = [
+  "Align M3 Air device identity help and rejection surfaces after backend visibility preflight merged.",
+]

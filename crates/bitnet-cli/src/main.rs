@@ -18,66 +18,14 @@ use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
-use std::alloc::{GlobalAlloc, Layout, System};
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, error, info, warn};
 
 #[global_allocator]
-static ALLOCATION_AUDIT_ALLOCATOR: AllocationAuditAllocator = AllocationAuditAllocator;
+static ALLOCATION_AUDIT_ALLOCATOR: allocation_audit::AllocationAuditAllocator =
+    allocation_audit::AllocationAuditAllocator;
 
-static ALLOCATION_AUDIT_ENABLED: AtomicBool = AtomicBool::new(false);
-static ALLOCATION_AUDIT_ALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_ALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-
-struct AllocationAuditAllocator;
-
-unsafe impl GlobalAlloc for AllocationAuditAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc_zeroed(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-        }
-        unsafe { System.dealloc(ptr, layout) };
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        let new_ptr = unsafe { System.realloc(ptr, layout, new_size) };
-        if !new_ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-            record_allocation_audit_alloc(new_size);
-        }
-        new_ptr
-    }
-}
-
-fn record_allocation_audit_alloc(size: usize) {
-    ALLOCATION_AUDIT_ALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_ALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
-fn record_allocation_audit_dealloc(size: usize) {
-    ALLOCATION_AUDIT_DEALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_DEALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
+mod allocation_audit;
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
@@ -90,11 +38,22 @@ mod ln_rules;
 mod mac;
 mod model_cache;
 mod planner_receipts;
+mod prompt_audit;
 mod score;
 mod simple_generation;
 pub mod tokenizer_discovery;
 
+use allocation_audit::{
+    AllocationAuditGuard, AllocationAuditSnapshot, allocation_bytes_delta_json,
+    allocation_count_delta_json, allocation_samples_json, mean_alloc_bytes, mean_alloc_count,
+};
+#[cfg(feature = "full-cli")]
+use allocation_audit::{
+    WarmSessionPromptAllocationAudit, warm_session_aggregate_allocation_audit_json,
+    warm_session_prompt_allocation_audit_json,
+};
 use exit::*;
+use prompt_audit::*;
 
 /// Build the CLI command for external use (e.g., in tests)
 pub fn build_cli() -> clap::Command {
@@ -1816,7 +1775,9 @@ async fn async_main() -> Result<()> {
             handle_lunar_lake_probe_command(json_out).await
         }
         #[cfg(feature = "full-cli")]
-        Some(Commands::LunarLake(command)) => handle_lunar_lake_command(command).await,
+        Some(Commands::LunarLake(command)) => {
+            handle_lunar_lake_command(command, &requested_backend_label).await
+        }
         Some(Commands::IntelNpuProbe { strict, json_out }) => {
             intel_npu::handle_probe_command(strict, json_out).await
         }
@@ -2277,196 +2238,6 @@ async fn handle_prompt_authority_audit_command(
 
     write_json_output(json_out.as_ref(), &receipt)?;
     Ok(())
-}
-
-fn prompt_audit_reference_parity_json(
-    reference_source: Option<String>,
-    reference_rendered_prompt: Option<String>,
-    reference_prompt_ids: &[u32],
-    bitnet_rendered_prompt: &str,
-    bitnet_prompt_ids: Option<&[u32]>,
-) -> serde_json::Value {
-    let rendered_prompt_available = reference_rendered_prompt.is_some();
-    let prompt_token_ids_available = !reference_prompt_ids.is_empty();
-    let rendered_prompt_match =
-        reference_rendered_prompt.as_deref().map(|reference| reference == bitnet_rendered_prompt);
-    let prompt_token_ids_match = if prompt_token_ids_available {
-        bitnet_prompt_ids.map(|bitnet_ids| reference_prompt_ids == bitnet_ids)
-    } else {
-        None
-    };
-    let first_rendered_prompt_mismatch = reference_rendered_prompt
-        .as_deref()
-        .and_then(|reference| first_string_mismatch(reference, bitnet_rendered_prompt));
-    let first_prompt_token_id_mismatch = if prompt_token_ids_available {
-        bitnet_prompt_ids
-            .and_then(|bitnet_ids| first_token_mismatch(reference_prompt_ids, bitnet_ids))
-    } else {
-        None
-    };
-    let passed = rendered_prompt_match == Some(true) && prompt_token_ids_match == Some(true);
-
-    serde_json::json!({
-        "available": rendered_prompt_available || prompt_token_ids_available,
-        "source": reference_source.unwrap_or_else(|| "unspecified_external_reference".to_string()),
-        "compared_against": "metadata_authority",
-        "reference_rendered_prompt_available": rendered_prompt_available,
-        "reference_prompt_token_ids_available": prompt_token_ids_available,
-        "rendered_prompt_match": rendered_prompt_match,
-        "prompt_token_ids_match": prompt_token_ids_match,
-        "first_rendered_prompt_mismatch_index": first_rendered_prompt_mismatch,
-        "first_prompt_token_id_mismatch_index": first_prompt_token_id_mismatch,
-        "passed": passed,
-    })
-}
-
-#[derive(Debug)]
-struct TokenizerJsonPromptMetadata {
-    family: Option<String>,
-    chat_template: Option<String>,
-}
-
-fn read_resolved_tokenizer_json_prompt_metadata(
-    source: bitnet_tokenizers::auto::TokenizerSource,
-    path: Option<&std::path::Path>,
-) -> Option<TokenizerJsonPromptMetadata> {
-    match source {
-        bitnet_tokenizers::auto::TokenizerSource::Explicit
-        | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
-            path.and_then(read_tokenizer_json_prompt_metadata)
-        }
-        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata
-        | bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => None,
-    }
-}
-
-fn read_tokenizer_json_prompt_metadata(
-    path: &std::path::Path,
-) -> Option<TokenizerJsonPromptMetadata> {
-    if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-        return None;
-    }
-    let value: serde_json::Value = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
-    let family = value
-        .get("tokenizer_class")
-        .and_then(serde_json::Value::as_str)
-        .or_else(|| {
-            value
-                .get("model")
-                .and_then(|model| model.get("type"))
-                .and_then(serde_json::Value::as_str)
-        })
-        .map(str::to_string);
-    let chat_template =
-        value.get("chat_template").and_then(serde_json::Value::as_str).map(str::to_string);
-    Some(TokenizerJsonPromptMetadata { family, chat_template })
-}
-
-fn prompt_audit_current_default_template(
-    model_path: &std::path::Path,
-    tokenizer_path: Option<&std::path::Path>,
-    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
-) -> bitnet_inference::TemplateType {
-    let path_template =
-        bitnet_inference::TemplateType::detect_from_paths(Some(model_path), tokenizer_path);
-    if matches!(path_template, bitnet_inference::TemplateType::BitnetCppAnswer) {
-        bitnet_inference::TemplateType::BitnetCppAnswer
-    } else if tokenizer.token_to_id("<|eot_id|>").is_some() {
-        bitnet_inference::TemplateType::Llama3Chat
-    } else {
-        bitnet_inference::TemplateType::Instruct
-    }
-}
-
-fn prompt_audit_variant_json(
-    label: &str,
-    template_type: bitnet_inference::TemplateType,
-    template_source: &str,
-    prompt: &str,
-    system_prompt: Option<&str>,
-    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
-) -> (serde_json::Value, Option<Vec<u32>>, String) {
-    let rendered_prompt = template_type.apply(prompt, system_prompt);
-    let add_bos = template_type.should_add_bos();
-    let parse_special = template_type.parse_special();
-    let encoded = tokenizer.encode(&rendered_prompt, add_bos, parse_special);
-    let (ids, error) = match encoded {
-        Ok(ids) => (Some(ids), None),
-        Err(error) => (None, Some(error.to_string())),
-    };
-    let entry = serde_json::json!({
-        "mode": label,
-        "prompt_policy": {
-            "template_type": template_type.to_string(),
-            "template_source": template_source,
-            "rendered_prompt": rendered_prompt,
-            "rendered_sha256": compute_sha256_bytes(rendered_prompt.as_bytes()),
-            "add_bos": add_bos,
-            "add_eos": false,
-            "parse_special": parse_special,
-            "add_generation_prompt": !matches!(template_type, bitnet_inference::TemplateType::Raw),
-        },
-        "tokens": {
-            "prompt_token_ids": ids.clone().unwrap_or_default(),
-            "prompt_token_count": ids.as_ref().map(Vec::len),
-            "encode_error": error,
-        }
-    });
-    (entry, ids, rendered_prompt)
-}
-
-fn prompt_audit_classification(
-    current_rendered: &str,
-    metadata_rendered: &str,
-    current_ids: &Option<Vec<u32>>,
-    metadata_ids: &Option<Vec<u32>>,
-) -> (&'static str, Vec<String>, Option<usize>) {
-    let mut notes = Vec::new();
-    if current_rendered != metadata_rendered {
-        notes.push("current_default_rendered_prompt_differs_from_metadata_authority".to_string());
-        return ("prompt", notes, first_string_mismatch(current_rendered, metadata_rendered));
-    }
-    match (current_ids, metadata_ids) {
-        (Some(left), Some(right)) if left != right => {
-            notes.push(
-                "current_default_prompt_token_ids_differ_from_metadata_authority".to_string(),
-            );
-            ("token_ids", notes, first_token_mismatch(left, right))
-        }
-        (Some(_), Some(_)) => {
-            notes.push("current_default_and_metadata_authority_prompt_tokens_match".to_string());
-            notes.push(
-                "model_inference_not_run; first-token logits remain unclassified".to_string(),
-            );
-            ("unknown", notes, None)
-        }
-        _ => {
-            notes.push("one_or_more_prompt_variants_failed_to_encode".to_string());
-            ("token_ids", notes, None)
-        }
-    }
-}
-
-fn first_token_mismatch(left: &[u32], right: &[u32]) -> Option<usize> {
-    let shared = left.len().min(right.len());
-    (0..shared).find(|idx| left[*idx] != right[*idx]).or(if left.len() != right.len() {
-        Some(shared)
-    } else {
-        None
-    })
-}
-
-fn first_string_mismatch(left: &str, right: &str) -> Option<usize> {
-    let mut left_chars = left.chars();
-    let mut right_chars = right.chars();
-    let mut index = 0;
-    loop {
-        match (left_chars.next(), right_chars.next()) {
-            (Some(left), Some(right)) if left == right => index += 1,
-            (Some(_), Some(_)) | (Some(_), None) | (None, Some(_)) => return Some(index),
-            (None, None) => return None,
-        }
-    }
 }
 
 async fn handle_device_smoke_command(
@@ -9964,11 +9735,16 @@ fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) 
 }
 
 #[cfg(feature = "full-cli")]
-async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
+async fn handle_lunar_lake_command(
+    command: LunarLakeCommand,
+    requested_backend_label: &str,
+) -> Result<()> {
     match command.action {
         LunarLakeAction::Ask {
             artifact_root,
             operator_receipt,
+            promotion_ledger,
+            profile,
             route,
             model,
             tokenizer,
@@ -9982,6 +9758,8 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
             run_lunar_lake_ask(
                 artifact_root,
                 operator_receipt,
+                promotion_ledger,
+                profile,
                 route,
                 model,
                 tokenizer,
@@ -9989,6 +9767,7 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
                 max_new_tokens,
                 expect_contains,
                 json_out,
+                requested_backend_label,
             )
             .await
         }
@@ -10001,6 +9780,8 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
 async fn run_lunar_lake_ask(
     artifact_root: std::path::PathBuf,
     operator_receipt: std::path::PathBuf,
+    promotion_ledger: std::path::PathBuf,
+    profile: String,
     route_id: String,
     model: std::path::PathBuf,
     tokenizer: Option<std::path::PathBuf>,
@@ -10008,15 +9789,20 @@ async fn run_lunar_lake_ask(
     max_new_tokens: usize,
     expect_contains: Option<String>,
     json_out: Option<std::path::PathBuf>,
+    requested_backend_label: &str,
 ) -> Result<()> {
     if !(1..=128).contains(&max_new_tokens) {
         anyhow::bail!("lunar-lake ask requires --max-new-tokens in 1..=128");
     }
-    let route = commands::lunar_lake::load_operator_ask_route(
+    let route_selection = commands::lunar_lake::resolve_operator_ask_route_selection(
         &artifact_root,
         &operator_receipt,
+        &promotion_ledger,
         &route_id,
+        requested_backend_label,
+        &profile,
     )?;
+    let route = route_selection.route.clone();
     let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
     let source_run_path = source_run_receipt_path(&receipt_path);
 
@@ -10094,6 +9880,7 @@ async fn run_lunar_lake_ask(
         operator_receipt_path: &operator_receipt_path,
         source_run_path: &source_run_path,
         route: &route,
+        route_selection: &route_selection,
         question: &question,
         answer,
         normalized_answer: &normalized_answer,
@@ -10140,6 +9927,7 @@ struct LunarLakeAskReceiptContext<'a> {
     operator_receipt_path: &'a std::path::Path,
     source_run_path: &'a std::path::Path,
     route: &'a commands::lunar_lake::OperatorRoute,
+    route_selection: &'a commands::lunar_lake::OperatorAskRouteSelection,
     question: &'a str,
     answer: &'a str,
     normalized_answer: &'a str,
@@ -10170,6 +9958,15 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "artifact_root": ctx.artifact_root.display().to_string(),
         "operator_receipt": ctx.operator_receipt_path.display().to_string(),
         "source_run_receipt": ctx.source_run_path.display().to_string(),
+        "requested_device": ctx.route_selection.requested_device,
+        "requested_route": ctx.route_selection.requested_route,
+        "profile_id": ctx.route_selection.profile_id,
+        "selected_route": ctx.route_selection.selected_route,
+        "promotion_status": ctx.route_selection.promotion_status,
+        "route_reason": ctx.route_selection.route_reason,
+        "why_not_cpu": ctx.route_selection.why_not_cpu,
+        "why_not_gpu": ctx.route_selection.why_not_gpu,
+        "why_not_npu": ctx.route_selection.why_not_npu,
         "requested_backend": requested_backend,
         "selected_backend": selected_backend,
         "runtime_api": runtime_api,
@@ -10178,6 +9975,22 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "backend_lane": "dense_slm_cpu",
         "selected_kernel_or_runtime": selected_kernel_or_runtime,
         "route_id": ctx.route.route_id,
+        "route_selection": {
+            "requested_device": ctx.route_selection.requested_device,
+            "requested_route": ctx.route_selection.requested_route,
+            "profile_id": ctx.route_selection.profile_id,
+            "selected_route": ctx.route_selection.selected_route,
+            "selected_backend": ctx.route_selection.selected_backend,
+            "runtime_api": ctx.route_selection.runtime_api,
+            "promotion_status": ctx.route_selection.promotion_status,
+            "selection_source": ctx.route_selection.selection_source,
+            "route_reason": ctx.route_selection.route_reason,
+            "why_not_cpu": ctx.route_selection.why_not_cpu,
+            "why_not_gpu": ctx.route_selection.why_not_gpu,
+            "why_not_npu": ctx.route_selection.why_not_npu,
+            "candidate_routes": ctx.route_selection.candidate_routes,
+            "promotion_ledger": ctx.route_selection.promotion_ledger,
+        },
         "model_family": model_family,
         "model_architecture": model_architecture,
         "quantization": quantization,
@@ -11340,52 +11153,6 @@ fn rounded_ms(ms: f64) -> f64 {
     (ms * 1000.0).round() / 1000.0
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct AllocationAuditSnapshot {
-    alloc_count: u64,
-    alloc_bytes: u64,
-    dealloc_count: u64,
-    dealloc_bytes: u64,
-}
-
-impl AllocationAuditSnapshot {
-    fn current() -> Self {
-        Self {
-            alloc_count: ALLOCATION_AUDIT_ALLOC_COUNT.load(Ordering::Relaxed),
-            alloc_bytes: ALLOCATION_AUDIT_ALLOC_BYTES.load(Ordering::Relaxed),
-            dealloc_count: ALLOCATION_AUDIT_DEALLOC_COUNT.load(Ordering::Relaxed),
-            dealloc_bytes: ALLOCATION_AUDIT_DEALLOC_BYTES.load(Ordering::Relaxed),
-        }
-    }
-
-    fn delta_since(start: Self) -> Self {
-        let current = Self::current();
-        Self {
-            alloc_count: current.alloc_count.saturating_sub(start.alloc_count),
-            alloc_bytes: current.alloc_bytes.saturating_sub(start.alloc_bytes),
-            dealloc_count: current.dealloc_count.saturating_sub(start.dealloc_count),
-            dealloc_bytes: current.dealloc_bytes.saturating_sub(start.dealloc_bytes),
-        }
-    }
-}
-
-struct AllocationAuditGuard {
-    previous: bool,
-}
-
-impl AllocationAuditGuard {
-    fn enable(enabled: bool) -> Self {
-        let previous = ALLOCATION_AUDIT_ENABLED.swap(enabled, Ordering::Relaxed);
-        Self { previous }
-    }
-}
-
-impl Drop for AllocationAuditGuard {
-    fn drop(&mut self) {
-        ALLOCATION_AUDIT_ENABLED.store(self.previous, Ordering::Relaxed);
-    }
-}
-
 fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
     if samples.is_empty() {
         return serde_json::json!({
@@ -11449,319 +11216,6 @@ fn tokens_per_second_json(tokens: usize, elapsed_ms: f64) -> serde_json::Value {
     } else {
         serde_json::json!(rounded_ms(tokens as f64 / (elapsed_ms / 1000.0)))
     }
-}
-
-fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
-    if samples.is_empty() {
-        return serde_json::json!({
-            "count": 0,
-            "alloc_count_total": 0,
-            "alloc_bytes_total": 0,
-            "dealloc_count_total": 0,
-            "dealloc_bytes_total": 0,
-            "net_bytes_total": 0,
-            "mean_alloc_count_per_token": serde_json::Value::Null,
-            "mean_alloc_bytes_per_token": serde_json::Value::Null,
-            "max_alloc_count_per_token": serde_json::Value::Null,
-            "max_alloc_bytes_per_token": serde_json::Value::Null,
-        });
-    }
-
-    let total_alloc_count = samples.iter().map(|sample| sample.alloc_count).sum::<u64>();
-    let total_alloc_bytes = samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>();
-    let total_dealloc_count = samples.iter().map(|sample| sample.dealloc_count).sum::<u64>();
-    let total_dealloc_bytes = samples.iter().map(|sample| sample.dealloc_bytes).sum::<u64>();
-    let max_alloc_count = samples.iter().map(|sample| sample.alloc_count).max().unwrap_or(0);
-    let max_alloc_bytes = samples.iter().map(|sample| sample.alloc_bytes).max().unwrap_or(0);
-    let count = samples.len() as f64;
-
-    let net_bytes_total = total_alloc_bytes as i64 - total_dealloc_bytes as i64;
-
-    serde_json::json!({
-        "count": samples.len(),
-        "alloc_count_total": total_alloc_count,
-        "alloc_bytes_total": total_alloc_bytes,
-        "dealloc_count_total": total_dealloc_count,
-        "dealloc_bytes_total": total_dealloc_bytes,
-        "net_bytes_total": net_bytes_total,
-        "mean_alloc_count_per_token": rounded_ms(total_alloc_count as f64 / count),
-        "mean_alloc_bytes_per_token": rounded_ms(total_alloc_bytes as f64 / count),
-        "max_alloc_count_per_token": max_alloc_count,
-        "max_alloc_bytes_per_token": max_alloc_bytes,
-    })
-}
-
-#[cfg(feature = "full-cli")]
-struct WarmSessionPromptAllocationAudit<'a> {
-    enabled: bool,
-    requested_backend: &'a str,
-    prompt_tokenize: AllocationAuditSnapshot,
-    prompt_setup: AllocationAuditSnapshot,
-    prompt_prefill: &'a [AllocationAuditSnapshot],
-    decode_total: &'a [AllocationAuditSnapshot],
-    embed: &'a [AllocationAuditSnapshot],
-    forward: &'a [AllocationAuditSnapshot],
-    logits: &'a [AllocationAuditSnapshot],
-    sample: &'a [AllocationAuditSnapshot],
-    token_vector_update: &'a [AllocationAuditSnapshot],
-    token_decode: &'a [AllocationAuditSnapshot],
-    stop_tail_update: &'a [AllocationAuditSnapshot],
-    receipt_construction: AllocationAuditSnapshot,
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_prompt_allocation_audit_json(
-    audit: WarmSessionPromptAllocationAudit<'_>,
-) -> serde_json::Value {
-    if !audit.enabled {
-        return serde_json::json!({
-            "enabled": false,
-            "method": "not_requested",
-            "scope": "not_requested",
-        });
-    }
-
-    let prompt_tokenize = std::slice::from_ref(&audit.prompt_tokenize);
-    let prompt_setup = std::slice::from_ref(&audit.prompt_setup);
-    let receipt_construction = std::slice::from_ref(&audit.receipt_construction);
-    let mut hotspots = vec![
-        allocation_hotspot("prompt_tokenize", prompt_tokenize),
-        allocation_hotspot("prompt_setup", prompt_setup),
-        allocation_hotspot("prompt_prefill", audit.prompt_prefill),
-        allocation_hotspot("decode_total", audit.decode_total),
-        allocation_hotspot("model.embed", audit.embed),
-        allocation_hotspot("model.forward", audit.forward),
-        allocation_hotspot("model.logits_and_extract", audit.logits),
-        allocation_hotspot("sampler.sample", audit.sample),
-        allocation_hotspot("token_vector_updates", audit.token_vector_update),
-        allocation_hotspot("tokenizer.decode", audit.token_decode),
-        allocation_hotspot("stop_tail_updates", audit.stop_tail_update),
-        allocation_hotspot("receipt_construction", receipt_construction),
-    ];
-    hotspots.retain(|hotspot| hotspot.alloc_count > 0 || hotspot.alloc_bytes > 0);
-    hotspots.sort_by(|left, right| {
-        right
-            .alloc_bytes
-            .cmp(&left.alloc_bytes)
-            .then_with(|| right.alloc_count.cmp(&left.alloc_count))
-            .then_with(|| left.component.cmp(right.component))
-    });
-
-    serde_json::json!({
-        "enabled": true,
-        "method": "process_global_allocator_counter_delta",
-        "scope": warm_session_allocation_scope(audit.requested_backend),
-        "claim_scope": "allocation counter deltas for this prompt/profile only; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
-        "optimization_deferred": false,
-        "unavoidable_candidates_named_before_optimization": true,
-        "ranked_hotspots": hotspots.iter().map(AllocationHotspot::to_json).collect::<Vec<_>>(),
-        "unavoidable_candidates": [
-            "model.embed/model.forward/model.logits tensor outputs from the current dense Qwen CPU execution path",
-            "tokenizer.decode allocation for per-token text and stop-tail checks",
-            "receipt construction outside the decode hot loop",
-            "prompt token vector growth is controlled by reusable session buffers; model tensor outputs remain the dominant allocation source"
-        ],
-        "instrumentation_included": [
-            "prompt_tokenize",
-            "prompt_setup",
-            "prompt_prefill_step",
-            "decode_step_total",
-            "model.embed",
-            "model.forward",
-            "model.logits_and_extract",
-            "sampler.sample",
-            "token_vector_updates",
-            "tokenizer.decode",
-            "stop_tail_updates",
-            "receipt_construction"
-        ],
-        "instrumentation_excluded": [
-            "model_load",
-            "tokenizer_load",
-            "aggregate_receipt_serialization",
-            "OS allocator reuse and fragmentation outside counter deltas"
-        ],
-        "prompt_tokenize": allocation_samples_json(prompt_tokenize),
-        "prompt_setup": allocation_samples_json(prompt_setup),
-        "prompt_prefill": allocation_samples_json(audit.prompt_prefill),
-        "decode": {
-            "total": allocation_samples_json(audit.decode_total),
-            "steady_state": allocation_samples_json(audit.decode_total.get(1..).unwrap_or(&[])),
-            "embed": allocation_samples_json(audit.embed),
-            "forward": allocation_samples_json(audit.forward),
-            "logits": allocation_samples_json(audit.logits),
-            "sample": allocation_samples_json(audit.sample),
-            "token_vector_update": allocation_samples_json(audit.token_vector_update),
-            "token_decode": allocation_samples_json(audit.token_decode),
-            "stop_tail_update": allocation_samples_json(audit.stop_tail_update),
-        },
-        "receipt_construction": allocation_samples_json(receipt_construction),
-    })
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_aggregate_allocation_audit_json(
-    enabled: bool,
-    requested_backend: &str,
-    prompt_summaries: &[serde_json::Value],
-) -> serde_json::Value {
-    if !enabled {
-        return serde_json::json!({
-            "enabled": false,
-            "method": "not_requested",
-            "scope": "not_requested",
-        });
-    }
-
-    let mut totals = std::collections::BTreeMap::<String, (u64, u64)>::new();
-    for prompt in prompt_summaries {
-        let Some(hotspots) = prompt["allocation_audit"]["ranked_hotspots"].as_array() else {
-            continue;
-        };
-        for hotspot in hotspots {
-            let Some(component) = hotspot["component"].as_str() else {
-                continue;
-            };
-            let entry = totals.entry(component.to_string()).or_default();
-            entry.0 += hotspot["alloc_count"].as_u64().unwrap_or_default();
-            entry.1 += hotspot["alloc_bytes"].as_u64().unwrap_or_default();
-        }
-    }
-    let mut ranked = totals
-        .into_iter()
-        .map(|(component, (alloc_count, alloc_bytes))| {
-            serde_json::json!({
-                "component": component,
-                "alloc_count": alloc_count,
-                "alloc_bytes": alloc_bytes,
-            })
-        })
-        .collect::<Vec<_>>();
-    ranked.sort_by(|left, right| {
-        right["alloc_bytes"]
-            .as_u64()
-            .unwrap_or_default()
-            .cmp(&left["alloc_bytes"].as_u64().unwrap_or_default())
-            .then_with(|| {
-                right["alloc_count"]
-                    .as_u64()
-                    .unwrap_or_default()
-                    .cmp(&left["alloc_count"].as_u64().unwrap_or_default())
-            })
-            .then_with(|| {
-                left["component"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .cmp(right["component"].as_str().unwrap_or_default())
-            })
-    });
-
-    serde_json::json!({
-        "enabled": true,
-        "method": "process_global_allocator_counter_delta",
-        "scope": warm_session_allocation_scope(requested_backend),
-        "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
-        "prompt_count": prompt_summaries.len(),
-        "ranked_hotspots": ranked,
-        "optimization_deferred": false,
-    })
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_allocation_scope(requested_backend: &str) -> &'static str {
-    match requested_backend.trim().to_ascii_lowercase().as_str() {
-        "cpu" => "selected generic CPU SLM warm-session prompt hot path",
-        "apple-m3-air-cpu-neon" => {
-            "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
-        }
-        _ => "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
-    }
-}
-
-#[cfg(feature = "full-cli")]
-struct AllocationHotspot {
-    component: &'static str,
-    alloc_count: u64,
-    alloc_bytes: u64,
-}
-
-#[cfg(feature = "full-cli")]
-impl AllocationHotspot {
-    fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
-            "component": self.component,
-            "alloc_count": self.alloc_count,
-            "alloc_bytes": self.alloc_bytes,
-        })
-    }
-}
-
-#[cfg(feature = "full-cli")]
-fn allocation_hotspot(
-    component: &'static str,
-    samples: &[AllocationAuditSnapshot],
-) -> AllocationHotspot {
-    AllocationHotspot {
-        component,
-        alloc_count: samples.iter().map(|sample| sample.alloc_count).sum(),
-        alloc_bytes: samples.iter().map(|sample| sample.alloc_bytes).sum(),
-    }
-}
-
-fn allocation_count_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
-    if samples.is_empty() {
-        return serde_json::json!({
-            "count": 0,
-            "total": 0,
-            "mean_per_token": serde_json::Value::Null,
-            "max_per_token": serde_json::Value::Null,
-        });
-    }
-
-    let total = samples.iter().map(|sample| sample.alloc_count).sum::<u64>();
-    let max = samples.iter().map(|sample| sample.alloc_count).max().unwrap_or(0);
-
-    serde_json::json!({
-        "count": samples.len(),
-        "total": total,
-        "mean_per_token": rounded_ms(total as f64 / samples.len() as f64),
-        "max_per_token": max,
-    })
-}
-
-fn allocation_bytes_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
-    if samples.is_empty() {
-        return serde_json::json!({
-            "count": 0,
-            "total": 0,
-            "mean_per_token": serde_json::Value::Null,
-            "max_per_token": serde_json::Value::Null,
-        });
-    }
-
-    let total = samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>();
-    let max = samples.iter().map(|sample| sample.alloc_bytes).max().unwrap_or(0);
-
-    serde_json::json!({
-        "count": samples.len(),
-        "total": total,
-        "mean_per_token": rounded_ms(total as f64 / samples.len() as f64),
-        "max_per_token": max,
-    })
-}
-
-fn mean_alloc_count(samples: &[AllocationAuditSnapshot]) -> Option<f64> {
-    if samples.is_empty() {
-        return None;
-    }
-    Some(samples.iter().map(|sample| sample.alloc_count).sum::<u64>() as f64 / samples.len() as f64)
-}
-
-fn mean_alloc_bytes(samples: &[AllocationAuditSnapshot]) -> Option<f64> {
-    if samples.is_empty() {
-        return None;
-    }
-    Some(samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>() as f64 / samples.len() as f64)
 }
 
 fn percentile_nearest(sorted_samples: &[f64], percentile: usize) -> f64 {
@@ -13114,6 +12568,29 @@ mod tests {
             phase_evidence: Some("slm-phase-warm-session-qwen25-cpu.json".to_string()),
             acceleration_claim: false,
         };
+        let route_selection = commands::lunar_lake::OperatorAskRouteSelection {
+            requested_device: "auto".to_string(),
+            requested_route: "auto".to_string(),
+            profile_id: "ask_normal".to_string(),
+            selected_route: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            promotion_status: "promoted".to_string(),
+            selection_source: "promotion_ledger_auto".to_string(),
+            route_reason: "test route".to_string(),
+            why_not_cpu: vec![
+                "dense_slm_default_cpu is promoted for profile ask_normal and remains the safe no-fallback default"
+                    .to_string(),
+            ],
+            why_not_gpu: vec!["route is not promoted for profile `ask_normal`".to_string()],
+            why_not_npu: vec!["route is not promoted for profile `ask_normal`".to_string()],
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+            promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+            route: route.clone(),
+        };
         let source = serde_json::json!({
             "requested_backend": "cpu",
             "selected_backend": "cpu-rust",
@@ -13151,6 +12628,7 @@ mod tests {
             operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
             source_run_path: std::path::Path::new("lunar-lake-operator-ask-source-run.json"),
             route: &route,
+            route_selection: &route_selection,
             question: "2+2?",
             answer: "\n4<|im_end|>",
             normalized_answer: "4",
@@ -13166,6 +12644,13 @@ mod tests {
         assert_eq!(receipt["backend_lane"], "dense_slm_cpu");
         assert_eq!(receipt["selected_kernel_or_runtime"], "dense-qwen-cpu-reference");
         assert_eq!(receipt["route_id"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["requested_device"], "auto");
+        assert_eq!(receipt["requested_route"], "auto");
+        assert_eq!(receipt["profile_id"], "ask_normal");
+        assert_eq!(receipt["selected_route"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["promotion_status"], "promoted");
+        assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto");
+        assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");
         assert_eq!(receipt["quantization"], "Q8_0");
@@ -13645,7 +13130,7 @@ mod tests {
         assert_eq!(slm_warm_session_artifact_kind("cpu"), "slm_cpu_warm_session");
         assert_eq!(slm_warm_session_prompt_artifact_kind("cpu"), "slm_cpu_warm_session_prompt");
         assert_eq!(
-            warm_session_allocation_scope("cpu"),
+            crate::allocation_audit::warm_session_allocation_scope("cpu"),
             "selected generic CPU SLM warm-session prompt hot path"
         );
         assert!(!allocation_audit_backend_supported(&RunBackendIdentity {

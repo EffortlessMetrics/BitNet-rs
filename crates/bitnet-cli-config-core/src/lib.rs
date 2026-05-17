@@ -51,7 +51,7 @@ pub const APPLE_M3_AIR_DEVICE_LABELS_TEXT: &str = "apple-m3-air-metal = strict r
 pub const DEVICE_HELP: &str = "Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes";
 
 /// Help for legacy full-cli commands that do not emit Apple proof receipts.
-pub const LEGACY_RUNTIME_DEVICE_HELP: &str = "Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple M4 labels";
+pub const LEGACY_RUNTIME_DEVICE_HELP: &str = "Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple proof labels";
 
 /// Runtime labels currently handled by legacy full-cli commands.
 pub const LEGACY_RUNTIME_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, auto";
@@ -313,27 +313,30 @@ impl ConfigBuilder {
 mod tests {
     use super::{
         APPLE_M3_AIR_DEVICE_LABELS_TEXT, APPLE_M4_DEVICE_LABELS_TEXT, CliConfig, ConfigBuilder,
-        SUPPORTED_DEVICE_LABELS, invalid_device_message,
+        LoggingConfig, PerformanceConfig, SUPPORTED_DEVICE_LABELS, invalid_device_message,
+        is_supported_device_label, unsupported_legacy_command_device_message,
     };
 
     #[test]
-    fn supported_device_labels_constant_matches_validation() {
+    fn supported_device_labels_constant_matches_validation() -> anyhow::Result<()> {
         for device in SUPPORTED_DEVICE_LABELS {
             if device.contains("<index>") {
                 continue;
             }
             let config =
                 CliConfig { default_device: (*device).to_string(), ..CliConfig::default() };
-            config.validate().unwrap_or_else(|err| panic!("{device} should validate: {err}"));
+            config.validate()?;
         }
+        Ok(())
     }
 
     #[test]
-    fn validates_intel_npu_labels_without_aliasing() {
+    fn validates_intel_npu_labels_without_aliasing() -> anyhow::Result<()> {
         for device in ["npu", "intel-npu", "intel-npu:1", "openvino-npu", "intel-npu-openvino"] {
             let config = CliConfig { default_device: device.to_string(), ..CliConfig::default() };
-            config.validate().unwrap();
+            config.validate()?;
         }
+        Ok(())
     }
 
     #[test]
@@ -345,17 +348,19 @@ mod tests {
     }
 
     #[test]
-    fn builder_preserves_intel_npu_device_label() {
-        let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build().unwrap();
+    fn builder_preserves_intel_npu_device_label() -> anyhow::Result<()> {
+        let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build()?;
         assert_eq!(config.default_device, "intel-npu:2");
+        Ok(())
     }
 
     #[test]
-    fn validates_apple_m4_labels_without_aliasing() {
+    fn validates_apple_m4_labels_without_aliasing() -> anyhow::Result<()> {
         for device in ["apple-m4-metal", "apple-m4-mpsgraph", "apple-m4-cpu-neon"] {
             let config = CliConfig { default_device: device.to_string(), ..CliConfig::default() };
-            config.validate().unwrap();
+            config.validate()?;
         }
+        Ok(())
     }
 
     #[test]
@@ -375,5 +380,302 @@ mod tests {
         assert!(message.contains(APPLE_M3_AIR_DEVICE_LABELS_TEXT), "got: {message}");
         assert!(message.contains("strict mode fails"), "got: {message}");
         assert!(message.contains("fallback_used"), "got: {message}");
+    }
+
+    #[test]
+    fn unsupported_legacy_command_device_message_names_command_and_device() {
+        let msg = unsupported_legacy_command_device_message("infer", "apple-m4-metal");
+        assert!(msg.starts_with("infer does not support"), "got: {msg}");
+        assert!(msg.contains("apple-m4-metal"), "got: {msg}");
+        assert!(msg.contains("bitnet run"), "got: {msg}");
+        assert!(msg.contains(APPLE_M4_DEVICE_LABELS_TEXT), "got: {msg}");
+        assert!(msg.contains(APPLE_M3_AIR_DEVICE_LABELS_TEXT), "got: {msg}");
+    }
+
+    #[test]
+    fn is_supported_device_label_accepts_known_labels() {
+        for label in ["cpu", "cuda", "auto", "apple-m4-metal", "npu:0", "npu:1234", "intel-npu:0"] {
+            assert!(is_supported_device_label(label), "{label} should be supported");
+        }
+    }
+
+    #[test]
+    fn is_supported_device_label_rejects_unknown_or_malformed() {
+        for label in ["", "unknown", "npu:", "npu:abc", "intel-npu:", "intel-npu:x", "CPU"] {
+            assert!(!is_supported_device_label(label), "{label} should be rejected");
+        }
+    }
+
+    #[test]
+    fn defaults_validate_cleanly() -> anyhow::Result<()> {
+        let config = CliConfig::default();
+        assert_eq!(config.default_device, "auto");
+        assert_eq!(config.logging.level, "info");
+        assert_eq!(config.logging.format, "pretty");
+        assert!(config.logging.timestamps);
+        assert_eq!(config.performance.batch_size, 1);
+        assert!(config.performance.memory_optimization);
+        assert!(config.performance.cpu_threads.is_none());
+        config.validate()?;
+        Ok(())
+    }
+
+    #[test]
+    fn validate_rejects_bad_log_level() {
+        let config = CliConfig {
+            logging: LoggingConfig { level: "loud".to_string(), ..LoggingConfig::default() },
+            ..CliConfig::default()
+        };
+        let err = config.validate().expect_err("loud is not a level");
+        assert!(format!("{err}").contains("Invalid log level"));
+    }
+
+    #[test]
+    fn validate_accepts_each_log_level() -> anyhow::Result<()> {
+        for level in ["trace", "debug", "info", "warn", "error"] {
+            let config = CliConfig {
+                logging: LoggingConfig { level: level.to_string(), ..LoggingConfig::default() },
+                ..CliConfig::default()
+            };
+            config.validate()?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn validate_rejects_bad_log_format() {
+        let config = CliConfig {
+            logging: LoggingConfig { format: "xml".to_string(), ..LoggingConfig::default() },
+            ..CliConfig::default()
+        };
+        let err = config.validate().expect_err("xml is not a format");
+        assert!(format!("{err}").contains("Invalid log format"));
+    }
+
+    #[test]
+    fn validate_accepts_each_log_format() -> anyhow::Result<()> {
+        for fmt in ["pretty", "json", "compact"] {
+            let config = CliConfig {
+                logging: LoggingConfig { format: fmt.to_string(), ..LoggingConfig::default() },
+                ..CliConfig::default()
+            };
+            config.validate()?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn validate_rejects_zero_batch_size() {
+        let config = CliConfig {
+            performance: PerformanceConfig { batch_size: 0, ..PerformanceConfig::default() },
+            ..CliConfig::default()
+        };
+        let err = config.validate().expect_err("batch_size 0 must fail");
+        assert!(format!("{err}").contains("Batch size"));
+    }
+
+    #[test]
+    fn load_from_file_returns_defaults_when_missing() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("does-not-exist.toml");
+        let config = CliConfig::load_from_file(&path)?;
+        // Compare to default by checking a few representative fields.
+        assert_eq!(config.default_device, CliConfig::default().default_device);
+        assert_eq!(config.logging.level, CliConfig::default().logging.level);
+        Ok(())
+    }
+
+    #[test]
+    fn save_and_load_round_trip() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("nested").join("config.toml");
+        let original = CliConfig {
+            default_device: "cpu".to_string(),
+            logging: LoggingConfig {
+                level: "debug".to_string(),
+                format: "json".to_string(),
+                timestamps: false,
+            },
+            performance: PerformanceConfig {
+                cpu_threads: Some(8),
+                batch_size: 4,
+                memory_optimization: false,
+            },
+            ..CliConfig::default()
+        };
+        original.save_to_file(&path)?;
+        assert!(path.exists(), "save_to_file must create the file (and any parents)");
+
+        let loaded = CliConfig::load_from_file(&path)?;
+        assert_eq!(loaded.default_device, "cpu");
+        assert_eq!(loaded.logging.level, "debug");
+        assert_eq!(loaded.logging.format, "json");
+        assert!(!loaded.logging.timestamps);
+        assert_eq!(loaded.performance.cpu_threads, Some(8));
+        assert_eq!(loaded.performance.batch_size, 4);
+        assert!(!loaded.performance.memory_optimization);
+        Ok(())
+    }
+
+    #[test]
+    fn load_from_file_rejects_malformed_toml() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("bad.toml");
+        std::fs::write(&path, "this is = not = toml")?;
+        let Err(err) = CliConfig::load_from_file(&path) else {
+            anyhow::bail!("malformed TOML should fail");
+        };
+        let message = format!("{err:#}");
+        assert!(message.contains("parse"), "expected parse error, got: {message}");
+        Ok(())
+    }
+
+    #[test]
+    fn default_config_path_ends_in_bitnet_config_toml() -> anyhow::Result<()> {
+        let path = CliConfig::default_config_path()?;
+        assert!(path.ends_with("bitnet/config.toml"), "got: {}", path.display());
+        Ok(())
+    }
+
+    #[test]
+    fn merge_with_env_reads_bitnet_device() {
+        temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Some("cuda")),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || {
+                let mut config = CliConfig::default();
+                config.merge_with_env();
+                assert_eq!(config.default_device, "cuda");
+            },
+        );
+    }
+
+    #[test]
+    fn merge_with_env_prefers_device_over_backend() {
+        temp_env::with_vars(
+            vec![("BITNET_DEVICE", Some("cuda")), ("BITNET_BACKEND", Some("rocm"))],
+            || {
+                let mut config = CliConfig::default();
+                config.merge_with_env();
+                assert_eq!(config.default_device, "cuda");
+            },
+        );
+    }
+
+    #[test]
+    fn merge_with_env_falls_back_to_backend() {
+        temp_env::with_vars(
+            vec![("BITNET_DEVICE", Option::<&str>::None), ("BITNET_BACKEND", Some("rocm"))],
+            || {
+                let mut config = CliConfig::default();
+                config.merge_with_env();
+                assert_eq!(config.default_device, "rocm");
+            },
+        );
+    }
+
+    #[test]
+    fn merge_with_env_reads_log_level_and_threads() {
+        temp_env::with_vars(
+            vec![("BITNET_LOG_LEVEL", Some("warn")), ("BITNET_CPU_THREADS", Some("12"))],
+            || {
+                let mut config = CliConfig::default();
+                config.merge_with_env();
+                assert_eq!(config.logging.level, "warn");
+                assert_eq!(config.performance.cpu_threads, Some(12));
+            },
+        );
+    }
+
+    #[test]
+    fn merge_with_env_ignores_non_numeric_thread_value() {
+        temp_env::with_vars(vec![("BITNET_CPU_THREADS", Some("not-a-number"))], || {
+            let mut config = CliConfig::default();
+            config.merge_with_env();
+            assert!(config.performance.cpu_threads.is_none());
+        });
+    }
+
+    #[test]
+    fn builder_log_level_cpu_threads_batch_size_propagate() -> anyhow::Result<()> {
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || -> anyhow::Result<CliConfig> {
+                ConfigBuilder::new()
+                    .device(Some("cpu".to_string()))
+                    .log_level(Some("debug".to_string()))
+                    .cpu_threads(Some(2))
+                    .batch_size(Some(8))
+                    .build()
+            },
+        )?;
+        assert_eq!(config.default_device, "cpu");
+        assert_eq!(config.logging.level, "debug");
+        assert_eq!(config.performance.cpu_threads, Some(2));
+        assert_eq!(config.performance.batch_size, 8);
+        Ok(())
+    }
+
+    #[test]
+    fn builder_none_options_leave_defaults_intact() -> anyhow::Result<()> {
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || -> anyhow::Result<CliConfig> {
+                ConfigBuilder::new()
+                    .device(None)
+                    .log_level(None)
+                    .cpu_threads(None)
+                    .batch_size(None)
+                    .build()
+            },
+        )?;
+        let defaults = CliConfig::default();
+        assert_eq!(config.default_device, defaults.default_device);
+        assert_eq!(config.logging.level, defaults.logging.level);
+        assert_eq!(config.performance.cpu_threads, defaults.performance.cpu_threads);
+        assert_eq!(config.performance.batch_size, defaults.performance.batch_size);
+        Ok(())
+    }
+
+    #[test]
+    fn builder_fails_validation_for_invalid_device() {
+        let err = ConfigBuilder::new()
+            .device(Some("nope".to_string()))
+            .build()
+            .expect_err("validate should reject");
+        assert!(format!("{err}").contains("Invalid device"));
+    }
+
+    #[test]
+    fn builder_from_file_loads_existing_config() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("cfg.toml");
+        let written = CliConfig { default_device: "cpu".to_string(), ..CliConfig::default() };
+        written.save_to_file(&path)?;
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || -> anyhow::Result<CliConfig> { ConfigBuilder::from_file(&path)?.build() },
+        )?;
+        assert_eq!(config.default_device, "cpu");
+        Ok(())
     }
 }

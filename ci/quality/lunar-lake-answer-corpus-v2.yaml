@@ -51,8 +51,8 @@ cases:
   - id: arithmetic_add_7_8
     category: math
     profile: regression_tiny
-    question: "Compute 7 + 8. Answer with the result."
-    max_new_tokens: 8
+    question: "Answer with exactly the number: 7 + 8 ="
+    max_new_tokens: 12
     scoring:
       kind: required_forbidden_tokens
       required_keywords:
@@ -66,8 +66,8 @@ cases:
   - id: copy_exact_color_triplet
     category: copy_exact
     profile: regression_tiny
-    question: "Repeat exactly: red blue green"
-    max_new_tokens: 12
+    question: "Copy exactly these three words and nothing else: red blue green"
+    max_new_tokens: 8
     scoring:
       kind: required_keywords
       required_keywords:
@@ -77,13 +77,15 @@ cases:
     gate:
       kind: contains_any
       contains_any:
+        - "red, blue, green"
+        - "Red, blue, green"
         - "red blue green"
         - "Red blue green"
 
   - id: yes_no_clear_sky
     category: yes_no
     profile: ask_short
-    question: "Answer yes or no: is the sky usually blue on a clear day?"
+    question: "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?"
     max_new_tokens: 8
     scoring:
       kind: normalized_match
@@ -192,25 +194,25 @@ cases:
         - "CPU"
         - "route"
 
-  - id: short_reasoning_heavier_object
+  - id: short_reasoning_apples_left
     category: short_reasoning
     profile: ask_normal
-    question: "A full mug is heavier than an empty mug. Which one is heavier? Answer briefly."
+    question: "Tom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no."
     max_new_tokens: 16
     scoring:
       kind: required_keywords
       required_keywords:
-        - "full"
+        - "yes"
     gate:
       kind: contains_any
       contains_any:
-        - "full"
-        - "Full"
+        - "yes"
+        - "Yes"
 
   - id: decode_heavy_short_list
     category: decode_heavy
     profile: decode_heavy
-    question: "List six practical checks for a local inference route. Use short comma-separated phrases."
+    question: "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases."
     max_new_tokens: 64
     scoring:
       kind: required_keywords

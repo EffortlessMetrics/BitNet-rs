@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T08:16:58Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-002-reference-vs-rust"
+
+notes = [
+  "Started the reference-vs-Rust BitNet M4 comparison using the accepted Microsoft I2_S GGUF and external tokenizer authority.",
+  "Reference outputs are generated with the local Microsoft BitNet.cpp `llama-cli` command shape and compared against the existing validated Rust M4 BitNet eval receipt from `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json`.",
+  "The comparison records reference generated text, Rust generated text and token IDs, reference token-ID unavailability, prompt-template identity, and mechanical scoring deltas without making a fresh Rust runtime, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim.",
+]

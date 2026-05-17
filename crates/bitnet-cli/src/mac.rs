@@ -20,6 +20,8 @@ use crate::model_cache::{self, VerifiedCachedModel};
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
 const APPLE_M3_AIR_CPU_NEON: &str = "apple-m3-air-cpu-neon";
 const APPLE_M4_METAL: &str = "apple-m4-metal";
+const APPLE_M3_AIR_METAL: &str = "apple-m3-air-metal";
+const APPLE_M3_AIR_MPSGRAPH: &str = "apple-m3-air-mpsgraph";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
@@ -80,6 +82,42 @@ const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
     "resident_25",
     "resident_50",
     "resident_100",
+];
+const M4_SLM_BENCHMARK_V2_TIMING_METRICS: &[&str] = &[
+    "cold_load_ms",
+    "tokenizer_load_ms",
+    "prompt_tokenize_ms",
+    "prefill_ms",
+    "time_to_first_token_ms",
+    "decode_total_ms",
+    "sampling_ms_per_token",
+    "total_wall_ms",
+];
+const M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS: &[&str] =
+    &["input_tokens_per_second", "output_tokens_per_second", "decode_tokens_per_second"];
+const M4_SLM_BENCHMARK_V2_MEMORY_METRICS: &[&str] = &["peak_memory_mb", "memory_drift_mb"];
+const M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS: &[&str] = &[
+    "cold_load_ms",
+    "tokenizer_load_ms",
+    "prompt_tokenize_ms",
+    "prefill_ms",
+    "ttft_ms",
+    "sampling_ms_per_token",
+    "input_tok_s",
+    "output_tok_s",
+    "decode_tok_s",
+    "total_wall_ms",
+];
+const M4_SLM_BENCHMARK_V2_LEGACY_AGGREGATE_SPEED_METRICS: &[&str] = &[
+    "cold_load_ms",
+    "tokenizer_load_ms",
+    "prompt_tokenize_ms",
+    "prefill_ms",
+    "ttft_ms",
+    "input_tok_s",
+    "output_tok_s",
+    "decode_tok_s",
+    "total_wall_ms",
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -2429,7 +2467,7 @@ fn ensure_supported_mac_validate_device(
         APPLE_M4_CPU_NEON => Ok(APPLE_M4_CPU_NEON),
         APPLE_M3_AIR_CPU_NEON => Ok(APPLE_M3_AIR_CPU_NEON),
         _ => anyhow::bail!(
-            "mac validate routes supported Apple CPU/NEON validation through --device {APPLE_M4_CPU_NEON} or --device {APPLE_M3_AIR_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+            "mac validate routes supported Apple CPU/NEON validation through --device {APPLE_M4_CPU_NEON} or --device {APPLE_M3_AIR_CPU_NEON}; requested --device {label}. Full {APPLE_M4_METAL}/{APPLE_M3_AIR_METAL} inference, {APPLE_M3_AIR_MPSGRAPH}/MPSGraph model inference, and hidden CPU fallback are not supported by this wrapper."
         ),
     }
 }
@@ -6822,6 +6860,7 @@ struct BenchmarkMetricSamples {
     prompt_tokenize_ms: Vec<f64>,
     prefill_ms: Vec<f64>,
     time_to_first_token_ms: Vec<f64>,
+    sampling_ms_per_token: Vec<f64>,
     input_tokens_per_second: Vec<f64>,
     output_tokens_per_second: Vec<f64>,
     decode_tokens_per_second: Vec<f64>,
@@ -6840,6 +6879,8 @@ impl BenchmarkMetricSamples {
         self.prefill_ms.extend(benchmark_stat_samples(&profile["timing"]["prefill_ms"]));
         self.time_to_first_token_ms
             .extend(benchmark_stat_samples(&profile["timing"]["time_to_first_token_ms"]));
+        self.sampling_ms_per_token
+            .extend(benchmark_stat_samples(&profile["timing"]["sampling_ms_per_token"]));
         self.input_tokens_per_second
             .extend(benchmark_stat_samples(&profile["throughput"]["input_tokens_per_second"]));
         self.output_tokens_per_second
@@ -6858,6 +6899,7 @@ impl BenchmarkMetricSamples {
             ("prompt_tokenize_ms", &self.prompt_tokenize_ms),
             ("prefill_ms", &self.prefill_ms),
             ("ttft_ms", &self.time_to_first_token_ms),
+            ("sampling_ms_per_token", &self.sampling_ms_per_token),
             ("input_tok_s", &self.input_tokens_per_second),
             ("output_tok_s", &self.output_tokens_per_second),
             ("decode_tok_s", &self.decode_tokens_per_second),
@@ -6986,7 +7028,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
     }
 
     let aggregate = serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_slm_benchmark_v2",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
@@ -7021,8 +7063,16 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             "support_note": model.support_note,
         },
         "benchmark_contract": {
+            "contract_version": "1.1.0",
             "scope": "Apple M4 Mac mini dense SLM benchmark v2",
             "profile_execution_model": "one resident warm-session run per named profile",
+            "supported_profiles": M4_SLM_BENCHMARK_V2_PROFILES,
+            "required_metrics": {
+                "timing": M4_SLM_BENCHMARK_V2_TIMING_METRICS,
+                "throughput": M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS,
+                "memory": M4_SLM_BENCHMARK_V2_MEMORY_METRICS,
+                "aggregate_speed": M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+            },
             "profiles_loaded_independently": true,
             "profile_set_model_loads": summaries.len(),
             "cold_load_separated": true,
@@ -8335,10 +8385,11 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
             | Some("apple_m4_slm_eval_summary")
             | Some("apple_m4_slm_benchmark_v2")
             | Some("bitnet_apple_m4_local_answer_corpus")
+            | Some("bitnet_apple_m4_warm_session")
             | Some("bitnet_apple_m4_benchmark_v1")
     ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, bitnet_apple_m4_local_answer_corpus, or bitnet_apple_m4_benchmark_v1 receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, bitnet_apple_m4_local_answer_corpus, bitnet_apple_m4_warm_session, or bitnet_apple_m4_benchmark_v1 receipt",
             path.display()
         );
     }
@@ -8365,6 +8416,9 @@ fn compare_mac_regression(
         }
         Some("bitnet_apple_m4_local_answer_corpus") => {
             compare_bitnet_eval_answer_corpus_regression(path, receipt, baseline)
+        }
+        Some("bitnet_apple_m4_warm_session") => {
+            compare_bitnet_warm_session_regression(path, receipt, baseline)
         }
         Some("bitnet_apple_m4_benchmark_v1") => {
             compare_bitnet_benchmark_v1_regression(path, receipt, baseline)
@@ -8513,6 +8567,113 @@ fn compare_dense_slm_warm_session_regression(
         regression_metric(&baseline.receipt, &["memory", "peak_memory_mb"])?,
         regression_metric(receipt, &["memory", "peak_memory_mb"])?,
         PEAK_MEMORY_MB_HIGHER_PCT,
+    );
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn compare_bitnet_warm_session_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const WARM_PROMPT_TOK_S_LOWER_PCT: f64 = 15.0;
+    const TIME_TO_FIRST_TOKEN_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const PREFILL_HIGHER_PCT: f64 = 15.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const TOTAL_SESSION_MS_HIGHER_PCT: f64 = 15.0;
+    const RESIDENT_MEMORY_HIGHER_PCT: f64 = 10.0;
+
+    ensure_bitnet_warm_session_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    compare_lower_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.throughput.decode_generated_tok_s",
+        regression_metric(&baseline.receipt, &["speed", "throughput", "decode_generated_tok_s"])?,
+        regression_metric(receipt, &["speed", "throughput", "decode_generated_tok_s"])?,
+        DECODE_TOK_S_LOWER_PCT,
+    );
+    compare_lower_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.throughput.warm_prompt_generated_tok_s",
+        regression_metric(
+            &baseline.receipt,
+            &["speed", "throughput", "warm_prompt_generated_tok_s"],
+        )?,
+        regression_metric(receipt, &["speed", "throughput", "warm_prompt_generated_tok_s"])?,
+        WARM_PROMPT_TOK_S_LOWER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.timing.time_to_first_token_ms",
+        regression_metric(&baseline.receipt, &["speed", "timing", "time_to_first_token_ms"])?,
+        regression_metric(receipt, &["speed", "timing", "time_to_first_token_ms"])?,
+        TIME_TO_FIRST_TOKEN_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.timing.model_load_ms",
+        regression_metric(&baseline.receipt, &["speed", "timing", "model_load_ms"])?,
+        regression_metric(receipt, &["speed", "timing", "model_load_ms"])?,
+        LOAD_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.timing.tokenizer_load_ms",
+        regression_metric(&baseline.receipt, &["speed", "timing", "tokenizer_load_ms"])?,
+        regression_metric(receipt, &["speed", "timing", "tokenizer_load_ms"])?,
+        LOAD_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.timing.prefill_ms",
+        regression_metric(&baseline.receipt, &["speed", "timing", "prefill_ms"])?,
+        regression_metric(receipt, &["speed", "timing", "prefill_ms"])?,
+        PREFILL_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "speed.timing.sampling_ms",
+        regression_metric(&baseline.receipt, &["speed", "timing", "sampling_ms"])?,
+        regression_metric(receipt, &["speed", "timing", "sampling_ms"])?,
+        SAMPLING_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "timing.total_session_ms",
+        regression_metric(&baseline.receipt, &["timing", "total_session_ms"])?,
+        regression_metric(receipt, &["timing", "total_session_ms"])?,
+        TOTAL_SESSION_MS_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "bitnet_warm_session",
+        "memory.resident_memory_bytes",
+        regression_metric(&baseline.receipt, &["memory", "resident_memory_bytes"])?,
+        regression_metric(receipt, &["memory", "resident_memory_bytes"])?,
+        RESIDENT_MEMORY_HIGHER_PCT,
     );
 
     Ok(RegressionCheckSummary {
@@ -10560,6 +10721,588 @@ fn ensure_warm_session_regression_context_matches(
     Ok(())
 }
 
+fn ensure_bitnet_warm_session_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    if receipt["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256)
+        || baseline["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256)
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both BitNet warm-session receipts must use the accepted Microsoft I2_S GGUF",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if receipt["model_id"].as_str() != Some(BITNET_M4_MODEL_ID)
+        || baseline["model_id"].as_str() != Some(BITNET_M4_MODEL_ID)
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both BitNet warm-session receipts must record model_id={BITNET_M4_MODEL_ID}",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+
+    for (label, observed, expected) in [
+        ("schema_version", receipt["schema_version"].as_str(), baseline["schema_version"].as_str()),
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        (
+            "operator_command",
+            receipt["operator_command"].as_str(),
+            baseline["operator_command"].as_str(),
+        ),
+        ("machine_id", receipt["machine_id"].as_str(), baseline["machine_id"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "backend.requested_backend",
+            receipt["backend"]["requested_backend"].as_str(),
+            baseline["backend"]["requested_backend"].as_str(),
+        ),
+        (
+            "backend.selected_backend",
+            receipt["backend"]["selected_backend"].as_str(),
+            baseline["backend"]["selected_backend"].as_str(),
+        ),
+        (
+            "backend.runtime_api",
+            receipt["backend"]["runtime_api"].as_str(),
+            baseline["backend"]["runtime_api"].as_str(),
+        ),
+        ("model_id", receipt["model_id"].as_str(), baseline["model_id"].as_str()),
+        ("model.family", receipt["model"]["family"].as_str(), baseline["model"]["family"].as_str()),
+        ("model.repo", receipt["model"]["repo"].as_str(), baseline["model"]["repo"].as_str()),
+        ("model.file", receipt["model"]["file"].as_str(), baseline["model"]["file"].as_str()),
+        ("model.path", receipt["model"]["path"].as_str(), baseline["model"]["path"].as_str()),
+        ("model.sha256", receipt["model"]["sha256"].as_str(), baseline["model"]["sha256"].as_str()),
+        (
+            "model.architecture",
+            receipt["model"]["architecture"].as_str(),
+            baseline["model"]["architecture"].as_str(),
+        ),
+        ("model.format", receipt["model"]["format"].as_str(), baseline["model"]["format"].as_str()),
+        (
+            "model.loader_mode",
+            receipt["model"]["loader_mode"].as_str(),
+            baseline["model"]["loader_mode"].as_str(),
+        ),
+        (
+            "model.tokenizer",
+            receipt["model"]["tokenizer"].as_str(),
+            baseline["model"]["tokenizer"].as_str(),
+        ),
+        (
+            "model_cache.id",
+            receipt["model_cache"]["id"].as_str(),
+            baseline["model_cache"]["id"].as_str(),
+        ),
+        (
+            "model_cache.path",
+            receipt["model_cache"]["path"].as_str(),
+            baseline["model_cache"]["path"].as_str(),
+        ),
+        (
+            "model_cache.sha256",
+            receipt["model_cache"]["sha256"].as_str(),
+            baseline["model_cache"]["sha256"].as_str(),
+        ),
+        (
+            "model_cache.architecture",
+            receipt["model_cache"]["architecture"].as_str(),
+            baseline["model_cache"]["architecture"].as_str(),
+        ),
+        (
+            "model_cache.quantization",
+            receipt["model_cache"]["quantization"].as_str(),
+            baseline["model_cache"]["quantization"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_model",
+            receipt["model_cache"]["tokenizer_model"].as_str(),
+            baseline["model_cache"]["tokenizer_model"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_pre",
+            receipt["model_cache"]["tokenizer_pre"].as_str(),
+            baseline["model_cache"]["tokenizer_pre"].as_str(),
+        ),
+        (
+            "tokenizer.source",
+            receipt["tokenizer"]["source"].as_str(),
+            baseline["tokenizer"]["source"].as_str(),
+        ),
+        (
+            "tokenizer.type",
+            receipt["tokenizer"]["type"].as_str(),
+            baseline["tokenizer"]["type"].as_str(),
+        ),
+        (
+            "tokenizer.model_family",
+            receipt["tokenizer"]["model_family"].as_str(),
+            baseline["tokenizer"]["model_family"].as_str(),
+        ),
+        (
+            "tokenizer.pretokenizer_authority",
+            receipt["tokenizer"]["pretokenizer_authority"].as_str(),
+            baseline["tokenizer"]["pretokenizer_authority"].as_str(),
+        ),
+        (
+            "generation.prompt_template",
+            receipt["generation"]["prompt_template"].as_str(),
+            baseline["generation"]["prompt_template"].as_str(),
+        ),
+        (
+            "generation.mode",
+            receipt["generation"]["mode"].as_str(),
+            baseline["generation"]["mode"].as_str(),
+        ),
+        (
+            "session.reuse_scope",
+            receipt["session"]["reuse_scope"].as_str(),
+            baseline["session"]["reuse_scope"].as_str(),
+        ),
+        (
+            "session.kv_cache_reuse_policy",
+            receipt["session"]["kv_cache_reuse_policy"].as_str(),
+            baseline["session"]["kv_cache_reuse_policy"].as_str(),
+        ),
+        (
+            "session.sampler_reuse_policy",
+            receipt["session"]["sampler_reuse_policy"].as_str(),
+            baseline["session"]["sampler_reuse_policy"].as_str(),
+        ),
+        (
+            "bitnet_warm_prompt_source.source",
+            receipt["bitnet_warm_prompt_source"]["source"].as_str(),
+            baseline["bitnet_warm_prompt_source"]["source"].as_str(),
+        ),
+        (
+            "mac_bitnet_claim_boundary.tokenizer_path",
+            receipt["mac_bitnet_claim_boundary"]["tokenizer_path"].as_str(),
+            baseline["mac_bitnet_claim_boundary"]["tokenizer_path"].as_str(),
+        ),
+        (
+            "mac_bitnet_claim_boundary.tokenizer_sha256",
+            receipt["mac_bitnet_claim_boundary"]["tokenizer_sha256"].as_str(),
+            baseline["mac_bitnet_claim_boundary"]["tokenizer_sha256"].as_str(),
+        ),
+        (
+            "mac_bitnet_claim_boundary.requested_backend",
+            receipt["mac_bitnet_claim_boundary"]["requested_backend"].as_str(),
+            baseline["mac_bitnet_claim_boundary"]["requested_backend"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    for (label, observed, expected) in [
+        (
+            "tokenizer.bos",
+            receipt["tokenizer"]["bos"].as_u64(),
+            baseline["tokenizer"]["bos"].as_u64(),
+        ),
+        (
+            "tokenizer.eos",
+            receipt["tokenizer"]["eos"].as_u64(),
+            baseline["tokenizer"]["eos"].as_u64(),
+        ),
+        (
+            "model.vocab_size",
+            receipt["model"]["vocab_size"].as_u64(),
+            baseline["model"]["vocab_size"].as_u64(),
+        ),
+        (
+            "generation.max_new_tokens",
+            receipt["generation"]["max_new_tokens"].as_u64(),
+            baseline["generation"]["max_new_tokens"].as_u64(),
+        ),
+        (
+            "generation.top_k",
+            receipt["generation"]["top_k"].as_u64(),
+            baseline["generation"]["top_k"].as_u64(),
+        ),
+        (
+            "session.prompt_count",
+            receipt["session"]["prompt_count"].as_u64(),
+            baseline["session"]["prompt_count"].as_u64(),
+        ),
+        (
+            "session.stop_sequence_count",
+            receipt["session"]["stop_sequence_count"].as_u64(),
+            baseline["session"]["stop_sequence_count"].as_u64(),
+        ),
+        (
+            "session.stop_token_id_count",
+            receipt["session"]["stop_token_id_count"].as_u64(),
+            baseline["session"]["stop_token_id_count"].as_u64(),
+        ),
+        (
+            "speed.counts.prompt_count",
+            receipt["speed"]["counts"]["prompt_count"].as_u64(),
+            baseline["speed"]["counts"]["prompt_count"].as_u64(),
+        ),
+        (
+            "speed.counts.prompt_tokens",
+            receipt["speed"]["counts"]["prompt_tokens"].as_u64(),
+            baseline["speed"]["counts"]["prompt_tokens"].as_u64(),
+        ),
+        (
+            "speed.counts.generated_tokens",
+            receipt["speed"]["counts"]["generated_tokens"].as_u64(),
+            baseline["speed"]["counts"]["generated_tokens"].as_u64(),
+        ),
+        (
+            "bitnet_warm_prompt_source.fixed_proof_prompt_count",
+            receipt["bitnet_warm_prompt_source"]["fixed_proof_prompt_count"].as_u64(),
+            baseline["bitnet_warm_prompt_source"]["fixed_proof_prompt_count"].as_u64(),
+        ),
+        (
+            "bitnet_warm_prompt_source.session_prompt_count",
+            receipt["bitnet_warm_prompt_source"]["session_prompt_count"].as_u64(),
+            baseline["bitnet_warm_prompt_source"]["session_prompt_count"].as_u64(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "backend.fallback_used",
+            receipt["backend"]["fallback_used"].as_bool(),
+            baseline["backend"]["fallback_used"].as_bool(),
+        ),
+        (
+            "model.fallback_loader_used",
+            receipt["model"]["fallback_loader_used"].as_bool(),
+            baseline["model"]["fallback_loader_used"].as_bool(),
+        ),
+        (
+            "tokenizer.strict",
+            receipt["tokenizer"]["strict"].as_bool(),
+            baseline["tokenizer"]["strict"].as_bool(),
+        ),
+        (
+            "generation.deterministic",
+            receipt["generation"]["deterministic"].as_bool(),
+            baseline["generation"]["deterministic"].as_bool(),
+        ),
+        (
+            "session.model_loaded_once",
+            receipt["session"]["model_loaded_once"].as_bool(),
+            baseline["session"]["model_loaded_once"].as_bool(),
+        ),
+        (
+            "session.tokenizer_loaded_once",
+            receipt["session"]["tokenizer_loaded_once"].as_bool(),
+            baseline["session"]["tokenizer_loaded_once"].as_bool(),
+        ),
+        (
+            "session.per_prompt_receipts_enabled",
+            receipt["session"]["per_prompt_receipts_enabled"].as_bool(),
+            baseline["session"]["per_prompt_receipts_enabled"].as_bool(),
+        ),
+        (
+            "bitnet_warm_prompt_source.variable_prompts",
+            receipt["bitnet_warm_prompt_source"]["variable_prompts"].as_bool(),
+            baseline["bitnet_warm_prompt_source"]["variable_prompts"].as_bool(),
+        ),
+        (
+            "bitnet_warm_prompt_source.determinism_requires_repeated_prompt",
+            receipt["bitnet_warm_prompt_source"]["determinism_requires_repeated_prompt"].as_bool(),
+            baseline["bitnet_warm_prompt_source"]["determinism_requires_repeated_prompt"].as_bool(),
+        ),
+        (
+            "quality_summary.fail_on_quality",
+            receipt["quality_summary"]["fail_on_quality"].as_bool(),
+            baseline["quality_summary"]["fail_on_quality"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    if receipt["backend"]["fallback_reason"] != baseline["backend"]["fallback_reason"] {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: backend.fallback_reason mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if receipt["timeout_policy"] != baseline["timeout_policy"]
+        || receipt["timeout_seconds"] != baseline["timeout_seconds"]
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: timeout policy mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    for (label, observed, expected) in [
+        (
+            "generation.temperature",
+            receipt["generation"]["temperature"].as_f64(),
+            baseline["generation"]["temperature"].as_f64(),
+        ),
+        (
+            "generation.top_p",
+            receipt["generation"]["top_p"].as_f64(),
+            baseline["generation"]["top_p"].as_f64(),
+        ),
+        (
+            "generation.repetition_penalty",
+            receipt["generation"]["repetition_penalty"].as_f64(),
+            baseline["generation"]["repetition_penalty"].as_f64(),
+        ),
+    ] {
+        let values_match = match (observed, expected) {
+            (Some(observed), Some(expected)) => (observed - expected).abs() <= f64::EPSILON,
+            _ => false,
+        };
+        if !values_match {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if receipt["quality_summary"]["passed"].as_bool() != Some(true)
+        || baseline["quality_summary"]["passed"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both BitNet warm-session receipts must pass quality",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if receipt["determinism"]["checked"].as_bool() != Some(true)
+        || baseline["determinism"]["checked"].as_bool() != Some(true)
+        || receipt["determinism"]["passed"].as_bool() != Some(true)
+        || baseline["determinism"]["passed"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both BitNet warm-session receipts must pass repeated-prompt determinism",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    ensure_bitnet_warm_session_claim_boundaries_match(path, receipt, baseline_path, baseline)?;
+    ensure_bitnet_warm_session_prompts_match(path, receipt, baseline_path, baseline)?;
+    Ok(())
+}
+
+fn ensure_bitnet_warm_session_claim_boundaries_match(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for flag in
+        ["bitnet_warm_session", "warm_session_flow", "model_loaded_once", "tokenizer_loaded_once"]
+    {
+        if receipt["claim_boundary"][flag].as_bool() != Some(true)
+            || baseline["claim_boundary"][flag].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: claim_boundary.{flag} must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "bitnet_quality_claimed",
+        "broad_performance_claim",
+        "chat_enabled",
+        "full_metal_inference_claimed",
+        "metal_phase_contribution_only",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+        "serve_enabled",
+        "speedup_claim",
+    ] {
+        if receipt["claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in ["bitnet_warm_session"] {
+        if receipt["mac_bitnet_claim_boundary"][flag].as_bool() != Some(true)
+            || baseline["mac_bitnet_claim_boundary"][flag].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_bitnet_claim_boundary.{flag} must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "broad_performance_claim",
+        "chat_enabled",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+        "serve_enabled",
+        "speedup_claim",
+    ] {
+        if receipt["mac_bitnet_claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["mac_bitnet_claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_bitnet_claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn ensure_bitnet_warm_session_prompts_match(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    let prompts = receipt["prompts"].as_array().ok_or_else(|| {
+        anyhow!("{} BitNet warm-session receipt is missing prompts", path.display())
+    })?;
+    let baseline_prompts = baseline["prompts"].as_array().ok_or_else(|| {
+        anyhow!(
+            "regression baseline {} BitNet warm-session receipt is missing prompts",
+            baseline_path.display()
+        )
+    })?;
+    if prompts.len() != baseline_prompts.len() {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: prompt set length mismatch (observed={}, baseline={})",
+            path.display(),
+            baseline_path.display(),
+            prompts.len(),
+            baseline_prompts.len()
+        );
+    }
+    let session_prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
+    if prompts.len() as u64 != session_prompt_count {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: prompts length does not match session.prompt_count",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    for (index, (prompt, baseline_prompt)) in prompts.iter().zip(baseline_prompts).enumerate() {
+        for (label, observed, expected) in [
+            ("case_id", prompt["case_id"].as_str(), baseline_prompt["case_id"].as_str()),
+            ("prompt", prompt["prompt"].as_str(), baseline_prompt["prompt"].as_str()),
+            (
+                "backend.requested_backend",
+                prompt["backend"]["requested_backend"].as_str(),
+                baseline_prompt["backend"]["requested_backend"].as_str(),
+            ),
+            (
+                "backend.selected_backend",
+                prompt["backend"]["selected_backend"].as_str(),
+                baseline_prompt["backend"]["selected_backend"].as_str(),
+            ),
+            (
+                "backend.runtime_api",
+                prompt["backend"]["runtime_api"].as_str(),
+                baseline_prompt["backend"]["runtime_api"].as_str(),
+            ),
+        ] {
+            if observed.is_none() || expected.is_none() || observed != expected {
+                anyhow::bail!(
+                    "{} cannot be compared to baseline {}: prompts[{index}].{label} mismatch (observed={observed:?}, baseline={expected:?})",
+                    path.display(),
+                    baseline_path.display()
+                );
+            }
+        }
+        for (label, observed, expected) in [
+            (
+                "prompt_index",
+                prompt["prompt_index"].as_u64(),
+                baseline_prompt["prompt_index"].as_u64(),
+            ),
+            (
+                "repeat_index",
+                prompt["repeat_index"].as_u64(),
+                baseline_prompt["repeat_index"].as_u64(),
+            ),
+            (
+                "generated_tokens",
+                prompt["generated_tokens"].as_u64(),
+                baseline_prompt["generated_tokens"].as_u64(),
+            ),
+        ] {
+            if observed.is_none() || expected.is_none() || observed != expected {
+                anyhow::bail!(
+                    "{} cannot be compared to baseline {}: prompts[{index}].{label} mismatch (observed={observed:?}, baseline={expected:?})",
+                    path.display(),
+                    baseline_path.display()
+                );
+            }
+        }
+        if prompt["backend"]["fallback_used"].as_bool() != Some(false)
+            || baseline_prompt["backend"]["fallback_used"].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: prompts[{index}].backend.fallback_used must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+        if prompt["quality"]["passed"].as_bool() != Some(true)
+            || baseline_prompt["quality"]["passed"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: prompts[{index}].quality.passed must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
 fn find_profile<'a>(
     receipt: &'a serde_json::Value,
     profile_id: &str,
@@ -12097,7 +12840,14 @@ fn validate_slm_benchmark_v2_receipt(
     path: &Path,
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
-    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    let schema_version = require_non_empty_string_at(path, receipt, &["schema_version"])?;
+    if schema_version != "1.0.0" && schema_version != "1.1.0" {
+        anyhow::bail!(
+            "{} SLM benchmark v2 schema_version must be \"1.0.0\" or \"1.1.0\", got {schema_version:?}",
+            path.display()
+        );
+    }
+    let requires_explicit_contract = schema_version == "1.1.0";
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_slm_benchmark_v2")?;
     require_exact_string_at(path, receipt, &["profile_set"], "slm-benchmark-v2")?;
     require_bool_at(path, receipt, &["build", "release_mode"], true)?;
@@ -12118,22 +12868,55 @@ fn validate_slm_benchmark_v2_receipt(
         );
     }
 
-    for field in [
-        "cold_load_ms",
-        "tokenizer_load_ms",
-        "prompt_tokenize_ms",
-        "prefill_ms",
-        "ttft_ms",
-        "input_tok_s",
-        "output_tok_s",
-        "decode_tok_s",
-        "total_wall_ms",
-    ] {
+    let aggregate_speed_metrics = if requires_explicit_contract {
+        M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS
+    } else {
+        M4_SLM_BENCHMARK_V2_LEGACY_AGGREGATE_SPEED_METRICS
+    };
+    for &field in aggregate_speed_metrics {
         validate_benchmark_percentiles(path, receipt, &["speed"], field, true)?;
     }
     validate_benchmark_percentiles(path, receipt, &["memory"], "peak_memory_mb", true)?;
     validate_benchmark_percentiles(path, receipt, &["memory"], "memory_drift_mb", false)?;
     require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+    if requires_explicit_contract {
+        require_exact_string_at(
+            path,
+            receipt,
+            &["benchmark_contract", "contract_version"],
+            "1.1.0",
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "supported_profiles"],
+            M4_SLM_BENCHMARK_V2_PROFILES,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "timing"],
+            M4_SLM_BENCHMARK_V2_TIMING_METRICS,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "throughput"],
+            M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "memory"],
+            M4_SLM_BENCHMARK_V2_MEMORY_METRICS,
+        )?;
+        require_string_array_equals(
+            path,
+            receipt,
+            &["benchmark_contract", "required_metrics", "aggregate_speed"],
+            M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+        )?;
+    }
 
     require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
     require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
@@ -12165,6 +12948,7 @@ fn validate_slm_benchmark_v2_receipt(
     let mut prompt_count_total = 0u64;
     let mut generated_tokens_total = 0u64;
     let mut seen_profiles = std::collections::BTreeSet::new();
+    let mut observed_profile_ids = Vec::with_capacity(profiles.len());
     for profile in profiles {
         let profile_id = require_non_empty_string_at(path, profile, &["profile_id"])?;
         if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
@@ -12179,6 +12963,7 @@ fn validate_slm_benchmark_v2_receipt(
                 path.display()
             );
         }
+        observed_profile_ids.push(profile_id.to_string());
         require_non_empty_string_at(path, profile, &["receipt_path"])?;
         let prompt_count = require_u64_at(path, profile, &["prompt_count"], true)?;
         let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], true)?;
@@ -12189,21 +12974,10 @@ fn validate_slm_benchmark_v2_receipt(
 
         validate_benchmark_stat_object(path, profile, &["prompt_tokens"], true)?;
         validate_benchmark_stat_object(path, profile, &["output_tokens"], true)?;
-        for field in [
-            "cold_load_ms",
-            "tokenizer_load_ms",
-            "prompt_tokenize_ms",
-            "prefill_ms",
-            "time_to_first_token_ms",
-            "decode_total_ms",
-            "sampling_ms_per_token",
-            "total_wall_ms",
-        ] {
+        for &field in M4_SLM_BENCHMARK_V2_TIMING_METRICS {
             validate_benchmark_stat_object(path, profile, &["timing", field], true)?;
         }
-        for field in
-            ["input_tokens_per_second", "output_tokens_per_second", "decode_tokens_per_second"]
-        {
+        for &field in M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS {
             validate_benchmark_stat_object(path, profile, &["throughput", field], true)?;
         }
         validate_benchmark_stat_object(path, profile, &["memory", "peak_memory_mb"], true)?;
@@ -12212,6 +12986,31 @@ fn validate_slm_benchmark_v2_receipt(
 
         prompt_count_total += prompt_count;
         generated_tokens_total += generated_tokens;
+    }
+    if requires_explicit_contract {
+        let profiles_required =
+            json_value_at(receipt, &["profiles_required"]).as_array().ok_or_else(|| {
+                anyhow!("{} SLM benchmark v2 summary is missing profiles_required", path.display())
+            })?;
+        let required_profile_ids = profiles_required
+            .iter()
+            .map(|value| {
+                value.as_str().map(str::to_string).ok_or_else(|| {
+                    anyhow!(
+                        "{} SLM benchmark v2 profiles_required must contain only strings",
+                        path.display()
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if required_profile_ids != observed_profile_ids {
+            anyhow::bail!(
+                "{} SLM benchmark v2 profiles_required must match profiles order {:?}, got {:?}",
+                path.display(),
+                observed_profile_ids,
+                required_profile_ids
+            );
+        }
     }
 
     if receipt["prompt_count"].as_u64() != Some(prompt_count_total) {
@@ -13294,6 +14093,38 @@ fn require_non_empty_string_array_at(
     Ok(())
 }
 
+fn require_string_array_equals(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    expected: &[&str],
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let values = json_value_at(value, segments).as_array().ok_or_else(|| {
+        anyhow!("{} SLM eval summary is missing array {label}", receipt_path.display())
+    })?;
+    let observed = values
+        .iter()
+        .map(|value| {
+            value.as_str().ok_or_else(|| {
+                anyhow!(
+                    "{} SLM eval summary {label} must contain only strings",
+                    receipt_path.display()
+                )
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if observed != expected {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be {:?}, got {:?}",
+            receipt_path.display(),
+            expected,
+            observed
+        );
+    }
+    Ok(())
+}
+
 fn is_sha256_hex(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
@@ -13322,6 +14153,20 @@ fn receipt_flag_true(value: &serde_json::Value, key: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mac_validate_rejects_m3_metal_identity_without_cpu_fallback_claim() -> Result<(), String> {
+        let err = match ensure_supported_mac_validate_device(Some(APPLE_M3_AIR_METAL)) {
+            Ok(label) => return Err(format!("M3 Air Metal should be rejected, got {label}")),
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains(APPLE_M3_AIR_METAL), "got: {err}");
+        assert!(err.contains(APPLE_M3_AIR_MPSGRAPH), "got: {err}");
+        assert!(err.contains(APPLE_M3_AIR_CPU_NEON), "got: {err}");
+        assert!(err.contains("hidden CPU fallback"), "got: {err}");
+        Ok(())
+    }
 
     fn test_verified_model(cache_root: &Path) -> VerifiedCachedModel {
         VerifiedCachedModel {

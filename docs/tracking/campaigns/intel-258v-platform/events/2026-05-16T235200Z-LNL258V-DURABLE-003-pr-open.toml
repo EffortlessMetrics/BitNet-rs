@@ -1,0 +1,20 @@
+timestamp = "2026-05-16T23:52:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5240
+branch = "codex/lunar-lake/LNL258V-DURABLE-003-index-stability"
+summary = "Opened PR #5240 to index the existing repeated dense Qwen CPU warm-session receipt in the Lunar Lake durability bundle."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+]
+
+notes = [
+  "The PR consumes existing repeated-run evidence only and does not execute new inference.",
+  "The claim boundary remains limited to bounded dense Qwen CPU repeated-run stability for regression_tiny, ask_short, and ask_normal profiles.",
+  "OpenVINO GPU/NPU promotion, speedup, acceleration, broad quality, BitNet proof, and QK256/I2_S behavior changes remain out of scope.",
+]

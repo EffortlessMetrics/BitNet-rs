@@ -104,45 +104,147 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_string_fields() {
-        let j = MinimalJson::parse(r#"{"key":"value"}"#).unwrap();
+    fn parses_string_fields() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"key":"value"}"#)?;
         assert_eq!(j.get_str("key"), Some("value".to_string()));
+        Ok(())
     }
 
     #[test]
-    fn parses_u32_fields() {
-        let j = MinimalJson::parse(r#"{"n":42}"#).unwrap();
+    fn parses_u32_fields() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"n":42}"#)?;
         assert_eq!(j.get_u32("n"), Some(42));
+        Ok(())
     }
 
     #[test]
-    fn parses_f32_fields() {
-        let j = MinimalJson::parse(r#"{"f":0.7}"#).unwrap();
+    fn parses_f32_fields() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"f":0.7}"#)?;
         assert_eq!(j.get_f32("f"), Some(0.7));
+        Ok(())
     }
 
     #[test]
-    fn parses_bool_fields() {
-        let j = MinimalJson::parse(r#"{"b":true}"#).unwrap();
+    fn parses_bool_fields() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"b":true}"#)?;
         assert_eq!(j.get_bool("b"), Some(true));
+        Ok(())
     }
 
     #[test]
-    fn preserves_nested_values_as_raw_strings() {
-        let j = MinimalJson::parse(r#"{"obj":{"a":1},"arr":[1,2,3]}"#).unwrap();
+    fn preserves_nested_values_as_raw_strings() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"obj":{"a":1},"arr":[1,2,3]}"#)?;
         assert_eq!(j.get_str("obj"), Some("{\"a\":1}".to_string()));
         assert_eq!(j.get_str("arr"), Some("[1,2,3]".to_string()));
+        Ok(())
     }
 
     #[test]
-    fn handles_missing_keys() {
-        let j = MinimalJson::parse("{}").unwrap();
+    fn handles_missing_keys() -> Result<(), String> {
+        let j = MinimalJson::parse("{}")?;
         assert_eq!(j.get_str("missing"), None);
+        Ok(())
     }
 
     #[test]
     fn rejects_non_object_json() {
         assert!(MinimalJson::parse("not json").is_err());
         assert!(MinimalJson::parse("[1,2]").is_err());
+    }
+
+    #[test]
+    fn rejects_empty_and_whitespace_only_input() {
+        assert!(MinimalJson::parse("").is_err());
+        assert!(MinimalJson::parse("   \n\t").is_err());
+    }
+
+    #[test]
+    fn rejects_unbalanced_braces() {
+        assert!(MinimalJson::parse("{\"k\":\"v\"").is_err());
+        assert!(MinimalJson::parse("\"k\":\"v\"}").is_err());
+    }
+
+    #[test]
+    fn accepts_surrounding_whitespace() -> Result<(), String> {
+        let j = MinimalJson::parse("  \n {\"k\":\"v\"}\t ")?;
+        assert_eq!(j.get_str("k"), Some("v".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn parses_multiple_top_level_fields() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"a":"x","b":2,"c":true}"#)?;
+        assert_eq!(j.get_str("a"), Some("x".to_string()));
+        assert_eq!(j.get_u32("b"), Some(2));
+        assert_eq!(j.get_bool("c"), Some(true));
+        Ok(())
+    }
+
+    #[test]
+    fn parses_false_bool() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"b":false}"#)?;
+        assert_eq!(j.get_bool("b"), Some(false));
+        Ok(())
+    }
+
+    #[test]
+    fn typed_getters_return_none_for_missing_keys() -> Result<(), String> {
+        let j = MinimalJson::parse("{}")?;
+        assert_eq!(j.get_u32("none"), None);
+        assert_eq!(j.get_f32("none"), None);
+        assert_eq!(j.get_bool("none"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn get_u32_returns_none_for_non_integer() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"k":"abc"}"#)?;
+        assert_eq!(j.get_u32("k"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn get_f32_returns_none_for_non_numeric() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"k":"not-a-number"}"#)?;
+        assert_eq!(j.get_f32("k"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn get_bool_returns_none_for_non_bool_value() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"flag":"yes"}"#)?;
+        assert_eq!(j.get_bool("flag"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn empty_object_yields_no_fields() -> Result<(), String> {
+        let j = MinimalJson::parse("{}")?;
+        assert_eq!(j.get_str("anything"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn empty_object_with_internal_whitespace() -> Result<(), String> {
+        let j = MinimalJson::parse("{   }")?;
+        assert_eq!(j.get_str("anything"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn preserves_commas_inside_strings() -> Result<(), String> {
+        // A comma inside a quoted string value must not split the field.
+        let j = MinimalJson::parse(r#"{"k":"a,b,c","n":3}"#)?;
+        assert_eq!(j.get_str("k"), Some("a,b,c".to_string()));
+        assert_eq!(j.get_u32("n"), Some(3));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_array_values_keep_internal_commas() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"arr":[1,2,3,4],"tail":"end"}"#)?;
+        assert_eq!(j.get_str("arr"), Some("[1,2,3,4]".to_string()));
+        assert_eq!(j.get_str("tail"), Some("end".to_string()));
+        Ok(())
     }
 }

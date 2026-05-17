@@ -1,0 +1,20 @@
+timestamp = "2026-05-16T16:20:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-004"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OP-004-ledger-auto-route"
+summary = "Started LNL258V-OP-004 to make Lunar Lake operator ask resolve auto routes through the promotion ledger."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-math-brief.json",
+]
+
+notes = [
+  "Auto ask selection may choose only routes promoted for the requested profile and currently resolves ask_normal to dense_slm_default_cpu.",
+  "The auto ask receipt records requested_device, requested_route, selected_route, profile_id, promotion_status, route_reason, and why GPU/NPU candidates were not selected.",
+  "No OpenVINO GPU/NPU promotion, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or BitNet QK256/I2_S behavior change is claimed.",
+]

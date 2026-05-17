@@ -1,0 +1,14 @@
+timestamp = "2026-05-16T12:54:20Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-003-stop-template-scoring"
+summary = "Started dense SLM scorer and normalization repair after the 500-case corpus expansion."
+
+notes = [
+  "Scope is deterministic answer-corpus scorer and normalization behavior for documented dense SLM stop/template/format cases.",
+  "No live model run, pass-rate refresh, BitNet proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim is included.",
+]

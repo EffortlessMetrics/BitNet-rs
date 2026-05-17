@@ -1,0 +1,19 @@
+timestamp = "2026-05-17T02:10:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-006"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-COMPARE-006-regression-v2-compare"
+summary = "Started LNL258V-COMPARE-006 to make operator comparison consume strict regression-v2 evidence by default."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The work item refreshes compare evidence only; it does not execute inference or change route promotion.",
+  "The comparison receipt should carry corpus-v2, route-profile, cold/warm benchmark, and durability readiness from the strict regression-v2 surface.",
+]

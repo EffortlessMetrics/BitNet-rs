@@ -1,0 +1,18 @@
+timestamp = "2026-05-16T15:51:39Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-017"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5148
+branch = "codex/apple-m3-macbook-air/M3MBA-017-device-help-alignment"
+head_sha = "cfea2d3a5f5a045dbc2693e4de60fce44c51408d"
+merge_sha = "cd03ab9aba7bc57c4f5d155fd5c696a8993bcf97"
+summary = "Merged M3MBA-017 to align M3 Air device help and rejection surfaces for distinct Metal, MPSGraph, and CPU NEON proof-lane labels."
+
+notes = [
+  "CLI help now exposes apple-m3-air-metal, apple-m3-air-mpsgraph, and apple-m3-air-cpu-neon as M3 Air labels instead of relying on M4 wording.",
+  "mac validate still rejects unsupported M3 Air Metal or MPSGraph model inference claims and hidden CPU fallback.",
+  "No model inference, Neural Engine execution, speedup, or performance claim was made.",
+]

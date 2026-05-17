@@ -143,11 +143,11 @@ determinism check, and produced the expected short outputs:
 |---:|---:|---|---:|---:|---:|
 | 5 | 10 | yes | 7909.0 ms | 2.095 | 43955.621 ms |
 
-`bitnet mac regression` currently supports BitNet eval and benchmark receipts;
-it does not yet accept `bitnet_apple_m4_warm_session` as a regression baseline
-kind. The warm-session refresh is therefore receipt-validated and
-identity-matched, but not compared by the strict regression command in this
-item.
+`bitnet mac regression` supports BitNet eval, benchmark, and variable
+warm-session receipts. `bitnet_apple_m4_warm_session` comparisons are
+identity-strict and require the accepted artifact/tokenizer metadata, backend,
+fallback state, prompt set, warm profile, timeout policy, and receipt schema to
+match before timing or memory drift is reported.
 
 ## Dashboard History Results
 

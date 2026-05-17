@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T03:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-BENCH-002-total-response"
+summary = "Started LNL258V-BENCH-002 to normalize dense Qwen CPU total-response timing in route-profile and cold/warm benchmark evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The current promoted dense Qwen CPU profile timing has measured load/tokenize/prefill/decode fields but leaves total_response_ms null.",
+  "This item derives total_response_ms from existing receipt fields only; no new inference, route promotion, speedup claim, accelerator claim, or BitNet QK256/I2_S behavior change is in scope.",
+]

@@ -685,8 +685,9 @@ fn mac_check_rejects_blocked_bitnet_model_before_cache_guidance() {
 }
 
 #[test]
-fn model_fetch_offline_missing_cache_explains_repair_options() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_fetch_offline_missing_cache_explains_repair_options()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -704,6 +705,7 @@ fn model_fetch_offline_missing_cache_explains_repair_options() {
         .stderr(predicate::str::contains("offline mode"))
         .stderr(predicate::str::contains("pre-seed"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+    Ok(())
 }
 
 #[test]
@@ -1902,6 +1904,106 @@ fn mac_regression_rejects_bitnet_eval_context_mismatch() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn mac_regression_accepts_matching_bitnet_warm_session() -> Result<(), Box<dyn std::error::Error>> {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            receipt_str.as_str(),
+            "--baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_bitnet_warm_session_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-warm.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["speed"]["throughput"]["decode_generated_tok_s"] = serde_json::json!(0.5);
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_bitnet_warm_session_context_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-warm.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["tokenizer"]["pretokenizer_authority"] = serde_json::json!("other-tokenizer");
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("tokenizer.pretokenizer_authority mismatch"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_receipts_check_accepts_bitnet_warm_session_baseline()
+-> Result<(), Box<dyn std::error::Error>> {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            receipt_str.as_str(),
+            "--regression-baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
 fn mac_regression_accepts_matching_bitnet_benchmark_v1() -> Result<(), Box<dyn std::error::Error>> {
     let receipt =
         workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json");
@@ -2310,8 +2412,8 @@ fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt()
 }
 
 #[test]
-fn mac_receipts_check_accepts_golden_smoke_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_golden_smoke_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("mac-smoke.json");
     std::fs::write(
         &receipt_path,
@@ -2353,10 +2455,8 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
                 "broad_performance_claim": false,
                 "speedup_claim": false
             }
-        }))
-        .expect("json"),
-    )
-    .expect("write receipt");
+        }))?,
+    )?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2365,6 +2465,7 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_golden_smoke"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
 }
 
 #[test]
@@ -2757,7 +2858,7 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
     std::fs::write(
         &receipt_path,
         serde_json::to_vec_pretty(&serde_json::json!({
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0",
             "artifact_kind": "apple_m4_slm_benchmark_v2",
             "requested_backend": "apple-m4-cpu-neon",
             "selected_backend": "apple-m4-cpu-neon",
@@ -2782,6 +2883,7 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
             "prompt_count": 3,
             "generated_tokens": 48,
             "speed": benchmark_speed_v2_json(),
+            "benchmark_contract": benchmark_contract_v2_json(),
             "memory": {
                 "peak_memory_mb_p50": 3900.0,
                 "peak_memory_mb_p90": 3950.0,
@@ -2826,14 +2928,14 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
 }
 
 #[test]
-fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("slm-benchmark-v2-resident-100.json");
     let mut receipt = slm_benchmark_v2_summary();
     receipt["profiles_required"] = serde_json::json!(["resident_100"]);
     receipt["profiles"] = serde_json::json!([benchmark_profile_v2_json("resident_100")]);
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2842,6 +2944,46 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("slm-benchmark-v2-missing-sampling.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["speed"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing speed object"))?
+        .remove("sampling_ms_per_token_p50");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("sampling_ms_per_token_p50"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("slm-benchmark-v2-profile-mismatch.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["profiles_required"] = serde_json::json!(["resident_100"]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("profiles_required must match profiles order"));
+    Ok(())
 }
 
 #[test]
@@ -3653,6 +3795,9 @@ fn benchmark_speed_v2_json() -> serde_json::Value {
         "ttft_ms_p50": 1800.0,
         "ttft_ms_p90": 2100.0,
         "ttft_ms_p99": 2300.0,
+        "sampling_ms_per_token_p50": 0.2,
+        "sampling_ms_per_token_p90": 0.3,
+        "sampling_ms_per_token_p99": 0.4,
         "input_tok_s_p50": 118.0,
         "input_tok_s_p90": 130.0,
         "input_tok_s_p99": 140.0,
@@ -3665,6 +3810,58 @@ fn benchmark_speed_v2_json() -> serde_json::Value {
         "total_wall_ms_p50": 5200.0,
         "total_wall_ms_p90": 5600.0,
         "total_wall_ms_p99": 5900.0
+    })
+}
+
+fn benchmark_contract_v2_json() -> serde_json::Value {
+    serde_json::json!({
+        "contract_version": "1.1.0",
+        "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+        "profile_execution_model": "one resident warm-session run per named profile",
+        "supported_profiles": [
+            "short_prompt_16_out",
+            "short_prompt_64_out",
+            "long_prompt_16_out",
+            "long_prompt_128_out",
+            "context_1k",
+            "context_4k",
+            "resident_25",
+            "resident_50",
+            "resident_100"
+        ],
+        "required_metrics": {
+            "timing": [
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "time_to_first_token_ms",
+                "decode_total_ms",
+                "sampling_ms_per_token",
+                "total_wall_ms"
+            ],
+            "throughput": [
+                "input_tokens_per_second",
+                "output_tokens_per_second",
+                "decode_tokens_per_second"
+            ],
+            "memory": [
+                "peak_memory_mb",
+                "memory_drift_mb"
+            ],
+            "aggregate_speed": [
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "ttft_ms",
+                "sampling_ms_per_token",
+                "input_tok_s",
+                "output_tok_s",
+                "decode_tok_s",
+                "total_wall_ms"
+            ]
+        }
     })
 }
 
@@ -3881,7 +4078,7 @@ fn slm_eval_summary_report() -> serde_json::Value {
 
 fn slm_benchmark_v2_summary() -> serde_json::Value {
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_slm_benchmark_v2",
         "requested_backend": "apple-m4-cpu-neon",
         "selected_backend": "apple-m4-cpu-neon",
@@ -3906,6 +4103,7 @@ fn slm_benchmark_v2_summary() -> serde_json::Value {
         "prompt_count": 3,
         "generated_tokens": 48,
         "speed": benchmark_speed_v2_json(),
+        "benchmark_contract": benchmark_contract_v2_json(),
         "memory": {
             "peak_memory_mb_p50": 3900.0,
             "peak_memory_mb_p90": 3950.0,
@@ -5423,8 +5621,31 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
 
     let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["case_count"], 100);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 912587);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-bitnet-v1"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "1.0.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+    );
     assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
     assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
     assert_eq!(receipt["model"]["bytes"], 1_187_801_280u64);
@@ -5499,8 +5720,69 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
     let receipt: serde_json::Value =
         serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
     assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-slm-eval-seeded-corpus-v2");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-slm-eval-seeded-corpus-v2");
-    assert_eq!(receipt["corpus"]["case_count"], 120);
+    assert_eq!(receipt["corpus"]["case_count"], 500);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 777331);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-v2"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.2.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority."
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v2 plus normalize_match_text_v1 for normalized_match only; known Qwen ChatML stop tails and leading assistant separators are stripped before scoring, JSON/schema scoring may extract fenced or embedded JSON payloads deterministically, keyword checks use token boundaries, and exact_match remains strict after trim."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["receipt_contract"],
+        "answer_corpus_aggregate_receipt_v1"
+    );
+    let scoring_kinds: Vec<&str> = receipt["scoring_contract"]["supported_scoring_kinds"]
+        .as_array()
+        .ok_or("missing supported scoring kinds")?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for kind in [
+        "exact_match",
+        "normalized_match",
+        "json_schema",
+        "numeric_tolerance",
+        "required_keywords",
+        "forbidden_tokens",
+        "required_forbidden_tokens",
+    ] {
+        assert!(scoring_kinds.contains(&kind), "missing scoring contract kind `{kind}`");
+    }
+    let failure_categories: Vec<&str> = receipt["scoring_contract"]["supported_failure_categories"]
+        .as_array()
+        .ok_or("missing supported failure categories")?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for category in [
+        "formatting",
+        "factual_table",
+        "extraction",
+        "refusal",
+        "timeout",
+        "schema",
+        "normalization",
+    ] {
+        assert!(failure_categories.contains(&category), "missing failure category `{category}`");
+    }
     assert_eq!(receipt["model"]["id"], "qwen2.5-1.5b-instruct-q4_k_m");
     assert_eq!(receipt["model"]["repo"], "Qwen/Qwen2.5-1.5B-Instruct-GGUF");
     assert_eq!(receipt["model"]["revision"], "91cad51170dc346986eccefdc2dd33a9da36ead9");
@@ -5607,6 +5889,131 @@ fn reference_compare_validates_slm_external_reference_artifact() {
     );
     assert_eq!(receipt["comparison"]["first_divergence"]["index"], 0);
     assert_eq!(receipt["speedup_claim"], false);
+}
+
+/// `reference-compare` accepts the SmolLM2 first-token/top-k comparator shape.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_validates_smollm2_first_token_topk_artifact()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let artifact = dir.path().join("smollm2-reference.json");
+    let out = dir.path().join("smollm2-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "model_family": "smollm2",
+          "prompt_text": "What is 2+2? Answer with only the number.",
+          "prompt_template": "smollm2_chatml_with_explicit_system",
+          "bos": true,
+          "reference": {
+            "backend": "llama-cli-known-good",
+            "kernel": "external-reference",
+            "prompt_ids": [1, 9690, 198, 2683, 359, 253, 5356, 11173, 30, 2],
+            "generated_ids": [34],
+            "text": "4",
+            "topk_step0": [[34, 12.0], [504, 4.0]],
+            "chosen_id": 34
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "kernel": "dense-q8_0-reference",
+            "loader_mode": "real_gguf",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_strict": true,
+            "fallback_used": false,
+            "prompt_ids": [1, 9690, 198, 2683, 359, 253, 5356, 11173, 30, 2],
+            "generated_ids": [504],
+            "text": "The",
+            "topk_step0": [[504, 10.0], [34, 8.0]],
+            "chosen_id": 504
+          }
+        }"#,
+    )?;
+
+    bitnet()
+        .arg("reference-compare")
+        .arg("--artifact")
+        .arg(&artifact)
+        .arg("--json-out")
+        .arg(&out)
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
+    assert_eq!(receipt["artifact_kind"], "slm_reference_divergence_validation");
+    assert_eq!(receipt["model"]["family"], "smollm2");
+    assert_eq!(receipt["validation"]["passed"], true);
+    assert_eq!(receipt["comparison"]["passed"], false);
+    assert_eq!(receipt["comparison"]["first_divergence"]["phase"], "logits");
+    assert_eq!(
+        receipt["comparison"]["first_divergence"]["classification"],
+        "logits_or_shared_transformer_math"
+    );
+    assert_eq!(receipt["comparison"]["bitnet_rs"]["fallback_used"], false);
+    assert_eq!(receipt["speedup_claim"], false);
+    Ok(())
+}
+
+/// `--require-match` keeps the SmolLM2 comparator fail-closed when top-k diverges.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_require_match_fails_smollm2_topk_divergence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let artifact = dir.path().join("smollm2-reference.json");
+    let out = dir.path().join("smollm2-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "model_family": "smollm2",
+          "prompt_text": "What is 2+2? Answer with only the number.",
+          "prompt_template": "smollm2_chatml_with_explicit_system",
+          "bos": true,
+          "reference": {
+            "backend": "llama-cli-known-good",
+            "kernel": "external-reference",
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [34],
+            "text": "4",
+            "topk_step0": [[34, 12.0], [504, 4.0]],
+            "chosen_id": 34
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "kernel": "dense-q8_0-reference",
+            "loader_mode": "real_gguf",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_strict": true,
+            "fallback_used": false,
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [504],
+            "text": "The",
+            "topk_step0": [[504, 10.0], [34, 8.0]],
+            "chosen_id": 504
+          }
+        }"#,
+    )?;
+
+    bitnet()
+        .arg("reference-compare")
+        .arg("--artifact")
+        .arg(&artifact)
+        .arg("--json-out")
+        .arg(&out)
+        .arg("--require-match")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("reference artifact diverged"));
+    Ok(())
 }
 
 /// `first-token-divergence --help` documents the external reference and local CPU inputs.

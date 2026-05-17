@@ -1,0 +1,19 @@
+timestamp = "2026-05-16T18:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-BENCH-001-cold-warm"
+summary = "Started LNL258V-BENCH-001 to index cold/warm profile benchmark qualification evidence for Lunar Lake routes."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+]
+
+notes = [
+  "The work item reads existing route-profile and phase receipts to classify cold/warm timing and telemetry gaps.",
+  "No new inference, route promotion, speedup, Arc/NPU acceleration, or BitNet QK256/I2_S behavior change is in scope.",
+]

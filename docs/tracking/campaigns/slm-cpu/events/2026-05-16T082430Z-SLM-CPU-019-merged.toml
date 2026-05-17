@@ -1,0 +1,28 @@
+timestamp = "2026-05-16T08:24:30Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-019"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5081
+branch = "model/slm-cpu-019-smollm2-normalization-validation"
+head_sha = "c93ad85786934dc93b3be4ef4eb7aa31694d19cd"
+merge_sha = "11ca6d7ceee41cfc4ec073976a15f5c0fb5b21d8"
+
+summary = "Merged #5081 with exact metadata-scoped SmolLM2 360M normalization validation for SLM-CPU-019."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5081",
+  "crates/bitnet-models/src/formats/gguf/loader.rs",
+  "crates/bitnet-models/src/formats/gguf/loader/tensor_loading.rs",
+  "crates/bitnet-models/src/formats/gguf/tests.rs",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json",
+]
+
+notes = [
+  "The strict loader now has exact metadata-scoped SmolLM2 360M normalization validation.",
+  "Generic llama strict LayerNorm/RMSNorm gamma validation remains fail-closed.",
+  "The accepted SmolLM2 normalization exception is receipt-visible.",
+  "The next SmolLM2 proof is a strict CPU sanity retry with fallback_used=false; this merge does not claim CPU answer, CUDA, speed, server, broad dense GGUF, or BitNet QK256 proof.",
+]

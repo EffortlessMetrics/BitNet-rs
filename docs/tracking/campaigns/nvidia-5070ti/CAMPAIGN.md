@@ -169,7 +169,7 @@ the claim boundary before new runtime work.
 | BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
 | Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts and benchmark qualification reviews exist; direct ask/chat hardware receipts not found | `docs/reports/CUDA_DENSE_QWEN25_Q8_PRODUCT_AUDIT.md` | direct ask/chat user-path receipts if required, then server reuse |
 | Qwen3 0.6B | accelerator-ready dense SLM candidate with artifact, CPU sanity, all-layer plan, one-token strict CUDA proof, bounded short-decode strict CUDA proof, warm-session strict CUDA proof, and benchmark qualification review; product CLI, speed, server, full-residency, and BitNet QK256 claims remain false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json` | user-facing ask/chat product UX or repeated comparator evidence before any product CLI or speed profile promotion |
-| SmolLM2 360M | structurally valid artifact contract; strict CPU preflight is blocked before tokenizer/prompt/generation; governed normalization-policy audit recorded | `ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json` | implement exact metadata-scoped SmolLM2 normalization validation and retry CPU sanity before all-layer planning or CUDA |
+| SmolLM2 360M | structurally valid artifact contract; strict CPU retry reached one-token generation with `fallback_used=false` but failed the math quality gate; wrong-first-token diagnosis and comparator contract are recorded | `ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json` | same-prompt first-token/top-k or checkpoint comparator capture before CPU answer readiness, all-layer planning, or CUDA |
 | Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | Llama 3.2 3B | registered candidate | none | memory envelope, artifact contract, tokenizer/prompt authority |
 | Gemma/Phi small | registered candidate | none | architecture policy, artifact contract, tokenizer/prompt authority |
@@ -259,6 +259,8 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |
 | CUDA-SERVER-001 | merged | PR #4820 added claim-safe strict dense Qwen server receipt classification without promoting server readiness or speed. |
 | CUDA-SERVER-002 | merged | PR #4854 committed the exact bounded dense Qwen strict RTX 5070 Ti server-smoke receipt before any server-ready coverage promotion. |
+| CUDA-SERVER-003 | merged | PR #5190 audited the bounded dense Qwen server-smoke receipt against BITNET-SPEC-0010 and recorded that `server_ready` remains false until a refreshed or supplemental receipt carries artifact checksum identity, endpoint/profile scope, and generation-policy fields. |
+| CUDA-STATUS-001 | merged | PR #5158 added a user-facing CUDA capability matrix page backed by model coverage and campaign proof state without promoting model, speed, server, or residency claims. |
 
 ## Review Policy
 

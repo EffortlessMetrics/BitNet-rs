@@ -1,0 +1,17 @@
+timestamp = "2026-05-16T07:25:46Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-003"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5078
+head_sha = "030f1ee89926e32b9121cc8b4ff69dab07184c0b"
+branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-003-dashboard-trends"
+summary = "Opened PR #5078 for the M4 dashboard trend refresh."
+
+notes = [
+  "The PR records the model-free report-refresh and regression-dashboard outputs in docs, while leaving target output files local.",
+  "The dashboard reports five evidence families, 18 committed reports, nine comparison groups, and nine comparable groups.",
+  "Dense SLM and BitNet evidence remain separated; no live model run, model download, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim is made.",
+]

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-16T00:20:00Z",
+  "created_utc": "2026-05-17T07:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -61,7 +61,12 @@
     "gpu_npu_promotion_blockers": [
       "benchmark_qualified_speedup_or_power_advantage",
       "candidate route requires benchmark-qualified profile evidence",
-      "power telemetry receipt missing for low_power promotion",
+      "corpus_v2 profile ask_normal has 1 quality failures",
+      "corpus_v2 profile ask_short has 1 quality failures",
+      "corpus_v2 profile decode_heavy has 1 quality failures",
+      "corpus_v2 profile prefill_heavy has 1 quality failures",
+      "corpus_v2 profile quality evidence missing",
+      "power advantage evidence missing for low_power promotion",
       "profile_regression_bundle",
       "route not promoted for profile ask_normal",
       "route not promoted for profile ask_short",
@@ -73,11 +78,107 @@
     "regression_ready": true,
     "gaps": []
   },
+  "cold_warm_benchmark": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+    "benchmark_gate_ready": true,
+    "profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal",
+      "prefill_heavy",
+      "decode_heavy",
+      "structured",
+      "low_power",
+      "bitnet_strict_reference"
+    ],
+    "promoted_routes_have_critical_timing": true,
+    "candidate_routes_remain_unpromoted": true,
+    "fallback_observed": false,
+    "benchmark_qualified_advantage_claimed": false,
+    "telemetry_gaps": [
+      "ask_normal:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "ask_normal:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "ask_normal:dense_slm_default_cpu=thermal_context_unavailable",
+      "ask_normal:dense_slm_openvino_gpu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "ask_normal:dense_slm_openvino_gpu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "ask_normal:dense_slm_openvino_gpu_candidate=thermal_context_unavailable",
+      "ask_normal:dense_slm_openvino_npu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "ask_normal:dense_slm_openvino_npu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "ask_normal:dense_slm_openvino_npu_candidate=thermal_context_unavailable",
+      "ask_short:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "ask_short:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "ask_short:dense_slm_default_cpu=thermal_context_unavailable",
+      "ask_short:dense_slm_openvino_gpu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "ask_short:dense_slm_openvino_gpu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "ask_short:dense_slm_openvino_gpu_candidate=thermal_context_unavailable",
+      "ask_short:dense_slm_openvino_npu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "ask_short:dense_slm_openvino_npu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "ask_short:dense_slm_openvino_npu_candidate=thermal_context_unavailable",
+      "bitnet_strict_reference:bitnet_reference_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "bitnet_strict_reference:bitnet_reference_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "bitnet_strict_reference:bitnet_reference_cpu=thermal_context_unavailable",
+      "decode_heavy:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "decode_heavy:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "decode_heavy:dense_slm_default_cpu=thermal_context_unavailable",
+      "decode_heavy:dense_slm_openvino_gpu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "decode_heavy:dense_slm_openvino_gpu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "decode_heavy:dense_slm_openvino_gpu_candidate=thermal_context_unavailable",
+      "decode_heavy:dense_slm_openvino_npu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "decode_heavy:dense_slm_openvino_npu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "decode_heavy:dense_slm_openvino_npu_candidate=thermal_context_unavailable",
+      "low_power:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "low_power:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "low_power:dense_slm_default_cpu=thermal_context_unavailable",
+      "low_power:dense_slm_openvino_gpu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "low_power:dense_slm_openvino_gpu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "low_power:dense_slm_openvino_gpu_candidate=thermal_context_unavailable",
+      "low_power:dense_slm_openvino_npu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "low_power:dense_slm_openvino_npu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "low_power:dense_slm_openvino_npu_candidate=thermal_context_unavailable",
+      "prefill_heavy:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "prefill_heavy:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "prefill_heavy:dense_slm_default_cpu=thermal_context_unavailable",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate=thermal_context_unavailable",
+      "prefill_heavy:dense_slm_openvino_npu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "prefill_heavy:dense_slm_openvino_npu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "prefill_heavy:dense_slm_openvino_npu_candidate=thermal_context_unavailable",
+      "regression_tiny:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "regression_tiny:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "regression_tiny:dense_slm_default_cpu=thermal_context_unavailable",
+      "structured:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "structured:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "structured:dense_slm_default_cpu=thermal_context_unavailable"
+    ],
+    "regression_ready": true,
+    "gaps": []
+  },
+  "durability_bundle": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+    "durability_index_ready": true,
+    "stability_proven": true,
+    "profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal"
+    ],
+    "required_repeat_count": 10,
+    "stable_profile_count": 3,
+    "fallback_observed": false,
+    "answer_drift_detected": false,
+    "route_drift_detected": false,
+    "repeated_run_stability_claim": true,
+    "regression_ready": true,
+    "gaps": []
+  },
   "regression_surface": {
     "surface_id": "lunar_lake_regression_v2",
     "strict_default": true,
     "answer_corpus_v2_indexed": true,
     "route_profile_comparison_indexed": true,
+    "cold_warm_benchmark_indexed": true,
+    "durability_bundle_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -109,9 +210,16 @@
       "low_power",
       "bitnet_strict_reference"
     ],
+    "required_durability_profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal"
+    ],
     "fallback_observed": false,
     "candidate_routes_remain_unpromoted": true,
     "benchmark_qualified_advantage_claimed": false,
+    "cold_warm_benchmark_ready": true,
+    "durability_stability_proven": true,
     "strict_ready": true,
     "gaps": []
   },
@@ -218,6 +326,40 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=false",
         "fallback_observed=false"
+      ]
+    },
+    {
+      "check_id": "cold_warm_benchmark_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json"
+      ],
+      "notes": [
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "benchmark_gate_ready=true",
+        "promoted_routes_have_critical_timing=true",
+        "candidate_routes_remain_unpromoted=true",
+        "benchmark_qualified_advantage_claimed=false",
+        "fallback_observed=false",
+        "telemetry_gap_count=54"
+      ]
+    },
+    {
+      "check_id": "durability_bundle_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json"
+      ],
+      "notes": [
+        "profiles=regression_tiny,ask_short,ask_normal",
+        "durability_index_ready=true",
+        "stability_proven=true",
+        "required_repeat_count=10",
+        "stable_profile_count=3",
+        "fallback_observed=false",
+        "answer_drift_detected=false",
+        "route_drift_detected=false",
+        "repeated_run_stability_claim=true"
       ]
     }
   ],

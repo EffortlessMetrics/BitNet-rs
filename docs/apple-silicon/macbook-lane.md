@@ -82,13 +82,19 @@ After the machine profile exists, mirror the known-good dense Qwen Mac path:
 ```text
 model_id = qwen2.5-0.5b-instruct-q8_0
 model_sha256 = ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
-requested_backend = apple-m4-cpu-neon or the MacBook Apple CPU/NEON label defined by the item
-selected_backend = recorded actual Apple CPU/NEON route
+requested_backend = apple-m3-air-cpu-neon for the current M3 Air lane
+selected_backend = apple-m3-air-cpu-neon for accepted dense SLM receipts
 fallback_used = false
 quality corpus = apple-m4-slm-quality-determinism-v1 shape
 ```
 
 The MacBook receipt should be compared to the M4 Mac mini for behavior and timing context, but it must not replace the M4 performance envelope.
+
+The M3 Air device model also has `apple-m3-air-metal` and
+`apple-m3-air-mpsgraph` request identities. They are visibility and
+proof-boundary labels until a later receipt-backed runtime item lands; dense SLM
+model inference must not treat hidden CPU execution as Metal or MPSGraph
+success.
 
 ## BitNet Candidate Sweeps
 

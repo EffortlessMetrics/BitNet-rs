@@ -1,0 +1,24 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-022"
+event = "pr_open"
+timestamp = "2026-05-16T14:49:00Z"
+actor = "codex"
+pr = 5140
+head_sha = "fae5cafff90cb343bb903aebdd5b75a143b6dc5d"
+branch = "model/slm-cpu-022-smollm2-reference-comparator"
+
+summary = "Refreshed #5140 after local and CI no-panic policy found panic-debt in the new CLI tests."
+
+notes = [
+  "The SmolLM2 comparator fixture tests now return Result and pass paths directly instead of using new expect/unwrap sites.",
+  "Local check-no-panic-family reports zero unallowlisted findings after the refresh.",
+]
+
+validation = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo run --locked -p xtask --no-default-features -- check-no-panic-family --report-dir target/bitnet/reports",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_validates_smollm2_first_token_topk_artifact",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_require_match_fails_smollm2_topk_divergence",
+  "git diff --check",
+]

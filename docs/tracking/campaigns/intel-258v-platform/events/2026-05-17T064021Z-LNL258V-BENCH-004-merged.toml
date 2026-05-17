@@ -1,0 +1,27 @@
+timestamp = "2026-05-17T06:40:21Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5289
+branch = "codex/lunar-lake/LNL258V-BENCH-004-telemetry-capture"
+head_sha = "58e6aa33b38f672c4bc271ad0b595c3ee519c25c"
+merge_sha = "fb65ee01f9bf80e6998c20f33fdf87e2fbfac5be"
+summary = "Merged LNL258V-BENCH-004 live memory and power telemetry capture for Lunar Lake benchmark evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The merged PR adds a lunar-lake telemetry-context command that records live current-machine memory and power context.",
+  "Thermal sensor context remains an explicit telemetry gap when the OS does not expose usable thermal zones.",
+  "Cold/warm benchmark, durability, strict regression v2, and operator comparison artifacts now index the live telemetry receipt while preserving OpenVINO GPU/NPU promotion blockers.",
+  "The claim boundary remains telemetry and benchmark/regression wiring only: no new inference, route promotion, speedup, acceleration, or BitNet QK256/I2_S behavior change.",
+]

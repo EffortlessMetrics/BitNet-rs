@@ -36,7 +36,11 @@ ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-s
 ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json
 ```
 
-## Next PRs
+## Completed Productization PRs
+
+These items have landed and should be treated as the current official BitNet
+CUDA productization baseline. Future BitNet work should build on these receipts
+instead of reopening basic CUDA execution proof.
 
 ### CUDA-PROD-008: Reconcile Proof State
 

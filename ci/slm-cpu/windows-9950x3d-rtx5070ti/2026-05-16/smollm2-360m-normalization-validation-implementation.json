@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_normalization_validation_implementation",
+  "work_item": "SLM-CPU-019",
+  "timestamp_utc": "2026-05-16T07:37:38Z",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "id": "smollm2-360m-instruct",
+    "artifact_id": "smollm2-360m-instruct-q8_0",
+    "contract_id": "smollm2_360m_instruct_q8_0",
+    "repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+    "revision": "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f",
+    "file": "smollm2-360m-instruct-q8_0.gguf",
+    "sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+    "gguf_architecture": "llama",
+    "tokenizer_pre": "smollm",
+    "quant_format": "Q8_0",
+    "hidden_size": 960,
+    "block_count": 32,
+    "vocab_size": 49152,
+    "intermediate_size": 2560
+  },
+  "implemented_policy": {
+    "generic_layernorm_gamma_guard": "fail_closed",
+    "dense_qwen_policy": "unchanged_family_scoped_bypass",
+    "bitnet_prescaled_policy": "explicit_bitnet_architecture_scope",
+    "smollm2_policy": "exact_metadata_and_sha_scoped_norm_envelope",
+    "smollm2_receipt_visible_record": "smollm2_norm_gamma_envelope_accept",
+    "forbidden_implementations_avoided": [
+      "generic llama gamma relaxation",
+      "non-strict warning downgrade",
+      "environment-only bypass",
+      "name-only model recognition",
+      "proof inheritance from Qwen2.5, Qwen3, Apple M4, or CUDA"
+    ]
+  },
+  "validation": [
+    {
+      "command": "cargo test --locked -p bitnet-models --no-default-features --features cpu --lib test_ln_gamma_validator_envelope",
+      "result": "passed",
+      "meaning": "generic strict hidden-scaled gamma fails; BitNet-scoped pre-scaled gamma passes; exact SmolLM2 norm envelope emits a receipt-visible record"
+    },
+    {
+      "command": "cargo test --locked -p bitnet-models --no-default-features --features cpu --lib smollm2_norm_policy_requires_exact_metadata_scope",
+      "result": "passed",
+      "meaning": "SmolLM2 selection requires exact architecture, tokenizer pre-tokenizer, dimensions, and SHA; generic llama and SHA mismatch remain generic"
+    }
+  ],
+  "next_proof": {
+    "work_item": "SLM-CPU-020",
+    "goal": "retry strict SmolLM2 CPU sanity with the pinned artifact",
+    "required_result": "either tokenizer/prompt/generation is reached with fallback_used=false, or a new post-load blocker receipt identifies the next failure stage"
+  },
+  "claim_boundary": {
+    "loader_behavior_changed": true,
+    "normalization_validation_implemented": true,
+    "exact_smollm2_metadata_scope_required": true,
+    "generic_llama_relaxed": false,
+    "cpu_sanity_retried": false,
+    "cpu_answer_ready": false,
+    "answer_quality_claimed": false,
+    "sustained_throughput_claimed": false,
+    "cuda_claimed": false,
+    "server_claimed": false,
+    "bitnet_qk256_claimed": false,
+    "broad_dense_gguf_claimed": false
+  }
+}

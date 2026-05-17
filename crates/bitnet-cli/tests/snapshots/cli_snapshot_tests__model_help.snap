@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 92
 expression: help
 ---
 Fetch, verify, list, and prune supported local model artifacts
@@ -11,13 +12,14 @@ Commands:
   verify     Verify a cached or explicit supported model artifact
   contracts  Inspect BitNet-family model contracts and claim boundaries
   coverage   Inspect cross-family model coverage tiers and claim boundaries
+  status     Show user-facing model support for a device from the coverage matrix
   list       List supported model artifacts and cache status
   prune      Remove cached model artifacts
   help       Print this message or the help of the given subcommand(s)
 
 Options:
   -c, --config <PATH>      Configuration file path
-  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --log-level <LEVEL>  Log level (trace, debug, info, warn, error)
       --threads <N>        Number of CPU threads
       --batch-size <SIZE>  Batch size for processing

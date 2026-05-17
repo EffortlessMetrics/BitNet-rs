@@ -104,15 +104,69 @@ false claim booleans.
 
 This same-box 9950X3D preflight does not replace the Kaby Lake i5-8250U Qwen3
 Q8_0 appliance profile. The Qwen3 profile remains the established SLM CPU
-baseline. SmolLM2 remains a second-model candidate blocked before CPU answer
-sanity until exact metadata-scoped SmolLM2 normalization validation is
-implemented and strict CPU sanity is retried.
+baseline. SmolLM2 remains a second-model candidate. `SLM-CPU-019` implemented
+exact metadata-scoped SmolLM2 normalization validation, and `SLM-CPU-020`
+retried strict CPU sanity. The retry reached strict tokenizer loading, prompt
+rendering, and one-token generation with `fallback_used=false`, but the
+generated token was `The` for the math prompt. That is a quality blocker, not a
+CPU answer-ready proof.
+
+Retry evidence:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json
+```
+
+## Wrong-First-Token Diagnosis
+
+`SLM-CPU-021` records the next blocker without promoting the model. The
+committed evidence now says:
+
+```text
+reference runner = bounded coherent output under raw SmolLM2 ChatML
+Rust strict CPU = reaches generation with fallback_used=false
+Rust selected token = 504 / "The"
+expected answer = "4"
+quality gate = failed
+```
+
+This is not enough to claim that prompt formatting alone is the fault, because
+earlier committed diagnostic evidence recorded a prompt/token-ID parity probe
+that still produced incoherent Rust output after the first reference token.
+It is also not enough to claim transformer math as the only fault, because the
+latest strict CPU retry does not include a same-prompt reference first-token,
+top-k, or checkpoint comparison.
+
+Machine-readable diagnosis:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json
+```
+
+`SLM-CPU-022` adds the comparator contract and validates the SmolLM2
+first-token/top-k artifact shape accepted by `bitnet reference-compare`.
+This is still not the missing reference run. It defines the required same-prompt
+evidence before any later proof can clear the blocker:
+
+```text
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json
+```
+
+The next execution proof must run the exact pinned artifact with a
+reference-compatible raw ChatML prompt and record Rust CPU versus reference
+first-token/top-k or checkpoint evidence. SmolLM2 CPU answer readiness and CUDA
+planning remain blocked until that comparator localizes or clears the
+wrong-first-token behavior.
 
 ## Claim Boundary
 
 This page may claim only that the pinned SmolLM2 360M artifact reached strict
-CPU model-load preflight on the 9950X3D box and failed closed without fallback.
-It must not claim SmolLM2 CPU answer quality, broad dense SLM support, sustained
-throughput, CUDA, server readiness, OpenVINO, NPU, UHD 620, Qwen3.5 support,
-Q4/Q5 expansion, BitNet QK256 behavior, or inherited proof from Qwen2.5, Qwen3,
-or Apple M4 evidence.
+CPU model-load preflight on the 9950X3D box, and later reached strict one-token
+CPU generation after exact metadata-scoped normalization validation. The
+wrong-first-token diagnosis and comparator contract may claim only that the
+current blocker is unresolved between prompt-policy and shared dense CPU math
+until a reference-compatible comparator is captured. They must not claim
+SmolLM2 CPU answer quality, broad dense SLM support, sustained throughput, CUDA,
+server readiness, OpenVINO, NPU, UHD 620, Qwen3.5 support, Q4/Q5 expansion,
+BitNet QK256 behavior, or inherited proof from Qwen2.5, Qwen3, or Apple M4
+evidence.

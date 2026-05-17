@@ -21,14 +21,19 @@ promotion tied to receipts.
 | 11 | CUDA-MODEL-002 | `model(cuda): add Qwen3 CPU answer sanity` | CPU receipts |
 | 12 | CUDA-MODEL-003 | `model(cuda): add Qwen3 CUDA all-layer plan` | all-layer plan |
 | 13 | CUDA-MODEL-004 | `model(cuda): add Qwen3 one-token CUDA proof` | CUDA receipt path |
-| 14 | CUDA-MODEL-005 | `model(cuda): add Qwen3 short-decode and warm-session proof` | CUDA receipt path |
-| 15 | CUDA-UX-008 | `cli(cuda): model support dashboard` | CLI/status surface |
-| 16 | CUDA-UX-010 | `docs(cuda): 9950X3D+5070Ti CUDA quickstart` | tutorial |
-| 17 | CUDA-SERVER-001 | `server(cuda): strict CUDA server smoke` | server path |
-| 18 | CUDA-SERVER-002 | `server(cuda): commit dense Qwen strict smoke receipt` | server receipt path |
-| 19 | CUDA-MODEL-008 | `model(cuda): sync Qwen3 earned status row` | model coverage and status |
-| 20 | CUDA-MODEL-SMOLLM2-001 | `model(cuda): add SmolLM2 360M artifact contract` | model artifact docs |
-| 21 | CUDA-MODEL-SMOLLM2-002 | `docs(cuda): sync SmolLM2 CPU blocker state` | model coverage and plan docs |
+| 14 | CUDA-MODEL-005 | `model(cuda): add Qwen3 short-decode CUDA proof` | CUDA receipt path |
+| 15 | CUDA-MODEL-006 | `model(cuda): add Qwen3 warm-session CUDA proof` | CUDA receipt path |
+| 16 | CUDA-MODEL-007 | `model(cuda): add Qwen3 benchmark qualification review` | benchmark receipts |
+| 17 | CUDA-MODEL-008 | `model(cuda): sync Qwen3 earned status row` | model coverage and status |
+| 18 | CUDA-UX-008 | `cli(cuda): model support dashboard` | CLI/status surface |
+| 19 | CUDA-UX-010 | `docs(cuda): 9950X3D+5070Ti CUDA quickstart` | tutorial |
+| 20 | CUDA-SERVER-001 | `server(cuda): strict CUDA server smoke` | server path |
+| 21 | CUDA-SERVER-002 | `server(cuda): commit dense Qwen strict smoke receipt` | server receipt path |
+| 22 | CUDA-MODEL-SMOLLM2-001 | `model(cuda): add SmolLM2 360M artifact contract` | model artifact docs |
+| 23 | CUDA-MODEL-SMOLLM2-002 | `docs(cuda): sync SmolLM2 CPU blocker state` | model coverage and plan docs |
+| 24 | CUDA-SERVER-003 | `docs(cuda): define server readiness promotion boundary` | server readiness spec |
+| 25 | CUDA-SERVER-004 | `docs(cuda): promote dense Qwen exact-profile server readiness` | model coverage and status |
+| 26 | CUDA-SERVER-005 | `server(cuda): official BitNet strict server smoke` | server receipt path |
 
 ## Shared Links
 
@@ -38,6 +43,8 @@ All work items link to:
   `docs/proposals/BITNET-PROP-0002-9950x3d-5070ti-cuda-productization.md`
 - Spec:
   `docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md`
+- Server readiness spec:
+  `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
 - ADR:
   `docs/adr/BITNET-ADR-0004-9950x3d-5070ti-cuda-product-bench.md`
 - Campaign:
@@ -52,7 +59,7 @@ All work items link to:
 | Lane | Current state | Last real receipt | Next missing proof |
 | --- | --- | --- | --- |
 | BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
-| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts, benchmark qualification reviews, and bounded server-smoke receipts exist; speed and broad server readiness stay false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json` | exact-profile server readiness promotion spec before any `server_ready=true` row |
+| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts, benchmark qualification reviews, and bounded server-smoke receipts exist; speed and broad server readiness stay false | `docs/reports/CUDA_SERVER_003_DENSE_QWEN_READINESS_AUDIT.md` | refresh or supplement server-smoke evidence with artifact checksum identity, endpoint/profile scope, and generation policy before any exact-profile `server_ready=true` row |
 | Qwen3 0.6B | accelerator-ready dense SLM candidate; one-token, short-decode, warm-session, and benchmark-review evidence exists; product CLI, speed, server, full residency, broad dense GGUF, and BitNet proof stay false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json` | user-facing ask/chat product UX or repeated same-artifact comparator evidence before any product CLI or speed profile promotion |
 | SmolLM2 360M | structurally valid artifact contract; strict CPU preflight blocked before tokenizer/prompt/generation; governed normalization-policy audit recorded | `ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-policy-audit.json` | implement exact metadata-scoped SmolLM2 normalization validation and retry CPU sanity before all-layer planning or CUDA |
 | Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
@@ -409,18 +416,19 @@ Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
 Campaign item: `CUDA-MODEL-SMOLLM2-002`
 Blocked by: CUDA-MODEL-SMOLLM2-001, SLM-CPU-017
-Blocks: SmolLM2 CPU sanity retry, dense all-layer planning, and CUDA route planning
+Blocks: SmolLM2 wrong-first-token diagnosis, dense all-layer planning, and CUDA route planning
 
 ### Goal
 
 Sync the CUDA productization and model coverage surfaces to the committed
-SLM-CPU-017 SmolLM2 strict CPU preflight blocker.
+SmolLM2 strict CPU blocker chain.
 
 ### Production delta
 
 Docs and model coverage only. The model row records that SmolLM2 360M reached
-strict CPU model-load preflight on the 9950X3D and failed closed at strict
-loader normalization policy before tokenizer, prompt rendering, or generation.
+strict CPU model-load preflight on the 9950X3D, passed exact metadata-scoped
+normalization validation in a later SLM CPU item, and then reached one-token
+generation with `fallback_used=false` but selected the wrong first token.
 
 ### Non-goals
 
@@ -431,11 +439,12 @@ dense GGUF claim, or BitNet QK256 proof.
 ### Acceptance
 
 - `ci/model-artifacts/model-coverage-matrix.toml` records the SmolLM2 row as
-  structurally valid with CPU sanity blocked by strict loader policy.
-- The row links the next proof to resolving the strict loader/model-family
-  normalization policy or recording a governed exception.
-- The NVIDIA campaign and CUDA productization plan point to the SLM-CPU-017
-  blocker receipt as the last real evidence.
+  structurally valid with CPU answer readiness blocked by wrong-first-token
+  diagnosis.
+- The row links the next proof to a reference-compatible first-token/top-k or
+  checkpoint comparator capture using the SLM-CPU-022 contract.
+- The NVIDIA campaign and CUDA productization plan point to the SLM CPU blocker
+  and diagnosis receipts as the last real evidence.
 - The SmolLM2 ladder does not start CUDA planning until CPU sanity is
   unblocked.
 
@@ -450,14 +459,18 @@ cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070t
 
 ```text
 ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json
+ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json
 ```
 
 ### Claim boundary
 
 This work can only claim that the SmolLM2 artifact contract exists and that a
-strict CPU preflight blocker is recorded. It cannot claim CPU answer readiness,
-CUDA execution, product CLI readiness, speed, server readiness, full residency,
-broad dense GGUF support, or BitNet QK256 proof.
+strict CPU quality blocker is recorded through wrong-first-token diagnosis and
+comparator contract. It cannot claim CPU answer readiness, CUDA execution,
+product CLI readiness, speed, server readiness, full residency, broad dense GGUF
+support, or BitNet QK256 proof.
 
 ### Rollback
 
@@ -517,3 +530,59 @@ Status and docs summarize proof. They do not create new proof.
 ### Rollback
 
 Revert the status/docs/server-smoke PR and demote the server row if needed.
+
+## Work items: CUDA-SERVER-003 through CUDA-SERVER-005
+
+Status: CUDA-SERVER-003 blocked; CUDA-SERVER-004 and CUDA-SERVER-005 proposed
+Linked proposal: BITNET-PROP-0002
+Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
+Linked ADRs: BITNET-ADR-0004
+Campaign items: `CUDA-SERVER-003` through `CUDA-SERVER-005`
+Blocked by: CUDA-SERVER-002
+Blocks: exact-profile server readiness status promotion
+
+### Goal
+
+Define and then apply exact-profile server readiness promotion without turning
+bounded smoke evidence into broad server support.
+
+### Production delta
+
+See [`server-readiness.md`](server-readiness.md).
+
+### Non-goals
+
+No global server readiness, no speedup, no full-residency claim, and no
+cross-family proof inheritance.
+
+### Acceptance
+
+`CUDA-SERVER-003` audits the bounded dense Qwen server-smoke receipt against the
+readiness boundary and records that it is not promotable as-is. Later promotion
+PRs can set `server_ready=true` only for the exact model/profile whose refreshed
+or supplemental receipt satisfies the server readiness spec.
+
+### Proof commands
+
+```bash
+git diff --check
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+```
+
+### Receipt paths
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json
+ci/hardware/windows-9950x3d-rtx5070ti/<date>/server-strict-bitnet-i2s-qk256-smoke.json
+```
+
+### Claim boundary
+
+Server readiness is exact-profile only and cannot imply BitNet/dense
+cross-family proof, speedup, full residency, concurrency, or production
+deployment readiness.
+
+### Rollback
+
+Revert the docs or promotion row introduced by the PR. Do not edit historical
+server receipts by hand.

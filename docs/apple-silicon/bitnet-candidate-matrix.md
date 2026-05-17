@@ -22,7 +22,7 @@ ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
 |---:|---|---|---|
 | 1 | `microsoft/bitnet-b1.58-2B-4T-gguf` `ggml-model-i2_s.gguf` | ARM `I2_S`, then `TL1` | Shared answer gate says the official I2_S artifact is answer-ready when paired with external Microsoft tokenizer authority and `tokenizer.ggml.pre=llama-bpe`; MacBook must rerun before Apple claims. |
 | 2 | `1bitLLM/bitnet_b1_58-large` | ARM `I2_S` or `TL1` | Smaller 0.7B control candidate; must record GGUF file, tokenizer authority, and coherent reference output. |
-| 3 | `1bitLLM/bitnet_b1_58-3B` | ARM `TL1` diagnostic only | `I2_S` is upstream-unsupported for this model; use only supported/listed TL diagnostic routes until runner evidence exists. |
+| 3 | `1bitLLM/bitnet_b1_58-3B` | ARM `TL1`/`TL2` diagnostic only | Blocked at revision `af89e318d78a70802061246bf037199d2fb97020`: the official repository has safetensors shards and tokenizer files but no GGUF, and the current M3 Air free-space state cannot safely absorb the shards without cleanup or an approved conversion plan. |
 | 4 | `tiiuae/Falcon-E-1B-Instruct-GGUF` | Verify `I2_S` runner path | Secondary BitNet-like family after Microsoft and 1bitLLM behavior is understood. |
 | 5 | `tiiuae/Falcon-E-3B-Instruct-GGUF` | Verify `I2_S` runner path | Larger secondary family; use only if storage and smaller-candidate results justify it. |
 

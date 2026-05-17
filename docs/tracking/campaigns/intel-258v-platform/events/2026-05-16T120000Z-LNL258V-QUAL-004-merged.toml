@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T12:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5100
+merge_sha = "708a3f20a7dbced99f64ca4d15b4e7434a33aa41"
+head_sha = "5781130cca172d9a57a2bdeceacb28d3ec8e8951"
+branch = "codex/lunar-lake/LNL258V-QUAL-004-qwen-corpus-v2-diagnosis"
+summary = "Merged LNL258V-QUAL-004 after CI passed to classify dense Qwen CPU corpus-v2 route blockers."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5100",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+]
+
+notes = [
+  "The diagnosis records fallback_used=false, selected_backend=cpu-rust, failed profiles/categories, failed-case classes, route blockers, and recommended next fixes for the promoted CPU control route.",
+  "The merge preserves the claim boundary: no new inference, broad dense SLM quality claim, speedup claim, route promotion, Arc/NPU execution claim, or BitNet QK256/I2_S behavior change.",
+]

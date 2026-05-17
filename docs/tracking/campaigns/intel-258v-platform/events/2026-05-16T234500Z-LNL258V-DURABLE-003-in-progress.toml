@@ -1,0 +1,20 @@
+timestamp = "2026-05-16T23:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-003"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-DURABLE-003-index-stability"
+summary = "Started LNL258V-DURABLE-003 to index the existing repeated dense Qwen CPU warm-session receipt in the Lunar Lake durability bundle."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session.json",
+]
+
+notes = [
+  "This work item consumes existing repeated-run evidence only; it does not execute new inference.",
+  "The durability bundle may claim bounded dense Qwen CPU repeated-run stability for regression_tiny, ask_short, and ask_normal profiles only.",
+  "It must not promote OpenVINO GPU/NPU routes or claim speedup, acceleration, broad quality, BitNet proof, or QK256/I2_S behavior changes.",
+]

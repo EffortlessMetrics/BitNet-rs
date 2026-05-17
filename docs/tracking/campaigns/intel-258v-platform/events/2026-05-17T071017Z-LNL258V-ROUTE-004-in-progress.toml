@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T07:10:17Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-004"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-004-telemetry-profiles"
+summary = "Started LNL258V-ROUTE-004 to normalize route-profile telemetry evidence against the live Lunar Lake telemetry-context receipt."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The item is route-profile and benchmark/regression evidence wiring only.",
+  "No new inference, route promotion, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior change is in scope.",
+]

@@ -1,0 +1,21 @@
+timestamp = "2026-05-16T20:20:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-DURABLE-001-stability"
+summary = "Started LNL258V-DURABLE-001 to index repeated-run durability requirements for Lunar Lake route profiles."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The work item adds a durability indexing surface only; it does not run inference or claim repeated-run stability.",
+  "The bundle must preserve no route promotion, no speedup, no acceleration, no hidden fallback, and no dense-SLM-as-BitNet-proof boundaries.",
+]

@@ -1701,6 +1701,49 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-STATUS-001"
+status = "merged"
+branch = "docs/cuda-capability-matrix"
+pr = 5158
+head_sha = "9f3cc37206c10f9a6db866edf84a78d4551f5417"
+merge_sha = "25357a82dcff5f1e7797d84b22a8e0306b7970ea"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a user-facing CUDA capability matrix status page for the 9950X3D + RTX 5070 Ti lane, sourced from the model coverage matrix and NVIDIA campaign proof ledger. The page must distinguish official BitNet I2_S/QK256, dense Qwen2.5, Qwen3, SmolLM2, and later dense candidates; preserve speedup_claim=false and server_ready=false where the model coverage row says false; and avoid creating any new model, runtime, CUDA, answer, speed, server, full-residency, or publication claim."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/status/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  ".github/workflows/**",
+  "README.md",
+]
+may_claim = [
+  "Users have a CUDA capability status page that summarizes current model tiers, routes, speed, server, and claim boundaries from existing proof sources.",
+]
+must_not_claim = [
+  "The status page creates new model, CUDA, answer, speed, server, or residency proof.",
+  "Qwen3 product CLI readiness is promoted.",
+  "SmolLM2 CPU answer readiness or CUDA planning is unblocked.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2_S/QK256 proof.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
+]
+
+[[work_item]]
 id = "CUDA-UX-001"
 status = "merged"
 branch = "codex/cuda-ux-receipts-explain"
@@ -2862,6 +2905,54 @@ must_not_claim = [
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
   "Official BitNet QK256 server smoke exists.",
   "Crates.io or docs.rs badges are promoted from pending before publish.",
+]
+
+[[work_item]]
+id = "CUDA-SERVER-003"
+status = "merged"
+branch = "docs/dense-qwen-server-readiness"
+pr = 5190
+head_sha = "9aa2c0c2cdb1e928d5565a2970f6de04f21e2a8d"
+merge_sha = "2d53cec49ff1741e2cf9c390e121aa0b365c5670"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-SERVER-002"]
+acceptance = "Audit the bounded dense Qwen strict RTX 5070 Ti server-smoke receipt against BITNET-SPEC-0010 and record that server_ready remains false because the receipt lacks artifact checksum identity, endpoint or request-profile scope, and generation-policy fields."
+commands = [
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-15\\server-strict-dense-qwen25-q8-smoke.json",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-file-policy --report-dir target/bitnet/reports --fail-on-error",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/reports/CUDA_SERVER_003_DENSE_QWEN_READINESS_AUDIT.md",
+  "docs/status/CUDA_CAPABILITY_MATRIX.md",
+  "plans/cuda-5070ti-productization/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  ".github/workflows/**",
+  "ci/hardware/**",
+  "README.md",
+]
+may_claim = [
+  "The bounded dense Qwen server-smoke receipt has been audited against BITNET-SPEC-0010.",
+  "The current receipt is useful bounded evidence but is not sufficient for exact-profile server_ready promotion.",
+]
+must_not_claim = [
+  "Production server readiness exists.",
+  "Model coverage server_ready is promoted.",
+  "A refreshed server receipt with artifact checksum, endpoint/profile, and generation policy exists.",
+  "Server proof creates a global CUDA speedup or full-residency claim.",
+  "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
 ]
 
 [[work_item]]

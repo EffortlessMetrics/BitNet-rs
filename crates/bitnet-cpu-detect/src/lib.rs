@@ -101,7 +101,10 @@ pub fn best_tier() -> CpuExecutionTier {
 
 #[cfg(test)]
 mod tests {
-    use super::{CpuExecutionTier, available_tiers, avx2_available, avx2_fma_available, best_tier};
+    use super::{
+        CpuExecutionTier, available_tiers, avx2_available, avx2_fma_available, avx512_available,
+        best_tier, neon_available,
+    };
 
     #[test]
     fn scalar_tier_is_always_present() {
@@ -128,6 +131,86 @@ mod tests {
     fn avx2_fma_implies_avx2() {
         if avx2_fma_available() {
             assert!(avx2_available());
+        }
+    }
+
+    #[test]
+    fn priority_values_are_monotonic_and_distinct() {
+        // Lower priority number = higher preference. Distinct values let
+        // `available_tiers()` dedup correctly after sort.
+        assert_eq!(CpuExecutionTier::Avx512.priority(), 0);
+        assert_eq!(CpuExecutionTier::Avx2.priority(), 1);
+        assert_eq!(CpuExecutionTier::Neon.priority(), 2);
+        assert_eq!(CpuExecutionTier::Scalar.priority(), 3);
+
+        // Strictly monotonic: every higher-tier variant beats the next.
+        assert!(CpuExecutionTier::Avx512.priority() < CpuExecutionTier::Avx2.priority());
+        assert!(CpuExecutionTier::Avx2.priority() < CpuExecutionTier::Neon.priority());
+        assert!(CpuExecutionTier::Neon.priority() < CpuExecutionTier::Scalar.priority());
+    }
+
+    #[test]
+    fn cpu_execution_tier_ord_follows_enum_order() {
+        // The derived Ord uses enum declaration order; verify the
+        // ordering matches the priority numbering (lower = better).
+        assert!(CpuExecutionTier::Avx512 < CpuExecutionTier::Avx2);
+        assert!(CpuExecutionTier::Avx2 < CpuExecutionTier::Neon);
+        assert!(CpuExecutionTier::Neon < CpuExecutionTier::Scalar);
+    }
+
+    #[test]
+    fn cpu_execution_tier_is_copy_and_eq() {
+        let t = CpuExecutionTier::Avx2;
+        let copy = t;
+        assert_eq!(t, copy);
+        // Debug should not panic.
+        let _ = format!("{t:?}");
+    }
+
+    #[test]
+    fn available_tiers_are_deduplicated() {
+        let tiers = available_tiers();
+        let mut sorted = tiers.clone();
+        sorted.sort_by_key(|t| t.priority());
+        sorted.dedup();
+        assert_eq!(tiers, sorted, "available_tiers should already be sorted and deduped");
+    }
+
+    #[test]
+    fn runtime_detection_helpers_return_bool() {
+        // These return false on platforms / feature combinations where the
+        // ISA is not compiled or unavailable, but must always be callable.
+        let _ = avx2_available();
+        let _ = avx2_fma_available();
+        let _ = avx512_available();
+        let _ = neon_available();
+    }
+
+    #[test]
+    fn neon_implies_aarch64() {
+        // The runtime check returns true only when both compiled-in via the
+        // `neon` feature *and* the target is aarch64 *and* the OS reports
+        // NEON. So if neon_available() ever returns true, the target_arch
+        // must be aarch64.
+        if neon_available() {
+            assert_eq!(std::env::consts::ARCH, "aarch64");
+        }
+    }
+
+    #[test]
+    fn avx_implies_x86_64() {
+        if avx2_available() || avx512_available() {
+            assert_eq!(std::env::consts::ARCH, "x86_64");
+        }
+    }
+
+    #[test]
+    fn available_tiers_strictly_sorted() {
+        // Stronger than monotonic: after dedup, priorities are strictly
+        // increasing.
+        let tiers = available_tiers();
+        for pair in tiers.windows(2) {
+            assert!(pair[0].priority() < pair[1].priority(), "priorities should be unique");
         }
     }
 }

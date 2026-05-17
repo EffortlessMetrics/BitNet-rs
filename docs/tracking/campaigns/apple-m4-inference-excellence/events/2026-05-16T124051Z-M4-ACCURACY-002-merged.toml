@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T12:40:51Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-002"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-002-dense-500"
+pr = 5119
+merge_sha = "23eca8792e12946a0bdb99c9aa4d4be42436617c"
+summary = "Merged dense 500-case corpus expansion."
+
+notes = [
+  "PR #5119 expanded the seeded dense SLM eval corpus to 500 deterministic mechanically scored cases and updated the corpus contract to version 2.1.0.",
+  "This closeout does not add live model runs, runtime pass-rate refreshes, model downloads, BitNet behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claims.",
+]

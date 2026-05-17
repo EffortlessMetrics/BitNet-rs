@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T13:03:55Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-003"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-003-stop-template-scoring"
+pr = 5128
+head_sha = "661b71656e6b9fd8e5b006b1db40103d37aa89f8"
+summary = "Opened PR #5128 for dense SLM scorer and normalization repair."
+
+notes = [
+  "PR #5128 handles deterministic answer-corpus scoring for known dense SLM stop/template/format cases and bumps the dense corpus contract to 2.2.0.",
+  "No live model run, pass-rate refresh, BitNet proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim is included.",
+]

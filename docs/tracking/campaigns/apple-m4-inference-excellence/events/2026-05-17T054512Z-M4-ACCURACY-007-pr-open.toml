@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T05:45:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-007"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5285
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-007-dense-500-history"
+head_sha = "139b53578a48d98e266861416c54db46f4a8e73d"
+summary = "Opened PR #5285 for the second matching 500-case dense SLM eval-v2 refresh."
+
+notes = [
+  "PR #5285 records a second full 500-case answer-corpus run, summary receipts, task-family rollup, report-refresh manifest, and regression dashboard for every supported dense M4 model identity.",
+  "Each model summary validates with receipts-check, and matching regression checks against the 2026-05-16T1711Z 500-case baseline report matched_context=true with zero warnings.",
+  "The PR does not claim BitNet behavior, BitNet chat or serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, broad model quality, broad performance, or speedup.",
+]

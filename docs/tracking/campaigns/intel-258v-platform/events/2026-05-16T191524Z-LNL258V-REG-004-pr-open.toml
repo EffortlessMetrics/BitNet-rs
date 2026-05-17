@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T19:15:24Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-004"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5200
+branch = "codex/lunar-lake/LNL258V-REG-004-benchmark-regression"
+head_sha = "618945e45a0108c2b17e7cb17702ca33a75683f4"
+summary = "Opened LNL258V-REG-004 to gate regression v2 on cold/warm benchmark qualification."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5200",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+]
+
+notes = [
+  "The PR makes strict Lunar Lake regression v2 index the cold/warm benchmark qualification receipt by default.",
+  "No new inference, route promotion, speedup, Arc/NPU acceleration, or BitNet QK256/I2_S behavior change is in scope.",
+]
