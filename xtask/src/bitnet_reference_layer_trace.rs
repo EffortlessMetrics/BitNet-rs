@@ -81,6 +81,11 @@ const REFERENCE_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_output", "cb(cur, \"attn_o_out\", il)"),
     ("attention_residual", "cb(ffn_inp, \"ffn_inp\", il)"),
     ("ffn_norm", "cb(cur, \"ffn_norm\", il)"),
+    ("ffn_up_projection", "cb(tmp, \"ffn_up\", il)"),
+    ("ffn_gate_projection", "cb(cur, \"ffn_gate\", il)"),
+    ("ffn_relu_activation", "cb(cur, \"ffn_relu\", il)"),
+    ("ffn_relu_squared", "cb(cur, \"ffn_sqr(relu)\", il)"),
+    ("ffn_parallel_product", "cb(cur, \"ffn_gate_par\", il)"),
     ("ffn_parallel_output", "cb(cur, \"ffn_out\", il)"),
     ("ffn_subnorm", "cb(cur, \"ffn_sub_norm\", il)"),
     ("ffn_down", "cb(cur, \"ffn_down\", il)"),
@@ -118,6 +123,9 @@ const RUST_REQUIRED_ANCHORS: &[(&str, &str)] = &[
     ("attention_residual", "post_attention_residual"),
     ("pre_ffn_norm", "pre_ffn_norm"),
     ("ffn_norm", "post_ffn_norm"),
+    ("ffn_gate_history", "post_ffn_gate_proj_history_ref_layout"),
+    ("ffn_activation_history", "post_ffn_gate_activation_history_ref_layout"),
+    ("ffn_up_history", "post_ffn_up_proj_history_ref_layout"),
     ("ffn_parallel_output_history", "post_swiglu_history_ref_layout"),
     ("ffn_gate", "post_ffn_gate_proj"),
     ("ffn_activation", "post_ffn_gate_activation"),
@@ -6545,6 +6553,14 @@ fn reference_stage_mapping() -> Vec<(&'static str, &'static str)> {
         ("ffn_inp_history_ref_layout", "post_attention_residual_history_ref_layout"),
         ("ffn_norm", "post_ffn_norm"),
         ("ffn_norm_history_ref_layout", "post_ffn_norm_history_ref_layout"),
+        ("ffn_up", "post_ffn_up_proj"),
+        ("ffn_up_history_ref_layout", "post_ffn_up_proj_history_ref_layout"),
+        ("ffn_gate", "post_ffn_gate_proj"),
+        ("ffn_gate_history_ref_layout", "post_ffn_gate_proj_history_ref_layout"),
+        ("ffn_sqr(relu)", "post_ffn_gate_activation"),
+        ("ffn_relu_sqr_history_ref_layout", "post_ffn_gate_activation_history_ref_layout"),
+        ("ffn_gate_par", "post_swiglu"),
+        ("ffn_gate_par_history_ref_layout", "post_swiglu_history_ref_layout"),
         ("ffn_out", "post_swiglu"),
         ("ffn_out_history_ref_layout", "post_swiglu_history_ref_layout"),
         ("ffn_sub_norm", "post_ffn_subnorm"),
@@ -6962,6 +6978,10 @@ fn layer_operation_boundary_delta(
         ("attn_o_out", "post_o_proj", "attention_output_projection"),
         ("ffn_inp", "post_attention_residual", "attention_residual_output"),
         ("ffn_norm", "post_ffn_norm", "ffn_norm_output"),
+        ("ffn_up", "post_ffn_up_proj", "ffn_up_projection"),
+        ("ffn_gate", "post_ffn_gate_proj", "ffn_gate_projection"),
+        ("ffn_sqr(relu)", "post_ffn_gate_activation", "ffn_relu_squared"),
+        ("ffn_gate_par", "post_swiglu", "ffn_parallel_product"),
         ("ffn_out", "post_swiglu", "ffn_swiglu_output"),
         ("ffn_sub_norm", "post_ffn_subnorm", "ffn_subnorm_output"),
         ("ffn_down", "post_down_proj", "ffn_down_projection"),
@@ -7110,6 +7130,26 @@ fn layer_history_boundary_delta(
             "ffn_norm_output_history",
         ),
         (
+            "ffn_up_history_ref_layout",
+            "post_ffn_up_proj_history_ref_layout",
+            "ffn_up_projection_history",
+        ),
+        (
+            "ffn_gate_history_ref_layout",
+            "post_ffn_gate_proj_history_ref_layout",
+            "ffn_gate_projection_history",
+        ),
+        (
+            "ffn_relu_sqr_history_ref_layout",
+            "post_ffn_gate_activation_history_ref_layout",
+            "ffn_relu_squared_history",
+        ),
+        (
+            "ffn_gate_par_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_parallel_product_history",
+        ),
+        (
             "ffn_out_history_ref_layout",
             "post_swiglu_history_ref_layout",
             "ffn_swiglu_output_history",
@@ -7213,6 +7253,26 @@ fn layer_ffn_history_drift(
             "ffn_norm_output_history",
         ),
         (
+            "ffn_up_history_ref_layout",
+            "post_ffn_up_proj_history_ref_layout",
+            "ffn_up_projection_history",
+        ),
+        (
+            "ffn_gate_history_ref_layout",
+            "post_ffn_gate_proj_history_ref_layout",
+            "ffn_gate_projection_history",
+        ),
+        (
+            "ffn_relu_sqr_history_ref_layout",
+            "post_ffn_gate_activation_history_ref_layout",
+            "ffn_relu_squared_history",
+        ),
+        (
+            "ffn_gate_par_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_parallel_product_history",
+        ),
+        (
             "ffn_out_history_ref_layout",
             "post_swiglu_history_ref_layout",
             "ffn_swiglu_output_history",
@@ -7232,6 +7292,10 @@ fn layer_ffn_history_drift(
     const CURRENT_STAGES: &[(&str, &str, &str)] = &[
         ("ffn_inp", "post_attention_residual", "ffn_input_current"),
         ("ffn_norm", "post_ffn_norm", "ffn_norm_output_current"),
+        ("ffn_up", "post_ffn_up_proj", "ffn_up_projection_current"),
+        ("ffn_gate", "post_ffn_gate_proj", "ffn_gate_projection_current"),
+        ("ffn_sqr(relu)", "post_ffn_gate_activation", "ffn_relu_squared_current"),
+        ("ffn_gate_par", "post_swiglu", "ffn_parallel_product_current"),
         ("ffn_out", "post_swiglu", "ffn_swiglu_output_current"),
         ("ffn_sub_norm", "post_ffn_subnorm", "ffn_subnorm_output_current"),
         ("ffn_down", "post_down_proj", "ffn_down_projection_current"),
@@ -7430,6 +7494,26 @@ fn layer_full_prefix_token_drift(
             "ffn_norm_history_ref_layout",
             "post_ffn_norm_history_ref_layout",
             "ffn_norm_output_history",
+        ),
+        (
+            "ffn_up_history_ref_layout",
+            "post_ffn_up_proj_history_ref_layout",
+            "ffn_up_projection_history",
+        ),
+        (
+            "ffn_gate_history_ref_layout",
+            "post_ffn_gate_proj_history_ref_layout",
+            "ffn_gate_projection_history",
+        ),
+        (
+            "ffn_relu_sqr_history_ref_layout",
+            "post_ffn_gate_activation_history_ref_layout",
+            "ffn_relu_squared_history",
+        ),
+        (
+            "ffn_gate_par_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_parallel_product_history",
         ),
         (
             "ffn_out_history_ref_layout",
@@ -7738,6 +7822,26 @@ fn layer_prefix_token_stage_deltas(
             "ffn_norm_history_ref_layout",
             "post_ffn_norm_history_ref_layout",
             "ffn_norm_output_history",
+        ),
+        (
+            "ffn_up_history_ref_layout",
+            "post_ffn_up_proj_history_ref_layout",
+            "ffn_up_projection_history",
+        ),
+        (
+            "ffn_gate_history_ref_layout",
+            "post_ffn_gate_proj_history_ref_layout",
+            "ffn_gate_projection_history",
+        ),
+        (
+            "ffn_relu_sqr_history_ref_layout",
+            "post_ffn_gate_activation_history_ref_layout",
+            "ffn_relu_squared_history",
+        ),
+        (
+            "ffn_gate_par_history_ref_layout",
+            "post_swiglu_history_ref_layout",
+            "ffn_parallel_product_history",
         ),
         (
             "ffn_out_history_ref_layout",
@@ -10647,6 +10751,34 @@ fn layer_current_history_consistency(
             "post_ffn_norm",
             "post_ffn_norm_history_ref_layout",
             "ffn_norm_output",
+        ),
+        (
+            "ffn_up",
+            "ffn_up_history_ref_layout",
+            "post_ffn_up_proj",
+            "post_ffn_up_proj_history_ref_layout",
+            "ffn_up_projection",
+        ),
+        (
+            "ffn_gate",
+            "ffn_gate_history_ref_layout",
+            "post_ffn_gate_proj",
+            "post_ffn_gate_proj_history_ref_layout",
+            "ffn_gate_projection",
+        ),
+        (
+            "ffn_sqr(relu)",
+            "ffn_relu_sqr_history_ref_layout",
+            "post_ffn_gate_activation",
+            "post_ffn_gate_activation_history_ref_layout",
+            "ffn_relu_squared",
+        ),
+        (
+            "ffn_gate_par",
+            "ffn_gate_par_history_ref_layout",
+            "post_swiglu",
+            "post_swiglu_history_ref_layout",
+            "ffn_parallel_product",
         ),
         (
             "ffn_out",
@@ -19574,6 +19706,10 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
         json!({"reference": "attn_sub_norm_history_ref_layout", "rust": "post_attention_subnorm_history_ref_layout", "scope": "layer0 full-prefix attention subnorm history"}),
         json!({"reference": "attn_o_out_history_ref_layout", "rust": "post_o_proj_history_ref_layout", "scope": "layer0 full-prefix attention output projection history"}),
         json!({"reference": "ffn_norm", "rust": "post_ffn_norm", "scope": "layer0"}),
+        json!({"reference": "ffn_up", "rust": "post_ffn_up_proj", "scope": "layer0"}),
+        json!({"reference": "ffn_gate", "rust": "post_ffn_gate_proj", "scope": "layer0"}),
+        json!({"reference": "ffn_sqr(relu)", "rust": "post_ffn_gate_activation", "scope": "layer0"}),
+        json!({"reference": "ffn_gate_par", "rust": "post_swiglu", "scope": "layer0"}),
         json!({"reference": "ffn_out", "rust": "post_swiglu", "scope": "layer0"}),
         json!({"reference": "ffn_sub_norm", "rust": "post_ffn_subnorm", "scope": "layer0"}),
         json!({"reference": "ffn_down", "rust": "post_down_proj", "scope": "layer0"}),
@@ -19581,6 +19717,10 @@ fn build_plan(args: &LayerTracePlanArgs) -> Result<Value> {
         json!({"reference": "attn_norm_history_ref_layout", "rust": "attention_v_input_history_ref_layout", "scope": "layer0 full-prefix attention norm output history"}),
         json!({"reference": "ffn_inp_history_ref_layout", "rust": "post_attention_residual_history_ref_layout", "scope": "layer0 full-prefix attention residual history"}),
         json!({"reference": "ffn_norm_history_ref_layout", "rust": "post_ffn_norm_history_ref_layout", "scope": "layer0 full-prefix FFN norm output history"}),
+        json!({"reference": "ffn_up_history_ref_layout", "rust": "post_ffn_up_proj_history_ref_layout", "scope": "layer0 full-prefix FFN up projection history"}),
+        json!({"reference": "ffn_gate_history_ref_layout", "rust": "post_ffn_gate_proj_history_ref_layout", "scope": "layer0 full-prefix FFN gate projection history"}),
+        json!({"reference": "ffn_relu_sqr_history_ref_layout", "rust": "post_ffn_gate_activation_history_ref_layout", "scope": "layer0 full-prefix FFN ReLU squared activation history"}),
+        json!({"reference": "ffn_gate_par_history_ref_layout", "rust": "post_swiglu_history_ref_layout", "scope": "layer0 full-prefix FFN parallel product history"}),
         json!({"reference": "ffn_out_history_ref_layout", "rust": "post_swiglu_history_ref_layout", "scope": "layer0 full-prefix FFN SwiGLU output history"}),
         json!({"reference": "ffn_sub_norm_history_ref_layout", "rust": "post_ffn_subnorm_history_ref_layout", "scope": "layer0 full-prefix FFN subnorm output history"}),
         json!({"reference": "ffn_down_history_ref_layout", "rust": "post_down_proj_history_ref_layout", "scope": "layer0 full-prefix FFN down projection history"}),
@@ -20640,6 +20780,19 @@ mod tests {
                 && entry.pointer("/rust")
                     == Some(&json!("attention_v_cache_f16_roundtrip_kv_head4_live_ref_layout"))
         }));
+        assert!(stage_mapping.iter().any(|entry| {
+            entry.pointer("/reference") == Some(&json!("ffn_up_history_ref_layout"))
+                && entry.pointer("/rust") == Some(&json!("post_ffn_up_proj_history_ref_layout"))
+        }));
+        assert!(stage_mapping.iter().any(|entry| {
+            entry.pointer("/reference") == Some(&json!("ffn_relu_sqr_history_ref_layout"))
+                && entry.pointer("/rust")
+                    == Some(&json!("post_ffn_gate_activation_history_ref_layout"))
+        }));
+        assert!(stage_mapping.iter().any(|entry| {
+            entry.pointer("/reference") == Some(&json!("ffn_gate_par_history_ref_layout"))
+                && entry.pointer("/rust") == Some(&json!("post_swiglu_history_ref_layout"))
+        }));
     }
 
     #[test]
@@ -20693,6 +20846,10 @@ mod tests {
         assert!(patch.contains("ffn_inp_history_ref_layout"));
         assert!(patch.contains("ffn_norm_core_history_ref_layout"));
         assert!(patch.contains("ffn_norm_history_ref_layout"));
+        assert!(patch.contains("ffn_up_history_ref_layout"));
+        assert!(patch.contains("ffn_gate_history_ref_layout"));
+        assert!(patch.contains("ffn_relu_sqr_history_ref_layout"));
+        assert!(patch.contains("ffn_gate_par_history_ref_layout"));
         assert!(patch.contains("ffn_out_history_ref_layout"));
         assert!(patch.contains("ffn_sub_norm_history_ref_layout"));
         assert!(patch.contains("ffn_down_history_ref_layout"));
@@ -21415,8 +21572,8 @@ mod tests {
 
         assert_eq!(drift.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(drift.pointer("/claim_allowed"), Some(&json!(false)));
-        assert_eq!(drift.pointer("/history/missing_stage_count"), Some(&json!(6)));
-        assert_eq!(drift.pointer("/current_token/missing_stage_count"), Some(&json!(6)));
+        assert_eq!(drift.pointer("/history/missing_stage_count"), Some(&json!(10)));
+        assert_eq!(drift.pointer("/current_token/missing_stage_count"), Some(&json!(10)));
         assert!(reasons.contains(&json!("layer_ffn_history_stage_missing")));
         assert!(reasons.contains(&json!("layer_ffn_current_stage_missing")));
         assert!(
@@ -21538,6 +21695,30 @@ mod tests {
                 "ffn_norm_history_ref_layout",
                 "post_ffn_norm",
                 "post_ffn_norm_history_ref_layout",
+            ),
+            (
+                "ffn_up",
+                "ffn_up_history_ref_layout",
+                "post_ffn_up_proj",
+                "post_ffn_up_proj_history_ref_layout",
+            ),
+            (
+                "ffn_gate",
+                "ffn_gate_history_ref_layout",
+                "post_ffn_gate_proj",
+                "post_ffn_gate_proj_history_ref_layout",
+            ),
+            (
+                "ffn_sqr(relu)",
+                "ffn_relu_sqr_history_ref_layout",
+                "post_ffn_gate_activation",
+                "post_ffn_gate_activation_history_ref_layout",
+            ),
+            (
+                "ffn_gate_par",
+                "ffn_gate_par_history_ref_layout",
+                "post_swiglu",
+                "post_swiglu_history_ref_layout",
             ),
             (
                 "ffn_out",
@@ -21676,7 +21857,7 @@ mod tests {
             Some(&json!("earliest_earlier_prefix_token"))
         );
         assert_eq!(frontier.pointer("/earliest_earlier_prefix_token/token"), Some(&json!(0)));
-        assert_eq!(frontier.pointer("/max_earlier_prefix_token/token"), Some(&json!(0)));
+        assert_eq!(frontier.pointer("/max_earlier_prefix_token/token"), Some(&json!(1)));
         assert_eq!(frontier.pointer("/sampled_current_token_row/token"), Some(&json!(2)));
         assert!(reasons.contains(&json!("earlier_prefix_token_frontier_present")));
         assert!(reasons.contains(&json!("sampled_current_token_history_drift_present")));
@@ -21685,8 +21866,10 @@ mod tests {
         let stage_deltas = report.pointer("/layer_0_prefix_token_stage_deltas").unwrap();
         let token0_labels =
             stage_deltas.pointer("/target_rows/0/labels").and_then(Value::as_array).unwrap();
-        let token2_labels =
+        let token1_labels =
             stage_deltas.pointer("/target_rows/1/labels").and_then(Value::as_array).unwrap();
+        let token2_labels =
+            stage_deltas.pointer("/target_rows/2/labels").and_then(Value::as_array).unwrap();
         let stage_reasons =
             stage_deltas.pointer("/current_blocked_reasons").and_then(Value::as_array).unwrap();
 
@@ -21696,16 +21879,38 @@ mod tests {
             stage_deltas.pointer("/source_frontier/active_frontier"),
             Some(&json!("earliest_earlier_prefix_token"))
         );
-        assert_eq!(stage_deltas.pointer("/target_token_count"), Some(&json!(2)));
-        assert_eq!(stage_deltas.pointer("/material_target_count"), Some(&json!(2)));
+        assert_eq!(stage_deltas.pointer("/target_token_count"), Some(&json!(3)));
+        assert_eq!(stage_deltas.pointer("/material_target_count"), Some(&json!(3)));
         assert_eq!(stage_deltas.pointer("/target_rows/0/token"), Some(&json!(0)));
         assert_eq!(
             stage_deltas.pointer("/target_rows/0/first_material_stage/boundary"),
             Some(&json!("ffn_input_history"))
         );
-        assert_eq!(stage_deltas.pointer("/target_rows/1/token"), Some(&json!(2)));
+        assert_eq!(stage_deltas.pointer("/target_rows/1/token"), Some(&json!(1)));
+        assert_eq!(stage_deltas.pointer("/target_rows/2/token"), Some(&json!(2)));
+        let token0_rows =
+            stage_deltas.pointer("/target_rows/0/rows").and_then(Value::as_array).unwrap();
+        assert!(token0_rows.iter().any(|row| {
+            row.pointer("/boundary") == Some(&json!("ffn_gate_projection_history"))
+                && row.pointer("/reference_stage") == Some(&json!("ffn_gate_history_ref_layout"))
+                && row.pointer("/rust_stage")
+                    == Some(&json!("post_ffn_gate_proj_history_ref_layout"))
+        }));
+        assert!(token0_rows.iter().any(|row| {
+            row.pointer("/boundary") == Some(&json!("ffn_relu_squared_history"))
+                && row.pointer("/reference_stage")
+                    == Some(&json!("ffn_relu_sqr_history_ref_layout"))
+                && row.pointer("/rust_stage")
+                    == Some(&json!("post_ffn_gate_activation_history_ref_layout"))
+        }));
+        assert!(token0_rows.iter().any(|row| {
+            row.pointer("/boundary") == Some(&json!("ffn_parallel_product_history"))
+                && row.pointer("/reference_stage")
+                    == Some(&json!("ffn_gate_par_history_ref_layout"))
+                && row.pointer("/rust_stage") == Some(&json!("post_swiglu_history_ref_layout"))
+        }));
         assert!(token0_labels.contains(&json!("earliest_earlier_prefix_token")));
-        assert!(token0_labels.contains(&json!("max_earlier_prefix_token")));
+        assert!(token1_labels.contains(&json!("max_earlier_prefix_token")));
         assert!(token2_labels.contains(&json!("sampled_current_token")));
         assert!(stage_reasons.contains(&json!("prefix_token_stage_delta_present")));
     }
@@ -21724,6 +21929,30 @@ mod tests {
                 "ffn_norm_history_ref_layout",
                 "post_ffn_norm",
                 "post_ffn_norm_history_ref_layout",
+            ),
+            (
+                "ffn_up",
+                "ffn_up_history_ref_layout",
+                "post_ffn_up_proj",
+                "post_ffn_up_proj_history_ref_layout",
+            ),
+            (
+                "ffn_gate",
+                "ffn_gate_history_ref_layout",
+                "post_ffn_gate_proj",
+                "post_ffn_gate_proj_history_ref_layout",
+            ),
+            (
+                "ffn_sqr(relu)",
+                "ffn_relu_sqr_history_ref_layout",
+                "post_ffn_gate_activation",
+                "post_ffn_gate_activation_history_ref_layout",
+            ),
+            (
+                "ffn_gate_par",
+                "ffn_gate_par_history_ref_layout",
+                "post_swiglu",
+                "post_swiglu_history_ref_layout",
             ),
             (
                 "ffn_out",
@@ -21856,7 +22085,7 @@ mod tests {
             boundary.pointer("/source_frontier/active_frontier"),
             Some(&json!("earliest_earlier_prefix_token"))
         );
-        assert_eq!(boundary.pointer("/target_token_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/target_token_count"), Some(&json!(3)));
         assert_eq!(boundary.pointer("/clean_input_material_output_count"), Some(&json!(1)));
         assert_eq!(boundary.pointer("/material_output_count"), Some(&json!(1)));
         assert_eq!(boundary.pointer("/rows/0/token"), Some(&json!(0)));
@@ -21941,7 +22170,7 @@ mod tests {
         assert_eq!(consistency.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(consistency.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(consistency.pointer("/selected_current_token"), Some(&Value::Null));
-        assert_eq!(consistency.pointer("/missing_stage_count"), Some(&json!(6)));
+        assert_eq!(consistency.pointer("/missing_stage_count"), Some(&json!(10)));
         assert!(reasons.contains(&json!("sampled_current_token_unavailable")));
         assert!(reasons.contains(&json!("current_history_stage_missing")));
     }
@@ -22107,8 +22336,8 @@ mod tests {
         let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
 
         assert_eq!(boundary.pointer("/compared_count"), Some(&json!(0)));
-        assert_eq!(boundary.pointer("/missing_rust_count"), Some(&json!(10)));
-        assert_eq!(boundary.pointer("/missing_reference_count"), Some(&json!(9)));
+        assert_eq!(boundary.pointer("/missing_rust_count"), Some(&json!(14)));
+        assert_eq!(boundary.pointer("/missing_reference_count"), Some(&json!(13)));
         assert_eq!(boundary.pointer("/rows/3/status"), Some(&json!("missing_rust")));
         assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(0)));
     }

@@ -1381,6 +1381,13 @@ impl FeedForward {
         let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_gate_proj", &gate)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.layer_idx,
+            _trace_base_seq,
+            "post_ffn_gate_proj",
+            &gate,
+        )?;
 
         // MLP gating diagnostics (point 3 of user's plan)
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
@@ -1392,6 +1399,13 @@ impl FeedForward {
         let gate = feed_forward_activation(self.activation_type, &gate)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_gate_activation", &gate)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(
+            self.layer_idx,
+            _trace_base_seq,
+            "post_ffn_gate_activation",
+            &gate,
+        )?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(activation_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -1406,6 +1420,8 @@ impl FeedForward {
         let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
         #[cfg(feature = "trace")]
         trace_layer0_tensor(self.layer_idx, _trace_base_seq, 1, "post_ffn_up_proj", &up)?;
+        #[cfg(feature = "trace")]
+        trace_layer_history_ref_layout(self.layer_idx, _trace_base_seq, "post_ffn_up_proj", &up)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
