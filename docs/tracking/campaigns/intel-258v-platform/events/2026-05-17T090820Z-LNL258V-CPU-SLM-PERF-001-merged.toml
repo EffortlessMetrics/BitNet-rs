@@ -1,0 +1,22 @@
+timestamp = "2026-05-17T09:08:20Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5315
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-001-phase-attribution"
+head_sha = "92a2a37db83e570cc36efc5fcca9c97a425d9bc6"
+merge_sha = "784153381f3ec228cc7d9f8cc3342f1f1ad3c47e"
+summary = "Merged LNL258V-CPU-SLM-PERF-001 dense Qwen CPU phase attribution."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-phase-attribution.json",
+]
+
+notes = [
+  "PR #5315 merged the no-new-inference CPU dense SLM phase attribution command and receipt.",
+  "The receipt attributes existing cold one-off and warm-session Qwen CPU phase evidence and indexes OpenVINO CPU smoke-level context only.",
+  "The merge preserves no route-promotion, speedup, power-advantage, Arc/NPU acceleration, and BitNet QK256/I2_S behavior-change boundaries.",
+]

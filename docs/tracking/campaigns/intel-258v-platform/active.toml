@@ -3176,9 +3176,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-CPU-SLM-PERF-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-001-phase-attribution"
 pr = 5315
+merge_sha = "784153381f3ec228cc7d9f8cc3342f1f1ad3c47e"
 head_sha = "92a2a37db83e570cc36efc5fcca9c97a425d9bc6"
 stackable = false
 review_mode = "codex_premerge"
