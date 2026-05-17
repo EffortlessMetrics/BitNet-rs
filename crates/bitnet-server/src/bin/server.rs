@@ -129,25 +129,6 @@ fn parse_default_device_arg(device: &str) -> Result<DeviceConfig> {
     device.parse()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::parse_default_device_arg;
-    use bitnet_server::DeviceConfig;
-
-    #[test]
-    fn parses_strict_rtx_5070_ti_cuda_device_arg() {
-        assert!(matches!(
-            parse_default_device_arg("nvidia-rtx-5070-ti-cuda"),
-            Ok(DeviceConfig::NvidiaRtx5070TiCuda)
-        ));
-    }
-
-    #[test]
-    fn rejects_unknown_device_arg() {
-        assert!(parse_default_device_arg("generic-fast-gpu").is_err());
-    }
-}
-
 /// Wait for shutdown signals
 async fn wait_for_shutdown() {
     let ctrl_c = async {
@@ -170,5 +151,24 @@ async fn wait_for_shutdown() {
         _ = terminate => {
             info!("Received SIGTERM");
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_default_device_arg;
+    use bitnet_server::DeviceConfig;
+
+    #[test]
+    fn parses_strict_rtx_5070_ti_cuda_device_arg() {
+        assert!(matches!(
+            parse_default_device_arg("nvidia-rtx-5070-ti-cuda"),
+            Ok(DeviceConfig::NvidiaRtx5070TiCuda)
+        ));
+    }
+
+    #[test]
+    fn rejects_unknown_device_arg() {
+        assert!(parse_default_device_arg("generic-fast-gpu").is_err());
     }
 }
