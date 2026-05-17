@@ -102,6 +102,109 @@ fn server_shared_engine_chat_completion_receipt() -> Value {
     })
 }
 
+fn bitnet_qk256_server_smoke_receipt() -> Value {
+    json!({
+        "receipt_kind": "server_shared_engine_chat_completion",
+        "request_id": "request-bitnet-1",
+        "runtime_path": "shared_local_inference_engine",
+        "runtime_api": "cuda",
+        "model_identity": {
+            "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "requested_model": "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "active_model_id": "model-1",
+            "active_model_path": "models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+            "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+        },
+        "endpoint_profile": {
+            "endpoint": "/v1/chat/completions",
+            "method": "POST",
+            "request_profile": "non_streaming_chat_completion",
+            "streaming": false,
+            "message_count": 1
+        },
+        "generation_policy": {
+            "max_tokens": 2,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "decoding": "greedy"
+        },
+        "requested_model": "microsoft-bitnet-b1.58-2B-4T-i2s",
+        "active_model_id": "model-1",
+        "active_model_path": "models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+        "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "model_coverage_row": "bitnet_official_2b_i2s_qk256",
+        "model_coverage_tier": "product_cli_ready",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_route": "bitnet_qk256_cuda",
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "bitnet_b1_58",
+            "quantization": "i2_s_qk256",
+            "selected_route": "bitnet_qk256_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": false,
+            "bitnet_packed_qk256_cuda": true,
+            "cuda_bitnet_qk256_ops": 420,
+            "cuda_dense_regular_llm_ops": 0,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 420,
+            "cuda_ops": 420,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "execution_coverage": {
+            "execution_claim": "cuda_inference_contribution",
+            "bitnet_linear_layers_total": 420,
+            "bitnet_linear_layers_on_cuda": 420,
+            "bitnet_linear_layers_cpu_fallback": 0,
+            "unsupported_ops": [],
+            "fallback_used": false
+        },
+        "kernel_stats": [{
+            "kernel_id": "qk256_gemv_cuda",
+            "invocations": 420,
+            "fallback_invocations": 0,
+            "cpu_fallback_invocations": 0,
+            "host_to_device_bytes": 1024,
+            "device_to_host_bytes": 2048,
+            "kernel_launches": 420,
+            "kernel_time_ms": 12.5,
+            "kernel_time_samples": 420
+        }],
+        "prompt_template": "bitnetcpp-answer",
+        "tokenizer_authority": "active_model_tokenizer",
+        "prompt_authority": "server_chat_template",
+        "fallback_used": false,
+        "simulated_inference": false,
+        "streaming": false,
+        "generated_text_non_empty": true,
+        "prompt_tokens": 14,
+        "completion_tokens": 1,
+        "total_ms": 83,
+        "quality_gate": {
+            "gate": "server_non_empty_utf8_response",
+            "passed": true,
+            "generated_text_non_empty": true,
+            "utf8_valid": true,
+            "broad_chat_quality_claimed": false
+        },
+        "server_smoke_response_claimed": true,
+        "server_ready_claimed": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false,
+        "dense_regular_llm_cuda_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": true
+    })
+}
+
 fn remove_top_level_field(receipt: &mut Value, field: &str) {
     let removed = receipt.as_object_mut().and_then(|object| object.remove(field));
     assert!(removed.is_some(), "expected receipt field `{field}` to exist");
@@ -173,6 +276,42 @@ fn server_shared_engine_chat_completion_receipt_validates() {
     let receipt = server_shared_engine_chat_completion_receipt();
 
     assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_ok());
+}
+
+#[test]
+fn bitnet_qk256_server_smoke_receipt_validates() {
+    let receipt = bitnet_qk256_server_smoke_receipt();
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_ok());
+}
+
+#[test]
+fn bitnet_qk256_server_smoke_receipt_rejects_cpu_fallback() {
+    let mut receipt = bitnet_qk256_server_smoke_receipt();
+    receipt["execution_plan"]["cpu_fallback_ops"] = json!(1);
+    receipt["execution_plan"]["strict_cuda_ready"] = json!(false);
+    receipt["execution_coverage"]["bitnet_linear_layers_cpu_fallback"] = json!(1);
+    receipt["execution_coverage"]["fallback_used"] = json!(true);
+    receipt["kernel_stats"][0]["fallback_invocations"] = json!(1);
+    receipt["kernel_stats"][0]["cpu_fallback_invocations"] = json!(1);
+
+    let err = validate_server_shared_engine_chat_completion_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("cpu_fallback_ops"), "unexpected error: {err}");
+}
+
+#[test]
+fn bitnet_qk256_server_smoke_receipt_rejects_dense_claim_leak() {
+    let mut receipt = bitnet_qk256_server_smoke_receipt();
+    receipt["dense_regular_llm_cuda_inference_claimed"] = json!(true);
+
+    let err = validate_server_shared_engine_chat_completion_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("dense_regular_llm_cuda_inference_claimed"), "unexpected error: {err}");
 }
 
 #[test]

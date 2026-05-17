@@ -68,14 +68,16 @@ required_receipts = [
   "strict_cuda_ask",
   "warm_session",
   "benchmark_profile_receipt",
+  "server_shared_engine_chat_completion",
 ]
 forbidden_claims = [
   "global_speedup",
   "full_cuda_residency_without_phase_receipts",
   "dense_regular_llm_cuda_proof",
+  "broad_production_server_readiness",
 ]
-next_proof = "profile-specific speedup qualification and deeper residency/transfer timing."
-claim_boundary = "Official Microsoft 2B I2_S is the current BitNet QK256 x86/CUDA answer lane. It is not globally speed-qualified and does not prove dense regular-LLM CUDA."
+next_proof = "profile-specific speedup qualification, deeper residency/transfer timing, and any broader production server-readiness qualification."
+claim_boundary = "Official Microsoft 2B I2_S is the current BitNet QK256 x86/CUDA answer lane and has strict RTX 5070 Ti server-smoke evidence for the bitnet_qk256_cuda route only. It is not globally speed-qualified, does not prove dense regular-LLM CUDA, and does not claim broad production server readiness."
 
   [entry.claims]
   registered = true

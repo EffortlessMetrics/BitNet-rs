@@ -79,6 +79,12 @@ use monitoring::{
 const DENSE_QWEN25_Q8_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 const DENSE_QWEN25_Q8_MODEL_SHA256: &str =
     "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+const BITNET_QK256_MODEL_ID: &str = "microsoft-bitnet-b1.58-2B-4T-i2s";
+const BITNET_QK256_MODEL_SHA256: &str =
+    "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162";
+const BITNET_QK256_ROUTE: &str = "bitnet_qk256_cuda";
+const DENSE_QWEN_ROUTE: &str = "dense_regular_llm_cuda";
+const SHARED_ENGINE_ROUTE: &str = "shared_validated_local_inference_engine";
 
 #[derive(Deserialize)]
 pub struct InferenceRequest {
@@ -197,6 +203,12 @@ pub struct ServerSharedEngineReceipt {
     pub selected_backend: String,
     pub requested_backend: String,
     pub selected_route: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_plan: Option<ServerSharedEngineExecutionPlan>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_coverage: Option<ServerSharedEngineExecutionCoverage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kernel_stats: Option<Vec<ServerSharedEngineKernelStats>>,
     pub prompt_template: String,
     pub tokenizer_authority: String,
     pub prompt_authority: String,
@@ -244,6 +256,57 @@ pub struct ServerSharedEngineGenerationPolicy {
     pub temperature: f32,
     pub top_p: f32,
     pub decoding: String,
+}
+
+/// Dispatch plan summary attached to BitNet QK256 server-smoke receipts.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineExecutionPlan {
+    pub planner_version: String,
+    pub model_family: String,
+    pub quantization: String,
+    pub selected_route: String,
+    pub requested_backend: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub strict_fallback_policy: String,
+    pub dense_regular_llm_cuda: bool,
+    pub bitnet_packed_qk256_cuda: bool,
+    pub cuda_bitnet_qk256_ops: u64,
+    pub cuda_dense_regular_llm_ops: u64,
+    pub cpu_fallback_ops: u64,
+    pub unsupported_ops: u64,
+    pub total_ops: u64,
+    pub cuda_ops: u64,
+    pub mixed_cuda_routes: bool,
+    pub fallback_used: bool,
+    pub strict_cuda_ready: bool,
+    pub speedup_claim: bool,
+    pub full_cuda_residency_claimed: bool,
+}
+
+/// QK256 dispatch coverage attached to BitNet server-smoke receipts.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineExecutionCoverage {
+    pub execution_claim: String,
+    pub bitnet_linear_layers_total: u64,
+    pub bitnet_linear_layers_on_cuda: u64,
+    pub bitnet_linear_layers_cpu_fallback: u64,
+    pub unsupported_ops: Vec<String>,
+    pub fallback_used: bool,
+}
+
+/// Kernel statistics attached to BitNet QK256 server-smoke receipts.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineKernelStats {
+    pub kernel_id: String,
+    pub invocations: u64,
+    pub fallback_invocations: u64,
+    pub cpu_fallback_invocations: u64,
+    pub host_to_device_bytes: Option<u64>,
+    pub device_to_host_bytes: Option<u64>,
+    pub kernel_launches: u64,
+    pub kernel_time_ms: Option<f64>,
+    pub kernel_time_samples: Option<u64>,
 }
 
 /// Bounded quality gate attached to a server shared-engine receipt.
@@ -827,6 +890,8 @@ async fn chat_completions_handler(
             bitnet_inference::prompt_formatter::estimate_token_count(&rendered_prompt)
         });
 
+    let qk256_coverage_before = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+    let qk256_runtime_before = bitnet_qk256_dispatch::qk256_cuda_runtime_stats();
     let start = Instant::now();
     let generated = match active_model
         .engine
@@ -858,6 +923,8 @@ async fn chat_completions_handler(
         }
     };
     let total_ms = start.elapsed().as_millis() as u64;
+    let qk256_coverage_after = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+    let qk256_runtime_after = bitnet_qk256_dispatch::qk256_cuda_runtime_stats();
 
     active_model.update_usage();
 
@@ -878,6 +945,15 @@ async fn chat_completions_handler(
         &usage,
         &generated,
         total_ms,
+        bitnet_server_qk256_evidence(
+            &request,
+            &active_model.metadata,
+            &qk256_coverage_before,
+            &qk256_coverage_after,
+            &qk256_runtime_before,
+            &qk256_runtime_after,
+        )
+        .as_ref(),
     );
     let response = ChatCompletionResponse {
         id: format!("chatcmpl-{request_id}"),
@@ -948,6 +1024,76 @@ fn token_count_for_text(engine: &bitnet_inference::InferenceEngine, text: &str) 
     engine.tokenizer().encode(text, false, true).ok().map(|tokens| tokens.len())
 }
 
+#[derive(Debug, Clone)]
+struct ServerQk256Evidence {
+    coverage: bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    runtime_stats: bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+}
+
+fn bitnet_server_qk256_evidence(
+    request: &ChatCompletionRequest,
+    active_model: &model_manager::ModelMetadata,
+    coverage_before: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    coverage_after: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    runtime_before: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+    runtime_after: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+) -> Option<ServerQk256Evidence> {
+    is_official_bitnet_qk256_model(request, active_model).then(|| ServerQk256Evidence {
+        coverage: qk256_dispatch_coverage_delta(coverage_before, coverage_after),
+        runtime_stats: qk256_cuda_runtime_stats_delta(runtime_before, runtime_after),
+    })
+}
+
+fn qk256_dispatch_coverage_delta(
+    before: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    after: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+) -> bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+    let bitnet_linear_layers_on_cuda =
+        after.bitnet_linear_layers_on_cuda.saturating_sub(before.bitnet_linear_layers_on_cuda);
+    let bitnet_linear_layers_cpu_fallback = after
+        .bitnet_linear_layers_cpu_fallback
+        .saturating_sub(before.bitnet_linear_layers_cpu_fallback);
+    let bitnet_linear_layers_total =
+        after.bitnet_linear_layers_total.saturating_sub(before.bitnet_linear_layers_total);
+    let unsupported_delta = after
+        .unsupported_ops
+        .iter()
+        .filter(|candidate| !before.unsupported_ops.iter().any(|prior| prior == *candidate))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+        bitnet_linear_layers_total,
+        bitnet_linear_layers_on_cuda,
+        bitnet_linear_layers_cpu_fallback,
+        unsupported_ops: unsupported_delta,
+        execution_claim: if bitnet_linear_layers_on_cuda > 0 {
+            "cuda_inference_contribution"
+        } else {
+            after.execution_claim
+        },
+    }
+}
+
+fn qk256_cuda_runtime_stats_delta(
+    before: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+    after: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+) -> bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+    let before_ms = before.kernel_time_ms.unwrap_or(0.0);
+    let after_ms = after.kernel_time_ms.unwrap_or(0.0);
+    let kernel_time_samples = after.kernel_time_samples.saturating_sub(before.kernel_time_samples);
+    bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+        host_to_device_bytes: after
+            .host_to_device_bytes
+            .saturating_sub(before.host_to_device_bytes),
+        device_to_host_bytes: after
+            .device_to_host_bytes
+            .saturating_sub(before.device_to_host_bytes),
+        kernel_time_ms: (kernel_time_samples > 0).then_some((after_ms - before_ms).max(0.0)),
+        kernel_time_samples,
+    }
+}
+
 fn build_server_shared_engine_receipt(
     request_id: &str,
     request: &ChatCompletionRequest,
@@ -957,6 +1103,7 @@ fn build_server_shared_engine_receipt(
     usage: &ChatCompletionUsage,
     generated_text: &str,
     total_ms: u64,
+    qk256_evidence: Option<&ServerQk256Evidence>,
 ) -> ServerSharedEngineReceipt {
     let requested_backend = configured_device.backend_label();
     let selected_backend = selected_backend_label(configured_device, active_model);
@@ -965,12 +1112,30 @@ fn build_server_shared_engine_receipt(
     let fallback_used = matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
         && selected_backend != requested_backend;
     let generated_text_non_empty = !generated_text.trim().is_empty();
-    let server_smoke_response_claimed = generated_text_non_empty
+    let dense_cuda_smoke_claimed = generated_text_non_empty
         && selected_backend == "nvidia-rtx-5070-ti-cuda"
         && !fallback_used
-        && route == "dense_regular_llm_cuda";
+        && route == DENSE_QWEN_ROUTE;
+    let bitnet_qk256_proof_claimed = generated_text_non_empty
+        && selected_backend == "nvidia-rtx-5070-ti-cuda"
+        && !fallback_used
+        && route == BITNET_QK256_ROUTE
+        && qk256_evidence.is_some_and(bitnet_qk256_evidence_is_strict_cuda);
+    let server_smoke_response_claimed = dense_cuda_smoke_claimed || bitnet_qk256_proof_claimed;
     let streaming = request.stream.unwrap_or(false);
     let generation_policy = server_receipt_generation_policy(request);
+    let execution_plan = qk256_evidence.map(|evidence| {
+        server_receipt_qk256_execution_plan(
+            &route,
+            &requested_backend,
+            &selected_backend,
+            &evidence.coverage,
+            fallback_used,
+        )
+    });
+    let execution_coverage =
+        qk256_evidence.map(|evidence| server_receipt_qk256_execution_coverage(&evidence.coverage));
+    let kernel_stats = qk256_evidence.map(|evidence| server_receipt_qk256_kernel_stats(evidence));
 
     ServerSharedEngineReceipt {
         receipt_kind: "server_shared_engine_chat_completion".to_string(),
@@ -1005,6 +1170,9 @@ fn build_server_shared_engine_receipt(
         requested_backend,
         selected_backend,
         selected_route: route,
+        execution_plan,
+        execution_coverage,
+        kernel_stats,
         prompt_template: prompt_template.to_string(),
         tokenizer_authority: "active_model_tokenizer".to_string(),
         prompt_authority: "server_chat_template".to_string(),
@@ -1026,9 +1194,83 @@ fn build_server_shared_engine_receipt(
         server_ready_claimed: false,
         speedup_claim: false,
         full_cuda_residency_claimed: false,
-        dense_regular_llm_cuda_inference_claimed: server_smoke_response_claimed,
-        bitnet_packed_i2s_qk256_proof: false,
+        dense_regular_llm_cuda_inference_claimed: dense_cuda_smoke_claimed,
+        bitnet_packed_i2s_qk256_proof: bitnet_qk256_proof_claimed,
     }
+}
+
+fn bitnet_qk256_evidence_is_strict_cuda(evidence: &ServerQk256Evidence) -> bool {
+    evidence.coverage.bitnet_linear_layers_on_cuda > 0
+        && evidence.coverage.bitnet_linear_layers_cpu_fallback == 0
+        && evidence.coverage.unsupported_ops.is_empty()
+}
+
+fn server_receipt_qk256_execution_plan(
+    route: &str,
+    requested_backend: &str,
+    selected_backend: &str,
+    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    fallback_used: bool,
+) -> ServerSharedEngineExecutionPlan {
+    let bitnet_ready = route == BITNET_QK256_ROUTE
+        && coverage.bitnet_linear_layers_on_cuda > 0
+        && coverage.bitnet_linear_layers_cpu_fallback == 0
+        && coverage.unsupported_ops.is_empty()
+        && !fallback_used;
+    ServerSharedEngineExecutionPlan {
+        planner_version: "cuda-planner-004".to_string(),
+        model_family: "bitnet_b1_58".to_string(),
+        quantization: "i2_s_qk256".to_string(),
+        selected_route: route.to_string(),
+        requested_backend: requested_backend.to_string(),
+        selected_backend: selected_backend.to_string(),
+        runtime_api: "cuda".to_string(),
+        strict_fallback_policy: "reject".to_string(),
+        dense_regular_llm_cuda: false,
+        bitnet_packed_qk256_cuda: bitnet_ready,
+        cuda_bitnet_qk256_ops: coverage.bitnet_linear_layers_on_cuda,
+        cuda_dense_regular_llm_ops: 0,
+        cpu_fallback_ops: coverage.bitnet_linear_layers_cpu_fallback,
+        unsupported_ops: coverage.unsupported_ops.len() as u64,
+        total_ops: coverage.bitnet_linear_layers_total,
+        cuda_ops: coverage.bitnet_linear_layers_on_cuda,
+        mixed_cuda_routes: false,
+        fallback_used,
+        strict_cuda_ready: bitnet_ready,
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    }
+}
+
+fn server_receipt_qk256_execution_coverage(
+    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+) -> ServerSharedEngineExecutionCoverage {
+    ServerSharedEngineExecutionCoverage {
+        execution_claim: coverage.execution_claim.to_string(),
+        bitnet_linear_layers_total: coverage.bitnet_linear_layers_total,
+        bitnet_linear_layers_on_cuda: coverage.bitnet_linear_layers_on_cuda,
+        bitnet_linear_layers_cpu_fallback: coverage.bitnet_linear_layers_cpu_fallback,
+        unsupported_ops: coverage.unsupported_ops.clone(),
+        fallback_used: coverage.bitnet_linear_layers_cpu_fallback > 0,
+    }
+}
+
+fn server_receipt_qk256_kernel_stats(
+    evidence: &ServerQk256Evidence,
+) -> Vec<ServerSharedEngineKernelStats> {
+    vec![ServerSharedEngineKernelStats {
+        kernel_id: "qk256_gemv_cuda".to_string(),
+        invocations: evidence.coverage.bitnet_linear_layers_on_cuda,
+        fallback_invocations: evidence.coverage.bitnet_linear_layers_cpu_fallback,
+        cpu_fallback_invocations: evidence.coverage.bitnet_linear_layers_cpu_fallback,
+        host_to_device_bytes: (evidence.runtime_stats.host_to_device_bytes > 0)
+            .then_some(evidence.runtime_stats.host_to_device_bytes),
+        device_to_host_bytes: (evidence.runtime_stats.device_to_host_bytes > 0)
+            .then_some(evidence.runtime_stats.device_to_host_bytes),
+        kernel_launches: evidence.coverage.bitnet_linear_layers_on_cuda,
+        kernel_time_ms: evidence.runtime_stats.kernel_time_ms,
+        kernel_time_samples: Some(evidence.runtime_stats.kernel_time_samples),
+    }]
 }
 
 fn server_receipt_generation_policy(
@@ -1058,9 +1300,13 @@ fn server_receipt_route(
     if matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
         && is_dense_qwen25_q8_model(request, active_model)
     {
-        "dense_regular_llm_cuda".to_string()
+        DENSE_QWEN_ROUTE.to_string()
+    } else if matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
+        && is_official_bitnet_qk256_model(request, active_model)
+    {
+        BITNET_QK256_ROUTE.to_string()
     } else {
-        "shared_validated_local_inference_engine".to_string()
+        SHARED_ENGINE_ROUTE.to_string()
     }
 }
 
@@ -1069,9 +1315,15 @@ fn server_receipt_model_coverage(
     request: &ChatCompletionRequest,
     active_model: &model_manager::ModelMetadata,
 ) -> Option<ServerReceiptModelCoverage> {
-    if route == "dense_regular_llm_cuda" && is_dense_qwen25_q8_model(request, active_model) {
+    if route == DENSE_QWEN_ROUTE && is_dense_qwen25_q8_model(request, active_model) {
         return Some(ServerReceiptModelCoverage {
             row: "dense_qwen25_05b_q8_cuda",
+            tier: "product_cli_ready",
+        });
+    }
+    if route == BITNET_QK256_ROUTE && is_official_bitnet_qk256_model(request, active_model) {
+        return Some(ServerReceiptModelCoverage {
+            row: "bitnet_official_2b_i2s_qk256",
             tier: "product_cli_ready",
         });
     }
@@ -1088,6 +1340,18 @@ fn is_dense_qwen25_q8_model(
             .model_sha256
             .as_deref()
             .is_some_and(|sha256| sha256.eq_ignore_ascii_case(DENSE_QWEN25_Q8_MODEL_SHA256))
+}
+
+fn is_official_bitnet_qk256_model(
+    request: &ChatCompletionRequest,
+    active_model: &model_manager::ModelMetadata,
+) -> bool {
+    request.model == BITNET_QK256_MODEL_ID
+        && active_model_device_is_cuda(active_model)
+        && active_model
+            .model_sha256
+            .as_deref()
+            .is_some_and(|sha256| sha256.eq_ignore_ascii_case(BITNET_QK256_MODEL_SHA256))
 }
 
 fn active_model_device_is_cuda(active_model: &model_manager::ModelMetadata) -> bool {
@@ -1724,6 +1988,7 @@ mod tests {
             &usage,
             "4",
             25,
+            None,
         );
 
         assert_eq!(receipt.receipt_kind, "server_shared_engine_chat_completion");
@@ -1795,6 +2060,7 @@ mod tests {
             &usage,
             "Working capital is current assets minus current liabilities.",
             25,
+            None,
         );
 
         assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
@@ -1875,6 +2141,7 @@ mod tests {
             &usage,
             "Working capital is current assets minus current liabilities.",
             25,
+            None,
         );
 
         assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
@@ -1928,6 +2195,7 @@ mod tests {
             &usage,
             "Working capital is current assets minus current liabilities.",
             25,
+            None,
         );
 
         assert_eq!(receipt.selected_backend, "Cpu");
@@ -1939,6 +2207,93 @@ mod tests {
         assert!(!receipt.server_ready_claimed);
         assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
         assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+    }
+
+    #[test]
+    fn bitnet_qk256_server_smoke_receipt_records_qk256_claim_boundary() {
+        let request = ChatCompletionRequest {
+            model: "microsoft-bitnet-b1.58-2B-4T-i2s".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "Say OK.".to_string(),
+            }],
+            max_tokens: Some(2),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 14, completion_tokens: 1, total_tokens: 15 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf".to_string(),
+            model_sha256: Some(
+                "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162".to_string(),
+            ),
+            device: "Cuda(0)".to_string(),
+            quantization_type: "I2_S/QK256".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 1132,
+            parameters: 2_000_000_000,
+            context_length: 4096,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+        let evidence = super::ServerQk256Evidence {
+            coverage: bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+                bitnet_linear_layers_total: 420,
+                bitnet_linear_layers_on_cuda: 420,
+                bitnet_linear_layers_cpu_fallback: 0,
+                unsupported_ops: Vec::new(),
+                execution_claim: "cuda_inference_contribution",
+            },
+            runtime_stats: bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+                host_to_device_bytes: 1024,
+                device_to_host_bytes: 2048,
+                kernel_time_ms: Some(12.5),
+                kernel_time_samples: 420,
+            },
+        };
+
+        let receipt = build_server_shared_engine_receipt(
+            "request-bitnet",
+            &request,
+            &metadata,
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            "bitnetcpp-answer",
+            &usage,
+            "OK",
+            83,
+            Some(&evidence),
+        );
+
+        assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.runtime_api, "cuda");
+        assert_eq!(receipt.selected_route, "bitnet_qk256_cuda");
+        assert_eq!(receipt.model_coverage_row.as_deref(), Some("bitnet_official_2b_i2s_qk256"));
+        assert_eq!(receipt.model_coverage_tier.as_deref(), Some("product_cli_ready"));
+        assert!(!receipt.fallback_used);
+        assert!(receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
+        assert!(!receipt.speedup_claim);
+        assert!(!receipt.full_cuda_residency_claimed);
+        assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(receipt.bitnet_packed_i2s_qk256_proof);
+        let plan = receipt.execution_plan.as_ref().expect("execution plan");
+        assert_eq!(plan.selected_route, "bitnet_qk256_cuda");
+        assert!(plan.bitnet_packed_qk256_cuda);
+        assert_eq!(plan.cuda_bitnet_qk256_ops, 420);
+        assert_eq!(plan.cpu_fallback_ops, 0);
+        assert_eq!(plan.cuda_dense_regular_llm_ops, 0);
+        assert!(plan.strict_cuda_ready);
+        let coverage = receipt.execution_coverage.as_ref().expect("execution coverage");
+        assert_eq!(coverage.bitnet_linear_layers_on_cuda, 420);
+        assert_eq!(coverage.bitnet_linear_layers_cpu_fallback, 0);
+        let stats = receipt.kernel_stats.as_ref().expect("kernel stats");
+        assert_eq!(stats[0].kernel_id, "qk256_gemv_cuda");
+        assert_eq!(stats[0].invocations, 420);
+        assert_eq!(stats[0].fallback_invocations, 0);
+        assert_eq!(stats[0].cpu_fallback_invocations, 0);
     }
 
     #[test]
@@ -1987,6 +2342,7 @@ mod tests {
             &usage,
             "Liquidity risk is the chance cash is unavailable when needed.",
             31,
+            None,
         );
 
         assert!(receipt.streaming);
