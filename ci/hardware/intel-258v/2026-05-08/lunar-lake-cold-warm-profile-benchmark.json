@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-17T04:50:00Z",
+  "created_utc": "2026-05-17T05:50:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -51,14 +51,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -116,14 +114,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -170,14 +166,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -233,14 +227,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -310,14 +302,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -364,14 +354,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -427,14 +415,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -505,14 +491,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -560,14 +544,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -623,14 +605,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -701,14 +681,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -756,14 +734,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -819,14 +795,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -895,14 +869,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -962,14 +934,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -978,7 +948,6 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "corpus_v2 profile quality evidence missing",
-            "power telemetry receipt does not provide low_power promotion evidence",
             "route not promoted for profile low_power"
           ]
         },
@@ -1019,14 +988,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -1039,7 +1006,6 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "power telemetry receipt does not provide low_power promotion evidence",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
@@ -1083,14 +1049,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
@@ -1103,7 +1067,6 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "power telemetry receipt does not provide low_power promotion evidence",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
@@ -1112,8 +1075,8 @@
         }
       ],
       "profile_gaps": [
-        "low_power route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power telemetry receipt does not provide low_power promotion evidence; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
-        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power telemetry receipt does not provide low_power promotion evidence; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
+        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
       ]
     },
     {
@@ -1154,14 +1117,12 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "not_recorded_in_committed_receipts",
-            "power_context": "not_recorded_in_committed_receipts",
-            "thermal_context": "not_recorded_in_committed_receipts",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
             "telemetry_gaps": [
-              "memory context is not recorded in the committed Lunar Lake profile receipts",
-              "power context is not recorded in the committed Lunar Lake profile receipts",
-              "thermal context is not recorded in the committed Lunar Lake profile receipts",
-              "low_power route promotion remains blocked until a real power telemetry receipt exists"
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
           "critical_timing_present": true,
