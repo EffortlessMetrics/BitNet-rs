@@ -50,7 +50,42 @@ jobs:
 
       - name: Run ripr check SARIF (advisory)
         run: |
-          ripr check --root . --base "origin/${{ github.base_ref }}" --format sarif > target/ripr/ripr.sarif || true
+          if timeout 25s ripr check --root . --base "origin/${{ github.base_ref }}" --format sarif > target/ripr/ripr.sarif; then
+            echo "ripr SARIF generated"
+          else
+            status=$?
+            echo "ripr SARIF generation timed out or failed with status ${status}; writing advisory fallback."
+            cat > target/ripr/ripr.sarif <<'JSON'
+          {
+            "version": "2.1.0",
+            "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "ripr",
+                    "rules": []
+                  }
+                },
+                "results": [],
+                "invocations": [
+                  {
+                    "executionSuccessful": false,
+                    "toolExecutionNotifications": [
+                      {
+                        "level": "warning",
+                        "message": {
+                          "text": "ripr SARIF generation timed out or failed; JSON and markdown advisory artifacts remain authoritative for this job."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+          JSON
+          fi
 
       - name: Step summary
         if: always()
