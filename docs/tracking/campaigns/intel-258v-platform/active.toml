@@ -4478,8 +4478,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BENCH-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/lunar-lake/LNL258V-BENCH-003-telemetry-context"
+pr = 5280
+head_sha = "06f1bedd46ab2d3db9f15d5d01f04b8b229656a8"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
