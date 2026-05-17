@@ -1,0 +1,25 @@
+timestamp = "2026-05-17T06:18:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-004"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5289
+branch = "codex/lunar-lake/LNL258V-BENCH-004-telemetry-capture"
+head_sha = "bfd1260f93125b2c0bdeb3494f20ae61709174c9"
+summary = "Opened LNL258V-BENCH-004 to capture live memory and power telemetry context for Lunar Lake benchmark evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The PR adds a telemetry-context command that captures live sysinfo memory and OS power context for the current 258V machine.",
+  "Thermal sensor context remains unavailable and is preserved as an explicit telemetry gap.",
+  "No model inference, route promotion, speedup or power-advantage claim, accelerator claim, or BitNet QK256/I2_S behavior change is in scope.",
+]
