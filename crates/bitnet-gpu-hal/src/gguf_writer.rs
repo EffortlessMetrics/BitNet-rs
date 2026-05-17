@@ -1143,12 +1143,12 @@ mod tests {
 
     #[test]
     fn test_metadata_float32() {
-        let entry = MetadataEntry::new("k", MetadataValue::Float32(3.14));
+        let entry = MetadataEntry::new("k", MetadataValue::Float32(3.125));
         let mut buf = Vec::new();
         MetadataWriter::write_entry(&mut buf, &entry).unwrap();
         let parsed = MetadataWriter::read_entry(&mut Cursor::new(&buf)).unwrap();
         if let MetadataValue::Float32(v) = parsed.value {
-            assert!((v - 3.14).abs() < 1e-6);
+            assert!((v - 3.125).abs() < 1e-6);
         } else {
             panic!("wrong type");
         }
@@ -1896,7 +1896,7 @@ mod tests {
             MetadataEntry::new("a", MetadataValue::Uint32(1)),
             MetadataEntry::new("b", MetadataValue::String("hello".into())),
             MetadataEntry::new("c", MetadataValue::Bool(true)),
-            MetadataEntry::new("d", MetadataValue::Float64(2.718)),
+            MetadataEntry::new("d", MetadataValue::Float64(std::f64::consts::E)),
         ];
         let mut buf = Vec::new();
         MetadataWriter::write_all(&mut buf, &entries).unwrap();
@@ -2041,7 +2041,7 @@ mod tests {
                 // Use finite floats to avoid NaN comparison issues
                 (-1e30f32..1e30f32).prop_map(MetadataValue::Float32),
                 any::<bool>().prop_map(MetadataValue::Bool),
-                "[a-zA-Z0-9_]{0,100}".prop_map(|s| MetadataValue::String(s)),
+                "[a-zA-Z0-9_]{0,100}".prop_map(MetadataValue::String),
                 any::<u64>().prop_map(MetadataValue::Uint64),
                 any::<i64>().prop_map(MetadataValue::Int64),
                 (-1e100f64..1e100f64).prop_map(MetadataValue::Float64),

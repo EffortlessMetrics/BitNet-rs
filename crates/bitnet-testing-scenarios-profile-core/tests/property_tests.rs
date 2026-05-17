@@ -140,7 +140,7 @@ proptest! {
 
 #[test]
 fn report_format_variants_are_distinct() {
-    let formats = vec![
+    let formats = [
         ReportFormat::Html,
         ReportFormat::Json,
         ReportFormat::Junit,

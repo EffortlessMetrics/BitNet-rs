@@ -1484,7 +1484,7 @@ mod tests {
     fn test_launcher_set_arg() {
         let mut l = OpenCLKernelLauncher::new("add", 3);
         l.set_arg(0, KernelArg::Int(42)).unwrap();
-        l.set_arg(1, KernelArg::Float(3.14)).unwrap();
+        l.set_arg(1, KernelArg::Float(3.125)).unwrap();
         assert_eq!(l.arg_count(), 2);
     }
 

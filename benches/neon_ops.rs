@@ -7,25 +7,32 @@
 //! On non-aarch64 targets the benchmark group is empty so the file still
 //! compiles without errors.
 
-use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
+#[cfg(target_arch = "aarch64")]
+use criterion::{BatchSize, BenchmarkId};
+use criterion::{Criterion, criterion_group, criterion_main};
+#[cfg(target_arch = "aarch64")]
 use std::hint::black_box;
 
 // ---------------------------------------------------------------------------
 // Helpers: deterministic mock data
 // ---------------------------------------------------------------------------
 
+#[cfg(target_arch = "aarch64")]
 fn make_f32_vec(n: usize) -> Vec<f32> {
     (0..n).map(|i| (i as f32) / (n as f32) - 0.5).collect()
 }
 
+#[cfg(target_arch = "aarch64")]
 fn make_f32_ones(n: usize) -> Vec<f32> {
     vec![1.0f32; n]
 }
 
+#[cfg(target_arch = "aarch64")]
 fn make_f32_zeros(n: usize) -> Vec<f32> {
     vec![0.0f32; n]
 }
 
+#[cfg(target_arch = "aarch64")]
 fn make_f32_matrix(rows: usize, cols: usize) -> Vec<f32> {
     (0..rows * cols).map(|i| ((i % 97) as f32) * 0.01 - 0.5).collect()
 }

@@ -18,7 +18,8 @@ use bitnet_runtime_feature_flags::{
 /// Every publicly accessible field is a bool and individually settable.
 #[test]
 fn every_field_is_independently_settable() {
-    let fields: &[(&str, fn() -> FeatureActivation)] = &[
+    type FieldGetter = (&'static str, fn() -> FeatureActivation);
+    let fields: &[FieldGetter] = &[
         ("cpu", || FeatureActivation { cpu: true, ..Default::default() }),
         ("gpu", || FeatureActivation { gpu: true, ..Default::default() }),
         ("cuda", || FeatureActivation { cuda: true, ..Default::default() }),
@@ -364,7 +365,7 @@ fn feature_activation_copied_produces_same_labels() {
 #[test]
 fn feature_activation_cloned_produces_same_labels() {
     let original = FeatureActivation { quantization: true, fixtures: true, ..Default::default() };
-    let cloned = original.clone();
+    let cloned = original;
     assert_eq!(
         feature_labels_from_activation(original),
         feature_labels_from_activation(cloned),

@@ -1135,14 +1135,14 @@ mod tests {
         let dim = 4;
         let out = pe.encode(&[pos], dim);
         let d = dim as f32;
-        for i in 0..dim {
+        for (i, value) in out.iter().enumerate().take(dim) {
             let dim_pair = (i / 2) as f32;
             let angle = pos as f32 / 10_000_f32.powf(2.0 * dim_pair / d);
             let expected = if i % 2 == 0 { angle.sin() } else { angle.cos() };
             assert!(
-                (out[i] - expected).abs() < 1e-5,
+                (*value - expected).abs() < 1e-5,
                 "dim {i}: got {} expected {expected}",
-                out[i]
+                *value
             );
         }
     }
@@ -1766,7 +1766,7 @@ mod tests {
                 let pe = PositionEmbedding::sinusoidal();
                 let out = pe.encode(&[pos], dim);
                 for &v in &out {
-                    prop_assert!(v >= -1.0 && v <= 1.0,
+                    prop_assert!((-1.0..=1.0).contains(&v),
                         "sinusoidal value {v} out of [-1,1] at pos={pos} dim={dim}");
                 }
             }

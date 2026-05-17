@@ -786,9 +786,7 @@ mod tests {
     fn unpack_block_smoke() {
         // Pattern: BitNet.cpp grouped lanes [0, 1, 2, 3].
         let mut qs = [0u8; QK256_PACKED_BYTES];
-        for b in &mut qs {
-            *b = 0b_00_01_10_11;
-        }
+        qs.fill(0b_00_01_10_11);
         let mut codes = [0u8; QK256_BLOCK];
         unpack_qk256_block(&qs, &mut codes);
 
@@ -1317,7 +1315,7 @@ mod tests {
             weight_scale,
         )?;
 
-        let expected_int_dot = 0 * -127 + 1 * -1 + 2 * 1 + 3 * 127;
+        let expected_int_dot = -1 + 2 + 3 * 127;
         let expected_act_sum = -127 - 1 + 1 + 127;
         let expected = ((expected_int_dot - expected_act_sum) as f32 / 1.0) * weight_scale;
         assert_eq!(expected, 95.5);

@@ -886,6 +886,7 @@ impl Default for ErrorEngine {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(clippy::result_large_err)]
 mod tests {
     use super::*;
 

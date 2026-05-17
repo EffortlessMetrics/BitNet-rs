@@ -422,7 +422,7 @@ fn active_context_clone() {
         ],
         || {
             let ctx = ActiveContext::from_env();
-            let ctx2 = ctx.clone();
+            let ctx2 = ctx;
             assert_eq!(ctx.scenario, ctx2.scenario);
         },
     );

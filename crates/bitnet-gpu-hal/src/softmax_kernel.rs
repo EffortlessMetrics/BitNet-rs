@@ -1305,8 +1305,8 @@ mod tests {
     #[test]
     fn edge_alternating_extreme() {
         let mut input = vec![0.0; 6];
-        for i in 0..6 {
-            input[i] = if i % 2 == 0 { 100.0 } else { -100.0 };
+        for (i, value) in input.iter_mut().enumerate().take(6) {
+            *value = if i % 2 == 0 { 100.0 } else { -100.0 };
         }
         let out = SoftmaxKernel::compute(&input, &default_config());
         assert_sums_to_one(&out, 1e-5);

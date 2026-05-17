@@ -118,7 +118,7 @@ fn hal_error_debug() {
 #[test]
 fn hal_result_ok() {
     let r: HalResult<i32> = Ok(42);
-    assert_eq!(r.unwrap(), 42);
+    assert_eq!(r, Ok(42));
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn memory_type_ne() {
 fn memory_type_clone_copy() {
     let mt = MemoryType::Device;
     let mt2 = mt;
-    let mt3 = mt.clone();
+    let mt3 = mt;
     assert_eq!(mt, mt2);
     assert_eq!(mt, mt3);
 }

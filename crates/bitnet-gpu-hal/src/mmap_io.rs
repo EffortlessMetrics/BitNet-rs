@@ -1143,7 +1143,7 @@ mod tests {
 
     #[test]
     fn slice_f32_access() {
-        let values: Vec<f32> = vec![1.0, 2.5, -3.14];
+        let values: Vec<f32> = vec![1.0, 2.5, -3.125];
         let bytes: Vec<u8> = values.iter().flat_map(|v| v.to_ne_bytes()).collect();
         let f = temp_file(&bytes);
         let mf = MmapFile::open(f.path(), MmapConfig::default()).unwrap();
@@ -1763,7 +1763,7 @@ mod tests {
 
     #[test]
     fn error_source_io() {
-        let inner = io::Error::new(io::ErrorKind::Other, "inner");
+        let inner = io::Error::other("inner");
         let e = MmapError::Io(inner);
         assert!(std::error::Error::source(&e).is_some());
     }

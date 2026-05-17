@@ -1163,6 +1163,7 @@ fn print_tail(output: &Output, lines: usize) {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::{parse_max_rss_mb, receipt_payload, validate_receipt_payload};
     use serde_json::json;

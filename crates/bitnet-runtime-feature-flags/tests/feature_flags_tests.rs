@@ -47,7 +47,7 @@ fn feature_activation_implements_copy() {
 #[test]
 fn feature_activation_clone_is_independent() {
     let original = FeatureActivation { gpu: true, cuda: true, ..Default::default() };
-    let cloned = original.clone();
+    let cloned = original;
     assert_eq!(original.gpu, cloned.gpu);
     assert_eq!(original.cuda, cloned.cuda);
     assert_eq!(original.cpu, cloned.cpu);

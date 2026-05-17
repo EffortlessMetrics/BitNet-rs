@@ -1308,14 +1308,14 @@ mod tests {
 
     #[test]
     fn test_metadata_value_float32() {
-        let v = MetadataValue::Float32(3.14);
+        let v = MetadataValue::Float32(3.125);
         assert_eq!(v.type_name(), "float32");
-        assert!((v.as_f32().unwrap() - 3.14).abs() < 1e-5);
+        assert!((v.as_f32().unwrap() - 3.125).abs() < 1e-5);
     }
 
     #[test]
     fn test_metadata_value_float64() {
-        let v = MetadataValue::Float64(2.718281828);
+        let v = MetadataValue::Float64(std::f64::consts::E);
         assert_eq!(v.type_name(), "float64");
     }
 
@@ -1450,7 +1450,7 @@ mod tests {
         let mut reader = GGUFMetadataReader::new();
         reader.insert("a", MetadataValue::UInt32(1));
         reader.insert("b", MetadataValue::String("hello".into()));
-        reader.insert("c", MetadataValue::Float32(3.14));
+        reader.insert("c", MetadataValue::Float32(3.125));
         assert_eq!(reader.len(), 3);
     }
 

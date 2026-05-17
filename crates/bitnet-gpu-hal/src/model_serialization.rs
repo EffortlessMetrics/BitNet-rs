@@ -1356,8 +1356,7 @@ mod tests {
 
     #[test]
     fn test_header_bad_magic() {
-        let mut h = ModelHeader::default();
-        h.magic = *b"XXXX";
+        let h = ModelHeader { magic: *b"XXXX", ..Default::default() };
         let bytes = serde_json::to_vec(&h).unwrap();
         assert!(ModelHeader::from_bytes(&bytes).is_err());
     }

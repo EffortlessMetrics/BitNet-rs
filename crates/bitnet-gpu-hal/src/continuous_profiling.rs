@@ -1299,8 +1299,7 @@ mod tests {
 
     #[test]
     fn config_effective_rate_clamping() {
-        let mut cfg = ProfilerConfig::default();
-        cfg.sampling_rate_hz = 0;
+        let mut cfg = ProfilerConfig { sampling_rate_hz: 0, ..Default::default() };
         assert_eq!(cfg.effective_rate(), 1);
         cfg.sampling_rate_hz = 999_999;
         assert_eq!(cfg.effective_rate(), 10_000);
@@ -1310,8 +1309,7 @@ mod tests {
 
     #[test]
     fn config_sample_interval() {
-        let mut cfg = ProfilerConfig::default();
-        cfg.sampling_rate_hz = 1000;
+        let cfg = ProfilerConfig { sampling_rate_hz: 1000, ..Default::default() };
         assert_eq!(cfg.sample_interval(), Duration::from_millis(1));
     }
 

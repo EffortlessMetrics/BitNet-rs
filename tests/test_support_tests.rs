@@ -333,9 +333,7 @@ fn test_ac2_build_time_constant_detection() {
     let _llama: bool = HAS_LLAMA;
     // In a test environment without C++ backends, both should be false.
     // (Unless CROSSVAL_HAS_BITNET/LLAMA was set at build time.)
-    // Just verify the constants compile and are boolean.
-    assert!(HAS_BITNET == true || HAS_BITNET == false);
-    assert!(HAS_LLAMA == true || HAS_LLAMA == false);
+    // The typed bindings above verify the constants compile and are boolean.
 }
 
 /// Tests spec: docs/specs/test-infrastructure-conditional-execution.md#ac2

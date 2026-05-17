@@ -3,7 +3,8 @@
 //! Measures throughput of template detection, application, and multi-turn
 //! chat rendering across representative template families.
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
 use bitnet_prompt_templates_core::{ChatRole, ChatTurn, TemplateType};
 

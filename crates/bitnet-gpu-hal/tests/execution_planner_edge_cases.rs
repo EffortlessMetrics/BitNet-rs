@@ -338,7 +338,7 @@ fn cost_model_estimate() {
 #[test]
 fn cost_model_total_cost() {
     let cm = CostModel::default();
-    let nodes = vec![
+    let nodes = [
         ExecutionNode::new(0, "a", OpKind::MatMul).with_flops(100),
         ExecutionNode::new(1, "b", OpKind::Activation).with_flops(50),
     ];

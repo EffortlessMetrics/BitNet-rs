@@ -223,7 +223,7 @@ fn kv_cache_multiple_appends() {
 
     for i in 0..5 {
         let k = vec![i as f32; stride];
-        let v = vec![(i as f32) * -1.0; stride];
+        let v = vec![-(i as f32); stride];
         cache.append(0, &k, &v);
     }
     assert_eq!(cache.seq_len(0), 5);

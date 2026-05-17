@@ -1211,6 +1211,70 @@ fn create_activation_matrix(tokens: usize, cols: usize) -> Vec<f32> {
         .collect()
 }
 
+fn timestamp_label() -> String {
+    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+}
+
+fn available_threads() -> usize {
+    std::thread::available_parallelism().map_or(1, usize::from)
+}
+
+fn cpu_model_label() -> String {
+    env::var("PROCESSOR_IDENTIFIER")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .or(proc_cpuinfo_model_label())
+        .unwrap_or_else(|| env::consts::ARCH.to_string())
+}
+
+fn proc_cpuinfo_model_label() -> Option<String> {
+    #[cfg(not(windows))]
+    {
+        fs::read_to_string("/proc/cpuinfo").ok().and_then(|text| {
+            text.lines().find_map(|line| {
+                line.strip_prefix("model name").and_then(|rest| {
+                    rest.split_once(':').map(|(_, value)| value.trim().to_string())
+                })
+            })
+        })
+    }
+    #[cfg(windows)]
+    {
+        None
+    }
+}
+
+fn cpu_features() -> Vec<&'static str> {
+    let mut features = Vec::new();
+    for feature in ["sse2", "avx", "avx2", "fma", "avx512f"] {
+        if cpu_has_feature(feature) {
+            features.push(feature);
+        }
+    }
+    if features.is_empty() {
+        features.push(env::consts::ARCH);
+    }
+    features
+}
+
+fn cpu_has_feature(feature: &str) -> bool {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        match feature {
+            "sse2" => std::arch::is_x86_feature_detected!("sse2"),
+            "avx" => std::arch::is_x86_feature_detected!("avx"),
+            "avx2" => std::arch::is_x86_feature_detected!("avx2"),
+            "fma" => std::arch::is_x86_feature_detected!("fma"),
+            "avx512f" => std::arch::is_x86_feature_detected!("avx512f"),
+            _ => false,
+        }
+    }
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    {
+        let _ = feature;
+        false
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1280,70 +1344,5 @@ mod tests {
             run["operation"] == "gemm" && run["candidate"]["thread_partition"] == "tokens"
         }));
         Ok(())
-    }
-}
-
-fn timestamp_label() -> String {
-    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
-}
-
-fn available_threads() -> usize {
-    std::thread::available_parallelism().map_or(1, usize::from)
-}
-
-fn cpu_model_label() -> String {
-    env::var("PROCESSOR_IDENTIFIER")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .or(proc_cpuinfo_model_label())
-        .unwrap_or_else(|| env::consts::ARCH.to_string())
-}
-
-fn proc_cpuinfo_model_label() -> Option<String> {
-    #[cfg(not(windows))]
-    {
-        fs::read_to_string("/proc/cpuinfo").ok().and_then(|text| {
-            text.lines().find_map(|line| {
-                line.strip_prefix("model name").and_then(|rest| {
-                    rest.split_once(':').map(|(_, value)| value.trim().to_string())
-                })
-            })
-        })
-    }
-    #[cfg(windows)]
-    {
-        None
-    }
-}
-
-fn cpu_features() -> Vec<&'static str> {
-    let mut features = Vec::new();
-    for feature in ["sse2", "avx", "avx2", "fma", "avx512f"] {
-        if cpu_has_feature(feature) {
-            features.push(feature);
-        }
-    }
-    if features.is_empty() {
-        features.push(env::consts::ARCH);
-    }
-    features
-}
-
-fn cpu_has_feature(feature: &str) -> bool {
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    {
-        match feature {
-            "sse2" => std::arch::is_x86_feature_detected!("sse2"),
-            "avx" => std::arch::is_x86_feature_detected!("avx"),
-            "avx2" => std::arch::is_x86_feature_detected!("avx2"),
-            "fma" => std::arch::is_x86_feature_detected!("fma"),
-            "avx512f" => std::arch::is_x86_feature_detected!("avx512f"),
-            _ => false,
-        }
-    }
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-    {
-        let _ = feature;
-        false
     }
 }

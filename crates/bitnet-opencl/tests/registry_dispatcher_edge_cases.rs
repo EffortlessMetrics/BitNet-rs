@@ -128,7 +128,7 @@ fn operation_eq() {
 fn operation_copy_clone() {
     let op = Operation::Attention;
     let op2 = op; // Copy
-    let op3 = op.clone();
+    let op3 = op;
     assert_eq!(op2, op3);
 }
 
