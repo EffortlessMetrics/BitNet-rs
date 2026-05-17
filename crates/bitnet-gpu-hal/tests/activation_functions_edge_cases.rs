@@ -351,7 +351,7 @@ fn softplus_positive() {
 fn softplus_zero() {
     let sp = SoftplusActivation;
     let out = sp.forward(&[0.0]);
-    assert!((out[0] - 0.6931).abs() < 0.01);
+    assert!((out[0] - std::f32::consts::LN_2).abs() < 0.01);
 }
 
 #[test]

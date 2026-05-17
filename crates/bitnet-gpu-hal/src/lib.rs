@@ -26,6 +26,22 @@
 #![allow(clippy::needless_pass_by_value)]
 #![allow(clippy::trivially_copy_pass_by_ref)]
 #![allow(clippy::manual_div_ceil)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::approx_constant,
+        clippy::default_constructed_unit_structs,
+        clippy::erasing_op,
+        clippy::field_reassign_with_default,
+        clippy::identity_op,
+        clippy::io_other_error,
+        clippy::manual_range_contains,
+        clippy::needless_range_loop,
+        clippy::redundant_closure,
+        clippy::result_large_err,
+        clippy::useless_vec
+    )
+)]
 
 // === GPU Backend Implementations ===
 pub mod cuda_backend;

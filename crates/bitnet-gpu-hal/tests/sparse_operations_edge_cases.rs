@@ -12,7 +12,7 @@ use std::collections::HashSet;
 
 #[test]
 fn sparse_format_all_variants() {
-    let variants = vec![
+    let variants = [
         SparseFormat::CSR,
         SparseFormat::CSC,
         SparseFormat::COO,
@@ -206,7 +206,7 @@ fn sparse_matrix_clone() {
 
 #[test]
 fn sparse_matmul_default() {
-    let mm = SparseMatMul::default();
+    let mm = SparseMatMul;
     let _ = format!("{:?}", mm);
 }
 
@@ -264,7 +264,7 @@ fn dense_matmul_identity() {
 
 #[test]
 fn sparse_softmax_default() {
-    let sm = SparseSoftmax::default();
+    let sm = SparseSoftmax;
     let _ = format!("{:?}", sm);
 }
 
@@ -435,7 +435,7 @@ fn block_sparse_clone_debug() {
 
 #[test]
 fn sparse_converter_default() {
-    let conv = SparseConverter::default();
+    let conv = SparseConverter;
     let _ = format!("{:?}", conv);
 }
 
@@ -491,7 +491,7 @@ fn sparse_converter_roundtrip_csr_coo_csr() {
 
 #[test]
 fn sparse_analyzer_default() {
-    let a = SparseAnalyzer::default();
+    let a = SparseAnalyzer;
     let _ = format!("{:?}", a);
 }
 

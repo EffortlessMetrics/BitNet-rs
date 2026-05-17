@@ -161,8 +161,8 @@ fn distribution_stats_normal_display() {
     let stats = DistributionStats {
         mean: 0.001_234,
         std_dev: 0.998_765,
-        min: -3.14,
-        max: 3.14,
+        min: -3.125,
+        max: 3.125,
         nan_count: 0,
         inf_count: 0,
         element_count: 2048,

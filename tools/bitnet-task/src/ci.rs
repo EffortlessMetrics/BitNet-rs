@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_test_module)]
+
 use super::*;
 
 pub(crate) fn cmd_quality_gate(root: &Path) -> Result<()> {

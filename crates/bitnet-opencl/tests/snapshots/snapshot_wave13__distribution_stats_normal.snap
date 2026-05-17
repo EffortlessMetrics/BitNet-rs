@@ -2,4 +2,4 @@
 source: crates/bitnet-opencl/tests/snapshot_wave13.rs
 expression: stats.to_string()
 ---
-n=2048, mean=0.001234, std=0.998765, min=-3.140000, max=3.140000
+n=2048, mean=0.001234, std=0.998765, min=-3.125000, max=3.125000

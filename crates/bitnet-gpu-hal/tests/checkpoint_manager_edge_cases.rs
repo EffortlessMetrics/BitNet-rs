@@ -18,7 +18,7 @@ fn compression_mode_default_is_none() {
 
 #[test]
 fn compression_mode_all_variants() {
-    let variants = vec![
+    let variants = [
         CompressionMode::None,
         CompressionMode::Zstd,
         CompressionMode::Lz4,
@@ -96,8 +96,7 @@ fn checkpoint_error_from_io() {
 
 #[test]
 fn trigger_reason_all_variants() {
-    let variants =
-        vec![TriggerReason::TokenCount, TriggerReason::TimeElapsed, TriggerReason::Explicit];
+    let variants = [TriggerReason::TokenCount, TriggerReason::TimeElapsed, TriggerReason::Explicit];
     assert_eq!(variants.len(), 3);
 }
 
@@ -501,8 +500,7 @@ fn manager_delete() {
 
 #[test]
 fn manager_prune() {
-    let mut config = CheckpointConfig::default();
-    config.max_checkpoints = 2;
+    let config = CheckpointConfig { max_checkpoints: 2, ..Default::default() };
     let storage = MemoryCheckpointStorage::default();
     let mut mgr = CheckpointManager::new(config, storage).unwrap();
 
@@ -551,8 +549,7 @@ fn manager_scheduler_accessor() {
 
 #[test]
 fn manager_config_accessor() {
-    let mut config = CheckpointConfig::default();
-    config.compression = CompressionMode::Zstd;
+    let config = CheckpointConfig { compression: CompressionMode::Zstd, ..Default::default() };
     let storage = MemoryCheckpointStorage::default();
     let mgr = CheckpointManager::new(config, storage).unwrap();
     assert_eq!(mgr.config().compression, CompressionMode::Zstd);

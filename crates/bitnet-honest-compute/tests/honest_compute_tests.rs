@@ -212,7 +212,7 @@ fn validate_kernel_ids_exactly_max_count_passes() {
 
 #[test]
 fn validate_kernel_ids_one_over_max_count_fails() {
-    let kernels = std::iter::repeat("i2s_kernel").take(MAX_KERNEL_COUNT + 1);
+    let kernels = std::iter::repeat_n("i2s_kernel", MAX_KERNEL_COUNT + 1);
     let err = validate_kernel_ids(kernels).unwrap_err();
     assert_eq!(err, KernelValidationError::KernelCountExceedsLimit { count: MAX_KERNEL_COUNT + 1 });
 }

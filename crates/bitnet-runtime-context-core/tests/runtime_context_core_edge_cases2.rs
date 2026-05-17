@@ -11,6 +11,10 @@
 use bitnet_runtime_context_core::{ActiveContext, ExecutionEnvironment, TestingScenario};
 use serial_test::serial;
 
+fn clone_value<T: Clone>(value: &T) -> T {
+    value.clone()
+}
+
 // ---------------------------------------------------------------------------
 // from_env — no env vars (clean slate)
 // ---------------------------------------------------------------------------
@@ -422,7 +426,7 @@ fn active_context_clone() {
         ],
         || {
             let ctx = ActiveContext::from_env();
-            let ctx2 = ctx.clone();
+            let ctx2 = clone_value(&ctx);
             assert_eq!(ctx.scenario, ctx2.scenario);
         },
     );
