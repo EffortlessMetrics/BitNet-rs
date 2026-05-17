@@ -12215,6 +12215,10 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_norm_f64_selected_k_rope_scalar_arithmetic_frontier(
             &selected_k_rope_producer_storage_frontier,
         );
+    let selected_k_rope_direct_expression_frontier =
+        attention_norm_f64_selected_k_rope_direct_expression_frontier(
+            &selected_k_rope_scalar_arithmetic_frontier,
+        );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12308,6 +12312,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "selected_k_rope_capture_policy_frontier": selected_k_rope_capture_policy_frontier,
         "selected_k_rope_producer_storage_frontier": selected_k_rope_producer_storage_frontier,
         "selected_k_rope_scalar_arithmetic_frontier": selected_k_rope_scalar_arithmetic_frontier,
+        "selected_k_rope_direct_expression_frontier": selected_k_rope_direct_expression_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -14097,6 +14102,149 @@ fn attention_norm_f64_selected_k_rope_scalar_arithmetic_frontier(
         "arithmetic_replay_matches_storage": arithmetic_replay_matches_storage,
         "before_store_matches_storage": before_matches_storage,
         "storage_matches_direct": storage_matches_direct,
+        "scalar_record": scalar_record.cloned().unwrap_or(Value::Null),
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn attention_norm_f64_selected_k_rope_direct_expression_frontier(
+    selected_k_rope_scalar_arithmetic_frontier: &Value,
+) -> Value {
+    let scalar_classification = selected_k_rope_scalar_arithmetic_frontier
+        .pointer("/classification")
+        .and_then(Value::as_str);
+    let scalar_record = selected_k_rope_scalar_arithmetic_frontier
+        .pointer("/scalar_record")
+        .filter(|record| !record.is_null());
+    let component =
+        scalar_record.and_then(|record| record.pointer("/component")).and_then(Value::as_str);
+    let term_split_bits = scalar_record
+        .and_then(|record| value_u64(record, "/term_split_replay_bits_u32"))
+        .or_else(|| {
+            scalar_record.and_then(|record| value_u64(record, "/arithmetic_replay_bits_u32"))
+        })
+        .or_else(|| {
+            value_u64(selected_k_rope_scalar_arithmetic_frontier, "/arithmetic_replay_bits_u32")
+        });
+    let direct_expression_bits = scalar_record
+        .and_then(|record| value_u64(record, "/direct_expression_bits_u32"))
+        .or_else(|| scalar_record.and_then(|record| value_u64(record, "/before_store_bits_u32")))
+        .or_else(|| {
+            value_u64(selected_k_rope_scalar_arithmetic_frontier, "/producer_before_store_bits_u32")
+        });
+    let fma_x0_product_contracted_bits =
+        scalar_record.and_then(|record| value_u64(record, "/fma_x0_product_contracted_bits_u32"));
+    let fma_x1_product_contracted_bits =
+        scalar_record.and_then(|record| value_u64(record, "/fma_x1_product_contracted_bits_u32"));
+    let storage_bits =
+        value_u64(selected_k_rope_scalar_arithmetic_frontier, "/storage_source_bits_u32");
+    let active_frontier = matches!(
+        scalar_classification,
+        Some("selected_k_rope_scalar_term_split_replay_differs_from_before_store")
+            | Some("selected_k_rope_scalar_arithmetic_replay_pins_midpoint")
+    );
+    let direct_matches_term_split =
+        direct_expression_bits.zip(term_split_bits).is_some_and(|(left, right)| left == right);
+    let direct_matches_x0_product_contracted = direct_expression_bits
+        .zip(fma_x0_product_contracted_bits)
+        .is_some_and(|(left, right)| left == right);
+    let direct_matches_x1_product_contracted = direct_expression_bits
+        .zip(fma_x1_product_contracted_bits)
+        .is_some_and(|(left, right)| left == right);
+    let direct_matches_storage =
+        direct_expression_bits.zip(storage_bits).is_some_and(|(left, right)| left == right);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !active_frontier {
+        blocked_reasons.push("selected_k_rope_scalar_arithmetic_frontier_not_active".to_string());
+    }
+    if scalar_record.is_none() {
+        blocked_reasons.push("selected_k_rope_scalar_record_missing".to_string());
+    }
+    if component.is_none() {
+        blocked_reasons.push("selected_k_rope_scalar_component_missing".to_string());
+    }
+    if term_split_bits.is_none() {
+        blocked_reasons.push("selected_k_rope_term_split_replay_bits_missing".to_string());
+    }
+    if direct_expression_bits.is_none() {
+        blocked_reasons.push("selected_k_rope_direct_expression_bits_missing".to_string());
+    }
+    if fma_x0_product_contracted_bits.is_none() {
+        blocked_reasons.push("selected_k_rope_fma_x0_product_contracted_bits_missing".to_string());
+    }
+    if fma_x1_product_contracted_bits.is_none() {
+        blocked_reasons.push("selected_k_rope_fma_x1_product_contracted_bits_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if !active_frontier {
+        "selected_k_rope_direct_expression_not_active_frontier"
+    } else if scalar_record.is_none()
+        || component.is_none()
+        || term_split_bits.is_none()
+        || direct_expression_bits.is_none()
+        || fma_x0_product_contracted_bits.is_none()
+        || fma_x1_product_contracted_bits.is_none()
+    {
+        "selected_k_rope_direct_expression_inputs_missing"
+    } else if direct_matches_term_split {
+        "selected_k_rope_direct_expression_matches_term_split"
+    } else if direct_matches_x0_product_contracted {
+        "selected_k_rope_direct_expression_matches_x0_product_contracted"
+    } else if direct_matches_x1_product_contracted {
+        "selected_k_rope_direct_expression_matches_x1_product_contracted"
+    } else {
+        "selected_k_rope_direct_expression_contraction_unpinned"
+    };
+
+    let next_diagnostic = match classification {
+        "selected_k_rope_direct_expression_matches_term_split" => {
+            "the selected reference ROPE direct expression matches term-split replay; inspect scalar input/trig source drift before runtime math changes"
+        }
+        "selected_k_rope_direct_expression_matches_x0_product_contracted" => {
+            "the selected reference ROPE direct expression matches x0-product contraction; compare Rust ROPE contraction policy before runtime math changes"
+        }
+        "selected_k_rope_direct_expression_matches_x1_product_contracted" => {
+            "the selected reference ROPE direct expression matches x1-product contraction; compare Rust ROPE contraction policy before runtime math changes"
+        }
+        "selected_k_rope_direct_expression_contraction_unpinned" => {
+            "extend the selected K ROPE scalar probe with additional expression variants before changing runtime math"
+        }
+        "selected_k_rope_direct_expression_inputs_missing" => {
+            "rerun the selected K scalar probe with term-split, direct-expression, and contracted-expression bit fields"
+        }
+        "selected_k_rope_direct_expression_not_active_frontier" => {
+            "pin the selected K scalar arithmetic frontier before interpreting direct-expression contraction policy"
+        }
+        _ => {
+            "keep selected K direct-expression policy diagnostic-only until scalar bits are pinned"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected K ROPE direct-expression frontier is diagnostic-only evidence for deciding whether the reference scalar midpoint comes from term-split replay, a contracted product form, or another expression policy; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "scalar_arithmetic_classification": scalar_classification,
+        "component": component,
+        "term_split_replay_bits_u32": term_split_bits,
+        "term_split_replay_bits_hex": term_split_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "direct_expression_bits_u32": direct_expression_bits,
+        "direct_expression_bits_hex": direct_expression_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "fma_x0_product_contracted_bits_u32": fma_x0_product_contracted_bits,
+        "fma_x0_product_contracted_bits_hex": fma_x0_product_contracted_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "fma_x1_product_contracted_bits_u32": fma_x1_product_contracted_bits,
+        "fma_x1_product_contracted_bits_hex": fma_x1_product_contracted_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "storage_source_bits_u32": storage_bits,
+        "storage_source_bits_hex": storage_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "direct_expression_matches_term_split": direct_matches_term_split,
+        "direct_expression_matches_x0_product_contracted": direct_matches_x0_product_contracted,
+        "direct_expression_matches_x1_product_contracted": direct_matches_x1_product_contracted,
+        "direct_expression_matches_storage": direct_matches_storage,
         "scalar_record": scalar_record.cloned().unwrap_or(Value::Null),
         "blocked_reasons": blocked_reasons,
         "next_diagnostic": next_diagnostic,
@@ -32831,7 +32979,11 @@ mod tests {
         assert!(patch.contains("cos_theta_bits_u32"));
         assert!(patch.contains("term0_bits_u32"));
         assert!(patch.contains("term1_bits_u32"));
+        assert!(patch.contains("term_split_replay_bits_u32"));
         assert!(patch.contains("arithmetic_replay_bits_u32"));
+        assert!(patch.contains("fma_x0_product_contracted_bits_u32"));
+        assert!(patch.contains("fma_x1_product_contracted_bits_u32"));
+        assert!(patch.contains("direct_expression_bits_u32"));
         assert!(patch.contains("before_store_bits_u32"));
         assert!(patch.contains("after_store_bits_u32"));
         assert!(patch.contains("ggml_compute_forward_rope_f32"));
@@ -42767,6 +42919,183 @@ mod tests {
             frontier.pointer("/arithmetic_replay_matches_before_store"),
             Some(&json!(false))
         );
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_k_rope_direct_expression_frontier_reports_term_split_match() {
+        let scalar_frontier = json!({
+            "classification": "selected_k_rope_scalar_arithmetic_replay_pins_midpoint",
+            "producer_before_store_bits_u32": 3229921280u32,
+            "storage_source_bits_u32": 3229921280u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "component": "lower_x0_cos_minus_x1_sin",
+                "term_split_replay_bits_u32": 3229921280u32,
+                "arithmetic_replay_bits_u32": 3229921280u32,
+                "fma_x0_product_contracted_bits_u32": 3229921279u32,
+                "fma_x1_product_contracted_bits_u32": 3229921278u32,
+                "direct_expression_bits_u32": 3229921280u32,
+                "before_store_bits_u32": 3229921280u32,
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_rope_direct_expression_frontier(&scalar_frontier);
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_rope_direct_expression_matches_term_split"))
+        );
+        assert_eq!(frontier.pointer("/term_split_replay_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/direct_expression_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/direct_expression_matches_term_split"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/direct_expression_matches_storage"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_k_rope_direct_expression_frontier_reports_x0_contracted_match() {
+        let scalar_frontier = json!({
+            "classification": "selected_k_rope_scalar_term_split_replay_differs_from_before_store",
+            "producer_before_store_bits_u32": 3229921280u32,
+            "storage_source_bits_u32": 3229921280u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "component": "lower_x0_cos_minus_x1_sin",
+                "term_split_replay_bits_u32": 3229921279u32,
+                "arithmetic_replay_bits_u32": 3229921279u32,
+                "fma_x0_product_contracted_bits_u32": 3229921280u32,
+                "fma_x1_product_contracted_bits_u32": 3229921278u32,
+                "direct_expression_bits_u32": 3229921280u32,
+                "before_store_bits_u32": 3229921280u32,
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_rope_direct_expression_frontier(&scalar_frontier);
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_rope_direct_expression_matches_x0_product_contracted"))
+        );
+        assert_eq!(frontier.pointer("/term_split_replay_bits_hex"), Some(&json!("0xc084afff")));
+        assert_eq!(
+            frontier.pointer("/fma_x0_product_contracted_bits_hex"),
+            Some(&json!("0xc084b000"))
+        );
+        assert_eq!(
+            frontier.pointer("/direct_expression_matches_x0_product_contracted"),
+            Some(&json!(true))
+        );
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_k_rope_direct_expression_frontier_reports_x1_contracted_match() {
+        let scalar_frontier = json!({
+            "classification": "selected_k_rope_scalar_term_split_replay_differs_from_before_store",
+            "producer_before_store_bits_u32": 3229921280u32,
+            "storage_source_bits_u32": 3229921280u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "component": "lower_x0_cos_minus_x1_sin",
+                "term_split_replay_bits_u32": 3229921279u32,
+                "arithmetic_replay_bits_u32": 3229921279u32,
+                "fma_x0_product_contracted_bits_u32": 3229921278u32,
+                "fma_x1_product_contracted_bits_u32": 3229921280u32,
+                "direct_expression_bits_u32": 3229921280u32,
+                "before_store_bits_u32": 3229921280u32,
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_rope_direct_expression_frontier(&scalar_frontier);
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_rope_direct_expression_matches_x1_product_contracted"))
+        );
+        assert_eq!(
+            frontier.pointer("/fma_x1_product_contracted_bits_hex"),
+            Some(&json!("0xc084b000"))
+        );
+        assert_eq!(
+            frontier.pointer("/direct_expression_matches_x1_product_contracted"),
+            Some(&json!(true))
+        );
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_k_rope_direct_expression_frontier_reports_unpinned_contraction() {
+        let scalar_frontier = json!({
+            "classification": "selected_k_rope_scalar_term_split_replay_differs_from_before_store",
+            "producer_before_store_bits_u32": 3229921280u32,
+            "storage_source_bits_u32": 3229921280u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "component": "lower_x0_cos_minus_x1_sin",
+                "term_split_replay_bits_u32": 3229921279u32,
+                "fma_x0_product_contracted_bits_u32": 3229921278u32,
+                "fma_x1_product_contracted_bits_u32": 3229921277u32,
+                "direct_expression_bits_u32": 3229921280u32,
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_rope_direct_expression_frontier(&scalar_frontier);
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_rope_direct_expression_contraction_unpinned"))
+        );
+        assert_eq!(frontier.pointer("/direct_expression_matches_term_split"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/direct_expression_matches_x0_product_contracted"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            frontier.pointer("/direct_expression_matches_x1_product_contracted"),
+            Some(&json!(false))
+        );
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_k_rope_direct_expression_frontier_blocks_missing_inputs() {
+        let scalar_frontier = json!({
+            "classification": "selected_k_rope_scalar_term_split_replay_differs_from_before_store",
+            "producer_before_store_bits_u32": 3229921280u32,
+            "scalar_record": {
+                "stage": "kcur_rope_scalar_probe",
+                "tensor_name": "Kcur-0",
+                "component": "lower_x0_cos_minus_x1_sin",
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_rope_direct_expression_frontier(&scalar_frontier);
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_rope_direct_expression_inputs_missing"))
+        );
+        assert!(frontier.pointer("/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| {
+                reasons.contains(&json!("selected_k_rope_term_split_replay_bits_missing"))
+                    && reasons
+                        .contains(&json!("selected_k_rope_fma_x0_product_contracted_bits_missing"))
+                    && reasons
+                        .contains(&json!("selected_k_rope_fma_x1_product_contracted_bits_missing"))
+            }
+        ));
         assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
