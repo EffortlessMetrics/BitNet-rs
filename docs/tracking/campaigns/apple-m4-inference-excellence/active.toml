@@ -632,7 +632,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-001-profile-contract"
 stackable = false
 review_mode = "codex_premerge"
@@ -640,6 +640,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
 pr = 5288
+merge_sha = "cc0400a3fddb5af5bbca18b6bf8abdae131ffe89"
 acceptance = "Ensure the M4 benchmark profile contract records cold load, tokenizer load, prompt tokenization, prefill/input tokens per second, TTFT, output/decode tokens per second, sampling overhead, total wall time, peak memory, and memory drift for the supported profile set."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_benchmark -- --nocapture",

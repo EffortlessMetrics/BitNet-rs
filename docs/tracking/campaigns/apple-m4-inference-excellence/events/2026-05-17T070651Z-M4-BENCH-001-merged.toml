@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T07:06:51Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5288
+merge_sha = "cc0400a3fddb5af5bbca18b6bf8abdae131ffe89"
+
+notes = [
+  "Merged PR #5288, tightening the apple_m4_slm_benchmark_v2 receipt contract to schema/contract version 1.1.0 with explicit timing, throughput, memory, aggregate speed, sampling overhead, and supported-profile contract arrays.",
+  "The receipt validator remains backward-compatible with legacy 1.0.0 benchmark receipts while requiring sampling overhead and exact profile-contract metadata for new 1.1.0 reports.",
+  "M4-BENCH-001 is tracker-closed as benchmark receipt contract work only; no fresh runtime benchmark, new speed or memory result, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim was made.",
+]
