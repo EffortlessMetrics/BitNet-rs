@@ -230,6 +230,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
         phase_comparison: PathBuf,
 
+        /// Active answer corpus v2 fixture used to verify corpus receipt case alignment.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ANSWER_CORPUS_V2)]
+        answer_corpus_v2: Option<PathBuf>,
+
         /// Dense Qwen CPU corpus-v2 execution receipt to classify promoted CPU profile quality.
         /// Relative paths are resolved under artifact-root.
         #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
@@ -958,6 +963,8 @@ pub struct LunarLakeRouteProfileComparison {
     pub artifact_root: String,
     pub promotion_ledger: String,
     pub phase_comparison_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_corpus_v2_fixture: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cpu_corpus_v2_receipt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1842,6 +1849,7 @@ impl LunarLakeCommand {
                 artifact_root,
                 promotion_ledger,
                 phase_comparison,
+                answer_corpus_v2,
                 cpu_corpus_v2,
                 openvino_corpus_v2,
                 telemetry_context,
@@ -1860,6 +1868,7 @@ impl LunarLakeCommand {
                     artifact_root,
                     promotion_ledger,
                     phase_comparison,
+                    answer_corpus_v2.as_deref(),
                     cpu_corpus_v2.as_deref(),
                     openvino_corpus_v2.as_deref(),
                     telemetry_context.as_deref(),
@@ -3316,6 +3325,7 @@ pub fn build_route_profile_comparison_with_created_utc(
         None,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -3325,6 +3335,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     root: &Path,
     promotion_ledger: &Path,
     phase_comparison: &Path,
+    answer_corpus_v2: Option<&Path>,
     cpu_corpus_v2: Option<&Path>,
     openvino_corpus_v2: Option<&Path>,
     telemetry_context: Option<&Path>,
@@ -3334,6 +3345,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
         root,
         promotion_ledger,
         phase_comparison,
+        answer_corpus_v2,
         cpu_corpus_v2,
         openvino_corpus_v2,
         telemetry_context,
@@ -3348,6 +3360,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
     root: &Path,
     promotion_ledger: &Path,
     phase_comparison: &Path,
+    answer_corpus_v2: Option<&Path>,
     cpu_corpus_v2: Option<&Path>,
     openvino_corpus_v2: Option<&Path>,
     telemetry_context: Option<&Path>,
@@ -3363,6 +3376,8 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
     let quality_index = load_profile_quality_index(root, cpu_corpus_v2, openvino_corpus_v2)?;
 
     let mut gaps = Vec::new();
+    let corpus_alignment =
+        load_corpus_case_alignment_index(root, answer_corpus_v2, &quality_index, &mut gaps)?;
     let telemetry_context = load_benchmark_telemetry_context(root, telemetry_context, &mut gaps)?;
     let route_diagnostics = load_route_diagnostics_index(
         root,
@@ -3397,6 +3412,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
                 &ledger,
                 &phase_comparison_json,
                 &quality_index,
+                &corpus_alignment,
                 telemetry_context.as_ref(),
                 &route_diagnostics,
             )
@@ -3437,6 +3453,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
         artifact_root: path_string(root),
         promotion_ledger: path_string(&promotion_ledger_path),
         phase_comparison_receipt: path_string(&phase_comparison_path),
+        answer_corpus_v2_fixture: corpus_alignment.fixture_source.clone(),
         cpu_corpus_v2_receipt: quality_index.cpu_source.clone(),
         openvino_corpus_v2_receipt: quality_index.openvino_source.clone(),
         telemetry_context_receipt: telemetry_context
@@ -7310,6 +7327,132 @@ impl ProfileQualityIndex {
 }
 
 #[derive(Debug, Clone, Default)]
+struct CorpusCaseAlignmentIndex {
+    fixture_source: Option<String>,
+    by_route: BTreeMap<String, CorpusCaseAlignmentEvidence>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct CorpusCaseAlignmentEvidence {
+    source_receipts: Vec<String>,
+    blockers: Vec<String>,
+}
+
+impl CorpusCaseAlignmentIndex {
+    fn add(
+        &mut self,
+        route_id: &str,
+        fixture_source: String,
+        receipt_source: String,
+        blockers: Vec<String>,
+    ) {
+        let entry = self.by_route.entry(route_id.to_string()).or_default();
+        for source in [fixture_source, receipt_source] {
+            if !entry.source_receipts.contains(&source) {
+                entry.source_receipts.push(source);
+            }
+        }
+        entry.blockers.extend(blockers);
+        entry.blockers.sort();
+        entry.blockers.dedup();
+    }
+
+    fn get(&self, route_id: &str) -> Option<&CorpusCaseAlignmentEvidence> {
+        self.by_route.get(route_id)
+    }
+}
+
+fn load_corpus_case_alignment_index(
+    root: &Path,
+    answer_corpus_v2: Option<&Path>,
+    quality_index: &ProfileQualityIndex,
+    gaps: &mut Vec<String>,
+) -> Result<CorpusCaseAlignmentIndex> {
+    let mut index = CorpusCaseAlignmentIndex::default();
+    let Some(fixture_path) = answer_corpus_v2 else {
+        return Ok(index);
+    };
+    let fixture_path = resolve_receipt_path(root, fixture_path);
+    if !fixture_path.exists() {
+        gaps.push(format!("answer corpus v2 fixture missing: {}", path_string(&fixture_path)));
+        return Ok(index);
+    }
+    let (fixture_source, expected_case_ids) = load_answer_corpus_v2_case_ids(&fixture_path)?;
+    index.fixture_source = Some(fixture_source.clone());
+
+    if let Some(source) = &quality_index.cpu_source {
+        let path = PathBuf::from(source);
+        let json: Value = read_json_receipt(&path)?;
+        let observed = case_ids_from_json_cases(value_at(&json, "cases"));
+        let blockers =
+            corpus_case_alignment_blockers(DEFAULT_ASK_ROUTE, &expected_case_ids, &observed);
+        index.add(DEFAULT_ASK_ROUTE, fixture_source.clone(), source.clone(), blockers);
+    }
+
+    if let Some(source) = &quality_index.openvino_source {
+        let path = PathBuf::from(source);
+        let json: Value = read_json_receipt(&path)?;
+        if let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) {
+            for device in devices {
+                let Some(route_id) = openvino_device_route_id(device) else {
+                    continue;
+                };
+                let observed = case_ids_from_json_cases(device.get("cases"));
+                let blockers =
+                    corpus_case_alignment_blockers(route_id, &expected_case_ids, &observed);
+                index.add(route_id, fixture_source.clone(), source.clone(), blockers);
+            }
+        }
+    }
+
+    Ok(index)
+}
+
+fn load_answer_corpus_v2_case_ids(path: &Path) -> Result<(String, BTreeSet<String>)> {
+    let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let corpus: AnswerCorpusV2Fixture = serde_yaml::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    let case_ids = corpus.cases.into_iter().map(|case| case.id).collect::<BTreeSet<_>>();
+    Ok((path_string(path), case_ids))
+}
+
+fn case_ids_from_json_cases(cases: Option<&Value>) -> BTreeSet<String> {
+    cases
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|case| string_at(case, "id").or_else(|| string_at(case, "case_id")))
+        .collect()
+}
+
+fn corpus_case_alignment_blockers(
+    route_id: &str,
+    expected: &BTreeSet<String>,
+    observed: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut blockers = Vec::new();
+    if observed.is_empty() {
+        blockers.push(format!("{route_id} corpus-v2 receipt has no case IDs to align"));
+        return blockers;
+    }
+    let missing = expected.difference(observed).cloned().collect::<Vec<_>>();
+    if !missing.is_empty() {
+        blockers.push(format!(
+            "{route_id} corpus-v2 receipt is missing active fixture cases [{}]",
+            missing.join(", ")
+        ));
+    }
+    let unexpected = observed.difference(expected).cloned().collect::<Vec<_>>();
+    if !unexpected.is_empty() {
+        blockers.push(format!(
+            "{route_id} corpus-v2 receipt has stale or unexpected cases [{}]",
+            unexpected.join(", ")
+        ));
+    }
+    blockers
+}
+
+#[derive(Debug, Clone, Default)]
 struct RouteDiagnosticsIndex {
     by_route: BTreeMap<String, RouteDiagnosticEvidence>,
 }
@@ -8068,6 +8211,7 @@ fn evaluate_workload_profile(
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
     quality_index: &ProfileQualityIndex,
+    corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
 ) -> Result<WorkloadProfileEvaluation> {
@@ -8091,6 +8235,7 @@ fn evaluate_workload_profile(
                 ledger,
                 phase_comparison,
                 quality_index,
+                corpus_alignment,
                 telemetry_context,
                 route_diagnostics,
             )
@@ -8164,6 +8309,7 @@ fn evaluate_profile_route(
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
     quality_index: &ProfileQualityIndex,
+    corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
 ) -> Result<ProfileRouteEvidence> {
@@ -8176,6 +8322,9 @@ fn evaluate_profile_route(
     let mut blockers = route.missing_evidence.clone();
     let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
     let telemetry = telemetry_context.map(telemetry_for_profile_route);
+    if let Some(alignment) = corpus_alignment.get(route_id) {
+        blockers.extend(alignment.blockers.iter().cloned());
+    }
     if let Some(diagnostic) = route_diagnostics.get(route_id) {
         blockers.extend(diagnostic.blockers.iter().cloned());
     }
@@ -8227,6 +8376,13 @@ fn evaluate_profile_route(
         && !evidence.contains(&quality.source_receipt)
     {
         evidence.push(quality.source_receipt.clone());
+    }
+    if let Some(alignment) = corpus_alignment.get(route_id) {
+        for source in &alignment.source_receipts {
+            if !evidence.contains(source) {
+                evidence.push(source.clone());
+            }
+        }
     }
     if let Some(diagnostic) = route_diagnostics.get(route_id) {
         for source in &diagnostic.source_receipts {
@@ -9257,6 +9413,7 @@ mod tests {
             Path::new(DENSE_PHASE_COMPARISON),
             None,
             None,
+            None,
             Some(Path::new(POWER_THERMAL_CONTEXT_FILE)),
             "2026-05-17T06:55:00Z".to_string(),
         )?;
@@ -9318,6 +9475,7 @@ mod tests {
     fn route_profile_comparison_indexes_corpus_v2_profile_quality_blockers() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
         write_route_corpus_v2_receipts(temp.path())?;
         write_json(
             temp.path(),
@@ -9457,6 +9615,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROMOTION_LEDGER),
             Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
             None,
@@ -9467,6 +9626,10 @@ mod tests {
         )?;
 
         assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
+        assert_eq!(
+            profiles.answer_corpus_v2_fixture.as_deref(),
+            Some(path_string(&temp.path().join("corpus-v2.yaml")).as_str())
+        );
         assert_eq!(profiles.route_diagnosis_receipts.len(), 3);
         let cpu_corpus_path = path_string(&temp.path().join(DENSE_CPU_CORPUS_V2));
         assert_eq!(profiles.cpu_corpus_v2_receipt.as_deref(), Some(cpu_corpus_path.as_str()));
@@ -9507,6 +9670,20 @@ mod tests {
                 &"OpenVINO generated token IDs are retokenized, not direct pipeline internals"
                     .to_string()
             )
+        );
+        assert!(
+            gpu_route.blockers.iter().any(|blocker| blocker.contains(
+                "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [arithmetic_add_7_8, short_reasoning_apples_left]"
+            )),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            gpu_route.blockers.iter().any(|blocker| blocker.contains(
+                "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]"
+            )),
+            "{:?}",
+            gpu_route.blockers
         );
         let Some(npu_route) = ask_short
             .route_evidence
@@ -9612,6 +9789,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROMOTION_LEDGER),
             Path::new(DENSE_PHASE_COMPARISON),
+            None,
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
             None,
@@ -9794,6 +9972,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROMOTION_LEDGER),
             Path::new(DENSE_PHASE_COMPARISON),
+            None,
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
             None,
@@ -10413,6 +10592,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROMOTION_LEDGER),
             Path::new(DENSE_PHASE_COMPARISON),
+            None,
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
             None,
@@ -11504,6 +11684,10 @@ cases:
     category: math
     profile: regression_tiny
     gate: {kind: contains_any}
+  - id: arithmetic_add_7_8
+    category: math
+    profile: regression_tiny
+    gate: {kind: contains_any}
   - id: copy_exact_color_triplet
     category: copy_exact
     profile: regression_tiny
@@ -11536,7 +11720,7 @@ cases:
     category: long_prompt_summarization
     profile: prefill_heavy
     gate: {kind: contains_any}
-  - id: short_reasoning_heavier_object
+  - id: short_reasoning_apples_left
     category: short_reasoning
     profile: ask_normal
     gate: {kind: contains_any}
@@ -11550,12 +11734,40 @@ cases:
     }
 
     fn write_route_corpus_v2_receipts(root: &Path) -> Result<()> {
+        let current_case_ids = json!([
+            {"id": "math_2_plus_2_brief"},
+            {"id": "arithmetic_add_7_8"},
+            {"id": "copy_exact_color_triplet"},
+            {"id": "yes_no_clear_sky"},
+            {"id": "short_factual_capital_france"},
+            {"id": "instruction_single_sentence_rust"},
+            {"id": "stop_token_one_word_done"},
+            {"id": "transcript_context_code_word"},
+            {"id": "structured_json_city_country"},
+            {"id": "long_prompt_summary_route_policy"},
+            {"id": "short_reasoning_apples_left"},
+            {"id": "decode_heavy_short_list"}
+        ]);
+        let stale_openvino_case_ids = json!([
+            {"id": "math_2_plus_2_brief"},
+            {"id": "copy_exact_color_triplet"},
+            {"id": "yes_no_clear_sky"},
+            {"id": "short_factual_capital_france"},
+            {"id": "instruction_single_sentence_rust"},
+            {"id": "stop_token_one_word_done"},
+            {"id": "transcript_context_code_word"},
+            {"id": "structured_json_city_country"},
+            {"id": "long_prompt_summary_route_policy"},
+            {"id": "short_reasoning_heavier_object"},
+            {"id": "decode_heavy_short_list"}
+        ]);
         write_json(
             root,
             DENSE_CPU_CORPUS_V2,
             json!({
                 "artifact_kind": "slm_cpu_answer_corpus",
                 "fallback_used": false,
+                "cases": current_case_ids,
                 "profile_summary": {
                     "regression_tiny": {"total": 4, "passed": 4, "failed": 0},
                     "ask_short": {"total": 2, "passed": 1, "failed": 1},
@@ -11574,6 +11786,7 @@ cases:
                         {
                             "runtime_device": "CPU",
                             "fallback_used": false,
+                            "cases": stale_openvino_case_ids.clone(),
                             "quality_summary": {
                                 "profile_summary": {
                                     "ask_short": {"total": 2, "passed": 2, "failed": 0}
@@ -11583,6 +11796,7 @@ cases:
                         {
                             "runtime_device": "GPU.0",
                             "fallback_used": false,
+                            "cases": stale_openvino_case_ids.clone(),
                             "quality_summary": {
                                 "profile_summary": {
                                     "ask_short": {"total": 2, "passed": 1, "failed": 1},
@@ -11593,6 +11807,7 @@ cases:
                         {
                             "runtime_device": "NPU",
                             "fallback_used": false,
+                            "cases": stale_openvino_case_ids.clone(),
                             "quality_summary": {
                                 "profile_summary": {
                                     "ask_short": {"total": 2, "passed": 2, "failed": 0}
