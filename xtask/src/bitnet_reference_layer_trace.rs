@@ -7691,6 +7691,10 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_selected_rust_post_rope_capture_source(
             &report["attention_selected_post_rope_capture_replay_source"],
         );
+    report["attention_selected_post_rope_runtime_replay_source"] =
+        attention_selected_post_rope_runtime_replay_source(
+            &report["attention_selected_rust_post_rope_capture_source"],
+        );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -28408,6 +28412,200 @@ fn attention_selected_rust_post_rope_capture_source(capture_replay_source: &Valu
     })
 }
 
+fn attention_selected_post_rope_runtime_replay_source(rust_capture_source: &Value) -> Value {
+    let source_rows = rust_capture_source.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut projection_pair_delta_count = 0usize;
+    let mut arithmetic_unpinned_count = 0usize;
+    let mut capture_only_count = 0usize;
+    let mut clean_count = 0usize;
+    let mut max_abs_runtime_replay_delta = 0.0f64;
+    let mut max_abs_linearized_minus_replay = 0.0f64;
+
+    if let Some(source_rows) = source_rows {
+        for source_row in source_rows {
+            if source_row.pointer("/classification").and_then(Value::as_str)
+                != Some("selected_rust_post_rope_capture_source_runtime_replay_unclean")
+            {
+                continue;
+            }
+            selected_count += 1;
+            let capture_replay_row =
+                source_row.pointer("/capture_replay_source_row").unwrap_or(&Value::Null);
+            let direct_epsilon_row = capture_replay_row
+                .pointer("/post_rope_raw_key_epsilon_row")
+                .unwrap_or(&Value::Null);
+            let nested_epsilon_row = capture_replay_row
+                .pointer("/history_source_row/post_rope_raw_key_epsilon_row")
+                .unwrap_or(&Value::Null);
+            let epsilon_row =
+                if direct_epsilon_row.is_null() { nested_epsilon_row } else { direct_epsilon_row };
+            let mut blocked_reasons = Vec::<String>::new();
+            if capture_replay_row.is_null() {
+                blocked_reasons.push("capture_replay_source_row_missing".to_string());
+            }
+            if epsilon_row.is_null() {
+                blocked_reasons.push("post_rope_raw_key_epsilon_row_missing".to_string());
+            }
+
+            let runtime_replay_delta = value_f64(epsilon_row, "/runtime_replay_delta");
+            let linearized_delta_minus_runtime_replay_delta =
+                value_f64(epsilon_row, "/linearized_delta_minus_runtime_replay_delta");
+            let linearized_delta_for_probe_dim =
+                value_f64(epsilon_row, "/linearized_delta_for_probe_dim");
+            let projection_bucket_match = value_bool(epsilon_row, "/projection_bucket_match");
+            let paired_projection_bucket_match =
+                value_bool(epsilon_row, "/paired_projection_bucket_match");
+            let replay_bucket_match = value_bool(epsilon_row, "/replay_bucket_match");
+            let post_rope_bucket_match = value_bool(epsilon_row, "/post_rope_bucket_match");
+            let midpoint_straddled = value_bool(epsilon_row, "/midpoint_straddled");
+            if runtime_replay_delta.is_none() {
+                blocked_reasons.push("runtime_replay_delta_missing".to_string());
+            }
+            if linearized_delta_minus_runtime_replay_delta.is_none() {
+                blocked_reasons
+                    .push("linearized_delta_minus_runtime_replay_delta_missing".to_string());
+            }
+            if linearized_delta_for_probe_dim.is_none() {
+                blocked_reasons.push("linearized_delta_for_probe_dim_missing".to_string());
+            }
+            if projection_bucket_match.is_none() {
+                blocked_reasons.push("projection_bucket_match_missing".to_string());
+            }
+            if paired_projection_bucket_match.is_none() {
+                blocked_reasons.push("paired_projection_bucket_match_missing".to_string());
+            }
+            if replay_bucket_match.is_none() {
+                blocked_reasons.push("replay_bucket_match_missing".to_string());
+            }
+            if post_rope_bucket_match.is_none() {
+                blocked_reasons.push("post_rope_bucket_match_missing".to_string());
+            }
+            if midpoint_straddled.is_none() {
+                blocked_reasons.push("midpoint_straddled_missing".to_string());
+            }
+            if let Some(delta) = runtime_replay_delta {
+                max_abs_runtime_replay_delta = max_abs_runtime_replay_delta.max(delta.abs());
+            }
+            if let Some(delta) = linearized_delta_minus_runtime_replay_delta {
+                max_abs_linearized_minus_replay = max_abs_linearized_minus_replay.max(delta.abs());
+            }
+
+            let linearized_matches_replay = linearized_delta_minus_runtime_replay_delta
+                .is_some_and(|delta| delta.abs() <= 1.0e-6);
+            let projection_buckets_stable = projection_bucket_match == Some(true)
+                && paired_projection_bucket_match == Some(true);
+            let replay_bucket_crossing = replay_bucket_match == Some(false);
+            let post_rope_bucket_crossing = post_rope_bucket_match == Some(false);
+            let replay_has_delta = runtime_replay_delta.is_some_and(|delta| delta.abs() > 1.0e-12);
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "selected_post_rope_runtime_replay_source_missing_context"
+            } else if replay_has_delta
+                && projection_buckets_stable
+                && linearized_matches_replay
+                && replay_bucket_crossing
+                && midpoint_straddled == Some(true)
+            {
+                projection_pair_delta_count += 1;
+                "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing"
+            } else if replay_has_delta && !linearized_matches_replay {
+                arithmetic_unpinned_count += 1;
+                "selected_post_rope_runtime_replay_source_arithmetic_unpinned"
+            } else if !replay_has_delta && post_rope_bucket_crossing {
+                capture_only_count += 1;
+                "selected_post_rope_runtime_replay_source_capture_only"
+            } else {
+                clean_count += 1;
+                "selected_post_rope_runtime_replay_source_clean"
+            };
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": source_row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": source_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": source_row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                "query_token": source_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": source_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "runtime_replay_delta": runtime_replay_delta,
+                "linearized_delta_for_probe_dim": linearized_delta_for_probe_dim,
+                "linearized_delta_minus_runtime_replay_delta": linearized_delta_minus_runtime_replay_delta,
+                "linearized_matches_replay": linearized_matches_replay,
+                "projection_buckets_stable": projection_buckets_stable,
+                "projection_bucket_match": projection_bucket_match,
+                "paired_projection_bucket_match": paired_projection_bucket_match,
+                "post_rope_bucket_match": post_rope_bucket_match,
+                "replay_bucket_match": replay_bucket_match,
+                "replay_bucket_crossing": replay_bucket_crossing,
+                "post_rope_bucket_crossing": post_rope_bucket_crossing,
+                "midpoint_straddled": midpoint_straddled,
+                "input_pair": epsilon_row.pointer("/input_pair").cloned().unwrap_or(Value::Null),
+                "post_rope_bucket": epsilon_row.pointer("/post_rope_bucket").cloned().unwrap_or(Value::Null),
+                "replay_bucket": epsilon_row.pointer("/replay_bucket").cloned().unwrap_or(Value::Null),
+                "rust_capture_source_row": source_row.clone(),
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "selected_post_rope_runtime_replay_source_no_runtime_rows"
+    } else if missing_context_count == selected_count {
+        "selected_post_rope_runtime_replay_source_missing_context"
+    } else if projection_pair_delta_count > 0 {
+        "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing"
+    } else if arithmetic_unpinned_count > 0 {
+        "selected_post_rope_runtime_replay_source_arithmetic_unpinned"
+    } else if capture_only_count > 0 {
+        "selected_post_rope_runtime_replay_source_capture_only"
+    } else if clean_count == selected_count {
+        "selected_post_rope_runtime_replay_source_clean"
+    } else {
+        "selected_post_rope_runtime_replay_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing" => {
+            "move upstream to the selected pre-RoPE projection pair delta before changing post-RoPE runtime math"
+        }
+        "selected_post_rope_runtime_replay_source_arithmetic_unpinned" => {
+            "pin selected post-RoPE replay arithmetic before changing runtime math"
+        }
+        "selected_post_rope_runtime_replay_source_capture_only" => {
+            "return to Rust trace capture precision because runtime replay is clean"
+        }
+        "selected_post_rope_runtime_replay_source_missing_context" => {
+            "capture selected runtime replay and linearized delta context before source attribution"
+        }
+        "selected_post_rope_runtime_replay_source_clean" => {
+            "move downstream from selected post-RoPE runtime replay source"
+        }
+        "selected_post_rope_runtime_replay_source_no_runtime_rows" => {
+            "classify selected Rust post-RoPE capture source before runtime replay attribution"
+        }
+        _ => "keep selected post-RoPE runtime replay source diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected post-RoPE runtime replay source is diagnostic-only evidence for whether the selected replay delta is explained by pre-RoPE projection pair epsilon and ROPE linearization; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "missing_context_count": missing_context_count,
+        "projection_pair_delta_count": projection_pair_delta_count,
+        "arithmetic_unpinned_count": arithmetic_unpinned_count,
+        "capture_only_count": capture_only_count,
+        "clean_count": clean_count,
+        "max_abs_runtime_replay_delta": max_abs_runtime_replay_delta,
+        "max_abs_linearized_minus_replay": max_abs_linearized_minus_replay,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     post_rope_raw_key_epsilon: &Value,
 ) -> Value {
@@ -43687,6 +43885,132 @@ mod tests {
             Some(&json!(
                 "pin selected post-RoPE runtime replay before interpreting Rust trace capture"
             ))
+        );
+    }
+
+    #[test]
+    fn selected_post_rope_runtime_replay_source_reports_projection_pair_delta() {
+        let rust_capture_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_rust_post_rope_capture_source_runtime_replay_unclean",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "capture_replay_source_row": {
+                        "post_rope_raw_key_epsilon_row": {
+                            "runtime_replay_delta": -1.5497207641601562e-6_f64,
+                            "linearized_delta_for_probe_dim": -1.4845603999447121e-6_f64,
+                            "linearized_delta_minus_runtime_replay_delta": 6.516036421544413e-8_f64,
+                            "projection_bucket_match": true,
+                            "paired_projection_bucket_match": true,
+                            "post_rope_bucket_match": false,
+                            "replay_bucket_match": false,
+                            "midpoint_straddled": true,
+                            "input_pair": {
+                                "delta_x0": -3.5762786865234375e-6_f64,
+                                "delta_x1": 2.1457672119140625e-6_f64,
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+
+        let report = attention_selected_post_rope_runtime_replay_source(&rust_capture_source);
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing"
+            ))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/projection_pair_delta_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/arithmetic_unpinned_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/rows/0/linearized_matches_replay"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "move upstream to the selected pre-RoPE projection pair delta before changing post-RoPE runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_post_rope_runtime_replay_source_reads_nested_epsilon_row() {
+        let rust_capture_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_rust_post_rope_capture_source_runtime_replay_unclean",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "capture_replay_source_row": {
+                        "history_source_row": {
+                            "post_rope_raw_key_epsilon_row": {
+                                "runtime_replay_delta": -1.5497207641601562e-6_f64,
+                                "linearized_delta_for_probe_dim": -1.4845603999447121e-6_f64,
+                                "linearized_delta_minus_runtime_replay_delta": 6.516036421544413e-8_f64,
+                                "projection_bucket_match": true,
+                                "paired_projection_bucket_match": true,
+                                "post_rope_bucket_match": false,
+                                "replay_bucket_match": false,
+                                "midpoint_straddled": true,
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+
+        let report = attention_selected_post_rope_runtime_replay_source(&rust_capture_source);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing"
+            ))
+        );
+        assert_eq!(report.pointer("/projection_pair_delta_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/rows/0/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_post_rope_runtime_replay_source_reports_missing_context() {
+        let rust_capture_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_rust_post_rope_capture_source_runtime_replay_unclean",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+
+        let report = attention_selected_post_rope_runtime_replay_source(&rust_capture_source);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_post_rope_runtime_replay_source_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/0"),
+            Some(&json!("capture_replay_source_row_missing"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/1"),
+            Some(&json!("post_rope_raw_key_epsilon_row_missing"))
         );
     }
 
