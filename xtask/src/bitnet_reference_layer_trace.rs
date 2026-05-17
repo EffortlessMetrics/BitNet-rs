@@ -8648,6 +8648,7 @@ fn layer_prefix_value_mix_history_attribution(
                 .map(|head| (head, scalar_rust_tensor(record)))
         })
         .collect::<BTreeMap<_, _>>();
+    let numeric_variants = reference_value_mix_numeric_variant_specs();
 
     let group_size = if reference_value_cache_heads.is_empty()
         || reference_value_mix_heads.is_empty()
@@ -8717,6 +8718,14 @@ fn layer_prefix_value_mix_history_attribution(
     let mut first_material_rust_self_recompute_row = Value::Null;
     let mut first_material_probability_source_row = Value::Null;
     let mut first_material_value_cache_source_row = Value::Null;
+    let mut rust_numeric_variant_rows = Vec::<Value>::new();
+    let mut rust_numeric_variant_compared_count = 0usize;
+    let mut rust_numeric_variant_missing_count = 0usize;
+    let mut rust_numeric_variant_unexplained_count = 0usize;
+    let mut rust_numeric_variant_best_counts = BTreeMap::<String, usize>::new();
+    let mut max_rust_numeric_variant_best_abs_delta = 0.0f64;
+    let mut max_rust_numeric_variant_best_rms_delta = 0.0f64;
+    let mut first_unexplained_rust_numeric_variant_row = Value::Null;
 
     for (token, labels) in targets {
         let mut head_rows = Vec::new();
@@ -8795,6 +8804,69 @@ fn layer_prefix_value_mix_history_attribution(
                     max_rust_self_recompute_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
                 max_rust_self_recompute_rms_delta =
                     max_rust_self_recompute_rms_delta.max(delta_metric(delta, "/rms_abs_delta"));
+            }
+            let rust_numeric_variants = rust_probability
+                .zip(rust_value_cache)
+                .zip(rust_target)
+                .and_then(|((probability, value_cache), rust_target)| {
+                    value_mix_history_numeric_variant_token_report(
+                        probability,
+                        value_cache,
+                        rust_target,
+                        token,
+                        &numeric_variants,
+                    )
+                });
+            if let Some(report) = &rust_numeric_variants {
+                rust_numeric_variant_compared_count += 1;
+                let best_variant =
+                    report.pointer("/best_variant").and_then(Value::as_str).unwrap_or("");
+                if !best_variant.is_empty() {
+                    *rust_numeric_variant_best_counts
+                        .entry(best_variant.to_string())
+                        .or_insert(0) += 1;
+                }
+                let best_abs =
+                    report.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0);
+                let best_rms = report.pointer("/rms_delta").and_then(Value::as_f64).unwrap_or(0.0);
+                max_rust_numeric_variant_best_abs_delta =
+                    max_rust_numeric_variant_best_abs_delta.max(best_abs);
+                max_rust_numeric_variant_best_rms_delta =
+                    max_rust_numeric_variant_best_rms_delta.max(best_rms);
+                let explained = report
+                    .pointer("/best_variant_explains_target")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                if !explained {
+                    rust_numeric_variant_unexplained_count += 1;
+                    if first_unexplained_rust_numeric_variant_row.is_null() {
+                        first_unexplained_rust_numeric_variant_row = json!({
+                            "layer": layer,
+                            "token": token,
+                            "labels": labels,
+                            "head": head,
+                            "kv_head": kv_head,
+                            "best_variant": best_variant,
+                            "max_abs_delta": best_abs,
+                            "rms_delta": best_rms,
+                            "best_delta": report.pointer("/best_delta").cloned().unwrap_or(Value::Null),
+                        });
+                    }
+                }
+                rust_numeric_variant_rows.push(json!({
+                    "layer": layer,
+                    "token": token,
+                    "labels": labels,
+                    "head": head,
+                    "kv_head": kv_head,
+                    "best_variant": report.pointer("/best_variant").cloned().unwrap_or(Value::Null),
+                    "best_variant_explains_target": report.pointer("/best_variant_explains_target").cloned().unwrap_or(Value::Null),
+                    "max_abs_delta": best_abs,
+                    "rms_delta": best_rms,
+                    "report": report,
+                }));
+            } else {
+                rust_numeric_variant_missing_count += 1;
             }
             let probability_source_delta =
                 reference_probability.zip(rust_probability).and_then(|(reference, rust)| {
@@ -8919,6 +8991,7 @@ fn layer_prefix_value_mix_history_attribution(
                     "target_material_mismatch": target_material,
                     "rust_self_recompute_delta": rust_self_delta.unwrap_or(Value::Null),
                     "rust_self_recompute_material_mismatch": rust_self_material,
+                    "rust_self_numeric_variants": rust_numeric_variants.unwrap_or(Value::Null),
                     "rust_probability_history_present": rust_probability.is_some(),
                     "rust_expanded_value_cache_history_present": rust_value_cache.is_some(),
                     "probability_source_delta": probability_source_delta.unwrap_or(Value::Null),
@@ -8943,6 +9016,7 @@ fn layer_prefix_value_mix_history_attribution(
                     "target_material_mismatch": target_material,
                     "rust_self_recompute_delta": rust_self_delta.unwrap_or(Value::Null),
                     "rust_self_recompute_material_mismatch": rust_self_material,
+                    "rust_self_numeric_variants": rust_numeric_variants.unwrap_or(Value::Null),
                     "probability_source_delta": probability_source_delta.unwrap_or(Value::Null),
                     "probability_source_material_mismatch": probability_source_material,
                     "value_cache_source_delta": value_cache_source_delta.unwrap_or(Value::Null),
@@ -9000,6 +9074,24 @@ fn layer_prefix_value_mix_history_attribution(
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
+    let rust_self_numeric_variants = json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Rust prefix value-mix numeric variants are diagnostic-only evidence for separating accumulation/rounding policy from trace serialization or unmodeled runtime arithmetic; they do not promote reference parity, A770 semantic quality, selected attention, resident KV, attention score residency, softmax residency, value-mix residency, full residency, performance, or completion",
+        "variant_count": numeric_variants.len(),
+        "variants_tested": numeric_variants.iter().map(|variant| variant.id).collect::<Vec<_>>(),
+        "compared_count": rust_numeric_variant_compared_count,
+        "missing_count": rust_numeric_variant_missing_count,
+        "unexplained_count": rust_numeric_variant_unexplained_count,
+        "best_variant_counts": rust_numeric_variant_best_counts,
+        "max_best_abs_delta": max_rust_numeric_variant_best_abs_delta,
+        "max_best_rms_delta": max_rust_numeric_variant_best_rms_delta,
+        "all_compared": !rust_value_mix_heads.is_empty() && rust_numeric_variant_missing_count == 0,
+        "all_explained": rust_numeric_variant_compared_count > 0 && rust_numeric_variant_unexplained_count == 0,
+        "first_unexplained_row": first_unexplained_rust_numeric_variant_row,
+        "rows": rust_numeric_variant_rows,
+    });
+
     let source_summary = prefix_value_mix_history_source_summary(
         token_rows.is_empty(),
         missing_input_count,
@@ -9007,6 +9099,8 @@ fn layer_prefix_value_mix_history_attribution(
         rust_self_recompute_compared_count,
         rust_self_recompute_missing_count,
         rust_self_recompute_material_count,
+        rust_numeric_variant_compared_count,
+        rust_numeric_variant_unexplained_count,
         probability_source_delta_compared_count,
         probability_source_delta_material_count,
         value_cache_source_delta_compared_count,
@@ -9068,6 +9162,7 @@ fn layer_prefix_value_mix_history_attribution(
         "rust_self_recompute_material_count": rust_self_recompute_material_count,
         "max_rust_self_recompute_abs_delta": max_rust_self_recompute_abs_delta,
         "max_rust_self_recompute_rms_delta": max_rust_self_recompute_rms_delta,
+        "rust_self_numeric_variants": rust_self_numeric_variants,
         "probability_source_delta_compared_count": probability_source_delta_compared_count,
         "probability_source_delta_missing_count": probability_source_delta_missing_count,
         "probability_source_delta_material_count": probability_source_delta_material_count,
@@ -9106,6 +9201,182 @@ fn value_mix_history_material_row(
     })
 }
 
+fn value_mix_history_numeric_variant_token_report(
+    probability: &ScalarTraceTensor,
+    value_cache: &ScalarTraceTensor,
+    target: &ScalarTraceTensor,
+    query_token: usize,
+    variants: &[ReferenceValueMixNumericVariantSpec],
+) -> Option<Value> {
+    let mut variant_rows = Vec::<Value>::new();
+    let mut best_variant = "";
+    let mut best_delta = Value::Null;
+    let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+    let mut best_accum_policy = "";
+    let mut best_probability_f16_roundtrip = false;
+    let mut best_value_f16_roundtrip = false;
+    let mut best_output_f16_roundtrip = false;
+
+    for &variant in variants {
+        let Some(delta) = value_mix_history_numeric_variant_token_delta(
+            probability,
+            value_cache,
+            target,
+            query_token,
+            variant,
+        ) else {
+            continue;
+        };
+        let rms = delta_metric(&delta, "/rms_abs_delta");
+        let max_abs = delta_metric(&delta, "/max_abs_delta");
+        let count_mismatch =
+            !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false);
+        let rank = (rms, max_abs, count_mismatch);
+        if rank < best_rank {
+            best_rank = rank;
+            best_variant = variant.id;
+            best_delta = delta.clone();
+            best_accum_policy = variant.accum_policy.label();
+            best_probability_f16_roundtrip = variant.probability_f16_roundtrip;
+            best_value_f16_roundtrip = variant.value_f16_roundtrip;
+            best_output_f16_roundtrip = variant.output_f16_roundtrip;
+        }
+        variant_rows.push(json!({
+            "variant": variant.id,
+            "accum_policy": variant.accum_policy.label(),
+            "probability_f16_roundtrip": variant.probability_f16_roundtrip,
+            "value_f16_roundtrip": variant.value_f16_roundtrip,
+            "output_f16_roundtrip": variant.output_f16_roundtrip,
+            "max_abs_delta": max_abs,
+            "rms_delta": rms,
+            "delta": delta,
+        }));
+    }
+
+    if variant_rows.is_empty() {
+        return None;
+    }
+
+    let best_variant_explains_target = reference_score_variant_explained(&best_delta);
+    Some(json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "query_token": query_token,
+        "variant_count": variants.len(),
+        "best_variant": best_variant,
+        "best_variant_explains_target": best_variant_explains_target,
+        "accum_policy": best_accum_policy,
+        "probability_f16_roundtrip": best_probability_f16_roundtrip,
+        "value_f16_roundtrip": best_value_f16_roundtrip,
+        "output_f16_roundtrip": best_output_f16_roundtrip,
+        "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+        "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+        "best_delta": best_delta,
+        "variants": variant_rows,
+    }))
+}
+
+fn value_mix_history_numeric_variant_token_delta(
+    probability: &ScalarTraceTensor,
+    value_cache: &ScalarTraceTensor,
+    target: &ScalarTraceTensor,
+    query_token: usize,
+    variant: ReferenceValueMixNumericVariantSpec,
+) -> Option<Value> {
+    let (value_dim, target_token_count) = scalar_tensor_dim_token_shape(target)?;
+    let (probability_key_count, probability_query_count) =
+        scalar_tensor_dim_token_shape(probability)?;
+    let (cache_value_dim, value_cache_token_count) = scalar_tensor_dim_token_shape(value_cache)?;
+    if cache_value_dim != value_dim
+        || query_token >= target_token_count
+        || query_token >= probability_query_count
+    {
+        return None;
+    }
+    let probability_sample_count = probability_key_count.checked_mul(probability_query_count)?;
+    let value_cache_sample_count = value_dim.checked_mul(value_cache_token_count)?;
+    if probability.first_values.len() < probability_sample_count
+        || value_cache.first_values.len() < value_cache_sample_count
+        || target.first_values.len() < value_dim.checked_mul(target_token_count)?
+    {
+        return None;
+    }
+
+    let key_count = probability_key_count.min(value_cache_token_count);
+    let mut recomputed = Vec::<f32>::with_capacity(value_dim);
+    let mut target_values = Vec::<f32>::with_capacity(value_dim);
+    for dim in 0..value_dim {
+        let value = match variant.accum_policy {
+            ReferenceScoreAccumPolicy::F64 => {
+                let mut sum = 0.0f64;
+                for key_token in 0..key_count {
+                    let probability = numeric_variant_value(
+                        probability.first_values[key_token * probability_query_count + query_token],
+                        variant.probability_f16_roundtrip,
+                    ) as f64;
+                    let value = numeric_variant_value(
+                        value_cache.first_values[dim * value_cache_token_count + key_token],
+                        variant.value_f16_roundtrip,
+                    ) as f64;
+                    sum += probability * value;
+                }
+                sum as f32
+            }
+            ReferenceScoreAccumPolicy::F32 => {
+                let mut sum = 0.0f32;
+                for key_token in 0..key_count {
+                    let probability = numeric_variant_value(
+                        probability.first_values[key_token * probability_query_count + query_token],
+                        variant.probability_f16_roundtrip,
+                    );
+                    let value = numeric_variant_value(
+                        value_cache.first_values[dim * value_cache_token_count + key_token],
+                        variant.value_f16_roundtrip,
+                    );
+                    sum += probability * value;
+                }
+                sum
+            }
+            ReferenceScoreAccumPolicy::F32MulAdd => {
+                let mut sum = 0.0f32;
+                for key_token in 0..key_count {
+                    let probability = numeric_variant_value(
+                        probability.first_values[key_token * probability_query_count + query_token],
+                        variant.probability_f16_roundtrip,
+                    );
+                    let value = numeric_variant_value(
+                        value_cache.first_values[dim * value_cache_token_count + key_token],
+                        variant.value_f16_roundtrip,
+                    );
+                    sum = probability.mul_add(value, sum);
+                }
+                sum
+            }
+        };
+        recomputed.push(if variant.output_f16_roundtrip { f16_roundtrip(value) } else { value });
+        target_values.push(target.first_values[dim * target_token_count + query_token]);
+    }
+
+    let mut delta = compare_vectors(&recomputed, &target_values);
+    if let Some(object) = delta.as_object_mut() {
+        object.insert("layout".to_string(), json!("dim_major_token_minor"));
+        object.insert("query_token".to_string(), json!(query_token));
+        object.insert("key_count_used".to_string(), json!(key_count));
+        object.insert("probability_key_count".to_string(), json!(probability_key_count));
+        object.insert("probability_query_count".to_string(), json!(probability_query_count));
+        object.insert("value_cache_token_count".to_string(), json!(value_cache_token_count));
+        object.insert("value_dim".to_string(), json!(value_dim));
+        object.insert("accum_policy".to_string(), json!(variant.accum_policy.label()));
+        object.insert(
+            "probability_f16_roundtrip".to_string(),
+            json!(variant.probability_f16_roundtrip),
+        );
+        object.insert("value_f16_roundtrip".to_string(), json!(variant.value_f16_roundtrip));
+        object.insert("output_f16_roundtrip".to_string(), json!(variant.output_f16_roundtrip));
+    }
+    Some(delta)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn prefix_value_mix_history_source_summary(
     token_targets_missing: bool,
@@ -9114,6 +9385,8 @@ fn prefix_value_mix_history_source_summary(
     rust_self_recompute_compared_count: usize,
     rust_self_recompute_missing_count: usize,
     rust_self_recompute_material_count: usize,
+    rust_numeric_variant_compared_count: usize,
+    rust_numeric_variant_unexplained_count: usize,
     probability_source_delta_compared_count: usize,
     probability_source_delta_material_count: usize,
     value_cache_source_delta_compared_count: usize,
@@ -9133,6 +9406,9 @@ fn prefix_value_mix_history_source_summary(
     let rust_self_recompute_clean = rust_self_recompute_compared_count > 0
         && rust_self_recompute_missing_count == 0
         && !rust_self_recompute_drift_present;
+    let rust_self_recompute_explained_by_numeric_variants = rust_self_recompute_drift_present
+        && rust_numeric_variant_compared_count > 0
+        && rust_numeric_variant_unexplained_count == 0;
     let probability_source_clean =
         probability_source_delta_compared_count > 0 && !probability_source_drift_present;
     let value_cache_source_clean =
@@ -9142,6 +9418,25 @@ fn prefix_value_mix_history_source_summary(
         "prefix_targets_missing"
     } else if missing_input_count > 0 || rust_self_recompute_missing_count > 0 {
         "missing_inputs"
+    } else if rust_self_recompute_drift_present
+        && rust_self_recompute_explained_by_numeric_variants
+        && probability_source_drift_present
+        && value_cache_source_drift_present
+    {
+        "rust_value_mix_numeric_policy_and_both_sources_drift"
+    } else if rust_self_recompute_drift_present
+        && rust_self_recompute_explained_by_numeric_variants
+        && probability_source_drift_present
+    {
+        "rust_value_mix_numeric_policy_and_probability_source_drift"
+    } else if rust_self_recompute_drift_present
+        && rust_self_recompute_explained_by_numeric_variants
+        && value_cache_source_drift_present
+    {
+        "rust_value_mix_numeric_policy_and_value_cache_source_drift"
+    } else if rust_self_recompute_drift_present && rust_self_recompute_explained_by_numeric_variants
+    {
+        "rust_value_mix_numeric_policy_drift"
     } else if rust_self_recompute_drift_present
         && probability_source_drift_present
         && value_cache_source_drift_present
@@ -9169,6 +9464,18 @@ fn prefix_value_mix_history_source_summary(
         "prefix_targets_missing" => "capture prefix frontier targets before source attribution",
         "missing_inputs" => {
             "capture missing Rust/reference probability, value-cache, and value-mix history inputs"
+        }
+        "rust_value_mix_numeric_policy_and_probability_source_drift" => {
+            "pin Rust value-mix history numeric policy, then inspect probability-history source drift; value-cache source is clean for compared rows"
+        }
+        "rust_value_mix_numeric_policy_and_value_cache_source_drift" => {
+            "pin Rust value-mix history numeric policy, then inspect value-cache source drift"
+        }
+        "rust_value_mix_numeric_policy_and_both_sources_drift" => {
+            "pin Rust value-mix history numeric policy with both probability and value-cache source drift present"
+        }
+        "rust_value_mix_numeric_policy_drift" => {
+            "pin Rust value-mix history numeric policy; modeled variants explain Rust self-recompute drift"
         }
         "rust_value_mix_recompute_and_probability_source_drift" => {
             "localize Rust value-mix history arithmetic or trace serialization, then inspect probability-history source drift; value-cache source is clean for compared rows"
@@ -9203,6 +9510,9 @@ fn prefix_value_mix_history_source_summary(
         "classification": classification,
         "target_drift_present": target_drift_present,
         "rust_self_recompute_drift_present": rust_self_recompute_drift_present,
+        "rust_self_recompute_explained_by_numeric_variants": rust_self_recompute_explained_by_numeric_variants,
+        "rust_numeric_variant_compared_count": rust_numeric_variant_compared_count,
+        "rust_numeric_variant_unexplained_count": rust_numeric_variant_unexplained_count,
         "probability_source_drift_present": probability_source_drift_present,
         "value_cache_source_drift_present": value_cache_source_drift_present,
         "rust_self_recompute_clean": rust_self_recompute_clean,
@@ -24551,6 +24861,30 @@ mod tests {
                 "localize Rust value-mix history arithmetic or trace serialization, then inspect probability-history source drift; value-cache source is clean for compared rows"
             ))
         );
+        assert_eq!(
+            attribution.pointer("/rust_self_numeric_variants/diagnostic_only"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            attribution.pointer("/rust_self_numeric_variants/claim_allowed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            attribution.pointer("/rust_self_numeric_variants/compared_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            attribution.pointer("/rust_self_numeric_variants/unexplained_count"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            attribution.pointer("/rust_self_numeric_variants/first_unexplained_row/token"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            attribution.pointer("/rows/0/rows/0/rust_self_numeric_variants/claim_allowed"),
+            Some(&json!(false))
+        );
     }
 
     #[test]
@@ -24560,6 +24894,8 @@ mod tests {
             0,
             1,
             2,
+            0,
+            0,
             0,
             0,
             2,
@@ -24587,6 +24923,76 @@ mod tests {
                 "Rust self-recompute and source deltas are clean; inspect value-mix target trace binding"
             ))
         );
+    }
+
+    #[test]
+    fn prefix_value_mix_history_source_summary_reports_numeric_policy_drift() {
+        let summary = prefix_value_mix_history_source_summary(
+            false,
+            0,
+            1,
+            2,
+            0,
+            1,
+            2,
+            0,
+            2,
+            1,
+            2,
+            0,
+            0.000001,
+            0.00001,
+            0.0,
+            &json!({"source": "target_delta"}),
+            &json!({"source": "rust_self_recompute_delta"}),
+            &json!({"source": "probability_source_delta"}),
+            &Value::Null,
+        );
+
+        assert_eq!(
+            summary.pointer("/classification"),
+            Some(&json!("rust_value_mix_numeric_policy_and_probability_source_drift"))
+        );
+        assert_eq!(
+            summary.pointer("/rust_self_recompute_explained_by_numeric_variants"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            summary.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin Rust value-mix history numeric policy, then inspect probability-history source drift; value-cache source is clean for compared rows"
+            ))
+        );
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn value_mix_history_numeric_variants_report_best_explanation() {
+        let probability =
+            ScalarTraceTensor { first_values: vec![1.0], shape: vec![1, 1], num_elements: 1 };
+        let value_cache =
+            ScalarTraceTensor { first_values: vec![1.0001], shape: vec![1, 1], num_elements: 1 };
+        let target = ScalarTraceTensor {
+            first_values: vec![f16_roundtrip(1.0001)],
+            shape: vec![1, 1],
+            num_elements: 1,
+        };
+        let variants = reference_value_mix_numeric_variant_specs();
+        let report = value_mix_history_numeric_variant_token_report(
+            &probability,
+            &value_cache,
+            &target,
+            0,
+            &variants,
+        )
+        .unwrap();
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/best_variant_explains_target"), Some(&json!(true)));
+        assert_eq!(report.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(report.pointer("/variant_count"), Some(&json!(10)));
+        assert_eq!(report.pointer("/variants").and_then(Value::as_array).map(Vec::len), Some(10));
     }
 
     #[test]
