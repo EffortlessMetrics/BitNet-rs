@@ -22762,6 +22762,7 @@ fn attention_selected_historical_rope_epsilon_materiality(
     let mut missing_product_context_count = 0usize;
     let mut key_delta_match_count = 0usize;
     let mut epsilon_not_product_material_count = 0usize;
+    let mut product_uses_post_rope_f16_bucket_count = 0usize;
     let mut max_key_delta_abs_difference = 0.0f64;
     let mut max_product_abs_delta = 0.0f64;
 
@@ -22816,6 +22817,16 @@ fn attention_selected_historical_rope_epsilon_materiality(
                     .and_then(Value::as_f64);
                 let product_key_delta =
                     product_contributor.pointer("/key_delta").and_then(Value::as_f64);
+                let product_reference_key =
+                    product_contributor.pointer("/reference_key").and_then(Value::as_f64);
+                let product_rust_key =
+                    product_contributor.pointer("/rust_key").and_then(Value::as_f64);
+                let post_rope_reference_f16 = epsilon_probe
+                    .pointer("/post_rope_bucket/left_f16_value")
+                    .and_then(Value::as_f64);
+                let post_rope_rust_f16 = epsilon_probe
+                    .pointer("/post_rope_bucket/right_f16_value")
+                    .and_then(Value::as_f64);
                 let signed_product_delta =
                     product_contributor.pointer("/signed_product_delta").and_then(Value::as_f64);
                 let abs_product_delta = product_contributor
@@ -22858,6 +22869,14 @@ fn attention_selected_historical_rope_epsilon_materiality(
                         });
                     let epsilon_not_product_material = !key_delta_matches_product
                         && key_only_delta_abs_ratio.is_some_and(|ratio| ratio <= 0.01);
+                    let reference_key_matches_post_rope_f16 = product_reference_key
+                        .zip(post_rope_reference_f16)
+                        .is_some_and(|(product, bucket)| (product - bucket).abs() <= 1.0e-9);
+                    let rust_key_matches_post_rope_f16 = product_rust_key
+                        .zip(post_rope_rust_f16)
+                        .is_some_and(|(product, bucket)| (product - bucket).abs() <= 1.0e-9);
+                    let product_uses_post_rope_f16_bucket_values =
+                        reference_key_matches_post_rope_f16 && rust_key_matches_post_rope_f16;
 
                     compared_count += 1;
                     if key_delta_matches_product {
@@ -22865,6 +22884,9 @@ fn attention_selected_historical_rope_epsilon_materiality(
                     }
                     if epsilon_not_product_material {
                         epsilon_not_product_material_count += 1;
+                    }
+                    if product_uses_post_rope_f16_bucket_values {
+                        product_uses_post_rope_f16_bucket_count += 1;
                     }
                     max_key_delta_abs_difference =
                         max_key_delta_abs_difference.max(key_delta_abs_difference);
@@ -22894,6 +22916,15 @@ fn attention_selected_historical_rope_epsilon_materiality(
                         "key_only_reference_query_ratio_to_signed_product_delta": key_only_delta_reference_query_ratio,
                         "key_only_reference_query_abs_ratio_to_product_delta": key_only_delta_abs_ratio,
                         "epsilon_not_product_material": epsilon_not_product_material,
+                        "product_bucket_source": {
+                            "product_reference_key": product_reference_key,
+                            "product_rust_key": product_rust_key,
+                            "post_rope_reference_f16": post_rope_reference_f16,
+                            "post_rope_rust_f16": post_rope_rust_f16,
+                            "reference_key_matches_post_rope_f16": reference_key_matches_post_rope_f16,
+                            "rust_key_matches_post_rope_f16": rust_key_matches_post_rope_f16,
+                            "product_uses_post_rope_f16_bucket_values": product_uses_post_rope_f16_bucket_values,
+                        },
                     });
                 } else {
                     blocked_reasons.push("selected_rope_or_product_delta_missing".to_string());
@@ -22927,6 +22958,8 @@ fn attention_selected_historical_rope_epsilon_materiality(
         "selected_historical_rope_epsilon_product_context_missing"
     } else if key_delta_match_count == compared_count && compared_count > 0 {
         "selected_historical_rope_epsilon_materiality_pinned"
+    } else if product_uses_post_rope_f16_bucket_count == compared_count && compared_count > 0 {
+        "selected_historical_rope_product_uses_post_rope_f16_bucket_values"
     } else if epsilon_not_product_material_count == compared_count && compared_count > 0 {
         "selected_historical_rope_epsilon_not_product_material"
     } else {
@@ -22941,6 +22974,9 @@ fn attention_selected_historical_rope_epsilon_materiality(
         }
         "selected_historical_rope_epsilon_not_product_material" => {
             "inspect selected key F16 bucket value used by score product before changing RoPE runtime math"
+        }
+        "selected_historical_rope_product_uses_post_rope_f16_bucket_values" => {
+            "inspect whether selected score product should consume post-RoPE F16 bucket values before changing runtime math"
         }
         "selected_historical_rope_epsilon_product_context_missing" => {
             "capture selected score-position product contributors for the historical RoPE epsilon row"
@@ -22961,6 +22997,7 @@ fn attention_selected_historical_rope_epsilon_materiality(
         "missing_product_context_count": missing_product_context_count,
         "key_delta_match_count": key_delta_match_count,
         "epsilon_not_product_material_count": epsilon_not_product_material_count,
+        "product_uses_post_rope_f16_bucket_count": product_uses_post_rope_f16_bucket_count,
         "max_key_delta_abs_difference": max_key_delta_abs_difference,
         "max_product_abs_delta": max_product_abs_delta,
         "rows": rows,
@@ -35457,6 +35494,10 @@ mod tests {
                         "post_rope": {
                             "capture_delta": capture_delta,
                             "runtime_replay_delta": capture_delta,
+                        },
+                        "post_rope_bucket": {
+                            "left_f16_value": 1.48095703125_f64,
+                            "right_f16_value": 1.47998046875_f64,
                         }
                     }
                 }
@@ -35548,6 +35589,10 @@ mod tests {
                         "post_rope": {
                             "capture_delta": capture_delta,
                             "runtime_replay_delta": capture_delta,
+                        },
+                        "post_rope_bucket": {
+                            "left_f16_value": 1.48095703125_f64,
+                            "right_f16_value": 1.47998046875_f64,
                         }
                     }
                 }
@@ -35561,9 +35606,10 @@ mod tests {
 
         assert_eq!(
             report.pointer("/classification"),
-            Some(&json!("selected_historical_rope_epsilon_not_product_material"))
+            Some(&json!("selected_historical_rope_product_uses_post_rope_f16_bucket_values"))
         );
         assert_eq!(report.pointer("/epsilon_not_product_material_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/product_uses_post_rope_f16_bucket_count"), Some(&json!(1)));
         assert_eq!(
             report.pointer("/rows/0/materiality/key_delta_matches_product"),
             Some(&json!(false))
@@ -35573,9 +35619,15 @@ mod tests {
             Some(&json!(true))
         );
         assert_eq!(
+            report.pointer(
+                "/rows/0/materiality/product_bucket_source/product_uses_post_rope_f16_bucket_values"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
             report.pointer("/next_diagnostic"),
             Some(&json!(
-                "inspect selected key F16 bucket value used by score product before changing RoPE runtime math"
+                "inspect whether selected score product should consume post-RoPE F16 bucket values before changing runtime math"
             ))
         );
     }
