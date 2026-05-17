@@ -1,28 +1,62 @@
 {
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_thermal_context",
-  "proof_stage": "telemetry_availability_recorded",
-  "created_utc": "2026-05-17T04:45:00Z",
+  "proof_stage": "live_telemetry_context_captured_no_promotion_change",
+  "created_utc": "2026-05-17T05:45:00Z",
   "machine_id": "intel-258v",
-  "telemetry_scope": "committed_lunar_lake_profile_artifacts",
-  "memory_context": "not_recorded_in_committed_receipts",
-  "power_context": "not_recorded_in_committed_receipts",
-  "thermal_context": "not_recorded_in_committed_receipts",
+  "telemetry_scope": "current_machine_runtime_telemetry",
+  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+  "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+  "thermal_context": "thermal_context_unavailable",
   "availability": {
-    "memory_context_recorded": false,
-    "power_context_recorded": false,
+    "memory_context_recorded": true,
+    "power_context_recorded": true,
     "thermal_context_recorded": false
   },
+  "memory": {
+    "source": "sysinfo",
+    "total_bytes": 33873780736,
+    "available_bytes": 10407493632,
+    "used_bytes": 23466287104
+  },
+  "power": {
+    "source": "os_power_probe",
+    "active_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+    "ac_power_inferred": true
+  },
+  "thermal": {
+    "source": "thermal_probe_unavailable",
+    "thermal_zones_visible": null,
+    "temperatures_celsius": []
+  },
+  "sources": [
+    {
+      "source": "sysinfo",
+      "available": true,
+      "status": "captured"
+    },
+    {
+      "source": "os_power_probe",
+      "available": true,
+      "status": "captured"
+    },
+    {
+      "source": "thermal_probe_unavailable",
+      "available": false,
+      "status": "unavailable"
+    }
+  ],
   "gaps": [
-    "memory context is not recorded in the committed Lunar Lake profile receipts",
-    "power context is not recorded in the committed Lunar Lake profile receipts",
-    "thermal context is not recorded in the committed Lunar Lake profile receipts",
-    "low_power route promotion remains blocked until a real power telemetry receipt exists"
+    "thermal sensor context is not available from the current OS telemetry probe",
+    "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
   ],
   "claim_boundary": {
-    "new_measurement_executed": false,
+    "new_inference_executed": false,
+    "telemetry_measurement_executed": true,
     "route_promotion_changed": false,
     "speedup_claim": false,
+    "power_advantage_claim": false,
     "acceleration_claim": false,
     "hidden_fallback_allowed": false
   }

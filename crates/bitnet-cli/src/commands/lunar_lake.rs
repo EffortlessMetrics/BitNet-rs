@@ -12,6 +12,8 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
+use std::process::Command;
 
 const DEFAULT_ARTIFACT_ROOT: &str = "ci/hardware/intel-258v/2026-05-08";
 
@@ -47,7 +49,6 @@ const REGRESSION_BUNDLE_V2: &str = "lunar-lake-regression-bundle-v2.json";
 const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
-#[cfg(test)]
 const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
@@ -307,6 +308,26 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the benchmark qualification surface cannot safely gate route promotion.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Capture current machine memory/power/thermal context for route benchmark receipts.
+    #[command(alias = "telemetry")]
+    TelemetryContext {
+        /// Artifact root for relative output paths.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Output JSON telemetry context receipt to file.
+        #[arg(long, default_value = POWER_THERMAL_CONTEXT_FILE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when memory and power context cannot be captured.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -975,6 +996,74 @@ pub struct BenchmarkClaimBoundary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeTelemetryContext {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub telemetry_scope: String,
+    pub memory_context: String,
+    pub power_context: String,
+    pub thermal_context: String,
+    pub availability: TelemetryAvailability,
+    pub memory: TelemetryMemoryContext,
+    pub power: TelemetryPowerContext,
+    pub thermal: TelemetryThermalContext,
+    pub sources: Vec<TelemetrySourceStatus>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: TelemetryClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryAvailability {
+    pub memory_context_recorded: bool,
+    pub power_context_recorded: bool,
+    pub thermal_context_recorded: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryMemoryContext {
+    pub source: String,
+    pub total_bytes: Option<u64>,
+    pub available_bytes: Option<u64>,
+    pub used_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryPowerContext {
+    pub source: String,
+    pub active_scheme: Option<String>,
+    pub battery_status: Option<String>,
+    pub ac_power_inferred: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TelemetryThermalContext {
+    pub source: String,
+    pub thermal_zones_visible: Option<u64>,
+    pub temperatures_celsius: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetrySourceStatus {
+    pub source: String,
+    pub available: bool,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryClaimBoundary {
+    pub new_inference_executed: bool,
+    pub telemetry_measurement_executed: bool,
+    pub route_promotion_changed: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub hidden_fallback_allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeDurabilityBundle {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -1210,6 +1299,25 @@ impl LunarLakeCommand {
                 if *strict && !receipt.benchmark_gate_ready {
                     bail!(
                         "Lunar Lake cold/warm benchmark qualification failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::TelemetryContext { artifact_root, json_out, created_utc, strict } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_telemetry_context_with_created_utc(artifact_root, created_utc);
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_telemetry_context(&receipt, Some(&json_out))?;
+                if *strict
+                    && (!receipt.availability.memory_context_recorded
+                        || !receipt.availability.power_context_recorded)
+                {
+                    bail!(
+                        "Lunar Lake telemetry context capture failed required memory/power context: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -2586,6 +2694,380 @@ pub fn build_cold_warm_benchmark_with_created_utc(
     })
 }
 
+pub fn build_telemetry_context_with_created_utc(
+    _root: &Path,
+    created_utc: String,
+) -> LunarLakeTelemetryContext {
+    let memory = collect_telemetry_memory_context();
+    let power = collect_telemetry_power_context();
+    let thermal = collect_telemetry_thermal_context();
+
+    let memory_context_recorded = memory.total_bytes.is_some() || memory.available_bytes.is_some();
+    let power_context_recorded =
+        power.active_scheme.as_ref().is_some_and(|value| !value.is_empty())
+            || power.battery_status.as_ref().is_some_and(|value| !value.is_empty())
+            || power.ac_power_inferred.is_some();
+    let thermal_context_recorded =
+        thermal.thermal_zones_visible.unwrap_or(0) > 0 || !thermal.temperatures_celsius.is_empty();
+
+    let mut gaps = Vec::new();
+    if !memory_context_recorded {
+        gaps.push(
+            "memory context is not available from the current OS telemetry probe".to_string(),
+        );
+    }
+    if !power_context_recorded {
+        gaps.push("power context is not available from the current OS telemetry probe".to_string());
+    }
+    if !thermal_context_recorded {
+        gaps.push(
+            "thermal sensor context is not available from the current OS telemetry probe"
+                .to_string(),
+        );
+    }
+    gaps.push(
+        "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            .to_string(),
+    );
+
+    let availability = TelemetryAvailability {
+        memory_context_recorded,
+        power_context_recorded,
+        thermal_context_recorded,
+    };
+    let memory_context = format_memory_context(&memory);
+    let power_context = format_power_context(&power);
+    let thermal_context = format_thermal_context(&thermal);
+    let sources = vec![
+        TelemetrySourceStatus {
+            source: memory.source.clone(),
+            available: memory_context_recorded,
+            status: if memory_context_recorded {
+                "captured".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+        },
+        TelemetrySourceStatus {
+            source: power.source.clone(),
+            available: power_context_recorded,
+            status: if power_context_recorded {
+                "captured".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+        },
+        TelemetrySourceStatus {
+            source: thermal.source.clone(),
+            available: thermal_context_recorded,
+            status: if thermal_context_recorded {
+                "captured".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+        },
+    ];
+
+    LunarLakeTelemetryContext {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_power_thermal_context".to_string(),
+        proof_stage: "live_telemetry_context_captured_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        telemetry_scope: "current_machine_runtime_telemetry".to_string(),
+        memory_context,
+        power_context,
+        thermal_context,
+        availability,
+        memory,
+        power,
+        thermal,
+        sources,
+        gaps,
+        claim_boundary: TelemetryClaimBoundary {
+            new_inference_executed: false,
+            telemetry_measurement_executed: true,
+            route_promotion_changed: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    }
+}
+
+fn collect_telemetry_memory_context() -> TelemetryMemoryContext {
+    let mut system = sysinfo::System::new();
+    system.refresh_memory();
+    let total_bytes = nonzero_u64(system.total_memory());
+    let available_bytes = nonzero_u64(system.available_memory());
+    let used_bytes = match (total_bytes, available_bytes) {
+        (Some(total), Some(available)) => Some(total.saturating_sub(available)),
+        _ => nonzero_u64(system.used_memory()),
+    };
+    TelemetryMemoryContext {
+        source: "sysinfo".to_string(),
+        total_bytes,
+        available_bytes,
+        used_bytes,
+    }
+}
+
+fn collect_telemetry_power_context() -> TelemetryPowerContext {
+    let active_scheme = platform_power_mode();
+    let battery_status = platform_battery_status();
+    let ac_power_inferred = battery_status.as_deref().and_then(infer_ac_power_from_battery_status);
+    TelemetryPowerContext {
+        source: "os_power_probe".to_string(),
+        active_scheme,
+        battery_status,
+        ac_power_inferred,
+    }
+}
+
+fn collect_telemetry_thermal_context() -> TelemetryThermalContext {
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(temperatures_celsius) = windows_thermal_temperatures_celsius()
+            && !temperatures_celsius.is_empty()
+        {
+            return TelemetryThermalContext {
+                source: "windows_msa_cpi_thermal_zone".to_string(),
+                thermal_zones_visible: Some(temperatures_celsius.len() as u64),
+                temperatures_celsius,
+            };
+        }
+        TelemetryThermalContext {
+            source: "windows_msa_cpi_thermal_zone".to_string(),
+            thermal_zones_visible: None,
+            temperatures_celsius: Vec::new(),
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let temperatures = linux_thermal_temperatures_celsius();
+        if !temperatures.is_empty() {
+            return TelemetryThermalContext {
+                source: "linux_sysfs_thermal".to_string(),
+                thermal_zones_visible: Some(temperatures.len() as u64),
+                temperatures_celsius: temperatures,
+            };
+        }
+        let visible = fs::read_dir("/sys/class/thermal").ok().map(|entries| {
+            entries
+                .flatten()
+                .filter(|entry| entry.file_name().to_string_lossy().starts_with("thermal_zone"))
+                .count() as u64
+        });
+        return TelemetryThermalContext {
+            source: "linux_sysfs_thermal".to_string(),
+            thermal_zones_visible: visible,
+            temperatures_celsius: Vec::new(),
+        };
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        TelemetryThermalContext {
+            source: "thermal_probe_unavailable".to_string(),
+            thermal_zones_visible: None,
+            temperatures_celsius: Vec::new(),
+        }
+    }
+}
+
+fn format_memory_context(memory: &TelemetryMemoryContext) -> String {
+    match (memory.total_bytes, memory.available_bytes) {
+        (Some(total), Some(available)) => {
+            let used = memory.used_bytes.unwrap_or_else(|| total.saturating_sub(available));
+            format!(
+                "source={};total_bytes={total};available_bytes={available};used_bytes={used}",
+                memory.source
+            )
+        }
+        (Some(total), None) => {
+            format!("source={};total_bytes={total};available_bytes=unavailable", memory.source)
+        }
+        _ => "memory_context_unavailable".to_string(),
+    }
+}
+
+fn format_power_context(power: &TelemetryPowerContext) -> String {
+    if power.active_scheme.is_none()
+        && power.battery_status.is_none()
+        && power.ac_power_inferred.is_none()
+    {
+        return "power_context_unavailable".to_string();
+    }
+    let active_scheme = power.active_scheme.as_deref().unwrap_or("unavailable");
+    let battery_status = power.battery_status.as_deref().unwrap_or("unavailable");
+    let ac_power = power
+        .ac_power_inferred
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "unavailable".to_string());
+    format!(
+        "source={};active_scheme={active_scheme};battery_status={battery_status};ac_power_inferred={ac_power}",
+        power.source
+    )
+}
+
+fn format_thermal_context(thermal: &TelemetryThermalContext) -> String {
+    if !thermal.temperatures_celsius.is_empty() {
+        let values = thermal
+            .temperatures_celsius
+            .iter()
+            .map(|value| format!("{value:.1}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        return format!("source={};temperatures_celsius={values}", thermal.source);
+    }
+    match thermal.thermal_zones_visible {
+        Some(count) if count > 0 => {
+            format!(
+                "source={};thermal_zones_visible={count};temperatures_celsius=unavailable",
+                thermal.source
+            )
+        }
+        _ => "thermal_context_unavailable".to_string(),
+    }
+}
+
+fn nonzero_u64(value: u64) -> Option<u64> {
+    (value > 0).then_some(value)
+}
+
+#[cfg(target_os = "windows")]
+fn command_stdout(command: &str, args: &[&str]) -> Option<String> {
+    Command::new(command)
+        .args(args)
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+#[cfg(target_os = "windows")]
+fn platform_power_mode() -> Option<String> {
+    command_stdout("powercfg", &["/GETACTIVESCHEME"])
+}
+
+#[cfg(target_os = "linux")]
+fn platform_power_mode() -> Option<String> {
+    let governors = fs::read_dir("/sys/devices/system/cpu")
+        .ok()?
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path().join("cpufreq/scaling_governor");
+            fs::read_to_string(path).ok().map(|value| value.trim().to_string())
+        })
+        .filter(|value| !value.is_empty())
+        .collect::<BTreeSet<_>>();
+    (!governors.is_empty()).then(|| governors.into_iter().collect::<Vec<_>>().join(","))
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn platform_power_mode() -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn platform_battery_status() -> Option<String> {
+    command_stdout(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-Command",
+            "$b = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1; if ($null -eq $b) { '' } else { \"BatteryStatus=$($b.BatteryStatus);EstimatedChargeRemaining=$($b.EstimatedChargeRemaining)\" }",
+        ],
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn platform_battery_status() -> Option<String> {
+    let supplies = fs::read_dir("/sys/class/power_supply").ok()?;
+    for entry in supplies.flatten() {
+        let status_path = entry.path().join("status");
+        if let Ok(value) = fs::read_to_string(status_path) {
+            let value = value.trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn platform_battery_status() -> Option<String> {
+    None
+}
+
+fn infer_ac_power_from_battery_status(status: &str) -> Option<bool> {
+    let lower = status.to_ascii_lowercase();
+    if lower.contains("charging")
+        || lower.contains("full")
+        || lower.contains("ac")
+        || lower.contains("batterystatus=2")
+        || lower.contains("batterystatus=6")
+        || lower.contains("batterystatus=7")
+        || lower.contains("batterystatus=8")
+        || lower.contains("batterystatus=9")
+        || lower.contains("batterystatus=11")
+    {
+        return Some(true);
+    }
+    if lower.contains("discharging")
+        || lower.contains("batterystatus=1")
+        || lower.contains("batterystatus=4")
+        || lower.contains("batterystatus=5")
+    {
+        return Some(false);
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn windows_thermal_temperatures_celsius() -> Option<Vec<f64>> {
+    let json = command_stdout(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CurrentTemperature | ConvertTo-Json -Compress",
+        ],
+    )?;
+    let value: Value = serde_json::from_str(&json).ok()?;
+    let raw_values = match value {
+        Value::Number(number) => number.as_f64().into_iter().collect::<Vec<_>>(),
+        Value::Array(values) => values.into_iter().filter_map(|value| value.as_f64()).collect(),
+        _ => Vec::new(),
+    };
+    let temperatures = raw_values
+        .into_iter()
+        .filter_map(|value| {
+            let celsius = (value / 10.0) - 273.15;
+            celsius.is_finite().then_some(celsius)
+        })
+        .filter(|value| *value > -50.0 && *value < 150.0)
+        .collect::<Vec<_>>();
+    (!temperatures.is_empty()).then_some(temperatures)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_thermal_temperatures_celsius() -> Vec<f64> {
+    fs::read_dir("/sys/class/thermal")
+        .ok()
+        .into_iter()
+        .flat_map(|entries| entries.flatten())
+        .filter_map(|entry| fs::read_to_string(entry.path().join("temp")).ok())
+        .filter_map(|value| value.trim().parse::<f64>().ok())
+        .map(|value| value / 1000.0)
+        .filter(|value| value.is_finite() && *value > -50.0 && *value < 150.0)
+        .collect()
+}
+
 fn cold_warm_profile_benchmark(
     profile: &WorkloadProfileEvaluation,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
@@ -2757,6 +3239,9 @@ fn load_benchmark_telemetry_context(
     }
     if bool_at_any(&telemetry, &["claim_boundary.speedup_claim"]).unwrap_or(false) {
         global_gaps.push("power/thermal context receipt claims speedup".to_string());
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.power_advantage_claim"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt claims power advantage".to_string());
     }
     if bool_at_any(&telemetry, &["claim_boundary.acceleration_claim"]).unwrap_or(false) {
         global_gaps.push("power/thermal context receipt claims acceleration".to_string());
@@ -4024,6 +4509,25 @@ fn write_or_print_cold_warm_benchmark(
         }
         fs::write(path, json)?;
         println!("Lunar Lake cold/warm profile benchmark written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_telemetry_context(
+    receipt: &LunarLakeTelemetryContext,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake telemetry context receipt written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -6096,6 +6600,28 @@ mod tests {
         }));
         assert!(!benchmark.claim_boundary.speedup_claim);
         assert!(!benchmark.claim_boundary.route_promotion_changed);
+        Ok(())
+    }
+
+    #[test]
+    fn telemetry_context_records_live_context_without_route_claims() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+
+        let receipt = build_telemetry_context_with_created_utc(
+            temp.path(),
+            "2026-05-17T05:45:00Z".to_string(),
+        );
+
+        assert_eq!(receipt.artifact_kind, "lunar_lake_power_thermal_context");
+        assert_eq!(receipt.proof_stage, "live_telemetry_context_captured_no_promotion_change");
+        assert!(receipt.claim_boundary.telemetry_measurement_executed);
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(!receipt.claim_boundary.acceleration_claim);
+        assert_eq!(receipt.memory.source, "sysinfo");
+        assert!(receipt.sources.iter().any(|source| source.source == "sysinfo"));
         Ok(())
     }
 
