@@ -1,0 +1,21 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-028"
+event = "merged"
+timestamp = "2026-05-17T16:29:13Z"
+actor = "codex"
+pr = 5384
+branch = "codex/slm-cpu-028-q4-planning-gates"
+head_sha = "06041a534af0d8fbe02569c75d3b2249f6399a2e"
+merge_sha = "8c79a58d28c7a5114556919ab4cfd201474134a8"
+summary = "Merged the bounded Kaby Lake Q4_K_M/Q4_K_S expansion planning gate and readied SLM-CPU-029."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5384",
+  "docs/slm/SLM_CPU_Q4_EXPANSION_PLAN.md",
+  "ci/slm-cpu/q4-expansion-candidates.toml",
+]
+notes = [
+  "Merged the bounded Kaby Lake Q4_K_M/Q4_K_S expansion planning gate.",
+  "SLM-CPU-028 is a planning artifact only; it does not implement or claim Q4 runtime support.",
+  "SLM-CPU-029 is ready as the next bounded Qwen3 Q8_0 warm-session allocation/layout optimization slice.",
+]

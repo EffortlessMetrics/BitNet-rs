@@ -2254,9 +2254,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-028"
-status = "pr_open"
+status = "merged"
 pr = 5384
 head_sha = "06041a534af0d8fbe02569c75d3b2249f6399a2e"
+merge_sha = "8c79a58d28c7a5114556919ab4cfd201474134a8"
 branch = "codex/slm-cpu-028-q4-planning-gates"
 stackable = false
 review_mode = "codex_premerge"
@@ -2295,6 +2296,58 @@ must_not_claim = [
   "Q4_K_M or Q4_K_S runtime support exists.",
   "Sustained 8250U throughput is proven.",
   "Broad answer quality is proven.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-029"
+status = "ready"
+branch = "codex/slm-cpu-029-kv-temp-reuse"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-028"]
+acceptance = "Reduce the next Qwen3-0.6B Q8_0 strict CPU warm-session hot-loop allocation or layout boundary after the SLM-CPU-026 logits scratch reuse and SLM-CPU-028 Q4 planning gate. Prioritize KV/cache/temp buffer reuse, prompt/session buffer pre-sizing, avoidable tensor clones/transposes, or keeping tokenizer/stop-policy work out of the decode hot loop only where deterministic generated IDs and strict receipt provenance are preserved. The slice must use the Qwen3 Q8_0 4-thread appliance profile as behavior oracle, record before/after allocation or timing evidence where available, preserve model SHA, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel, tokenizer.source=gguf_metadata, tokenizer.strict=true, and fallback_used=false, and scope any improvement to the fixed model/corpus/thread-count artifact. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-kv-temp-reuse.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The next Kaby SLM optimization target is a bounded Qwen3 Q8_0 warm-session allocation or layout boundary after logits scratch reuse.",
+  "A valid SLM-CPU-029 slice must preserve generated IDs, decoded text, strict tokenizer authority, selected CPU backend, model SHA, and fallback=false against the recorded 4-thread appliance oracle.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
   "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
   "Qwen3.5 or hybrid architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
