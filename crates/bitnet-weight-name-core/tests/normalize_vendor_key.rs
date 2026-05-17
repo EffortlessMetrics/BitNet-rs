@@ -53,7 +53,9 @@ fn attention_llama_w_aliases() {
         ("layers.6.self_attn.wo.weight", "layers.6.attention.o_proj.weight"),
         // `model.layers.N.attn.w*`
         ("model.layers.8.attn.wk.weight", "layers.8.attention.k_proj.weight"),
+        ("model.layers.8.attn.wo.weight", "layers.8.attention.o_proj.weight"),
         // `model.layers.N.self_attn.w*` with a multi-digit index
+        ("model.layers.14.self_attn.wq.weight", "layers.14.attention.q_proj.weight"),
         ("model.layers.14.self_attn.wv.weight", "layers.14.attention.v_proj.weight"),
         ("model.layers.27.self_attn.wo.weight", "layers.27.attention.o_proj.weight"),
     ]);
