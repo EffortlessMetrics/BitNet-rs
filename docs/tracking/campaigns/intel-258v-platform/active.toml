@@ -3697,10 +3697,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-006"
-status = "pr_open"
+status = "merged"
 pr = 5344
+merge_sha = "6e2318f7ec7e56d741ddbb3edebd8a66bed7e4ff"
 branch = "codex/lunar-lake/LNL258V-REG-006-corpus-receipt-alignment"
-head_sha = "a585cdbe7504cf4cf535f95d024ccf71025e131f"
+head_sha = "ffca9e3f1abbc330d25368e86f84de130ef35f56"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
