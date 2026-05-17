@@ -1140,13 +1140,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-007"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-007-serve-gate"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-006"]
+pr = 5339
+merge_sha = "8590563daaeb00decd6fe8fdc3570e141c69933c"
 acceptance = "Enable BitNet serve only after BitNet chat, streaming request/response semantics, health/ready endpoints, per-request receipts, timeout behavior, and failure-mode receipts pass on M4."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_serve -- --nocapture",
@@ -1180,7 +1182,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-008"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
 stackable = false
 review_mode = "codex_premerge"
