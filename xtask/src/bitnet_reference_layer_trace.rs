@@ -17642,14 +17642,33 @@ fn attention_score_raw_history_position_qk_recompute(
     } else {
         "selected_score_positions_partially_recomputed"
     };
-    let next_diagnostic = match classification {
-        "selected_score_positions_recomputed_from_qk" => {
-            "compare selected-position candidate deltas to decide whether score drift follows Q, K, or score-row semantics"
+    let candidate_delta_summary = score_position_candidate_delta_summary(&rows);
+    let candidate_delta_classification = candidate_delta_summary
+        .pointer("/classification")
+        .and_then(Value::as_str)
+        .unwrap_or("score_slot_candidate_deltas_not_available");
+    let next_diagnostic = match (classification, candidate_delta_classification) {
+        (
+            "selected_score_positions_recomputed_from_qk",
+            "score_slot_drift_follows_side_specific_qk",
+        ) => {
+            "use the side-specific Q/K delta summary to localize the upstream Q or K input divergence"
         }
-        "selected_score_positions_require_query_history" => {
+        (
+            "selected_score_positions_recomputed_from_qk",
+            "score_slot_drift_follows_side_specific_qk_with_reference_residual",
+        ) => {
+            "pin reference score accumulation or input capture precision for the remaining reference recompute residual before changing runtime math"
+        }
+        ("selected_score_positions_recomputed_from_qk", _) => {
+            "interpret selected-position candidate deltas before changing score math"
+        }
+        ("selected_score_positions_require_query_history", _) => {
             "capture post-RoPE query history in reference and Rust before changing score math"
         }
-        "no_selected_positions" => "capture material score positions before recomputing Q/K slots",
+        ("no_selected_positions", _) => {
+            "capture material score positions before recomputing Q/K slots"
+        }
         _ => "capture missing Q/K score inputs before interpreting selected score-position drift",
     };
 
@@ -17676,9 +17695,198 @@ fn attention_score_raw_history_position_qk_recompute(
         "recomputed_count": recomputed_count,
         "blocked_count": blocked_count,
         "missing_input_count": missing_input_count,
+        "candidate_delta_summary": candidate_delta_summary,
         "rows": rows,
         "next_diagnostic": next_diagnostic,
     })
+}
+
+fn score_position_candidate_delta_summary(rows: &[Value]) -> Value {
+    const SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS: f64 = 1.0e-3;
+
+    let mut compared_row_count = 0usize;
+    let mut recomputed_row_count = 0usize;
+    let mut side_specific_best_count = 0usize;
+    let mut reference_self_best_count = 0usize;
+    let mut rust_self_best_count = 0usize;
+    let mut mixed_best_count = 0usize;
+    let mut missing_best_count = 0usize;
+    let mut reference_residual_count = 0usize;
+    let mut rust_residual_count = 0usize;
+    let mut max_best_reference_abs_delta = 0.0f64;
+    let mut max_best_rust_abs_delta = 0.0f64;
+    let mut max_actual_abs_delta = 0.0f64;
+    let mut first_reference_residual_row = Value::Null;
+    let mut first_rust_residual_row = Value::Null;
+    let mut summary_rows = Vec::<Value>::new();
+
+    for row in rows {
+        compared_row_count += 1;
+        let status = row.pointer("/status").and_then(Value::as_str).unwrap_or("unknown");
+        if status != "recomputed" {
+            missing_best_count += 1;
+            summary_rows.push(json!({
+                "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+                "status": status,
+                "classification": "not_recomputed",
+            }));
+            continue;
+        }
+        recomputed_row_count += 1;
+
+        let reference_base =
+            row.pointer("/best_reference_candidate/base_candidate").and_then(Value::as_str);
+        let rust_base = row.pointer("/best_rust_candidate/base_candidate").and_then(Value::as_str);
+        let reference_delta = row
+            .pointer("/best_reference_candidate/reference_abs_delta")
+            .and_then(Value::as_f64)
+            .unwrap_or(f64::INFINITY);
+        let rust_delta = row
+            .pointer("/best_rust_candidate/rust_abs_delta")
+            .and_then(Value::as_f64)
+            .unwrap_or(f64::INFINITY);
+        let actual_delta = row.pointer("/actual_abs_delta").and_then(Value::as_f64).unwrap_or(0.0);
+        max_best_reference_abs_delta = max_best_reference_abs_delta.max(reference_delta);
+        max_best_rust_abs_delta = max_best_rust_abs_delta.max(rust_delta);
+        max_actual_abs_delta = max_actual_abs_delta.max(actual_delta);
+
+        let reference_self_best =
+            reference_base.is_some_and(score_candidate_base_is_reference_self);
+        let rust_self_best = rust_base.is_some_and(score_candidate_base_is_rust_self);
+        let mixed_best = reference_base.is_some_and(score_candidate_base_is_mixed)
+            || rust_base.is_some_and(score_candidate_base_is_mixed);
+        if reference_self_best {
+            reference_self_best_count += 1;
+        }
+        if rust_self_best {
+            rust_self_best_count += 1;
+        }
+        if reference_self_best && rust_self_best {
+            side_specific_best_count += 1;
+        }
+        if mixed_best {
+            mixed_best_count += 1;
+        }
+        if !reference_self_best || !rust_self_best {
+            missing_best_count += 1;
+        }
+
+        let reference_residual = reference_delta > SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS;
+        let rust_residual = rust_delta > SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS;
+        if reference_residual {
+            reference_residual_count += 1;
+            if first_reference_residual_row.is_null() {
+                first_reference_residual_row = json!({
+                    "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+                    "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                    "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                    "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                    "best_reference_candidate": row.pointer("/best_reference_candidate").cloned().unwrap_or(Value::Null),
+                });
+            }
+        }
+        if rust_residual {
+            rust_residual_count += 1;
+            if first_rust_residual_row.is_null() {
+                first_rust_residual_row = json!({
+                    "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+                    "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                    "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                    "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                    "best_rust_candidate": row.pointer("/best_rust_candidate").cloned().unwrap_or(Value::Null),
+                });
+            }
+        }
+
+        let row_classification =
+            if reference_self_best && rust_self_best && !reference_residual && !rust_residual {
+                "side_specific_qk_best"
+            } else if reference_self_best && rust_self_best && reference_residual && !rust_residual
+            {
+                "side_specific_qk_best_with_reference_residual"
+            } else if reference_self_best && rust_self_best && rust_residual {
+                "side_specific_qk_best_with_rust_residual"
+            } else if mixed_best {
+                "mixed_qk_best"
+            } else {
+                "candidate_delta_unresolved"
+            };
+        summary_rows.push(json!({
+            "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+            "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+            "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+            "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+            "classification": row_classification,
+            "reference_best_base": reference_base,
+            "rust_best_base": rust_base,
+            "reference_best_self": reference_self_best,
+            "rust_best_self": rust_self_best,
+            "mixed_best": mixed_best,
+            "best_reference_abs_delta": reference_delta,
+            "best_rust_abs_delta": rust_delta,
+            "actual_abs_delta": actual_delta,
+            "reference_residual_over_warn": reference_residual,
+            "rust_residual_over_warn": rust_residual,
+        }));
+    }
+
+    let classification = if compared_row_count == 0 {
+        "score_slot_candidate_deltas_not_available"
+    } else if recomputed_row_count != compared_row_count {
+        "score_slot_candidate_deltas_missing_recompute"
+    } else if side_specific_best_count == compared_row_count
+        && reference_residual_count == 0
+        && rust_residual_count == 0
+    {
+        "score_slot_drift_follows_side_specific_qk"
+    } else if side_specific_best_count == compared_row_count
+        && reference_residual_count > 0
+        && rust_residual_count == 0
+    {
+        "score_slot_drift_follows_side_specific_qk_with_reference_residual"
+    } else if side_specific_best_count == compared_row_count {
+        "score_slot_drift_follows_side_specific_qk_with_residual"
+    } else if side_specific_best_count > 0 {
+        "score_slot_drift_partially_follows_side_specific_qk"
+    } else {
+        "score_slot_candidate_deltas_unresolved"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected score-position candidate delta classification is diagnostic-only evidence; it compares recomputed score slots against reference and Rust raw score slots and does not promote runtime math, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "residual_warn_abs": SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "compared_row_count": compared_row_count,
+        "recomputed_row_count": recomputed_row_count,
+        "side_specific_best_count": side_specific_best_count,
+        "reference_self_best_count": reference_self_best_count,
+        "rust_self_best_count": rust_self_best_count,
+        "mixed_best_count": mixed_best_count,
+        "missing_best_count": missing_best_count,
+        "reference_residual_count": reference_residual_count,
+        "rust_residual_count": rust_residual_count,
+        "max_best_reference_abs_delta": max_best_reference_abs_delta,
+        "max_best_rust_abs_delta": max_best_rust_abs_delta,
+        "max_actual_abs_delta": max_actual_abs_delta,
+        "first_reference_residual_row": first_reference_residual_row,
+        "first_rust_residual_row": first_rust_residual_row,
+        "rows": summary_rows,
+    })
+}
+
+fn score_candidate_base_is_reference_self(base: &str) -> bool {
+    base.starts_with("reference_q") && base.contains("_reference_k")
+}
+
+fn score_candidate_base_is_rust_self(base: &str) -> bool {
+    base.starts_with("rust_q") && base.contains("_rust_k")
+}
+
+fn score_candidate_base_is_mixed(base: &str) -> bool {
+    (base.starts_with("reference_q") && base.contains("_rust_k"))
+        || (base.starts_with("rust_q") && base.contains("_reference_k"))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -27073,6 +27281,80 @@ mod tests {
             Some(&json!(0.0))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn score_position_candidate_delta_summary_classifies_side_specific_qk() {
+        let rows = vec![json!({
+            "label": "max_material_position",
+            "status": "recomputed",
+            "head": 0,
+            "key_slot": 13,
+            "query_token": 3,
+            "actual_abs_delta": 0.023406982421875_f64,
+            "best_reference_candidate": {
+                "base_candidate": "reference_q_history_reference_k",
+                "candidate": "reference_q_history_reference_k_q_trace_k_f16",
+                "reference_abs_delta": 0.0005_f64,
+            },
+            "best_rust_candidate": {
+                "base_candidate": "rust_q_history_rust_k",
+                "candidate": "rust_q_history_rust_k_q_trace_k_f32",
+                "rust_abs_delta": 0.0_f64,
+            }
+        })];
+
+        let summary = score_position_candidate_delta_summary(&rows);
+
+        assert_eq!(summary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            summary.pointer("/classification"),
+            Some(&json!("score_slot_drift_follows_side_specific_qk"))
+        );
+        assert_eq!(summary.pointer("/side_specific_best_count"), Some(&json!(1)));
+        assert_eq!(summary.pointer("/reference_residual_count"), Some(&json!(0)));
+        assert_eq!(summary.pointer("/rust_residual_count"), Some(&json!(0)));
+        assert_eq!(
+            summary.pointer("/rows/0/classification"),
+            Some(&json!("side_specific_qk_best"))
+        );
+    }
+
+    #[test]
+    fn score_position_candidate_delta_summary_reports_reference_residual() {
+        let rows = vec![json!({
+            "label": "max_material_position",
+            "status": "recomputed",
+            "head": 0,
+            "key_slot": 13,
+            "query_token": 3,
+            "actual_abs_delta": 0.023406982421875_f64,
+            "best_reference_candidate": {
+                "base_candidate": "reference_q_history_reference_k",
+                "candidate": "reference_q_history_reference_k_q_trace_k_f16",
+                "reference_abs_delta": 0.018768310546875_f64,
+            },
+            "best_rust_candidate": {
+                "base_candidate": "rust_q_history_rust_k",
+                "candidate": "rust_q_history_rust_k_q_trace_k_f32",
+                "rust_abs_delta": 0.0_f64,
+            }
+        })];
+
+        let summary = score_position_candidate_delta_summary(&rows);
+
+        assert_eq!(
+            summary.pointer("/classification"),
+            Some(&json!("score_slot_drift_follows_side_specific_qk_with_reference_residual"))
+        );
+        assert_eq!(summary.pointer("/reference_residual_count"), Some(&json!(1)));
+        assert_eq!(summary.pointer("/rust_residual_count"), Some(&json!(0)));
+        assert_eq!(summary.pointer("/first_reference_residual_row/key_slot"), Some(&json!(13)));
+        assert_eq!(
+            summary.pointer("/rows/0/classification"),
+            Some(&json!("side_specific_qk_best_with_reference_residual"))
+        );
     }
 
     #[test]
