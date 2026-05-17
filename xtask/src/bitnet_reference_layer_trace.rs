@@ -18965,6 +18965,41 @@ fn score_position_candidate_accum_values(
     query_token: usize,
     selected_current_token: Option<usize>,
 ) -> Option<ScorePositionCandidateAccumValues> {
+    let pairs = score_position_candidate_query_key_pairs(
+        candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
+    if pairs.is_empty() {
+        return None;
+    }
+
+    let mut sum_f64 = 0.0f64;
+    let mut sum_f32 = 0.0f32;
+    let mut sum_f32_mul_add = 0.0f32;
+    for (query, key) in pairs {
+        sum_f64 += (query as f64) * (key as f64);
+        sum_f32 += query * key;
+        sum_f32_mul_add = query.mul_add(key, sum_f32_mul_add);
+    }
+    Some(ScorePositionCandidateAccumValues {
+        f64_sequential: sum_f64,
+        f32_sequential: sum_f32,
+        f32_mul_add: sum_f32_mul_add,
+    })
+}
+
+fn score_position_candidate_query_key_pairs(
+    candidate: ScorePositionInputCandidate<'_>,
+    head: usize,
+    head_dim: usize,
+    key_slot: usize,
+    query_token: usize,
+    selected_current_token: Option<usize>,
+) -> Option<Vec<(f32, f32)>> {
     let query_token_count = match candidate.query_layout {
         ScoreQueryLayout::HeadMajorCurrent => 1,
         ScoreQueryLayout::DimMajorHistory => candidate.query_values.len().checked_div(head_dim)?,
@@ -18978,9 +19013,7 @@ fn score_position_candidate_accum_values(
         return None;
     }
 
-    let mut sum_f64 = 0.0f64;
-    let mut sum_f32 = 0.0f32;
-    let mut sum_f32_mul_add = 0.0f32;
+    let mut pairs = Vec::with_capacity(head_dim);
     for dim in 0..head_dim {
         let query_index = match candidate.query_layout {
             ScoreQueryLayout::HeadMajorCurrent => {
@@ -19008,15 +19041,95 @@ fn score_position_candidate_accum_values(
             *candidate.key_values.get(key_index)?,
             candidate.key_f16_roundtrip,
         );
-        sum_f64 += (query as f64) * (key as f64);
-        sum_f32 += query * key;
-        sum_f32_mul_add = query.mul_add(key, sum_f32_mul_add);
+        pairs.push((query, key));
     }
-    Some(ScorePositionCandidateAccumValues {
-        f64_sequential: sum_f64,
-        f32_sequential: sum_f32,
-        f32_mul_add: sum_f32_mul_add,
-    })
+    Some(pairs)
+}
+
+fn score_position_candidate_input_residual_sensitivity(
+    candidate: ScorePositionInputCandidate<'_>,
+    head: usize,
+    head_dim: usize,
+    key_slot: usize,
+    query_token: usize,
+    selected_current_token: Option<usize>,
+    recomputed_score: f64,
+    reference_score: Option<f64>,
+    rust_score: Option<f64>,
+) -> Option<Value> {
+    let pairs = score_position_candidate_query_key_pairs(
+        candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
+    if pairs.is_empty() {
+        return None;
+    }
+
+    let mut query_l1 = 0.0f64;
+    let mut query_l2_sq = 0.0f64;
+    let mut query_max_abs = 0.0f64;
+    let mut key_l1 = 0.0f64;
+    let mut key_l2_sq = 0.0f64;
+    let mut key_max_abs = 0.0f64;
+    let mut product_l1 = 0.0f64;
+    let mut product_max_abs = 0.0f64;
+    for (query, key) in pairs.iter().copied() {
+        let query = f64::from(query);
+        let key = f64::from(key);
+        let product = query * key;
+        query_l1 += query.abs();
+        query_l2_sq += query * query;
+        query_max_abs = query_max_abs.max(query.abs());
+        key_l1 += key.abs();
+        key_l2_sq += key * key;
+        key_max_abs = key_max_abs.max(key.abs());
+        product_l1 += product.abs();
+        product_max_abs = product_max_abs.max(product.abs());
+    }
+    let query_l2 = query_l2_sq.sqrt();
+    let key_l2 = key_l2_sq.sqrt();
+    let head_dim = pairs.len() as f64;
+
+    let sensitivity_for = |target: Option<f64>| -> Value {
+        let Some(target) = target else {
+            return Value::Null;
+        };
+        let signed_delta = target - recomputed_score;
+        let abs_delta = signed_delta.abs();
+        json!({
+            "target_score": target,
+            "signed_delta": signed_delta,
+            "abs_delta": abs_delta,
+            "relative_abs_delta": if target != 0.0 { json!(abs_delta / target.abs()) } else { Value::Null },
+            "mean_product_delta_per_dim": abs_delta / head_dim,
+            "query_l2_delta_if_key_fixed": if key_l2 > 0.0 { json!(abs_delta / key_l2) } else { Value::Null },
+            "key_l2_delta_if_query_fixed": if query_l2 > 0.0 { json!(abs_delta / query_l2) } else { Value::Null },
+            "uniform_query_abs_delta_if_key_fixed": if key_l1 > 0.0 { json!(abs_delta / key_l1) } else { Value::Null },
+            "uniform_key_abs_delta_if_query_fixed": if query_l1 > 0.0 { json!(abs_delta / query_l1) } else { Value::Null },
+        })
+    };
+
+    Some(json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected score-position input residual sensitivity is diagnostic-only evidence for the q/k perturbation scale needed to explain a score residual; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "head_dim": pairs.len(),
+        "recomputed_score_slot": recomputed_score,
+        "query_l1": query_l1,
+        "query_l2": query_l2,
+        "query_max_abs": query_max_abs,
+        "key_l1": key_l1,
+        "key_l2": key_l2,
+        "key_max_abs": key_max_abs,
+        "product_l1": product_l1,
+        "product_max_abs": product_max_abs,
+        "reference": sensitivity_for(reference_score),
+        "rust": sensitivity_for(rust_score),
+    }))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -19037,8 +19150,10 @@ fn score_position_candidate_accumulation_probe(
     let mut best_rust_capture_policy = "";
     let mut best_reference_abs_delta = f64::INFINITY;
     let mut best_reference_abs_delta_after_capture_probe = f64::INFINITY;
+    let mut best_reference_input_residual_sensitivity = Value::Null;
     let mut best_rust_abs_delta = f64::INFINITY;
     let mut best_rust_abs_delta_after_capture_probe = f64::INFINITY;
+    let mut best_rust_input_residual_sensitivity = Value::Null;
     let mut f32_reference_abs_delta = f64::INFINITY;
     let mut f32_rust_abs_delta = f64::INFINITY;
     let mut f32_cast_reference_abs_delta = f64::INFINITY;
@@ -19067,6 +19182,18 @@ fn score_position_candidate_accumulation_probe(
             let value = capture_policy.capture(raw_value);
             let reference_abs_delta = reference_score.map(|target| (target - value).abs());
             let rust_abs_delta = rust_score.map(|target| (target - value).abs());
+            let input_residual_sensitivity = score_position_candidate_input_residual_sensitivity(
+                candidate,
+                head,
+                head_dim,
+                key_slot,
+                query_token,
+                selected_current_token,
+                value,
+                reference_score,
+                rust_score,
+            )
+            .unwrap_or(Value::Null);
             if matches!(capture_policy, ScoreOutputCapturePolicy::F32Cast) {
                 if let Some(delta) = reference_abs_delta {
                     if delta < best_reference_abs_delta {
@@ -19085,12 +19212,14 @@ fn score_position_candidate_accumulation_probe(
                 if delta < best_reference_abs_delta_after_capture_probe {
                     best_reference_abs_delta_after_capture_probe = delta;
                     best_reference_capture_policy = capture_policy.label();
+                    best_reference_input_residual_sensitivity = input_residual_sensitivity.clone();
                 }
             }
             if let Some(delta) = rust_abs_delta {
                 if delta < best_rust_abs_delta_after_capture_probe {
                     best_rust_abs_delta_after_capture_probe = delta;
                     best_rust_capture_policy = capture_policy.label();
+                    best_rust_input_residual_sensitivity = input_residual_sensitivity.clone();
                 }
             }
             if matches!(
@@ -19122,6 +19251,7 @@ fn score_position_candidate_accumulation_probe(
                 "recomputed_score_slot": value,
                 "reference_abs_delta": reference_abs_delta,
                 "rust_abs_delta": rust_abs_delta,
+                "input_residual_sensitivity": input_residual_sensitivity,
             }));
         }
     }
@@ -19174,6 +19304,7 @@ fn score_position_candidate_accumulation_probe(
         } else {
             Value::Null
         },
+        "best_reference_input_residual_sensitivity": best_reference_input_residual_sensitivity,
         "best_rust_abs_delta": if best_rust_abs_delta.is_finite() {
             json!(best_rust_abs_delta)
         } else {
@@ -19184,6 +19315,7 @@ fn score_position_candidate_accumulation_probe(
         } else {
             Value::Null
         },
+        "best_rust_input_residual_sensitivity": best_rust_input_residual_sensitivity,
         "f32_reference_abs_delta": if f32_reference_abs_delta.is_finite() {
             json!(f32_reference_abs_delta)
         } else {
@@ -28357,6 +28489,14 @@ mod tests {
             probe.pointer("/reference_residual_explained_by_capture_policy"),
             Some(&json!(true))
         );
+        assert_eq!(
+            probe.pointer("/best_reference_input_residual_sensitivity/reference/abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(
+            probe.pointer("/best_reference_input_residual_sensitivity/claim_allowed"),
+            Some(&json!(false))
+        );
         assert_eq!(probe.pointer("/reference_residual_improved_over_f32"), Some(&json!(true)));
     }
 
@@ -28417,6 +28557,17 @@ mod tests {
         assert_eq!(f64_raw.pointer("/reference_abs_delta"), Some(&json!(0.0)));
         assert!(
             f32_cast.pointer("/reference_abs_delta").and_then(Value::as_f64).unwrap_or(0.0) > 0.0
+        );
+        assert_eq!(
+            f64_raw.pointer("/input_residual_sensitivity/reference/abs_delta"),
+            Some(&json!(0.0))
+        );
+        assert!(
+            f32_cast
+                .pointer("/input_residual_sensitivity/reference/mean_product_delta_per_dim")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+                > 0.0
         );
         assert_eq!(probe.pointer("/claim_allowed"), Some(&json!(false)));
     }
