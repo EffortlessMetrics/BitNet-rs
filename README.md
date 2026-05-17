@@ -185,7 +185,20 @@ Nix: `nix develop && nix build .#bitnet-cli && nix flake check` - see [Nix guide
 
 ## Testing
 
+For fast local feedback while developing, run the default dev check. It verifies
+formatting, checks the Cargo default-members with `--locked --no-default-features --features cpu`,
+and runs their library tests without opting into every workspace crate.
+
 ```bash
+./scripts/dev-check.sh
+# or: just dev-check
+# or: make dev-check
+```
+
+Before opening a broader PR, run the full workspace check:
+
+```bash
+./scripts/dev-check.sh full
 cargo nextest run --locked --workspace --no-default-features --features cpu
 cargo fmt --all -- --check
 cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings

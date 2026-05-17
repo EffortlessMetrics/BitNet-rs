@@ -57,6 +57,14 @@ docs:
 docs-automation:
     scripts/docs_automation.sh
 
+# Fast local contributor check (fmt check, default-member build, unit tests)
+dev-check:
+    scripts/dev-check.sh quick
+
+# Full local contributor check (fmt check, workspace clippy, workspace tests)
+dev-check-full:
+    scripts/dev-check.sh full
+
 # Format and lint code
 fmt:
     cargo fmt --all

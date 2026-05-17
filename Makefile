@@ -16,7 +16,7 @@ NC := $(shell tput sgr0 2>/dev/null || echo "")
 .PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup \
         build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
         watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
-        guards preflight docs-check \
+        guards preflight docs-check dev-check dev-check-full \
         b t r c f l d g bt bf cf cb ct fr ft q a i
 
 # Detect OS and features
@@ -162,6 +162,14 @@ fmt:
 lint:
 	@echo "$(GREEN)Running clippy...$(NC)"
 	@$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
+
+## dev-check: Fast local contributor check (fmt check, default-member build, unit tests)
+dev-check:
+	@./scripts/dev-check.sh quick
+
+## dev-check-full: Full local contributor check (fmt check, workspace clippy, workspace tests)
+dev-check-full:
+	@./scripts/dev-check.sh full
 
 ## check: Run all checks (fmt, lint, test)
 check: fmt lint test
