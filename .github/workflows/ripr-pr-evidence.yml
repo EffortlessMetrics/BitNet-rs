@@ -60,7 +60,7 @@ jobs:
 
       - name: RIPR review guidance
         run: |
-          if ! timeout 120s target/debug/xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD; then
+          if ! timeout 25s target/debug/xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD; then
             mkdir -p target/ripr/review
             printf '%s\n' \
               '{' \
