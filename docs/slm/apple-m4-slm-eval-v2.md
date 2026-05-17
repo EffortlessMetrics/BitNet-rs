@@ -250,6 +250,52 @@ from `M4-ACCURACY-003` remain separate from this rollup. A fresh 500-case
 runtime pass-rate refresh must be recorded as its own evidence item before the
 larger corpus has runtime pass rates.
 
+## Full 500-Case Runtime Refresh
+
+`M4-ACCURACY-006` records the first full 500-case dense SLM eval-v2 runtime
+refresh for every supported M4 dense model identity:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/<model-id>/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/<model-id>/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/task-family-pass-rates.json
+```
+
+The run keeps the bounded eval context unchanged: `apple-m4-cpu-neon`,
+`fallback_used=false`, supported Qwen dense model IDs only, strict GGUF
+tokenizer authority, Qwen2.5 prompt template, deterministic corpus seed
+`777331`, corpus contract `2.2.0`, generated text, generated token IDs, and the
+dense-SLM-only claim boundary. This is not BitNet evidence, not a broad
+quality claim, and not a broad performance benchmark. The summary memory and
+resident-stability fields continue to point at the prior matching dense
+warm-session proof because `answer-corpus` child receipts do not record fresh
+process RSS.
+
+| Model | Strict score | Quality gate | TTFT p50 | TTFT p90 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 299 / 500 | 299 / 500 | 4214.0 ms | 11488.1 ms | 12.298 | 1.095 | 8.957 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 297 / 500 | 297 / 500 | 2202.0 ms | 2793.8 ms | 21.988 | 2.237 | 15.626 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 246 / 500 | 245 / 500 | 8724.0 ms | 11114.7 ms | 5.525 | 0.571 | 4.971 |
+
+Task-family strict pass rates from the 500-case rollup:
+
+| Family | Qwen 0.5B Q8_0 | Qwen 0.5B Q4_K_M | Qwen 1.5B Q4_K_M |
+|---|---:|---:|---:|
+| `arithmetic_exact` | 71 / 84 | 71 / 84 | 84 / 84 |
+| `numeric_tolerance` | 0 / 42 | 0 / 42 | 1 / 42 |
+| `fixed_table_qa` | 14 / 50 | 4 / 50 | 15 / 50 |
+| `format_constrained_json` | 24 / 42 | 20 / 42 | 2 / 42 |
+| `closed_label_classification` | 16 / 50 | 28 / 50 | 0 / 50 |
+| `synthetic_extraction` | 49 / 50 | 49 / 50 | 36 / 50 |
+| `ordering_sorting` | 13 / 50 | 13 / 50 | 0 / 50 |
+| `copy_edit_rewrite` | 40 / 50 | 40 / 50 | 30 / 50 |
+| `constrained_summary` | 37 / 41 | 37 / 41 | 41 / 41 |
+| `instruction_following_required_forbidden` | 35 / 41 | 35 / 41 | 37 / 41 |
+
+The 500-case reports are not trend-ready yet. `M4-ACCURACY-007` must produce a
+second matching 500-case refresh before these larger reports can replace the
+120-case pair as comparable history.
+
 ## Benchmark Contract
 
 The v2 benchmark profile set should include:

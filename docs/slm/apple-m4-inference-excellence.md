@@ -136,12 +136,33 @@ normalization. These fields are emitted alongside strict `failed_rules` and
 legacy taxonomy labels; they are not an LLM judge and do not broaden dense SLM
 quality claims.
 
-The remaining dense accuracy gap is to run the full 500-case corpus on the M4
-for every supported dense model identity, then repeat it once under matching
-identity before using the 500-case reports as trend-ready evidence:
+`M4-ACCURACY-006` records the first full 500-case runtime pass-rate refresh on
+the M4 for every supported dense model identity:
 
 ```text
-M4-ACCURACY-006  full 500-case dense SLM eval-v2 receipts
+ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/<model-id>/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/<model-id>/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/task-family-pass-rates.json
+```
+
+The refresh keeps `apple-m4-cpu-neon`, `fallback_used=false`, catalog-pinned
+GGUF SHA256 values, strict GGUF tokenizer authority, Qwen2.5 prompt template,
+generated text, generated token IDs, task-family counts, and deterministic
+failure categories. It is accuracy-depth evidence, not a broad quality or
+performance claim. Memory and resident-stability fields in the summary receipts
+remain sourced from the prior matching dense warm-session proof because
+`answer-corpus` child receipts do not record fresh process RSS.
+
+| Model | Strict score | Quality gate | TTFT p50 | TTFT p90 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 299 / 500 | 299 / 500 | 4214.0 ms | 11488.1 ms | 12.298 | 1.095 | 8.957 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 297 / 500 | 297 / 500 | 2202.0 ms | 2793.8 ms | 21.988 | 2.237 | 15.626 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 246 / 500 | 245 / 500 | 8724.0 ms | 11114.7 ms | 5.525 | 0.571 | 4.971 |
+
+The remaining dense accuracy gap is to repeat the 500-case refresh once under
+matching identity before treating the 500-case reports as trend-ready evidence:
+
+```text
 M4-ACCURACY-007  second matching 500-case dense eval-v2 refresh
 ```
 
