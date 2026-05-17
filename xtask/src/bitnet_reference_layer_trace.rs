@@ -7687,6 +7687,10 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_selected_post_rope_capture_replay_source(
             &report["attention_selected_post_rope_history_bucket_source"],
         );
+    report["attention_selected_rust_post_rope_capture_source"] =
+        attention_selected_rust_post_rope_capture_source(
+            &report["attention_selected_post_rope_capture_replay_source"],
+        );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -28255,6 +28259,155 @@ fn attention_selected_post_rope_capture_replay_source(history_source: &Value) ->
     })
 }
 
+fn attention_selected_rust_post_rope_capture_source(capture_replay_source: &Value) -> Value {
+    let source_rows = capture_replay_source.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut trace_bucket_crossing_count = 0usize;
+    let mut trace_subbucket_drift_count = 0usize;
+    let mut runtime_replay_unclean_count = 0usize;
+    let mut clean_count = 0usize;
+    let mut max_abs_rust_replay_minus_capture = 0.0f64;
+
+    if let Some(source_rows) = source_rows {
+        for source_row in source_rows {
+            if source_row.pointer("/classification").and_then(Value::as_str)
+                != Some("selected_post_rope_capture_replay_source_rust_capture_mismatch")
+            {
+                continue;
+            }
+            selected_count += 1;
+            let mut blocked_reasons = Vec::<String>::new();
+            let reference_mismatch = value_bool(source_row, "/reference_capture_mismatch");
+            let rust_mismatch = value_bool(source_row, "/rust_capture_mismatch");
+            let runtime_replay_has_delta = value_bool(source_row, "/runtime_replay_has_delta");
+            let post_rope_bucket_match = value_bool(source_row, "/post_rope_bucket_match");
+            let replay_bucket_match = value_bool(source_row, "/replay_bucket_match");
+            let rust_replay_minus_capture = value_f64(source_row, "/rust_replay_minus_capture");
+            if reference_mismatch.is_none() {
+                blocked_reasons.push("reference_capture_mismatch_missing".to_string());
+            }
+            if rust_mismatch.is_none() {
+                blocked_reasons.push("rust_capture_mismatch_missing".to_string());
+            }
+            if runtime_replay_has_delta.is_none() {
+                blocked_reasons.push("runtime_replay_has_delta_missing".to_string());
+            }
+            if post_rope_bucket_match.is_none() {
+                blocked_reasons.push("post_rope_bucket_match_missing".to_string());
+            }
+            if replay_bucket_match.is_none() {
+                blocked_reasons.push("replay_bucket_match_missing".to_string());
+            }
+            if rust_replay_minus_capture.is_none() {
+                blocked_reasons.push("rust_replay_minus_capture_missing".to_string());
+            }
+            if let Some(delta) = rust_replay_minus_capture {
+                max_abs_rust_replay_minus_capture =
+                    max_abs_rust_replay_minus_capture.max(delta.abs());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "selected_rust_post_rope_capture_source_missing_context"
+            } else if runtime_replay_has_delta == Some(true) || replay_bucket_match == Some(false) {
+                runtime_replay_unclean_count += 1;
+                "selected_rust_post_rope_capture_source_runtime_replay_unclean"
+            } else if reference_mismatch == Some(false)
+                && rust_mismatch == Some(true)
+                && replay_bucket_match == Some(true)
+                && post_rope_bucket_match == Some(false)
+            {
+                trace_bucket_crossing_count += 1;
+                "selected_rust_post_rope_capture_source_trace_bucket_crossing"
+            } else if reference_mismatch == Some(false) && rust_mismatch == Some(true) {
+                trace_subbucket_drift_count += 1;
+                "selected_rust_post_rope_capture_source_trace_subbucket_drift"
+            } else {
+                clean_count += 1;
+                "selected_rust_post_rope_capture_source_clean"
+            };
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": source_row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": source_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": source_row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                "query_token": source_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": source_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "reference_capture_mismatch": reference_mismatch,
+                "rust_capture_mismatch": rust_mismatch,
+                "runtime_replay_has_delta": runtime_replay_has_delta,
+                "rust_replay_minus_capture": rust_replay_minus_capture,
+                "post_rope_bucket_match": post_rope_bucket_match,
+                "replay_bucket_match": replay_bucket_match,
+                "post_rope_left_f16_bits": source_row.pointer("/post_rope_bucket/left_f16_bits").cloned().unwrap_or(Value::Null),
+                "post_rope_right_f16_bits": source_row.pointer("/post_rope_bucket/right_f16_bits").cloned().unwrap_or(Value::Null),
+                "replay_left_f16_bits": source_row.pointer("/replay_bucket/left_f16_bits").cloned().unwrap_or(Value::Null),
+                "replay_right_f16_bits": source_row.pointer("/replay_bucket/right_f16_bits").cloned().unwrap_or(Value::Null),
+                "post_rope_bucket": source_row.pointer("/post_rope_bucket").cloned().unwrap_or(Value::Null),
+                "replay_bucket": source_row.pointer("/replay_bucket").cloned().unwrap_or(Value::Null),
+                "capture_replay_source_row": source_row.clone(),
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "selected_rust_post_rope_capture_source_no_rust_capture_rows"
+    } else if missing_context_count == selected_count {
+        "selected_rust_post_rope_capture_source_missing_context"
+    } else if runtime_replay_unclean_count > 0 {
+        "selected_rust_post_rope_capture_source_runtime_replay_unclean"
+    } else if trace_bucket_crossing_count > 0 {
+        "selected_rust_post_rope_capture_source_trace_bucket_crossing"
+    } else if trace_subbucket_drift_count > 0 {
+        "selected_rust_post_rope_capture_source_trace_subbucket_drift"
+    } else if clean_count == selected_count {
+        "selected_rust_post_rope_capture_source_clean"
+    } else {
+        "selected_rust_post_rope_capture_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_rust_post_rope_capture_source_trace_bucket_crossing" => {
+            "pin Rust post-RoPE trace capture write precision for the selected history record before changing runtime math"
+        }
+        "selected_rust_post_rope_capture_source_trace_subbucket_drift" => {
+            "decide whether Rust post-RoPE trace subbucket capture drift is material before changing runtime math"
+        }
+        "selected_rust_post_rope_capture_source_runtime_replay_unclean" => {
+            "pin selected post-RoPE runtime replay before interpreting Rust trace capture"
+        }
+        "selected_rust_post_rope_capture_source_missing_context" => {
+            "capture selected Rust post-RoPE bucket and replay context before source attribution"
+        }
+        "selected_rust_post_rope_capture_source_clean" => {
+            "move downstream from selected Rust post-RoPE capture source"
+        }
+        "selected_rust_post_rope_capture_source_no_rust_capture_rows" => {
+            "classify selected post-RoPE capture/replay source before Rust capture attribution"
+        }
+        _ => "keep selected Rust post-RoPE capture source diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected Rust post-RoPE capture source is diagnostic-only evidence for whether the selected score-key bucket crossing is introduced by Rust trace capture rather than runtime replay; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "missing_context_count": missing_context_count,
+        "trace_bucket_crossing_count": trace_bucket_crossing_count,
+        "trace_subbucket_drift_count": trace_subbucket_drift_count,
+        "runtime_replay_unclean_count": runtime_replay_unclean_count,
+        "clean_count": clean_count,
+        "max_abs_rust_replay_minus_capture": max_abs_rust_replay_minus_capture,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     post_rope_raw_key_epsilon: &Value,
 ) -> Value {
@@ -43409,6 +43562,132 @@ mod tests {
             Some(&json!("runtime_replay_delta_missing"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_rust_post_rope_capture_source_reports_trace_bucket_crossing() {
+        let capture_replay_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_capture_replay_source_rust_capture_mismatch",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "reference_capture_mismatch": false,
+                    "rust_capture_mismatch": true,
+                    "runtime_replay_has_delta": false,
+                    "rust_replay_minus_capture": 1.1920928955078125e-7_f64,
+                    "post_rope_bucket_match": false,
+                    "replay_bucket_match": true,
+                    "post_rope_bucket": {
+                        "left_f16_bits": "0x3dec",
+                        "right_f16_bits": "0x3deb",
+                        "f16_bucket_match": false,
+                    },
+                    "replay_bucket": {
+                        "left_f16_bits": "0x3dec",
+                        "right_f16_bits": "0x3dec",
+                        "f16_bucket_match": true,
+                    }
+                }
+            ]
+        });
+
+        let report = attention_selected_rust_post_rope_capture_source(&capture_replay_source);
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_rust_post_rope_capture_source_trace_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/trace_bucket_crossing_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/runtime_replay_unclean_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_rust_post_rope_capture_source_trace_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/rows/0/post_rope_bucket_match"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rows/0/replay_bucket_match"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin Rust post-RoPE trace capture write precision for the selected history record before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_rust_post_rope_capture_source_reports_missing_context() {
+        let capture_replay_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_capture_replay_source_rust_capture_mismatch",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "rust_capture_mismatch": true,
+                }
+            ]
+        });
+
+        let report = attention_selected_rust_post_rope_capture_source(&capture_replay_source);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_rust_post_rope_capture_source_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/0"),
+            Some(&json!("reference_capture_mismatch_missing"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/1"),
+            Some(&json!("runtime_replay_has_delta_missing"))
+        );
+    }
+
+    #[test]
+    fn selected_rust_post_rope_capture_source_prioritizes_unclean_replay() {
+        let capture_replay_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_capture_replay_source_rust_capture_mismatch",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "reference_capture_mismatch": false,
+                    "rust_capture_mismatch": true,
+                    "runtime_replay_has_delta": true,
+                    "rust_replay_minus_capture": -1.1920928955078125e-7_f64,
+                    "post_rope_bucket_match": false,
+                    "replay_bucket_match": false,
+                }
+            ]
+        });
+
+        let report = attention_selected_rust_post_rope_capture_source(&capture_replay_source);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_rust_post_rope_capture_source_runtime_replay_unclean"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/runtime_replay_unclean_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/trace_bucket_crossing_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected post-RoPE runtime replay before interpreting Rust trace capture"
+            ))
+        );
     }
 
     #[test]
