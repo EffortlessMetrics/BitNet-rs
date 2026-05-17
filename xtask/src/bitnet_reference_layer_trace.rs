@@ -19132,6 +19132,181 @@ fn score_position_candidate_input_residual_sensitivity(
     }))
 }
 
+fn score_position_candidate_reduction_order_probe(
+    candidate: ScorePositionInputCandidate<'_>,
+    head: usize,
+    head_dim: usize,
+    key_slot: usize,
+    query_token: usize,
+    selected_current_token: Option<usize>,
+    reference_score: Option<f64>,
+    rust_score: Option<f64>,
+) -> Option<Value> {
+    let pairs = score_position_candidate_query_key_pairs(
+        candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
+    if pairs.is_empty() {
+        return None;
+    }
+
+    let mut rows = Vec::<Value>::new();
+    let mut best_reference_variant = "";
+    let mut best_reference_capture_policy = "";
+    let mut best_rust_variant = "";
+    let mut best_rust_capture_policy = "";
+    let mut best_reference_abs_delta = f64::INFINITY;
+    let mut best_rust_abs_delta = f64::INFINITY;
+    for (variant, raw_value) in score_position_reduction_order_values(&pairs) {
+        for capture_policy in
+            [ScoreOutputCapturePolicy::F32Cast, ScoreOutputCapturePolicy::F16Roundtrip]
+        {
+            let value = capture_policy.capture(f64::from(raw_value));
+            let reference_abs_delta = reference_score.map(|target| (target - value).abs());
+            let rust_abs_delta = rust_score.map(|target| (target - value).abs());
+            if let Some(delta) = reference_abs_delta {
+                if delta < best_reference_abs_delta {
+                    best_reference_abs_delta = delta;
+                    best_reference_variant = variant;
+                    best_reference_capture_policy = capture_policy.label();
+                }
+            }
+            if let Some(delta) = rust_abs_delta {
+                if delta < best_rust_abs_delta {
+                    best_rust_abs_delta = delta;
+                    best_rust_variant = variant;
+                    best_rust_capture_policy = capture_policy.label();
+                }
+            }
+            rows.push(json!({
+                "reduction_order": variant,
+                "output_capture_policy": capture_policy.label(),
+                "accum_policy": "f32_sequential",
+                "recomputed_score_slot_f32_raw": raw_value,
+                "recomputed_score_slot": value,
+                "reference_abs_delta": reference_abs_delta,
+                "rust_abs_delta": rust_abs_delta,
+            }));
+        }
+    }
+
+    Some(json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected score-position reduction-order probe is diagnostic-only evidence for whether f32 dot-product grouping/order explains a score residual; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "candidate": candidate.id,
+        "base_candidate": candidate.base_candidate,
+        "accum_policy": "f32_sequential",
+        "output_capture_policies": ["f32_cast", "f16_roundtrip"],
+        "variant_count": rows.len(),
+        "best_reference_reduction_order": if best_reference_abs_delta.is_finite() {
+            json!(best_reference_variant)
+        } else {
+            Value::Null
+        },
+        "best_reference_output_capture_policy": if best_reference_abs_delta.is_finite() {
+            json!(best_reference_capture_policy)
+        } else {
+            Value::Null
+        },
+        "best_reference_abs_delta_after_reduction_probe": if best_reference_abs_delta.is_finite() {
+            json!(best_reference_abs_delta)
+        } else {
+            Value::Null
+        },
+        "best_rust_reduction_order": if best_rust_abs_delta.is_finite() {
+            json!(best_rust_variant)
+        } else {
+            Value::Null
+        },
+        "best_rust_output_capture_policy": if best_rust_abs_delta.is_finite() {
+            json!(best_rust_capture_policy)
+        } else {
+            Value::Null
+        },
+        "best_rust_abs_delta_after_reduction_probe": if best_rust_abs_delta.is_finite() {
+            json!(best_rust_abs_delta)
+        } else {
+            Value::Null
+        },
+        "reference_residual_explained_by_reduction_order": best_reference_abs_delta <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "rust_residual_explained_by_reduction_order": best_rust_abs_delta <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "variants": rows,
+    }))
+}
+
+fn score_position_reduction_order_values(pairs: &[(f32, f32)]) -> Vec<(&'static str, f32)> {
+    let products = score_position_products(pairs);
+    let mut rows = vec![
+        ("dim_ascending", score_position_sum_products(&products)),
+        (
+            "product_abs_ascending",
+            score_position_sum_sorted_products(&products, |left, right| {
+                left.abs().total_cmp(&right.abs())
+            }),
+        ),
+        (
+            "product_abs_descending",
+            score_position_sum_sorted_products(&products, |left, right| {
+                right.abs().total_cmp(&left.abs())
+            }),
+        ),
+        (
+            "product_signed_ascending",
+            score_position_sum_sorted_products(&products, |left, right| left.total_cmp(right)),
+        ),
+        (
+            "product_signed_descending",
+            score_position_sum_sorted_products(&products, |left, right| right.total_cmp(left)),
+        ),
+        ("dim_descending", score_position_sum_products_reverse(&products)),
+        ("pairwise_dim_ascending", score_position_sum_products_pairwise(&products)),
+    ];
+    rows.dedup_by_key(|(variant, _)| *variant);
+    rows
+}
+
+fn score_position_products(pairs: &[(f32, f32)]) -> Vec<f32> {
+    pairs.iter().map(|(query, key)| query * key).collect()
+}
+
+fn score_position_sum_products(products: &[f32]) -> f32 {
+    products.iter().copied().fold(0.0f32, |sum, product| sum + product)
+}
+
+fn score_position_sum_products_reverse(products: &[f32]) -> f32 {
+    products.iter().rev().copied().fold(0.0f32, |sum, product| sum + product)
+}
+
+fn score_position_sum_sorted_products(
+    products: &[f32],
+    compare: impl Fn(&f32, &f32) -> std::cmp::Ordering,
+) -> f32 {
+    let mut sorted = products.to_vec();
+    sorted.sort_by(compare);
+    score_position_sum_products(&sorted)
+}
+
+fn score_position_sum_products_pairwise(products: &[f32]) -> f32 {
+    let mut partials = products.to_vec();
+    if partials.is_empty() {
+        return 0.0;
+    }
+    while partials.len() > 1 {
+        let mut next = Vec::with_capacity(partials.len().div_ceil(2));
+        for chunk in partials.chunks(2) {
+            let value = if chunk.len() == 2 { chunk[0] + chunk[1] } else { chunk[0] };
+            next.push(value);
+        }
+        partials = next;
+    }
+    partials[0]
+}
+
 #[allow(clippy::too_many_arguments)]
 fn score_position_candidate_accumulation_probe(
     candidate: ScorePositionInputCandidate<'_>,
@@ -19167,6 +19342,17 @@ fn score_position_candidate_accumulation_probe(
         query_token,
         selected_current_token,
     )?;
+    let reduction_order_probe = score_position_candidate_reduction_order_probe(
+        candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+        reference_score,
+        rust_score,
+    )
+    .unwrap_or(Value::Null);
 
     for accum_policy in [
         ReferenceScoreAccumPolicy::F64,
@@ -19316,6 +19502,7 @@ fn score_position_candidate_accumulation_probe(
             Value::Null
         },
         "best_rust_input_residual_sensitivity": best_rust_input_residual_sensitivity,
+        "reduction_order_probe": reduction_order_probe,
         "f32_reference_abs_delta": if f32_reference_abs_delta.is_finite() {
             json!(f32_reference_abs_delta)
         } else {
@@ -28473,6 +28660,9 @@ mod tests {
         assert_eq!(probe.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(probe.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(probe.pointer("/variant_count"), Some(&json!(9)));
+        assert_eq!(probe.pointer("/reduction_order_probe/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(probe.pointer("/reduction_order_probe/claim_allowed"), Some(&json!(false)));
+        assert_eq!(probe.pointer("/reduction_order_probe/variant_count"), Some(&json!(14)));
         assert_eq!(probe.pointer("/best_reference_accum_policy"), Some(&json!("f64_sequential")));
         assert_eq!(probe.pointer("/best_reference_capture_policy"), Some(&json!("f64_raw")));
         assert_eq!(probe.pointer("/best_reference_abs_delta"), Some(&json!(0.0)));
@@ -28570,6 +28760,66 @@ mod tests {
                 > 0.0
         );
         assert_eq!(probe.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn score_position_candidate_accumulation_probe_reports_reduction_order_delta() {
+        let query_values = vec![1.0e10_f32, -1.0e10_f32, 1.0];
+        let key_values = vec![1.0, 1.0, 1.0];
+        let candidate = ScorePositionInputCandidate {
+            id: "reference_q_history_reference_k_q_trace_k_f32",
+            base_candidate: "reference_q_history_reference_k",
+            score_input_variant: "q_trace_k_f32",
+            query_source: "reference_qcur_history_head",
+            key_source: "reference_kcur_history_kv_head",
+            query_layout: ScoreQueryLayout::DimMajorHistory,
+            key_layout: ScoreKeyLayout::DimMajor,
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            query_values: &query_values,
+            key_values: &key_values,
+        };
+
+        let probe = score_position_candidate_accumulation_probe(
+            candidate,
+            0,
+            3,
+            0,
+            0,
+            Some(0),
+            Some(0.0),
+            Some(1.0),
+        )
+        .expect("reduction order probe");
+
+        assert_eq!(probe.pointer("/variant_count"), Some(&json!(9)));
+        assert_eq!(probe.pointer("/best_reference_abs_delta"), Some(&json!(1.0)));
+        assert_eq!(
+            probe.pointer("/reference_residual_explained_by_accumulation"),
+            Some(&json!(false))
+        );
+
+        let reduction_probe =
+            probe.pointer("/reduction_order_probe").expect("reduction order probe");
+        assert_eq!(reduction_probe.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(reduction_probe.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(reduction_probe.pointer("/variant_count"), Some(&json!(14)));
+        assert_eq!(
+            reduction_probe.pointer("/best_reference_reduction_order"),
+            Some(&json!("product_abs_ascending"))
+        );
+        assert_eq!(
+            reduction_probe.pointer("/best_reference_output_capture_policy"),
+            Some(&json!("f32_cast"))
+        );
+        assert_eq!(
+            reduction_probe.pointer("/best_reference_abs_delta_after_reduction_probe"),
+            Some(&json!(0.0))
+        );
+        assert_eq!(
+            reduction_probe.pointer("/reference_residual_explained_by_reduction_order"),
+            Some(&json!(true))
+        );
     }
 
     #[test]
@@ -28692,6 +28942,13 @@ mod tests {
             ),
             Some(&json!(true))
         );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/best_reference_accumulation_probe/reduction_order_probe/variant_count"
+            ),
+            Some(&json!(14))
+        );
+        assert_eq!(report.pointer("/rows/0/candidates/0/reduction_order_probe"), None);
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
