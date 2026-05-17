@@ -1,0 +1,22 @@
+timestamp = "2026-05-17T05:10:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-003"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-BENCH-003-telemetry-context"
+summary = "Started LNL258V-BENCH-003 to normalize power/thermal context in Lunar Lake cold/warm benchmark evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The current benchmark artifacts record low_power promotion blocked because power telemetry is missing.",
+  "This item attaches a structured telemetry availability receipt to cold/warm benchmark route evidence without running inference, promoting routes, or claiming speedup/acceleration.",
+]

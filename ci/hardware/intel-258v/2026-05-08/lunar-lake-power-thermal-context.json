@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_power_thermal_context",
+  "proof_stage": "telemetry_availability_recorded",
+  "created_utc": "2026-05-17T04:45:00Z",
+  "machine_id": "intel-258v",
+  "telemetry_scope": "committed_lunar_lake_profile_artifacts",
+  "memory_context": "not_recorded_in_committed_receipts",
+  "power_context": "not_recorded_in_committed_receipts",
+  "thermal_context": "not_recorded_in_committed_receipts",
+  "availability": {
+    "memory_context_recorded": false,
+    "power_context_recorded": false,
+    "thermal_context_recorded": false
+  },
+  "gaps": [
+    "memory context is not recorded in the committed Lunar Lake profile receipts",
+    "power context is not recorded in the committed Lunar Lake profile receipts",
+    "thermal context is not recorded in the committed Lunar Lake profile receipts",
+    "low_power route promotion remains blocked until a real power telemetry receipt exists"
+  ],
+  "claim_boundary": {
+    "new_measurement_executed": false,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "acceleration_claim": false,
+    "hidden_fallback_allowed": false
+  }
+}
