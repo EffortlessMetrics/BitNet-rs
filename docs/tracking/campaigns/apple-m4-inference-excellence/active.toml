@@ -1060,13 +1060,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-005"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-005-progress-timeout"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-004"]
+pr = 5323
 acceptance = "Harden BitNet operator progress, timeout, partial-failure, and repair UX for one-shot and warm-session routes, with failure receipts preserving backend, fallback, model, tokenizer, timeout stage, and partial generation."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet -- --nocapture",
