@@ -3237,6 +3237,68 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-CPU-SLM-PERF-002"
+status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-002-resident-cpu"
+pr = 5320
+head_sha = "90cc7faabbb55841c3f1e859b42f284027488278"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-CPU-SLM-PERF-001", "LNL258V-DURABLE-003"]
+acceptance = "Add a no-new-inference Lunar Lake dense Qwen CPU resident-session artifact that reads the existing CPU phase-attribution and repeated warm-session receipts; records model/tokenizer loaded once, resident prompt-loop timing by regression_tiny/ask_short/ask_normal, prompt-loop fallback/answer/determinism status, cold one-off reference timing, and resident/no-reload gaps without changing route promotion or claiming speedup, power advantage, Arc/NPU acceleration, or BitNet QK256/I2_S behavior."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::cpu_slm_resident_session_summarizes_no_reload_warm_loop -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake cpu-slm-resident-session --artifact-root ci/hardware/intel-258v/2026-05-08 --phase-attribution lunar-lake-cpu-slm-phase-attribution.json --repeated-warm-session lunar-lake-durable-qwen25-cpu-warm-session.json --required-repeats 10 --json-out lunar-lake-cpu-slm-resident-session.json --created-utc 2026-05-17T09:30:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-resident-session.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-resident-session.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Existing Lunar Lake dense Qwen CPU repeated warm-session evidence proves a resident prompt loop with model_loaded_once=true and tokenizer_loaded_once=true.",
+  "The resident-session artifact records per-profile no-reload timing for regression_tiny, ask_short, and ask_normal from existing receipts.",
+  "The artifact records that cold one-off CPU load remains separate from resident prompt-loop timing.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "Broad dense SLM answer quality is proven.",
+  "CPU speedup is proven.",
+  "Power advantage is proven.",
+  "GPU or NPU route promotion is changed.",
+  "OpenVINO CPU speedup is proven.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ROUTE-004"
 status = "merged"
 branch = "codex/lunar-lake/LNL258V-ROUTE-004-telemetry-profiles"

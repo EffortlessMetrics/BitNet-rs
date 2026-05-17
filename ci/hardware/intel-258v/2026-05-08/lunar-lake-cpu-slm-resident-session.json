@@ -1,0 +1,243 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_cpu_slm_resident_session",
+  "proof_stage": "resident_cpu_no_reload_timing_no_new_inference",
+  "created_utc": "2026-05-17T09:30:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "source_receipts": {
+    "phase_attribution_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-phase-attribution.json",
+    "repeated_warm_session_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session.json"
+  },
+  "model": {
+    "model_family": "qwen",
+    "model_architecture": "qwen2",
+    "quantization": "Q8_0",
+    "tokenizer_source": "gguf_metadata",
+    "prompt_template": "qwen2.5"
+  },
+  "backend": {
+    "route_id": "dense_slm_default_cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "selected_kernel_or_runtime": "resident_cpu_rust_gguf",
+    "fallback_used": false,
+    "answer_gate_passed": true
+  },
+  "resident_session": {
+    "reuse_scope": "resident_session",
+    "model_loaded_once": true,
+    "tokenizer_loaded_once": true,
+    "model_load_ms": 13592.773,
+    "model_sha256_ms": 579.851,
+    "tokenizer_load_ms": 568.949,
+    "total_session_ms": 413632.581,
+    "prompt_count": 30,
+    "per_prompt_receipts_enabled": true,
+    "session_owned_buffers": true,
+    "prompt_token_buffer_reused": true,
+    "generated_token_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "stop_policy_precomputed_once": true,
+    "resident_memory_bytes": 2801647616
+  },
+  "cold_reference": {
+    "profile_id": "ask_short",
+    "total_response_ms": 27986.539,
+    "cold_load_ms": 14250.931,
+    "tokenize_ms": 482.325,
+    "prefill_ms": 9361.503,
+    "first_token_ms": 9726.0,
+    "decode_total_ms": 3242.064,
+    "timing_scope": "cold_one_off_reference_from_cpu_phase_attribution"
+  },
+  "profiles": [
+    {
+      "profile_id": "ask_normal",
+      "case_ids": [
+        "ask_normal_instruction_rust"
+      ],
+      "observed_execution_count": 10,
+      "required_execution_count": 10,
+      "model_reload_observed": false,
+      "tokenizer_reload_observed": false,
+      "fallback_observed": false,
+      "answer_gate_passed": true,
+      "deterministic_generated_ids": true,
+      "deterministic_text": true,
+      "total_ms": {
+        "sample_count": 10,
+        "min": 16265.008,
+        "mean": 16407.3715,
+        "max": 16572.393
+      },
+      "time_to_first_token_ms": {
+        "sample_count": 10,
+        "min": 8716.0,
+        "mean": 8834.2,
+        "max": 8971.0
+      },
+      "prefill_ms": {
+        "sample_count": 10,
+        "min": 7811.024,
+        "mean": 7961.1515,
+        "max": 8089.869
+      },
+      "decode_total_ms": {
+        "sample_count": 10,
+        "min": 7821.365,
+        "mean": 7899.988799999999,
+        "max": 8000.71
+      },
+      "tokenize_ms": {
+        "sample_count": 10,
+        "min": 429.223,
+        "mean": 465.5535999999999,
+        "max": 495.779
+      },
+      "generated_tokens": {
+        "sample_count": 10,
+        "min": 24.0,
+        "mean": 24.0,
+        "max": 24.0
+      },
+      "decode_tokens_per_s_mean": 3.037978990552493,
+      "cold_to_resident_total_ratio": 1.70572958624116,
+      "blockers": []
+    },
+    {
+      "profile_id": "ask_short",
+      "case_ids": [
+        "ask_short_capital_france"
+      ],
+      "observed_execution_count": 10,
+      "required_execution_count": 10,
+      "model_reload_observed": false,
+      "tokenizer_reload_observed": false,
+      "fallback_observed": false,
+      "answer_gate_passed": true,
+      "deterministic_generated_ids": true,
+      "deterministic_text": true,
+      "total_ms": {
+        "sample_count": 10,
+        "min": 11036.382,
+        "mean": 11158.749899999999,
+        "max": 11296.331
+      },
+      "time_to_first_token_ms": {
+        "sample_count": 10,
+        "min": 8444.0,
+        "mean": 8531.8,
+        "max": 8647.0
+      },
+      "prefill_ms": {
+        "sample_count": 10,
+        "min": 7605.675,
+        "mean": 7656.6327,
+        "max": 7735.318
+      },
+      "decode_total_ms": {
+        "sample_count": 10,
+        "min": 2912.26,
+        "mean": 2950.160500000001,
+        "max": 3032.67
+      },
+      "tokenize_ms": {
+        "sample_count": 10,
+        "min": 434.987,
+        "mean": 466.20640000000003,
+        "max": 532.421
+      },
+      "generated_tokens": {
+        "sample_count": 10,
+        "min": 9.0,
+        "mean": 9.0,
+        "max": 9.0
+      },
+      "decode_tokens_per_s_mean": 3.0506814798720265,
+      "cold_to_resident_total_ratio": 2.5080353310902685,
+      "blockers": []
+    },
+    {
+      "profile_id": "regression_tiny",
+      "case_ids": [
+        "regression_tiny_math_2_plus_2_brief"
+      ],
+      "observed_execution_count": 10,
+      "required_execution_count": 10,
+      "model_reload_observed": false,
+      "tokenizer_reload_observed": false,
+      "fallback_observed": false,
+      "answer_gate_passed": true,
+      "deterministic_generated_ids": true,
+      "deterministic_text": true,
+      "total_ms": {
+        "sample_count": 10,
+        "min": 11726.267,
+        "mean": 12314.7897,
+        "max": 13210.084
+      },
+      "time_to_first_token_ms": {
+        "sample_count": 10,
+        "min": 9074.0,
+        "mean": 9660.9,
+        "max": 10665.0
+      },
+      "prefill_ms": {
+        "sample_count": 10,
+        "min": 8133.884,
+        "mean": 8737.638599999998,
+        "max": 9467.583
+      },
+      "decode_total_ms": {
+        "sample_count": 10,
+        "min": 2885.536,
+        "mean": 3018.6404999999995,
+        "max": 3151.317
+      },
+      "tokenize_ms": {
+        "sample_count": 10,
+        "min": 383.576,
+        "mean": 476.4964,
+        "max": 509.446
+      },
+      "generated_tokens": {
+        "sample_count": 10,
+        "min": 9.0,
+        "mean": 9.0,
+        "max": 9.0
+      },
+      "decode_tokens_per_s_mean": 2.981474607526137,
+      "cold_to_resident_total_ratio": 2.2725957715705047,
+      "blockers": []
+    }
+  ],
+  "resident_ready": true,
+  "findings": [
+    "cold_reference_total_response_ms=27986.539",
+    "resident_session_model_load_ms=13592.773",
+    "resident_ask_normal_mean_total_ms=16407.372",
+    "cold_to_resident_total_ratio_ask_normal=1.706",
+    "resident_ask_short_mean_total_ms=11158.750",
+    "cold_to_resident_total_ratio_ask_short=2.508",
+    "resident_regression_tiny_mean_total_ms=12314.790",
+    "cold_to_resident_total_ratio_regression_tiny=2.273"
+  ],
+  "recommended_next_items": [
+    "LNL258V-CPU-SLM-PERF-003: compare Rust GGUF CPU against OpenVINO CPU for the same Qwen profiles",
+    "LNL258V-GPU-QUAL-001: classify OpenVINO GPU corpus-v2 quality failures before promotion",
+    "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode"
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "broad_quality_claim": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "arc_npu_execution_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "hidden_fallback_allowed": false
+  }
+}

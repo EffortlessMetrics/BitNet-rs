@@ -54,6 +54,7 @@ const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
 const CPU_SLM_PHASE_ATTRIBUTION: &str = "lunar-lake-cpu-slm-phase-attribution.json";
+const CPU_SLM_RESIDENT_SESSION: &str = "lunar-lake-cpu-slm-resident-session.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -348,6 +349,39 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the attribution cannot classify the CPU timing evidence.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Summarize resident dense Qwen CPU no-reload timing from repeated warm-session receipts.
+    CpuSlmResidentSession {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// CPU dense-SLM phase attribution receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = CPU_SLM_PHASE_ATTRIBUTION)]
+        phase_attribution: PathBuf,
+
+        /// Repeated dense Qwen CPU warm-session receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DURABLE_QWEN_CPU_WARM_SESSION)]
+        repeated_warm_session: PathBuf,
+
+        /// Repeated executions required before the resident session can be treated as covered.
+        #[arg(long, default_value_t = 10)]
+        required_repeats: u64,
+
+        /// Output JSON resident-session receipt to file.
+        #[arg(long, default_value = CPU_SLM_RESIDENT_SESSION)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the resident-session artifact cannot classify the no-reload evidence.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -1152,6 +1186,95 @@ pub struct CpuSlmPerfClaimBoundary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeCpuSlmResidentSession {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: CpuSlmResidentSessionSources,
+    pub model: CpuSlmAttributionModel,
+    pub backend: CpuSlmAttributionBackend,
+    pub resident_session: CpuSlmResidentSessionEvidence,
+    pub cold_reference: CpuSlmResidentColdReference,
+    pub profiles: Vec<CpuSlmResidentProfileSummary>,
+    pub resident_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CpuSlmPerfClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmResidentSessionSources {
+    pub phase_attribution_receipt: String,
+    pub repeated_warm_session_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentSessionEvidence {
+    pub reuse_scope: Option<String>,
+    pub model_loaded_once: Option<bool>,
+    pub tokenizer_loaded_once: Option<bool>,
+    pub model_load_ms: Option<f64>,
+    pub model_sha256_ms: Option<f64>,
+    pub tokenizer_load_ms: Option<f64>,
+    pub total_session_ms: Option<f64>,
+    pub prompt_count: Option<u64>,
+    pub per_prompt_receipts_enabled: Option<bool>,
+    pub session_owned_buffers: Option<bool>,
+    pub prompt_token_buffer_reused: Option<bool>,
+    pub generated_token_buffer_reused: Option<bool>,
+    pub timing_buffers_reused: Option<bool>,
+    pub stop_policy_precomputed_once: Option<bool>,
+    pub resident_memory_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentColdReference {
+    pub profile_id: Option<String>,
+    pub total_response_ms: Option<f64>,
+    pub cold_load_ms: Option<f64>,
+    pub tokenize_ms: Option<f64>,
+    pub prefill_ms: Option<f64>,
+    pub first_token_ms: Option<f64>,
+    pub decode_total_ms: Option<f64>,
+    pub timing_scope: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentProfileSummary {
+    pub profile_id: String,
+    pub case_ids: Vec<String>,
+    pub observed_execution_count: u64,
+    pub required_execution_count: u64,
+    pub model_reload_observed: bool,
+    pub tokenizer_reload_observed: bool,
+    pub fallback_observed: bool,
+    pub answer_gate_passed: bool,
+    pub deterministic_generated_ids: Option<bool>,
+    pub deterministic_text: Option<bool>,
+    pub total_ms: CpuSlmResidentMetricSummary,
+    pub time_to_first_token_ms: CpuSlmResidentMetricSummary,
+    pub prefill_ms: CpuSlmResidentMetricSummary,
+    pub decode_total_ms: CpuSlmResidentMetricSummary,
+    pub tokenize_ms: CpuSlmResidentMetricSummary,
+    pub generated_tokens: CpuSlmResidentMetricSummary,
+    pub decode_tokens_per_s_mean: Option<f64>,
+    pub cold_to_resident_total_ratio: Option<f64>,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentMetricSummary {
+    pub sample_count: u64,
+    pub min: Option<f64>,
+    pub mean: Option<f64>,
+    pub max: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeTelemetryContext {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -1487,6 +1610,36 @@ impl LunarLakeCommand {
                 if *strict && !receipt.attribution_ready {
                     bail!(
                         "Lunar Lake CPU dense SLM phase attribution failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::CpuSlmResidentSession {
+                artifact_root,
+                phase_attribution,
+                repeated_warm_session,
+                required_repeats,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cpu_slm_resident_session_with_created_utc(
+                    artifact_root,
+                    phase_attribution,
+                    repeated_warm_session,
+                    *required_repeats,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_cpu_slm_resident_session(&receipt, Some(&json_out))?;
+                if *strict && !receipt.resident_ready {
+                    bail!(
+                        "Lunar Lake CPU dense SLM resident-session check failed: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -3170,6 +3323,415 @@ fn cpu_slm_openvino_cpu_context(json: &Value) -> Option<CpuSlmOpenVinoCpuContext
             "OpenVINO GenAI receipt does not expose tokenize/prefill/first-token/decode splits for this comparison".to_string(),
         ],
     })
+}
+
+pub fn build_cpu_slm_resident_session_with_created_utc(
+    root: &Path,
+    phase_attribution: &Path,
+    repeated_warm_session: &Path,
+    required_repeats: u64,
+    created_utc: String,
+) -> Result<LunarLakeCpuSlmResidentSession> {
+    let phase_attribution_path = resolve_receipt_path(root, phase_attribution);
+    let repeated_warm_session_path = resolve_receipt_path(root, repeated_warm_session);
+    let phase_attribution_json: Value = read_json_receipt(&phase_attribution_path)?;
+    let repeated_json: Value = read_json_receipt(&repeated_warm_session_path)?;
+
+    let mut gaps = Vec::new();
+    if string_at(&phase_attribution_json, "artifact_kind").as_deref()
+        != Some("lunar_lake_cpu_slm_phase_attribution")
+    {
+        gaps.push(
+            "phase attribution receipt must have artifact_kind=lunar_lake_cpu_slm_phase_attribution"
+                .to_string(),
+        );
+    }
+    if bool_at_any(&phase_attribution_json, &["attribution_ready"]) != Some(true) {
+        gaps.push("phase attribution receipt is not attribution_ready=true".to_string());
+    }
+    if string_at(&repeated_json, "artifact_kind").as_deref() != Some("slm_cpu_warm_session") {
+        gaps.push(
+            "repeated warm-session receipt must have artifact_kind=slm_cpu_warm_session"
+                .to_string(),
+        );
+    }
+    if string_at_any(&repeated_json, &["selected_backend", "backend.selected_backend"]).as_deref()
+        != Some("cpu-rust")
+    {
+        gaps.push("resident session must select backend cpu-rust".to_string());
+    }
+    if string_at_any(&repeated_json, &["runtime_api", "backend.runtime_api"]).as_deref()
+        != Some("cpu")
+    {
+        gaps.push("resident session must record runtime_api=cpu".to_string());
+    }
+    if fallback_used(&repeated_json) != Some(false) {
+        gaps.push("resident session must record fallback_used=false".to_string());
+    }
+    if bool_at_any(&repeated_json, &["quality_summary.passed"]) != Some(true) {
+        gaps.push("resident session must record passing answer gates".to_string());
+    }
+    if bool_at_any(&repeated_json, &["determinism.passed"]) != Some(true) {
+        gaps.push("resident session must record determinism.passed=true".to_string());
+    }
+    if bool_at_any(
+        &repeated_json,
+        &[
+            "speedup_claim",
+            "claim_boundary.speedup_claim",
+            "claim_boundary.broad_performance_claim",
+            "claim_boundary.full_metal_inference_claimed",
+            "claim_boundary.bitnet_quality_claimed",
+        ],
+    ) == Some(true)
+    {
+        gaps.push("resident session refuses speedup, accelerator, or BitNet claims".to_string());
+    }
+
+    let resident_session = cpu_slm_resident_session_evidence(&repeated_json);
+    if resident_session.model_loaded_once != Some(true) {
+        gaps.push("resident session did not prove model_loaded_once=true".to_string());
+    }
+    if resident_session.tokenizer_loaded_once != Some(true) {
+        gaps.push("resident session did not prove tokenizer_loaded_once=true".to_string());
+    }
+
+    let cold_reference = cpu_slm_resident_cold_reference(&phase_attribution_json);
+    let profiles = cpu_slm_resident_profiles(
+        &repeated_json,
+        required_repeats,
+        cold_reference.total_response_ms,
+        &mut gaps,
+    );
+    if profiles.is_empty() {
+        gaps.push("resident session has no repeated profile timing summaries".to_string());
+    }
+
+    let mut findings = Vec::new();
+    if let Some(total) = cold_reference.total_response_ms {
+        findings.push(format!("cold_reference_total_response_ms={total:.3}"));
+    }
+    if let Some(load) = resident_session.model_load_ms {
+        findings.push(format!("resident_session_model_load_ms={load:.3}"));
+    }
+    for profile in &profiles {
+        if let Some(mean) = profile.total_ms.mean {
+            findings.push(format!("resident_{}_mean_total_ms={mean:.3}", profile.profile_id));
+        }
+        if let Some(ratio) = profile.cold_to_resident_total_ratio {
+            findings
+                .push(format!("cold_to_resident_total_ratio_{}={ratio:.3}", profile.profile_id));
+        }
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-CPU-SLM-PERF-003: compare Rust GGUF CPU against OpenVINO CPU for the same Qwen profiles".to_string(),
+        "LNL258V-GPU-QUAL-001: classify OpenVINO GPU corpus-v2 quality failures before promotion".to_string(),
+        "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode".to_string(),
+    ];
+    let resident_ready = gaps.is_empty()
+        && !profiles.is_empty()
+        && profiles.iter().all(|profile| profile.blockers.is_empty());
+
+    Ok(LunarLakeCpuSlmResidentSession {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cpu_slm_resident_session".to_string(),
+        proof_stage: "resident_cpu_no_reload_timing_no_new_inference".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: CpuSlmResidentSessionSources {
+            phase_attribution_receipt: path_string(&phase_attribution_path),
+            repeated_warm_session_receipt: path_string(&repeated_warm_session_path),
+        },
+        model: CpuSlmAttributionModel {
+            model_family: string_at_any(&repeated_json, &["model.family", "corpus.model.family"]),
+            model_architecture: string_at_any(
+                &repeated_json,
+                &["model.architecture", "corpus.model.architecture"],
+            ),
+            quantization: string_at_any(
+                &repeated_json,
+                &["model.quant_format", "corpus.model.quant_format"],
+            ),
+            tokenizer_source: string_at_any(&repeated_json, &["model.tokenizer"]),
+            prompt_template: string_at_any(
+                &repeated_json,
+                &["generation.prompt_template", "corpus.defaults.prompt_template"],
+            ),
+        },
+        backend: CpuSlmAttributionBackend {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: string_at_any(
+                &repeated_json,
+                &["selected_backend", "backend.selected_backend"],
+            )
+            .unwrap_or_else(|| "unknown".to_string()),
+            runtime_api: string_at_any(&repeated_json, &["runtime_api", "backend.runtime_api"])
+                .unwrap_or_else(|| "unknown".to_string()),
+            selected_kernel_or_runtime: Some("resident_cpu_rust_gguf".to_string()),
+            fallback_used: fallback_used(&repeated_json),
+            answer_gate_passed: bool_at_any(&repeated_json, &["quality_summary.passed"]),
+        },
+        resident_session,
+        cold_reference,
+        profiles,
+        resident_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: CpuSlmPerfClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            arc_npu_execution_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn cpu_slm_resident_session_evidence(json: &Value) -> CpuSlmResidentSessionEvidence {
+    CpuSlmResidentSessionEvidence {
+        reuse_scope: string_at(json, "session.reuse_scope"),
+        model_loaded_once: bool_at_any(json, &["session.model_loaded_once"]),
+        tokenizer_loaded_once: bool_at_any(json, &["session.tokenizer_loaded_once"]),
+        model_load_ms: number_at_any(json, &["timing.model_load_ms"]),
+        model_sha256_ms: number_at_any(json, &["timing.model_sha256_ms"]),
+        tokenizer_load_ms: number_at_any(json, &["timing.tokenizer_load_ms"]),
+        total_session_ms: number_at_any(json, &["timing.total_session_ms"]),
+        prompt_count: u64_at(json, "session.prompt_count"),
+        per_prompt_receipts_enabled: bool_at_any(json, &["session.per_prompt_receipts_enabled"]),
+        session_owned_buffers: bool_at_any(json, &["session.session_owned_buffers"]),
+        prompt_token_buffer_reused: bool_at_any(json, &["session.prompt_token_buffer_reused"]),
+        generated_token_buffer_reused: bool_at_any(
+            json,
+            &["session.generated_token_buffer_reused"],
+        ),
+        timing_buffers_reused: bool_at_any(json, &["session.timing_buffers_reused"]),
+        stop_policy_precomputed_once: bool_at_any(json, &["session.stop_policy_precomputed_once"]),
+        resident_memory_bytes: u64_at(json, "memory.resident_memory_bytes"),
+    }
+}
+
+fn cpu_slm_resident_cold_reference(json: &Value) -> CpuSlmResidentColdReference {
+    CpuSlmResidentColdReference {
+        profile_id: string_at(json, "cold_one_off.profile_id"),
+        total_response_ms: number_at_any(json, &["cold_one_off.timing.total_response_ms"]),
+        cold_load_ms: number_at_any(json, &["cold_one_off.timing.cold_load_ms"]),
+        tokenize_ms: number_at_any(json, &["cold_one_off.timing.tokenize_ms"]),
+        prefill_ms: number_at_any(json, &["cold_one_off.timing.prefill_ms"]),
+        first_token_ms: number_at_any(json, &["cold_one_off.timing.first_token_ms"]),
+        decode_total_ms: number_at_any(json, &["cold_one_off.timing.decode_total_ms"]),
+        timing_scope: "cold_one_off_reference_from_cpu_phase_attribution".to_string(),
+    }
+}
+
+#[derive(Default)]
+struct ResidentProfileAccumulator {
+    case_ids: BTreeSet<String>,
+    observed_execution_count: u64,
+    model_reload_observed: bool,
+    tokenizer_reload_observed: bool,
+    fallback_observed: bool,
+    answer_gate_seen: bool,
+    answer_gate_passed: bool,
+    deterministic_generated_ids: Option<bool>,
+    deterministic_text: Option<bool>,
+    total_ms: Vec<f64>,
+    time_to_first_token_ms: Vec<f64>,
+    prefill_ms: Vec<f64>,
+    decode_total_ms: Vec<f64>,
+    tokenize_ms: Vec<f64>,
+    generated_tokens: Vec<f64>,
+}
+
+fn cpu_slm_resident_profiles(
+    json: &Value,
+    required_repeats: u64,
+    cold_reference_total_ms: Option<f64>,
+    gaps: &mut Vec<String>,
+) -> Vec<CpuSlmResidentProfileSummary> {
+    let mut by_index = BTreeMap::<u64, &Value>::new();
+    for prompt in json.get("prompts").and_then(Value::as_array).into_iter().flatten() {
+        if let Some(index) = u64_at(prompt, "prompt_index") {
+            by_index.insert(index, prompt);
+        }
+    }
+    if by_index.is_empty() {
+        gaps.push("resident warm-session receipt has no prompt receipts".to_string());
+    }
+
+    let mut profiles = BTreeMap::<String, ResidentProfileAccumulator>::new();
+    for group in json.pointer("/determinism/groups").and_then(Value::as_array).into_iter().flatten()
+    {
+        let Some(case_id) = group.get("case_id").and_then(Value::as_str) else {
+            gaps.push("resident determinism group is missing case_id".to_string());
+            continue;
+        };
+        let Some(profile_id) = durability_profile_for_case_id(case_id) else {
+            continue;
+        };
+        let prompt_indices = group
+            .get("prompt_indices")
+            .and_then(Value::as_array)
+            .map(|indices| indices.iter().filter_map(Value::as_u64).collect::<Vec<_>>())
+            .unwrap_or_default();
+        let entry = profiles.entry(profile_id.to_string()).or_default();
+        entry.case_ids.insert(case_id.to_string());
+        entry.observed_execution_count =
+            entry.observed_execution_count.max(u64_at(group, "attempt_count").unwrap_or(0));
+        if !entry.answer_gate_seen {
+            entry.answer_gate_passed = true;
+            entry.answer_gate_seen = true;
+        }
+        entry.deterministic_generated_ids = Some(
+            entry.deterministic_generated_ids.unwrap_or(true)
+                && bool_at_any(group, &["stable_generated_token_ids"]) == Some(true),
+        );
+        entry.deterministic_text = Some(
+            entry.deterministic_text.unwrap_or(true)
+                && bool_at_any(group, &["stable_text"]) == Some(true),
+        );
+        for index in prompt_indices {
+            let Some(prompt) = by_index.get(&index) else {
+                gaps.push(format!(
+                    "resident determinism group {case_id} references missing prompt_index {index}"
+                ));
+                continue;
+            };
+            entry.fallback_observed |= fallback_used(prompt) != Some(false);
+            entry.answer_gate_passed &= answer_gate_passed(prompt) == Some(true);
+            entry.model_reload_observed |=
+                number_at_any(prompt, &["timing.model_load_ms"]).is_some_and(|value| value > 0.0);
+            entry.tokenizer_reload_observed |= number_at_any(prompt, &["timing.tokenizer_load_ms"])
+                .is_some_and(|value| value > 0.0);
+            push_number(prompt, "timing.total_ms", &mut entry.total_ms);
+            push_first_number(
+                prompt,
+                &["timing.time_to_first_token_ms", "timing.first_token_ms"],
+                &mut entry.time_to_first_token_ms,
+            );
+            push_number(prompt, "timing.prefill_ms", &mut entry.prefill_ms);
+            push_number(prompt, "timing.decode_total_ms", &mut entry.decode_total_ms);
+            push_number(prompt, "timing.tokenize_ms", &mut entry.tokenize_ms);
+            if let Some(tokens) = u64_at(prompt, "generated_tokens") {
+                entry.generated_tokens.push(tokens as f64);
+            }
+        }
+    }
+
+    profiles
+        .into_iter()
+        .map(|(profile_id, entry)| {
+            let mut blockers = Vec::new();
+            if entry.observed_execution_count < required_repeats {
+                blockers.push(format!(
+                    "resident profile observed {}/{} required executions",
+                    entry.observed_execution_count, required_repeats
+                ));
+            }
+            if entry.model_reload_observed {
+                blockers.push("model reload observed inside resident prompt loop".to_string());
+            }
+            if entry.tokenizer_reload_observed {
+                blockers.push("tokenizer reload observed inside resident prompt loop".to_string());
+            }
+            if entry.fallback_observed {
+                blockers.push("fallback observed inside resident prompt loop".to_string());
+            }
+            if !entry.answer_gate_passed {
+                blockers
+                    .push("answer gate failure observed inside resident prompt loop".to_string());
+            }
+            if entry.deterministic_generated_ids != Some(true) {
+                blockers.push("generated token IDs drifted in resident prompt loop".to_string());
+            }
+            if entry.deterministic_text != Some(true) {
+                blockers.push("decoded text drifted in resident prompt loop".to_string());
+            }
+            if entry.total_ms.is_empty() {
+                blockers.push("resident profile has no total_ms timing samples".to_string());
+            }
+            blockers.sort();
+            blockers.dedup();
+
+            let total_ms = resident_metric_summary(&entry.total_ms);
+            let decode_total_ms = resident_metric_summary(&entry.decode_total_ms);
+            let generated_tokens = resident_metric_summary(&entry.generated_tokens);
+            let decode_tokens_per_s_mean =
+                match (sum_f64(&entry.generated_tokens), sum_f64(&entry.decode_total_ms)) {
+                    (Some(tokens), Some(ms)) if ms > 0.0 => Some(tokens / (ms / 1000.0)),
+                    _ => None,
+                };
+            let cold_to_resident_total_ratio = match (cold_reference_total_ms, total_ms.mean) {
+                (Some(cold), Some(warm)) if warm > 0.0 => Some(cold / warm),
+                _ => None,
+            };
+
+            CpuSlmResidentProfileSummary {
+                profile_id,
+                case_ids: entry.case_ids.into_iter().collect(),
+                observed_execution_count: entry.observed_execution_count,
+                required_execution_count: required_repeats,
+                model_reload_observed: entry.model_reload_observed,
+                tokenizer_reload_observed: entry.tokenizer_reload_observed,
+                fallback_observed: entry.fallback_observed,
+                answer_gate_passed: entry.answer_gate_passed,
+                deterministic_generated_ids: entry.deterministic_generated_ids,
+                deterministic_text: entry.deterministic_text,
+                total_ms,
+                time_to_first_token_ms: resident_metric_summary(&entry.time_to_first_token_ms),
+                prefill_ms: resident_metric_summary(&entry.prefill_ms),
+                decode_total_ms,
+                tokenize_ms: resident_metric_summary(&entry.tokenize_ms),
+                generated_tokens,
+                decode_tokens_per_s_mean,
+                cold_to_resident_total_ratio,
+                blockers,
+            }
+        })
+        .collect()
+}
+
+fn push_number(json: &Value, path: &str, out: &mut Vec<f64>) {
+    if let Some(value) = number_at_any(json, &[path]) {
+        out.push(value);
+    }
+}
+
+fn push_first_number(json: &Value, paths: &[&str], out: &mut Vec<f64>) {
+    if let Some(value) = number_at_any(json, paths) {
+        out.push(value);
+    }
+}
+
+fn resident_metric_summary(values: &[f64]) -> CpuSlmResidentMetricSummary {
+    let sample_count = values.len() as u64;
+    if values.is_empty() {
+        return CpuSlmResidentMetricSummary { sample_count, min: None, mean: None, max: None };
+    }
+    let mut min = f64::INFINITY;
+    let mut max = f64::NEG_INFINITY;
+    let mut sum = 0.0;
+    for value in values {
+        min = min.min(*value);
+        max = max.max(*value);
+        sum += value;
+    }
+    CpuSlmResidentMetricSummary {
+        sample_count,
+        min: Some(min),
+        mean: Some(sum / values.len() as f64),
+        max: Some(max),
+    }
+}
+
+fn sum_f64(values: &[f64]) -> Option<f64> {
+    (!values.is_empty()).then(|| values.iter().sum())
 }
 
 pub fn build_telemetry_context_with_created_utc(
@@ -5025,6 +5587,25 @@ fn write_or_print_cpu_slm_phase_attribution(
         }
         fs::write(path, json)?;
         println!("Lunar Lake CPU dense SLM phase attribution written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cpu_slm_resident_session(
+    receipt: &LunarLakeCpuSlmResidentSession,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake CPU dense SLM resident-session receipt written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -7407,6 +7988,150 @@ mod tests {
         assert!(!receipt.claim_boundary.new_inference_executed);
         assert!(!receipt.claim_boundary.route_promotion_changed);
         assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.arc_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn cpu_slm_resident_session_summarizes_no_reload_warm_loop() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            "phase-attribution.json",
+            json!({
+                "artifact_kind": "lunar_lake_cpu_slm_phase_attribution",
+                "attribution_ready": true,
+                "cold_one_off": {
+                    "profile_id": "ask_short",
+                    "timing": {
+                        "cold_load_ms": 100.0,
+                        "tokenize_ms": 2.0,
+                        "prefill_ms": 20.0,
+                        "first_token_ms": 30.0,
+                        "decode_total_ms": 40.0,
+                        "total_response_ms": 200.0
+                    }
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "resident.json",
+            json!({
+                "artifact_kind": "slm_cpu_warm_session",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "speedup_claim": false,
+                "quality_summary": {"passed": true},
+                "determinism": {
+                    "passed": true,
+                    "groups": [
+                        {
+                            "case_id": "ask_short_math",
+                            "attempt_count": 2,
+                            "stable_generated_token_ids": true,
+                            "stable_text": true,
+                            "prompt_indices": [0, 1]
+                        }
+                    ]
+                },
+                "claim_boundary": {
+                    "speedup_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "bitnet_quality_claimed": false
+                },
+                "model": {
+                    "family": "qwen",
+                    "architecture": "qwen2",
+                    "quant_format": "Q8_0",
+                    "tokenizer": "tokenizer.json"
+                },
+                "generation": {"prompt_template": "qwen2.5"},
+                "session": {
+                    "reuse_scope": "resident_session",
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true,
+                    "prompt_count": 2,
+                    "per_prompt_receipts_enabled": true,
+                    "session_owned_buffers": true,
+                    "prompt_token_buffer_reused": true,
+                    "generated_token_buffer_reused": true,
+                    "timing_buffers_reused": true,
+                    "stop_policy_precomputed_once": true
+                },
+                "memory": {"resident_memory_bytes": 1000},
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "model_sha256_ms": 5.0,
+                    "tokenizer_load_ms": 10.0,
+                    "total_session_ms": 260.0
+                },
+                "prompts": [
+                    {
+                        "prompt_index": 0,
+                        "case_id": "ask_short_math",
+                        "fallback_used": false,
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {
+                            "model_load_ms": 0.0,
+                            "tokenizer_load_ms": 0.0,
+                            "total_ms": 80.0,
+                            "time_to_first_token_ms": 30.0,
+                            "prefill_ms": 20.0,
+                            "decode_total_ms": 40.0,
+                            "tokenize_ms": 2.0
+                        }
+                    },
+                    {
+                        "prompt_index": 1,
+                        "case_id": "ask_short_math",
+                        "backend": {"fallback_used": false},
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {
+                            "model_load_ms": 0.0,
+                            "tokenizer_load_ms": 0.0,
+                            "total_ms": 100.0,
+                            "first_token_ms": 40.0,
+                            "prefill_ms": 22.0,
+                            "decode_total_ms": 44.0,
+                            "tokenize_ms": 3.0
+                        }
+                    }
+                ]
+            }),
+        )?;
+
+        let receipt = build_cpu_slm_resident_session_with_created_utc(
+            temp.path(),
+            Path::new("phase-attribution.json"),
+            Path::new("resident.json"),
+            2,
+            "2026-05-17T09:15:00Z".to_string(),
+        )?;
+
+        assert!(receipt.resident_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_cpu_slm_resident_session");
+        assert_eq!(receipt.backend.selected_backend, "cpu-rust");
+        assert_eq!(receipt.resident_session.model_loaded_once, Some(true));
+        assert_eq!(receipt.resident_session.tokenizer_loaded_once, Some(true));
+        let profile = receipt
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short profile")?;
+        assert_eq!(profile.observed_execution_count, 2);
+        assert_eq!(profile.total_ms.mean, Some(90.0));
+        assert_eq!(profile.decode_tokens_per_s_mean, Some(8.0 / 0.084));
+        assert_eq!(profile.cold_to_resident_total_ratio, Some(200.0 / 90.0));
+        assert!(profile.blockers.is_empty());
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
         assert!(!receipt.claim_boundary.arc_npu_execution_claim);
         assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
         Ok(())

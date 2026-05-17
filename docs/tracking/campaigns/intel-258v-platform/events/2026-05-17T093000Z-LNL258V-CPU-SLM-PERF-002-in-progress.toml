@@ -1,0 +1,19 @@
+timestamp = "2026-05-17T09:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-002-resident-cpu"
+summary = "Started dense Qwen CPU resident-session no-reload timing artifact."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-resident-session.json",
+]
+
+notes = [
+  "The item reads existing CPU phase-attribution and repeated warm-session receipts without running new inference.",
+  "The resident-session receipt records model/tokenizer loaded once and per-profile prompt-loop timing for regression_tiny, ask_short, and ask_normal.",
+  "The item preserves no route-promotion, speedup, power-advantage, Arc/NPU acceleration, and BitNet QK256/I2_S behavior-change boundaries.",
+]
