@@ -77,7 +77,7 @@ artifacts to separate strict proof items.
 | M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
 | M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
 | M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
-| M3MBA-019 | in_progress | Refresh the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4-sync tracks. |
+| M3MBA-019 | pr_open | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4-sync tracks. |
 
 Current focus: no M3 Air BitNet handoff item is active after `M3MBA-008`
 merged. The Microsoft 2B I2_S artifact is accepted only for the recorded M3 Air
