@@ -1,0 +1,513 @@
+{
+  "artifact_kind": "apple_m4_bitnet_eval_task_family_pass_rates",
+  "schema_version": "1.0.0",
+  "campaign": "apple-m4-inference-excellence",
+  "work_item": "M4-BITNET-EX-008",
+  "machine_id": "apple-m4-mac-mini",
+  "source_evidence_family": "bitnet_eval",
+  "source_report_timestamp": "2026-05-17T0810Z",
+  "source_reports": [
+    "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+    "ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/reference-vs-rust-comparison.json",
+    "ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/reference-runner-output.json"
+  ],
+  "report_scope": {
+    "bitnet_only": true,
+    "accepted_artifact_only": true,
+    "dense_slm_evidence_used": false,
+    "derived_from_committed_receipts": true,
+    "fresh_runtime_run": false,
+    "llm_judge_required": false,
+    "mechanical_scoring_only": true,
+    "reference_vs_rust_deltas_included": true,
+    "source_runtime_case_count": 100,
+    "source_runtime_work_items": [
+      "M4-BITNET-EX-001",
+      "M4-BITNET-EX-002"
+    ],
+    "trend_ready": false,
+    "trend_ready_blocked_by": "M4-BITNET-EX-009",
+    "trend_ready_scope": "bitnet_eval_matching_identity_after_second_refresh"
+  },
+  "corpus": {
+    "name": "apple-m4-bitnet-eval-seeded-corpus",
+    "path": "ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml",
+    "case_count": 100,
+    "selected_case_count": 100,
+    "corpus_version": "1.0.0",
+    "seed": 912587,
+    "prompt_template": "bitnetcpp-answer",
+    "scoring_schema": "answer_corpus_mechanical_scoring_v1",
+    "normalization_rules": "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "bytes": 1187801280,
+    "family": "bitnet",
+    "architecture": "bitnet_b1_58",
+    "quantization": "I2_S",
+    "answer_ready": {
+      "evidence": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+      "gate": "MODEL-ARTIFACT-007",
+      "manifest": "ci/model-artifacts/artifact-manifest.toml",
+      "state": "answer_ready"
+    }
+  },
+  "tokenizer": {
+    "authority": {
+      "ggml_pre": "llama-bpe",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "source": "external_tokenizer_json"
+    },
+    "path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+    "source": "externally_supplied_llama_bpe",
+    "strict": true
+  },
+  "prompt_template": "bitnetcpp-answer",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "quality_summary": {
+    "failed": 25,
+    "not_run": 0,
+    "passed": 75,
+    "timeout": 0,
+    "total": 100
+  },
+  "scoring_summary": {
+    "enabled": true,
+    "failed": 25,
+    "failure_taxonomy": {
+      "answer_content": 20,
+      "fenced_json": 5,
+      "format_only": 5
+    },
+    "kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "not_run": 0,
+    "passed": 75,
+    "total": 100
+  },
+  "accuracy": {
+    "cases_total": 100,
+    "cases_scored": 100,
+    "cases_passed": 75,
+    "pass_rate": 0.75,
+    "quality_gate_cases_passed": 75,
+    "quality_gate_pass_rate": 0.75,
+    "bucket_counts": {
+      "exact_match": {
+        "passed": 14,
+        "total": 14
+      },
+      "json_schema": {
+        "passed": 5,
+        "total": 10
+      },
+      "normalized_match": {
+        "passed": 35,
+        "total": 46
+      },
+      "numeric_tolerance": {
+        "passed": 5,
+        "total": 10
+      },
+      "required_forbidden_tokens": {
+        "passed": 7,
+        "total": 10
+      },
+      "required_keywords": {
+        "passed": 9,
+        "total": 10
+      }
+    },
+    "scoring_kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ]
+  },
+  "reference_vs_rust": {
+    "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/reference-vs-rust-comparison.json",
+    "summary": {
+      "both_failed": 16,
+      "both_passed": 61,
+      "generated_token_id_comparable": 0,
+      "generated_token_id_matches": 0,
+      "generated_token_id_unavailable": 100,
+      "mechanical_scoring_deltas": 23,
+      "mechanical_scoring_matches": 77,
+      "reference_passed": 70,
+      "reference_passed_rust_failed": 9,
+      "rust_passed": 75,
+      "rust_passed_reference_failed": 14,
+      "status_counts": {
+        "matched_text": 55,
+        "mismatched_text": 45
+      },
+      "text_matches": 55,
+      "text_mismatches": 45,
+      "total": 100
+    },
+    "scoring_kind_summary": {
+      "exact_match": {
+        "mechanical_scoring_match": 14,
+        "reference_passed": 14,
+        "rust_passed": 14,
+        "total": 14
+      },
+      "json_schema": {
+        "mechanical_scoring_match": 5,
+        "reference_passed": 10,
+        "rust_passed": 5,
+        "total": 10
+      },
+      "normalized_match": {
+        "mechanical_scoring_match": 35,
+        "reference_passed": 30,
+        "rust_passed": 35,
+        "total": 46
+      },
+      "numeric_tolerance": {
+        "mechanical_scoring_match": 5,
+        "reference_passed": 0,
+        "rust_passed": 5,
+        "total": 10
+      },
+      "required_forbidden_tokens": {
+        "mechanical_scoring_match": 9,
+        "reference_passed": 8,
+        "rust_passed": 7,
+        "total": 10
+      },
+      "required_keywords": {
+        "mechanical_scoring_match": 9,
+        "reference_passed": 8,
+        "rust_passed": 9,
+        "total": 10
+      }
+    },
+    "generated_token_ids_available_from_reference_runner": false,
+    "generated_token_id_status": "not_exposed_by_reference_runner"
+  },
+  "task_families": {
+    "arithmetic_exact": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 10,
+      "pass_rate": 1,
+      "quality_gate_cases_passed": 10,
+      "quality_gate_pass_rate": 1,
+      "failed": 0,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "exact_match"
+      ],
+      "failure_taxonomy": {},
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 10,
+        "text_match_rate": 1,
+        "mechanical_scoring_matches": 10,
+        "mechanical_scoring_match_rate": 1,
+        "reference_passed": 10,
+        "rust_passed": 10,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 0
+      }
+    },
+    "closed_label_classification": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 9,
+      "pass_rate": 0.9,
+      "quality_gate_cases_passed": 9,
+      "quality_gate_pass_rate": 0.9,
+      "failed": 1,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "normalized_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 1
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 6,
+        "text_match_rate": 0.6,
+        "mechanical_scoring_matches": 7,
+        "mechanical_scoring_match_rate": 0.7,
+        "reference_passed": 6,
+        "rust_passed": 9,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 3
+      }
+    },
+    "constrained_summary": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 9,
+      "pass_rate": 0.9,
+      "quality_gate_cases_passed": 9,
+      "quality_gate_pass_rate": 0.9,
+      "failed": 1,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "required_keywords"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 1
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 3,
+        "text_match_rate": 0.3,
+        "mechanical_scoring_matches": 9,
+        "mechanical_scoring_match_rate": 0.9,
+        "reference_passed": 8,
+        "rust_passed": 9,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 1
+      }
+    },
+    "fixed_table_qa": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 6,
+      "pass_rate": 0.6,
+      "quality_gate_cases_passed": 6,
+      "quality_gate_pass_rate": 0.6,
+      "failed": 4,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "exact_match",
+        "normalized_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 4
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 2,
+        "text_match_rate": 0.2,
+        "mechanical_scoring_matches": 6,
+        "mechanical_scoring_match_rate": 0.6,
+        "reference_passed": 8,
+        "rust_passed": 6,
+        "reference_passed_rust_failed": 3,
+        "rust_passed_reference_failed": 1
+      }
+    },
+    "format_constrained_json": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 5,
+      "pass_rate": 0.5,
+      "quality_gate_cases_passed": 5,
+      "quality_gate_pass_rate": 0.5,
+      "failed": 5,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "json_schema"
+      ],
+      "failure_taxonomy": {
+        "fenced_json": 5,
+        "format_only": 5
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 3,
+        "text_match_rate": 0.3,
+        "mechanical_scoring_matches": 5,
+        "mechanical_scoring_match_rate": 0.5,
+        "reference_passed": 10,
+        "rust_passed": 5,
+        "reference_passed_rust_failed": 5,
+        "rust_passed_reference_failed": 0
+      }
+    },
+    "numeric_tolerance": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 5,
+      "pass_rate": 0.5,
+      "quality_gate_cases_passed": 5,
+      "quality_gate_pass_rate": 0.5,
+      "failed": 5,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "numeric_tolerance"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 5
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 3,
+        "text_match_rate": 0.3,
+        "mechanical_scoring_matches": 5,
+        "mechanical_scoring_match_rate": 0.5,
+        "reference_passed": 0,
+        "rust_passed": 5,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 5
+      }
+    },
+    "ordering_sorting": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 8,
+      "pass_rate": 0.8,
+      "quality_gate_cases_passed": 8,
+      "quality_gate_pass_rate": 0.8,
+      "failed": 2,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "normalized_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 2
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 8,
+        "text_match_rate": 0.8,
+        "mechanical_scoring_matches": 9,
+        "mechanical_scoring_match_rate": 0.9,
+        "reference_passed": 7,
+        "rust_passed": 8,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 1
+      }
+    },
+    "required_forbidden_tokens": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 7,
+      "pass_rate": 0.7,
+      "quality_gate_cases_passed": 7,
+      "quality_gate_pass_rate": 0.7,
+      "failed": 3,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "required_forbidden_tokens"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 3
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 4,
+        "text_match_rate": 0.4,
+        "mechanical_scoring_matches": 9,
+        "mechanical_scoring_match_rate": 0.9,
+        "reference_passed": 8,
+        "rust_passed": 7,
+        "reference_passed_rust_failed": 1,
+        "rust_passed_reference_failed": 0
+      }
+    },
+    "rewrite_normalized": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 9,
+      "pass_rate": 0.9,
+      "quality_gate_cases_passed": 9,
+      "quality_gate_pass_rate": 0.9,
+      "failed": 1,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "normalized_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 1
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 7,
+        "text_match_rate": 0.7,
+        "mechanical_scoring_matches": 8,
+        "mechanical_scoring_match_rate": 0.8,
+        "reference_passed": 7,
+        "rust_passed": 9,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 2
+      }
+    },
+    "synthetic_extraction": {
+      "cases_total": 10,
+      "cases_scored": 10,
+      "cases_passed": 7,
+      "pass_rate": 0.7,
+      "quality_gate_cases_passed": 7,
+      "quality_gate_pass_rate": 0.7,
+      "failed": 3,
+      "timeout": 0,
+      "not_run": 0,
+      "scoring_kinds": [
+        "exact_match",
+        "normalized_match"
+      ],
+      "failure_taxonomy": {
+        "answer_content": 3
+      },
+      "reference_vs_rust": {
+        "total": 10,
+        "text_matches": 9,
+        "text_match_rate": 0.9,
+        "mechanical_scoring_matches": 9,
+        "mechanical_scoring_match_rate": 0.9,
+        "reference_passed": 6,
+        "rust_passed": 7,
+        "reference_passed_rust_failed": 0,
+        "rust_passed_reference_failed": 1
+      }
+    }
+  },
+  "evidence": {
+    "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+    "source_reference_runner_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/reference-runner-output.json",
+    "source_reference_vs_rust_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/reference-vs-rust-comparison.json"
+  },
+  "claim_boundary": {
+    "bitnet_evidence": true,
+    "bitnet_eval_only": true,
+    "bitnet_quality_claimed": false,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "bounded_seeded_corpus_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_evidence_used": false,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence_used_for_m4_rust": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  }
+}

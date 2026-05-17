@@ -104,15 +104,15 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BENCH-005 | proposed | Publish repeatability and variance envelopes for dense and BitNet timing families. |
 | M4-BENCH-006 | proposed | Publish explicit BitNet one-shot and warm variance receipts. |
 | M4-BENCH-003 | proposed | Wire benchmark summaries into matching-identity regression comparisons. |
-| M4-BITNET-REG-001 | proposed | Add direct BitNet warm-session regression support. |
-| M4-BITNET-EX-001 | proposed | Add a BitNet-specific 100-case deterministic corpus. |
-| M4-BITNET-EX-002 | proposed | Compare reference-runner and Rust M4 BitNet answers under the accepted identity. |
-| M4-BITNET-EX-003 | proposed | Publish the BitNet one-shot benchmark envelope. |
-| M4-BITNET-EX-004 | proposed | Add BitNet variable warm 25/50/100 prompt soaks. |
-| M4-BITNET-EX-005 | proposed | Harden BitNet progress, timeout, partial-failure, and repair UX. |
-| M4-BITNET-EX-006 | proposed | Enable BitNet chat only after warm, timeout, determinism, and streaming gates pass. |
-| M4-BITNET-EX-007 | proposed | Enable BitNet serve only after chat and service receipts pass. |
-| M4-BITNET-EX-008 | proposed | Publish BitNet task-family and failure-taxonomy reports. |
+| M4-BITNET-REG-001 | merged | Add direct BitNet warm-session regression support. |
+| M4-BITNET-EX-001 | merged | Add a BitNet-specific 100-case deterministic corpus. |
+| M4-BITNET-EX-002 | merged | Compare reference-runner and Rust M4 BitNet answers under the accepted identity. |
+| M4-BITNET-EX-003 | merged | Publish the BitNet one-shot benchmark envelope. |
+| M4-BITNET-EX-004 | merged | Add BitNet variable warm 25/50/100 prompt soaks. |
+| M4-BITNET-EX-005 | merged | Harden BitNet progress, timeout, partial-failure, and repair UX. |
+| M4-BITNET-EX-006 | merged | Enable BitNet chat only after warm, timeout, determinism, and streaming gates pass. |
+| M4-BITNET-EX-007 | merged | Enable BitNet serve only after chat and service receipts pass. |
+| M4-BITNET-EX-008 | pr_open | Publish BitNet task-family and failure-taxonomy reports. |
 | M4-BITNET-EX-009 | proposed | Add matching BitNet eval history and a larger-corpus decision. |
 | M4-OPS-UX-001 | proposed | Add an operator-facing M4 evidence summary. |
 | M4-OPS-UX-002 | proposed | Add explain/open affordances for report-refresh and regression-dashboard outputs. |

@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T13:53:43Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-008"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
+pr = 5371
+head_sha = "e2150f5f2d330dcfae4dc41bd11f4793752a04a5"
+
+notes = [
+  "Opened PR #5371 for the M4-BITNET-EX-008 BitNet task-family and failure-taxonomy rollup.",
+  "The PR adds a BitNet-only derived JSON report at ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json and documents the 75/100 Rust M4 pass rate plus reference-vs-Rust deltas.",
+  "The report is derived from committed receipts and is not a fresh runtime run; dense Qwen evidence remains separate.",
+  "No BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]

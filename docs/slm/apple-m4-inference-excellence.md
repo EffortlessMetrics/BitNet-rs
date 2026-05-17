@@ -381,6 +381,52 @@ reference generated token IDs: unavailable from the reference runner
 Rust generated token IDs: recorded in the source M4 eval receipt
 ```
 
+`M4-BITNET-EX-008` publishes a standalone BitNet task-family and
+failure-taxonomy rollup derived from those committed receipts:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json
+```
+
+The report is BitNet-only, uses the accepted Microsoft I2_S GGUF and external
+tokenizer identity, derives from the committed M4 Rust answer-corpus receipt
+and the reference-vs-Rust comparison receipt, and explicitly records that it is
+not a fresh runtime run. Dense Qwen evidence is not used. The source Rust
+receipt remains the 100-case M4 CPU/NEON run from
+`2026-05-15T2214Z`; reference generated token IDs remain unavailable because
+the reference runner did not expose them.
+
+Overall mechanical score:
+
+```text
+Rust M4 passes: 75 / 100
+timeouts: 0
+not run: 0
+reference-vs-Rust text matches: 55 / 100
+reference-vs-Rust mechanical scoring matches: 77 / 100
+reference pass / Rust fail: 9
+Rust pass / reference fail: 14
+```
+
+| Task family | Rust pass rate | Failure taxonomy | Reference text match | Reference scoring match |
+|---|---:|---|---:|---:|
+| arithmetic_exact | 10 / 10 | none | 10 / 10 | 10 / 10 |
+| closed_label_classification | 9 / 10 | `answer_content=1` | 6 / 10 | 7 / 10 |
+| constrained_summary | 9 / 10 | `answer_content=1` | 3 / 10 | 9 / 10 |
+| fixed_table_qa | 6 / 10 | `answer_content=4` | 2 / 10 | 6 / 10 |
+| format_constrained_json | 5 / 10 | `fenced_json=5`, `format_only=5` | 3 / 10 | 5 / 10 |
+| numeric_tolerance | 5 / 10 | `answer_content=5` | 3 / 10 | 5 / 10 |
+| ordering_sorting | 8 / 10 | `answer_content=2` | 8 / 10 | 9 / 10 |
+| required_forbidden_tokens | 7 / 10 | `answer_content=3` | 4 / 10 | 9 / 10 |
+| rewrite_normalized | 9 / 10 | `answer_content=1` | 7 / 10 | 8 / 10 |
+| synthetic_extraction | 7 / 10 | `answer_content=3` | 9 / 10 | 9 / 10 |
+
+This is a report-surface improvement only. It does not claim broad BitNet
+quality, does not add matching eval history by itself, and does not enable or
+broaden chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup,
+or broad Apple Silicon performance claims. `M4-BITNET-EX-009` remains the
+matching-history eval refresh and larger-corpus decision point.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:

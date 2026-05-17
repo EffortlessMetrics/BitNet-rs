@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T13:50:49Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-008"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
+
+notes = [
+  "Started M4-BITNET-EX-008 to publish a BitNet-only task-family pass-rate and mechanical failure-taxonomy rollup for the accepted Microsoft I2_S GGUF and external tokenizer identity.",
+  "The rollup is derived from committed BitNet eval and reference-vs-Rust comparison receipts; it is not a fresh runtime run.",
+  "Dense Qwen evidence remains separate; no chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes are in scope.",
+]

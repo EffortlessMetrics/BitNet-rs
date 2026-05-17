@@ -1182,7 +1182,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-008"
-status = "ready"
+status = "pr_open"
+pr = 5371
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
 stackable = false
 review_mode = "codex_premerge"
@@ -1192,7 +1193,8 @@ blocked_by = ["M4-BITNET-EX-001", "M4-BITNET-EX-002", "M4-BITNET-EX-005"]
 acceptance = "Publish BitNet-specific task-family pass-rate and mechanical failure-taxonomy reports for the accepted artifact/tokenizer identity, separate from dense Qwen evidence and preserving reference-vs-Rust deltas where available."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/<bitnet-corpus>.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json",
-  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/summary.json --json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json --json",
+  "jq -e '.artifact_kind == \"apple_m4_bitnet_eval_task_family_pass_rates\" and .work_item == \"M4-BITNET-EX-008\" and .report_scope.bitnet_only == true and .claim_boundary.dense_slm_evidence_used == false and .accuracy.cases_total == 100 and .accuracy.cases_passed == 75 and (.task_families | length) == 10 and .reference_vs_rust.summary.mechanical_scoring_matches == 77' ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
