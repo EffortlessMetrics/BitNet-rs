@@ -7497,6 +7497,11 @@ fn compare_reference_to_rust_with_records_with_model(
             &report["attention_rust_score_input_operand_drift"],
             &report["attention_selected_historical_rope_epsilon_materiality"],
         );
+    report["attention_selected_score_key_f16_policy"] = attention_selected_score_key_f16_policy(
+        &report["attention_reference_score_input_operand_policy"],
+        &report["attention_rust_score_input_operand_drift"],
+        &report["attention_selected_key_score_input_capture_source"],
+    );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
             reference_records,
@@ -23674,6 +23679,198 @@ fn attention_selected_key_score_input_capture_source(
     })
 }
 
+fn attention_selected_score_key_f16_policy(
+    operand_policy: &Value,
+    operand_drift: &Value,
+    capture_source: &Value,
+) -> Value {
+    let operand_rows = operand_policy.pointer("/rows").and_then(Value::as_array);
+    let drift_rows = operand_drift.pointer("/rows").and_then(Value::as_array);
+    let source_rows = capture_source.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut aligned_f16_view_count = 0usize;
+    let mut bucket_sensitive_count = 0usize;
+    let mut unpinned_count = 0usize;
+
+    if let Some(source_rows) = source_rows {
+        for source_row in source_rows {
+            let source_classification =
+                source_row.pointer("/classification").and_then(Value::as_str);
+            if !matches!(
+                source_classification,
+                Some("selected_key_score_input_capture_source_post_rope_f16_view")
+                    | Some("selected_key_score_input_capture_source_post_rope_f16_value")
+            ) {
+                continue;
+            }
+            let head = source_row.pointer("/head").and_then(Value::as_u64);
+            let key_slot = source_row.pointer("/key_slot").and_then(Value::as_u64);
+            let query_token = source_row.pointer("/query_token").and_then(Value::as_u64);
+            let operand_row = find_qk_recompute_row(operand_rows, head, key_slot, query_token);
+            let drift_row = find_qk_recompute_row(drift_rows, head, key_slot, query_token);
+            let mut blocked_reasons = Vec::<String>::new();
+            if operand_row.is_none() {
+                blocked_reasons.push("reference_operand_policy_row_missing".to_string());
+            }
+            if drift_row.is_none() {
+                blocked_reasons.push("rust_operand_drift_row_missing".to_string());
+            }
+
+            let reference_operand_classification =
+                operand_row.and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let rust_operand_drift_classification =
+                drift_row.and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let reference_score_candidate = operand_row
+                .and_then(|row| row.pointer("/reference_score_input_candidate"))
+                .and_then(Value::as_bool)
+                == Some(true);
+            let reference_exact_operand =
+                operand_row.and_then(|row| row.pointer("/exact_operand")).and_then(Value::as_bool)
+                    == Some(true);
+            let reference_tolerance_operand = operand_row
+                .and_then(|row| row.pointer("/tolerance_operand"))
+                .and_then(Value::as_bool)
+                == Some(true);
+            let reference_abs_delta = operand_row
+                .and_then(|row| row.pointer("/reference_abs_delta").and_then(Value::as_f64));
+            let score_key_stage_is_f16 =
+                source_row.pointer("/score_key_stage_is_f16").and_then(Value::as_bool)
+                    == Some(true);
+            let reference_matches_f16 = source_row
+                .pointer("/reference_product_matches_post_rope_f16")
+                .and_then(Value::as_bool)
+                == Some(true);
+            let rust_matches_f16 =
+                source_row.pointer("/rust_product_matches_post_rope_f16").and_then(Value::as_bool)
+                    == Some(true);
+            let reference_matches_raw = source_row
+                .pointer("/reference_product_matches_raw_post_rope")
+                .and_then(Value::as_bool)
+                == Some(true);
+            let rust_matches_raw =
+                source_row.pointer("/rust_product_matches_raw_post_rope").and_then(Value::as_bool)
+                    == Some(true);
+            let f16_bucket_crossing =
+                source_row.pointer("/f16_bucket_crossing").and_then(Value::as_bool) == Some(true);
+            let reference_feeds_f16_view =
+                reference_score_candidate && score_key_stage_is_f16 && reference_matches_f16;
+            let rust_feeds_f16_view = rust_matches_f16;
+            let policy_aligned = reference_feeds_f16_view && rust_feeds_f16_view;
+            let raw_policy_rejected = !reference_matches_raw && !rust_matches_raw;
+
+            if !reference_score_candidate {
+                blocked_reasons.push("reference_score_input_candidate_missing".to_string());
+            }
+            if !score_key_stage_is_f16 {
+                blocked_reasons.push("reference_score_key_stage_not_f16".to_string());
+            }
+            if !reference_matches_f16 || !rust_matches_f16 {
+                blocked_reasons
+                    .push("score_key_product_not_post_rope_f16_on_both_sides".to_string());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                "selected_score_key_f16_policy_unpinned"
+            } else if policy_aligned && f16_bucket_crossing && raw_policy_rejected {
+                "selected_score_key_f16_policy_aligned_bucket_sensitive"
+            } else if policy_aligned {
+                "selected_score_key_f16_policy_aligned"
+            } else {
+                "selected_score_key_f16_policy_unpinned"
+            };
+
+            compared_count += 1;
+            match row_classification {
+                "selected_score_key_f16_policy_unpinned" => unpinned_count += 1,
+                "selected_score_key_f16_policy_aligned_bucket_sensitive" => {
+                    aligned_f16_view_count += 1;
+                    bucket_sensitive_count += 1;
+                }
+                "selected_score_key_f16_policy_aligned" => aligned_f16_view_count += 1,
+                _ => {}
+            }
+            if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+            }
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": head,
+                "kv_head": source_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": query_token,
+                "contributor_dim": source_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "capture_source_classification": source_classification,
+                "reference_operand_classification": reference_operand_classification,
+                "rust_operand_drift_classification": rust_operand_drift_classification,
+                "reference_score_input_candidate": reference_score_candidate,
+                "reference_exact_operand": reference_exact_operand,
+                "reference_tolerance_operand": reference_tolerance_operand,
+                "reference_abs_delta": reference_abs_delta,
+                "score_key_stage_is_f16": score_key_stage_is_f16,
+                "reference_feeds_post_rope_f16_view": reference_feeds_f16_view,
+                "rust_feeds_post_rope_f16_view": rust_feeds_f16_view,
+                "policy_aligned": policy_aligned,
+                "f16_bucket_crossing": f16_bucket_crossing,
+                "raw_policy_rejected": raw_policy_rejected,
+                "reference_product_matches_raw_post_rope": reference_matches_raw,
+                "rust_product_matches_raw_post_rope": rust_matches_raw,
+                "reference_product_matches_post_rope_f16": reference_matches_f16,
+                "rust_product_matches_post_rope_f16": rust_matches_f16,
+                "runtime_change_candidate": if policy_aligned {
+                    "none_from_score_key_f16_policy"
+                } else {
+                    "score_key_f16_policy_unpinned"
+                },
+            }));
+        }
+    }
+
+    let classification = if compared_count == 0 {
+        "no_selected_key_score_input_capture_source_rows"
+    } else if unpinned_count == compared_count {
+        "selected_score_key_f16_policy_unpinned"
+    } else if aligned_f16_view_count == compared_count && bucket_sensitive_count > 0 {
+        "selected_score_key_f16_policy_aligned_bucket_sensitive"
+    } else if aligned_f16_view_count == compared_count {
+        "selected_score_key_f16_policy_aligned"
+    } else {
+        "selected_score_key_f16_policy_mixed"
+    };
+    let next_diagnostic = match classification {
+        "selected_score_key_f16_policy_aligned_bucket_sensitive" => {
+            "localize the selected post-RoPE raw key epsilon that crosses the F16 bucket boundary; do not change score-input F16 policy"
+        }
+        "selected_score_key_f16_policy_aligned" => {
+            "move downstream from score-key F16 policy because both sides feed post-RoPE F16 key views"
+        }
+        "selected_score_key_f16_policy_unpinned" => {
+            "pin selected score-key F16 policy before changing runtime math"
+        }
+        "no_selected_key_score_input_capture_source_rows" => {
+            "capture selected key score-input source rows before deciding F16 score-key policy"
+        }
+        _ => "keep selected score-key F16 policy diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected score-key F16 policy is diagnostic-only evidence for whether the selected reference and Rust score products are both fed by post-RoPE F16 key views; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "compared_count": compared_count,
+        "missing_context_count": missing_context_count,
+        "aligned_f16_view_count": aligned_f16_view_count,
+        "bucket_sensitive_count": bucket_sensitive_count,
+        "unpinned_count": unpinned_count,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -36575,6 +36772,88 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "pin whether Rust and reference should both feed score products from post-RoPE F16 key views before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_score_key_f16_policy_reports_aligned_bucket_sensitive() {
+        let operand_policy = json!({
+            "rows": [
+                {
+                    "classification": "reference_score_input_capture_tolerance_pinned_operand",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "reference_score_input_candidate": true,
+                    "exact_operand": false,
+                    "tolerance_operand": true,
+                    "reference_abs_delta": 0.000030517578125_f64,
+                }
+            ]
+        });
+        let operand_drift = json!({
+            "rows": [
+                {
+                    "classification": "selected_score_input_operand_drift_key_bucket_crossing",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+        let capture_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_score_input_capture_source_post_rope_f16_view",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "score_key_stage_is_f16": true,
+                    "f16_bucket_crossing": true,
+                    "reference_product_matches_raw_post_rope": false,
+                    "rust_product_matches_raw_post_rope": false,
+                    "reference_product_matches_post_rope_f16": true,
+                    "rust_product_matches_post_rope_f16": true,
+                }
+            ]
+        });
+
+        let report = attention_selected_score_key_f16_policy(
+            &operand_policy,
+            &operand_drift,
+            &capture_source,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_score_key_f16_policy_aligned_bucket_sensitive"))
+        );
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/aligned_f16_view_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/bucket_sensitive_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/reference_feeds_post_rope_f16_view"),
+            Some(&json!(true))
+        );
+        assert_eq!(report.pointer("/rows/0/rust_feeds_post_rope_f16_view"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rows/0/policy_aligned"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/rows/0/runtime_change_candidate"),
+            Some(&json!("none_from_score_key_f16_policy"))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize the selected post-RoPE raw key epsilon that crosses the F16 bucket boundary; do not change score-input F16 policy"
             ))
         );
     }
