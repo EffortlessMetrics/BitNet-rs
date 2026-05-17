@@ -17544,6 +17544,11 @@ fn attention_score_raw_history_position_qk_recompute(
         })
         .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
+    let reference_score_history_heads = reference_records
+        .iter()
+        .filter(|record| record.stage.contains("history_ref_layout"))
+        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .collect::<BTreeMap<_, _>>();
     let rust_score_key_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
@@ -17645,6 +17650,8 @@ fn attention_score_raw_history_position_qk_recompute(
         "selected_score_positions_partially_recomputed"
     };
     let candidate_delta_summary = score_position_candidate_delta_summary(&rows);
+    let reference_input_stage_provenance =
+        score_position_reference_input_stage_provenance(&rows, reference_records);
     let candidate_delta_classification = candidate_delta_summary
         .pointer("/classification")
         .and_then(Value::as_str)
@@ -17687,6 +17694,7 @@ fn attention_score_raw_history_position_qk_recompute(
         "rust_query_history_head_count": rust_query_history_heads.len(),
         "reference_kcur_history_head_count": reference_kcur_history_heads.len(),
         "reference_legacy_key_head_count": reference_legacy_key_heads.len(),
+        "reference_score_history_head_count": reference_score_history_heads.len(),
         "rust_score_key_head_count": rust_score_key_heads.len(),
         "rust_score_key_f16_probe_head_count": rust_score_key_f16_probe_heads.len(),
         "rust_fallback_key_head_count": rust_fallback_key_heads.len(),
@@ -17698,9 +17706,292 @@ fn attention_score_raw_history_position_qk_recompute(
         "blocked_count": blocked_count,
         "missing_input_count": missing_input_count,
         "candidate_delta_summary": candidate_delta_summary,
+        "reference_input_stage_provenance": reference_input_stage_provenance,
         "rows": rows,
         "next_diagnostic": next_diagnostic,
     })
+}
+
+fn score_position_reference_input_stage_provenance(
+    rows: &[Value],
+    reference_records: &[ReferenceTraceRecord],
+) -> Value {
+    let query_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "qcur_history_head").map(|head| (head, record))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let kcur_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kcur_history_kv_head").map(|head| (head, record))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let legacy_key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_kv_head").map(|head| (head, record))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let score_history_heads = reference_records
+        .iter()
+        .filter(|record| record.stage.contains("history_ref_layout"))
+        .filter_map(|record| parse_stage_head(&record.stage, "kq_head").map(|head| (head, record)))
+        .collect::<BTreeMap<_, _>>();
+
+    let mut compared_row_count = 0usize;
+    let mut residual_row_count = 0usize;
+    let mut exact_score_graph_source_bound_count = 0usize;
+    let mut parent_source_bound_count = 0usize;
+    let mut missing_score_graph_source_count = 0usize;
+    let mut missing_query_stage_count = 0usize;
+    let mut missing_key_stage_count = 0usize;
+    let mut summary_rows = Vec::<Value>::new();
+
+    for row in rows {
+        if row.pointer("/status").and_then(Value::as_str) != Some("recomputed") {
+            continue;
+        }
+        compared_row_count += 1;
+        let head = row
+            .pointer("/head")
+            .and_then(Value::as_u64)
+            .and_then(|value| usize::try_from(value).ok());
+        let kv_head = row
+            .pointer("/kv_head")
+            .and_then(Value::as_u64)
+            .and_then(|value| usize::try_from(value).ok());
+        let best_reference_candidate = row.pointer("/best_reference_candidate");
+        let reference_best_base = best_reference_candidate
+            .and_then(|candidate| candidate.pointer("/base_candidate"))
+            .and_then(Value::as_str);
+        let reference_delta = best_reference_candidate
+            .and_then(|candidate| candidate.pointer("/reference_abs_delta"))
+            .and_then(Value::as_f64)
+            .unwrap_or(f64::INFINITY);
+        let reference_residual = reference_delta > SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS;
+        if reference_residual {
+            residual_row_count += 1;
+        }
+
+        let query_stage =
+            head.and_then(|head| query_history_heads.get(&head).copied()).or_else(|| {
+                reference_records
+                    .iter()
+                    .find(|record| record.stage == "Qcur" && record.values_available)
+            });
+        let key_stage = kv_head
+            .and_then(|kv_head| kcur_history_heads.get(&kv_head).copied())
+            .or_else(|| kv_head.and_then(|kv_head| legacy_key_heads.get(&kv_head).copied()));
+        let score_stage = head.and_then(|head| score_history_heads.get(&head).copied());
+
+        if query_stage.is_none() {
+            missing_query_stage_count += 1;
+        }
+        if key_stage.is_none() {
+            missing_key_stage_count += 1;
+        }
+
+        let score_graph_source_names =
+            score_stage.map(reference_graph_source_names).unwrap_or_default();
+        let query_parent = query_stage
+            .and_then(|record| reference_parent_with_graph_sources(reference_records, record));
+        let key_parent = key_stage
+            .and_then(|record| reference_parent_with_graph_sources(reference_records, record));
+        let score_parent = score_stage
+            .and_then(|record| reference_parent_with_graph_sources(reference_records, record));
+        let query_names = reference_record_and_parent_source_names(query_stage, query_parent);
+        let key_names = reference_record_and_parent_source_names(key_stage, key_parent);
+        let exact_score_graph_source_bound =
+            graph_source_name_overlap(&score_graph_source_names, &query_names)
+                && graph_source_name_overlap(&score_graph_source_names, &key_names);
+        let parent_source_bound = !query_names.is_empty() && !key_names.is_empty();
+        if exact_score_graph_source_bound {
+            exact_score_graph_source_bound_count += 1;
+        }
+        if parent_source_bound {
+            parent_source_bound_count += 1;
+        }
+        if score_graph_source_names.is_empty() {
+            missing_score_graph_source_count += 1;
+        }
+
+        let mut blockers = Vec::<&'static str>::new();
+        if score_graph_source_names.is_empty() {
+            blockers.push("reference_score_graph_sources_missing");
+        }
+        if query_stage.is_none() {
+            blockers.push("reference_query_stage_missing");
+        }
+        if key_stage.is_none() {
+            blockers.push("reference_key_stage_missing");
+        }
+        if query_stage.is_some() && !reference_record_has_graph_sources(query_stage.unwrap()) {
+            blockers.push("reference_query_history_view_graph_sources_missing");
+        }
+        if key_stage.is_some() && !reference_record_has_graph_sources(key_stage.unwrap()) {
+            blockers.push("reference_key_history_view_graph_sources_missing");
+        }
+        if !parent_source_bound {
+            blockers.push("reference_score_input_parent_sources_missing");
+        }
+        let classification = if exact_score_graph_source_bound {
+            "reference_score_inputs_exact_graph_bound"
+        } else if parent_source_bound {
+            "reference_score_inputs_parent_bound_but_score_graph_unpinned"
+        } else {
+            "reference_score_input_stage_binding_unpinned"
+        };
+
+        summary_rows.push(json!({
+            "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+            "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+            "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+            "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+            "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+            "reference_best_base": reference_best_base,
+            "reference_best_abs_delta": if reference_delta.is_finite() { json!(reference_delta) } else { Value::Null },
+            "reference_residual_over_warn": reference_residual,
+            "classification": classification,
+            "exact_score_graph_source_bound": exact_score_graph_source_bound,
+            "parent_source_bound": parent_source_bound,
+            "missing_binding_reasons": blockers,
+            "score_stage": reference_stage_provenance_summary(score_stage, score_parent),
+            "query_stage": reference_stage_provenance_summary(query_stage, query_parent),
+            "key_stage": reference_stage_provenance_summary(key_stage, key_parent),
+        }));
+    }
+
+    let classification = if compared_row_count == 0 {
+        "reference_score_input_stage_provenance_not_available"
+    } else if exact_score_graph_source_bound_count == compared_row_count {
+        "reference_score_inputs_exact_graph_bound"
+    } else if parent_source_bound_count == compared_row_count {
+        "reference_score_inputs_parent_bound_but_score_graph_unpinned"
+    } else {
+        "reference_score_input_stage_binding_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "reference_score_inputs_exact_graph_bound" => {
+            "inspect reference score input capture precision for residual score rows"
+        }
+        "reference_score_inputs_parent_bound_but_score_graph_unpinned" => {
+            "capture exact reference kq graph input bindings before changing score math"
+        }
+        "reference_score_input_stage_binding_unpinned" => {
+            "capture missing reference score input stages or parent graph sources before interpreting residual score rows"
+        }
+        _ => {
+            "capture selected score positions before interpreting reference score input provenance"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Reference score input stage provenance is diagnostic-only evidence for whether selected score-position residuals are bound to exact reference score graph inputs; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "compared_row_count": compared_row_count,
+        "reference_residual_row_count": residual_row_count,
+        "exact_score_graph_source_bound_count": exact_score_graph_source_bound_count,
+        "parent_source_bound_count": parent_source_bound_count,
+        "missing_score_graph_source_count": missing_score_graph_source_count,
+        "missing_query_stage_count": missing_query_stage_count,
+        "missing_key_stage_count": missing_key_stage_count,
+        "rows": summary_rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn reference_stage_provenance_summary(
+    record: Option<&ReferenceTraceRecord>,
+    parent: Option<&ReferenceTraceRecord>,
+) -> Value {
+    match record {
+        Some(record) => json!({
+            "present": true,
+            "name": record.name,
+            "stage": record.stage,
+            "graph_index": record.graph_index,
+            "graph_op": record.graph_op,
+            "graph_source_count": reference_graph_source_count(record),
+            "graph_source_names": reference_graph_source_names(record),
+            "parent_with_graph_sources": parent.map(|parent| json!({
+                "name": parent.name,
+                "stage": parent.stage,
+                "graph_index": parent.graph_index,
+                "graph_op": parent.graph_op,
+                "graph_source_count": reference_graph_source_count(parent),
+                "graph_source_names": reference_graph_source_names(parent),
+            })).unwrap_or(Value::Null),
+            "view_source_present": !record.view_source.is_null(),
+            "view_offset": record.view_offset,
+            "full_shape": record.full_shape,
+            "sample_offset": record.sample_offset,
+            "token_axis": record.token_axis,
+            "sampled_token_index": reference_sampled_token_index(record),
+            "shape": record.shape,
+            "dtype": record.dtype,
+            "nelements": record.nelements,
+            "values_available": record.values_available,
+            "first_values_len": record.first_values.len(),
+        }),
+        None => json!({
+            "present": false,
+        }),
+    }
+}
+
+fn reference_parent_with_graph_sources<'a>(
+    reference_records: &'a [ReferenceTraceRecord],
+    record: &ReferenceTraceRecord,
+) -> Option<&'a ReferenceTraceRecord> {
+    reference_records.iter().find(|candidate| {
+        !std::ptr::eq(*candidate, record)
+            && candidate.graph_index == record.graph_index
+            && candidate.graph_op == record.graph_op
+            && reference_record_has_graph_sources(candidate)
+    })
+}
+
+fn reference_record_has_graph_sources(record: &ReferenceTraceRecord) -> bool {
+    reference_graph_source_count(record) > 0
+}
+
+fn reference_graph_source_count(record: &ReferenceTraceRecord) -> usize {
+    record.graph_sources.as_array().map(Vec::len).unwrap_or(0)
+}
+
+fn reference_record_and_parent_source_names(
+    record: Option<&ReferenceTraceRecord>,
+    parent: Option<&ReferenceTraceRecord>,
+) -> Vec<String> {
+    let mut names = Vec::<String>::new();
+    if let Some(record) = record {
+        names.extend(reference_graph_source_names(record));
+    }
+    if let Some(parent) = parent {
+        names.extend(reference_graph_source_names(parent));
+    }
+    names.sort();
+    names.dedup();
+    names
+}
+
+fn reference_graph_source_names(record: &ReferenceTraceRecord) -> Vec<String> {
+    record
+        .graph_sources
+        .as_array()
+        .into_iter()
+        .flat_map(|sources| sources.iter())
+        .filter_map(|source| source.pointer("/name").and_then(Value::as_str))
+        .map(str::to_string)
+        .collect()
+}
+
+fn graph_source_name_overlap(left: &[String], right: &[String]) -> bool {
+    left.iter().any(|left| right.iter().any(|right| left == right))
 }
 
 fn score_position_candidate_delta_summary(rows: &[Value]) -> Value {
@@ -27794,6 +28085,150 @@ mod tests {
                 "/rows/0/best_reference_accumulation_probe/reference_residual_explained_by_accumulation"
             ),
             Some(&json!(true))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn attention_score_raw_history_position_qk_recompute_reports_reference_stage_provenance() {
+        let mut reference_query_parent = test_reference_trace_record("Qcur", vec![0.0, 0.0, 0.0]);
+        reference_query_parent.shape = vec![3, 1];
+        reference_query_parent.nelements = 3;
+        reference_query_parent.graph_op = Some("ROPE".to_string());
+        reference_query_parent.graph_index = Some(5);
+        reference_query_parent.graph_sources =
+            json!([{ "name": "Qcur-0 (reshaped)", "op": "RESHAPE" }]);
+        let mut reference_query_history =
+            test_reference_trace_record("qcur_history_head0_ref_layout", vec![1.0, 2.0, 3.0]);
+        reference_query_history.shape = vec![3, 1];
+        reference_query_history.nelements = 3;
+        reference_query_history.graph_op = Some("ROPE".to_string());
+        reference_query_history.graph_index = Some(5);
+        reference_query_history.graph_sources = json!([]);
+        let mut reference_key_parent = test_reference_trace_record("Kcur", vec![1.0, 1.0, 1.0]);
+        reference_key_parent.shape = vec![3, 1];
+        reference_key_parent.nelements = 3;
+        reference_key_parent.graph_op = Some("ROPE".to_string());
+        reference_key_parent.graph_index = Some(8);
+        reference_key_parent.graph_sources =
+            json!([{ "name": "Kcur-0 (reshaped)", "op": "RESHAPE" }]);
+        let mut reference_key =
+            test_reference_trace_record("kcur_history_kv_head0_ref_layout", vec![1.0, 1.0, 1.0]);
+        reference_key.shape = vec![3, 1];
+        reference_key.nelements = 3;
+        reference_key.graph_op = Some("ROPE".to_string());
+        reference_key.graph_index = Some(8);
+        reference_key.graph_sources = json!([]);
+        let mut reference_score =
+            test_reference_trace_record("kq_head0_history_ref_layout", vec![7.0]);
+        reference_score.shape = vec![1, 1, 1, 1];
+        reference_score.nelements = 1;
+        reference_score.graph_op = Some("MUL_MAT".to_string());
+        reference_score.graph_index = Some(18);
+        reference_score.graph_sources = json!([]);
+        let reference_records = vec![
+            reference_query_parent,
+            reference_query_history,
+            reference_key_parent,
+            reference_key,
+            reference_score,
+        ];
+
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_q_rope".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_q_rope".to_string(),
+                stage: Some("attention_q_rope".to_string()),
+                shape: vec![1, 3],
+                num_elements: 3,
+                first_values: vec![0.0, 0.0, 0.0],
+                seq: Some(0),
+                ..test_rust_trace_record("attention_q_rope", vec![0.0, 0.0, 0.0])
+            },
+        );
+        rust_records.insert(
+            "attention_q_score_input_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_q_score_input_head0_history_ref_layout".to_string(),
+                stage: Some("attention_q_score_input_head0_history_ref_layout".to_string()),
+                shape: vec![3, 1],
+                num_elements: 3,
+                first_values: vec![1.0, 2.0, 3.0],
+                ..test_rust_trace_record(
+                    "attention_q_score_input_head0_history_ref_layout",
+                    vec![1.0, 2.0, 3.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_k_score_input_head0_live_ref_layout".to_string(),
+                stage: Some("attention_k_score_input_head0_live_ref_layout".to_string()),
+                shape: vec![3, 1],
+                num_elements: 3,
+                first_values: vec![1.0, 1.0, 1.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![1.0, 1.0, 1.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_scores_raw_head0_history_ref_layout".to_string(),
+                stage: Some("attention_scores_raw_head0_history_ref_layout".to_string()),
+                shape: vec![1, 1],
+                num_elements: 1,
+                first_values: vec![6.0],
+                ..test_rust_trace_record("attention_scores_raw_head0_history_ref_layout", vec![6.0])
+            },
+        );
+
+        let position_drilldown =
+            attention_score_raw_history_position_drilldown(&reference_records, &rust_records);
+        let report = attention_score_raw_history_position_qk_recompute(
+            &reference_records,
+            &rust_records,
+            &position_drilldown,
+        );
+        let provenance = report
+            .pointer("/reference_input_stage_provenance")
+            .expect("reference input stage provenance");
+        let row = provenance.pointer("/rows/0").expect("provenance row");
+        let missing_reasons = row
+            .pointer("/missing_binding_reasons")
+            .and_then(Value::as_array)
+            .expect("missing binding reasons");
+
+        assert_eq!(provenance.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(provenance.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            provenance.pointer("/classification"),
+            Some(&json!("reference_score_inputs_parent_bound_but_score_graph_unpinned"))
+        );
+        assert_eq!(
+            row.pointer("/classification"),
+            Some(&json!("reference_score_inputs_parent_bound_but_score_graph_unpinned"))
+        );
+        assert_eq!(row.pointer("/parent_source_bound"), Some(&json!(true)));
+        assert_eq!(row.pointer("/exact_score_graph_source_bound"), Some(&json!(false)));
+        assert!(missing_reasons.contains(&json!("reference_score_graph_sources_missing")));
+        assert!(
+            missing_reasons.contains(&json!("reference_query_history_view_graph_sources_missing"))
+        );
+        assert!(
+            missing_reasons.contains(&json!("reference_key_history_view_graph_sources_missing"))
+        );
+        assert_eq!(
+            row.pointer("/query_stage/parent_with_graph_sources/graph_source_names/0"),
+            Some(&json!("Qcur-0 (reshaped)"))
+        );
+        assert_eq!(
+            row.pointer("/key_stage/parent_with_graph_sources/graph_source_names/0"),
+            Some(&json!("Kcur-0 (reshaped)"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
