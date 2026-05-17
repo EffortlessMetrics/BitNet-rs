@@ -153,6 +153,11 @@ reference-vs-Rust comparison, and `larger-corpus-decision.json`, which stages a
 250-case BitNet corpus before any 500-case expansion or broad BitNet quality
 envelope claim.
 
+The follow-on inference-excellence tracker work splits that stage into
+`M4-BITNET-EX-010` for the 250-case corpus/scorer contract,
+`M4-BITNET-EX-011` for bounded 250-case M4 receipts, and `M4-BITNET-EX-012`
+for the 500-case expansion-or-repair decision.
+
 The receipt records generated text, generated token IDs, tokenizer authority,
 model SHA, per-case timing, task-family scoring, and failure taxonomy for the
 bounded corpus. It also keeps the explicit claim boundary: this is not a broad

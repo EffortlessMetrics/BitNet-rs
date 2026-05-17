@@ -469,6 +469,14 @@ decision evidence only. It does not enable BitNet chat or serve, does not use
 dense Qwen evidence, and does not widen Metal, QK256, Neural Engine, MPSGraph,
 MacBook, broad Apple Silicon performance, or speedup claims.
 
+The tracker now makes that decision executable as three separate gates:
+`M4-BITNET-EX-010` defines the deterministic 250-case corpus and scorer
+contract, `M4-BITNET-EX-011` runs the accepted artifact/tokenizer/backend
+identity and publishes bounded receipts, and `M4-BITNET-EX-012` decides whether
+the next honest step is a 500-case BitNet expansion or corpus/scoring repair.
+Trend and release gates depend on that decision instead of treating the
+100-case larger-corpus recommendation as sufficient.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:
