@@ -1,3 +1,5 @@
+#![allow(clippy::clone_on_copy, clippy::type_complexity)]
+
 //! Comprehensive tests for `bitnet-runtime-feature-flags`.
 //!
 //! Covers the full public API surface: `FeatureActivation` construction and

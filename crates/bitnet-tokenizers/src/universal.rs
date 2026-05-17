@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_test_module)]
+
 use bitnet_common::{BitNetError, InferenceError, Result};
 use std::path::Path;
 use tracing::{debug, warn};

@@ -364,13 +364,13 @@ mod tests {
     impl ContextFactory for MockFactory {
         fn create_context(&self, id: &str) -> Result<MemoryBytes, ContextPoolError> {
             let fail = self.fail_on_create.lock().unwrap();
-            if let Some(ref fail_id) = *fail {
-                if fail_id == id {
-                    return Err(ContextPoolError::CreationFailed {
-                        id: id.to_string(),
-                        reason: "mock failure".into(),
-                    });
-                }
+            if let Some(ref fail_id) = *fail
+                && fail_id == id
+            {
+                return Err(ContextPoolError::CreationFailed {
+                    id: id.to_string(),
+                    reason: "mock failure".into(),
+                });
             }
             self.create_count.fetch_add(1, Ordering::SeqCst);
             Ok(self.memory_per_context)

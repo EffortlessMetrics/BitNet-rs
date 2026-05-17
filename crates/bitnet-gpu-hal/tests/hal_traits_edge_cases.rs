@@ -115,9 +115,13 @@ fn hal_error_debug() {
 
 // ── HalResult ───────────────────────────────────────────────────────────────
 
+fn ok_result(value: i32) -> HalResult<i32> {
+    Ok(value)
+}
+
 #[test]
 fn hal_result_ok() {
-    let r: HalResult<i32> = Ok(42);
+    let r = ok_result(42);
     assert_eq!(r.unwrap(), 42);
 }
 
@@ -154,11 +158,15 @@ fn memory_type_ne() {
     assert_ne!(MemoryType::Pinned, MemoryType::Device);
 }
 
+fn clone_value<T: Clone>(value: &T) -> T {
+    value.clone()
+}
+
 #[test]
 fn memory_type_clone_copy() {
     let mt = MemoryType::Device;
     let mt2 = mt;
-    let mt3 = mt.clone();
+    let mt3 = clone_value(&mt);
     assert_eq!(mt, mt2);
     assert_eq!(mt, mt3);
 }

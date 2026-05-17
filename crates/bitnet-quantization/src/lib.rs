@@ -1,3 +1,13 @@
+#![cfg_attr(
+    test,
+    allow(
+        clippy::erasing_op,
+        clippy::identity_op,
+        clippy::manual_slice_fill,
+        clippy::neg_multiply
+    )
+)]
+
 //! Quantization algorithms for BitNet models
 //!
 //! This crate provides quantization algorithms for BitNet models, including:

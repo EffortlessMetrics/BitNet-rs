@@ -11,7 +11,7 @@ use bitnet_gpu_hal::model_pruning::*;
 
 #[test]
 fn pruning_method_all_variants() {
-    let v = vec![
+    let v = [
         PruningMethod::Magnitude,
         PruningMethod::Structured,
         PruningMethod::Movement,
@@ -37,7 +37,7 @@ fn pruning_method_debug() {
 
 #[test]
 fn pruning_granularity_all_variants() {
-    let v = vec![
+    let v = [
         PruningGranularity::Weight,
         PruningGranularity::Channel,
         PruningGranularity::Head,
@@ -57,7 +57,7 @@ fn pruning_granularity_clone_eq() {
 
 #[test]
 fn schedule_kind_all_variants() {
-    let v = vec![ScheduleKind::OneShot, ScheduleKind::Linear, ScheduleKind::Cubic];
+    let v = [ScheduleKind::OneShot, ScheduleKind::Linear, ScheduleKind::Cubic];
     assert_eq!(v.len(), 3);
 }
 
@@ -315,7 +315,7 @@ fn movement_pruner_current_sparsity() {
     let cfg = PruningConfig::movement(0.5, 100);
     let pruner = MovementPruner::new(cfg);
     let s = pruner.current_sparsity();
-    assert!(s >= 0.0 && s <= 1.0);
+    assert!((0.0..=1.0).contains(&s));
 }
 
 // ── LotteryTicket ───────────────────────────────────────────────
@@ -417,8 +417,8 @@ fn pruning_report_from_mask_manager() {
 
 #[test]
 fn pruning_report_from_weights() {
-    let w1 = vec![0.0, 1.0, 0.0, 2.0];
-    let w2 = vec![3.0, 0.0, 0.0, 4.0];
+    let w1 = [0.0, 1.0, 0.0, 2.0];
+    let w2 = [3.0, 0.0, 0.0, 4.0];
     let report =
         PruningReport::from_weights(&[("a", &w1[..]), ("b", &w2[..])], PruningMethod::Structured);
     assert_eq!(report.total_params, 8);
