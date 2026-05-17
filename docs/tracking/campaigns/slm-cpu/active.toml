@@ -2152,7 +2152,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-026"
-status = "ready"
+status = "merged"
+pr = 5369
+merge_sha = "8f44d67b9ee06b97eda96ed0eaca0d1dfd9fcee6"
 branch = "codex/slm-cpu-026-repetition-penalty-logits-reuse"
 stackable = false
 review_mode = "codex_premerge"
@@ -2197,6 +2199,54 @@ must_not_claim = [
   "Broad Qwen answer quality is proven.",
   "Q4/Q5 quant expansion is in scope.",
   "A second dense model is supported by this item.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-027"
+status = "ready"
+branch = "codex/slm-cpu-027-second-dense-sanity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-026"]
+acceptance = "Add a bounded second-small-dense-GGUF sanity item after the Qwen3 Q8_0 Kaby proof-appliance profile. The slice must select or validate one non-Qwen3 small dense candidate by explicit model SHA, architecture metadata, strict tokenizer authority, selected CPU backend, fallback=false, prompt/generated token receipts, and reference-comparison or explicit blocker evidence. It must prove adapter generality only; it must not claim broad answer quality, sustained throughput, Q4/Q5 quant expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 quant expansion",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The Kaby Lake Qwen3 Q8_0 proof-appliance profile is complete through SLM-CPU-026.",
+  "A valid SLM-CPU-027 slice checks one second small dense model candidate for strict CPU operability or records the exact blocker.",
+  "The goal is adapter generality evidence, not speed or broad chat quality.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
+  "Q4/Q5 quant expansion is in scope.",
   "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
   "Qwen3.5 or hybrid architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
