@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T14:39:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-008"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5372
+branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
+head_sha = "f274700750fda9d413880feb7e3df2bb773428d9"
+merge_sha = "843da973eb609ddcb5943be6b99b93d6afec0669"
+summary = "Merged the M3MBA-008 handoff for the accepted Microsoft 2B I2_S M3 Air reference-runner artifact."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5372",
+  "docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md",
+]
+notes = [
+  "The handoff preserves source, hash, tokenizer authority, route, and claim boundaries for separate M4 strict-proof work.",
+  "M3 Air evidence remains artifact-selection evidence only and is not M4 proof.",
+  "The 0.7B and 3B secondary candidates remain blocked and are not handoff targets.",
+]
