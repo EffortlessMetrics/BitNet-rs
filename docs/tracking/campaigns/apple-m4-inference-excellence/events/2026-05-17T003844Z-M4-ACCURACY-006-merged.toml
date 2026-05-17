@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T00:38:44Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-006"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5243
+merge_sha = "7246c7be632c321eabbd440f925776a441f0a177"
+
+notes = [
+  "Merged PR #5243, adding full 500-case answer-corpus receipts, summary receipts, and a task-family pass-rate rollup for every supported dense M4 model identity.",
+  "The committed receipts preserve model SHA256, tokenizer authority, prompt template, apple-m4-cpu-neon backend, fallback_used=false, generated text, generated token IDs, task-family pass rates, and deterministic failure categories.",
+  "M4-ACCURACY-006 is tracker-closed as dense SLM eval-v2 evidence only; no BitNet proof, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim was made.",
+]
