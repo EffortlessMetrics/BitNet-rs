@@ -857,7 +857,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-REG-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-REG-001-warm-regression"
 stackable = false
 review_mode = "codex_premerge"
@@ -865,6 +865,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-002", "M4-EXCELLENCE-004"]
 pr = 5299
+merge_sha = "173a59055f11a5677712942abc2a79358d1cf307"
 acceptance = "Add direct `bitnet mac regression --baseline` support for `bitnet_apple_m4_warm_session` receipts, matching accepted artifact/tokenizer identity, backend, fallback state, prompt set, warm profile, timeout policy, and receipt schema before reporting drift."
 commands = [
   "bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-productization/variable-warm-session.json",
