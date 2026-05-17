@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1676 @@ struct llama_context {
+@@ -3441,6 +3444,1696 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -1149,7 +1149,11 @@ index 666fcc4d..23ee29ff 100644
 +            double head_min = std::numeric_limits<double>::infinity();
 +            double head_max = -std::numeric_limits<double>::infinity();
 +            std::vector<float> head_values;
++            std::vector<int64_t> head_source_indices;
++            std::vector<uint32_t> head_source_bits;
 +            head_values.reserve((size_t) head_nelements);
++            head_source_indices.reserve((size_t) head_nelements);
++            head_source_bits.reserve((size_t) head_nelements);
 +            for (int64_t dim = 0; dim < head_dim; ++dim) {
 +                for (int64_t token = 0; token < token_count; ++token) {
 +                    const int64_t index = dim + head_dim * head + head_dim * kv_head_count * token;
@@ -1159,6 +1163,8 @@ index 666fcc4d..23ee29ff 100644
 +                    const float value_f32 = values[(size_t) index];
 +                    const double value = value_f32;
 +                    head_values.push_back(value_f32);
++                    head_source_indices.push_back(index);
++                    head_source_bits.push_back(bitnet_rs_reference_layer_trace_f32_bits(value_f32));
 +                    head_sum += value;
 +                    head_sq_sum += value * value;
 +                    head_min = value < head_min ? value : head_min;
@@ -1224,6 +1230,20 @@ index 666fcc4d..23ee29ff 100644
 +                    out << ",";
 +                }
 +                out << bitnet_rs_reference_layer_trace_f32_bits(head_values[i]);
++            }
++            out << "],\"first_value_source_indices_u64\":[";
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                out << head_source_indices[i];
++            }
++            out << "],\"first_value_source_bits_u32\":[";
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                out << head_source_bits[i];
 +            }
 +            out << "]}";
 +        }
