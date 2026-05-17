@@ -1,0 +1,38 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-024"
+event = "pr_open"
+timestamp = "2026-05-17T10:30:00Z"
+actor = "codex"
+pr = 5342
+head_sha = "e4cc380b6b4d3c72542e15f601cb21c18a249936"
+branch = "codex/slm-cpu-024-greedy-sampler-fast-path"
+
+summary = "Opened #5342 with a guarded greedy no-penalty sampler fast path and i5-8250U Qwen3 Q8_0 after artifact."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5342",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+  "docs/slm/SLM_CPU_QWEN3_WARM_SESSION.md",
+]
+
+notes = [
+  "The sampler bypasses logits scratch copying only for deterministic greedy sampling when repetition penalty is inactive or there is no context to penalize.",
+  "The after artifact preserves the 4-thread Qwen3 Q8_0 warm-session generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, and fallback=false boundary.",
+  "The validation records zero sampler decode allocations and keeps sustained-throughput, broad answer-quality, Q4/Q5, second-model, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, and BitNet QK256 claims false.",
+]
+
+validation = [
+  "rustfmt crates\\bitnet-sampling\\src\\lib.rs --edition 2024 --check --config skip_children=true",
+  "cargo test --locked -p bitnet-sampling",
+  "cargo clippy --locked -p bitnet-sampling -- -D warnings",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-greedy-sampler-fast-path.json",
+  "python -m json.tool ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-greedy-sampler-fast-path-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
