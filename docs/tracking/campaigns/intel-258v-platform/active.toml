@@ -4531,8 +4531,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-DURABLE-003"
-status = "pr_open"
+status = "merged"
 pr = 5240
+merge_sha = "2e7150befcb36bf161b94855efedcf427b2ec7b4"
 branch = "codex/lunar-lake/LNL258V-DURABLE-003-index-stability"
 stackable = false
 review_mode = "codex_premerge"
