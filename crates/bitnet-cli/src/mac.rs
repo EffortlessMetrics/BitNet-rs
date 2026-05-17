@@ -384,6 +384,10 @@ enum MacAction {
         #[arg(long, default_value_t = 0)]
         threads: usize,
 
+        /// Optional wall-clock timeout for the explicit BitNet one-shot ask route.
+        #[arg(long, value_name = "SECONDS")]
+        timeout_seconds: Option<u64>,
+
         /// Output strict Mac answer receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_ASK_DEFAULT_RECEIPT)]
         json_out: PathBuf,
@@ -973,6 +977,7 @@ impl MacCommand {
                 repetition_penalty,
                 seed,
                 threads,
+                timeout_seconds,
                 json_out,
                 progress,
                 quiet,
@@ -993,6 +998,7 @@ impl MacCommand {
                     repetition_penalty,
                     seed,
                     threads,
+                    timeout_seconds,
                     json_out,
                     progress,
                     quiet,
@@ -3021,6 +3027,7 @@ async fn run_ask(
     repetition_penalty: f32,
     seed: Option<u64>,
     threads: usize,
+    timeout_seconds: Option<u64>,
     json_out: PathBuf,
     progress: bool,
     quiet: bool,
@@ -3040,11 +3047,17 @@ async fn run_ask(
             repetition_penalty,
             seed,
             threads,
+            timeout_seconds,
             json_out,
             progress,
             quiet,
         )
         .await;
+    }
+    if timeout_seconds.is_some() {
+        anyhow::bail!(
+            "`bitnet mac ask --timeout-seconds` is currently scoped to the explicit BitNet one-shot route; dense SLM ask does not use this timeout flag yet"
+        );
     }
     if model_path.is_some() || tokenizer.is_some() {
         anyhow::bail!(
@@ -3090,6 +3103,7 @@ async fn run_bitnet_ask(
     repetition_penalty: f32,
     seed: Option<u64>,
     threads: usize,
+    timeout_seconds: Option<u64>,
     json_out: PathBuf,
     progress: bool,
     quiet: bool,
@@ -3112,6 +3126,8 @@ async fn run_bitnet_ask(
         question_bytes: question.len(),
         question_sha256: sha256_hex(question.as_bytes()),
         max_new_tokens,
+        timeout_seconds,
+        progress_enabled,
         started_at,
     };
     let tokenizer = match tokenizer {
@@ -3122,6 +3138,7 @@ async fn run_bitnet_ask(
                 failure_context,
                 "tokenizer_authority_missing",
                 "BitNet Mac ask requires explicit tokenizer authority; pass --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+                false,
             );
         }
     };
@@ -3140,6 +3157,7 @@ async fn run_bitnet_ask(
                 "BitNet Mac ask tokenizer is missing at {}; pass the accepted external tokenizer.json",
                 tokenizer.display()
             ),
+            false,
         );
     }
     let tokenizer_sha256 = match verify_bitnet_m4_tokenizer(&tokenizer) {
@@ -3153,6 +3171,7 @@ async fn run_bitnet_ask(
                 },
                 "tokenizer_verify_failed",
                 &error.to_string(),
+                false,
             );
         }
     };
@@ -3171,6 +3190,7 @@ async fn run_bitnet_ask(
                 },
                 "model_verify_failed",
                 &error.to_string(),
+                false,
             );
         }
     };
@@ -3189,7 +3209,7 @@ async fn run_bitnet_ask(
             json_out.display()
         )
     });
-    if let Err(error) = crate::run_simple_generation(
+    let ask_generation = crate::run_simple_generation(
         APPLE_M4_CPU_NEON,
         model.path.clone(),
         "auto".to_string(),
@@ -3230,10 +3250,30 @@ async fn run_bitnet_ask(
         Some("mac_bitnet_ask".to_string()),
         false,
         progress_enabled,
-    )
-    .await
-    {
+    );
+    let ask_result = if let Some(seconds) = timeout_seconds {
+        match tokio::time::timeout(std::time::Duration::from_secs(seconds), ask_generation).await {
+            Ok(result) => result,
+            Err(_) => {
+                return fail_bitnet_mac_ask_with_receipt(
+                    &json_out,
+                    BitNetMacAskFailureContext {
+                        model_path: Some(model.path.clone()),
+                        tokenizer_path: Some(tokenizer.clone()),
+                        ..failure_context.clone()
+                    },
+                    "generation_timeout",
+                    &format!("BitNet Mac ask exceeded --timeout-seconds {seconds}"),
+                    true,
+                );
+            }
+        }
+    } else {
+        ask_generation.await
+    };
+    if let Err(error) = ask_result {
         let message = error.to_string();
+        let stage = bitnet_mac_ask_failure_stage(&message);
         return fail_bitnet_mac_ask_with_receipt(
             &json_out,
             BitNetMacAskFailureContext {
@@ -3241,8 +3281,9 @@ async fn run_bitnet_ask(
                 tokenizer_path: Some(tokenizer.clone()),
                 ..failure_context.clone()
             },
-            "generation_failed",
+            stage,
             &message,
+            false,
         );
     }
     annotate_and_validate_bitnet_mac_ask_receipt(&json_out, &model, &tokenizer, &tokenizer_sha256)?;
@@ -3261,6 +3302,8 @@ struct BitNetMacAskFailureContext {
     question_bytes: usize,
     question_sha256: String,
     max_new_tokens: usize,
+    timeout_seconds: Option<u64>,
+    progress_enabled: bool,
     started_at: std::time::Instant,
 }
 
@@ -3269,12 +3312,18 @@ fn fail_bitnet_mac_ask_with_receipt(
     context: BitNetMacAskFailureContext,
     stage: &str,
     message: &str,
+    timeout_reached: bool,
 ) -> Result<()> {
-    let repair_guidance = bitnet_mac_ask_failure_repair_guidance(stage, &context);
+    let repair_guidance = bitnet_mac_ask_failure_repair_guidance(stage, &context, timeout_reached);
     let repair_text = bitnet_mac_ask_failure_repair_text(&repair_guidance);
-    if let Err(receipt_error) =
-        write_bitnet_mac_ask_failure_receipt(json_out, context, stage, message, &repair_guidance)
-    {
+    if let Err(receipt_error) = write_bitnet_mac_ask_failure_receipt(
+        json_out,
+        context,
+        stage,
+        message,
+        timeout_reached,
+        &repair_guidance,
+    ) {
         anyhow::bail!(
             "{message}{repair_text}; additionally failed to write BitNet Mac ask failure receipt {}: {receipt_error}",
             json_out.display()
@@ -3288,9 +3337,11 @@ fn write_bitnet_mac_ask_failure_receipt(
     context: BitNetMacAskFailureContext,
     stage: &str,
     message: &str,
+    timeout_reached: bool,
     repair_guidance: &[String],
 ) -> Result<()> {
     let elapsed_ms = context.started_at.elapsed().as_secs_f64() * 1000.0;
+    let timeout_enforced = context.timeout_seconds.is_some();
     let receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -3328,17 +3379,28 @@ fn write_bitnet_mac_ask_failure_receipt(
             "generated_text": "",
             "generated_token_ids": [],
             "generated_tokens": 0,
+            "partial_text": "",
+            "partial_token_ids": [],
+            "partial_generation_available": false,
         },
         "failure": {
             "stage": stage,
             "message": message,
             "elapsed_ms": (elapsed_ms * 1000.0).round() / 1000.0,
         },
+        "progress": {
+            "enabled": context.progress_enabled,
+            "status_stream": "stderr",
+            "last_stage": stage,
+            "stage_taxonomy": bitnet_mac_ask_stage_taxonomy(),
+            "diagnostic_note": "BitNet one-shot ask exposes tokenizer/model verification plus generation timing stages; partial generation may be unavailable for cancelled timeouts",
+        },
         "timeout_boundary": {
-            "configured_seconds": serde_json::Value::Null,
-            "reached": false,
-            "enforced": false,
-            "status": "not_reached",
+            "configured_seconds": context.timeout_seconds,
+            "reached": timeout_reached,
+            "enforced": timeout_enforced,
+            "status": if timeout_reached { "reached" } else { "not_reached" },
+            "stage": stage,
             "note": "failure occurred before a complete BitNet one-shot answer receipt was produced",
         },
         "repair_guidance": repair_guidance,
@@ -3363,6 +3425,7 @@ fn write_bitnet_mac_ask_failure_receipt(
 fn bitnet_mac_ask_failure_repair_guidance(
     stage: &str,
     context: &BitNetMacAskFailureContext,
+    timeout_reached: bool,
 ) -> Vec<String> {
     let mut guidance = Vec::new();
     let cache_dir_arg = context
@@ -3386,7 +3449,7 @@ fn bitnet_mac_ask_failure_repair_guidance(
             ));
         }
     }
-    if stage.contains("model") || stage == "generation_failed" {
+    if stage.contains("model") || stage.contains("generation") || stage == "decode" {
         let model_repair = if context.model_path.is_some() {
             format!(
                 "replace --model-path with the accepted Microsoft I2_S GGUF with SHA256 {BITNET_M4_EXPECTED_MODEL_SHA256}"
@@ -3411,6 +3474,11 @@ fn bitnet_mac_ask_failure_repair_guidance(
             ));
         }
     }
+    if timeout_reached || stage.contains("timeout") {
+        guidance.push(
+            "rerun with --progress to see the last completed one-shot stage, then increase --timeout-seconds or reduce --max-new-tokens".to_string(),
+        );
+    }
     guidance.push(
         "keep BitNet chat and serve disabled; this receipt is a failed one-shot ask attempt"
             .to_string(),
@@ -3427,6 +3495,46 @@ fn bitnet_mac_ask_failure_repair_text(guidance: &[String]) -> String {
         text.push_str(&format!("\n  {}. {step}", index + 1));
     }
     text
+}
+
+fn bitnet_mac_ask_failure_stage(message: &str) -> &'static str {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("failed to load real model") || lower.contains("model load") {
+        "model_load"
+    } else if lower.contains("failed to resolve tokenizer") || lower.contains("tokenizer load") {
+        "tokenizer_load"
+    } else if lower.contains("tokenize") || lower.contains("encode") {
+        "prompt_tokenize"
+    } else if lower.contains("prefill") {
+        "prefill"
+    } else if lower.contains("first token") || lower.contains("time_to_first") {
+        "first_token"
+    } else if lower.contains("decode")
+        || lower.contains("forward")
+        || lower.contains("logits")
+        || lower.contains("sample")
+    {
+        "decode"
+    } else if lower.contains("receipt") || lower.contains("write") || lower.contains("create") {
+        "receipt_write"
+    } else {
+        "generation_failed"
+    }
+}
+
+fn bitnet_mac_ask_stage_taxonomy() -> Vec<&'static str> {
+    vec![
+        "tokenizer_verify",
+        "model_verify",
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "prefill",
+        "first_token",
+        "decode",
+        "receipt_write",
+        "receipt_validation",
+    ]
 }
 
 fn mac_ask_progress<F>(enabled: bool, stage: &str, details: F)
@@ -3760,6 +3868,7 @@ async fn run_bitnet_smoke(
         1.1,
         None,
         threads,
+        None,
         answer_receipt_path.clone(),
         false,
         true,
@@ -4243,6 +4352,7 @@ fn write_bitnet_warm_failure_receipt(
             "generated_tokens": 0,
             "partial_text": "",
             "partial_token_ids": [],
+            "partial_generation_available": false,
         },
         "failure": {
             "stage": stage,
@@ -4536,6 +4646,7 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
         1.1,
         None,
         threads,
+        None,
         ask_receipt.clone(),
         progress,
         quiet,
@@ -11787,6 +11898,9 @@ fn validate_bitnet_mac_ask_failure_receipt(
     if receipt["generation"]["generated_text"].as_str() != Some("")
         || receipt["generation"]["generated_token_ids"].as_array().is_none_or(|ids| !ids.is_empty())
         || receipt["generation"]["generated_tokens"].as_u64() != Some(0)
+        || receipt["generation"]["partial_text"].as_str() != Some("")
+        || receipt["generation"]["partial_token_ids"].as_array().is_none_or(|ids| !ids.is_empty())
+        || receipt["generation"]["partial_generation_available"].as_bool() != Some(false)
     {
         anyhow::bail!(
             "{} BitNet Mac ask failure receipt must record empty partial generation",
@@ -11802,12 +11916,35 @@ fn validate_bitnet_mac_ask_failure_receipt(
             path.display()
         );
     }
-    if receipt["timeout_boundary"]["reached"].as_bool() != Some(false)
-        || receipt["timeout_boundary"]["enforced"].as_bool() != Some(false)
-        || receipt["timeout_boundary"]["status"].as_str() != Some("not_reached")
+    let taxonomy = receipt["progress"]["stage_taxonomy"].as_array().ok_or_else(|| {
+        anyhow!(
+            "{} BitNet Mac ask failure receipt is missing progress.stage_taxonomy",
+            path.display()
+        )
+    })?;
+    for required in
+        ["model_load", "tokenizer_load", "prefill", "first_token", "decode", "receipt_write"]
+    {
+        if !taxonomy.iter().any(|stage| stage.as_str() == Some(required)) {
+            anyhow::bail!(
+                "{} BitNet Mac ask failure receipt progress taxonomy must include {required}",
+                path.display()
+            );
+        }
+    }
+    if receipt["progress"]["last_stage"].as_str().is_none_or(str::is_empty) {
+        anyhow::bail!(
+            "{} BitNet Mac ask failure receipt must record progress.last_stage",
+            path.display()
+        );
+    }
+    if receipt["timeout_boundary"]["reached"].as_bool().is_none()
+        || receipt["timeout_boundary"]["enforced"].as_bool().is_none()
+        || receipt["timeout_boundary"]["status"].as_str().is_none_or(str::is_empty)
+        || receipt["timeout_boundary"]["stage"].as_str().is_none_or(str::is_empty)
     {
         anyhow::bail!(
-            "{} BitNet Mac ask failure receipt must record an explicit non-reached timeout boundary",
+            "{} BitNet Mac ask failure receipt must record an explicit timeout boundary",
             path.display()
         );
     }
@@ -11888,6 +12025,9 @@ fn validate_bitnet_warm_session_failure_receipt(
     if receipt["generation"]["generated_text"].as_str() != Some("")
         || receipt["generation"]["generated_token_ids"].as_array().is_none_or(|ids| !ids.is_empty())
         || receipt["generation"]["generated_tokens"].as_u64() != Some(0)
+        || receipt["generation"]["partial_text"].as_str() != Some("")
+        || receipt["generation"]["partial_token_ids"].as_array().is_none_or(|ids| !ids.is_empty())
+        || receipt["generation"]["partial_generation_available"].as_bool() != Some(false)
     {
         anyhow::bail!(
             "{} BitNet warm failure receipt must record empty partial generation",
@@ -15048,10 +15188,13 @@ mod tests {
             question_bytes: 12,
             question_sha256: "prompt-sha".to_string(),
             max_new_tokens: 16,
+            timeout_seconds: None,
+            progress_enabled: false,
             started_at: std::time::Instant::now(),
         };
 
-        let guidance = bitnet_mac_ask_failure_repair_guidance("model_verify_failed", &context);
+        let guidance =
+            bitnet_mac_ask_failure_repair_guidance("model_verify_failed", &context, false);
         let joined = guidance.join("\n");
 
         assert!(joined.contains("bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s"));
@@ -15076,15 +15219,60 @@ mod tests {
             question_bytes: 12,
             question_sha256: "prompt-sha".to_string(),
             max_new_tokens: 16,
+            timeout_seconds: None,
+            progress_enabled: false,
             started_at: std::time::Instant::now(),
         };
 
-        let guidance = bitnet_mac_ask_failure_repair_guidance("model_verify_failed", &context);
+        let guidance =
+            bitnet_mac_ask_failure_repair_guidance("model_verify_failed", &context, false);
         let joined = guidance.join("\n");
 
         assert!(joined.contains("replace --model-path with the accepted Microsoft I2_S GGUF"));
         assert!(joined.contains("bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --path"));
         assert!(joined.contains(&model_path.display().to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_mac_ask_timeout_failure_receipt_preserves_boundary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("bitnet-ask-timeout-failure.json");
+        let context = BitNetMacAskFailureContext {
+            model_id: BITNET_M4_MODEL_ID.to_string(),
+            cache_dir: Some(temp.path().join("models")),
+            model_path: Some(temp.path().join("ggml-model-i2_s.gguf")),
+            tokenizer_path: Some(temp.path().join("tokenizer.json")),
+            question_bytes: 12,
+            question_sha256: "prompt-sha".to_string(),
+            max_new_tokens: 16,
+            timeout_seconds: Some(1),
+            progress_enabled: true,
+            started_at: std::time::Instant::now(),
+        };
+        let guidance = bitnet_mac_ask_failure_repair_guidance("generation_timeout", &context, true);
+
+        write_bitnet_mac_ask_failure_receipt(
+            &receipt_path,
+            context,
+            "generation_timeout",
+            "BitNet Mac ask exceeded --timeout-seconds 1",
+            true,
+            &guidance,
+        )?;
+        let receipt = read_json_receipt(&receipt_path)?;
+        validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(receipt["timeout_boundary"]["configured_seconds"], 1);
+        assert_eq!(receipt["timeout_boundary"]["enforced"], true);
+        assert_eq!(receipt["timeout_boundary"]["reached"], true);
+        assert_eq!(receipt["timeout_boundary"]["stage"], "generation_timeout");
+        assert_eq!(receipt["generation"]["partial_generation_available"], false);
+        assert_eq!(receipt["progress"]["enabled"], true);
+        assert!(guidance.join("\n").contains("increase --timeout-seconds"));
+        assert_eq!(receipt["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+        assert_eq!(receipt["mac_bitnet_claim_boundary"]["serve_enabled"], false);
         Ok(())
     }
 

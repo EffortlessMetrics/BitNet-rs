@@ -737,6 +737,7 @@ fn mac_ask_help_documents_positional_question() {
         .success()
         .stdout(predicate::str::contains("[QUESTION]"))
         .stdout(predicate::str::contains("--question <QUESTION>"))
+        .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
         .stdout(predicate::str::contains("--quiet"));
 }
@@ -814,7 +815,17 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
-fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
+fn mac_bitnet_ask_timeout_seconds_is_bitnet_only_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "ask", "What is 2+2?", "--timeout-seconds", "10"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("explicit BitNet one-shot route"))
+        .stderr(predicate::str::contains("dense SLM ask does not use this timeout flag yet"));
+}
+
+#[test]
+fn mac_bitnet_ask_requires_explicit_tokenizer_before_cache_lookup() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt = dir.path().join("bitnet-ask-missing-tokenizer-authority.json");
     let receipt_str = receipt.to_string_lossy().into_owned();
@@ -841,7 +852,7 @@ fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
 }
 
 #[test]
-fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
+fn mac_bitnet_ask_writes_failure_receipt_for_missing_tokenizer()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let receipt = dir.path().join("bitnet-ask-failure.json");
@@ -860,6 +871,9 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
             "missing-bitnet.gguf",
             "--tokenizer",
             tokenizer_str.as_str(),
+            "--timeout-seconds",
+            "60",
+            "--progress",
             "--json-out",
             receipt_str.as_str(),
         ])
@@ -868,7 +882,8 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
         .stderr(predicate::str::contains("tokenizer is missing"))
         .stderr(predicate::str::contains("failure receipt written"))
         .stderr(predicate::str::contains("Repair guidance:"))
-        .stderr(predicate::str::contains("shasum -a 256"));
+        .stderr(predicate::str::contains("shasum -a 256"))
+        .stderr(predicate::str::contains("mac ask progress: tokenizer_verify_start"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
@@ -876,6 +891,17 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
     assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["generation"]["generated_tokens"], 0);
+    assert_eq!(receipt_json["generation"]["partial_generation_available"], false);
+    assert_eq!(receipt_json["timeout_boundary"]["configured_seconds"], 60);
+    assert_eq!(receipt_json["timeout_boundary"]["enforced"], true);
+    assert_eq!(receipt_json["timeout_boundary"]["reached"], false);
+    assert_eq!(receipt_json["timeout_boundary"]["stage"], "tokenizer_missing");
+    assert_eq!(receipt_json["progress"]["enabled"], true);
+    assert_eq!(receipt_json["progress"]["last_stage"], "tokenizer_missing");
+    let stage_taxonomy =
+        receipt_json["progress"]["stage_taxonomy"].as_array().ok_or("stage taxonomy missing")?;
+    assert!(stage_taxonomy.iter().any(|stage| stage.as_str() == Some("decode")));
+    assert!(stage_taxonomy.iter().any(|stage| stage.as_str() == Some("receipt_write")));
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
 
@@ -889,7 +915,7 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
 }
 
 #[test]
-fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
+fn mac_bitnet_ask_rejects_wrong_tokenizer_sha_before_model_lookup()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let tokenizer = dir.path().join("tokenizer.json");
@@ -1301,6 +1327,7 @@ fn mac_bitnet_warm_writes_failure_receipt_for_missing_tokenizer()
     assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["generation"]["generated_tokens"], 0);
+    assert_eq!(receipt_json["generation"]["partial_generation_available"], false);
     assert_eq!(receipt_json["timeout_boundary"]["enforced"], true);
     assert_eq!(receipt_json["timeout_boundary"]["reached"], false);
     assert_eq!(receipt_json["progress"]["enabled"], true);
