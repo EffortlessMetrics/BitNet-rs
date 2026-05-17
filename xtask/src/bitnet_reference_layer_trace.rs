@@ -7436,6 +7436,8 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_score_raw_history_delta(reference_records, rust_records);
     report["attention_score_raw_history_live_tail_delta"] =
         attention_score_raw_history_live_tail_delta(reference_records, rust_records);
+    report["attention_score_raw_history_source_summary"] =
+        attention_score_raw_history_source_summary(reference_records, rust_records);
     report["attention_probability_history_delta"] =
         attention_probability_history_delta(reference_records, rust_records);
     report["attention_value_mix_head_history_delta"] =
@@ -17225,6 +17227,131 @@ fn attention_score_raw_history_live_tail_delta(
     })
 }
 
+fn attention_score_raw_history_source_summary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let raw_history = attention_score_raw_history_delta(reference_records, rust_records);
+    let live_tail = attention_score_raw_history_live_tail_delta(reference_records, rust_records);
+    let score_input = attention_score_input_attribution(reference_records, rust_records);
+    let key_history_effect = attention_score_key_history_effect(reference_records, rust_records);
+    let kcur_f16_effect = attention_score_kcur_f16_effect(reference_records, rust_records);
+    attention_score_raw_history_source_summary_from_sections(
+        &raw_history,
+        &live_tail,
+        &score_input,
+        &key_history_effect,
+        &kcur_f16_effect,
+    )
+}
+
+fn attention_score_raw_history_source_summary_from_sections(
+    raw_history: &Value,
+    live_tail: &Value,
+    score_input: &Value,
+    key_history_effect: &Value,
+    kcur_f16_effect: &Value,
+) -> Value {
+    let raw_material_count = value_u64(raw_history, "/material_mismatch_count").unwrap_or(0);
+    let raw_missing_count = value_u64(raw_history, "/missing_rust_head_count").unwrap_or(0);
+    let live_material_count = value_u64(live_tail, "/live_material_mismatch_count").unwrap_or(0);
+    let live_missing_count = value_u64(live_tail, "/missing_rust_head_count").unwrap_or(0);
+    let score_input_compared_count = value_u64(score_input, "/compared_count").unwrap_or(0);
+    let score_input_missing_count = value_u64(score_input, "/missing_input_count").unwrap_or(0);
+    let key_history_compared_count = value_u64(key_history_effect, "/compared_count").unwrap_or(0);
+    let key_history_missing_count =
+        value_u64(key_history_effect, "/missing_input_count").unwrap_or(0);
+    let kcur_f16_compared_count = value_u64(kcur_f16_effect, "/compared_count").unwrap_or(0);
+    let kcur_f16_missing_count = value_u64(kcur_f16_effect, "/missing_input_count").unwrap_or(0);
+
+    let key_history_best_abs = value_f64(key_history_effect, "/max_best_abs_delta").unwrap_or(0.0);
+    let key_history_best_rms = value_f64(key_history_effect, "/max_best_rms_delta").unwrap_or(0.0);
+    let kcur_f16_shift_abs =
+        value_f64(kcur_f16_effect, "/max_shift_explanation_abs_delta").unwrap_or(0.0);
+    let kcur_f16_shift_rms =
+        value_f64(kcur_f16_effect, "/max_shift_explanation_rms_delta").unwrap_or(0.0);
+    let score_history_drift_present = raw_material_count > 0 || live_material_count > 0;
+    let missing_inputs = raw_missing_count
+        + live_missing_count
+        + score_input_missing_count
+        + key_history_missing_count
+        + kcur_f16_missing_count;
+    let key_history_effect_explained = key_history_compared_count > 0
+        && key_history_missing_count == 0
+        && key_history_best_abs <= 1.0e-6
+        && key_history_best_rms <= 1.0e-6;
+    let kcur_f16_effect_explained = kcur_f16_compared_count > 0
+        && kcur_f16_missing_count == 0
+        && kcur_f16_shift_abs <= 1.0e-6
+        && kcur_f16_shift_rms <= 1.0e-6;
+
+    let classification = if missing_inputs > 0
+        || score_input_compared_count == 0
+        || key_history_compared_count == 0
+        || kcur_f16_compared_count == 0
+    {
+        "missing_inputs"
+    } else if !score_history_drift_present {
+        "score_history_clean"
+    } else if key_history_effect_explained {
+        "score_history_drift_explained_by_key_history_effect"
+    } else if kcur_f16_effect_explained {
+        "score_history_drift_explained_by_reference_kcur_f16_roundtrip"
+    } else {
+        "score_history_drift_survives_current_qk_and_kcur_f16_probes"
+    };
+
+    let next_diagnostic = match classification {
+        "missing_inputs" => {
+            "capture missing raw score, Q/K input, key-history effect, or Kcur F16 effect rows"
+        }
+        "score_history_clean" => {
+            "raw score history is clean; inspect probability or value-mix history instead"
+        }
+        "score_history_drift_explained_by_key_history_effect" => {
+            "score drift follows key-history effect; inspect key history write/read source before changing score math"
+        }
+        "score_history_drift_explained_by_reference_kcur_f16_roundtrip" => {
+            "score drift follows Kcur F16 roundtrip; pin whether production should use this score-input precision"
+        }
+        _ => {
+            "localize raw score formation by token/head before changing score, softmax, or value-mix math"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Raw score-history source summary is diagnostic-only evidence for whether score drift is already explained by Q/K score-input attribution, key-history substitution, or Kcur F16 effects; it does not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "score_history_drift_present": score_history_drift_present,
+        "missing_inputs": missing_inputs,
+        "raw_material_mismatch_count": raw_material_count,
+        "raw_missing_rust_head_count": raw_missing_count,
+        "live_material_mismatch_count": live_material_count,
+        "live_missing_rust_head_count": live_missing_count,
+        "score_input_compared_count": score_input_compared_count,
+        "score_input_missing_count": score_input_missing_count,
+        "score_input_reference_best_candidate_counts": score_input.pointer("/reference_best_candidate_counts").cloned().unwrap_or(Value::Null),
+        "score_input_rust_best_candidate_counts": score_input.pointer("/rust_best_candidate_counts").cloned().unwrap_or(Value::Null),
+        "key_history_effect_compared_count": key_history_compared_count,
+        "key_history_effect_missing_count": key_history_missing_count,
+        "key_history_effect_explained": key_history_effect_explained,
+        "key_history_effect_best_variant_counts": key_history_effect.pointer("/best_variant_counts").cloned().unwrap_or(Value::Null),
+        "key_history_effect_max_best_abs_delta": key_history_best_abs,
+        "key_history_effect_max_best_rms_delta": key_history_best_rms,
+        "key_history_effect_max_actual_score_delta_abs": key_history_effect.pointer("/max_actual_score_delta_abs").cloned().unwrap_or(Value::Null),
+        "kcur_f16_effect_compared_count": kcur_f16_compared_count,
+        "kcur_f16_effect_missing_count": kcur_f16_missing_count,
+        "kcur_f16_effect_explained": kcur_f16_effect_explained,
+        "kcur_f16_reference_best_counts": kcur_f16_effect.pointer("/reference_best_counts").cloned().unwrap_or(Value::Null),
+        "kcur_f16_rust_best_counts": kcur_f16_effect.pointer("/rust_best_counts").cloned().unwrap_or(Value::Null),
+        "kcur_f16_max_shift_explanation_abs_delta": kcur_f16_shift_abs,
+        "kcur_f16_max_shift_explanation_rms_delta": kcur_f16_shift_rms,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_probability_history_delta(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
@@ -25448,6 +25575,94 @@ mod tests {
                 "localize raw score-history drift before changing softmax or value-mix arithmetic"
             ))
         );
+    }
+
+    #[test]
+    fn attention_score_raw_history_source_summary_reports_unexplained_score_drift() {
+        let summary = attention_score_raw_history_source_summary_from_sections(
+            &json!({
+                "material_mismatch_count": 20,
+                "missing_rust_head_count": 0,
+            }),
+            &json!({
+                "live_material_mismatch_count": 20,
+                "missing_rust_head_count": 0,
+            }),
+            &json!({
+                "compared_count": 20,
+                "missing_input_count": 0,
+                "reference_best_candidate_counts": {"reference_q_reference_k": 19},
+                "rust_best_candidate_counts": {"reference_q_reference_k": 14},
+            }),
+            &json!({
+                "compared_count": 20,
+                "missing_input_count": 0,
+                "best_variant_counts": {"reference_q_key_f16": 20},
+                "max_best_abs_delta": 0.001148223876953125,
+                "max_best_rms_delta": 0.0001,
+                "max_actual_score_delta_abs": 0.003864288330078125,
+            }),
+            &json!({
+                "compared_count": 20,
+                "missing_input_count": 0,
+                "reference_best_counts": {"reference_kcur_key_f16": 20},
+                "rust_best_counts": {"reference_kcur_key_f16": 20},
+                "max_shift_explanation_abs_delta": 0.0335235595703125,
+                "max_shift_explanation_rms_delta": 0.01,
+            }),
+        );
+
+        assert_eq!(summary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            summary.pointer("/classification"),
+            Some(&json!("score_history_drift_survives_current_qk_and_kcur_f16_probes"))
+        );
+        assert_eq!(summary.pointer("/score_history_drift_present"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/missing_inputs"), Some(&json!(0)));
+        assert_eq!(summary.pointer("/key_history_effect_explained"), Some(&json!(false)));
+        assert_eq!(summary.pointer("/kcur_f16_effect_explained"), Some(&json!(false)));
+        assert_eq!(
+            summary.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize raw score formation by token/head before changing score, softmax, or value-mix math"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_score_raw_history_source_summary_keeps_clean_scores_diagnostic() {
+        let summary = attention_score_raw_history_source_summary_from_sections(
+            &json!({
+                "material_mismatch_count": 0,
+                "missing_rust_head_count": 0,
+            }),
+            &json!({
+                "live_material_mismatch_count": 0,
+                "missing_rust_head_count": 0,
+            }),
+            &json!({
+                "compared_count": 2,
+                "missing_input_count": 0,
+            }),
+            &json!({
+                "compared_count": 2,
+                "missing_input_count": 0,
+                "max_best_abs_delta": 0.0,
+                "max_best_rms_delta": 0.0,
+            }),
+            &json!({
+                "compared_count": 2,
+                "missing_input_count": 0,
+                "max_shift_explanation_abs_delta": 0.0,
+                "max_shift_explanation_rms_delta": 0.0,
+            }),
+        );
+
+        assert_eq!(summary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(summary.pointer("/classification"), Some(&json!("score_history_clean")));
+        assert_eq!(summary.pointer("/score_history_drift_present"), Some(&json!(false)));
     }
 
     #[test]
