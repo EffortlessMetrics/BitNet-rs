@@ -1,0 +1,35 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-026"
+event = "pr_open"
+timestamp = "2026-05-17T13:30:42Z"
+actor = "codex"
+pr = 5369
+head_sha = "e50a90a8ee3d76ebe5754bc59c9992bb7b9d49a8"
+branch = "codex/slm-cpu-026-repetition-penalty-logits-reuse"
+
+summary = "Opened #5369 to reuse a host logits scratch buffer for Qwen3 Q8_0 warm-session repetition-penalty decode steps while preserving the SLM-CPU-025 behavior oracle."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5369",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+]
+
+notes = [
+  "The validation artifact preserves generated IDs, decoded text, model SHA, GGUF tokenizer authority, selected CPU backend, runtime_api=cpu, and fallback=false against the SLM-CPU-025 baseline.",
+  "The after artifact records direct_greedy_logits_steps=6, logits_scratch_reuse_steps=40, logits_vec_extraction_steps=0, and logits_vec_extraction_bypassed=true.",
+  "The PR does not claim sustained throughput, broad answer quality, Q4/Q5 quant expansion, a second model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 work.",
+]
+
+validation = [
+  "cargo test --locked -p bitnet-sampling",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-repetition-penalty-logits-reuse.json",
+  "python -m json.tool ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-repetition-penalty-logits-reuse-validation.json",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- -D warnings",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
