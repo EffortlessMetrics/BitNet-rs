@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T09:33:50Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5320
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-002-resident-cpu"
+head_sha = "90cc7faabbb55841c3f1e859b42f284027488278"
+summary = "Opened LNL258V-CPU-SLM-PERF-002 dense Qwen CPU resident-session PR."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-resident-session.json",
+]
+
+notes = [
+  "PR #5320 adds a no-new-inference resident CPU no-reload timing command and receipt.",
+  "The receipt indexes repeated warm-session evidence for regression_tiny, ask_short, and ask_normal with model/tokenizer loaded once.",
+  "The PR preserves no route-promotion, speedup, power-advantage, Arc/NPU acceleration, and BitNet QK256/I2_S behavior-change boundaries.",
+]
