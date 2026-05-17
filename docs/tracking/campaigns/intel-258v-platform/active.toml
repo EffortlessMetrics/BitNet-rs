@@ -4599,10 +4599,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-REG-005-durability-regression"
 pr = 5247
-head_sha = "cacec939c0c2c03cc30645c24d6bf0b7719cb983"
+merge_sha = "177a42c81162fd277c1a175c6f3bf78ab086845f"
+head_sha = "2121b096b2fb79332263f6d1a5cbe58aff92ecf8"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
