@@ -20723,6 +20723,66 @@ mod tests {
     }
 
     #[test]
+    fn reference_patch_kcur_history_records_follow_requested_trace_layer() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        assert!(patch.contains("bitnet_rs_kcur_history_stage"));
+        assert!(patch.contains("strcmp(bitnet_rs_kcur_history_stage, \"Kcur\") == 0"));
+        assert!(
+            patch.contains("bitnet_rs_kcur_history_layer == bitnet_rs_requested_history_layer")
+        );
+        assert!(patch.contains(
+            "head_name << \"kcur_history_kv_head\" << head << \"_ref_layout-\" << bitnet_rs_kcur_history_layer"
+        ));
+        assert!(patch.contains("out << \",\\\"layer\\\":\" << bitnet_rs_kcur_history_layer"));
+        assert!(!patch.contains("strcmp(name, \"Kcur-0\") == 0 && values_available"));
+        assert!(
+            !patch.contains("head_name << \"kcur_history_kv_head\" << head << \"_ref_layout-0\"")
+        );
+    }
+
+    #[test]
+    fn reference_patch_hunk_line_counts_are_consistent() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        let mut current_header: Option<&str> = None;
+        let mut expected_new_lines = 0usize;
+        let mut actual_new_lines = 0usize;
+        for line in patch.lines() {
+            if line.starts_with("@@ ") {
+                if let Some(header) = current_header {
+                    assert_eq!(actual_new_lines, expected_new_lines, "hunk {header}");
+                }
+                current_header = Some(line);
+                expected_new_lines = parse_patch_hunk_new_line_count(line);
+                actual_new_lines = 0;
+                continue;
+            }
+            if current_header.is_some() && (line.starts_with('+') || line.starts_with(' ')) {
+                actual_new_lines += 1;
+            }
+        }
+        if let Some(header) = current_header {
+            assert_eq!(actual_new_lines, expected_new_lines, "hunk {header}");
+        }
+    }
+
+    fn parse_patch_hunk_new_line_count(header: &str) -> usize {
+        let new_range = header
+            .split_whitespace()
+            .find(|part| part.starts_with('+'))
+            .expect("hunk header has new-file range");
+        let count = new_range
+            .trim_start_matches('+')
+            .split_once(',')
+            .map(|(_, count)| count)
+            .unwrap_or("1");
+        count.parse().expect("hunk new-file count is numeric")
+    }
+
+    #[test]
     fn reference_patch_allows_full_prefix_ffn_history_samples() {
         let patch =
             include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
