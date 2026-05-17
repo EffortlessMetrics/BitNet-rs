@@ -417,21 +417,23 @@ mod tests {
     }
 
     #[test]
-    fn greedy_sampling_ignores_nan_logits() {
+    fn greedy_sampling_ignores_nan_logits() -> Result<()> {
         let logits = vec![f32::NAN, 1.0, 0.5];
-        let token = greedy_sample(&logits).unwrap();
+        let token = greedy_sample(&logits)?;
         assert_eq!(token, 1);
+        Ok(())
     }
 
     #[test]
-    fn greedy_sampling_all_nan_falls_back_to_lowest_token_id() {
+    fn greedy_sampling_all_nan_falls_back_to_lowest_token_id() -> Result<()> {
         let logits = vec![f32::NAN, f32::NAN, f32::NAN];
-        let token = greedy_sample(&logits).unwrap();
+        let token = greedy_sample(&logits)?;
         assert_eq!(token, 0);
+        Ok(())
     }
 
     #[test]
-    fn invalid_repetition_penalty_is_ignored_before_greedy_sampling() {
+    fn invalid_repetition_penalty_is_ignored_before_greedy_sampling() -> Result<()> {
         let config = SamplingConfig {
             temperature: 0.0,
             repetition_penalty: f32::NAN,
@@ -439,16 +441,18 @@ mod tests {
             ..Default::default()
         };
         let mut strategy = SamplingStrategy::new(config);
-        let token = strategy.sample(&[10.0, 9.0], &[0]).unwrap();
+        let token = strategy.sample(&[10.0, 9.0], &[0])?;
         assert_eq!(token, 0);
+        Ok(())
     }
 
     #[test]
-    fn non_finite_temperature_uses_greedy_fallback() {
+    fn non_finite_temperature_uses_greedy_fallback() -> Result<()> {
         let config = SamplingConfig { temperature: f32::NAN, seed: Some(0), ..Default::default() };
         let mut strategy = SamplingStrategy::new(config);
-        let token = strategy.sample(&[1.0, 2.0, 3.0], &[]).unwrap();
+        let token = strategy.sample(&[1.0, 2.0, 3.0], &[])?;
         assert_eq!(token, 2);
+        Ok(())
     }
 
     #[test]
