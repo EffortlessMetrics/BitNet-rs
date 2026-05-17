@@ -4,8 +4,8 @@ use serde_json::json;
 use std::fs;
 
 #[test]
-fn ripr_annotations_emits_legacy_comment_annotations() {
-    let temp = tempfile::tempdir().unwrap();
+fn ripr_annotations_emits_legacy_comment_annotations() -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
     let comments = temp.path().join("comments.json");
     fs::write(
         &comments,
@@ -18,24 +18,24 @@ fn ripr_annotations_emits_legacy_comment_annotations() {
                     "body": "mutation risk: 50%\nadd an assertion"
                 }
             ]
-        }))
-        .unwrap(),
-    )
-    .unwrap();
+        }))?,
+    )?;
 
     let mut cmd = cargo_bin_cmd!("xtask");
-    cmd.args(["ripr-annotations", "--path", comments.to_str().unwrap()]);
+    cmd.arg("ripr-annotations").arg("--path").arg(&comments);
 
     cmd.assert()
         .success()
         .stdout(predicate::str::contains(
             "::warning file=src/lib.rs,line=42,title=RIPR%2C escaped::mutation risk: 50%25%0Aadd an assertion",
         ));
+
+    Ok(())
 }
 
 #[test]
-fn ripr_annotations_emits_finding_annotations() {
-    let temp = tempfile::tempdir().unwrap();
+fn ripr_annotations_emits_finding_annotations() -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
     let comments = temp.path().join("comments.json");
     fs::write(
         &comments,
@@ -53,26 +53,28 @@ fn ripr_annotations_emits_finding_annotations() {
                     }
                 }
             ]
-        }))
-        .unwrap(),
-    )
-    .unwrap();
+        }))?,
+    )?;
 
     let mut cmd = cargo_bin_cmd!("xtask");
-    cmd.args(["ripr-annotations", "--path", comments.to_str().unwrap()]);
+    cmd.arg("ripr-annotations").arg("--path").arg(&comments);
 
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("::notice file=crates/bitnet/src/lib.rs,line=7,title=RIPR missing_assertion::Assert the boundary condition. | Expression: value > 0 | Confidence: 0.87"));
+
+    Ok(())
 }
 
 #[test]
-fn ripr_annotations_missing_file_is_noop() {
-    let temp = tempfile::tempdir().unwrap();
+fn ripr_annotations_missing_file_is_noop() -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
     let missing = temp.path().join("missing.json");
 
     let mut cmd = cargo_bin_cmd!("xtask");
-    cmd.args(["ripr-annotations", "--path", missing.to_str().unwrap()]);
+    cmd.arg("ripr-annotations").arg("--path").arg(&missing);
 
     cmd.assert().success().stdout(predicate::str::is_empty());
+
+    Ok(())
 }
