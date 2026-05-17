@@ -1,0 +1,39 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-025"
+event = "pr_open"
+timestamp = "2026-05-17T11:45:50Z"
+actor = "codex"
+pr = 5357
+branch = "codex/slm-cpu-025-logits-extraction-reuse"
+head_sha = "eb984fa0a"
+summary = "Opened SLM-CPU-025 for Qwen3 Q8_0 warm-session logits extraction isolation after SLM-CPU-024."
+artifacts = [
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-prompts/",
+]
+
+notes = [
+  "The after artifact preserves generated IDs, decoded text, model SHA, GGUF tokenizer authority, selected CPU backend, and fallback=false against the SLM-CPU-024 baseline.",
+  "Direct tensor argmax bypasses full logits Vec extraction only for steps that match the existing deterministic greedy fast-path policy.",
+  "The remaining default repetition-penalty logits Vec extraction steps are explicit and are not claimed removed by this item.",
+]
+
+validation = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli direct_greedy_logits_guard_matches_sampler_fast_path_policy",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli greedy_argmax_token_2d_matches_lowest_id_tie_policy",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-logits-extraction-reuse.json",
+  "python -m json.tool ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-logits-extraction-reuse-validation.json",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- -D warnings",
+  "cargo run -p xtask --no-default-features -- campaign check slm-cpu",
+  "git diff --check",
+]
+claim_boundary = [
+  "Generated IDs and decoded text match the SLM-CPU-024 baseline.",
+  "Direct tensor argmax is used only for exact deterministic greedy fast-path steps.",
+  "Remaining logits Vec extraction for default repetition-penalty steps is explicit.",
+  "No sustained throughput, broad answer quality, Q4/Q5, second-model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
