@@ -12780,6 +12780,14 @@ fn compact_selected_boundary_summary(summary: &Value) -> Value {
         "selected_token": summary.pointer("/selected_token").cloned().unwrap_or(Value::Null),
         "exact_selected_bucket": summary.pointer("/exact_selected_bucket").cloned().unwrap_or(Value::Null),
         "selected_token_bucket": summary.pointer("/selected_token_bucket").cloned().unwrap_or(Value::Null),
+        "selected_dim_bucket": summary.pointer("/selected_dim_bucket").cloned().unwrap_or(Value::Null),
+        "selected_token_bucket_not_first": summary.pointer("/selected_token_bucket_not_first").cloned().unwrap_or(Value::Null),
+        "selected_dim_bucket_not_first": summary.pointer("/selected_dim_bucket_not_first").cloned().unwrap_or(Value::Null),
+        "selected_dim_and_token_bucket": summary.pointer("/selected_dim_and_token_bucket").cloned().unwrap_or(Value::Null),
+        "selected_token_f16_bucket_mismatch_count": summary.pointer("/selected_token_f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+        "selected_dim_f16_bucket_mismatch_count": summary.pointer("/selected_dim_f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+        "selected_token_mismatch_row": summary.pointer("/selected_token_mismatch_row").cloned().unwrap_or(Value::Null),
+        "selected_dim_mismatch_row": summary.pointer("/selected_dim_mismatch_row").cloned().unwrap_or(Value::Null),
         "bucket_mismatch_count": summary.pointer("/bucket_mismatch_count").cloned().unwrap_or(Value::Null),
         "first_f16_bucket_mismatch_layout": summary.pointer("/first_f16_bucket_mismatch_layout").cloned().unwrap_or(Value::Null),
         "max_abs_delta": summary.pointer("/max_abs_delta").cloned().unwrap_or(Value::Null),
@@ -24824,9 +24832,28 @@ fn attention_selected_key_score_input_source(
     let mut exact_score_input_count = 0usize;
     let mut exact_kcur_before_store_count = 0usize;
     let mut exact_kcur_score_input_count = 0usize;
+    let mut selected_token_before_store_count = 0usize;
+    let mut selected_token_cache_readback_count = 0usize;
+    let mut selected_token_cache_f16_roundtrip_count = 0usize;
+    let mut selected_token_score_input_count = 0usize;
+    let mut selected_token_kcur_before_store_count = 0usize;
+    let mut selected_token_kcur_score_input_count = 0usize;
+    let mut selected_dim_before_store_count = 0usize;
+    let mut selected_dim_cache_readback_count = 0usize;
+    let mut selected_dim_cache_f16_roundtrip_count = 0usize;
+    let mut selected_dim_score_input_count = 0usize;
+    let mut selected_dim_kcur_before_store_count = 0usize;
+    let mut selected_dim_kcur_score_input_count = 0usize;
+    let mut selected_dim_token_before_store_count = 0usize;
+    let mut selected_dim_token_cache_readback_count = 0usize;
+    let mut selected_dim_token_cache_f16_roundtrip_count = 0usize;
+    let mut selected_dim_token_score_input_count = 0usize;
+    let mut selected_dim_token_kcur_before_store_count = 0usize;
+    let mut selected_dim_token_kcur_score_input_count = 0usize;
     let mut missing_boundary_count = 0usize;
     let mut max_abs_delta_at_boundary = 0.0f64;
     let mut first_exact_boundary_row = Value::Null;
+    let mut first_context_boundary_row = Value::Null;
 
     if let Some(selected_rows) = selected_rows {
         for row in selected_rows {
@@ -24887,6 +24914,19 @@ fn attention_selected_key_score_input_source(
             let exact_score_input = boundary_selected_slot_exact(&legacy_score_input);
             let exact_kcur_before_store = boundary_selected_slot_exact(&kcur_before_store);
             let exact_kcur_score_input = boundary_selected_slot_exact(&kcur_score_input);
+            let token_before_store = boundary_selected_token_bucket(&legacy_before_store);
+            let token_cache_readback = boundary_selected_token_bucket(&legacy_cache_readback);
+            let token_cache_f16_roundtrip =
+                boundary_selected_token_bucket(&legacy_cache_f16_roundtrip);
+            let token_score_input = boundary_selected_token_bucket(&legacy_score_input);
+            let token_kcur_before_store = boundary_selected_token_bucket(&kcur_before_store);
+            let token_kcur_score_input = boundary_selected_token_bucket(&kcur_score_input);
+            let dim_before_store = boundary_selected_dim_bucket(&legacy_before_store);
+            let dim_cache_readback = boundary_selected_dim_bucket(&legacy_cache_readback);
+            let dim_cache_f16_roundtrip = boundary_selected_dim_bucket(&legacy_cache_f16_roundtrip);
+            let dim_score_input = boundary_selected_dim_bucket(&legacy_score_input);
+            let dim_kcur_before_store = boundary_selected_dim_bucket(&kcur_before_store);
+            let dim_kcur_score_input = boundary_selected_dim_bucket(&kcur_score_input);
 
             if exact_before_store {
                 exact_before_store_count += 1;
@@ -24905,6 +24945,60 @@ fn attention_selected_key_score_input_source(
             }
             if exact_kcur_score_input {
                 exact_kcur_score_input_count += 1;
+            }
+            if token_before_store {
+                selected_token_before_store_count += 1;
+            }
+            if token_cache_readback {
+                selected_token_cache_readback_count += 1;
+            }
+            if token_cache_f16_roundtrip {
+                selected_token_cache_f16_roundtrip_count += 1;
+            }
+            if token_score_input {
+                selected_token_score_input_count += 1;
+            }
+            if token_kcur_before_store {
+                selected_token_kcur_before_store_count += 1;
+            }
+            if token_kcur_score_input {
+                selected_token_kcur_score_input_count += 1;
+            }
+            if dim_before_store {
+                selected_dim_before_store_count += 1;
+            }
+            if dim_cache_readback {
+                selected_dim_cache_readback_count += 1;
+            }
+            if dim_cache_f16_roundtrip {
+                selected_dim_cache_f16_roundtrip_count += 1;
+            }
+            if dim_score_input {
+                selected_dim_score_input_count += 1;
+            }
+            if dim_kcur_before_store {
+                selected_dim_kcur_before_store_count += 1;
+            }
+            if dim_kcur_score_input {
+                selected_dim_kcur_score_input_count += 1;
+            }
+            if token_before_store && dim_before_store {
+                selected_dim_token_before_store_count += 1;
+            }
+            if token_cache_readback && dim_cache_readback {
+                selected_dim_token_cache_readback_count += 1;
+            }
+            if token_cache_f16_roundtrip && dim_cache_f16_roundtrip {
+                selected_dim_token_cache_f16_roundtrip_count += 1;
+            }
+            if token_score_input && dim_score_input {
+                selected_dim_token_score_input_count += 1;
+            }
+            if token_kcur_before_store && dim_kcur_before_store {
+                selected_dim_token_kcur_before_store_count += 1;
+            }
+            if token_kcur_score_input && dim_kcur_score_input {
+                selected_dim_token_kcur_score_input_count += 1;
             }
 
             let boundary_missing = [
@@ -24955,6 +25049,29 @@ fn attention_selected_key_score_input_source(
                     "classification": boundary_classification,
                 });
             }
+            if first_context_boundary_row.is_null()
+                && boundary_classification == "selected_key_boundary_unpinned"
+                && [
+                    &legacy_before_store,
+                    &legacy_cache_readback,
+                    &legacy_cache_f16_roundtrip,
+                    &legacy_score_input,
+                    &kcur_before_store,
+                    &kcur_score_input,
+                ]
+                .iter()
+                .any(|summary| {
+                    boundary_selected_token_bucket(summary) || boundary_selected_dim_bucket(summary)
+                })
+            {
+                first_context_boundary_row = json!({
+                    "head": head,
+                    "kv_head": kv_head,
+                    "key_slot": key_slot,
+                    "contributor_dim": contributor_dim,
+                    "classification": "selected_key_boundary_context_unpinned",
+                });
+            }
 
             rows.push(json!({
                 "status": if boundary_missing { "missing_boundary" } else { "compared" },
@@ -24993,6 +25110,37 @@ fn attention_selected_key_score_input_source(
     } else {
         "selected_key_score_input_source_unpinned"
     };
+    let selected_dim_token_context_count = selected_dim_token_before_store_count
+        + selected_dim_token_cache_readback_count
+        + selected_dim_token_cache_f16_roundtrip_count
+        + selected_dim_token_score_input_count
+        + selected_dim_token_kcur_before_store_count
+        + selected_dim_token_kcur_score_input_count;
+    let selected_token_context_count = selected_token_before_store_count
+        + selected_token_cache_readback_count
+        + selected_token_cache_f16_roundtrip_count
+        + selected_token_score_input_count
+        + selected_token_kcur_before_store_count
+        + selected_token_kcur_score_input_count;
+    let selected_dim_context_count = selected_dim_before_store_count
+        + selected_dim_cache_readback_count
+        + selected_dim_cache_f16_roundtrip_count
+        + selected_dim_score_input_count
+        + selected_dim_kcur_before_store_count
+        + selected_dim_kcur_score_input_count;
+    let boundary_context_classification = if selected_count == 0 {
+        "no_selected_key_dominant_score_rows"
+    } else if missing_boundary_count == selected_count {
+        "selected_key_score_input_boundary_missing"
+    } else if selected_dim_token_context_count > 0 {
+        "selected_key_selected_dim_token_bucket_context_unpinned"
+    } else if selected_token_context_count > 0 {
+        "selected_key_selected_token_bucket_context_unpinned"
+    } else if selected_dim_context_count > 0 {
+        "selected_key_selected_dim_bucket_context_unpinned"
+    } else {
+        "selected_key_score_input_source_unpinned"
+    };
     let next_diagnostic = match classification {
         "selected_key_drift_enters_before_cache_store" => {
             "localize selected key projection/RoPE input rows before changing score math"
@@ -25009,6 +25157,9 @@ fn attention_selected_key_score_input_source(
         }
         "no_selected_key_dominant_score_rows" => {
             "classify selected score Q/K contribution before localizing key source"
+        }
+        _ if selected_dim_token_context_count > 0 || selected_token_context_count > 0 => {
+            "emit selected key dim/token slot probes before changing score math"
         }
         _ => "add narrower selected key source probes before changing runtime math",
     };
@@ -25027,8 +25178,31 @@ fn attention_selected_key_score_input_source(
         "exact_score_input_count": exact_score_input_count,
         "exact_kcur_before_store_count": exact_kcur_before_store_count,
         "exact_kcur_score_input_count": exact_kcur_score_input_count,
+        "selected_token_before_store_count": selected_token_before_store_count,
+        "selected_token_cache_readback_count": selected_token_cache_readback_count,
+        "selected_token_cache_f16_roundtrip_count": selected_token_cache_f16_roundtrip_count,
+        "selected_token_score_input_count": selected_token_score_input_count,
+        "selected_token_kcur_before_store_count": selected_token_kcur_before_store_count,
+        "selected_token_kcur_score_input_count": selected_token_kcur_score_input_count,
+        "selected_dim_before_store_count": selected_dim_before_store_count,
+        "selected_dim_cache_readback_count": selected_dim_cache_readback_count,
+        "selected_dim_cache_f16_roundtrip_count": selected_dim_cache_f16_roundtrip_count,
+        "selected_dim_score_input_count": selected_dim_score_input_count,
+        "selected_dim_kcur_before_store_count": selected_dim_kcur_before_store_count,
+        "selected_dim_kcur_score_input_count": selected_dim_kcur_score_input_count,
+        "selected_dim_token_before_store_count": selected_dim_token_before_store_count,
+        "selected_dim_token_cache_readback_count": selected_dim_token_cache_readback_count,
+        "selected_dim_token_cache_f16_roundtrip_count": selected_dim_token_cache_f16_roundtrip_count,
+        "selected_dim_token_score_input_count": selected_dim_token_score_input_count,
+        "selected_dim_token_kcur_before_store_count": selected_dim_token_kcur_before_store_count,
+        "selected_dim_token_kcur_score_input_count": selected_dim_token_kcur_score_input_count,
+        "selected_token_context_count": selected_token_context_count,
+        "selected_dim_context_count": selected_dim_context_count,
+        "selected_dim_token_context_count": selected_dim_token_context_count,
+        "boundary_context_classification": boundary_context_classification,
         "max_abs_delta_at_boundary": max_abs_delta_at_boundary,
         "first_exact_boundary_row": first_exact_boundary_row,
+        "first_context_boundary_row": first_context_boundary_row,
         "rows": rows,
         "next_diagnostic": next_diagnostic,
     })
@@ -25085,6 +25259,44 @@ fn selected_key_boundary_summary(
             })
         })
     });
+    let selected_token_mismatch_row = selected_token
+        .and_then(|selected_token| {
+            delta
+                .pointer("/token_mismatch_counts")
+                .and_then(Value::as_array)?
+                .iter()
+                .find(|token| {
+                    token.pointer("/token").and_then(Value::as_u64) == Some(selected_token)
+                })
+                .cloned()
+        })
+        .unwrap_or(Value::Null);
+    let selected_token_f16_bucket_mismatch_count = selected_token_mismatch_row
+        .pointer("/f16_bucket_mismatch_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let selected_dim_bucket = selected_dim.is_some_and(|selected_dim| {
+        delta.pointer("/dim_mismatch_counts").and_then(Value::as_array).is_some_and(|dims| {
+            dims.iter().any(|dim| dim.pointer("/dim").and_then(Value::as_u64) == Some(selected_dim))
+        })
+    });
+    let selected_dim_mismatch_row = selected_dim
+        .and_then(|selected_dim| {
+            delta
+                .pointer("/dim_mismatch_counts")
+                .and_then(Value::as_array)?
+                .iter()
+                .find(|dim| dim.pointer("/dim").and_then(Value::as_u64) == Some(selected_dim))
+                .cloned()
+        })
+        .unwrap_or(Value::Null);
+    let selected_dim_f16_bucket_mismatch_count = selected_dim_mismatch_row
+        .pointer("/f16_bucket_mismatch_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let selected_token_bucket_not_first = selected_token_bucket && !exact_selected_bucket;
+    let selected_dim_bucket_not_first = selected_dim_bucket && !exact_selected_bucket;
+    let selected_dim_and_token_bucket = selected_dim_bucket && selected_token_bucket;
     let bucket_mismatch_count =
         delta.pointer("/f16_bucket_mismatch_count").and_then(Value::as_u64).unwrap_or(0);
     let classification = if status != "compared" {
@@ -25093,6 +25305,8 @@ fn selected_key_boundary_summary(
         "selected_slot_is_first_f16_bucket_mismatch"
     } else if selected_token_bucket {
         "selected_token_has_f16_bucket_mismatch"
+    } else if selected_dim_bucket {
+        "selected_dim_has_f16_bucket_mismatch"
     } else if bucket_mismatch_count > 0 {
         "f16_bucket_mismatch_elsewhere"
     } else {
@@ -25107,6 +25321,14 @@ fn selected_key_boundary_summary(
         "selected_token": selected_token,
         "exact_selected_bucket": exact_selected_bucket,
         "selected_token_bucket": selected_token_bucket,
+        "selected_dim_bucket": selected_dim_bucket,
+        "selected_token_bucket_not_first": selected_token_bucket_not_first,
+        "selected_dim_bucket_not_first": selected_dim_bucket_not_first,
+        "selected_dim_and_token_bucket": selected_dim_and_token_bucket,
+        "selected_token_f16_bucket_mismatch_count": selected_token_f16_bucket_mismatch_count,
+        "selected_dim_f16_bucket_mismatch_count": selected_dim_f16_bucket_mismatch_count,
+        "selected_token_mismatch_row": selected_token_mismatch_row,
+        "selected_dim_mismatch_row": selected_dim_mismatch_row,
         "bucket_mismatch_count": bucket_mismatch_count,
         "first_f16_bucket_mismatch_layout": first_bucket,
         "max_abs_delta": delta.pointer("/max_abs_delta").cloned().unwrap_or(Value::Null),
@@ -25123,6 +25345,14 @@ fn boundary_section_row_for_head(section: Option<&Value>, head: u64) -> Option<&
 
 fn boundary_selected_slot_exact(summary: &Value) -> bool {
     summary.pointer("/exact_selected_bucket").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn boundary_selected_token_bucket(summary: &Value) -> bool {
+    summary.pointer("/selected_token_bucket").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn boundary_selected_dim_bucket(summary: &Value) -> bool {
+    summary.pointer("/selected_dim_bucket").and_then(Value::as_bool).unwrap_or(false)
 }
 
 fn selected_key_boundary_classification(
@@ -30406,6 +30636,7 @@ fn f16_bucket_delta_dim_major(
     let mut delta = f16_bucket_delta(left, right);
     let compared_count = left.len().min(right.len()).min(dim_count.saturating_mul(token_count));
     let mut token_mismatch_counts = vec![0usize; token_count];
+    let mut dim_mismatch_counts = vec![0usize; dim_count];
     let mut first_layout_mismatch = Value::Null;
 
     for index in 0..compared_count {
@@ -30415,6 +30646,9 @@ fn f16_bucket_delta_dim_major(
             let dim = index / token_count;
             let token = index % token_count;
             if let Some(count) = token_mismatch_counts.get_mut(token) {
+                *count += 1;
+            }
+            if let Some(count) = dim_mismatch_counts.get_mut(dim) {
                 *count += 1;
             }
             if first_layout_mismatch.is_null() {
@@ -30447,6 +30681,20 @@ fn f16_bucket_delta_dim_major(
             }
         })
         .collect::<Vec<_>>();
+    let dim_rows = dim_mismatch_counts
+        .iter()
+        .enumerate()
+        .filter_map(|(dim, count)| {
+            if *count == 0 {
+                None
+            } else {
+                Some(json!({
+                    "dim": dim,
+                    "f16_bucket_mismatch_count": count,
+                }))
+            }
+        })
+        .collect::<Vec<_>>();
 
     if let Some(object) = delta.as_object_mut() {
         object.insert("layout".to_string(), json!("dim_major_token_minor"));
@@ -30454,6 +30702,7 @@ fn f16_bucket_delta_dim_major(
         object.insert("token_count".to_string(), json!(token_count));
         object.insert("first_f16_bucket_mismatch_layout".to_string(), first_layout_mismatch);
         object.insert("token_mismatch_counts".to_string(), json!(token_rows));
+        object.insert("dim_mismatch_counts".to_string(), json!(dim_rows));
     }
 
     delta
@@ -40499,6 +40748,208 @@ mod tests {
     }
 
     #[test]
+    fn selected_key_boundary_summary_reports_selected_token_bucket_not_first() {
+        let boundary = json!({
+            "rows": [
+                {
+                    "head": 1,
+                    "status": "compared",
+                    "delta": {
+                        "f16_bucket_mismatch_count": 2,
+                        "max_abs_delta": 0.00390625_f64,
+                        "rms_abs_delta": 0.0006_f64,
+                        "first_f16_bucket_mismatch_layout": {
+                            "dim": 39,
+                            "token": 2,
+                        },
+                        "token_mismatch_counts": [
+                            {
+                                "token": 2,
+                                "f16_bucket_mismatch_count": 2,
+                            }
+                        ],
+                        "dim_mismatch_counts": [
+                            {
+                                "dim": 39,
+                                "f16_bucket_mismatch_count": 1,
+                            },
+                            {
+                                "dim": 40,
+                                "f16_bucket_mismatch_count": 1,
+                            }
+                        ],
+                    },
+                }
+            ]
+        });
+
+        let summary = selected_key_boundary_summary(Some(&boundary), Some(1), Some(40), Some(2));
+
+        assert_eq!(summary.pointer("/status"), Some(&json!("compared")));
+        assert_eq!(
+            summary.pointer("/classification"),
+            Some(&json!("selected_token_has_f16_bucket_mismatch"))
+        );
+        assert_eq!(summary.pointer("/exact_selected_bucket"), Some(&json!(false)));
+        assert_eq!(summary.pointer("/selected_token_bucket"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/selected_dim_bucket"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/selected_token_bucket_not_first"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/selected_dim_bucket_not_first"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/selected_dim_and_token_bucket"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/selected_token_f16_bucket_mismatch_count"), Some(&json!(2)));
+        assert_eq!(summary.pointer("/selected_dim_f16_bucket_mismatch_count"), Some(&json!(1)));
+        assert_eq!(summary.pointer("/selected_token_mismatch_row/token"), Some(&json!(2)));
+        assert_eq!(summary.pointer("/selected_dim_mismatch_row/dim"), Some(&json!(40)));
+    }
+
+    #[test]
+    fn selected_key_score_input_source_preserves_token_bucket_without_exact_attribution() {
+        let selected_contribution = json!({
+            "rows": [
+                {
+                    "classification": "key_dominant",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 2,
+                    "query_token": 10,
+                    "best_candidate_product_delta": {
+                        "top_abs_product_delta_contributors": [
+                            {
+                                "dim": 40,
+                                "key_delta": -0.00390625_f64,
+                                "query_delta": 0.0_f64,
+                            }
+                        ],
+                    },
+                }
+            ]
+        });
+        let key_cache_boundary = json!({
+            "before_cache_store": {
+                "rows": [
+                    {
+                        "head": 1,
+                        "status": "compared",
+                        "delta": {
+                            "f16_bucket_mismatch_count": 2,
+                            "max_abs_delta": 0.00390625_f64,
+                            "rms_abs_delta": 0.0006_f64,
+                            "first_f16_bucket_mismatch_layout": {
+                                "dim": 39,
+                                "token": 2,
+                            },
+                            "token_mismatch_counts": [
+                                {
+                                    "token": 2,
+                                    "f16_bucket_mismatch_count": 2,
+                                }
+                            ],
+                            "dim_mismatch_counts": [
+                                {
+                                    "dim": 39,
+                                    "f16_bucket_mismatch_count": 1,
+                                },
+                                {
+                                    "dim": 40,
+                                    "f16_bucket_mismatch_count": 1,
+                                }
+                            ],
+                        },
+                    }
+                ]
+            },
+            "cache_readback": { "rows": [] },
+            "cache_f16_roundtrip": { "rows": [] },
+            "score_input": { "rows": [] }
+        });
+        let key_kcur_boundary = json!({
+            "before_cache_store": { "rows": [] },
+            "score_input": { "rows": [] }
+        });
+
+        let report = attention_selected_key_score_input_source(
+            &selected_contribution,
+            &key_cache_boundary,
+            &key_kcur_boundary,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_score_input_source_unpinned"))
+        );
+        assert_eq!(
+            report.pointer("/boundary_context_classification"),
+            Some(&json!("selected_key_selected_dim_token_bucket_context_unpinned"))
+        );
+        assert_eq!(report.pointer("/exact_before_store_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/selected_token_before_store_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/selected_dim_before_store_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/selected_dim_token_before_store_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/selected_token_context_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/selected_dim_context_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/selected_dim_token_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/legacy_before_cache_store/classification"),
+            Some(&json!("selected_token_has_f16_bucket_mismatch"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/legacy_before_cache_store/selected_dim_bucket"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/legacy_before_cache_store/selected_token_bucket_not_first"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/first_context_boundary_row/classification"),
+            Some(&json!("selected_key_boundary_context_unpinned"))
+        );
+    }
+
+    #[test]
+    fn compact_selected_boundary_summary_preserves_selected_token_context() {
+        let summary = json!({
+            "status": "compared",
+            "classification": "selected_token_has_f16_bucket_mismatch",
+            "row_head": 1,
+            "selected_dim": 40,
+            "selected_token": 2,
+            "exact_selected_bucket": false,
+            "selected_token_bucket": true,
+            "selected_dim_bucket": true,
+            "selected_token_bucket_not_first": true,
+            "selected_dim_bucket_not_first": true,
+            "selected_dim_and_token_bucket": true,
+            "selected_token_f16_bucket_mismatch_count": 2,
+            "selected_dim_f16_bucket_mismatch_count": 1,
+            "selected_token_mismatch_row": {
+                "token": 2,
+                "f16_bucket_mismatch_count": 2,
+            },
+            "selected_dim_mismatch_row": {
+                "dim": 40,
+                "f16_bucket_mismatch_count": 1,
+            },
+            "bucket_mismatch_count": 2,
+            "first_f16_bucket_mismatch_layout": {
+                "dim": 39,
+                "token": 2,
+            },
+            "max_abs_delta": 0.00390625_f64,
+            "rms_abs_delta": 0.0006_f64,
+        });
+
+        let compact = compact_selected_boundary_summary(&summary);
+
+        assert_eq!(compact.pointer("/selected_token_bucket_not_first"), Some(&json!(true)));
+        assert_eq!(compact.pointer("/selected_dim_bucket"), Some(&json!(true)));
+        assert_eq!(compact.pointer("/selected_token_f16_bucket_mismatch_count"), Some(&json!(2)));
+        assert_eq!(compact.pointer("/selected_dim_mismatch_row/dim"), Some(&json!(40)));
+    }
+
+    #[test]
     fn selected_key_projection_rope_source_reports_historical_slot_blocker() {
         let selected_key_source = json!({
             "rows": [
@@ -43901,6 +44352,7 @@ mod tests {
             Some(&json!(1))
         );
         assert_eq!(delta.pointer("/rows/0/delta/token_mismatch_counts/0/token"), Some(&json!(1)));
+        assert_eq!(delta.pointer("/rows/0/delta/dim_mismatch_counts/0/dim"), Some(&json!(0)));
         assert_eq!(delta.pointer("/rows/0/delta/max_abs_delta"), Some(&json!(0.25)));
         assert_eq!(delta.pointer("/rows/1/delta/max_abs_delta"), Some(&json!(0.5)));
     }
