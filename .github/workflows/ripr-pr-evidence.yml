@@ -64,6 +64,14 @@ jobs:
             mkdir -p target/ripr/review
             printf '%s\n' \
               '{' \
+              '  "schema_version": 1,' \
+              '  "tool": "ripr",' \
+              '  "mode": "review-comments-fallback",' \
+              '  "summary": {' \
+              '    "status": "timed_out",' \
+              '    "warnings": ["ripr review-comments timed out; see EffortlessMetrics/ripr#876"]' \
+              '  },' \
+              '  "findings": [],' \
               '  "comments": [],' \
               '  "summary_only": true,' \
               '  "suppressed": [],' \
