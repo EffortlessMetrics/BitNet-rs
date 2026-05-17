@@ -12084,6 +12084,10 @@ fn layer_attention_norm_f64_probability_history_effect(
         &selected_k_capture_precision_frontier,
         reference_json_text,
     );
+    let selected_k_capture_path_frontier = attention_norm_f64_selected_k_capture_path_frontier(
+        &selected_k_capture_precision_frontier,
+        &selected_k_json_precision_frontier,
+    );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12172,6 +12176,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "selected_historical_k_rope_source_frontier": selected_historical_k_rope_source_frontier,
         "selected_k_capture_precision_frontier": selected_k_capture_precision_frontier,
         "selected_k_json_precision_frontier": selected_k_json_precision_frontier,
+        "selected_k_capture_path_frontier": selected_k_capture_path_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -13155,6 +13160,169 @@ fn attention_norm_f64_selected_k_json_precision_frontier(
         "blocked_reasons": blocked_reasons,
         "next_diagnostic": next_diagnostic,
     })
+}
+
+fn attention_norm_f64_selected_k_capture_path_frontier(
+    selected_k_capture_precision_frontier: &Value,
+    selected_k_json_precision_frontier: &Value,
+) -> Value {
+    let source_classification =
+        selected_k_json_precision_frontier.pointer("/classification").and_then(Value::as_str);
+    let record = selected_k_capture_precision_frontier
+        .pointer("/reference_post_rope_record")
+        .unwrap_or(&Value::Null);
+    let stage = record.pointer("/stage").and_then(Value::as_str);
+    let dtype = record.pointer("/dtype").and_then(Value::as_str);
+    let graph_op = record.pointer("/graph_op").and_then(Value::as_str);
+    let dim = value_u64(selected_k_json_precision_frontier, "/contributor_dim");
+    let key_slot = value_u64(selected_k_json_precision_frontier, "/key_slot");
+    let token_count = value_u64(selected_k_json_precision_frontier, "/token_count")
+        .or_else(|| json_array_u64(record, "/shape", 1));
+    let head_dim = json_array_u64(record, "/shape", 0);
+    let kv_head_count = json_array_u64(record, "/full_shape", 1);
+    let kv_head = stage.and_then(parse_kcur_history_kv_head);
+    let first_value_index = value_u64(selected_k_json_precision_frontier, "/first_value_index");
+    let computed_first_values_index =
+        dim.zip(key_slot).zip(token_count).and_then(|((dim, token), token_count)| {
+            dim.checked_mul(token_count).and_then(|base| base.checked_add(token))
+        });
+    let source_tensor_flat_index =
+        dim.zip(key_slot).zip(head_dim).zip(kv_head).zip(kv_head_count).and_then(
+            |((((dim, token), head_dim), kv_head), kv_head_count)| {
+                head_dim.checked_mul(kv_head).and_then(|head_base| {
+                    head_dim.checked_mul(kv_head_count).and_then(|stride| {
+                        stride.checked_mul(token).and_then(|token_base| {
+                            dim.checked_add(head_base).and_then(|base| base.checked_add(token_base))
+                        })
+                    })
+                })
+            },
+        );
+    let source_bits_present =
+        selected_k_json_precision_frontier.pointer("/reference_source_bits_u32").is_some();
+    let capture_path_pinned = source_classification
+        == Some("f64_selected_k_reference_source_bits_preserve_midpoint_capture")
+        && stage.is_some_and(|stage| stage.starts_with("kcur_history_kv_head"))
+        && dtype == Some("f32")
+        && graph_op == Some("ROPE")
+        && first_value_index == computed_first_values_index
+        && source_tensor_flat_index.is_some()
+        && source_bits_present;
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if source_classification
+        != Some("f64_selected_k_reference_source_bits_preserve_midpoint_capture")
+    {
+        blocked_reasons.push("selected_k_source_bits_frontier_not_pinned".to_string());
+    }
+    if stage.is_none() {
+        blocked_reasons.push("reference_post_rope_stage_missing".to_string());
+    }
+    if !stage.is_some_and(|stage| stage.starts_with("kcur_history_kv_head")) {
+        blocked_reasons.push("reference_post_rope_stage_not_kcur_history".to_string());
+    }
+    if dtype != Some("f32") {
+        blocked_reasons.push("reference_post_rope_dtype_not_f32".to_string());
+    }
+    if graph_op != Some("ROPE") {
+        blocked_reasons.push("reference_post_rope_graph_op_not_rope".to_string());
+    }
+    if dim.is_none() {
+        blocked_reasons.push("selected_contributor_dim_missing".to_string());
+    }
+    if key_slot.is_none() {
+        blocked_reasons.push("selected_key_slot_missing".to_string());
+    }
+    if token_count.is_none() {
+        blocked_reasons.push("reference_token_count_missing".to_string());
+    }
+    if head_dim.is_none() {
+        blocked_reasons.push("reference_head_dim_missing".to_string());
+    }
+    if kv_head.is_none() {
+        blocked_reasons.push("reference_kv_head_missing_from_stage".to_string());
+    }
+    if kv_head_count.is_none() {
+        blocked_reasons.push("reference_kv_head_count_missing".to_string());
+    }
+    if first_value_index != computed_first_values_index {
+        blocked_reasons.push("first_values_index_formula_mismatch".to_string());
+    }
+    if source_tensor_flat_index.is_none() {
+        blocked_reasons.push("source_tensor_flat_index_unavailable".to_string());
+    }
+    if !source_bits_present {
+        blocked_reasons.push("reference_source_bits_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if capture_path_pinned {
+        "f64_selected_k_reference_capture_path_pinned_to_kcur_history_tensor_value"
+    } else if source_classification
+        != Some("f64_selected_k_reference_source_bits_preserve_midpoint_capture")
+    {
+        "f64_selected_k_capture_path_not_active_frontier"
+    } else {
+        "f64_selected_k_capture_path_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "f64_selected_k_reference_capture_path_pinned_to_kcur_history_tensor_value" => {
+            "inspect the reference tensor value before the Kcur history copy, because sidecar JSON and emitted source bits both preserve the copied midpoint"
+        }
+        "f64_selected_k_capture_path_not_active_frontier" => {
+            "pin selected K source bits before capture-path attribution"
+        }
+        _ => "attach missing Kcur history capture metadata before changing Rust runtime math",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected K capture-path frontier is diagnostic-only evidence for how the reference Kcur history sidecar value is copied before JSON and f32-bit emission; it does not change reference instrumentation, Rust runtime math, or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "source_classification": source_classification,
+        "record_name": selected_k_json_precision_frontier.pointer("/record_name").cloned().unwrap_or(Value::Null),
+        "stage": stage,
+        "dtype": dtype,
+        "graph_op": graph_op,
+        "shape": record.pointer("/shape").cloned().unwrap_or(Value::Null),
+        "full_shape": record.pointer("/full_shape").cloned().unwrap_or(Value::Null),
+        "sample_offset": record.pointer("/sample_offset").cloned().unwrap_or(Value::Null),
+        "token_axis": record.pointer("/token_axis").cloned().unwrap_or(Value::Null),
+        "view_source_present": record.pointer("/view_source_present").cloned().unwrap_or(Value::Null),
+        "view_offset": record.pointer("/view_offset").cloned().unwrap_or(Value::Null),
+        "values_available": record.pointer("/values_available").cloned().unwrap_or(Value::Null),
+        "first_values_len": record.pointer("/first_values_len").cloned().unwrap_or(Value::Null),
+        "layout": "dim_major_token_minor",
+        "capture_path": "reference_kcur_history_copy_from_values_vector",
+        "copy_formula": "first_values[dim * token_count + token] = values[dim + head_dim * kv_head + head_dim * kv_head_count * token]",
+        "contributor_dim": dim,
+        "key_slot": key_slot,
+        "token_count": token_count,
+        "head_dim": head_dim,
+        "kv_head": kv_head,
+        "kv_head_count": kv_head_count,
+        "first_value_index": first_value_index,
+        "computed_first_values_index": computed_first_values_index,
+        "first_values_index_matches_formula": first_value_index == computed_first_values_index,
+        "source_tensor_flat_index": source_tensor_flat_index,
+        "reference_source_bits_u32": selected_k_json_precision_frontier.pointer("/reference_source_bits_u32").cloned().unwrap_or(Value::Null),
+        "reference_source_bits_hex": selected_k_json_precision_frontier.pointer("/reference_source_bits_hex").cloned().unwrap_or(Value::Null),
+        "source_bits_present": source_bits_present,
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn json_array_u64(value: &Value, pointer: &str, index: usize) -> Option<u64> {
+    value.pointer(pointer).and_then(Value::as_array)?.get(index)?.as_u64()
+}
+
+fn parse_kcur_history_kv_head(stage: &str) -> Option<u64> {
+    let suffix = stage.strip_prefix("kcur_history_kv_head")?;
+    let digits = suffix.chars().take_while(|ch| ch.is_ascii_digit()).collect::<String>();
+    if digits.is_empty() { None } else { digits.parse::<u64>().ok() }
 }
 
 fn raw_first_value_decimal_for_record(
@@ -41082,6 +41250,112 @@ mod tests {
             Some(&json!(
                 "inspect the reference tensor capture path before first-value bit emission; source f32 bits and JSON decimal both preserve the selected midpoint capture"
             ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_capture_path_frontier_pins_kcur_copy_indices() {
+        let selected_capture_frontier = json!({
+            "classification": "f64_selected_k_reference_capture_midpoint_with_trace_metadata",
+            "reference_post_rope_record": {
+                "present": true,
+                "name": "kcur_history_kv_head1_ref_layout-0",
+                "stage": "kcur_history_kv_head1_ref_layout",
+                "graph_op": "ROPE",
+                "view_source_present": false,
+                "view_offset": 0,
+                "full_shape": [128, 5, 18, 1],
+                "sample_offset": 0,
+                "token_axis": -1,
+                "shape": [128, 18, 1, 1],
+                "dtype": "f32",
+                "nelements": 2304,
+                "values_available": true,
+                "first_values_len": 2304,
+            },
+        });
+        let selected_json_frontier = json!({
+            "classification": "f64_selected_k_reference_source_bits_preserve_midpoint_capture",
+            "record_name": "kcur_history_kv_head1_ref_layout-0",
+            "contributor_dim": 40,
+            "key_slot": 2,
+            "token_count": 18,
+            "first_value_index": 722,
+            "reference_source_bits_u32": 3229921280u32,
+            "reference_source_bits_hex": "0xc084b000",
+        });
+
+        let frontier = attention_norm_f64_selected_k_capture_path_frontier(
+            &selected_capture_frontier,
+            &selected_json_frontier,
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!(
+                "f64_selected_k_reference_capture_path_pinned_to_kcur_history_tensor_value"
+            ))
+        );
+        assert_eq!(frontier.pointer("/layout"), Some(&json!("dim_major_token_minor")));
+        assert_eq!(
+            frontier.pointer("/capture_path"),
+            Some(&json!("reference_kcur_history_copy_from_values_vector"))
+        );
+        assert_eq!(frontier.pointer("/computed_first_values_index"), Some(&json!(722)));
+        assert_eq!(frontier.pointer("/first_values_index_matches_formula"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/source_tensor_flat_index"), Some(&json!(1448)));
+        assert_eq!(frontier.pointer("/kv_head"), Some(&json!(1)));
+        assert_eq!(frontier.pointer("/kv_head_count"), Some(&json!(5)));
+        assert_eq!(frontier.pointer("/source_bits_present"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/blocked_reasons"), Some(&json!([])));
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect the reference tensor value before the Kcur history copy, because sidecar JSON and emitted source bits both preserve the copied midpoint"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_capture_path_frontier_blocks_without_stage_binding() {
+        let selected_capture_frontier = json!({
+            "reference_post_rope_record": {
+                "present": true,
+                "stage": "other_stage",
+                "graph_op": "ROPE",
+                "shape": [128, 18, 1, 1],
+                "full_shape": [128, 5, 18, 1],
+                "dtype": "f32",
+                "values_available": true,
+            },
+        });
+        let selected_json_frontier = json!({
+            "classification": "f64_selected_k_reference_source_bits_preserve_midpoint_capture",
+            "contributor_dim": 40,
+            "key_slot": 2,
+            "token_count": 18,
+            "first_value_index": 722,
+            "reference_source_bits_u32": 3229921280u32,
+        });
+
+        let frontier = attention_norm_f64_selected_k_capture_path_frontier(
+            &selected_capture_frontier,
+            &selected_json_frontier,
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_k_capture_path_unpinned"))
+        );
+        assert_eq!(
+            frontier.pointer("/blocked_reasons"),
+            Some(&json!([
+                "reference_kv_head_missing_from_stage",
+                "reference_post_rope_stage_not_kcur_history",
+                "source_tensor_flat_index_unavailable"
+            ]))
         );
     }
 
