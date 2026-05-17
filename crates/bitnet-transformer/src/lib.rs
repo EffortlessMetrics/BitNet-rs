@@ -593,6 +593,30 @@ impl MultiHeadAttention {
             .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, HKV, T, D]
 
+        #[cfg(feature = "trace")]
+        if self.layer_idx == trace_target_layer() {
+            for kv_head_idx in 0..self.n_kv_heads {
+                let projection = k
+                    .narrow(1, kv_head_idx, 1)?
+                    .reshape(&[seq_len, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_k_projection_kv_head{kv_head_idx}_ref_layout",
+                    self.layer_idx
+                );
+                let stage = format!("attention_k_projection_kv_head{kv_head_idx}_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &projection,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
+            }
+        }
+
         // Debug Q, K, V projections
         dbg_stats("Q", &q)?;
         dbg_stats("K", &k)?;
