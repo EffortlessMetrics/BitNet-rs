@@ -11793,6 +11793,17 @@ fn layer_attention_norm_f64_downstream_effect(
     } else {
         "f64 diagnostic capture clears the immediate bucket drift but downstream trace drift or coverage blockers remain; localize the first f64 downstream mismatch before changing production math"
     };
+    let residual_frontier = attention_norm_f64_downstream_residual_frontier(
+        f64_capture_cleared,
+        f64_capture_exact,
+        &f64_attention_output_history,
+        &f64_value_mix_attribution,
+        &f64_probability_history,
+        &f64_ffn_history,
+        &f64_layer_operation,
+        &f64_next_layer_operation,
+        &f64_layer_output,
+    );
 
     json!({
         "diagnostic_only": true,
@@ -11818,9 +11829,176 @@ fn layer_attention_norm_f64_downstream_effect(
             "layer_operation_boundary_delta": f64_layer_operation,
             "next_layer_operation_boundary_delta": f64_next_layer_operation,
         },
+        "residual_frontier": residual_frontier,
         "f64_downstream_clear": f64_downstream_clear,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
+    })
+}
+
+fn attention_norm_f64_downstream_residual_frontier(
+    f64_capture_cleared: bool,
+    f64_capture_exact: bool,
+    attention_output_history: &Value,
+    value_mix_attribution: &Value,
+    probability_history: &Value,
+    ffn_history: &Value,
+    layer_operation: &Value,
+    next_layer_operation: &Value,
+    layer_output: &Value,
+) -> Value {
+    let attention_boundary = attention_output_history
+        .pointer("/first_material_boundary/boundary")
+        .and_then(Value::as_str);
+    let value_mix_source_classification =
+        value_mix_attribution.pointer("/source_summary/classification").and_then(Value::as_str);
+    let probability_source_classification = value_mix_attribution
+        .pointer("/probability_history_source_summary/classification")
+        .and_then(Value::as_str);
+    let value_cache_source_clean = value_mix_attribution
+        .pointer("/source_summary/value_cache_source_clean")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let rust_self_recompute_explained = value_mix_attribution
+        .pointer("/source_summary/rust_self_recompute_explained_by_numeric_variants")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let probability_source_drift = value_mix_attribution
+        .pointer("/source_summary/probability_source_drift_present")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let value_cache_source_drift = value_mix_attribution
+        .pointer("/source_summary/value_cache_source_drift_present")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let rust_self_recompute_drift = value_mix_attribution
+        .pointer("/source_summary/rust_self_recompute_drift_present")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let attention_boundary_row = compact_first_material_boundary(
+        attention_output_history.pointer("/first_material_boundary").unwrap_or(&Value::Null),
+    );
+    let score_history_material_count =
+        value_u64(probability_history, "/score_raw_history_material_count").unwrap_or(0);
+    let probability_material_count =
+        value_u64(probability_history, "/probability_history_material_count").unwrap_or(0);
+    let layer_output_material_count =
+        value_u64(layer_output, "/material_mismatch_count").unwrap_or(0);
+    let ffn_history_material_count = value_u64(ffn_history, "/history/material_stage_count")
+        .unwrap_or(0)
+        + value_u64(ffn_history, "/current_token/material_stage_count").unwrap_or(0);
+    let layer_operation_material_count = value_u64(layer_operation, "/material_mismatch_count")
+        .unwrap_or(0)
+        + value_u64(next_layer_operation, "/material_mismatch_count").unwrap_or(0);
+
+    let classification = if !f64_capture_cleared {
+        "f64_downstream_residual_frontier_capture_not_cleared"
+    } else if attention_boundary == Some("attention_value_mix_merged_history")
+        && probability_source_classification
+            == Some("probability_drift_follows_score_history_drift")
+    {
+        "f64_downstream_residual_frontier_score_history_drives_value_mix"
+    } else if attention_boundary == Some("attention_value_mix_merged_history")
+        && probability_source_drift
+    {
+        "f64_downstream_residual_frontier_probability_source_drives_value_mix"
+    } else if attention_boundary == Some("attention_value_mix_merged_history")
+        && rust_self_recompute_drift
+        && rust_self_recompute_explained
+    {
+        "f64_downstream_residual_frontier_value_mix_numeric_policy"
+    } else if attention_boundary == Some("attention_value_mix_merged_history")
+        && value_cache_source_drift
+    {
+        "f64_downstream_residual_frontier_value_cache_source_drives_value_mix"
+    } else if attention_boundary.is_some() {
+        "f64_downstream_residual_frontier_attention_output_boundary"
+    } else if score_history_material_count > 0 {
+        "f64_downstream_residual_frontier_score_history"
+    } else if probability_material_count > 0 {
+        "f64_downstream_residual_frontier_probability_history"
+    } else if ffn_history_material_count > 0 {
+        "f64_downstream_residual_frontier_ffn_history"
+    } else if layer_operation_material_count > 0 {
+        "f64_downstream_residual_frontier_layer_operation"
+    } else if layer_output_material_count > 0 {
+        "f64_downstream_residual_frontier_layer_output"
+    } else if f64_capture_exact {
+        "f64_downstream_residual_frontier_clear"
+    } else {
+        "f64_downstream_residual_frontier_residual_unpinned"
+    };
+
+    let next_diagnostic = match classification {
+        "f64_downstream_residual_frontier_score_history_drives_value_mix" => {
+            "localize f64 raw score-history drift before changing value-mix, softmax, or RMSNorm production math"
+        }
+        "f64_downstream_residual_frontier_probability_source_drives_value_mix" => {
+            "localize f64 probability-history source drift before changing value-mix arithmetic"
+        }
+        "f64_downstream_residual_frontier_value_mix_numeric_policy" => {
+            "pin value-mix numeric policy under f64 RMSNorm before changing production math"
+        }
+        "f64_downstream_residual_frontier_value_cache_source_drives_value_mix" => {
+            "localize f64 value-cache source drift before changing value-mix arithmetic"
+        }
+        "f64_downstream_residual_frontier_attention_output_boundary" => {
+            "localize the first f64 attention-output boundary before production math changes"
+        }
+        "f64_downstream_residual_frontier_capture_not_cleared" => {
+            "keep localizing f64 attention RMSNorm capture before downstream attribution"
+        }
+        "f64_downstream_residual_frontier_clear" => {
+            "rerun full first-token/reference parity before considering a production RMSNorm change"
+        }
+        _ => "keep the f64 downstream residual diagnostic-only until the first boundary is pinned",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 downstream residual frontier is a compact diagnostic-only decision point for choosing the next trace optic after f64 attention RMSNorm clears the selected bucket; it does not change production math and does not promote reference parity, A770 semantic quality, selected attention, resident KV, residency, performance, or completion",
+        "classification": classification,
+        "f64_capture_cleared": f64_capture_cleared,
+        "f64_capture_exact": f64_capture_exact,
+        "attention_output_first_boundary": attention_boundary,
+        "attention_output_first_boundary_row": attention_boundary_row,
+        "value_mix_source_classification": value_mix_source_classification,
+        "probability_source_classification": probability_source_classification,
+        "value_cache_source_clean": value_cache_source_clean,
+        "rust_self_recompute_explained_by_numeric_variants": rust_self_recompute_explained,
+        "probability_source_drift_present": probability_source_drift,
+        "value_cache_source_drift_present": value_cache_source_drift,
+        "rust_self_recompute_drift_present": rust_self_recompute_drift,
+        "score_history_material_count": score_history_material_count,
+        "probability_material_count": probability_material_count,
+        "ffn_history_material_count": ffn_history_material_count,
+        "layer_operation_material_count": layer_operation_material_count,
+        "layer_output_material_count": layer_output_material_count,
+        "first_material_target_row": value_mix_attribution.pointer("/source_summary/first_material_target_row").cloned().unwrap_or(Value::Null),
+        "first_material_probability_source_row": value_mix_attribution.pointer("/source_summary/first_material_probability_source_row").cloned().unwrap_or(Value::Null),
+        "first_material_score_source_row": value_mix_attribution.pointer("/probability_history_source_summary/first_material_score_source_row").cloned().unwrap_or(Value::Null),
+        "first_material_rust_self_recompute_row": value_mix_attribution.pointer("/source_summary/first_material_rust_self_recompute_row").cloned().unwrap_or(Value::Null),
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn compact_first_material_boundary(row: &Value) -> Value {
+    if row.is_null() {
+        return Value::Null;
+    }
+
+    json!({
+        "boundary": row.pointer("/boundary").cloned().unwrap_or(Value::Null),
+        "layer": row.pointer("/layer").cloned().unwrap_or(Value::Null),
+        "material_mismatch": row.pointer("/material_mismatch").cloned().unwrap_or(Value::Null),
+        "reference_stage": row.pointer("/reference/stage").cloned().unwrap_or(Value::Null),
+        "rust_stage": row.pointer("/rust/stage").cloned().unwrap_or(Value::Null),
+        "reference_dtype": row.pointer("/reference/dtype").cloned().unwrap_or(Value::Null),
+        "rust_dtype": row.pointer("/rust/dtype").cloned().unwrap_or(Value::Null),
+        "reference_shape": row.pointer("/reference/shape").cloned().unwrap_or(Value::Null),
+        "rust_shape": row.pointer("/rust/shape").cloned().unwrap_or(Value::Null),
+        "delta": row.pointer("/delta").cloned().unwrap_or(Value::Null),
     })
 }
 
@@ -38798,6 +38976,132 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "localize the remaining f64 downstream residual before promoting any production RMSNorm runtime change"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_downstream_residual_frontier_points_to_score_history() {
+        let attention_output_history = json!({
+            "first_material_boundary": {
+                "boundary": "attention_value_mix_merged_history",
+                "layer": 0,
+                "material_mismatch": true,
+                "reference": {
+                    "stage": "kqv_head0",
+                    "dtype": "f32",
+                    "shape": [2560, 18],
+                    "first_values": [1.0, 2.0, 3.0]
+                },
+                "rust": {
+                    "stage": "attention_value_mix_merged_history_head0",
+                    "dtype": "f32",
+                    "shape": [2560, 18],
+                    "first_values": [1.0, 2.0, 3.0]
+                },
+                "delta": {
+                    "max_abs_delta": 0.00016039609909057617_f64
+                }
+            }
+        });
+        let value_mix_attribution = json!({
+            "source_summary": {
+                "classification": "rust_value_mix_numeric_policy_and_probability_source_drift",
+                "probability_source_drift_present": true,
+                "value_cache_source_clean": true,
+                "value_cache_source_drift_present": false,
+                "rust_self_recompute_drift_present": true,
+                "rust_self_recompute_explained_by_numeric_variants": true,
+                "first_material_target_row": {
+                    "source": "target_delta",
+                    "token": 3,
+                    "head": 0,
+                },
+                "first_material_probability_source_row": {
+                    "source": "probability_source_delta",
+                    "token": 3,
+                    "head": 0,
+                },
+                "first_material_rust_self_recompute_row": {
+                    "source": "rust_self_recompute_delta",
+                    "token": 17,
+                    "head": 12,
+                }
+            },
+            "probability_history_source_summary": {
+                "classification": "probability_drift_follows_score_history_drift",
+                "first_material_score_source_row": {
+                    "source": "score_source_delta",
+                    "token": 0,
+                    "head": 1,
+                }
+            }
+        });
+        let probability_history = json!({
+            "probability_history_material_count": 20,
+            "score_raw_history_material_count": 20,
+        });
+        let ffn_history = json!({
+            "history": {
+                "material_stage_count": 0
+            },
+            "current_token": {
+                "material_stage_count": 0
+            }
+        });
+        let layer_operation = json!({
+            "material_mismatch_count": 0
+        });
+        let next_layer_operation = json!({
+            "material_mismatch_count": 0
+        });
+        let layer_output = json!({
+            "material_mismatch_count": 1
+        });
+
+        let frontier = attention_norm_f64_downstream_residual_frontier(
+            true,
+            false,
+            &attention_output_history,
+            &value_mix_attribution,
+            &probability_history,
+            &ffn_history,
+            &layer_operation,
+            &next_layer_operation,
+            &layer_output,
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_downstream_residual_frontier_score_history_drives_value_mix"))
+        );
+        assert_eq!(
+            frontier.pointer("/attention_output_first_boundary"),
+            Some(&json!("attention_value_mix_merged_history"))
+        );
+        assert_eq!(
+            frontier.pointer("/probability_source_classification"),
+            Some(&json!("probability_drift_follows_score_history_drift"))
+        );
+        assert_eq!(frontier.pointer("/value_cache_source_clean"), Some(&json!(true)));
+        assert_eq!(
+            frontier.pointer("/attention_output_first_boundary_row/reference_stage"),
+            Some(&json!("kqv_head0"))
+        );
+        assert_eq!(
+            frontier.pointer("/attention_output_first_boundary_row/reference/first_values"),
+            None
+        );
+        assert_eq!(
+            frontier.pointer("/first_material_score_source_row/source"),
+            Some(&json!("score_source_delta"))
+        );
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize f64 raw score-history drift before changing value-mix, softmax, or RMSNorm production math"
             ))
         );
     }
