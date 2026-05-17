@@ -7487,6 +7487,10 @@ fn compare_reference_to_rust_with_records_with_model(
             &score_position_qk_recompute,
             &report["attention_selected_historical_rope_epsilon_materiality"],
         );
+    report["attention_rust_score_input_operand_drift"] = attention_rust_score_input_operand_drift(
+        &report["attention_reference_score_input_operand_policy"],
+        &report["attention_selected_historical_rope_epsilon_materiality"],
+    );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
             reference_records,
@@ -23307,6 +23311,167 @@ fn attention_reference_score_input_operand_policy(
     })
 }
 
+fn attention_rust_score_input_operand_drift(operand_policy: &Value, materiality: &Value) -> Value {
+    let operand_rows = operand_policy.pointer("/rows").and_then(Value::as_array);
+    let materiality_rows = materiality.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut compared_count = 0usize;
+    let mut missing_materiality_count = 0usize;
+    let mut clean_count = 0usize;
+    let mut query_only_count = 0usize;
+    let mut key_only_count = 0usize;
+    let mut mixed_count = 0usize;
+    let mut key_bucket_crossing_count = 0usize;
+    let mut max_abs_query_delta = 0.0f64;
+    let mut max_abs_key_delta = 0.0f64;
+    let mut max_abs_product_delta = 0.0f64;
+
+    if let Some(operand_rows) = operand_rows {
+        for operand_row in operand_rows {
+            let operand_classification =
+                operand_row.pointer("/classification").and_then(Value::as_str);
+            if !matches!(
+                operand_classification,
+                Some("reference_score_input_capture_exact_raw_operand")
+                    | Some("reference_score_input_capture_tolerance_pinned_operand")
+            ) {
+                continue;
+            }
+            let head = operand_row.pointer("/head").and_then(Value::as_u64);
+            let key_slot = operand_row.pointer("/key_slot").and_then(Value::as_u64);
+            let query_token = operand_row.pointer("/query_token").and_then(Value::as_u64);
+            let materiality_row =
+                find_qk_recompute_row(materiality_rows, head, key_slot, query_token);
+            if materiality_row.is_none() {
+                missing_materiality_count += 1;
+            }
+            let product = materiality_row
+                .and_then(|row| row.pointer("/product_contributor"))
+                .unwrap_or(&Value::Null);
+            let source_policy = materiality_row
+                .and_then(|row| row.pointer("/materiality/score_product_source_policy"))
+                .unwrap_or(&Value::Null);
+            let query_delta = product.pointer("/query_delta").and_then(Value::as_f64);
+            let key_delta = product.pointer("/key_delta").and_then(Value::as_f64);
+            let abs_product_delta =
+                product.pointer("/abs_product_delta").and_then(Value::as_f64).unwrap_or(0.0);
+            let query_changed = query_delta.is_some_and(|delta| delta != 0.0);
+            let key_changed = key_delta.is_some_and(|delta| delta != 0.0);
+            let score_input_capture_post_rope_bucket = source_policy
+                .pointer("/score_input_capture_uses_post_rope_f16_bucket_values")
+                .and_then(Value::as_bool)
+                == Some(true);
+            let row_classification = match (query_changed, key_changed) {
+                (false, false) => "selected_score_input_operand_drift_clean",
+                (true, false) => "selected_score_input_operand_drift_query_only",
+                (false, true) if score_input_capture_post_rope_bucket => {
+                    "selected_score_input_operand_drift_key_bucket_crossing"
+                }
+                (false, true) => "selected_score_input_operand_drift_key_only",
+                (true, true) => "selected_score_input_operand_drift_mixed_qk",
+            };
+
+            compared_count += 1;
+            match row_classification {
+                "selected_score_input_operand_drift_clean" => clean_count += 1,
+                "selected_score_input_operand_drift_query_only" => query_only_count += 1,
+                "selected_score_input_operand_drift_key_bucket_crossing" => {
+                    key_only_count += 1;
+                    key_bucket_crossing_count += 1;
+                }
+                "selected_score_input_operand_drift_key_only" => key_only_count += 1,
+                "selected_score_input_operand_drift_mixed_qk" => mixed_count += 1,
+                _ => {}
+            }
+            if let Some(delta) = query_delta {
+                max_abs_query_delta = max_abs_query_delta.max(delta.abs());
+            }
+            if let Some(delta) = key_delta {
+                max_abs_key_delta = max_abs_key_delta.max(delta.abs());
+            }
+            max_abs_product_delta = max_abs_product_delta.max(abs_product_delta);
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": head,
+                "kv_head": operand_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": query_token,
+                "contributor_dim": operand_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "operand_policy_classification": operand_classification,
+                "materiality_row_present": materiality_row.is_some(),
+                "query_delta": query_delta,
+                "key_delta": key_delta,
+                "abs_product_delta": abs_product_delta,
+                "score_input_capture_uses_post_rope_f16_bucket_values": score_input_capture_post_rope_bucket,
+                "product_contributor": product.clone(),
+                "score_product_source_policy": source_policy.clone(),
+            }));
+        }
+    }
+
+    let classification = if compared_count == 0 {
+        "no_tolerance_pinned_score_input_operand_rows"
+    } else if missing_materiality_count == compared_count {
+        "score_input_operand_drift_missing_materiality"
+    } else if clean_count == compared_count {
+        "score_input_operands_clean"
+    } else if key_bucket_crossing_count == compared_count {
+        "score_input_operand_drift_key_bucket_crossing"
+    } else if key_only_count == compared_count {
+        "score_input_operand_drift_key_only"
+    } else if query_only_count == compared_count {
+        "score_input_operand_drift_query_only"
+    } else if mixed_count > 0 {
+        "score_input_operand_drift_mixed_qk"
+    } else {
+        "score_input_operand_drift_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "score_input_operand_drift_key_bucket_crossing" => {
+            "inspect selected key score-input capture source around the post-RoPE F16 bucket boundary before changing runtime math"
+        }
+        "score_input_operand_drift_key_only" => {
+            "inspect selected key score-input capture source before changing runtime math"
+        }
+        "score_input_operand_drift_query_only" => {
+            "inspect selected query score-input capture source before changing runtime math"
+        }
+        "score_input_operand_drift_mixed_qk" => {
+            "inspect selected query and key score-input capture sources before changing runtime math"
+        }
+        "score_input_operands_clean" => {
+            "move downstream to score accumulation or probability drift before changing runtime math"
+        }
+        "score_input_operand_drift_missing_materiality" => {
+            "capture selected score product materiality rows before classifying operand drift"
+        }
+        "no_tolerance_pinned_score_input_operand_rows" => {
+            "pin reference score input operand policy before classifying Rust/reference operand drift"
+        }
+        _ => "keep Rust score-input operand drift diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Rust/reference score-input operand drift is diagnostic-only evidence comparing selected score-product query/key operands after the reference operand is tolerance-pinned; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "compared_count": compared_count,
+        "missing_materiality_count": missing_materiality_count,
+        "clean_count": clean_count,
+        "query_only_count": query_only_count,
+        "key_only_count": key_only_count,
+        "mixed_count": mixed_count,
+        "key_bucket_crossing_count": key_bucket_crossing_count,
+        "max_abs_query_delta": max_abs_query_delta,
+        "max_abs_key_delta": max_abs_key_delta,
+        "max_abs_product_delta": max_abs_product_delta,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -36050,6 +36215,67 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "compare Rust score-input key/query captures against tolerance-pinned reference score operands before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn rust_score_input_operand_drift_reports_key_bucket_crossing() {
+        let operand_policy = json!({
+            "rows": [
+                {
+                    "classification": "reference_score_input_capture_tolerance_pinned_operand",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+        let materiality = json!({
+            "rows": [
+                {
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "product_contributor": {
+                        "query_delta": 0.0_f64,
+                        "key_delta": 0.0009765625_f64,
+                        "abs_product_delta": 0.0005550384521484375_f64,
+                    },
+                    "materiality": {
+                        "score_product_source_policy": {
+                            "score_input_capture_uses_post_rope_f16_bucket_values": true,
+                        }
+                    }
+                }
+            ]
+        });
+
+        let report = attention_rust_score_input_operand_drift(&operand_policy, &materiality);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("score_input_operand_drift_key_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/key_only_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/key_bucket_crossing_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_score_input_operand_drift_key_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/rows/0/query_delta"), Some(&json!(0.0)));
+        assert_eq!(report.pointer("/rows/0/key_delta"), Some(&json!(0.0009765625_f64)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect selected key score-input capture source around the post-RoPE F16 bucket boundary before changing runtime math"
             ))
         );
     }
