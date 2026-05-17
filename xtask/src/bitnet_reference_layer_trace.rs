@@ -16688,6 +16688,7 @@ fn attention_key_current_projection_rope_boundary(
 #[derive(Debug, Clone, Copy)]
 enum RopeNumericArithmetic {
     F32TableF32Arithmetic,
+    F32IterativeThetaF32Arithmetic,
     F64TableCastF32Arithmetic,
     F64TableF64Arithmetic,
 }
@@ -16696,6 +16697,9 @@ impl RopeNumericArithmetic {
     fn label(self) -> &'static str {
         match self {
             RopeNumericArithmetic::F32TableF32Arithmetic => "f32_table_f32_arithmetic",
+            RopeNumericArithmetic::F32IterativeThetaF32Arithmetic => {
+                "f32_iterative_theta_f32_arithmetic"
+            }
             RopeNumericArithmetic::F64TableCastF32Arithmetic => "f64_table_cast_f32_arithmetic",
             RopeNumericArithmetic::F64TableF64Arithmetic => "f64_table_f64_arithmetic",
         }
@@ -16718,6 +16722,12 @@ const ROPE_NUMERIC_VARIANTS: &[RopeNumericVariantSpec] = &[
         arithmetic: RopeNumericArithmetic::F32TableF32Arithmetic,
     },
     RopeNumericVariantSpec {
+        id: "bitnet_500000_ggml_f32_iterative_theta_f32_arithmetic",
+        base: 500_000.0,
+        base_source: "bitnet.rope.freq_base",
+        arithmetic: RopeNumericArithmetic::F32IterativeThetaF32Arithmetic,
+    },
+    RopeNumericVariantSpec {
         id: "bitnet_500000_f64_table_cast_f32_arithmetic",
         base: 500_000.0,
         base_source: "bitnet.rope.freq_base",
@@ -16734,6 +16744,12 @@ const ROPE_NUMERIC_VARIANTS: &[RopeNumericVariantSpec] = &[
         base: 10_000.0,
         base_source: "llama_default",
         arithmetic: RopeNumericArithmetic::F32TableF32Arithmetic,
+    },
+    RopeNumericVariantSpec {
+        id: "llama_default_10000_ggml_f32_iterative_theta_f32_arithmetic",
+        base: 10_000.0,
+        base_source: "llama_default",
+        arithmetic: RopeNumericArithmetic::F32IterativeThetaF32Arithmetic,
     },
     RopeNumericVariantSpec {
         id: "llama_default_10000_f64_table_cast_f32_arithmetic",
@@ -16961,6 +16977,8 @@ fn apply_rope_split_head(
     }
     let half_dim = head_dim / 2;
     let mut output = vec![0.0f32; head_dim];
+    let theta_scale_f32 = (base as f32).powf(-2.0f32 / head_dim as f32);
+    let mut iterative_theta_f32 = token as f32;
     for i in 0..half_dim {
         let x0 = values[i];
         let x1 = values[i + half_dim];
@@ -16973,6 +16991,14 @@ fn apply_rope_split_head(
                 let cos = angle.cos();
                 output[i] = x0 * cos - x1 * sin;
                 output[i + half_dim] = x0 * sin + x1 * cos;
+            }
+            RopeNumericArithmetic::F32IterativeThetaF32Arithmetic => {
+                let angle = iterative_theta_f32;
+                let sin = angle.sin();
+                let cos = angle.cos();
+                output[i] = x0 * cos - x1 * sin;
+                output[i + half_dim] = x0 * sin + x1 * cos;
+                iterative_theta_f32 *= theta_scale_f32;
             }
             RopeNumericArithmetic::F64TableCastF32Arithmetic => {
                 let inv_freq = 1.0f64 / base.powf(exponent);
@@ -25781,7 +25807,7 @@ mod tests {
         assert_eq!(replay.pointer("/selected_token"), Some(&json!(17)));
         assert_eq!(replay.pointer("/compared_head_count"), Some(&json!(2)));
         assert_eq!(replay.pointer("/missing_head_count"), Some(&json!(0)));
-        assert_eq!(replay.pointer("/variant_count"), Some(&json!(6)));
+        assert_eq!(replay.pointer("/variant_count"), Some(&json!(8)));
         assert_eq!(
             replay.pointer("/rows/0/best_reference_variant/variant_id"),
             Some(&json!("llama_default_10000_f64_table_f64_arithmetic"))
@@ -25825,6 +25851,46 @@ mod tests {
         assert!(replay.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
             |reasons| reasons.contains(&json!("rust_attention_k_before_cache_store_head_missing"))
         ));
+    }
+
+    #[test]
+    fn rope_numeric_variant_replay_models_ggml_iterative_theta() {
+        let token = 17usize;
+        let head_dim = 128usize;
+        let mut input = vec![0.0f32; head_dim];
+        input[..head_dim / 2].fill(1.0);
+
+        let replay = apply_rope_split_head(
+            &input,
+            token,
+            head_dim,
+            500_000.0,
+            RopeNumericArithmetic::F32IterativeThetaF32Arithmetic,
+        )
+        .expect("iterative replay");
+        let powf_replay = apply_rope_split_head(
+            &input,
+            token,
+            head_dim,
+            500_000.0,
+            RopeNumericArithmetic::F32TableF32Arithmetic,
+        )
+        .expect("powf replay");
+
+        let lane = (0..head_dim / 2)
+            .find(|lane| replay[*lane].to_bits() != powf_replay[*lane].to_bits())
+            .expect("iterative theta must differ from per-lane powf for this probe");
+        let theta_scale = 500_000.0f32.powf(-2.0f32 / head_dim as f32);
+        let mut theta = token as f32;
+        for _ in 0..lane {
+            theta *= theta_scale;
+        }
+        let expected_cos = theta.cos();
+        let expected_sin = theta.sin();
+
+        assert_eq!(replay[lane].to_bits(), expected_cos.to_bits());
+        assert_eq!(replay[lane + head_dim / 2].to_bits(), expected_sin.to_bits());
+        assert_ne!(replay[lane].to_bits(), powf_replay[lane].to_bits());
     }
 
     #[test]
