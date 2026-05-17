@@ -24,6 +24,7 @@ task guides, conceptual explanations, and reference material.
 | Bring up or verify hardware | [Hardware matrix](hardware/HARDWARE_MATRIX.md) | [Benchmark protocol](hardware/BENCHMARK_PROTOCOL.md) |
 | Add code or run local validation | [Build commands](development/build-commands.md) | [Test suite](development/test-suite.md) |
 | Understand badge and PR evidence boundaries | [Verification](VERIFICATION.md) | [RIPR evidence policy](RIPR_EVIDENCE_POLICY.md) |
+| Understand project direction and proof sequencing | [Roadmap](../ROADMAP.md) | [Campaign trackers](tracking/campaigns/README.md) |
 
 ## Documentation Map
 
@@ -107,6 +108,7 @@ Lookup material for exact behavior, formats, and APIs.
 | Durable decisions | [adr/README.md](adr/README.md) |
 | User-facing status and claim tiers | [status/README.md](status/README.md) |
 | Active campaign work state | [tracking/TRACKER_MODEL.md](tracking/TRACKER_MODEL.md) |
+| Roadmap | [../ROADMAP.md](../ROADMAP.md) |
 | Proof-convergence plan | [../plans/proof-convergence/README.md](../plans/proof-convergence/README.md) |
 
 ### Development
