@@ -7677,6 +7677,12 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_selected_key_dim_token_slot_probe(
             &report["attention_post_fix_score_input_frontier"],
         );
+    report["attention_selected_post_rope_history_bucket_source"] =
+        attention_selected_post_rope_history_bucket_source(
+            &report["attention_selected_key_dim_token_slot_probe"],
+            &report["attention_selected_post_rope_raw_key_epsilon"],
+            &report["attention_selected_key_historical_projection_rope_source"],
+        );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -27862,6 +27868,222 @@ fn selected_key_score_matches_post_rope_f16(
         .is_some_and(|(score, bucket)| (score - bucket).abs() <= 1.0e-9)
 }
 
+fn attention_selected_post_rope_history_bucket_source(
+    slot_probe: &Value,
+    post_rope_raw_key_epsilon: &Value,
+    historical_rope_source: &Value,
+) -> Value {
+    let slot_rows = slot_probe.pointer("/rows").and_then(Value::as_array);
+    let epsilon_rows = post_rope_raw_key_epsilon.pointer("/rows").and_then(Value::as_array);
+    let historical_rows = historical_rope_source.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut pre_rope_bucket_crossing_count = 0usize;
+    let mut capture_replay_mismatch_count = 0usize;
+    let mut projection_subbucket_midpoint_count = 0usize;
+    let mut projection_bucket_crossing_count = 0usize;
+    let mut f16_midpoint_sensitive_count = 0usize;
+    let mut clean_count = 0usize;
+    let mut unpinned_count = 0usize;
+
+    if let Some(slot_rows) = slot_rows {
+        for slot_row in slot_rows {
+            if slot_row.pointer("/classification").and_then(Value::as_str)
+                != Some("selected_key_dim_token_slot_probe_post_rope_bucket_crossing")
+            {
+                continue;
+            }
+            selected_count += 1;
+            let head = slot_row.pointer("/head").and_then(Value::as_u64);
+            let key_slot = slot_row.pointer("/key_slot").and_then(Value::as_u64);
+            let query_token = slot_row.pointer("/query_token").and_then(Value::as_u64);
+            let epsilon_row = find_qk_recompute_row(epsilon_rows, head, key_slot, query_token);
+            let historical_row =
+                find_qk_recompute_row(historical_rows, head, key_slot, query_token);
+
+            let slot_pre_rope_bucket_crossing = selected_key_slot_probe_bucket_crossing(
+                slot_row.pointer("/pre_rope").unwrap_or(&Value::Null),
+            );
+            let slot_post_rope_bucket_crossing = selected_key_slot_probe_bucket_crossing(
+                slot_row.pointer("/post_rope").unwrap_or(&Value::Null),
+            );
+            let score_input_matches_post_rope_f16 =
+                slot_row.pointer("/score_input_matches_post_rope_f16").and_then(Value::as_bool)
+                    == Some(true);
+            let epsilon_classification =
+                epsilon_row.and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let historical_classification = historical_row
+                .and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let replay_matches_capture = epsilon_row
+                .and_then(|row| row.pointer("/replay_matches_capture").and_then(Value::as_bool));
+            let midpoint_straddled = epsilon_row
+                .and_then(|row| row.pointer("/midpoint_straddled").and_then(Value::as_bool));
+            let projection_bucket_match = epsilon_row
+                .and_then(|row| row.pointer("/projection_bucket_match").and_then(Value::as_bool));
+            let paired_projection_bucket_match = epsilon_row.and_then(|row| {
+                row.pointer("/paired_projection_bucket_match").and_then(Value::as_bool)
+            });
+            let post_rope_bucket_match = epsilon_row
+                .and_then(|row| row.pointer("/post_rope_bucket_match").and_then(Value::as_bool));
+
+            let mut blocked_reasons = Vec::<String>::new();
+            if epsilon_row.is_none() {
+                blocked_reasons.push("selected_post_rope_raw_key_epsilon_row_missing".to_string());
+            }
+            if historical_row.is_none() {
+                blocked_reasons
+                    .push("selected_historical_projection_rope_source_row_missing".to_string());
+            }
+            if !slot_post_rope_bucket_crossing {
+                blocked_reasons.push("selected_slot_post_rope_bucket_crossing_missing".to_string());
+            }
+
+            let projection_bucket_crossing = matches!(
+                epsilon_classification,
+                Some("selected_post_rope_raw_key_epsilon_projection_bucket_crossing")
+            ) || matches!(
+                historical_classification,
+                Some("selected_key_historical_drift_before_rope_input")
+            ) || projection_bucket_match == Some(false)
+                || paired_projection_bucket_match == Some(false);
+            let capture_replay_mismatch = matches!(
+                epsilon_classification,
+                Some("selected_post_rope_raw_key_epsilon_capture_replay_mismatch")
+            ) || replay_matches_capture == Some(false);
+            let projection_subbucket_midpoint = matches!(
+                epsilon_classification,
+                Some("selected_post_rope_raw_key_epsilon_projection_subbucket_midpoint_crossing")
+            ) || midpoint_straddled == Some(true);
+            let f16_midpoint_sensitive = matches!(
+                historical_classification,
+                Some(
+                    "selected_key_historical_post_rope_f16_bucket_sensitivity"
+                        | "selected_key_historical_post_rope_epsilon_reported"
+                )
+            ) && score_input_matches_post_rope_f16
+                && post_rope_bucket_match == Some(false);
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "selected_post_rope_history_bucket_source_missing_context"
+            } else if slot_pre_rope_bucket_crossing {
+                pre_rope_bucket_crossing_count += 1;
+                "selected_post_rope_history_bucket_source_pre_rope_bucket_crossing"
+            } else if projection_bucket_crossing {
+                projection_bucket_crossing_count += 1;
+                "selected_post_rope_history_bucket_source_projection_bucket_crossing"
+            } else if capture_replay_mismatch {
+                capture_replay_mismatch_count += 1;
+                "selected_post_rope_history_bucket_source_capture_replay_mismatch"
+            } else if projection_subbucket_midpoint {
+                projection_subbucket_midpoint_count += 1;
+                "selected_post_rope_history_bucket_source_projection_subbucket_midpoint"
+            } else if f16_midpoint_sensitive {
+                f16_midpoint_sensitive_count += 1;
+                "selected_post_rope_history_bucket_source_f16_midpoint_sensitive"
+            } else if !slot_post_rope_bucket_crossing {
+                clean_count += 1;
+                "selected_post_rope_history_bucket_source_clean"
+            } else {
+                unpinned_count += 1;
+                "selected_post_rope_history_bucket_source_unpinned"
+            };
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": head,
+                "kv_head": slot_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": query_token,
+                "contributor_dim": slot_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "slot_probe_classification": slot_row.pointer("/classification").cloned().unwrap_or(Value::Null),
+                "post_rope_raw_key_epsilon_classification": epsilon_classification,
+                "historical_projection_rope_classification": historical_classification,
+                "slot_pre_rope_bucket_crossing": slot_pre_rope_bucket_crossing,
+                "slot_post_rope_bucket_crossing": slot_post_rope_bucket_crossing,
+                "score_input_matches_post_rope_f16": score_input_matches_post_rope_f16,
+                "projection_bucket_crossing": projection_bucket_crossing,
+                "capture_replay_mismatch": capture_replay_mismatch,
+                "projection_subbucket_midpoint": projection_subbucket_midpoint,
+                "f16_midpoint_sensitive": f16_midpoint_sensitive,
+                "replay_matches_capture": replay_matches_capture,
+                "midpoint_straddled": midpoint_straddled,
+                "projection_bucket_match": projection_bucket_match,
+                "paired_projection_bucket_match": paired_projection_bucket_match,
+                "post_rope_bucket_match": post_rope_bucket_match,
+                "slot_probe_row": slot_row.clone(),
+                "post_rope_raw_key_epsilon_row": epsilon_row.cloned().unwrap_or(Value::Null),
+                "historical_projection_rope_row": historical_row.cloned().unwrap_or(Value::Null),
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "selected_post_rope_history_bucket_source_no_selected_rows"
+    } else if missing_context_count == selected_count {
+        "selected_post_rope_history_bucket_source_missing_context"
+    } else if pre_rope_bucket_crossing_count > 0 {
+        "selected_post_rope_history_bucket_source_pre_rope_bucket_crossing"
+    } else if projection_bucket_crossing_count > 0 {
+        "selected_post_rope_history_bucket_source_projection_bucket_crossing"
+    } else if capture_replay_mismatch_count > 0 {
+        "selected_post_rope_history_bucket_source_capture_replay_mismatch"
+    } else if projection_subbucket_midpoint_count > 0 {
+        "selected_post_rope_history_bucket_source_projection_subbucket_midpoint"
+    } else if f16_midpoint_sensitive_count > 0 {
+        "selected_post_rope_history_bucket_source_f16_midpoint_sensitive"
+    } else if clean_count == selected_count {
+        "selected_post_rope_history_bucket_source_clean"
+    } else {
+        "selected_post_rope_history_bucket_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_post_rope_history_bucket_source_capture_replay_mismatch" => {
+            "pin selected post-RoPE trace capture versus runtime replay before changing ROPE or score-input math"
+        }
+        "selected_post_rope_history_bucket_source_projection_subbucket_midpoint" => {
+            "localize selected pre-RoPE projection sub-bucket source before changing ROPE math"
+        }
+        "selected_post_rope_history_bucket_source_projection_bucket_crossing"
+        | "selected_post_rope_history_bucket_source_pre_rope_bucket_crossing" => {
+            "localize selected K projection input/output bucket crossing before changing ROPE math"
+        }
+        "selected_post_rope_history_bucket_source_f16_midpoint_sensitive" => {
+            "decide whether selected post-RoPE F16 midpoint sensitivity is acceptable capture precision or requires runtime alignment"
+        }
+        "selected_post_rope_history_bucket_source_missing_context" => {
+            "capture missing selected post-RoPE epsilon and historical projection source rows"
+        }
+        "selected_post_rope_history_bucket_source_clean" => {
+            "move downstream from selected post-RoPE history bucket source"
+        }
+        "selected_post_rope_history_bucket_source_no_selected_rows" => {
+            "refresh selected key dim/token slot probe before post-RoPE history source attribution"
+        }
+        _ => "keep selected post-RoPE history bucket source diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected post-RoPE history bucket source is diagnostic-only evidence for the remaining selected key dim/token bucket crossing; it connects the slot probe to existing post-RoPE epsilon and historical projection/RoPE rows without changing runtime math or promoting reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "missing_context_count": missing_context_count,
+        "pre_rope_bucket_crossing_count": pre_rope_bucket_crossing_count,
+        "capture_replay_mismatch_count": capture_replay_mismatch_count,
+        "projection_subbucket_midpoint_count": projection_subbucket_midpoint_count,
+        "projection_bucket_crossing_count": projection_bucket_crossing_count,
+        "f16_midpoint_sensitive_count": f16_midpoint_sensitive_count,
+        "clean_count": clean_count,
+        "unpinned_count": unpinned_count,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     post_rope_raw_key_epsilon: &Value,
 ) -> Value {
@@ -42811,6 +43033,127 @@ mod tests {
             Some(&json!("selected_score_input_values_missing"))
         );
         assert_eq!(report.pointer("/rows/0/score_input/values_present"), Some(&json!(false)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_post_rope_history_bucket_source_reports_capture_replay_mismatch() {
+        let slot_probe = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_dim_token_slot_probe_post_rope_bucket_crossing",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "pre_rope": {
+                        "f16_bucket_crossing": false
+                    },
+                    "post_rope": {
+                        "f16_bucket_crossing": true
+                    },
+                    "score_input_matches_post_rope_f16": true,
+                }
+            ]
+        });
+        let post_rope_raw_key_epsilon = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_raw_key_epsilon_capture_replay_mismatch",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "replay_matches_capture": false,
+                    "midpoint_straddled": false,
+                    "projection_bucket_match": true,
+                    "paired_projection_bucket_match": true,
+                    "post_rope_bucket_match": false,
+                }
+            ]
+        });
+        let historical_rope_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_historical_post_rope_epsilon_reported",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+
+        let report = attention_selected_post_rope_history_bucket_source(
+            &slot_probe,
+            &post_rope_raw_key_epsilon,
+            &historical_rope_source,
+        );
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_post_rope_history_bucket_source_capture_replay_mismatch"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/capture_replay_mismatch_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/projection_bucket_crossing_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_post_rope_history_bucket_source_capture_replay_mismatch"))
+        );
+        assert_eq!(report.pointer("/rows/0/capture_replay_mismatch"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected post-RoPE trace capture versus runtime replay before changing ROPE or score-input math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_post_rope_history_bucket_source_reports_missing_context() {
+        let slot_probe = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_dim_token_slot_probe_post_rope_bucket_crossing",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "pre_rope": {
+                        "f16_bucket_crossing": false
+                    },
+                    "post_rope": {
+                        "f16_bucket_crossing": true
+                    },
+                    "score_input_matches_post_rope_f16": true,
+                }
+            ]
+        });
+
+        let report = attention_selected_post_rope_history_bucket_source(
+            &slot_probe,
+            &json!({ "rows": [] }),
+            &json!({ "rows": [] }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_post_rope_history_bucket_source_missing_context"))
+        );
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/0"),
+            Some(&json!("selected_post_rope_raw_key_epsilon_row_missing"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/1"),
+            Some(&json!("selected_historical_projection_rope_source_row_missing"))
+        );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
