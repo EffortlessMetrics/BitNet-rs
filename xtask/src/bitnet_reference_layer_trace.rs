@@ -17969,14 +17969,35 @@ fn reference_record_and_parent_source_names(
 ) -> Vec<String> {
     let mut names = Vec::<String>::new();
     if let Some(record) = record {
+        names.push(record.name.clone());
         names.extend(reference_graph_source_names(record));
+        names.extend(reference_graph_source_aliases(record));
     }
     if let Some(parent) = parent {
+        names.push(parent.name.clone());
         names.extend(reference_graph_source_names(parent));
+        names.extend(reference_graph_source_aliases(parent));
     }
     names.sort();
     names.dedup();
     names
+}
+
+fn reference_graph_source_aliases(record: &ReferenceTraceRecord) -> Vec<String> {
+    let Some(layer) = record.layer else {
+        return Vec::new();
+    };
+    let stage = record.stage.as_str();
+    if stage == "Qcur" || stage.starts_with("qcur_history_head") {
+        vec![format!("q-{layer}")]
+    } else if stage == "Kcur"
+        || stage.starts_with("kcur_history_kv_head")
+        || stage.starts_with("k_kv_head")
+    {
+        vec![format!("k-{layer}")]
+    } else {
+        Vec::new()
+    }
 }
 
 fn reference_graph_source_names(record: &ReferenceTraceRecord) -> Vec<String> {
@@ -24311,6 +24332,24 @@ mod tests {
     }
 
     #[test]
+    fn reference_patch_score_history_records_preserve_graph_sources() {
+        let patch =
+            include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
+
+        assert!(patch.contains(
+            "history_name << history_head_stage_prefix << head << \"_history_ref_layout-\""
+        ));
+        assert!(patch.contains("bool first_history_source = true"));
+        assert!(patch.contains("struct ggml_tensor * source = tensor->src[src_i]"));
+        assert!(
+            patch.contains("bitnet_rs_reference_layer_trace_write_tensor_provenance(out, source)")
+        );
+        assert!(!patch.contains(
+            "history_stage << history_head_stage_prefix << head << \"_history_ref_layout\";\n+                    out << \",\\\"graph_sources\\\":[]\""
+        ));
+    }
+
+    #[test]
     fn reference_patch_hunk_line_counts_are_consistent() {
         let patch =
             include_str!("../../ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch");
@@ -28230,6 +28269,106 @@ mod tests {
             row.pointer("/key_stage/parent_with_graph_sources/graph_source_names/0"),
             Some(&json!("Kcur-0 (reshaped)"))
         );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn attention_score_raw_history_position_qk_recompute_binds_reference_score_source_aliases() {
+        let mut reference_query_history =
+            test_reference_trace_record("qcur_history_head0_ref_layout", vec![1.0, 2.0, 3.0]);
+        reference_query_history.shape = vec![3, 1];
+        reference_query_history.nelements = 3;
+        reference_query_history.graph_sources = json!([]);
+        let mut reference_key =
+            test_reference_trace_record("kcur_history_kv_head0_ref_layout", vec![1.0, 1.0, 1.0]);
+        reference_key.shape = vec![3, 1];
+        reference_key.nelements = 3;
+        reference_key.graph_sources = json!([]);
+        let mut reference_score =
+            test_reference_trace_record("kq_head0_history_ref_layout", vec![6.0]);
+        reference_score.shape = vec![1, 1, 1, 1];
+        reference_score.nelements = 1;
+        reference_score.graph_sources =
+            json!([{ "name": "k-0", "op": "VIEW" }, { "name": "q-0", "op": "VIEW" }]);
+        let reference_records = vec![reference_query_history, reference_key, reference_score];
+
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_q_rope".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_q_rope".to_string(),
+                stage: Some("attention_q_rope".to_string()),
+                shape: vec![1, 3],
+                num_elements: 3,
+                first_values: vec![1.0, 2.0, 3.0],
+                seq: Some(0),
+                ..test_rust_trace_record("attention_q_rope", vec![1.0, 2.0, 3.0])
+            },
+        );
+        rust_records.insert(
+            "attention_q_score_input_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_q_score_input_head0_history_ref_layout".to_string(),
+                stage: Some("attention_q_score_input_head0_history_ref_layout".to_string()),
+                shape: vec![3, 1],
+                num_elements: 3,
+                first_values: vec![1.0, 2.0, 3.0],
+                ..test_rust_trace_record(
+                    "attention_q_score_input_head0_history_ref_layout",
+                    vec![1.0, 2.0, 3.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_k_score_input_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_k_score_input_head0_live_ref_layout".to_string(),
+                stage: Some("attention_k_score_input_head0_live_ref_layout".to_string()),
+                shape: vec![3, 1],
+                num_elements: 3,
+                first_values: vec![1.0, 1.0, 1.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_head0_live_ref_layout",
+                    vec![1.0, 1.0, 1.0],
+                )
+            },
+        );
+        rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                name: "t0/blk0/attention_scores_raw_head0_history_ref_layout".to_string(),
+                stage: Some("attention_scores_raw_head0_history_ref_layout".to_string()),
+                shape: vec![1, 1],
+                num_elements: 1,
+                first_values: vec![6.5],
+                ..test_rust_trace_record("attention_scores_raw_head0_history_ref_layout", vec![6.5])
+            },
+        );
+
+        let position_drilldown =
+            attention_score_raw_history_position_drilldown(&reference_records, &rust_records);
+        let report = attention_score_raw_history_position_qk_recompute(
+            &reference_records,
+            &rust_records,
+            &position_drilldown,
+        );
+        let provenance = report.pointer("/reference_input_stage_provenance").unwrap();
+        let row = provenance.pointer("/rows/0").unwrap();
+
+        assert_eq!(
+            provenance.pointer("/classification"),
+            Some(&json!("reference_score_inputs_exact_graph_bound"))
+        );
+        assert_eq!(provenance.pointer("/exact_score_graph_source_bound_count"), Some(&json!(1)));
+        assert_eq!(provenance.pointer("/missing_score_graph_source_count"), Some(&json!(0)));
+        assert_eq!(
+            row.pointer("/classification"),
+            Some(&json!("reference_score_inputs_exact_graph_bound"))
+        );
+        assert_eq!(row.pointer("/exact_score_graph_source_bound"), Some(&json!(true)));
+        assert_eq!(row.pointer("/parent_source_bound"), Some(&json!(true)));
+        assert_eq!(row.pointer("/score_stage/graph_source_names/0"), Some(&json!("k-0")));
+        assert_eq!(row.pointer("/score_stage/graph_source_names/1"), Some(&json!("q-0")));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 

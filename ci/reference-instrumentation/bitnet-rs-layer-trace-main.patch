@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1353 @@ struct llama_context {
+@@ -3441,6 +3444,1366 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -1060,7 +1060,20 @@ index 666fcc4d..23ee29ff 100644
 +                    out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
 +                    out << ",\"graph_op\":";
 +                    bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
-+                    out << ",\"graph_sources\":[]";
++                    out << ",\"graph_sources\":[";
++                    bool first_history_source = true;
++                    for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++                        struct ggml_tensor * source = tensor->src[src_i];
++                        if (source == nullptr) {
++                            continue;
++                        }
++                        if (!first_history_source) {
++                            out << ",";
++                        }
++                        bitnet_rs_reference_layer_trace_write_tensor_provenance(out, source);
++                        first_history_source = false;
++                    }
++                    out << "]";
 +                    out << ",\"view_source\":null";
 +                    out << ",\"view_offset\":0";
 +                    out << ",\"dtype\":";
