@@ -2,7 +2,7 @@ use bitnet_common::{ActivationType, BitNetConfig, BitNetError, NormType, Result}
 pub use bitnet_qk256_dispatch::Qk256DispatchBackend;
 use bitnet_qk256_dispatch::forward_qk256_scaled_with_backend;
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
-use candle_core::{DType, Device, Module, Tensor};
+use candle_core::{CpuStorage, CustomOp3, DType, Device, Layout, Module, Shape, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 
 const DIAG_RMSNORM_F64_ACCUM_ENV: &str = "BITNET_DIAG_RMSNORM_F64_ACCUM";
@@ -323,6 +323,97 @@ fn feed_forward_activation(
     }
 }
 
+#[cfg(test)]
+#[inline]
+fn rope_split_lower_x0_contracted(x0: f32, x1: f32, cos: f32, sin: f32) -> f32 {
+    let x1_sin = x1 * sin;
+    x0.mul_add(cos, -x1_sin)
+}
+
+#[inline]
+fn rope_fused_product_with_rounded_addend(
+    lhs: f32,
+    factor: f32,
+    rounded_addend: f32,
+    negate_addend: bool,
+) -> f32 {
+    if negate_addend {
+        lhs.mul_add(factor, -rounded_addend)
+    } else {
+        lhs.mul_add(factor, rounded_addend)
+    }
+}
+
+struct RopeFusedMulAdd {
+    negate_addend: bool,
+}
+
+impl CustomOp3 for RopeFusedMulAdd {
+    fn name(&self) -> &'static str {
+        if self.negate_addend { "rope_fused_mul_sub_addend" } else { "rope_fused_mul_add" }
+    }
+
+    fn cpu_fwd(
+        &self,
+        s1: &CpuStorage,
+        l1: &Layout,
+        s2: &CpuStorage,
+        l2: &Layout,
+        s3: &CpuStorage,
+        l3: &Layout,
+    ) -> candle_core::Result<(CpuStorage, Shape)> {
+        if l1.shape() != l2.shape() || l1.shape() != l3.shape() {
+            return Err(candle_core::Error::msg(format!(
+                "{} requires identical input shapes, got {:?}, {:?}, {:?}",
+                self.name(),
+                l1.shape(),
+                l2.shape(),
+                l3.shape()
+            )));
+        }
+
+        let lhs = contiguous_f32_slice(s1, l1, self.name())?;
+        let factor = contiguous_f32_slice(s2, l2, self.name())?;
+        let addend = contiguous_f32_slice(s3, l3, self.name())?;
+        let out = lhs
+            .iter()
+            .zip(factor)
+            .zip(addend)
+            .map(|((&x, &m), &a)| {
+                rope_fused_product_with_rounded_addend(x, m, a, self.negate_addend)
+            })
+            .collect();
+
+        Ok((CpuStorage::F32(out), l1.shape().clone()))
+    }
+}
+
+fn contiguous_f32_slice<'a>(
+    storage: &'a CpuStorage,
+    layout: &Layout,
+    op: &'static str,
+) -> candle_core::Result<&'a [f32]> {
+    let CpuStorage::F32(values) = storage else {
+        return Err(candle_core::Error::msg(format!("{op} supports only F32 tensors")));
+    };
+    let Some((start, end)) = layout.contiguous_offsets() else {
+        return Err(candle_core::Error::msg(format!("{op} requires contiguous inputs")));
+    };
+    Ok(&values[start..end])
+}
+
+fn rope_fused_mul_add_tensor(
+    lhs: &Tensor,
+    factor: &Tensor,
+    addend: &Tensor,
+    negate_addend: bool,
+) -> Result<Tensor> {
+    let lhs = lhs.contiguous()?;
+    let factor = factor.contiguous()?;
+    let addend = addend.contiguous()?;
+    Ok(lhs.apply_op3_no_bwd(&factor, &addend, &RopeFusedMulAdd { negate_addend })?)
+}
+
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
     sin: Tensor,
@@ -378,8 +469,10 @@ impl RotaryEmbedding {
                 .unsqueeze(1)?
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
 
-            let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
-            let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
+            let x1_sin = x1.mul(&sin)?;
+            let x1_cos = x1.mul(&cos)?;
+            let x0_rot = rope_fused_mul_add_tensor(&x0, &cos, &x1_sin, true)?;
+            let x1_rot = rope_fused_mul_add_tensor(&x0, &sin, &x1_cos, false)?;
 
             // Concatenate back in split layout [real, imag]
             let rotated = Tensor::cat(&[x0_rot, x1_rot], 3)?;
@@ -387,18 +480,28 @@ impl RotaryEmbedding {
             Ok(rotated)
         } else {
             // Original 3D implementation for other uses
-            let (_batch, _seq, dim) = x.dims3()?;
+            let (batch, seq_len, dim) = x.dims3()?;
             let half_dim = dim / 2;
 
             // LLaMA RoPE uses SPLIT layout: [r0,r1,...,i0,i1,...]
             let x0 = x.narrow(2, 0, half_dim)?; // First half (real)
             let x1 = x.narrow(2, half_dim, half_dim)?; // Second half (imaginary)
 
-            let cos = self.cos.narrow(0, position, 1)?;
-            let sin = self.sin.narrow(0, position, 1)?;
+            let cos = self
+                .cos
+                .narrow(0, position, seq_len)?
+                .unsqueeze(0)?
+                .broadcast_as(&[batch, seq_len, half_dim])?;
+            let sin = self
+                .sin
+                .narrow(0, position, seq_len)?
+                .unsqueeze(0)?
+                .broadcast_as(&[batch, seq_len, half_dim])?;
 
-            let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
-            let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
+            let x1_sin = x1.mul(&sin)?;
+            let x1_cos = x1.mul(&cos)?;
+            let x0_rot = rope_fused_mul_add_tensor(&x0, &cos, &x1_sin, true)?;
+            let x1_rot = rope_fused_mul_add_tensor(&x0, &sin, &x1_cos, false)?;
 
             // Concatenate back in split layout [real, imag]
             let rotated = Tensor::cat(&[x0_rot, x1_rot], 2)?;
@@ -2527,6 +2630,99 @@ mod tests {
 
     fn max_abs_delta(left: &[f32], right: &[f32]) -> f32 {
         left.iter().zip(right).map(|(&l, &r)| (l - r).abs()).fold(0.0f32, f32::max)
+    }
+
+    #[test]
+    fn rope_lower_expression_policy_matches_reference_x0_contraction() {
+        let x0 = f32::from_bits(0xc084a64e);
+        let x1 = f32::from_bits(0x400a2799);
+        let cos = f32::from_bits(0x3f7ffffd);
+        let sin = f32::from_bits(0x3a0fc8ef);
+
+        let old_term_split = (x0 * cos) - (x1 * sin);
+        let contracted = rope_split_lower_x0_contracted(x0, x1, cos, sin);
+
+        assert_eq!(
+            old_term_split.to_bits(),
+            0xc084afff,
+            "diagnostic scalar should distinguish the old term-split policy"
+        );
+        assert_eq!(
+            contracted.to_bits(),
+            0xc084b000,
+            "selected-K lower ROPE scalar should match the reference direct/x0-contracted policy"
+        );
+    }
+
+    #[test]
+    fn rope_apply_4d_uses_reference_contracted_expression_policy() -> Result<()> {
+        let device = Device::Cpu;
+        let head_dim = 128usize;
+        let selected_dim = 40usize;
+        let paired_dim = 104usize;
+        let token = 2usize;
+        let rope = RotaryEmbedding::new(head_dim, token + 1, Some(500_000.0), &device)?;
+        let tables = build_rope_tables(head_dim, token + 1, 500_000.0).expect("rope tables");
+        let table_index = token * tables.half_dim + selected_dim;
+        let cos = tables.cos[table_index];
+        let sin = tables.sin[table_index];
+        assert_eq!(cos.to_bits(), 0x3f7ffffd, "test must use the pinned diagnostic cos");
+        assert_eq!(sin.to_bits(), 0x3a0fc8ef, "test must use the pinned diagnostic sin");
+
+        let x0 = f32::from_bits(0xc084a64e);
+        let x1 = f32::from_bits(0x400a2799);
+        let mut values = vec![0.0f32; 2 * head_dim];
+        values[selected_dim] = x0;
+        values[paired_dim] = x1;
+        values[head_dim + selected_dim] = x0;
+        values[head_dim + paired_dim] = x1;
+        let input = Tensor::from_vec(values, &[1, 2, 1, head_dim], &device)?;
+
+        let output = rope.apply(&input, token)?.flatten_all()?.to_vec1::<f32>()?;
+        let expected = rope_split_lower_x0_contracted(x0, x1, cos, sin);
+        assert_eq!(expected.to_bits(), 0xc084b000);
+        assert_eq!(output[selected_dim].to_bits(), expected.to_bits());
+        assert_eq!(output[head_dim + selected_dim].to_bits(), expected.to_bits());
+        assert_ne!(
+            output[selected_dim].to_bits(),
+            0xc084afff,
+            "4D Q/K ROPE path must not retain the old term-split selected-K scalar"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn rope_apply_3d_uses_reference_contracted_expression_policy() -> Result<()> {
+        let device = Device::Cpu;
+        let head_dim = 128usize;
+        let selected_dim = 40usize;
+        let paired_dim = 104usize;
+        let token = 2usize;
+        let rope = RotaryEmbedding::new(head_dim, token + 1, Some(500_000.0), &device)?;
+        let tables = build_rope_tables(head_dim, token + 1, 500_000.0).expect("rope tables");
+        let table_index = token * tables.half_dim + selected_dim;
+        let cos = tables.cos[table_index];
+        let sin = tables.sin[table_index];
+
+        let x0 = f32::from_bits(0xc084a64e);
+        let x1 = f32::from_bits(0x400a2799);
+        let mut values = vec![0.0f32; head_dim];
+        values[selected_dim] = x0;
+        values[paired_dim] = x1;
+        let input = Tensor::from_vec(values, &[1, 1, head_dim], &device)?;
+
+        let output = rope.apply(&input, token)?.flatten_all()?.to_vec1::<f32>()?;
+        let expected = rope_split_lower_x0_contracted(x0, x1, cos, sin);
+        assert_eq!(expected.to_bits(), 0xc084b000);
+        assert_eq!(output[selected_dim].to_bits(), expected.to_bits());
+        assert_ne!(
+            output[selected_dim].to_bits(),
+            0xc084afff,
+            "3D ROPE path must not retain the old term-split selected-K scalar"
+        );
+
+        Ok(())
     }
 
     #[test]
