@@ -1,0 +1,25 @@
+timestamp = "2026-05-17T04:35:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5261
+branch = "codex/lunar-lake/LNL258V-BENCH-002-total-response"
+head_sha = "3b6aa5f7b5ce7df5998f5d85dd9bb6a40d5f0254"
+merge_sha = "ce62a769f0e08cc4c5133cd2629ec04258546616"
+summary = "Merged LNL258V-BENCH-002 dense Qwen CPU total-response timing normalization."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The merged PR derives dense Qwen CPU total_response_ms from existing model-load, tokenizer-load, tokenize, prefill, and decode timing fields when no explicit latency total is present.",
+  "The claim boundary remains timing normalization only: no new inference, route promotion, speedup, acceleration, OpenVINO GPU/NPU promotion, or BitNet QK256/I2_S behavior change.",
+]
