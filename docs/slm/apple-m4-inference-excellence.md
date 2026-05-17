@@ -159,12 +159,31 @@ remain sourced from the prior matching dense warm-session proof because
 | `qwen2.5-0.5b-instruct-q4_k_m` | 297 / 500 | 297 / 500 | 2202.0 ms | 2793.8 ms | 21.988 | 2.237 | 15.626 |
 | `qwen2.5-1.5b-instruct-q4_k_m` | 246 / 500 | 245 / 500 | 8724.0 ms | 11114.7 ms | 5.525 | 0.571 | 4.971 |
 
-The remaining dense accuracy gap is to repeat the 500-case refresh once under
-matching identity before treating the 500-case reports as trend-ready evidence:
+`M4-ACCURACY-007` repeats the full 500-case runtime refresh under the same
+supported dense model identities:
 
 ```text
-M4-ACCURACY-007  second matching 500-case dense eval-v2 refresh
+ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/<model-id>/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/<model-id>/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/task-family-pass-rates.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/report-refresh/report-refresh-manifest.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json
 ```
+
+Each model summary validates with `bitnet mac receipts-check`, and each
+matching regression check against `2026-05-16T1711Z` reports
+`matched_context=true` with zero warnings. The refreshed dashboard reports
+`status=ok`, `report_count=24`, `group_count=9`, and
+`comparable_group_count=9`; the dense SLM eval-v2 family has three ready
+groups. This is comparable matching-history evidence for the recorded 500-case
+dense SLM identities only. It is not BitNet evidence, not a broad model-quality
+claim, and not a broad performance benchmark.
+
+| Model | Strict score | Quality gate | TTFT p50 | TTFT p90 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 299 / 500 | 299 / 500 | 2203 ms | 2771 ms | 22.010 | 2.206 | 15.628 |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 297 / 500 | 297 / 500 | 2201 ms | 2784 ms | 21.989 | 2.243 | 15.630 |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 246 / 500 | 245 / 500 | 8809 ms | 11336 ms | 5.505 | 0.574 | 4.949 |
 
 Scoring stays mechanical:
 

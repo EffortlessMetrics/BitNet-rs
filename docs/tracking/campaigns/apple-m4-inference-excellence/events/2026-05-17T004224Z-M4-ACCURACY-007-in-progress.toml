@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T00:42:24Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-007"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-007-dense-500-history"
+summary = "Started the second matching 500-case dense SLM eval-v2 refresh."
+
+notes = [
+  "This item will run the seeded 500-case dense SLM eval-v2 corpus again for every supported M4 dense model identity and compare against the 2026-05-16T1711Z 500-case baseline summaries.",
+  "Scope is matching-history dense SLM eval evidence only; no BitNet proof, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is made.",
+]

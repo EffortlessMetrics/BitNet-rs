@@ -469,7 +469,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-007"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-007-dense-500-history"
 stackable = false
 review_mode = "codex_premerge"
