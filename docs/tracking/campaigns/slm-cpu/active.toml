@@ -2254,7 +2254,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-028"
-status = "ready"
+status = "pr_open"
+pr = 5384
+head_sha = "ee672a2f72f1de3a4f655741b3580dfba4fcfc7f"
 branch = "codex/slm-cpu-028-q4-planning-gates"
 stackable = false
 review_mode = "codex_premerge"
