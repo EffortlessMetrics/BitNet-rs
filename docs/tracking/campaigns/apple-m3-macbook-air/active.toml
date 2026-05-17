@@ -837,9 +837,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-008"
-status = "pr_open"
+status = "merged"
 pr = 5372
-head_sha = "43805f94aeb8b0a87c22e02d3e3765611325f502"
+head_sha = "f274700750fda9d413880feb7e3df2bb773428d9"
+merge_sha = "843da973eb609ddcb5943be6b99b93d6afec0669"
 branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
 stackable = false
 review_mode = "codex_premerge"
