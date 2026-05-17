@@ -2303,7 +2303,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-029"
-status = "ready"
+status = "pr_open"
+pr = 5405
 branch = "codex/slm-cpu-029-kv-temp-reuse"
 stackable = false
 review_mode = "codex_premerge"

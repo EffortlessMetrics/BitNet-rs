@@ -8208,10 +8208,11 @@ async fn run_slm_warm_session(
             let next_token = match direct_next_token {
                 Some(token) => token,
                 None => {
-                    let sampler = session_sampler
-                        .as_mut()
-                        .or(prompt_sampler.as_mut())
-                        .expect("warm-session sampler must be available");
+                    let Some(sampler) = session_sampler.as_mut().or(prompt_sampler.as_mut()) else {
+                        anyhow::bail!(
+                            "warm-session sampler was unavailable for non-direct sampling"
+                        );
+                    };
                     sampler.sample_in_place(logits_scratch, generated_tokens)?
                 }
             };
