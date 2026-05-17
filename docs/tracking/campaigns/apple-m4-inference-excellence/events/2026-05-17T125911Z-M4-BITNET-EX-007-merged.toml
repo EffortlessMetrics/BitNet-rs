@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T12:59:11Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-007"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-007-serve-gate"
+pr = 5339
+head_sha = "24b8c353ba3457acbcc798e77137c02e222b54bb"
+merge_sha = "8590563daaeb00decd6fe8fdc3570e141c69933c"
+
+notes = [
+  "Merged PR #5339 for M4-BITNET-EX-007 BitNet serve gate route enablement.",
+  "The merge makes BitNet mac serve require a ready serve-gate receipt, adds BitNet serve route and receipt validation, and keeps the route scoped to accepted artifact/tokenizer identity and CPU/NEON backend evidence.",
+  "No production-hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]
