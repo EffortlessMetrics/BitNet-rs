@@ -172,6 +172,7 @@ struct LayerTraceCompareArgs {
     cpu_trace_dir: PathBuf,
     cpu_f64_trace_dir: Option<PathBuf>,
     a770_trace_dir: Option<PathBuf>,
+    reference_rope_scalar_trace: Option<PathBuf>,
     output: Option<PathBuf>,
     format: String,
 }
@@ -593,7 +594,7 @@ fn print_run_help() {
 
 fn print_compare_help() {
     println!(
-        "Compare a BitNet reference layer trace receipt against Rust CPU/A770 trace directories\n\nUsage: xtask.exe bitnet-reference-layer-trace-compare [OPTIONS]\n\nOptions:\n      --reference <PATH>           Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>       Rust CPU BITNET_TRACE_DIR output\n      --cpu-f64-trace-dir <PATH>   Optional Rust CPU trace captured with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --a770-trace-dir <PATH>      Optional strict A770 BITNET_TRACE_DIR output\n      --output <PATH>              Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-compare.json]\n      --format <FORMAT>            Output format: human or json [default: human]\n  -h, --help                       Print help"
+        "Compare a BitNet reference layer trace receipt against Rust CPU/A770 trace directories\n\nUsage: xtask.exe bitnet-reference-layer-trace-compare [OPTIONS]\n\nOptions:\n      --reference <PATH>                    Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>                Rust CPU BITNET_TRACE_DIR output\n      --cpu-f64-trace-dir <PATH>            Optional Rust CPU trace captured with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --a770-trace-dir <PATH>               Optional strict A770 BITNET_TRACE_DIR output\n      --reference-rope-scalar-trace <PATH>  Optional JSONL emitted by BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE\n      --output <PATH>                       Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-compare.json]\n      --format <FORMAT>                     Output format: human or json [default: human]\n  -h, --help                                Print help"
     );
 }
 
@@ -748,6 +749,7 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
     let mut cpu_trace_dir = None::<PathBuf>;
     let mut cpu_f64_trace_dir = None::<PathBuf>;
     let mut a770_trace_dir = None::<PathBuf>;
+    let mut reference_rope_scalar_trace = None::<PathBuf>;
     let mut output = Some(PathBuf::from(DEFAULT_COMPARE_OUTPUT));
     let mut format = "human".to_string();
     let mut i = 2usize;
@@ -764,6 +766,9 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
             "--cpu-trace-dir" => cpu_trace_dir = Some(PathBuf::from(value()?)),
             "--cpu-f64-trace-dir" => cpu_f64_trace_dir = Some(PathBuf::from(value()?)),
             "--a770-trace-dir" => a770_trace_dir = Some(PathBuf::from(value()?)),
+            "--reference-rope-scalar-trace" => {
+                reference_rope_scalar_trace = Some(PathBuf::from(value()?))
+            }
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
             other => bail!("unknown bitnet-reference-layer-trace-compare option {other}"),
@@ -775,6 +780,7 @@ fn parse_compare_args(args: &[String]) -> Result<LayerTraceCompareArgs> {
         cpu_trace_dir,
         cpu_f64_trace_dir,
         a770_trace_dir,
+        reference_rope_scalar_trace,
         output,
         format,
     })
@@ -1380,9 +1386,15 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
         Some(path) => Some(normalize_path(path)?),
         None => None,
     };
+    let reference_rope_scalar_trace_path = match &args.reference_rope_scalar_trace {
+        Some(path) => Some(normalize_path(path)?),
+        None => None,
+    };
 
     let reference_json = read_json(&reference_path)?;
     let reference_json_text = fs::read_to_string(&reference_path).ok();
+    let reference_rope_scalar_trace =
+        reference_rope_scalar_trace_path.as_ref().and_then(|path| read_jsonl_values(path).ok());
     let reference_records = read_reference_records(&reference_json)?;
     let model_path = reference_json
         .pointer("/model/model_path")
@@ -1438,6 +1450,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             &cpu_comparison,
             &f64_capture,
             reference_json_text.as_deref(),
+            reference_rope_scalar_trace.as_deref(),
             0,
         );
         let selected_f64_effect = attention_selected_historical_k_attention_norm_f64_effect(
@@ -11596,6 +11609,7 @@ fn layer_attention_norm_f64_downstream_effect(
     baseline_comparison: &Value,
     f64_capture: &Value,
     reference_json_text: Option<&str>,
+    reference_rope_scalar_trace: Option<&[Value]>,
     layer: usize,
 ) -> Value {
     let stage_mapping = reference_stage_mapping();
@@ -11621,6 +11635,7 @@ fn layer_attention_norm_f64_downstream_effect(
         reference_records,
         f64_rust_records,
         reference_json_text,
+        reference_rope_scalar_trace,
     );
     let f64_ffn_history = layer_ffn_history_drift(reference_records, f64_rust_record_list, layer);
     let f64_layer_operation =
@@ -12012,6 +12027,7 @@ fn layer_attention_norm_f64_probability_history_effect(
     reference_records: &[ReferenceTraceRecord],
     f64_rust_records: &BTreeMap<String, RustTraceRecord>,
     reference_json_text: Option<&str>,
+    reference_rope_scalar_trace: Option<&[Value]>,
 ) -> Value {
     let score_raw_history = attention_score_raw_history_delta(reference_records, f64_rust_records);
     let score_raw_live_tail =
@@ -12098,6 +12114,12 @@ fn layer_attention_norm_f64_probability_history_effect(
             &selected_historical_k_rope_source_frontier,
             &selected_k_capture_path_frontier,
             &selected_k_graph_producer_frontier,
+        );
+    let selected_k_rope_producer_storage_frontier =
+        attention_norm_f64_selected_k_rope_producer_storage_frontier(
+            &selected_k_rope_capture_policy_frontier,
+            &selected_k_capture_path_frontier,
+            reference_rope_scalar_trace,
         );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
@@ -12190,6 +12212,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "selected_k_capture_path_frontier": selected_k_capture_path_frontier,
         "selected_k_graph_producer_frontier": selected_k_graph_producer_frontier,
         "selected_k_rope_capture_policy_frontier": selected_k_rope_capture_policy_frontier,
+        "selected_k_rope_producer_storage_frontier": selected_k_rope_producer_storage_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -13703,6 +13726,131 @@ fn attention_norm_f64_selected_k_rope_capture_policy_frontier(
         "kcur_rope_graph_source_names": selected_k_graph_producer_frontier.pointer("/kcur_rope_graph_source_names").cloned().unwrap_or(Value::Null),
         "pre_rope_projection_graph_source_names": selected_k_graph_producer_frontier.pointer("/pre_rope_projection_graph_source_names").cloned().unwrap_or(Value::Null),
         "selected_dim_values": selected_historical_k_rope_source_frontier.pointer("/selected_dim_values").cloned().unwrap_or(Value::Null),
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn attention_norm_f64_selected_k_rope_producer_storage_frontier(
+    selected_k_rope_capture_policy_frontier: &Value,
+    selected_k_capture_path_frontier: &Value,
+    scalar_trace_records: Option<&[Value]>,
+) -> Value {
+    let capture_policy_classification =
+        selected_k_rope_capture_policy_frontier.pointer("/classification").and_then(Value::as_str);
+    let layer = selected_k_capture_path_frontier
+        .pointer("/reference_post_rope_record/layer")
+        .or_else(|| selected_k_capture_path_frontier.pointer("/layer"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let kv_head = selected_k_capture_path_frontier.pointer("/kv_head").and_then(Value::as_i64);
+    let token = selected_k_capture_path_frontier.pointer("/key_slot").and_then(Value::as_i64);
+    let dim = selected_k_capture_path_frontier.pointer("/contributor_dim").and_then(Value::as_i64);
+    let storage_bits = value_u64(selected_k_capture_path_frontier, "/storage_source_bits_u32");
+    let direct_bits = value_u64(selected_k_capture_path_frontier, "/direct_source_bits_u32");
+    let scalar_record = scalar_trace_records.and_then(|records| {
+        records.iter().find(|record| {
+            record.pointer("/stage").and_then(Value::as_str) == Some("kcur_rope_scalar_probe")
+                && record.pointer("/layer").and_then(Value::as_i64) == Some(layer)
+                && record.pointer("/kv_head").and_then(Value::as_i64) == kv_head
+                && record.pointer("/token").and_then(Value::as_i64) == token
+                && record.pointer("/dim").and_then(Value::as_i64) == dim
+        })
+    });
+    let before_bits = scalar_record
+        .and_then(|record| record.pointer("/before_store_bits_u32"))
+        .and_then(Value::as_u64);
+    let after_bits = scalar_record
+        .and_then(|record| record.pointer("/after_store_bits_u32"))
+        .and_then(Value::as_u64);
+    let before_matches_storage =
+        before_bits.zip(storage_bits).is_some_and(|(left, right)| left == right);
+    let after_matches_storage =
+        after_bits.zip(storage_bits).is_some_and(|(left, right)| left == right);
+    let storage_matches_direct =
+        storage_bits.zip(direct_bits).is_some_and(|(left, right)| left == right);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if capture_policy_classification
+        != Some("f64_selected_k_reference_rope_capture_policy_pinned_to_midpoint_storage")
+    {
+        blocked_reasons.push("selected_k_rope_capture_policy_not_pinned".to_string());
+    }
+    if scalar_trace_records.is_none() {
+        blocked_reasons.push("reference_rope_scalar_trace_missing".to_string());
+    }
+    if scalar_record.is_none() {
+        blocked_reasons.push("selected_k_rope_scalar_probe_missing".to_string());
+    }
+    if storage_bits.is_none() {
+        blocked_reasons.push("selected_k_storage_source_bits_missing".to_string());
+    }
+    if before_bits.is_none() {
+        blocked_reasons.push("selected_k_before_store_bits_missing".to_string());
+    }
+    if after_bits.is_none() {
+        blocked_reasons.push("selected_k_after_store_bits_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if capture_policy_classification
+        != Some("f64_selected_k_reference_rope_capture_policy_pinned_to_midpoint_storage")
+    {
+        "selected_k_rope_producer_storage_not_active_frontier"
+    } else if scalar_record.is_none() {
+        "selected_k_rope_scalar_probe_missing"
+    } else if before_matches_storage && after_matches_storage {
+        "selected_k_midpoint_produced_before_store"
+    } else if !before_matches_storage && after_matches_storage {
+        "selected_k_midpoint_introduced_at_store_or_materialization"
+    } else if before_bits.is_some() && after_bits.is_some() && storage_bits.is_some() {
+        "selected_k_rope_scalar_probe_storage_mismatch"
+    } else {
+        "selected_k_rope_producer_storage_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_k_midpoint_produced_before_store" => {
+            "inspect reference ROPE scalar arithmetic inputs because the selected midpoint exists before tensor storage"
+        }
+        "selected_k_midpoint_introduced_at_store_or_materialization" => {
+            "inspect reference ROPE tensor storage/materialization because scalar before-store bits differ from stored Kcur bits"
+        }
+        "selected_k_rope_scalar_probe_missing" => {
+            "rerun reference trace with BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE and selected layer/head/token/dim env vars"
+        }
+        "selected_k_rope_producer_storage_not_active_frontier" => {
+            "pin selected K ROPE capture-policy frontier before interpreting scalar producer storage evidence"
+        }
+        _ => {
+            "keep selected K ROPE producer/storage evidence diagnostic-only until scalar and storage bits are pinned"
+        }
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected K ROPE producer/storage frontier is diagnostic-only evidence for whether the selected reference K midpoint exists before ROPE tensor storage or is introduced by storage/materialization; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "capture_policy_classification": capture_policy_classification,
+        "layer": layer,
+        "kv_head": kv_head,
+        "token": token,
+        "dim": dim,
+        "scalar_trace_present": scalar_trace_records.is_some(),
+        "scalar_record_present": scalar_record.is_some(),
+        "producer_before_store_bits_u32": before_bits,
+        "producer_before_store_bits_hex": before_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "producer_after_store_bits_u32": after_bits,
+        "producer_after_store_bits_hex": after_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "storage_source_bits_u32": storage_bits,
+        "storage_source_bits_hex": storage_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "direct_source_bits_u32": direct_bits,
+        "direct_source_bits_hex": direct_bits.map(|bits| u32_bits_hex(bits as u32)),
+        "before_store_matches_storage": before_matches_storage,
+        "after_store_matches_storage": after_matches_storage,
+        "storage_matches_direct": storage_matches_direct,
+        "scalar_record": scalar_record.cloned().unwrap_or(Value::Null),
         "blocked_reasons": blocked_reasons,
         "next_diagnostic": next_diagnostic,
     })
@@ -31304,6 +31452,18 @@ fn read_json(path: &Path) -> Result<Value> {
     serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))
 }
 
+fn read_jsonl_values(path: &Path) -> Result<Vec<Value>> {
+    let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| !line.trim().is_empty())
+        .map(|(index, line)| {
+            serde_json::from_str(line)
+                .with_context(|| format!("parsing {} line {}", path.display(), index + 1))
+        })
+        .collect()
+}
+
 fn reference_argv(plan: &Value) -> Result<Vec<String>> {
     plan.pointer("/reference/command_argv")
         .and_then(Value::as_array)
@@ -31726,7 +31886,14 @@ fn cleanup_reference_sources(
     let mut capture = run_git(reference_root, &["restore", "--", "src/ggml-bitnet-mad.cpp"])?;
     let cpp_capture = run_git(
         cpp_root,
-        &["restore", "--", "common/common.cpp", "common/log.cpp", "src/llama.cpp"],
+        &[
+            "restore",
+            "--",
+            "common/common.cpp",
+            "common/log.cpp",
+            "src/llama.cpp",
+            "ggml/src/ggml.c",
+        ],
     )?;
     if !generated_lut_header_existed_before && generated_lut_header.exists() {
         fs::remove_file(generated_lut_header)
@@ -32389,6 +32556,12 @@ mod tests {
         assert!(patch.contains("out << \"],\\\"first_value_source_bits_u32\\\":[\""));
         assert!(patch.contains("out << \"],\\\"first_value_storage_offsets_u64\\\":[\""));
         assert!(patch.contains("out << \"],\\\"first_value_storage_source_bits_u32\\\":[\""));
+        assert!(patch.contains("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE"));
+        assert!(patch.contains("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_KV_HEAD"));
+        assert!(patch.contains("\\\"stage\\\":\\\"kcur_rope_scalar_probe\\\""));
+        assert!(patch.contains("before_store_bits_u32"));
+        assert!(patch.contains("after_store_bits_u32"));
+        assert!(patch.contains("ggml_compute_forward_rope_f32"));
         assert!(patch.contains("out << \",\\\"layer\\\":\" << bitnet_rs_kcur_history_layer"));
         assert!(!patch.contains("strcmp(name, \"Kcur-0\") == 0 && values_available"));
         assert!(
@@ -32489,6 +32662,15 @@ mod tests {
         let mut expected_new_lines = 0usize;
         let mut actual_new_lines = 0usize;
         for line in patch.lines() {
+            if line.starts_with("diff --git ") {
+                if let Some(header) = current_header {
+                    assert_eq!(actual_new_lines, expected_new_lines, "hunk {header}");
+                }
+                current_header = None;
+                expected_new_lines = 0;
+                actual_new_lines = 0;
+                continue;
+            }
             if line.starts_with("@@ ") {
                 if let Some(header) = current_header {
                     assert_eq!(actual_new_lines, expected_new_lines, "hunk {header}");
@@ -34038,6 +34220,8 @@ mod tests {
             "cpu-f64".to_string(),
             "--a770-trace-dir".to_string(),
             "a770".to_string(),
+            "--reference-rope-scalar-trace".to_string(),
+            "rope.jsonl".to_string(),
             "--output".to_string(),
             "out.json".to_string(),
             "--format".to_string(),
@@ -34050,6 +34234,7 @@ mod tests {
         assert_eq!(parsed.cpu_trace_dir, PathBuf::from("cpu"));
         assert_eq!(parsed.cpu_f64_trace_dir, Some(PathBuf::from("cpu-f64")));
         assert_eq!(parsed.a770_trace_dir, Some(PathBuf::from("a770")));
+        assert_eq!(parsed.reference_rope_scalar_trace, Some(PathBuf::from("rope.jsonl")));
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
     }
@@ -34354,6 +34539,7 @@ mod tests {
             cpu_trace_dir: cpu,
             cpu_f64_trace_dir: None,
             a770_trace_dir: None,
+            reference_rope_scalar_trace: None,
             output: None,
             format: "json".to_string(),
         })
@@ -37724,6 +37910,7 @@ mod tests {
             &rust_map,
             &baseline,
             &f64_capture,
+            None,
             None,
             0,
         );
@@ -42002,6 +42189,117 @@ mod tests {
             frontier.pointer("/blocked_reasons"),
             Some(&json!(["selected_k_graph_producer_not_pinned"]))
         );
+    }
+
+    #[test]
+    fn selected_k_rope_producer_storage_frontier_reports_midpoint_before_store() {
+        let capture_policy = json!({
+            "classification": "f64_selected_k_reference_rope_capture_policy_pinned_to_midpoint_storage",
+        });
+        let capture_path = json!({
+            "reference_post_rope_record": {"layer": 0},
+            "kv_head": 1,
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "storage_source_bits_u32": 3229921280u32,
+            "direct_source_bits_u32": 3229921280u32,
+        });
+        let scalar_records = vec![json!({
+            "stage": "kcur_rope_scalar_probe",
+            "layer": 0,
+            "kv_head": 1,
+            "token": 2,
+            "dim": 40,
+            "paired_dim": 104,
+            "component": "lower_x0_cos_minus_x1_sin",
+            "before_store_bits_u32": 3229921280u32,
+            "after_store_bits_u32": 3229921280u32,
+        })];
+
+        let frontier = attention_norm_f64_selected_k_rope_producer_storage_frontier(
+            &capture_policy,
+            &capture_path,
+            Some(&scalar_records),
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_midpoint_produced_before_store"))
+        );
+        assert_eq!(frontier.pointer("/producer_before_store_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/before_store_matches_storage"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/after_store_matches_storage"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/storage_matches_direct"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_k_rope_producer_storage_frontier_reports_storage_introduced_midpoint() {
+        let capture_policy = json!({
+            "classification": "f64_selected_k_reference_rope_capture_policy_pinned_to_midpoint_storage",
+        });
+        let capture_path = json!({
+            "reference_post_rope_record": {"layer": 0},
+            "kv_head": 1,
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "storage_source_bits_u32": 3229921280u32,
+            "direct_source_bits_u32": 3229921280u32,
+        });
+        let scalar_records = vec![json!({
+            "stage": "kcur_rope_scalar_probe",
+            "layer": 0,
+            "kv_head": 1,
+            "token": 2,
+            "dim": 40,
+            "before_store_bits_u32": 3229921279u32,
+            "after_store_bits_u32": 3229921280u32,
+        })];
+
+        let frontier = attention_norm_f64_selected_k_rope_producer_storage_frontier(
+            &capture_policy,
+            &capture_path,
+            Some(&scalar_records),
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_midpoint_introduced_at_store_or_materialization"))
+        );
+        assert_eq!(frontier.pointer("/before_store_matches_storage"), Some(&json!(false)));
+        assert_eq!(frontier.pointer("/after_store_matches_storage"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_k_rope_producer_storage_frontier_blocks_without_scalar_probe() {
+        let capture_policy = json!({
+            "classification": "f64_selected_k_reference_rope_capture_policy_pinned_to_midpoint_storage",
+        });
+        let capture_path = json!({
+            "reference_post_rope_record": {"layer": 0},
+            "kv_head": 1,
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "storage_source_bits_u32": 3229921280u32,
+        });
+
+        let frontier = attention_norm_f64_selected_k_rope_producer_storage_frontier(
+            &capture_policy,
+            &capture_path,
+            None,
+        );
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("selected_k_rope_scalar_probe_missing"))
+        );
+        assert!(frontier.pointer("/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| reasons.contains(&json!("reference_rope_scalar_trace_missing"))
+        ));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
