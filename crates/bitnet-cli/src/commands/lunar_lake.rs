@@ -47,6 +47,8 @@ const REGRESSION_BUNDLE_V2: &str = "lunar-lake-regression-bundle-v2.json";
 const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
+#[cfg(test)]
+const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
@@ -291,6 +293,10 @@ pub enum LunarLakeAction {
         /// Dense SLM phase comparison receipt to inspect. Relative paths are resolved under artifact-root.
         #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
         phase_comparison: PathBuf,
+
+        /// Optional power/thermal context receipt to attach to route timing evidence.
+        #[arg(long)]
+        telemetry_context: Option<PathBuf>,
 
         /// Output JSON cold/warm benchmark qualification receipt to file.
         #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK)]
@@ -948,9 +954,13 @@ pub struct ColdWarmRouteBenchmark {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BenchmarkTelemetry {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry_receipt: Option<String>,
     pub memory_context: String,
     pub power_context: String,
     pub thermal_context: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telemetry_gaps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -1180,6 +1190,7 @@ impl LunarLakeCommand {
                 artifact_root,
                 route_profile_comparison,
                 phase_comparison,
+                telemetry_context,
                 json_out,
                 created_utc,
                 strict,
@@ -1192,6 +1203,7 @@ impl LunarLakeCommand {
                     artifact_root,
                     route_profile_comparison,
                     phase_comparison,
+                    telemetry_context.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_cold_warm_benchmark(&receipt, Some(json_out))?;
@@ -2015,10 +2027,17 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
                 &route.telemetry.power_context,
                 &route.telemetry.thermal_context,
             ] {
-                if value.contains("not_normalized") || value.contains("missing") {
+                if value.contains("not_normalized")
+                    || value.contains("not_recorded")
+                    || value.contains("missing")
+                    || value.contains("unavailable")
+                {
                     telemetry_gaps
                         .insert(format!("{}:{}={}", profile.profile_id, route.route_id, value));
                 }
+            }
+            for gap in &route.telemetry.telemetry_gaps {
+                telemetry_gaps.insert(format!("{}:{}={}", profile.profile_id, route.route_id, gap));
             }
         }
     }
@@ -2506,6 +2525,7 @@ pub fn build_cold_warm_benchmark_with_created_utc(
     root: &Path,
     route_profile_comparison: &Path,
     phase_comparison: &Path,
+    telemetry_context: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeColdWarmBenchmark> {
     let route_profile_comparison_path = resolve_receipt_path(root, route_profile_comparison);
@@ -2515,6 +2535,7 @@ pub fn build_cold_warm_benchmark_with_created_utc(
     let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
 
     let mut gaps = Vec::new();
+    let telemetry_context = load_benchmark_telemetry_context(root, telemetry_context, &mut gaps)?;
     if !comparison.profile_comparison_ready {
         gaps.push(format!("route profile comparison is not ready: {}", comparison.gaps.join("; ")));
     }
@@ -2537,7 +2558,7 @@ pub fn build_cold_warm_benchmark_with_created_utc(
     let profiles = comparison
         .profiles
         .iter()
-        .map(|profile| cold_warm_profile_benchmark(profile, &mut gaps))
+        .map(|profile| cold_warm_profile_benchmark(profile, telemetry_context.as_ref(), &mut gaps))
         .collect::<Vec<_>>();
 
     let benchmark_gate_ready = gaps.is_empty();
@@ -2567,13 +2588,22 @@ pub fn build_cold_warm_benchmark_with_created_utc(
 
 fn cold_warm_profile_benchmark(
     profile: &WorkloadProfileEvaluation,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
     global_gaps: &mut Vec<String>,
 ) -> ColdWarmProfileBenchmark {
     let mut profile_gaps = Vec::new();
     let routes = profile
         .route_evidence
         .iter()
-        .map(|route| cold_warm_route_benchmark(profile, route, global_gaps, &mut profile_gaps))
+        .map(|route| {
+            cold_warm_route_benchmark(
+                profile,
+                route,
+                telemetry_context,
+                global_gaps,
+                &mut profile_gaps,
+            )
+        })
         .collect::<Vec<_>>();
     if profile.promoted_route.is_none() && routes.iter().all(|route| route.promotion_blocked) {
         profile_gaps.push(format!(
@@ -2593,11 +2623,32 @@ fn cold_warm_profile_benchmark(
 fn cold_warm_route_benchmark(
     profile: &WorkloadProfileEvaluation,
     route: &ProfileRouteEvidence,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
     global_gaps: &mut Vec<String>,
     profile_gaps: &mut Vec<String>,
 ) -> ColdWarmRouteBenchmark {
-    let mut blockers = route.blockers.clone();
-    blockers.extend(route.timing.known_gaps.iter().cloned());
+    let mut blockers = route
+        .blockers
+        .iter()
+        .filter_map(|blocker| {
+            if telemetry_context.is_some()
+                && blocker == "power telemetry receipt missing for low_power promotion"
+            {
+                None
+            } else {
+                Some(blocker.clone())
+            }
+        })
+        .collect::<Vec<_>>();
+    blockers.extend(route.timing.known_gaps.iter().filter_map(|gap| {
+        if telemetry_context.is_some()
+            && gap == "power and thermal context not normalized in this comparison"
+        {
+            None
+        } else {
+            Some(gap.clone())
+        }
+    }));
 
     let timing_required = route.route_id != "bitnet_reference_cpu";
     let critical_timing_present = !timing_required
@@ -2616,8 +2667,13 @@ fn cold_warm_route_benchmark(
             "BitNet route uses separate CPU reference and I2_S performance receipts".to_string(),
         );
     }
-    if profile.profile_id == "low_power" {
-        blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+    let telemetry = benchmark_telemetry_for_route(profile, telemetry_context);
+    if profile.profile_id == "low_power" && !power_context_is_promotion_evidence(&telemetry) {
+        blockers.push(if telemetry.telemetry_receipt.is_some() {
+            "power telemetry receipt does not provide low_power promotion evidence".to_string()
+        } else {
+            "power telemetry receipt missing for low_power promotion".to_string()
+        });
     }
     blockers.sort();
     blockers.dedup();
@@ -2661,20 +2717,95 @@ fn cold_warm_route_benchmark(
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
         timing: route.timing.clone(),
-        telemetry: BenchmarkTelemetry {
-            memory_context: "not_normalized_in_current_profile_benchmark".to_string(),
-            power_context: if profile.profile_id == "low_power" {
-                "required_for_promotion_but_not_recorded".to_string()
-            } else {
-                "not_normalized_in_current_profile_benchmark".to_string()
-            },
-            thermal_context: "not_normalized_in_current_profile_benchmark".to_string(),
-        },
+        telemetry,
         critical_timing_present,
         benchmark_qualified_advantage,
         promotion_blocked,
         blockers,
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct BenchmarkTelemetryContext {
+    receipt: String,
+    memory_context: String,
+    power_context: String,
+    thermal_context: String,
+    telemetry_gaps: Vec<String>,
+}
+
+fn load_benchmark_telemetry_context(
+    root: &Path,
+    telemetry_context: Option<&Path>,
+    global_gaps: &mut Vec<String>,
+) -> Result<Option<BenchmarkTelemetryContext>> {
+    let Some(path) = telemetry_context else {
+        return Ok(None);
+    };
+    let telemetry_path = resolve_receipt_path(root, path);
+    let telemetry: Value = read_json_receipt(&telemetry_path)?;
+    match string_at(&telemetry, "artifact_kind").as_deref() {
+        Some("lunar_lake_power_thermal_context") => {}
+        Some(other) => global_gaps
+            .push(format!("power/thermal context receipt has unexpected artifact_kind `{other}`")),
+        None => {
+            global_gaps.push("power/thermal context receipt is missing artifact_kind".to_string())
+        }
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.route_promotion_changed"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt changed route promotion".to_string());
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.speedup_claim"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt claims speedup".to_string());
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.acceleration_claim"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt claims acceleration".to_string());
+    }
+    Ok(Some(BenchmarkTelemetryContext {
+        receipt: path_string(&telemetry_path),
+        memory_context: string_at(&telemetry, "memory_context")
+            .unwrap_or_else(|| "memory_context_not_recorded".to_string()),
+        power_context: string_at(&telemetry, "power_context")
+            .unwrap_or_else(|| "power_context_not_recorded".to_string()),
+        thermal_context: string_at(&telemetry, "thermal_context")
+            .unwrap_or_else(|| "thermal_context_not_recorded".to_string()),
+        telemetry_gaps: string_array_at(&telemetry, "gaps"),
+    }))
+}
+
+fn benchmark_telemetry_for_route(
+    profile: &WorkloadProfileEvaluation,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+) -> BenchmarkTelemetry {
+    if let Some(context) = telemetry_context {
+        return BenchmarkTelemetry {
+            telemetry_receipt: Some(context.receipt.clone()),
+            memory_context: context.memory_context.clone(),
+            power_context: context.power_context.clone(),
+            thermal_context: context.thermal_context.clone(),
+            telemetry_gaps: context.telemetry_gaps.clone(),
+        };
+    }
+    BenchmarkTelemetry {
+        telemetry_receipt: None,
+        memory_context: "not_normalized_in_current_profile_benchmark".to_string(),
+        power_context: if profile.profile_id == "low_power" {
+            "required_for_promotion_but_not_recorded".to_string()
+        } else {
+            "not_normalized_in_current_profile_benchmark".to_string()
+        },
+        thermal_context: "not_normalized_in_current_profile_benchmark".to_string(),
+        telemetry_gaps: Vec::new(),
+    }
+}
+
+fn power_context_is_promotion_evidence(telemetry: &BenchmarkTelemetry) -> bool {
+    let value = telemetry.power_context.to_ascii_lowercase();
+    !(value.contains("not_recorded")
+        || value.contains("not_normalized")
+        || value.contains("missing")
+        || value.contains("unavailable")
+        || value.contains("required_for_promotion_but_not_recorded"))
 }
 
 pub fn build_durability_bundle_with_created_utc(
@@ -5733,6 +5864,28 @@ mod tests {
                 "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
             }),
         )?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": "telemetry_availability_recorded",
+                "created_utc": "2026-05-16T17:50:00Z",
+                "machine_id": "intel-258v",
+                "memory_context": "not_recorded_in_committed_receipts",
+                "power_context": "not_recorded_in_committed_receipts",
+                "thermal_context": "not_recorded_in_committed_receipts",
+                "gaps": ["power telemetry records absence only"],
+                "claim_boundary": {
+                    "new_measurement_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -5835,6 +5988,28 @@ mod tests {
                 "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
             }),
         )?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": "telemetry_availability_recorded",
+                "created_utc": "2026-05-16T17:50:00Z",
+                "machine_id": "intel-258v",
+                "memory_context": "not_recorded_in_committed_receipts",
+                "power_context": "not_recorded_in_committed_receipts",
+                "thermal_context": "not_recorded_in_committed_receipts",
+                "gaps": ["power telemetry records absence only"],
+                "claim_boundary": {
+                    "new_measurement_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -5878,6 +6053,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROFILE_COMPARISON),
             Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new(POWER_THERMAL_CONTEXT_FILE)),
             "2026-05-16T18:00:00Z".to_string(),
         )?;
 
@@ -5896,6 +6072,8 @@ mod tests {
         assert!(cpu.critical_timing_present);
         assert!(!cpu.promotion_blocked);
         assert_eq!(cpu.timing.total_response_ms, Some(217.0));
+        assert!(cpu.telemetry.telemetry_receipt.is_some());
+        assert_eq!(cpu.telemetry.memory_context, "not_recorded_in_committed_receipts");
         assert!(!cpu.blockers.iter().any(|blocker| blocker == "total response latency is missing"));
         let gpu = ask_normal
             .routes
@@ -5912,7 +6090,8 @@ mod tests {
         assert!(low_power.routes.iter().any(|route| {
             route.route_id == "dense_slm_openvino_npu_candidate"
                 && route.blockers.contains(
-                    &"power telemetry receipt missing for low_power promotion".to_string(),
+                    &"power telemetry receipt does not provide low_power promotion evidence"
+                        .to_string(),
                 )
         }));
         assert!(!benchmark.claim_boundary.speedup_claim);
@@ -6050,6 +6229,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROFILE_COMPARISON),
             Path::new(DENSE_PHASE_COMPARISON),
+            None,
             "2026-05-16T18:00:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
@@ -6213,6 +6393,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROFILE_COMPARISON),
             Path::new(DENSE_PHASE_COMPARISON),
+            None,
             "2026-05-14T17:45:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
@@ -6404,6 +6585,7 @@ mod tests {
             temp.path(),
             Path::new(ROUTE_PROFILE_COMPARISON),
             Path::new(DENSE_PHASE_COMPARISON),
+            None,
             "2026-05-14T17:45:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
