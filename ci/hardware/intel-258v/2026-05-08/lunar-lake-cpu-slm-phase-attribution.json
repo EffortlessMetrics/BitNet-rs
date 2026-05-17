@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_cpu_slm_phase_attribution",
+  "proof_stage": "cpu_dense_slm_phase_attribution_no_new_inference",
+  "created_utc": "2026-05-17T08:30:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "source_receipts": {
+    "cpu_phase_receipt": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+    "cold_warm_benchmark_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+    "phase_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json"
+  },
+  "model": {
+    "model_family": "qwen",
+    "model_architecture": "qwen2",
+    "quantization": "Q8_0",
+    "tokenizer_source": "gguf_metadata",
+    "prompt_template": "qwen2.5"
+  },
+  "backend": {
+    "route_id": "dense_slm_default_cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+    "fallback_used": false,
+    "answer_gate_passed": true
+  },
+  "cold_one_off": {
+    "profile_id": "ask_short",
+    "timing": {
+      "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+      "source_receipts": [
+        "lunar-lake-operator-ask-math-brief.json",
+        "slm-phase-warm-session-qwen25-cpu.json",
+        "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+      ],
+      "cold_load_ms": 14250.931,
+      "tokenize_ms": 482.325,
+      "prefill_ms": 9361.503,
+      "first_token_ms": 9726.0,
+      "decode_total_ms": 3242.064,
+      "generation_total_ms": 3242.064,
+      "total_response_ms": 27986.539,
+      "output_tokens": 9,
+      "throughput_tokens_per_s": 2.78,
+      "phase_coverage": [
+        "operator_ask_math_brief",
+        "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+        "warm_prefill_512",
+        "warm_decode_128",
+        "telemetry_context_indexed"
+      ],
+      "known_gaps": [
+        "bounded math ask only; not expanded profile regression corpus",
+        "thermal sensor context unavailable in telemetry receipt"
+      ]
+    },
+    "model_load_share_of_total": 0.5092066225123443,
+    "tokenize_share_of_total": 0.017234178188306883,
+    "first_token_share_of_total": 0.3475242151235635,
+    "decode_share_of_total": 0.11584369185485921,
+    "reported_prefill_share_of_total": 0.33450020383013424,
+    "non_decode_ms": 24744.475000000002,
+    "timing_notes": [
+      "cold one-off receipt reports both prefill_ms and first_token_ms; treat shares as diagnostic attribution, not additive benchmark accounting",
+      "cold one-off attribution is from bounded math ask, not expanded corpus-v2 profile execution"
+    ],
+    "blockers": [
+      "bounded math ask only; not expanded profile regression corpus",
+      "thermal sensor context unavailable in telemetry receipt"
+    ]
+  },
+  "warm_session": {
+    "model_loaded_once": true,
+    "tokenizer_loaded_once": true,
+    "model_load_ms": 4128.877,
+    "tokenizer_load_ms": 280.941,
+    "total_session_ms": 89780.225,
+    "profiles": [
+      {
+        "profile": "prefill_512",
+        "prompt_tokens": 541,
+        "generated_tokens": 1,
+        "prefill_ms": 63420.772,
+        "first_token_decode_ms": 175.035,
+        "decode_total_ms": 175.035,
+        "prefill_ms_per_prompt_token": 117.22878373382625,
+        "decode_tokens_per_s": 5.71314308566858,
+        "fallback_used": false,
+        "receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu-profiles\\prefill_512.json"
+      },
+      {
+        "profile": "decode_128",
+        "prompt_tokens": 37,
+        "generated_tokens": 128,
+        "prefill_ms": 3539.626,
+        "first_token_decode_ms": 127.352,
+        "decode_total_ms": 16931.925,
+        "prefill_ms_per_prompt_token": 95.66556756756758,
+        "decode_tokens_per_s": 7.559683851658923,
+        "fallback_used": false,
+        "receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu-profiles\\decode_128.json"
+      }
+    ],
+    "timing_notes": [
+      "warm-session receipt loaded the model once across phase profiles",
+      "warm-session receipt loaded the tokenizer once across phase profiles"
+    ]
+  },
+  "openvino_cpu_context": {
+    "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-llmpipeline-smoke.json",
+    "selected_backend": "openvino-cpu",
+    "runtime_api": "openvino_genai",
+    "fallback_used": false,
+    "answer_gate_passed": true,
+    "pipeline_load_ms": 2568.457,
+    "case_elapsed_ms_sum": 1776.209,
+    "timing_scope": "openvino_cpu_smoke_level_context_only",
+    "comparison_notes": [
+      "OpenVINO CPU timing is smoke-level context from existing receipts, not a speedup claim",
+      "OpenVINO GenAI receipt does not expose tokenize/prefill/first-token/decode splits for this comparison"
+    ]
+  },
+  "attribution_ready": true,
+  "findings": [
+    "cpu_one_off_total_response_ms=27986.539",
+    "cpu_one_off_model_load_share=0.509",
+    "cpu_one_off_prefill_share=0.335",
+    "warm_decode_128_tokens_per_s=7.560",
+    "openvino_cpu_smoke_context_indexed_without_speedup_claim"
+  ],
+  "recommended_next_items": [
+    "LNL258V-CPU-SLM-PERF-002: add resident CPU session/no-reload timing",
+    "LNL258V-CPU-SLM-PERF-003: compare Rust GGUF CPU against OpenVINO CPU for the same Qwen profiles",
+    "LNL258V-GPU-QUAL-001: keep GPU promotion blocked until corpus-v2 quality failures are classified",
+    "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode"
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "broad_quality_claim": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "arc_npu_execution_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "hidden_fallback_allowed": false
+  }
+}

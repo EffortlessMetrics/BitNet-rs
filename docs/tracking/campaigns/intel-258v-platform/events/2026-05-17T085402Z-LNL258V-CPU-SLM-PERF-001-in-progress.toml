@@ -1,0 +1,19 @@
+timestamp = "2026-05-17T08:54:02Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-001-phase-attribution"
+summary = "Started no-new-inference dense Qwen CPU phase attribution for Lunar Lake."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-phase-attribution.json",
+]
+
+notes = [
+  "The work item reads existing CPU phase, cold/warm benchmark, and dense SLM phase comparison receipts.",
+  "The artifact attributes cold one-off and warm-session CPU timing without executing new inference or changing routes.",
+  "OpenVINO CPU timing is indexed only as smoke-level context; no speedup or route-promotion claim is made.",
+]
