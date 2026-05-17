@@ -1265,6 +1265,7 @@ must_not_claim = [
 [[work_item]]
 id = "M4-BITNET-EX-010"
 status = "in_progress"
+pr = 5395
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
 stackable = false
 review_mode = "codex_premerge"
