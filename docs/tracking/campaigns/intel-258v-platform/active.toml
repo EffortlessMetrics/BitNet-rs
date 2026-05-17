@@ -2989,10 +2989,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-COMPARE-006"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-COMPARE-006-regression-v2-compare"
 pr = 5251
-head_sha = "7f85bc02f9545c39b5f540dc082d96490d1b6c03"
+merge_sha = "c63cf854d48f2c914a4dc8bfb7535b39586271ab"
+head_sha = "735eadbf1c81c4f8fdd1c67622c1a41e460c5835"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
