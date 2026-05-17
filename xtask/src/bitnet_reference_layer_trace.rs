@@ -22400,6 +22400,7 @@ fn attention_selected_key_historical_projection_rope_source(
     let mut before_rope_input_count = 0usize;
     let mut rust_rope_delta_count = 0usize;
     let mut reference_rope_delta_count = 0usize;
+    let mut post_rope_epsilon_probe_count = 0usize;
     let mut post_rope_bucket_sensitivity_count = 0usize;
     let mut historical_source_clean_count = 0usize;
     let mut unpinned_count = 0usize;
@@ -22488,6 +22489,7 @@ fn attention_selected_key_historical_projection_rope_source(
             let mut rust_replay_to_post_f16 = Value::Null;
             let mut reference_post_vs_rust_post_f16 = Value::Null;
             let mut post_rope_f16_bucket_sensitivity = Value::Null;
+            let mut post_rope_epsilon_probe = Value::Null;
             let mut selected_dim_values = Value::Null;
             let mut classification = "selected_key_historical_projection_rope_source_missing_input";
             let mut status = "blocked";
@@ -22562,6 +22564,31 @@ fn attention_selected_key_historical_projection_rope_source(
                             "selected_contributor_dim": selected_contributor_dim,
                             "selected_contributor_dim_matches_first_bucket": first_bucket_dim == selected_contributor_dim,
                         });
+                        let probe_dim = first_bucket_dim
+                            .and_then(|dim| usize::try_from(dim).ok())
+                            .or(contributor_dim);
+                        if let (
+                            Some(probe_dim),
+                            Some(reference_projection_token),
+                            Some(reference_post_rope_token),
+                        ) = (
+                            probe_dim,
+                            reference_projection_token.as_ref(),
+                            reference_post_rope_token.as_ref(),
+                        ) {
+                            post_rope_epsilon_probe = selected_historical_rope_epsilon_probe(
+                                probe_dim,
+                                key_slot,
+                                runtime_variant,
+                                reference_projection_token,
+                                rust_projection_token,
+                                reference_post_rope_token,
+                                rust_post_rope_token,
+                            );
+                            if !post_rope_epsilon_probe.is_null() {
+                                post_rope_epsilon_probe_count += 1;
+                            }
+                        }
                     }
 
                     classification =
@@ -22628,6 +22655,7 @@ fn attention_selected_key_historical_projection_rope_source(
                 "reference_runtime_replay_to_post_rope_f16": reference_replay_to_post_f16,
                 "reference_post_rope_vs_rust_post_rope_f16": reference_post_vs_rust_post_f16,
                 "post_rope_f16_bucket_sensitivity": post_rope_f16_bucket_sensitivity,
+                "post_rope_epsilon_probe": post_rope_epsilon_probe,
                 "selected_dim_values": selected_dim_values,
             }));
         }
@@ -22645,6 +22673,8 @@ fn attention_selected_key_historical_projection_rope_source(
         "selected_key_historical_reference_rope_delta"
     } else if missing_input_count > 0 {
         "selected_key_historical_projection_rope_source_missing_input"
+    } else if post_rope_epsilon_probe_count > 0 {
+        "selected_key_historical_post_rope_epsilon_reported"
     } else if post_rope_bucket_sensitivity_count > 0 {
         "selected_key_historical_post_rope_f16_bucket_sensitivity"
     } else if historical_source_clean_count == selected_count {
@@ -22667,6 +22697,9 @@ fn attention_selected_key_historical_projection_rope_source(
         }
         "selected_key_historical_post_rope_f16_bucket_sensitivity" => {
             "probe exact selected historical RoPE epsilon before changing runtime math"
+        }
+        "selected_key_historical_post_rope_epsilon_reported" => {
+            "evaluate selected historical RoPE epsilon materiality against score-position contribution before changing runtime math"
         }
         "selected_key_historical_projection_rope_source_clean" => {
             "inspect selected score/key expansion despite clean historical projection/RoPE source"
@@ -22694,6 +22727,7 @@ fn attention_selected_key_historical_projection_rope_source(
         "before_rope_input_count": before_rope_input_count,
         "rust_rope_delta_count": rust_rope_delta_count,
         "reference_rope_delta_count": reference_rope_delta_count,
+        "post_rope_epsilon_probe_count": post_rope_epsilon_probe_count,
         "post_rope_bucket_sensitivity_count": post_rope_bucket_sensitivity_count,
         "historical_source_clean_count": historical_source_clean_count,
         "unpinned_count": unpinned_count,
@@ -22729,6 +22763,186 @@ fn selected_key_historical_dim_values(
         "reference_post_rope": reference_post_rope.and_then(|values| values.get(dim)).copied(),
         "rust_post_rope": rust_post_rope.get(dim).copied(),
         "rust_runtime_replay": rust_replay.and_then(|values| values.get(dim)).copied(),
+    })
+}
+
+fn selected_historical_rope_epsilon_probe(
+    probe_dim: usize,
+    token: usize,
+    variant: RopeNumericVariantSpec,
+    reference_projection: &[f32],
+    rust_projection: &[f32],
+    reference_post_rope: &[f32],
+    rust_post_rope: &[f32],
+) -> Value {
+    let head_dim = reference_projection
+        .len()
+        .min(rust_projection.len())
+        .min(reference_post_rope.len())
+        .min(rust_post_rope.len());
+    if head_dim == 0 || !head_dim.is_multiple_of(2) || probe_dim >= head_dim {
+        return Value::Null;
+    }
+    let half_dim = head_dim / 2;
+    let lane = probe_dim % half_dim;
+    let paired_dim = if probe_dim < half_dim { probe_dim + half_dim } else { lane };
+    let Some(coefficients) =
+        rope_lane_coefficients(token, lane, head_dim, variant.base, variant.arithmetic)
+    else {
+        return Value::Null;
+    };
+    let Some(reference_replay) = apply_rope_split_head(
+        reference_projection,
+        token,
+        head_dim,
+        variant.base,
+        variant.arithmetic,
+    ) else {
+        return Value::Null;
+    };
+    let Some(rust_replay) =
+        apply_rope_split_head(rust_projection, token, head_dim, variant.base, variant.arithmetic)
+    else {
+        return Value::Null;
+    };
+
+    let reference_x0 = reference_projection[lane];
+    let reference_x1 = reference_projection[lane + half_dim];
+    let rust_x0 = rust_projection[lane];
+    let rust_x1 = rust_projection[lane + half_dim];
+    let dx0 = rust_x0 as f64 - reference_x0 as f64;
+    let dx1 = rust_x1 as f64 - reference_x1 as f64;
+    let (component, x0_coefficient, x1_coefficient) = if probe_dim < half_dim {
+        ("lower_x0_cos_minus_x1_sin", coefficients.cos, -coefficients.sin)
+    } else {
+        ("upper_x0_sin_plus_x1_cos", coefficients.sin, coefficients.cos)
+    };
+    let linearized_delta = dx0 * x0_coefficient + dx1 * x1_coefficient;
+    let replay_delta = rust_replay[probe_dim] as f64 - reference_replay[probe_dim] as f64;
+    let capture_delta = rust_post_rope[probe_dim] as f64 - reference_post_rope[probe_dim] as f64;
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "selected historical RoPE epsilon probe is diagnostic-only evidence for the exact projection epsilon and post-RoPE F16 bucket crossing at one selected key-score contributor; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "variant_id": variant.id,
+        "arithmetic": variant.arithmetic.label(),
+        "base": variant.base,
+        "token": token,
+        "head_dim": head_dim,
+        "lane": lane,
+        "probe_dim": probe_dim,
+        "paired_dim": paired_dim,
+        "output_component": component,
+        "trig": {
+            "angle": coefficients.angle,
+            "sin": coefficients.sin,
+            "cos": coefficients.cos,
+        },
+        "input_pair": {
+            "x0_dim": lane,
+            "x1_dim": lane + half_dim,
+            "reference_x0": reference_x0,
+            "rust_x0": rust_x0,
+            "delta_x0": dx0,
+            "reference_x1": reference_x1,
+            "rust_x1": rust_x1,
+            "delta_x1": dx1,
+            "x0_coefficient_for_probe_dim": x0_coefficient,
+            "x1_coefficient_for_probe_dim": x1_coefficient,
+            "linearized_delta_for_probe_dim": linearized_delta,
+        },
+        "post_rope": {
+            "reference_replay": reference_replay[probe_dim],
+            "rust_replay": rust_replay[probe_dim],
+            "runtime_replay_delta": replay_delta,
+            "linearized_delta_minus_runtime_replay_delta": linearized_delta - replay_delta,
+            "reference_capture": reference_post_rope[probe_dim],
+            "rust_capture": rust_post_rope[probe_dim],
+            "capture_delta": capture_delta,
+            "reference_replay_minus_capture": reference_replay[probe_dim] as f64 - reference_post_rope[probe_dim] as f64,
+            "rust_replay_minus_capture": rust_replay[probe_dim] as f64 - rust_post_rope[probe_dim] as f64,
+        },
+        "projection_bucket": f16_bucket_pair_probe(reference_projection[probe_dim], rust_projection[probe_dim]),
+        "paired_projection_bucket": f16_bucket_pair_probe(reference_projection[paired_dim], rust_projection[paired_dim]),
+        "post_rope_bucket": f16_bucket_pair_probe(reference_post_rope[probe_dim], rust_post_rope[probe_dim]),
+        "replay_bucket": f16_bucket_pair_probe(reference_replay[probe_dim], rust_replay[probe_dim]),
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RopeLaneCoefficients {
+    angle: f64,
+    sin: f64,
+    cos: f64,
+}
+
+fn rope_lane_coefficients(
+    token: usize,
+    lane: usize,
+    head_dim: usize,
+    base: f64,
+    arithmetic: RopeNumericArithmetic,
+) -> Option<RopeLaneCoefficients> {
+    if head_dim == 0 || !head_dim.is_multiple_of(2) || lane >= head_dim / 2 {
+        return None;
+    }
+    let exponent = (2.0 * lane as f64) / head_dim as f64;
+    let (angle, sin, cos) = match arithmetic {
+        RopeNumericArithmetic::F32TableF32Arithmetic => {
+            let inv_freq = 1.0f32 / (base as f32).powf(exponent as f32);
+            let angle = token as f32 * inv_freq;
+            (angle as f64, angle.sin() as f64, angle.cos() as f64)
+        }
+        RopeNumericArithmetic::F32IterativeThetaF32Arithmetic => {
+            let theta_scale = (base as f32).powf(-2.0f32 / head_dim as f32);
+            let mut angle = token as f32;
+            for _ in 0..lane {
+                angle *= theta_scale;
+            }
+            (angle as f64, angle.sin() as f64, angle.cos() as f64)
+        }
+        RopeNumericArithmetic::F64TableCastF32Arithmetic => {
+            let inv_freq = 1.0f64 / base.powf(exponent);
+            let angle = token as f64 * inv_freq;
+            (angle, angle.sin() as f32 as f64, angle.cos() as f32 as f64)
+        }
+        RopeNumericArithmetic::F64TableF64Arithmetic => {
+            let inv_freq = 1.0f64 / base.powf(exponent);
+            let angle = token as f64 * inv_freq;
+            (angle, angle.sin(), angle.cos())
+        }
+    };
+    Some(RopeLaneCoefficients { angle, sin, cos })
+}
+
+fn f16_bucket_pair_probe(left: f32, right: f32) -> Value {
+    let left_bits = f32_to_f16_bits_nearest_even(left);
+    let right_bits = f32_to_f16_bits_nearest_even(right);
+    let left_f16_value = f16_bits_to_f32(left_bits);
+    let right_f16_value = f16_bits_to_f32(right_bits);
+    let bucket_value_delta = right_f16_value as f64 - left_f16_value as f64;
+    let abs_bucket_value_delta = bucket_value_delta.abs();
+    let midpoint = (left_f16_value as f64 + right_f16_value as f64) / 2.0;
+    json!({
+        "left": left,
+        "right": right,
+        "delta": right as f64 - left as f64,
+        "abs_delta": (right as f64 - left as f64).abs(),
+        "left_f16_bits": format!("0x{left_bits:04x}"),
+        "right_f16_bits": format!("0x{right_bits:04x}"),
+        "left_f16_value": left_f16_value,
+        "right_f16_value": right_f16_value,
+        "f16_bucket_match": left_bits == right_bits,
+        "bucket_value_delta": bucket_value_delta,
+        "abs_delta_to_bucket_value_delta_ratio": if abs_bucket_value_delta > 0.0 {
+            json!((right as f64 - left as f64).abs() / abs_bucket_value_delta)
+        } else {
+            Value::Null
+        },
+        "f16_bucket_midpoint": midpoint,
+        "left_minus_midpoint": left as f64 - midpoint,
+        "right_minus_midpoint": right as f64 - midpoint,
     })
 }
 
@@ -34906,8 +35120,9 @@ mod tests {
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(
             report.pointer("/classification"),
-            Some(&json!("selected_key_historical_post_rope_f16_bucket_sensitivity"))
+            Some(&json!("selected_key_historical_post_rope_epsilon_reported"))
         );
+        assert_eq!(report.pointer("/post_rope_epsilon_probe_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/post_rope_bucket_sensitivity_count"), Some(&json!(1)));
         assert_eq!(
             report.pointer(
@@ -34937,9 +35152,35 @@ mod tests {
             Some(&json!(true))
         );
         assert_eq!(
+            report.pointer("/rows/0/post_rope_epsilon_probe/probe_dim"),
+            Some(&json!(contributor_dim))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/post_rope_epsilon_probe/paired_dim"),
+            Some(&json!(paired_dim))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/post_rope_epsilon_probe/post_rope_bucket/f16_bucket_match"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/post_rope_epsilon_probe/projection_bucket/f16_bucket_match"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/post_rope_epsilon_probe/paired_projection_bucket/f16_bucket_match"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/post_rope_epsilon_probe/replay_bucket/f16_bucket_match"),
+            Some(&json!(false))
+        );
+        assert_eq!(
             report.pointer("/next_diagnostic"),
             Some(&json!(
-                "probe exact selected historical RoPE epsilon before changing runtime math"
+                "evaluate selected historical RoPE epsilon materiality against score-position contribution before changing runtime math"
             ))
         );
     }
