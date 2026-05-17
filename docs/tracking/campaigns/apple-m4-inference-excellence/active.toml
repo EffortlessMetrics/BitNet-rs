@@ -1264,9 +1264,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-010"
-status = "pr_open"
+status = "merged"
 pr = 5395
-head_sha = "cb9081d505b6bdacd3173cdd2a4141148357d57a"
+merge_sha = "e323fbc6a5838fe540c130c61821b0bf4fc9fbd0"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
 stackable = false
 review_mode = "codex_premerge"
