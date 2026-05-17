@@ -55,6 +55,7 @@ const DURABILITY_BUNDLE: &str =
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
 const CPU_SLM_PHASE_ATTRIBUTION: &str = "lunar-lake-cpu-slm-phase-attribution.json";
 const CPU_SLM_RESIDENT_SESSION: &str = "lunar-lake-cpu-slm-resident-session.json";
+const CPU_SLM_RUNTIME_COMPARISON: &str = "lunar-lake-cpu-slm-runtime-comparison.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -382,6 +383,40 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the resident-session artifact cannot classify the no-reload evidence.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Compare Rust GGUF CPU and OpenVINO CPU evidence for dense Qwen without changing routes.
+    CpuSlmRuntimeComparison {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// CPU dense-SLM resident-session receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = CPU_SLM_RESIDENT_SESSION)]
+        resident_session: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 receipt to inspect for OpenVINO CPU profile quality.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU phase-runner receipt to inspect for OpenVINO CPU PerfMetrics.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_PHASE)]
+        openvino_phase_runner: PathBuf,
+
+        /// Output JSON runtime-comparison receipt to file.
+        #[arg(long, default_value = CPU_SLM_RUNTIME_COMPARISON)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the runtime comparison cannot classify Rust CPU vs OpenVINO CPU evidence.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -1275,6 +1310,76 @@ pub struct CpuSlmResidentMetricSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeCpuSlmRuntimeComparison {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: CpuSlmRuntimeComparisonSources,
+    pub model: CpuSlmAttributionModel,
+    pub rust_gguf_cpu: CpuSlmRuntimeRouteSummary,
+    pub openvino_cpu: CpuSlmRuntimeRouteSummary,
+    pub profiles: Vec<CpuSlmRuntimeProfileComparison>,
+    pub comparison_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CpuSlmPerfClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmRuntimeComparisonSources {
+    pub resident_session_receipt: String,
+    pub openvino_corpus_v2_receipt: String,
+    pub openvino_phase_runner_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmRuntimeRouteSummary {
+    pub route_id: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub quality_scope: String,
+    pub timing_scope: String,
+    pub load_or_construct_ms: Option<f64>,
+    pub known_gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmRuntimeProfileComparison {
+    pub profile_id: String,
+    pub rust_cpu: CpuSlmRuntimeProfileEvidence,
+    pub openvino_cpu: CpuSlmRuntimeProfileEvidence,
+    pub openvino_to_rust_total_ratio: Option<f64>,
+    pub status: String,
+    pub blockers: Vec<String>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmRuntimeProfileEvidence {
+    pub route_id: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub cases_total: Option<u64>,
+    pub cases_passed: Option<u64>,
+    pub cases_failed: Option<u64>,
+    pub timing_ms: CpuSlmResidentMetricSummary,
+    pub time_to_first_token_ms: CpuSlmResidentMetricSummary,
+    pub tokenize_ms: CpuSlmResidentMetricSummary,
+    pub generated_tokens: CpuSlmResidentMetricSummary,
+    pub throughput_tokens_per_s_mean: Option<f64>,
+    pub timing_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeTelemetryContext {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -1640,6 +1745,36 @@ impl LunarLakeCommand {
                 if *strict && !receipt.resident_ready {
                     bail!(
                         "Lunar Lake CPU dense SLM resident-session check failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::CpuSlmRuntimeComparison {
+                artifact_root,
+                resident_session,
+                openvino_corpus_v2,
+                openvino_phase_runner,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cpu_slm_runtime_comparison_with_created_utc(
+                    artifact_root,
+                    resident_session,
+                    openvino_corpus_v2,
+                    openvino_phase_runner,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_cpu_slm_runtime_comparison(&receipt, Some(&json_out))?;
+                if *strict && !receipt.comparison_ready {
+                    bail!(
+                        "Lunar Lake CPU dense SLM runtime comparison failed: {}",
                         receipt.gaps.join("; ")
                     );
                 }
@@ -3734,6 +3869,377 @@ fn sum_f64(values: &[f64]) -> Option<f64> {
     (!values.is_empty()).then(|| values.iter().sum())
 }
 
+pub fn build_cpu_slm_runtime_comparison_with_created_utc(
+    root: &Path,
+    resident_session: &Path,
+    openvino_corpus_v2: &Path,
+    openvino_phase_runner: &Path,
+    created_utc: String,
+) -> Result<LunarLakeCpuSlmRuntimeComparison> {
+    let resident_path = resolve_receipt_path(root, resident_session);
+    let openvino_corpus_path = resolve_receipt_path(root, openvino_corpus_v2);
+    let openvino_phase_path = resolve_receipt_path(root, openvino_phase_runner);
+    let resident: LunarLakeCpuSlmResidentSession = read_json_receipt(&resident_path)?;
+    let openvino_corpus: Value = read_json_receipt(&openvino_corpus_path)?;
+    let openvino_phase: Value = read_json_receipt(&openvino_phase_path)?;
+
+    let mut gaps = Vec::new();
+    if resident.artifact_kind != "lunar_lake_cpu_slm_resident_session" {
+        gaps.push(
+            "resident receipt must have artifact_kind=lunar_lake_cpu_slm_resident_session"
+                .to_string(),
+        );
+    }
+    if !resident.resident_ready {
+        gaps.push("resident CPU receipt is not resident_ready=true".to_string());
+    }
+    if resident.claim_boundary.new_inference_executed
+        || resident.claim_boundary.speedup_claim
+        || resident.claim_boundary.route_promotion_changed
+    {
+        gaps.push("runtime comparison refuses resident receipts with inference, speedup, or route-promotion claims".to_string());
+    }
+    if string_at(&openvino_corpus, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_corpus_v2")
+    {
+        gaps.push("OpenVINO corpus receipt must be corpus-v2".to_string());
+    }
+    if fallback_used(&openvino_corpus) != Some(false) {
+        gaps.push("OpenVINO corpus-v2 receipt must record fallback_used=false".to_string());
+    }
+    if string_at(&openvino_phase, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_runner")
+    {
+        gaps.push(
+            "OpenVINO phase-runner receipt is missing or has wrong artifact kind".to_string(),
+        );
+    }
+    if fallback_used(&openvino_phase) != Some(false) {
+        gaps.push("OpenVINO phase-runner receipt must record fallback_used=false".to_string());
+    }
+
+    let openvino_corpus_cpu = openvino_cpu_device(&openvino_corpus)
+        .context("OpenVINO corpus-v2 receipt does not contain CPU device evidence")?;
+    let openvino_phase_cpu = openvino_cpu_device(&openvino_phase)
+        .context("OpenVINO phase-runner receipt does not contain CPU device evidence")?;
+
+    let rust_gguf_cpu = CpuSlmRuntimeRouteSummary {
+        route_id: DEFAULT_ASK_ROUTE.to_string(),
+        selected_backend: resident.backend.selected_backend.clone(),
+        runtime_api: resident.backend.runtime_api.clone(),
+        selected_kernel_or_runtime: resident.backend.selected_kernel_or_runtime.clone(),
+        fallback_used: resident.backend.fallback_used,
+        answer_gate_passed: resident.backend.answer_gate_passed,
+        quality_scope: "resident repeated warm-session and CPU corpus-v2 route evidence"
+            .to_string(),
+        timing_scope: "resident Rust GGUF CPU prompt-loop timing".to_string(),
+        load_or_construct_ms: resident.resident_session.model_load_ms,
+        known_gaps: vec![
+            "Rust GGUF CPU timing is from resident prompt-loop evidence, not OpenVINO PerfMetrics"
+                .to_string(),
+        ],
+    };
+    let openvino_cpu = CpuSlmRuntimeRouteSummary {
+        route_id: "dense_slm_openvino_cpu_candidate".to_string(),
+        selected_backend: string_at(openvino_corpus_cpu, "selected_backend")
+            .unwrap_or_else(|| "openvino-cpu".to_string()),
+        runtime_api: string_at(openvino_corpus_cpu, "runtime_api")
+            .unwrap_or_else(|| "openvino_genai".to_string()),
+        selected_kernel_or_runtime: string_at(openvino_corpus_cpu, "selected_kernel_or_runtime"),
+        fallback_used: fallback_used(openvino_corpus_cpu),
+        answer_gate_passed: openvino_device_answer_gate_passed(openvino_corpus_cpu),
+        quality_scope: "OpenVINO CPU corpus-v2 candidate evidence".to_string(),
+        timing_scope: "OpenVINO GenAI generation wall time and PerfMetrics context".to_string(),
+        load_or_construct_ms: number_at_any(
+            openvino_corpus_cpu,
+            &["pipeline_construct_wall_ms", "timing.pipeline_load_ms"],
+        )
+        .or_else(|| number_at_any(openvino_phase_cpu, &["pipeline_construct_wall_ms"])),
+        known_gaps: vec![
+            "OpenVINO GenAI generated token IDs are retokenized from text when direct IDs are unavailable".to_string(),
+            "OpenVINO CPU prefill/decode_128 splits are not equivalent to GGUF CPU phase receipts".to_string(),
+        ],
+    };
+
+    let mut profile_ids = BTreeSet::new();
+    profile_ids.extend(resident.profiles.iter().map(|profile| profile.profile_id.clone()));
+    if let Some(summary) =
+        openvino_corpus_cpu.pointer("/quality_summary/profile_summary").and_then(Value::as_object)
+    {
+        profile_ids.extend(summary.keys().cloned());
+    }
+
+    let mut profiles = Vec::new();
+    for profile_id in profile_ids {
+        let rust_profile =
+            resident.profiles.iter().find(|profile| profile.profile_id == profile_id);
+        let rust_evidence = rust_runtime_profile_evidence(rust_profile, &resident.backend);
+        let openvino_evidence = openvino_runtime_profile_evidence(openvino_corpus_cpu, &profile_id);
+        let openvino_to_rust_total_ratio =
+            match (openvino_evidence.timing_ms.mean, rust_evidence.timing_ms.mean) {
+                (Some(openvino), Some(rust)) if rust > 0.0 => Some(openvino / rust),
+                _ => None,
+            };
+        let mut blockers = Vec::new();
+        if rust_profile.is_none() {
+            blockers.push("Rust GGUF CPU resident profile evidence missing".to_string());
+        }
+        if openvino_evidence.cases_total.unwrap_or(0) == 0 {
+            blockers.push("OpenVINO CPU corpus-v2 profile evidence missing".to_string());
+        }
+        if openvino_evidence.fallback_used != Some(false) {
+            blockers.push("OpenVINO CPU fallback status is not fallback_used=false".to_string());
+        }
+        if openvino_evidence.cases_failed.unwrap_or(0) > 0 {
+            blockers.push(format!(
+                "OpenVINO CPU corpus-v2 profile has {} answer-gate failure(s)",
+                openvino_evidence.cases_failed.unwrap_or(0)
+            ));
+        }
+        if openvino_evidence.timing_ms.sample_count == 0 {
+            blockers.push("OpenVINO CPU profile has no generation wall timing samples".to_string());
+        }
+        blockers.sort();
+        blockers.dedup();
+
+        let status = if blockers.is_empty() {
+            "candidate_timing_context_only_no_promotion".to_string()
+        } else {
+            "blocked_candidate_context_only".to_string()
+        };
+        let mut notes = vec![
+            "Runtime comparison records diagnostic timing context only; it does not promote OpenVINO CPU or claim speedup".to_string(),
+        ];
+        if let Some(ratio) = openvino_to_rust_total_ratio {
+            notes.push(format!(
+                "openvino_to_rust_total_ratio={ratio:.3}; ratio is not benchmark-qualified speedup"
+            ));
+        }
+
+        profiles.push(CpuSlmRuntimeProfileComparison {
+            profile_id,
+            rust_cpu: rust_evidence,
+            openvino_cpu: openvino_evidence,
+            openvino_to_rust_total_ratio,
+            status,
+            blockers,
+            notes,
+        });
+    }
+
+    let mut findings = Vec::new();
+    if let Some(load) = rust_gguf_cpu.load_or_construct_ms {
+        findings.push(format!("rust_gguf_cpu_model_load_ms={load:.3}"));
+    }
+    if let Some(load) = openvino_cpu.load_or_construct_ms {
+        findings.push(format!("openvino_cpu_pipeline_construct_ms={load:.3}"));
+    }
+    for profile in &profiles {
+        if let Some(ratio) = profile.openvino_to_rust_total_ratio {
+            findings.push(format!(
+                "profile_{}_openvino_to_rust_total_ratio={ratio:.3}",
+                profile.profile_id
+            ));
+        }
+        if !profile.blockers.is_empty() {
+            findings.push(format!(
+                "profile_{}_openvino_candidate_blocked_by={}",
+                profile.profile_id,
+                profile.blockers.join("|")
+            ));
+        }
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-GPU-QUAL-001: classify OpenVINO GPU corpus-v2 quality failures before promotion".to_string(),
+        "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode".to_string(),
+        "LNL258V-ROUTE-005: keep route promotion blocked until profile quality and timing evidence are benchmark-qualified".to_string(),
+    ];
+    let comparison_ready = gaps.is_empty();
+
+    Ok(LunarLakeCpuSlmRuntimeComparison {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cpu_slm_runtime_comparison".to_string(),
+        proof_stage: "rust_gguf_cpu_vs_openvino_cpu_context_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: CpuSlmRuntimeComparisonSources {
+            resident_session_receipt: path_string(&resident_path),
+            openvino_corpus_v2_receipt: path_string(&openvino_corpus_path),
+            openvino_phase_runner_receipt: path_string(&openvino_phase_path),
+        },
+        model: resident.model.clone(),
+        rust_gguf_cpu,
+        openvino_cpu,
+        profiles,
+        comparison_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: CpuSlmPerfClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            arc_npu_execution_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn openvino_cpu_device(json: &Value) -> Option<&Value> {
+    json.pointer("/generation/devices").and_then(Value::as_array)?.iter().find(|device| {
+        string_at(device, "runtime_device").as_deref() == Some("CPU")
+            || string_at(device, "selected_backend").as_deref() == Some("openvino-cpu")
+    })
+}
+
+fn openvino_device_answer_gate_passed(device: &Value) -> Option<bool> {
+    if let Some(failed) = u64_at(device, "quality_summary.failed") {
+        let passed = u64_at(device, "quality_summary.passed").unwrap_or(0);
+        return Some(failed == 0 && passed > 0);
+    }
+    let failed = u64_at(device, "failed")?;
+    let passed = u64_at(device, "passed").unwrap_or(0);
+    Some(failed == 0 && passed > 0)
+}
+
+fn rust_runtime_profile_evidence(
+    profile: Option<&CpuSlmResidentProfileSummary>,
+    backend: &CpuSlmAttributionBackend,
+) -> CpuSlmRuntimeProfileEvidence {
+    if let Some(profile) = profile {
+        CpuSlmRuntimeProfileEvidence {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: backend.selected_backend.clone(),
+            runtime_api: backend.runtime_api.clone(),
+            fallback_used: Some(profile.fallback_observed),
+            answer_gate_passed: Some(profile.answer_gate_passed),
+            cases_total: Some(profile.case_ids.len() as u64),
+            cases_passed: Some(if profile.answer_gate_passed {
+                profile.case_ids.len() as u64
+            } else {
+                0
+            }),
+            cases_failed: Some(if profile.answer_gate_passed {
+                0
+            } else {
+                profile.case_ids.len() as u64
+            }),
+            timing_ms: profile.total_ms.clone(),
+            time_to_first_token_ms: profile.time_to_first_token_ms.clone(),
+            tokenize_ms: profile.tokenize_ms.clone(),
+            generated_tokens: profile.generated_tokens.clone(),
+            throughput_tokens_per_s_mean: profile.decode_tokens_per_s_mean,
+            timing_source: "rust_gguf_cpu_resident_prompt_loop".to_string(),
+        }
+    } else {
+        CpuSlmRuntimeProfileEvidence {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: backend.selected_backend.clone(),
+            runtime_api: backend.runtime_api.clone(),
+            fallback_used: None,
+            answer_gate_passed: None,
+            cases_total: None,
+            cases_passed: None,
+            cases_failed: None,
+            timing_ms: resident_metric_summary(&[]),
+            time_to_first_token_ms: resident_metric_summary(&[]),
+            tokenize_ms: resident_metric_summary(&[]),
+            generated_tokens: resident_metric_summary(&[]),
+            throughput_tokens_per_s_mean: None,
+            timing_source: "missing_rust_gguf_cpu_profile".to_string(),
+        }
+    }
+}
+
+fn openvino_runtime_profile_evidence(
+    device: &Value,
+    profile_id: &str,
+) -> CpuSlmRuntimeProfileEvidence {
+    let summary = device
+        .pointer("/quality_summary/profile_summary")
+        .and_then(|summary| summary.as_object()?.get(profile_id));
+    let cases = device
+        .get("cases")
+        .and_then(Value::as_array)
+        .map(|cases| {
+            cases
+                .iter()
+                .filter(|case| case.get("profile").and_then(Value::as_str) == Some(profile_id))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut timing = Vec::new();
+    let mut ttft = Vec::new();
+    let mut tokenize = Vec::new();
+    let mut generated_tokens = Vec::new();
+    let mut throughput = Vec::new();
+    for case in &cases {
+        push_number(case, "timing.generation_wall_ms", &mut timing);
+        push_first_number(
+            case,
+            &[
+                "timing.first_streamed_text_chunk_ms",
+                "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+            ],
+            &mut ttft,
+        );
+        push_number(case, "timing.openvino_perf_metrics.tokenization.mean_ms", &mut tokenize);
+        push_number(
+            case,
+            "timing.openvino_perf_metrics.num_generated_tokens",
+            &mut generated_tokens,
+        );
+        push_number(case, "timing.openvino_perf_metrics.throughput.mean_ms", &mut throughput);
+    }
+
+    CpuSlmRuntimeProfileEvidence {
+        route_id: "dense_slm_openvino_cpu_candidate".to_string(),
+        selected_backend: string_at(device, "selected_backend")
+            .unwrap_or_else(|| "openvino-cpu".to_string()),
+        runtime_api: string_at(device, "runtime_api")
+            .unwrap_or_else(|| "openvino_genai".to_string()),
+        fallback_used: fallback_used(device),
+        answer_gate_passed: summary
+            .and_then(|summary| u64_at(summary, "failed").map(|failed| failed == 0))
+            .or_else(|| {
+                if cases.is_empty() {
+                    None
+                } else {
+                    Some(cases.iter().all(|case| case_passed(case)))
+                }
+            }),
+        cases_total: summary
+            .and_then(|summary| u64_at(summary, "total"))
+            .or_else(|| (!cases.is_empty()).then_some(cases.len() as u64)),
+        cases_passed: summary.and_then(|summary| u64_at(summary, "passed")).or_else(|| {
+            (!cases.is_empty())
+                .then_some(cases.iter().filter(|case| case_passed(case)).count() as u64)
+        }),
+        cases_failed: summary.and_then(|summary| u64_at(summary, "failed")).or_else(|| {
+            (!cases.is_empty())
+                .then_some(cases.iter().filter(|case| !case_passed(case)).count() as u64)
+        }),
+        timing_ms: resident_metric_summary(&timing),
+        time_to_first_token_ms: resident_metric_summary(&ttft),
+        tokenize_ms: resident_metric_summary(&tokenize),
+        generated_tokens: resident_metric_summary(&generated_tokens),
+        throughput_tokens_per_s_mean: mean_f64(&throughput),
+        timing_source: "openvino_cpu_corpus_v2_generation_wall_and_perfmetrics".to_string(),
+    }
+}
+
+fn mean_f64(values: &[f64]) -> Option<f64> {
+    let sum = sum_f64(values)?;
+    Some(sum / values.len() as f64)
+}
+
 pub fn build_telemetry_context_with_created_utc(
     _root: &Path,
     created_utc: String,
@@ -5606,6 +6112,25 @@ fn write_or_print_cpu_slm_resident_session(
         }
         fs::write(path, json)?;
         println!("Lunar Lake CPU dense SLM resident-session receipt written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cpu_slm_runtime_comparison(
+    receipt: &LunarLakeCpuSlmRuntimeComparison,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake CPU dense SLM runtime comparison written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -8132,6 +8657,187 @@ mod tests {
         assert!(!receipt.claim_boundary.new_inference_executed);
         assert!(!receipt.claim_boundary.speedup_claim);
         assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.arc_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn cpu_slm_runtime_comparison_blocks_openvino_cpu_on_profile_quality() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            "phase-attribution.json",
+            json!({
+                "artifact_kind": "lunar_lake_cpu_slm_phase_attribution",
+                "attribution_ready": true,
+                "cold_one_off": {
+                    "profile_id": "ask_short",
+                    "timing": {"total_response_ms": 200.0}
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "resident-source.json",
+            json!({
+                "artifact_kind": "slm_cpu_warm_session",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "quality_summary": {"passed": true},
+                "determinism": {
+                    "passed": true,
+                    "groups": [
+                        {
+                            "case_id": "ask_short_math",
+                            "attempt_count": 2,
+                            "stable_generated_token_ids": true,
+                            "stable_text": true,
+                            "prompt_indices": [0, 1]
+                        }
+                    ]
+                },
+                "claim_boundary": {
+                    "speedup_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "bitnet_quality_claimed": false
+                },
+                "model": {"family": "qwen", "architecture": "qwen2", "quant_format": "Q8_0", "tokenizer": "tokenizer.json"},
+                "generation": {"prompt_template": "qwen2.5"},
+                "session": {"model_loaded_once": true, "tokenizer_loaded_once": true, "prompt_count": 2},
+                "timing": {"model_load_ms": 100.0, "tokenizer_load_ms": 10.0},
+                "prompts": [
+                    {
+                        "prompt_index": 0,
+                        "case_id": "ask_short_math",
+                        "fallback_used": false,
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {"model_load_ms": 0.0, "tokenizer_load_ms": 0.0, "total_ms": 80.0, "time_to_first_token_ms": 30.0, "decode_total_ms": 40.0, "tokenize_ms": 2.0}
+                    },
+                    {
+                        "prompt_index": 1,
+                        "case_id": "ask_short_math",
+                        "fallback_used": false,
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {"model_load_ms": 0.0, "tokenizer_load_ms": 0.0, "total_ms": 100.0, "time_to_first_token_ms": 40.0, "decode_total_ms": 44.0, "tokenize_ms": 3.0}
+                    }
+                ]
+            }),
+        )?;
+        let resident = build_cpu_slm_resident_session_with_created_utc(
+            temp.path(),
+            Path::new("phase-attribution.json"),
+            Path::new("resident-source.json"),
+            2,
+            "2026-05-17T09:35:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("resident.json"), serde_json::to_vec_pretty(&resident)?)?;
+        write_json(
+            temp.path(),
+            "ov-corpus.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "selected_backend": "openvino-cpu",
+                            "runtime_api": "openvino_genai",
+                            "runtime_device": "CPU",
+                            "fallback_used": false,
+                            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
+                            "pipeline_construct_wall_ms": 20.0,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 1, "failed": 1}
+                                }
+                            },
+                            "cases": [
+                                {
+                                    "id": "ask_short_pass",
+                                    "profile": "ask_short",
+                                    "status": "passed",
+                                    "fallback_used": false,
+                                    "timing": {
+                                        "generation_wall_ms": 10.0,
+                                        "first_streamed_text_chunk_ms": 5.0,
+                                        "openvino_perf_metrics": {
+                                            "tokenization": {"mean_ms": 1.0},
+                                            "num_generated_tokens": 4,
+                                            "throughput": {"mean_ms": 20.0}
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "ask_short_fail",
+                                    "profile": "ask_short",
+                                    "status": "failed",
+                                    "fallback_used": false,
+                                    "timing": {
+                                        "generation_wall_ms": 12.0,
+                                        "first_streamed_text_chunk_ms": 6.0,
+                                        "openvino_perf_metrics": {
+                                            "tokenization": {"mean_ms": 2.0},
+                                            "num_generated_tokens": 4,
+                                            "throughput": {"mean_ms": 18.0}
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "ov-phase.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_runner",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "selected_backend": "openvino-cpu",
+                            "runtime_api": "openvino_genai",
+                            "runtime_device": "CPU",
+                            "fallback_used": false,
+                            "pipeline_construct_wall_ms": 25.0
+                        }
+                    ]
+                }
+            }),
+        )?;
+
+        let receipt = build_cpu_slm_runtime_comparison_with_created_utc(
+            temp.path(),
+            Path::new("resident.json"),
+            Path::new("ov-corpus.json"),
+            Path::new("ov-phase.json"),
+            "2026-05-17T09:40:00Z".to_string(),
+        )?;
+
+        assert!(receipt.comparison_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_cpu_slm_runtime_comparison");
+        assert_eq!(receipt.rust_gguf_cpu.selected_backend, "cpu-rust");
+        assert_eq!(receipt.openvino_cpu.selected_backend, "openvino-cpu");
+        let profile = receipt
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short profile")?;
+        assert_eq!(profile.openvino_cpu.cases_failed, Some(1));
+        assert_eq!(profile.openvino_cpu.timing_ms.mean, Some(11.0));
+        assert_eq!(profile.openvino_to_rust_total_ratio, Some(11.0 / 90.0));
+        assert_eq!(profile.status, "blocked_candidate_context_only");
+        assert!(profile.blockers.iter().any(|blocker| blocker.contains("answer-gate failure")));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
         assert!(!receipt.claim_boundary.arc_npu_execution_claim);
         assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
         Ok(())

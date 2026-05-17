@@ -3300,6 +3300,68 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-CPU-SLM-PERF-003"
+status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-003-openvino-cpu-compare"
+pr = 5324
+head_sha = "f77bccd64c47e61b823cbfaaeeec51a00953fdb4"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-CPU-SLM-PERF-002", "SLM-OV258V-006", "LNL258V-QUAL-003"]
+acceptance = "Add a no-new-inference Lunar Lake dense Qwen CPU runtime-comparison artifact that reads the resident Rust GGUF CPU receipt plus OpenVINO CPU corpus-v2 and phase-runner receipts; compares fallback, answer-gate/profile quality, load/construct timing, generation/TTFT/tokenization timing context, and profile blockers for Rust GGUF CPU versus OpenVINO CPU; keeps Rust GGUF CPU as default when OpenVINO CPU profile quality fails or phase coverage is not benchmark-qualified; and preserves no route-promotion, no speedup, no power-advantage, no Arc/NPU acceleration, and no BitNet QK256/I2_S behavior-change boundaries."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::cpu_slm_runtime_comparison_blocks_openvino_cpu_on_profile_quality -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake cpu-slm-runtime-comparison --artifact-root ci/hardware/intel-258v/2026-05-08 --resident-session lunar-lake-cpu-slm-resident-session.json --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --openvino-phase-runner slm-openvino-cpu-gpu-npu-phase-runner.json --json-out lunar-lake-cpu-slm-runtime-comparison.json --created-utc 2026-05-17T09:45:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-runtime-comparison.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-runtime-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Existing Rust GGUF CPU resident-session and OpenVINO CPU candidate receipts are indexed in one runtime-comparison artifact.",
+  "OpenVINO CPU currently remains a candidate because corpus-v2 profile quality failures and phase-coverage gaps block promotion.",
+  "The artifact records diagnostic timing context for Rust GGUF CPU and OpenVINO CPU without a benchmark-qualified speedup claim.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "Broad dense SLM answer quality is proven.",
+  "CPU speedup is proven.",
+  "OpenVINO CPU speedup is proven.",
+  "Power advantage is proven.",
+  "GPU or NPU route promotion is changed.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ROUTE-004"
 status = "merged"
 branch = "codex/lunar-lake/LNL258V-ROUTE-004-telemetry-profiles"
