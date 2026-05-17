@@ -1,0 +1,22 @@
+timestamp = "2026-05-17T02:48:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-006"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5251
+branch = "codex/lunar-lake/LNL258V-COMPARE-006-regression-v2-compare"
+head_sha = "735eadbf1c81c4f8fdd1c67622c1a41e460c5835"
+merge_sha = "c63cf854d48f2c914a4dc8bfb7535b39586271ab"
+summary = "Merged LNL258V-COMPARE-006 strict regression-v2 comparison wiring."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The merged PR makes Lunar Lake operator comparison consume the strict regression-v2 bundle and expose its surface summary in the comparison receipt.",
+  "The claim boundary remains comparison wiring only: no new inference, route promotion, quality claim, speedup claim, accelerator stability claim, or BitNet QK256/I2_S behavior change.",
+]
