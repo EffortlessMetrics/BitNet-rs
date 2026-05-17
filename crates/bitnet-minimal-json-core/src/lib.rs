@@ -23,55 +23,174 @@ impl MinimalJson {
         let inner = &trimmed[1..trimmed.len() - 1];
         let mut fields = HashMap::new();
 
-        for part in Self::split_top_level(inner) {
+        if inner.trim().is_empty() {
+            return Ok(Self { fields });
+        }
+
+        for part in Self::split_top_level(inner)? {
             let part = part.trim();
             if part.is_empty() {
-                continue;
+                return Err("empty field in JSON object".to_string());
             }
-            if let Some((k, v)) = part.split_once(':') {
-                let key = k.trim().trim_matches('"').to_string();
-                let val = v.trim();
-                let val = if val.starts_with('"') && val.ends_with('"') && val.len() >= 2 {
-                    val[1..val.len() - 1].to_string()
-                } else {
-                    val.to_string()
-                };
-                fields.insert(key, val);
-            }
+
+            let (k, v) = Self::split_key_value(part)?;
+            let key = Self::parse_json_string(k.trim())?;
+            let value = Self::parse_value(v.trim())?;
+            fields.insert(key, value);
         }
         Ok(Self { fields })
     }
 
     /// Split on commas that are not inside braces/brackets/quotes.
-    fn split_top_level(s: &str) -> Vec<String> {
+    fn split_top_level(s: &str) -> Result<Vec<&str>, String> {
         let mut parts = Vec::new();
-        let mut current = String::new();
-        let mut depth = 0_i32;
+        let mut stack = Vec::new();
         let mut in_string = false;
-        let mut prev = '\0';
-        for ch in s.chars() {
-            if ch == '"' && prev != '\\' {
+        let mut part_start = 0;
+
+        for (index, ch) in s.char_indices() {
+            if ch == '"' && !Self::quote_is_escaped_at(s, index) {
                 in_string = !in_string;
             }
+
             if !in_string {
                 match ch {
-                    '{' | '[' => depth += 1,
-                    '}' | ']' => depth -= 1,
-                    ',' if depth == 0 => {
-                        parts.push(std::mem::take(&mut current));
-                        prev = ch;
-                        continue;
+                    '{' => stack.push('}'),
+                    '[' => stack.push(']'),
+                    '}' | ']' => {
+                        if stack.pop() != Some(ch) {
+                            return Err("unbalanced nested JSON value".to_string());
+                        }
+                    }
+                    ',' if stack.is_empty() => {
+                        parts.push(&s[part_start..index]);
+                        part_start = index + ch.len_utf8();
                     }
                     _ => {}
                 }
             }
-            current.push(ch);
-            prev = ch;
         }
-        if !current.trim().is_empty() {
-            parts.push(current);
+
+        if in_string {
+            return Err("unterminated string in JSON object".to_string());
         }
-        parts
+        if !stack.is_empty() {
+            return Err("unbalanced nested JSON value".to_string());
+        }
+        if part_start < s.len() || !s.trim().is_empty() {
+            parts.push(&s[part_start..]);
+        }
+
+        Ok(parts)
+    }
+
+    fn split_key_value(part: &str) -> Result<(&str, &str), String> {
+        let mut stack = Vec::new();
+        let mut in_string = false;
+
+        for (index, ch) in part.char_indices() {
+            if ch == '"' && !Self::quote_is_escaped_at(part, index) {
+                in_string = !in_string;
+            }
+
+            if !in_string {
+                match ch {
+                    '{' => stack.push('}'),
+                    '[' => stack.push(']'),
+                    '}' | ']' => {
+                        if stack.pop() != Some(ch) {
+                            return Err("unbalanced nested JSON value".to_string());
+                        }
+                    }
+                    ':' if stack.is_empty() => return Ok((&part[..index], &part[index + 1..])),
+                    _ => {}
+                }
+            }
+        }
+
+        Err("expected ':' between JSON object key and value".to_string())
+    }
+
+    fn parse_value(value: &str) -> Result<String, String> {
+        if value.is_empty() {
+            return Err("expected JSON value".to_string());
+        }
+
+        if value.starts_with('"') { Self::parse_json_string(value) } else { Ok(value.to_string()) }
+    }
+
+    fn parse_json_string(value: &str) -> Result<String, String> {
+        if !value.starts_with('"') || !value.ends_with('"') || value.len() < 2 {
+            return Err("expected quoted JSON string".to_string());
+        }
+
+        let mut chars = value[1..value.len() - 1].chars();
+        let mut decoded = String::new();
+        while let Some(ch) = chars.next() {
+            match ch {
+                '\\' => Self::decode_escape(&mut chars, &mut decoded)?,
+                '"' => return Err("unescaped quote in JSON string".to_string()),
+                control if control.is_control() => {
+                    return Err("unescaped control character in JSON string".to_string());
+                }
+                other => decoded.push(other),
+            }
+        }
+
+        Ok(decoded)
+    }
+
+    fn decode_escape(chars: &mut std::str::Chars<'_>, decoded: &mut String) -> Result<(), String> {
+        let escaped = chars
+            .next()
+            .ok_or_else(|| "unterminated escape sequence in JSON string".to_string())?;
+        match escaped {
+            '"' => decoded.push('"'),
+            '\\' => decoded.push('\\'),
+            '/' => decoded.push('/'),
+            'b' => decoded.push('\u{0008}'),
+            'f' => decoded.push('\u{000c}'),
+            'n' => decoded.push('\n'),
+            'r' => decoded.push('\r'),
+            't' => decoded.push('\t'),
+            'u' => decoded.push(Self::decode_unicode_escape(chars)?),
+            other => return Err(format!("unsupported JSON string escape: \\{other}")),
+        }
+        Ok(())
+    }
+
+    fn decode_unicode_escape(chars: &mut std::str::Chars<'_>) -> Result<char, String> {
+        let code = Self::read_hex_escape(chars)?;
+        match code {
+            0xD800..=0xDBFF => {
+                if chars.next() != Some('\\') || chars.next() != Some('u') {
+                    return Err("high surrogate must be followed by a low surrogate".to_string());
+                }
+                let low = Self::read_hex_escape(chars)?;
+                if !(0xDC00..=0xDFFF).contains(&low) {
+                    return Err("high surrogate must be followed by a low surrogate".to_string());
+                }
+                let scalar = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00);
+                char::from_u32(scalar).ok_or_else(|| "invalid Unicode escape".to_string())
+            }
+            0xDC00..=0xDFFF => Err("low surrogate without preceding high surrogate".to_string()),
+            scalar => char::from_u32(scalar).ok_or_else(|| "invalid Unicode escape".to_string()),
+        }
+    }
+
+    fn read_hex_escape(chars: &mut std::str::Chars<'_>) -> Result<u32, String> {
+        let mut code = 0_u32;
+        for _ in 0..4 {
+            let digit =
+                chars.next().ok_or_else(|| "short Unicode escape in JSON string".to_string())?;
+            code = (code << 4)
+                | digit.to_digit(16).ok_or_else(|| "invalid Unicode escape digit".to_string())?;
+        }
+        Ok(code)
+    }
+
+    fn quote_is_escaped_at(s: &str, quote_index: usize) -> bool {
+        s[..quote_index].bytes().rev().take_while(|byte| *byte == b'\\').count() % 2 == 1
     }
 
     #[must_use]
@@ -246,5 +365,66 @@ mod tests {
         assert_eq!(j.get_str("arr"), Some("[1,2,3,4]".to_string()));
         assert_eq!(j.get_str("tail"), Some("end".to_string()));
         Ok(())
+    }
+
+    #[test]
+    fn preserves_commas_and_colons_inside_strings() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"message":"ready: yes, continue","tail":"ok"}"#)?;
+        assert_eq!(j.get_str("message"), Some("ready: yes, continue".to_string()));
+        assert_eq!(j.get_str("tail"), Some("ok".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn handles_escaped_quotes_and_even_backslashes_before_quotes() -> Result<(), String> {
+        let j =
+            MinimalJson::parse(r#"{"quote":"say \"hi\", then C:\\tools","after":"still parsed"}"#)?;
+        assert_eq!(j.get_str("quote"), Some("say \"hi\", then C:\\tools".to_string()));
+        assert_eq!(j.get_str("after"), Some("still parsed".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn decodes_common_string_escapes_in_keys_and_values() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"line\nkey":"one\ntwo\tthree"}"#)?;
+        assert_eq!(j.get_str("line\nkey"), Some("one\ntwo\tthree".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn decodes_unicode_string_escapes() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"snowman":"\u2603","face":"\uD83D\uDE00"}"#)?;
+        assert_eq!(j.get_str("snowman"), Some("☃".to_string()));
+        assert_eq!(j.get_str("face"), Some("😀".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_invalid_json_strings() {
+        assert!(MinimalJson::parse("{\"key\":\"bad\nvalue\"}").is_err());
+        assert!(MinimalJson::parse(r#"{"key":"bad "quote""}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"key":"\uD83D"}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"key":"\uDE00"}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"key":"\uZZZZ"}"#).is_err());
+    }
+
+    #[test]
+    fn rejects_malformed_fields_instead_of_silently_dropping_them() {
+        assert!(MinimalJson::parse(r#"{"ok":1,"missing_colon"}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"ok":1,}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"ok":}"#).is_err());
+    }
+
+    #[test]
+    fn rejects_unbalanced_or_unterminated_nested_values() {
+        assert!(MinimalJson::parse(r#"{"arr":[1,2}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"obj":{"a":1] }"#).is_err());
+        assert!(MinimalJson::parse(r#"{"text":"unterminated}"#).is_err());
+    }
+
+    #[test]
+    fn rejects_unquoted_keys_and_invalid_string_escapes() {
+        assert!(MinimalJson::parse(r#"{key:"value"}"#).is_err());
+        assert!(MinimalJson::parse(r#"{"key":"bad\xescape"}"#).is_err());
     }
 }
