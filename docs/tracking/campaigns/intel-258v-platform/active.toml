@@ -4404,10 +4404,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BENCH-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-BENCH-002-total-response"
 pr = 5261
-head_sha = "5b2060ee62e001dd95a8d0f966c0d2296f6be9a6"
+head_sha = "3b6aa5f7b5ce7df5998f5d85dd9bb6a40d5f0254"
+merge_sha = "ce62a769f0e08cc4c5133cd2629ec04258546616"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
