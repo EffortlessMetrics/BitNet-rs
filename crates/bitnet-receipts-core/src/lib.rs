@@ -63,6 +63,8 @@ pub use schema::{
 };
 
 use artifact_kinds::{
+    BITNET_B158_2B_4T_I2S_MODEL_FILE, BITNET_B158_2B_4T_I2S_MODEL_ID,
+    BITNET_B158_2B_4T_I2S_MODEL_SHA256,
     DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER,
     DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER, DENSE_ONE_LAYER_NO_REMAINING_GAP_CANDIDATE_ORDER,
     DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER, QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE,
@@ -225,14 +227,11 @@ pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Valu
 
     let model_identity = object_field(receipt, "model_identity")?;
     require_string_non_empty(model_identity, "model_id")?;
-    require_string_eq(model_identity, "model_id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
     require_string_non_empty(model_identity, "requested_model")?;
     require_string_non_empty(model_identity, "active_model_id")?;
     require_string_non_empty(model_identity, "active_model_path")?;
     require_sha256(model_identity, "model_sha256")?;
     require_sha256(receipt, "model_sha256")?;
-    require_string_eq(model_identity, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
-    require_string_eq(receipt, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
     require_same_string(receipt, "model_sha256", model_identity, "model_sha256", "model_sha256")?;
     require_same_string(
         receipt,
@@ -286,11 +285,19 @@ pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Valu
     require_positive_number(generation_policy, "top_p")?;
     require_string_non_empty(generation_policy, "decoding")?;
 
-    require_string_eq(receipt, "model_coverage_row", "dense_qwen25_05b_q8_cuda")?;
-    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
-    require_string_eq(receipt, "selected_route", "dense_regular_llm_cuda")?;
-    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
-    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+    match required_string(receipt, "selected_route")? {
+        "dense_regular_llm_cuda" => {
+            validate_dense_qwen_server_shared_engine_receipt(receipt, model_identity)?
+        }
+        "bitnet_qk256_cuda" => {
+            validate_bitnet_qk256_server_shared_engine_receipt(receipt, model_identity)?
+        }
+        route => {
+            return Err(anyhow!(
+                "server shared-engine receipt selected_route `{route}` is not an accepted exact-profile server-smoke route"
+            ));
+        }
+    }
 
     let quality = object_field(receipt, "quality_gate")?;
     require_string_non_empty(quality, "gate")?;
@@ -299,6 +306,122 @@ pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Valu
     require_bool_eq(quality, "utf8_valid", true)?;
     require_bool_eq(quality, "broad_chat_quality_claimed", false)?;
 
+    Ok(())
+}
+
+fn validate_dense_qwen_server_shared_engine_receipt(
+    receipt: &Value,
+    model_identity: &Value,
+) -> Result<()> {
+    require_string_eq(model_identity, "model_id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
+    require_string_eq(model_identity, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_coverage_row", "dense_qwen25_05b_q8_cuda")?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_shared_engine_receipt(
+    receipt: &Value,
+    model_identity: &Value,
+) -> Result<()> {
+    require_string_eq(model_identity, "model_id", BITNET_B158_2B_4T_I2S_MODEL_ID)?;
+    require_string_eq(model_identity, "model_sha256", BITNET_B158_2B_4T_I2S_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_sha256", BITNET_B158_2B_4T_I2S_MODEL_SHA256)?;
+    let active_model_path = required_string(model_identity, "active_model_path")?;
+    let normalized_path = active_model_path.replace('\\', "/");
+    if !normalized_path.ends_with(BITNET_B158_2B_4T_I2S_MODEL_FILE) {
+        return Err(anyhow!(
+            "model_identity.active_model_path must end with `{}` for BitNet QK256 server smoke",
+            BITNET_B158_2B_4T_I2S_MODEL_FILE
+        ));
+    }
+    require_string_eq(receipt, "model_coverage_row", "bitnet_official_2b_i2s_qk256")?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", false)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", true)?;
+    validate_bitnet_qk256_server_execution_plan(receipt)?;
+    validate_bitnet_qk256_server_execution_coverage(receipt)?;
+    validate_bitnet_qk256_server_kernel_stats(receipt)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_execution_plan(receipt: &Value) -> Result<()> {
+    let plan = object_field(receipt, "execution_plan")?;
+    require_string_eq(plan, "planner_version", CUDA_PLANNER_RECEIPT_VERSION)?;
+    require_string_eq(plan, "model_family", "bitnet_b1_58")?;
+    require_string_eq(plan, "quantization", "i2_s_qk256")?;
+    require_string_eq(plan, "selected_route", "bitnet_qk256_cuda")?;
+    require_string_eq(plan, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "runtime_api", "cuda")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", false)?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", true)?;
+    require_positive_u64(plan, "cuda_bitnet_qk256_ops")?;
+    let cuda_bitnet_ops = required_u64(plan, "cuda_bitnet_qk256_ops")?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_u64_eq(plan, "total_ops", cuda_bitnet_ops)?;
+    require_u64_eq(plan, "cuda_ops", cuda_bitnet_ops)?;
+    require_bool_eq(plan, "mixed_cuda_routes", false)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_execution_coverage(receipt: &Value) -> Result<()> {
+    let coverage = object_field(receipt, "execution_coverage")?;
+    require_string_eq(coverage, "execution_claim", "cuda_inference_contribution")?;
+    require_positive_u64(coverage, "bitnet_linear_layers_total")?;
+    require_positive_u64(coverage, "bitnet_linear_layers_on_cuda")?;
+    let total = required_u64(coverage, "bitnet_linear_layers_total")?;
+    let on_cuda = required_u64(coverage, "bitnet_linear_layers_on_cuda")?;
+    if total != on_cuda {
+        return Err(anyhow!(
+            "execution_coverage bitnet_linear_layers_total must match bitnet_linear_layers_on_cuda for zero-fallback BitNet QK256 server smoke"
+        ));
+    }
+    require_u64_eq(coverage, "bitnet_linear_layers_cpu_fallback", 0)?;
+    require_bool_eq(coverage, "fallback_used", false)?;
+    let unsupported_ops = array_field(coverage, "unsupported_ops")?;
+    if !unsupported_ops.is_empty() {
+        return Err(anyhow!("execution_coverage.unsupported_ops must be empty"));
+    }
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_kernel_stats(receipt: &Value) -> Result<()> {
+    let stats = array_field(receipt, "kernel_stats")?;
+    if stats.is_empty() {
+        return Err(anyhow!("kernel_stats must contain QK256 CUDA server-smoke entries"));
+    }
+    let mut total_invocations = 0_u64;
+    for (index, stat) in stats.iter().enumerate() {
+        require_string_eq(stat, "kernel_id", "qk256_gemv_cuda")?;
+        require_positive_u64(stat, "invocations")?;
+        let invocations = required_u64(stat, "invocations")?;
+        total_invocations += invocations;
+        require_u64_eq(stat, "fallback_invocations", 0)?;
+        require_u64_eq(stat, "cpu_fallback_invocations", 0)?;
+        require_optional_u64_field(stat, "host_to_device_bytes")?;
+        require_optional_u64_field(stat, "device_to_host_bytes")?;
+        require_positive_u64(stat, "kernel_launches")?;
+        require_optional_non_negative_number(stat, "kernel_time_ms")?;
+        require_optional_u64_field(stat, "kernel_time_samples")?;
+        if required_u64(stat, "kernel_launches")? != invocations {
+            return Err(anyhow!(
+                "kernel_stats[{index}].kernel_launches must match invocations for QK256 server smoke"
+            ));
+        }
+    }
+    let coverage = object_field(receipt, "execution_coverage")?;
+    require_u64_eq(coverage, "bitnet_linear_layers_on_cuda", total_invocations)?;
     Ok(())
 }
 
@@ -8118,6 +8241,15 @@ fn require_optional_positive_u64(object: &Value, field: &str) -> Result<()> {
     if actual == 0 {
         return Err(anyhow!("field `{field}` must be greater than zero when measured"));
     }
+    Ok(())
+}
+
+fn require_optional_u64_field(object: &Value, field: &str) -> Result<()> {
+    let value = object_field(object, field)?;
+    if value.is_null() {
+        return Ok(());
+    }
+    value.as_u64().ok_or_else(|| anyhow!("field `{field}` must be null or an unsigned integer"))?;
     Ok(())
 }
 

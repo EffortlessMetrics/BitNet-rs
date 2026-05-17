@@ -238,6 +238,10 @@ pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruc
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
     "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+pub(crate) const BITNET_B158_2B_4T_I2S_MODEL_ID: &str = "microsoft-bitnet-b1.58-2B-4T-i2s";
+pub(crate) const BITNET_B158_2B_4T_I2S_MODEL_FILE: &str = "ggml-model-i2_s.gguf";
+pub(crate) const BITNET_B158_2B_4T_I2S_MODEL_SHA256: &str =
+    "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162";
 pub(crate) const QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen3-0.6b-instruct-q8_0";
 pub(crate) const QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE: &str = "Qwen3-0.6B-Q8_0.gguf";
 pub(crate) const QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256: &str =

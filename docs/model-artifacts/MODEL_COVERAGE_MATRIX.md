@@ -44,7 +44,7 @@ official I2_S answer lane:
 
 | Entry | Artifact lane | Current tier | Boundary |
 |---|---|---|---|
-| `bitnet_official_2b_i2s_qk256` | GGUF I2_S / QK256 | `product_cli_ready` | Current official x86/CUDA answer lane, not globally speed-qualified. |
+| `bitnet_official_2b_i2s_qk256` | GGUF I2_S / QK256 | `product_cli_ready` | Current official x86/CUDA answer lane with strict RTX 5070 Ti `bitnet_qk256_cuda` server-smoke evidence only; speedup, full residency, dense regular-LLM CUDA, and broad production server readiness remain unclaimed. |
 | `bitnet_official_2b_tl1_arm_candidate` | GGUF TL1 | `registered` | ARM-oriented candidate; needs TL1 layout, scalar, NEON/Apple proofs. |
 | `bitnet_official_2b_tl2_x86_candidate` | GGUF TL2 | `registered` | x86 LUT candidate; needs TL2 runner and scalar/AVX proofs. |
 | `bitnet_official_2b_bf16_gpu_int2_candidate` | BF16 master to GPU packed int2/W2A8 | `registered` | Separate GPU-reference path; does not satisfy GGUF I2_S proof. |
