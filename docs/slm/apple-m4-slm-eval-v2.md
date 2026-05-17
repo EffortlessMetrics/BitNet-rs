@@ -360,6 +360,7 @@ tokenizer_load_ms
 prompt_tokenize_ms
 prefill_ms
 time_to_first_token_ms
+sampling_ms_per_token
 input_tokens_per_second
 output_tokens_per_second
 decode_tokens_per_second

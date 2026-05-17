@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T06:11:39Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-001"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5288
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-001-profile-contract"
+head_sha = "7f8e72ead6a5458b431828a95c9e662c067b9ae4"
+summary = "Opened PR #5288 for the M4 benchmark profile contract."
+
+notes = [
+  "PR #5288 adds `apple_m4_slm_benchmark_v2` schema 1.1.0 for future dense M4 benchmark summaries, including an explicit supported profile set and required timing, throughput, memory, and aggregate-speed metric contract.",
+  "The new contract records aggregate `sampling_ms_per_token` while receipts-check keeps committed schema 1.0.0 benchmark summaries valid.",
+  "The PR is contract-only: it does not record a fresh live M4 benchmark run, publish new speed or memory results, establish p50/p90/p99 or variance envelopes, prove regression drift, or make broad Apple Silicon, broad performance, broad quality, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or speedup claims.",
+]
