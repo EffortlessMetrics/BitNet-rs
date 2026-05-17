@@ -1,0 +1,19 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-026"
+event = "merged"
+timestamp = "2026-05-17T14:50:25Z"
+actor = "codex"
+pr = 5369
+merge_sha = "8f44d67b9ee06b97eda96ed0eaca0d1dfd9fcee6"
+branch = "codex/slm-cpu-026-repetition-penalty-logits-reuse"
+
+summary = "Merged #5369 to reuse a host logits scratch buffer for Qwen3 Q8_0 warm-session repetition-penalty decode steps while preserving count-aware repetition-penalty semantics and strict CPU provenance; advanced SLM-CPU-027 as the next ready adapter-generality item."
+
+notes = [
+  "The SLM-CPU-026 receipt records logits_scratch_reuse_steps=40, logits_vec_extraction_steps=0, direct_greedy_logits_steps=6, and logits_vec_extraction_bypassed=true.",
+  "Generated IDs and decoded text match the SLM-CPU-025 behavior oracle.",
+  "The slice preserves model SHA, prompt IDs, strict GGUF tokenizer authority, selected CPU backend, runtime_api=cpu, and fallback_used=false.",
+  "SLM-CPU-027 is ready for a bounded second small dense GGUF sanity check rather than further Qwen3 Q8_0 proof-appliance polishing.",
+  "No sustained throughput, broad answer quality, Q4/Q5 quant expansion, second dense model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
