@@ -6,6 +6,7 @@ publish = false
 license.workspace = true
 
 [dependencies]
+bitnet-greedy-argmax-core = { path = "../../crates/bitnet-greedy-argmax-core", version = "0.2.1-dev" }
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 fs2 = "0.4.3"

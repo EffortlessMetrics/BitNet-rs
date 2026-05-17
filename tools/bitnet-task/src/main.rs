@@ -1,4 +1,5 @@
 use anyhow::{Context, Result, bail};
+use bitnet_greedy_argmax_core::{EXIT_ARGMAX_MISMATCH, check_greedy_argmax};
 use clap::{Parser, Subcommand};
 use serde_json::Value;
 #[cfg(unix)]
@@ -93,6 +94,11 @@ enum Task {
     CheckSerialAnnotations,
     /// Equivalent of scripts/check-codeowners-teams.sh
     CheckCodeownersTeams,
+    /// Rust replacement for scripts/check_greedy_argmax.py
+    CheckGreedyArgmax {
+        /// Path to a BitNet CLI JSON receipt containing logits_dump.
+        json_file: PathBuf,
+    },
     /// Equivalent of scripts/check_coverage.sh
     CheckCoverage {
         /// Coverage report file (JSON).
@@ -291,6 +297,7 @@ fn main() -> Result<()> {
         Task::TestTokenGeneration { model } => cmd_test_token_generation(&root, model),
         Task::CheckSerialAnnotations => cmd_check_serial_annotations(&root),
         Task::CheckCodeownersTeams => cmd_check_codeowners_teams(&root),
+        Task::CheckGreedyArgmax { json_file } => cmd_check_greedy_argmax(&json_file),
         Task::CheckCoverage { coverage_file, threshold } => {
             cmd_check_coverage(&coverage_file, threshold)
         }
@@ -500,6 +507,53 @@ fn run_xtask_binary<S: AsRef<str>>(
         .with_context(|| format!("non-utf8 xtask path: {}", xtask_bin.display()))?;
     let args = xtask_args;
     run_capture(root, program, args, &[], allow_failure)
+}
+
+fn cmd_check_greedy_argmax(json_file: &Path) -> Result<()> {
+    let contents = fs::read_to_string(json_file)
+        .with_context(|| format!("failed to read {}", json_file.display()))?;
+    let value: Value = serde_json::from_str(&contents)
+        .with_context(|| format!("failed to parse {} as JSON", json_file.display()))?;
+
+    let report = match check_greedy_argmax(&value) {
+        Ok(report) => report,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(EXIT_ARGMAX_MISMATCH);
+        }
+    };
+
+    for missing in &report.missing_steps {
+        eprintln!("Step {}: Missing data ({})", missing.step_index, missing.reason);
+    }
+
+    for violation in &report.violations {
+        eprintln!(
+            "Step {}: Greedy violation! argmax={} (logit={:.4}) but chosen={}",
+            violation.step_index,
+            violation.argmax_token,
+            violation.argmax_logit,
+            violation.chosen_id
+        );
+        eprintln!("  Top logits at step {}:", violation.step_index);
+        for (rank, entry) in violation.top_logits.iter().enumerate() {
+            let marker = if entry.token_id == violation.chosen_id { " <-- CHOSEN" } else { "" };
+            eprintln!(
+                "    {}. token={} logit={:.4}{}",
+                rank + 1,
+                entry.token_id,
+                entry.logit,
+                marker
+            );
+        }
+    }
+
+    if report.is_valid() {
+        println!("✓ Greedy invariant holds for all {} steps", report.steps);
+        Ok(())
+    } else {
+        std::process::exit(EXIT_ARGMAX_MISMATCH);
+    }
 }
 
 fn cmd_preflight(emit_env: bool) -> Result<()> {

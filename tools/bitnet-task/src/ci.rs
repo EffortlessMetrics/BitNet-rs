@@ -1162,45 +1162,6 @@ fn print_tail(output: &Output, lines: usize) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{parse_max_rss_mb, receipt_payload, validate_receipt_payload};
-    use serde_json::json;
-
-    #[test]
-    fn parses_gnu_time_max_rss() {
-        let output = "\tMaximum resident set size (kbytes): 131072\n";
-        assert_eq!(parse_max_rss_mb(output), Some(128));
-    }
-
-    #[test]
-    fn validates_top_level_receipt_payloads() {
-        let value = json!({
-            "compute_path": "real",
-            "backend": "cpu",
-            "kernels": ["i2s_cpu_quantize"]
-        });
-        let summary = validate_receipt_payload(receipt_payload(&value), "inline").unwrap();
-        assert_eq!(summary.backend, "cpu");
-        assert_eq!(summary.compute_path, "real");
-        assert_eq!(summary.kernels_len, 1);
-    }
-
-    #[test]
-    fn validates_wrapped_receipt_payloads() {
-        let value = json!({
-            "receipt": {
-                "compute_path": "real",
-                "backend": "cuda",
-                "kernels": ["cuda_gemm"]
-            }
-        });
-        let summary = validate_receipt_payload(receipt_payload(&value), "inline").unwrap();
-        assert_eq!(summary.backend, "cuda");
-        assert_eq!(summary.kernels_len, 1);
-    }
-}
-
 pub(crate) fn cmd_grep_guards(root: &Path) -> Result<()> {
     let mut failed = false;
 
@@ -1481,4 +1442,43 @@ pub(crate) fn cmd_e2e_gate(root: &Path, command: &[String]) -> Result<()> {
 fn print_command_output(output: &Output) {
     print!("{}", String::from_utf8_lossy(&output.stdout));
     eprint!("{}", String::from_utf8_lossy(&output.stderr));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_max_rss_mb, receipt_payload, validate_receipt_payload};
+    use serde_json::json;
+
+    #[test]
+    fn parses_gnu_time_max_rss() {
+        let output = "\tMaximum resident set size (kbytes): 131072\n";
+        assert_eq!(parse_max_rss_mb(output), Some(128));
+    }
+
+    #[test]
+    fn validates_top_level_receipt_payloads() {
+        let value = json!({
+            "compute_path": "real",
+            "backend": "cpu",
+            "kernels": ["i2s_cpu_quantize"]
+        });
+        let summary = validate_receipt_payload(receipt_payload(&value), "inline").unwrap();
+        assert_eq!(summary.backend, "cpu");
+        assert_eq!(summary.compute_path, "real");
+        assert_eq!(summary.kernels_len, 1);
+    }
+
+    #[test]
+    fn validates_wrapped_receipt_payloads() {
+        let value = json!({
+            "receipt": {
+                "compute_path": "real",
+                "backend": "cuda",
+                "kernels": ["cuda_gemm"]
+            }
+        });
+        let summary = validate_receipt_payload(receipt_payload(&value), "inline").unwrap();
+        assert_eq!(summary.backend, "cuda");
+        assert_eq!(summary.kernels_len, 1);
+    }
 }

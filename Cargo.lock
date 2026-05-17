@@ -903,6 +903,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-greedy-argmax-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "bitnet-honest-compute"
 version = "0.2.1-dev"
 dependencies = [
@@ -1633,6 +1641,7 @@ name = "bitnet-task"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-greedy-argmax-core",
  "clap",
  "fs2",
  "serde_json",
