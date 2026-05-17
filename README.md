@@ -185,6 +185,21 @@ Nix: `nix develop && nix build .#bitnet-cli && nix flake check` - see [Nix guide
 
 ## Testing
 
+For a fast local loop, use the development check wrapper:
+
+```bash
+scripts/dev-check.sh quick
+scripts/dev-check.sh all
+```
+
+The same single-command CPU check is available as a Cargo alias:
+
+```bash
+cargo dev-check
+```
+
+The underlying CI-style commands remain available when you need to run each gate manually:
+
 ```bash
 cargo nextest run --locked --workspace --no-default-features --features cpu
 cargo fmt --all -- --check
@@ -218,9 +233,10 @@ Near-term work is focused on:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR:
+See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR, run the fast local wrapper first and then the fuller local CI gate when applicable:
 
 ```bash
+scripts/dev-check.sh all
 ./ci/local.sh
 ```
 
