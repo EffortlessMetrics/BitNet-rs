@@ -679,6 +679,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-kernels",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
