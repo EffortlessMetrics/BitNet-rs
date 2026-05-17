@@ -1,0 +1,34 @@
+schema_version = "1.0"
+timestamp = "2026-05-17T11:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-024"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5342
+merge_sha = "328fc4b893f505f3d06b64dd7abb5da2f47a53a6"
+summary = "SLM-CPU-024 merged the guarded greedy no-penalty sampler fast path and preserved the Qwen3 Q8_0 4-thread warm-session behavior oracle."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5342",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+  "docs/slm/SLM_CPU_QWEN3_WARM_SESSION.md",
+]
+
+notes = [
+  "The merged artifact validates that generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, and fallback=false match the recorded 4-thread baseline.",
+  "The after artifact records zero sampler decode allocations for the fixed Qwen3 Q8_0 warm-session corpus.",
+  "The next ready item is SLM-CPU-025, focused narrowly on the remaining logits extraction allocation boundary identified by the Kaby performance dashboard.",
+]
+
+claim_boundary = [
+  "No sustained 8250U throughput claim.",
+  "No broad answer-quality claim.",
+  "No Q4/Q5 quant expansion.",
+  "No server, GPU, NPU, OpenVINO, or UHD 620 claim.",
+  "No Qwen3.5 or hybrid architecture support claim.",
+  "No BitNet QK256/I2_S kernel change.",
+]

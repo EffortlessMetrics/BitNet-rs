@@ -2042,9 +2042,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-024"
-status = "pr_open"
+status = "merged"
 pr = 5342
 head_sha = "b17a0466eb31ff74d510dbd3cfb999860fb7bcbd"
+merge_sha = "328fc4b893f505f3d06b64dd7abb5da2f47a53a6"
 branch = "codex/slm-cpu-024-greedy-sampler-fast-path"
 stackable = false
 review_mode = "codex_premerge"
@@ -2089,6 +2090,59 @@ must_not_claim = [
   "Broad Qwen answer quality is proven.",
   "Q4/Q5 quant expansion is in scope.",
   "A second dense model is supported.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-025"
+status = "ready"
+branch = "codex/slm-cpu-025-logits-extraction-reuse"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-024"]
+acceptance = "Remove or explicitly isolate the remaining Qwen3-0.6B Q8_0 warm-session logits extraction allocation after SLM-CPU-024 without changing generated IDs or strict receipt provenance. The slice must preserve the Qwen3 Q8_0 4-thread behavior oracle, keep model SHA, prompt IDs, generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, and fallback=false identical to the recorded baseline, and emit before/after allocation evidence or explicitly documented unavailable counters. It must not claim sustained throughput, broad answer quality, Q4/Q5 quant expansion, a second dense model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-logits-extraction-reuse.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 quant expansion",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The next optimization target is the remaining Qwen3 Q8_0 logits extraction allocation after sampler scratch cleanup.",
+  "Any accepted runtime change must preserve generated IDs, decoded text, strict tokenizer authority, selected CPU backend, and fallback=false against the recorded Qwen3 Q8_0 4-thread oracle.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Broad Qwen answer quality is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "A second dense model is supported by this item.",
   "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
   "Qwen3.5 or hybrid architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
