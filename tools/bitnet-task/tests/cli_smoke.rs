@@ -409,3 +409,27 @@ fn vendor_wrapper_injects_master_default() {
         ]
     );
 }
+
+#[test]
+fn patch_policy_wrapper_dispatches_to_rust_facade() {
+    let repo_root = repo_root();
+    let manifest_path = repo_root.join("Cargo.toml");
+    let invocations = run_wrapper("check-patch-policy.sh", &["--strict", "--create-issue"]);
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(
+        invocations[0],
+        vec![
+            "run",
+            "--quiet",
+            "--locked",
+            "--manifest-path",
+            manifest_path.to_string_lossy().as_ref(),
+            "-p",
+            "bitnet-task",
+            "--",
+            "check-patch-policy",
+            "--strict",
+            "--create-issue",
+        ]
+    );
+}
