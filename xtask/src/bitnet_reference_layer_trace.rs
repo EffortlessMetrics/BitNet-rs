@@ -7448,11 +7448,17 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_score_raw_history_token_drift(reference_records, rust_records);
     let score_position_drilldown =
         attention_score_raw_history_position_drilldown(reference_records, rust_records);
+    let score_position_qk_recompute = attention_score_raw_history_position_qk_recompute(
+        reference_records,
+        rust_records,
+        &score_position_drilldown,
+    );
     report["attention_score_raw_history_position_qk_recompute"] =
-        attention_score_raw_history_position_qk_recompute(
-            reference_records,
-            rust_records,
-            &score_position_drilldown,
+        score_position_qk_recompute.clone();
+    report["attention_selected_score_mixed_qk_contribution"] =
+        attention_selected_score_mixed_qk_contribution(
+            &score_position_qk_recompute,
+            &report["attention_query_score_input_boundary"],
         );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
@@ -21510,6 +21516,257 @@ fn attention_query_score_input_f16_policy_effect(
     })
 }
 
+fn attention_selected_score_mixed_qk_contribution(
+    qk_recompute: &Value,
+    query_boundary: &Value,
+) -> Value {
+    let rows = qk_recompute.pointer("/rows").and_then(Value::as_array);
+    let mut output_rows = Vec::<Value>::new();
+    let mut classification_counts = BTreeMap::<String, usize>::new();
+    let mut dominant_input_counts = BTreeMap::<String, usize>::new();
+    let mut query_boundary_counts = BTreeMap::<String, usize>::new();
+    let mut selected_count = 0usize;
+    let mut compared_count = 0usize;
+    let mut product_delta_available_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut unresolved_residual_count = 0usize;
+    let mut query_dominant_count = 0usize;
+    let mut key_dominant_count = 0usize;
+    let mut mixed_qk_dominant_count = 0usize;
+    let mut no_material_product_delta_count = 0usize;
+    let mut max_abs_product_delta = 0.0f64;
+    let mut first_unresolved_row = Value::Null;
+    let mut first_product_row = Value::Null;
+
+    if let Some(rows) = rows {
+        for row in rows {
+            selected_count += 1;
+            let status = row.pointer("/status").and_then(Value::as_str).unwrap_or("unknown");
+            if status != "recomputed" {
+                missing_input_count += 1;
+            } else {
+                compared_count += 1;
+            }
+
+            let product_delta = row.pointer("/best_candidate_product_delta");
+            let product_delta_available = product_delta.is_some_and(|delta| !delta.is_null());
+            if product_delta_available {
+                product_delta_available_count += 1;
+            }
+
+            let reference_residual = row
+                .pointer("/best_reference_candidate/reference_abs_delta")
+                .and_then(Value::as_f64)
+                .is_some_and(|delta| delta > SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS);
+            let rust_residual = row
+                .pointer("/best_rust_candidate/rust_abs_delta")
+                .and_then(Value::as_f64)
+                .is_some_and(|delta| delta > SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS);
+            let unresolved_residual = reference_residual && rust_residual;
+            if unresolved_residual {
+                unresolved_residual_count += 1;
+            }
+
+            let dominant_input = product_delta
+                .and_then(|delta| delta.pointer("/dominant_input"))
+                .and_then(Value::as_str)
+                .unwrap_or("unavailable");
+            if product_delta_available {
+                *dominant_input_counts.entry(dominant_input.to_string()).or_insert(0) += 1;
+            }
+            let row_classification = if status != "recomputed" {
+                "candidate_delta_unavailable"
+            } else if !product_delta_available {
+                "candidate_delta_unavailable"
+            } else if unresolved_residual {
+                "unresolved_residual"
+            } else {
+                match dominant_input {
+                    "query" => {
+                        query_dominant_count += 1;
+                        "query_dominant"
+                    }
+                    "key" => {
+                        key_dominant_count += 1;
+                        "key_dominant"
+                    }
+                    "query_and_key" => {
+                        mixed_qk_dominant_count += 1;
+                        "mixed_qk_dominant"
+                    }
+                    "none" => {
+                        no_material_product_delta_count += 1;
+                        "no_material_product_delta"
+                    }
+                    _ => "candidate_delta_unavailable",
+                }
+            };
+            *classification_counts.entry(row_classification.to_string()).or_insert(0) += 1;
+
+            let head = row.pointer("/head").and_then(Value::as_u64);
+            let query_boundary_row = head
+                .and_then(|head| query_boundary_row_for_head(query_boundary, head))
+                .cloned()
+                .unwrap_or(Value::Null);
+            let query_first_boundary = query_boundary_row
+                .pointer("/first_material_boundary")
+                .and_then(Value::as_str)
+                .or_else(|| query_boundary_row.pointer("/classification").and_then(Value::as_str));
+            if let Some(boundary) = query_first_boundary {
+                *query_boundary_counts.entry(boundary.to_string()).or_insert(0) += 1;
+            }
+
+            max_abs_product_delta = max_abs_product_delta.max(
+                product_delta
+                    .and_then(|delta| delta.pointer("/max_abs_product_delta"))
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.0),
+            );
+            if first_product_row.is_null() && product_delta_available {
+                first_product_row = json!({
+                    "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+                    "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                    "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                    "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                    "classification": row_classification,
+                    "dominant_input": dominant_input,
+                    "product_delta": product_delta.cloned().unwrap_or(Value::Null),
+                });
+            }
+            if first_unresolved_row.is_null() && row_classification == "unresolved_residual" {
+                first_unresolved_row = json!({
+                    "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+                    "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                    "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                    "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                    "reference_abs_delta": row
+                        .pointer("/best_reference_candidate/reference_abs_delta")
+                        .cloned()
+                        .unwrap_or(Value::Null),
+                    "rust_abs_delta": row
+                        .pointer("/best_rust_candidate/rust_abs_delta")
+                        .cloned()
+                        .unwrap_or(Value::Null),
+                });
+            }
+
+            output_rows.push(json!({
+                "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+                "status": status,
+                "classification": row_classification,
+                "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "actual_abs_delta": row.pointer("/actual_abs_delta").cloned().unwrap_or(Value::Null),
+                "reference_best_candidate": row
+                    .pointer("/best_reference_candidate")
+                    .cloned()
+                    .unwrap_or(Value::Null),
+                "rust_best_candidate": row
+                    .pointer("/best_rust_candidate")
+                    .cloned()
+                    .unwrap_or(Value::Null),
+                "reference_residual_over_warn": reference_residual,
+                "rust_residual_over_warn": rust_residual,
+                "product_delta_available": product_delta_available,
+                "dominant_input": if product_delta_available {
+                    json!(dominant_input)
+                } else {
+                    Value::Null
+                },
+                "best_candidate_product_delta": product_delta.cloned().unwrap_or(Value::Null),
+                "query_score_input_boundary": query_boundary_row,
+            }));
+        }
+    }
+
+    let query_rope_count =
+        query_boundary_counts.get("reference_to_rust_query_rope").copied().unwrap_or(0);
+    let classification = if selected_count == 0 {
+        "no_selected_score_positions"
+    } else if missing_input_count > 0 {
+        "selected_score_positions_missing_inputs"
+    } else if product_delta_available_count == 0 {
+        "selected_score_product_delta_unavailable"
+    } else if unresolved_residual_count == compared_count && compared_count > 0 {
+        "selected_score_product_delta_blocked_by_residual"
+    } else if mixed_qk_dominant_count > 0 {
+        "selected_score_drift_has_mixed_qk_contribution"
+    } else if key_dominant_count > 0 && query_dominant_count > 0 {
+        "selected_score_drift_split_query_key_contribution"
+    } else if key_dominant_count > 0 {
+        "selected_score_drift_key_dominant"
+    } else if query_rope_count > 0 && query_dominant_count > 0 {
+        "selected_score_drift_query_dominant_with_query_rope_boundary"
+    } else if query_dominant_count > 0 {
+        "selected_score_drift_query_dominant"
+    } else if no_material_product_delta_count == product_delta_available_count {
+        "selected_score_product_delta_clean"
+    } else {
+        "selected_score_mixed_qk_contribution_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_score_drift_has_mixed_qk_contribution"
+        | "selected_score_drift_split_query_key_contribution" => {
+            "inspect both query and key selected-position source rows before changing runtime math"
+        }
+        "selected_score_drift_query_dominant_with_query_rope_boundary"
+        | "selected_score_drift_query_dominant" => {
+            "localize the reference-to-Rust query RoPE rows for the dominant selected score slots"
+        }
+        "selected_score_drift_key_dominant" => {
+            "localize the selected key score-input rows before changing score math"
+        }
+        "selected_score_product_delta_blocked_by_residual" => {
+            "pin residual score-position recompute before interpreting mixed Q/K product contribution"
+        }
+        "selected_score_positions_missing_inputs" | "selected_score_product_delta_unavailable" => {
+            "capture or recompute selected Q/K score-position product deltas before changing runtime math"
+        }
+        "selected_score_product_delta_clean" => {
+            "selected product deltas are clean; inspect score accumulation or downstream probability rows"
+        }
+        "no_selected_score_positions" => {
+            "capture selected score-position drift before interpreting mixed Q/K contribution"
+        }
+        _ => "add narrower selected Q/K source probes before changing runtime math",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "selected score mixed-QK contribution is diagnostic-only evidence for whether chosen raw score slots follow query, key, or mixed Q/K product deltas; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "residual_warn_abs": SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "selected_count": selected_count,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "product_delta_available_count": product_delta_available_count,
+        "unresolved_residual_count": unresolved_residual_count,
+        "query_dominant_count": query_dominant_count,
+        "key_dominant_count": key_dominant_count,
+        "mixed_qk_dominant_count": mixed_qk_dominant_count,
+        "no_material_product_delta_count": no_material_product_delta_count,
+        "max_abs_product_delta": max_abs_product_delta,
+        "classification_counts": classification_counts,
+        "dominant_input_counts": dominant_input_counts,
+        "query_boundary_counts": query_boundary_counts,
+        "first_product_row": first_product_row,
+        "first_unresolved_row": first_unresolved_row,
+        "rows": output_rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn query_boundary_row_for_head(query_boundary: &Value, head: u64) -> Option<&Value> {
+    query_boundary
+        .pointer("/rows")
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|row| row.pointer("/head").and_then(Value::as_u64) == Some(head))
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScoreKeyHistoryEffectVariant<'a> {
     id: &'static str,
@@ -32958,6 +33215,133 @@ mod tests {
         assert_eq!(effect.pointer("/rows/0/actual_score_shift"), Some(&json!(5.0)));
         assert_eq!(effect.pointer("/rows/0/f16_shift_from_reference"), Some(&json!(5.0)));
         assert_eq!(effect.pointer("/rows/0/f16_shift_residual_abs"), Some(&json!(0.0)));
+    }
+
+    #[test]
+    fn selected_score_mixed_qk_contribution_reports_product_source() {
+        let qk_recompute = json!({
+            "rows": [
+                {
+                    "label": "max_material_position",
+                    "status": "recomputed",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "actual_abs_delta": 0.023406982421875_f64,
+                    "best_reference_candidate": {
+                        "base_candidate": "reference_q_score_input_reference_k_score_input",
+                        "candidate": "reference_q_history_reference_k_q_trace_k_f32",
+                        "reference_abs_delta": 0.0_f64,
+                    },
+                    "best_rust_candidate": {
+                        "base_candidate": "rust_q_history_rust_k",
+                        "candidate": "rust_q_history_rust_k_q_trace_k_f32",
+                        "rust_abs_delta": 0.0_f64,
+                    },
+                    "best_candidate_product_delta": {
+                        "dominant_input": "query_and_key",
+                        "query_changed_dim_count": 1,
+                        "key_changed_dim_count": 1,
+                        "query_l1_delta": 0.00390625_f64,
+                        "key_l1_delta": 0.125_f64,
+                        "max_abs_product_delta": 0.02_f64,
+                        "top_abs_product_delta_contributors": [
+                            {
+                                "dim": 6,
+                                "query_delta": 0.00390625_f64,
+                                "key_delta": 0.125_f64,
+                                "abs_product_delta": 0.02_f64,
+                            }
+                        ],
+                    },
+                }
+            ]
+        });
+        let query_boundary = json!({
+            "rows": [
+                {
+                    "head": 0,
+                    "first_material_boundary": "reference_to_rust_query_rope",
+                }
+            ]
+        });
+
+        let report = attention_selected_score_mixed_qk_contribution(&qk_recompute, &query_boundary);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_score_drift_has_mixed_qk_contribution"))
+        );
+        assert_eq!(report.pointer("/mixed_qk_dominant_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/dominant_input_counts/query_and_key"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/query_boundary_counts/reference_to_rust_query_rope"),
+            Some(&json!(1))
+        );
+        assert_eq!(report.pointer("/rows/0/classification"), Some(&json!("mixed_qk_dominant")));
+        assert_eq!(
+            report.pointer(
+                "/rows/0/best_candidate_product_delta/top_abs_product_delta_contributors/0/dim"
+            ),
+            Some(&json!(6))
+        );
+    }
+
+    #[test]
+    fn selected_score_mixed_qk_contribution_keeps_residual_blocking_explicit() {
+        let qk_recompute = json!({
+            "rows": [
+                {
+                    "label": "first_material_position",
+                    "status": "recomputed",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "actual_abs_delta": 0.023406982421875_f64,
+                    "best_reference_candidate": {
+                        "base_candidate": "reference_q_score_input_reference_k_score_input",
+                        "candidate": "reference_q_history_reference_k_q_trace_k_f32",
+                        "reference_abs_delta": 0.1_f64,
+                    },
+                    "best_rust_candidate": {
+                        "base_candidate": "rust_q_history_rust_k",
+                        "candidate": "rust_q_history_rust_k_q_trace_k_f32",
+                        "rust_abs_delta": 0.1_f64,
+                    },
+                    "best_candidate_product_delta": {
+                        "dominant_input": "query",
+                        "query_changed_dim_count": 1,
+                        "key_changed_dim_count": 0,
+                        "query_l1_delta": 0.00390625_f64,
+                        "key_l1_delta": 0.0_f64,
+                        "max_abs_product_delta": 0.02_f64,
+                    },
+                }
+            ]
+        });
+        let query_boundary = json!({
+            "rows": [
+                {
+                    "head": 0,
+                    "first_material_boundary": "reference_to_rust_query_rope",
+                }
+            ]
+        });
+
+        let report = attention_selected_score_mixed_qk_contribution(&qk_recompute, &query_boundary);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_score_product_delta_blocked_by_residual"))
+        );
+        assert_eq!(report.pointer("/unresolved_residual_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rows/0/classification"), Some(&json!("unresolved_residual")));
+        assert_eq!(report.pointer("/first_unresolved_row/key_slot"), Some(&json!(13)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
