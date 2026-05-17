@@ -1,0 +1,25 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-024"
+event = "merged"
+timestamp = "2026-05-17T11:26:00Z"
+actor = "codex"
+pr = 5342
+head_sha = "2ea2bfaba0d6ed47151bdd00df87902dee5026cc"
+merge_sha = "328fc4b893f505f3d06b64dd7abb5da2f47a53a6"
+branch = "codex/slm-cpu-024-greedy-sampler-fast-path"
+
+summary = "Corrected the SLM-CPU-024 merged head SHA to match the final #5342 PR head."
+
+notes = [
+  "The merged tracker row already recorded #5342 and merge SHA 328fc4b893f505f3d06b64dd7abb5da2f47a53a6.",
+  "This refresh updates head_sha from the earlier tracker-refresh commit to the final PR head that GitHub merged.",
+  "No runtime, receipt, throughput, broad answer-quality, GPU, NPU, OpenVINO, UHD 620, server, Q4/Q5, Qwen3.5, or BitNet QK256 claim changes.",
+]
+
+validation = [
+  "C:\\bntarget\\lnl258v-route-004\\debug\\xtask.exe campaign check slm-cpu",
+  "C:\\bntarget\\lnl258v-route-004\\debug\\xtask.exe campaign generate --check",
+  "C:\\bntarget\\lnl258v-route-004\\debug\\xtask.exe campaign doctor",
+  "git diff --check",
+]
