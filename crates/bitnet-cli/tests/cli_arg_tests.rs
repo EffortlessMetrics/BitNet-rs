@@ -685,8 +685,9 @@ fn mac_check_rejects_blocked_bitnet_model_before_cache_guidance() {
 }
 
 #[test]
-fn model_fetch_offline_missing_cache_explains_repair_options() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_fetch_offline_missing_cache_explains_repair_options()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -704,6 +705,7 @@ fn model_fetch_offline_missing_cache_explains_repair_options() {
         .stderr(predicate::str::contains("offline mode"))
         .stderr(predicate::str::contains("pre-seed"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+    Ok(())
 }
 
 #[test]
@@ -2310,8 +2312,8 @@ fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt()
 }
 
 #[test]
-fn mac_receipts_check_accepts_golden_smoke_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_golden_smoke_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("mac-smoke.json");
     std::fs::write(
         &receipt_path,
@@ -2353,10 +2355,8 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
                 "broad_performance_claim": false,
                 "speedup_claim": false
             }
-        }))
-        .expect("json"),
-    )
-    .expect("write receipt");
+        }))?,
+    )?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2365,6 +2365,7 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_golden_smoke"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
 }
 
 #[test]
@@ -2827,14 +2828,14 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
 }
 
 #[test]
-fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("slm-benchmark-v2-resident-100.json");
     let mut receipt = slm_benchmark_v2_summary();
     receipt["profiles_required"] = serde_json::json!(["resident_100"]);
     receipt["profiles"] = serde_json::json!([benchmark_profile_v2_json("resident_100")]);
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2843,16 +2844,20 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"));
+    Ok(())
 }
 
 #[test]
-fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("slm-benchmark-v2-missing-sampling.json");
     let mut receipt = slm_benchmark_v2_summary();
-    receipt["speed"].as_object_mut().expect("speed object").remove("sampling_ms_per_token_p50");
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    receipt["speed"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing speed object"))?
+        .remove("sampling_ms_per_token_p50");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2860,16 +2865,17 @@ fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("sampling_ms_per_token_p50"));
+    Ok(())
 }
 
 #[test]
-fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("slm-benchmark-v2-profile-mismatch.json");
     let mut receipt = slm_benchmark_v2_summary();
     receipt["profiles_required"] = serde_json::json!(["resident_100"]);
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2877,6 +2883,7 @@ fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("profiles_required must match profiles order"));
+    Ok(())
 }
 
 #[test]
