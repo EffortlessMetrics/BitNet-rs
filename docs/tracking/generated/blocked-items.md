@@ -83,7 +83,7 @@
 | apple-m4-inference-excellence | M4-BITNET-EX-002 | M4-BITNET-EX-001 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-003 | M4-BITNET-EX-001 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-004 | M4-EXCELLENCE-002 | merged |
-| apple-m4-inference-excellence | M4-BITNET-EX-005 | M4-BITNET-EX-004 | proposed |
+| apple-m4-inference-excellence | M4-BITNET-EX-005 | M4-BITNET-EX-004 | in_progress |
 | apple-m4-inference-excellence | M4-BITNET-EX-006 | M4-BITNET-EX-004, M4-BITNET-EX-005 | proposed |
 | apple-m4-inference-excellence | M4-BITNET-EX-007 | M4-BITNET-EX-006 | proposed |
 | apple-m4-inference-excellence | M4-BITNET-EX-008 | M4-BITNET-EX-001, M4-BITNET-EX-002, M4-BITNET-EX-005 | proposed |

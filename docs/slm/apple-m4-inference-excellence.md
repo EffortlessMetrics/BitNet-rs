@@ -490,6 +490,39 @@ tokenizer, backend, and machine context. It does not claim BitNet chat, BitNet
 serve, BitNet broad quality, full Metal inference, QK256, Neural Engine,
 MPSGraph, MacBook evidence, speedup, or broad Apple Silicon performance.
 
+`M4-BITNET-EX-005` hardens BitNet operator failure UX before any chat or serve
+gate can move. The one-shot `bitnet mac ask` BitNet route now accepts
+`--timeout-seconds` and records timeout state in failure receipts. Dense SLM
+`mac ask` rejects that timeout flag for now so the new behavior stays scoped to
+the explicit BitNet one-shot route.
+
+The BitNet one-shot failure receipt now records the same operator diagnostics
+shape expected from warm-session failure receipts:
+
+```text
+progress.enabled
+progress.status_stream
+progress.last_stage
+progress.stage_taxonomy
+timeout_boundary.configured_seconds
+timeout_boundary.enforced
+timeout_boundary.reached
+timeout_boundary.stage
+generation.partial_text
+generation.partial_token_ids
+generation.partial_generation_available
+repair_guidance
+```
+
+The receipt validator rejects BitNet one-shot failure receipts that omit the
+progress taxonomy, timeout boundary, repair guidance, or explicit partial
+generation fields. The hardening remains conservative: setup, verification,
+generation, and timeout failures preserve backend, fallback, model, tokenizer,
+prompt, timeout, and claim-boundary fields, but decode-time partial text is
+still recorded as unavailable unless the generation path can safely provide it.
+This is operator UX and receipt-contract hardening only; it does not claim
+BitNet quality and does not enable BitNet chat or serve.
+
 BitNet chat and serve stay disabled until their specific receipt gates pass.
 
 ## Stability And Service
