@@ -277,15 +277,15 @@ mod tests {
     use std::{fs, path::PathBuf};
     use tempfile::tempdir;
 
-    fn write_trace(dir: &Path, name: &str, hash: &str) {
+    fn write_trace(dir: &Path, name: &str, hash: &str) -> Result<()> {
         fs::write(
             dir.join(name),
             format!(
                 r#"{{"seq":0,"layer":1,"stage":"attn","shape":[1,2],"dtype":"f32","blake3":"{hash}","rms":1.25,"num_elements":2}}
 "#
             ),
-        )
-        .unwrap();
+        )?;
+        Ok(())
     }
 
     #[test]
@@ -299,37 +299,41 @@ mod tests {
     }
 
     #[test]
-    fn test_load_traces_skips_records_without_keys() {
-        let dir = tempdir().unwrap();
+    fn test_load_traces_skips_records_without_keys() -> Result<()> {
+        let dir = tempdir()?;
         fs::write(
             dir.path().join("sample.trace"),
             "{\"event\":\"legacy\"}\n{\"seq\":1,\"layer\":2,\"stage\":\"mlp\",\"blake3\":\"abc\"}\n",
-        )
-        .unwrap();
+        )?;
 
-        let traces = load_traces(dir.path()).unwrap();
+        let traces = load_traces(dir.path())?;
         assert_eq!(traces.len(), 1);
         assert!(traces.contains_key(&TraceKey { seq: 1, layer: 2, stage: "mlp".to_owned() }));
+        Ok(())
     }
 
     #[test]
-    fn test_compare_matching_traces() {
-        let rs_dir = tempdir().unwrap();
-        let cpp_dir = tempdir().unwrap();
-        write_trace(rs_dir.path(), "a.trace", "abcdef0123456789");
-        write_trace(cpp_dir.path(), "a.jsonl", "abcdef0123456789");
+    fn test_compare_matching_traces() -> Result<()> {
+        let rs_dir = tempdir()?;
+        let cpp_dir = tempdir()?;
+        write_trace(rs_dir.path(), "a.trace", "abcdef0123456789")?;
+        write_trace(cpp_dir.path(), "a.jsonl", "abcdef0123456789")?;
 
-        run(rs_dir.path(), cpp_dir.path()).unwrap();
+        run(rs_dir.path(), cpp_dir.path())?;
+        Ok(())
     }
 
     #[test]
-    fn test_compare_detects_hash_divergence() {
-        let rs_dir = tempdir().unwrap();
-        let cpp_dir = tempdir().unwrap();
-        write_trace(rs_dir.path(), "a.trace", "abcdef0123456789");
-        write_trace(cpp_dir.path(), "a.trace", "fedcba9876543210");
+    fn test_compare_detects_hash_divergence() -> Result<()> {
+        let rs_dir = tempdir()?;
+        let cpp_dir = tempdir()?;
+        write_trace(rs_dir.path(), "a.trace", "abcdef0123456789")?;
+        write_trace(cpp_dir.path(), "a.trace", "fedcba9876543210")?;
 
-        let err = run(rs_dir.path(), cpp_dir.path()).unwrap_err();
-        assert!(err.to_string().contains("trace divergence detected"));
+        match run(rs_dir.path(), cpp_dir.path()) {
+            Ok(()) => bail!("expected trace divergence"),
+            Err(err) => assert!(err.to_string().contains("trace divergence detected")),
+        }
+        Ok(())
     }
 }
