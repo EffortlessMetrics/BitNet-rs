@@ -1,0 +1,20 @@
+timestamp = "2026-05-17T00:20:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-DURABLE-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5240
+merge_sha = "2e7150befcb36bf161b94855efedcf427b2ec7b4"
+summary = "Merged PR #5240, indexing the existing repeated dense Qwen CPU warm-session receipt in the Lunar Lake durability bundle."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+]
+
+notes = [
+  "The durability bundle records observed 10/10 executions, fallback_used=false, stable generated IDs/text, passing answer gates, and timing variance evidence for regression_tiny, ask_short, and ask_normal dense Qwen CPU profiles.",
+  "The claim remains bounded to the dense Qwen CPU repeated-run surface and does not promote OpenVINO GPU/NPU routes.",
+  "No new inference, speedup, acceleration, broad quality, BitNet proof, or QK256/I2_S behavior claim is added by the closeout.",
+]
