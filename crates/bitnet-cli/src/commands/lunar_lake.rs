@@ -4798,11 +4798,25 @@ fn profile_timing_for_route(
 fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<ProfileTimingSummary> {
     let ask_path = root.join(DENSE_CPU_OPERATOR_ASK);
     let ask: Value = read_json_receipt(&ask_path)?;
+    let cold_load_ms = number_at_any(&ask, &["timing.model_load_ms"]);
+    let tokenizer_load_ms = number_at_any(&ask, &["timing.tokenizer_load_ms"]);
+    let tokenize_ms = number_at_any(&ask, &["timing.tokenize_ms"]);
+    let prefill_ms = number_at_any(&ask, &["timing.prefill_ms"]);
     let output_tokens = number_at_any(&ask, &["tokens.generated_count", "timing.decode_tokens"])
         .map(|value| value as u64);
     let generation_total_ms = number_at_any(&ask, &["timing.decode_total_ms"]);
     let throughput_tokens_per_s = number_at_any(&ask, &["timing.decode_steady_state_tok_s"])
         .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
+    let total_response_ms = number_at_any(&ask, &["latency.total_ms", "timing.total_response_ms"])
+        .or_else(|| {
+            sum_all_optional([
+                cold_load_ms,
+                tokenizer_load_ms,
+                tokenize_ms,
+                prefill_ms,
+                generation_total_ms,
+            ])
+        });
 
     let mut phase_coverage = vec![
         "operator_ask_math_brief".to_string(),
@@ -4824,13 +4838,13 @@ fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<Pro
             DENSE_CPU_PHASE.to_string(),
             DENSE_PHASE_COMPARISON.to_string(),
         ],
-        cold_load_ms: number_at_any(&ask, &["timing.model_load_ms"]),
-        tokenize_ms: number_at_any(&ask, &["timing.tokenize_ms"]),
-        prefill_ms: number_at_any(&ask, &["timing.prefill_ms"]),
+        cold_load_ms,
+        tokenize_ms,
+        prefill_ms,
         first_token_ms: number_at_any(&ask, &["timing.first_token_ms"]),
         decode_total_ms: generation_total_ms,
         generation_total_ms,
-        total_response_ms: number_at_any(&ask, &["latency.total_ms"]),
+        total_response_ms,
         output_tokens,
         throughput_tokens_per_s,
         phase_coverage,
@@ -4909,6 +4923,10 @@ fn sum_optional(left: Option<f64>, right: Option<f64>) -> Option<f64> {
         (Some(left), Some(right)) => Some(left + right),
         _ => None,
     }
+}
+
+fn sum_all_optional<const N: usize>(values: [Option<f64>; N]) -> Option<f64> {
+    values.into_iter().try_fold(0.0, |sum, value| value.map(|value| sum + value))
 }
 
 fn attached_route_evidence<'a>(
@@ -5696,13 +5714,13 @@ mod tests {
                 "answer_gate_passed": true,
                 "timing": {
                     "model_load_ms": 100.0,
+                    "tokenizer_load_ms": 5.0,
                     "tokenize_ms": 2.0,
                     "prefill_ms": 20.0,
                     "first_token_ms": 30.0,
                     "decode_total_ms": 90.0,
                     "decode_steady_state_tok_s": 10.0
                 },
-                "latency": {"total_ms": 150.0},
                 "tokens": {"generated_count": 8}
             }),
         )?;
@@ -5798,13 +5816,13 @@ mod tests {
                 "answer_gate_passed": true,
                 "timing": {
                     "model_load_ms": 100.0,
+                    "tokenizer_load_ms": 5.0,
                     "tokenize_ms": 2.0,
                     "prefill_ms": 20.0,
                     "first_token_ms": 30.0,
                     "decode_total_ms": 90.0,
                     "decode_steady_state_tok_s": 10.0
                 },
-                "latency": {"total_ms": 150.0},
                 "tokens": {"generated_count": 8}
             }),
         )?;
@@ -5877,6 +5895,8 @@ mod tests {
             .context("missing CPU route benchmark")?;
         assert!(cpu.critical_timing_present);
         assert!(!cpu.promotion_blocked);
+        assert_eq!(cpu.timing.total_response_ms, Some(217.0));
+        assert!(!cpu.blockers.iter().any(|blocker| blocker == "total response latency is missing"));
         let gpu = ask_normal
             .routes
             .iter()
