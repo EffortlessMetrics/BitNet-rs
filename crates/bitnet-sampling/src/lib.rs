@@ -604,7 +604,7 @@ mod property_tests {
     }
 
     #[test]
-    fn greedy_no_penalty_sampling_bypasses_logits_scratch() {
+    fn greedy_no_penalty_sampling_bypasses_logits_scratch() -> Result<()> {
         let mut strategy = SamplingStrategy::new(SamplingConfig {
             temperature: 0.0,
             repetition_penalty: 1.0,
@@ -612,14 +612,15 @@ mod property_tests {
             ..Default::default()
         });
 
-        let token = strategy.sample(&[0.1, 0.4, 0.2], &[1, 2, 1]).unwrap();
+        let token = strategy.sample(&[0.1, 0.4, 0.2], &[1, 2, 1])?;
 
         assert_eq!(token, 1);
         assert_eq!(strategy.logits_buffer_capacity(), 0);
+        Ok(())
     }
 
     #[test]
-    fn greedy_repetition_penalty_still_uses_scratch_and_changes_choice() {
+    fn greedy_repetition_penalty_still_uses_scratch_and_changes_choice() -> Result<()> {
         let mut strategy = SamplingStrategy::new(SamplingConfig {
             temperature: 0.0,
             repetition_penalty: 2.0,
@@ -627,9 +628,10 @@ mod property_tests {
             ..Default::default()
         });
 
-        let token = strategy.sample(&[0.1, 0.4, 0.3], &[1]).unwrap();
+        let token = strategy.sample(&[0.1, 0.4, 0.3], &[1])?;
 
         assert_eq!(token, 2);
         assert!(strategy.logits_buffer_capacity() >= 3);
+        Ok(())
     }
 }
