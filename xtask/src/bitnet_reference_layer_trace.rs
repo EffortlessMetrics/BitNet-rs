@@ -6957,6 +6957,8 @@ fn layer_operation_boundary_delta(
 ) -> Value {
     const STAGE_MAPPING: &[(&str, &str, &str)] = &[
         ("attn_norm", "attn_norm", "attention_norm_output"),
+        ("attn_value_mix", "attention_value_mix_merged", "attention_value_mix_merged"),
+        ("attn_sub_norm", "post_attention_subnorm", "attention_subnorm_output"),
         ("attn_o_out", "post_o_proj", "attention_output_projection"),
         ("ffn_inp", "post_attention_residual", "attention_residual_output"),
         ("ffn_norm", "post_ffn_norm", "ffn_norm_output"),
@@ -20856,6 +20858,66 @@ mod tests {
     }
 
     #[test]
+    fn compare_reports_layer1_attention_value_mix_before_projection() {
+        let mut reference_attn = test_reference_trace_record("attn_norm", vec![1.0, 2.0]);
+        reference_attn.name = "attn_norm-1".to_string();
+        reference_attn.layer = Some(1);
+        let mut reference_value_mix = test_reference_trace_record("attn_value_mix", vec![2.0, 3.0]);
+        reference_value_mix.name = "attn_value_mix-1".to_string();
+        reference_value_mix.layer = Some(1);
+        let mut reference_subnorm = test_reference_trace_record("attn_sub_norm", vec![4.0, 5.0]);
+        reference_subnorm.name = "attn_sub_norm-1".to_string();
+        reference_subnorm.layer = Some(1);
+        let mut reference_o = test_reference_trace_record("attn_o_out", vec![6.0, 7.0]);
+        reference_o.name = "attn_o_out-1".to_string();
+        reference_o.layer = Some(1);
+        let reference_records =
+            vec![reference_attn, reference_value_mix, reference_subnorm, reference_o];
+
+        let mut rust_attn = test_rust_trace_record("attn_norm", vec![1.0, 2.0]);
+        rust_attn.name = "t0/blk1/attn_norm".to_string();
+        rust_attn.layer = Some(1);
+        let mut rust_value_mix =
+            test_rust_trace_record("attention_value_mix_merged", vec![2.0, 3.5]);
+        rust_value_mix.name = "t0/blk1/attention_value_mix_merged".to_string();
+        rust_value_mix.layer = Some(1);
+        let mut rust_subnorm = test_rust_trace_record("post_attention_subnorm", vec![4.0, 5.5]);
+        rust_subnorm.name = "t0/blk1/post_attention_subnorm".to_string();
+        rust_subnorm.layer = Some(1);
+        let mut rust_o = test_rust_trace_record("post_o_proj", vec![6.0, 7.5]);
+        rust_o.name = "t0/blk1/post_o_proj".to_string();
+        rust_o.layer = Some(1);
+        let rust_records = vec![rust_attn, rust_value_mix, rust_subnorm, rust_o];
+        let rust_map = rust_trace_stage_map(rust_records.clone());
+
+        let report = compare_reference_to_rust_with_records(
+            &reference_records,
+            &rust_map,
+            &rust_records,
+            &[],
+        );
+        let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
+        let rows = boundary.pointer("/rows").and_then(Value::as_array).unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/compared_count"), Some(&json!(4)));
+        assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(3)));
+        assert_eq!(
+            boundary.pointer("/first_material_stage/boundary"),
+            Some(&json!("attention_value_mix_merged"))
+        );
+        assert!(rows.iter().any(|row| {
+            row.pointer("/boundary") == Some(&json!("attention_subnorm_output"))
+                && row.pointer("/status") == Some(&json!("material_mismatch"))
+        }));
+        assert!(rows.iter().any(|row| {
+            row.pointer("/boundary") == Some(&json!("attention_output_projection"))
+                && row.pointer("/status") == Some(&json!("material_mismatch"))
+        }));
+    }
+
+    #[test]
     fn compare_reports_layer1_attention_norm_history_drift_by_explicit_layer() {
         let mut reference_layer0_input = ReferenceTraceRecord {
             shape: vec![2, 3, 1, 1],
@@ -21985,9 +22047,9 @@ mod tests {
         let boundary = report.pointer("/layer_1_operation_boundary_delta").unwrap();
 
         assert_eq!(boundary.pointer("/compared_count"), Some(&json!(0)));
-        assert_eq!(boundary.pointer("/missing_rust_count"), Some(&json!(8)));
-        assert_eq!(boundary.pointer("/missing_reference_count"), Some(&json!(7)));
-        assert_eq!(boundary.pointer("/rows/1/status"), Some(&json!("missing_rust")));
+        assert_eq!(boundary.pointer("/missing_rust_count"), Some(&json!(10)));
+        assert_eq!(boundary.pointer("/missing_reference_count"), Some(&json!(9)));
+        assert_eq!(boundary.pointer("/rows/3/status"), Some(&json!("missing_rust")));
         assert_eq!(boundary.pointer("/material_mismatch_count"), Some(&json!(0)));
     }
 
