@@ -7695,6 +7695,10 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_selected_post_rope_runtime_replay_source(
             &report["attention_selected_rust_post_rope_capture_source"],
         );
+    report["attention_selected_pre_rope_projection_pair_source"] =
+        attention_selected_pre_rope_projection_pair_source(
+            &report["attention_selected_post_rope_runtime_replay_source"],
+        );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -28606,6 +28610,216 @@ fn attention_selected_post_rope_runtime_replay_source(rust_capture_source: &Valu
     })
 }
 
+fn attention_selected_pre_rope_projection_pair_source(runtime_replay_source: &Value) -> Value {
+    let source_rows = runtime_replay_source.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut missing_input_pair_count = 0usize;
+    let mut projection_bucket_crossing_count = 0usize;
+    let mut raw_projection_pair_count = 0usize;
+    let mut dominant_x0_count = 0usize;
+    let mut dominant_x1_count = 0usize;
+    let mut unpinned_count = 0usize;
+    let mut max_abs_linearized_contribution = 0.0f64;
+    let mut max_abs_projection_delta = 0.0f64;
+
+    if let Some(source_rows) = source_rows {
+        for source_row in source_rows {
+            if source_row.pointer("/classification").and_then(Value::as_str)
+                != Some(
+                    "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing",
+                )
+            {
+                continue;
+            }
+            selected_count += 1;
+
+            let input_pair = source_row.pointer("/input_pair").unwrap_or(&Value::Null);
+            let delta_x0 = value_f64(input_pair, "/delta_x0");
+            let delta_x1 = value_f64(input_pair, "/delta_x1");
+            let x0_coefficient = value_f64(input_pair, "/x0_coefficient_for_probe_dim");
+            let x1_coefficient = value_f64(input_pair, "/x1_coefficient_for_probe_dim");
+            let x0_dim = input_pair.pointer("/x0_dim").and_then(Value::as_u64);
+            let x1_dim = input_pair.pointer("/x1_dim").and_then(Value::as_u64);
+            let projection_buckets_stable = value_bool(source_row, "/projection_buckets_stable");
+            let projection_bucket_match = value_bool(source_row, "/projection_bucket_match");
+            let paired_projection_bucket_match =
+                value_bool(source_row, "/paired_projection_bucket_match");
+            let linearized_matches_replay = value_bool(source_row, "/linearized_matches_replay");
+            let replay_bucket_crossing = value_bool(source_row, "/replay_bucket_crossing");
+            let midpoint_straddled = value_bool(source_row, "/midpoint_straddled");
+            let runtime_replay_delta = value_f64(source_row, "/runtime_replay_delta");
+            let linearized_delta = value_f64(source_row, "/linearized_delta_for_probe_dim");
+            let linearized_delta_minus_runtime_replay_delta =
+                value_f64(source_row, "/linearized_delta_minus_runtime_replay_delta");
+
+            let mut blocked_reasons = Vec::<String>::new();
+            if input_pair.is_null() {
+                blocked_reasons.push("projection_input_pair_missing".to_string());
+            }
+            if delta_x0.is_none() || delta_x1.is_none() {
+                blocked_reasons.push("projection_input_pair_delta_missing".to_string());
+            }
+            if x0_coefficient.is_none() || x1_coefficient.is_none() {
+                blocked_reasons.push("rope_projection_pair_coefficient_missing".to_string());
+            }
+            if x0_dim.is_none() || x1_dim.is_none() {
+                blocked_reasons.push("projection_input_pair_dim_missing".to_string());
+            }
+            if projection_buckets_stable.is_none() {
+                blocked_reasons.push("projection_buckets_stable_missing".to_string());
+            }
+            if linearized_matches_replay.is_none() {
+                blocked_reasons.push("linearized_matches_replay_missing".to_string());
+            }
+            if replay_bucket_crossing.is_none() {
+                blocked_reasons.push("replay_bucket_crossing_missing".to_string());
+            }
+            if midpoint_straddled.is_none() {
+                blocked_reasons.push("midpoint_straddled_missing".to_string());
+            }
+
+            let x0_linearized_contribution =
+                delta_x0.zip(x0_coefficient).map(|(delta, coefficient)| delta * coefficient);
+            let x1_linearized_contribution =
+                delta_x1.zip(x1_coefficient).map(|(delta, coefficient)| delta * coefficient);
+            let linearized_sum =
+                x0_linearized_contribution.zip(x1_linearized_contribution).map(|(x0, x1)| x0 + x1);
+            let linearized_sum_matches_report = linearized_sum
+                .zip(linearized_delta)
+                .is_some_and(|(sum, delta)| (sum - delta).abs() <= 1.0e-12);
+            let dominant_projection_input =
+                match (x0_linearized_contribution, x1_linearized_contribution) {
+                    (Some(x0), Some(x1)) if x0.abs() >= x1.abs() => Some(("x0", x0_dim, x0)),
+                    (Some(_), Some(x1)) => Some(("x1", x1_dim, x1)),
+                    _ => None,
+                };
+            let dominant_input_label = dominant_projection_input.map(|(label, _, _)| label);
+            let dominant_input_dim = dominant_projection_input.and_then(|(_, dim, _)| dim);
+            let dominant_linearized_contribution =
+                dominant_projection_input.map(|(_, _, contribution)| contribution);
+            if let Some(contribution) = dominant_linearized_contribution {
+                max_abs_linearized_contribution =
+                    max_abs_linearized_contribution.max(contribution.abs());
+            }
+            if let Some(delta) = delta_x0 {
+                max_abs_projection_delta = max_abs_projection_delta.max(delta.abs());
+            }
+            if let Some(delta) = delta_x1 {
+                max_abs_projection_delta = max_abs_projection_delta.max(delta.abs());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_input_pair_count += 1;
+                "selected_pre_rope_projection_pair_source_missing_input_pair"
+            } else if projection_buckets_stable == Some(false)
+                || projection_bucket_match == Some(false)
+                || paired_projection_bucket_match == Some(false)
+            {
+                projection_bucket_crossing_count += 1;
+                "selected_pre_rope_projection_pair_source_projection_bucket_crossing"
+            } else if projection_buckets_stable == Some(true)
+                && linearized_matches_replay == Some(true)
+                && replay_bucket_crossing == Some(true)
+                && midpoint_straddled == Some(true)
+                && linearized_sum_matches_report
+            {
+                raw_projection_pair_count += 1;
+                if dominant_input_label == Some("x0") {
+                    dominant_x0_count += 1;
+                } else if dominant_input_label == Some("x1") {
+                    dominant_x1_count += 1;
+                }
+                "selected_pre_rope_projection_pair_source_raw_projection_pair_delta"
+            } else {
+                unpinned_count += 1;
+                "selected_pre_rope_projection_pair_source_unpinned"
+            };
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": source_row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": source_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": source_row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+                "query_token": source_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": source_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "probe_dim": source_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "x0_dim": x0_dim,
+                "x1_dim": x1_dim,
+                "delta_x0": delta_x0,
+                "delta_x1": delta_x1,
+                "x0_coefficient_for_probe_dim": x0_coefficient,
+                "x1_coefficient_for_probe_dim": x1_coefficient,
+                "x0_linearized_contribution": x0_linearized_contribution,
+                "x1_linearized_contribution": x1_linearized_contribution,
+                "dominant_projection_input": dominant_input_label,
+                "dominant_projection_input_dim": dominant_input_dim,
+                "dominant_linearized_contribution": dominant_linearized_contribution,
+                "linearized_sum_from_projection_pair": linearized_sum,
+                "linearized_sum_matches_report": linearized_sum_matches_report,
+                "linearized_delta_for_probe_dim": linearized_delta,
+                "linearized_delta_minus_runtime_replay_delta": linearized_delta_minus_runtime_replay_delta,
+                "runtime_replay_delta": runtime_replay_delta,
+                "projection_buckets_stable": projection_buckets_stable,
+                "projection_bucket_match": projection_bucket_match,
+                "paired_projection_bucket_match": paired_projection_bucket_match,
+                "linearized_matches_replay": linearized_matches_replay,
+                "replay_bucket_crossing": replay_bucket_crossing,
+                "midpoint_straddled": midpoint_straddled,
+                "projection_bucket": source_row.pointer("/projection_bucket").cloned().unwrap_or(Value::Null),
+                "paired_projection_bucket": source_row.pointer("/paired_projection_bucket").cloned().unwrap_or(Value::Null),
+                "post_rope_runtime_replay_source_row": source_row.clone(),
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "selected_pre_rope_projection_pair_source_no_runtime_projection_pair_rows"
+    } else if missing_input_pair_count == selected_count {
+        "selected_pre_rope_projection_pair_source_missing_input_pair"
+    } else if projection_bucket_crossing_count > 0 {
+        "selected_pre_rope_projection_pair_source_projection_bucket_crossing"
+    } else if raw_projection_pair_count > 0 && unpinned_count == 0 {
+        "selected_pre_rope_projection_pair_source_raw_projection_pair_delta"
+    } else {
+        "selected_pre_rope_projection_pair_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_pre_rope_projection_pair_source_raw_projection_pair_delta" => {
+            "localize selected pre-RoPE projection input history at the dominant dim before changing QK256, ROPE, or score-input runtime math"
+        }
+        "selected_pre_rope_projection_pair_source_projection_bucket_crossing" => {
+            "localize selected pre-RoPE projection F16 bucket crossing before changing ROPE runtime math"
+        }
+        "selected_pre_rope_projection_pair_source_missing_input_pair" => {
+            "capture selected pre-RoPE projection input-pair context before changing runtime math"
+        }
+        "selected_pre_rope_projection_pair_source_no_runtime_projection_pair_rows" => {
+            "classify selected post-RoPE runtime replay source before pre-RoPE projection-pair attribution"
+        }
+        _ => "keep selected pre-RoPE projection-pair source diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected pre-RoPE projection-pair source is diagnostic-only evidence for whether stable pre-RoPE projection pair epsilons explain the selected post-RoPE replay bucket crossing; it does not change QK256, ROPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "missing_input_pair_count": missing_input_pair_count,
+        "projection_bucket_crossing_count": projection_bucket_crossing_count,
+        "raw_projection_pair_count": raw_projection_pair_count,
+        "dominant_x0_count": dominant_x0_count,
+        "dominant_x1_count": dominant_x1_count,
+        "unpinned_count": unpinned_count,
+        "max_abs_linearized_contribution": max_abs_linearized_contribution,
+        "max_abs_projection_delta": max_abs_projection_delta,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     post_rope_raw_key_epsilon: &Value,
 ) -> Value {
@@ -44012,6 +44226,128 @@ mod tests {
             report.pointer("/rows/0/blocked_reasons/1"),
             Some(&json!("post_rope_raw_key_epsilon_row_missing"))
         );
+    }
+
+    #[test]
+    fn selected_pre_rope_projection_pair_source_reports_dominant_x1() {
+        let runtime_replay_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "runtime_replay_delta": 3.25e-6_f64,
+                    "linearized_delta_for_probe_dim": 3.25e-6_f64,
+                    "linearized_delta_minus_runtime_replay_delta": 0.0,
+                    "linearized_matches_replay": true,
+                    "projection_buckets_stable": true,
+                    "projection_bucket_match": true,
+                    "paired_projection_bucket_match": true,
+                    "replay_bucket_crossing": true,
+                    "midpoint_straddled": true,
+                    "input_pair": {
+                        "delta_x0": 1.0e-6_f64,
+                        "delta_x1": 4.0e-6_f64,
+                        "x0_coefficient_for_probe_dim": 0.25,
+                        "x1_coefficient_for_probe_dim": 0.75,
+                        "x0_dim": 13,
+                        "x1_dim": 77,
+                    },
+                    "projection_bucket": {
+                        "f16_bucket_match": true
+                    },
+                    "paired_projection_bucket": {
+                        "f16_bucket_match": true
+                    }
+                }
+            ]
+        });
+
+        let report = attention_selected_pre_rope_projection_pair_source(&runtime_replay_source);
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_pre_rope_projection_pair_source_raw_projection_pair_delta"))
+        );
+        assert_eq!(report.pointer("/raw_projection_pair_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/dominant_x1_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rows/0/dominant_projection_input"), Some(&json!("x1")));
+        assert_eq!(report.pointer("/rows/0/dominant_projection_input_dim"), Some(&json!(77)));
+        assert_eq!(report.pointer("/rows/0/linearized_sum_matches_report"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn selected_pre_rope_projection_pair_source_reports_missing_input_pair() {
+        let runtime_replay_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+
+        let report = attention_selected_pre_rope_projection_pair_source(&runtime_replay_source);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_pre_rope_projection_pair_source_missing_input_pair"))
+        );
+        assert_eq!(report.pointer("/missing_input_pair_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/blocked_reasons/0"),
+            Some(&json!("projection_input_pair_missing"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_pre_rope_projection_pair_source_reports_projection_bucket_crossing() {
+        let runtime_replay_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "runtime_replay_delta": -1.0e-6_f64,
+                    "linearized_delta_for_probe_dim": -1.0e-6_f64,
+                    "linearized_delta_minus_runtime_replay_delta": 0.0,
+                    "linearized_matches_replay": true,
+                    "projection_buckets_stable": false,
+                    "projection_bucket_match": false,
+                    "paired_projection_bucket_match": true,
+                    "replay_bucket_crossing": true,
+                    "midpoint_straddled": true,
+                    "input_pair": {
+                        "delta_x0": -1.0e-6_f64,
+                        "delta_x1": 0.0,
+                        "x0_coefficient_for_probe_dim": 1.0,
+                        "x1_coefficient_for_probe_dim": 0.0,
+                        "x0_dim": 13,
+                        "x1_dim": 77,
+                    }
+                }
+            ]
+        });
+
+        let report = attention_selected_pre_rope_projection_pair_source(&runtime_replay_source);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_pre_rope_projection_pair_source_projection_bucket_crossing"))
+        );
+        assert_eq!(report.pointer("/projection_bucket_crossing_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/raw_projection_pair_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
