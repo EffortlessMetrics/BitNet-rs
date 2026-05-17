@@ -91,7 +91,7 @@ smoke receipts stay immutable evidence for what happened.
 
 ## Work Item: CUDA-SERVER-004
 
-Status: proposed
+Status: merged
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
