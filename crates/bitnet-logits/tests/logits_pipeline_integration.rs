@@ -212,12 +212,12 @@ fn softmax_handles_neg_infinity() {
 }
 
 #[test]
-fn softmax_all_neg_infinity_uniform() {
+fn softmax_all_neg_infinity_stays_zero() {
     let mut logits = vec![f32::NEG_INFINITY; 5];
     softmax_in_place(&mut logits);
-    // Should fall back to uniform
+    // Fully masked logits should stay masked instead of falling back to uniform.
     for &p in &logits {
-        assert!((p - 0.2).abs() < 1e-5);
+        assert_eq!(p, 0.0);
     }
 }
 

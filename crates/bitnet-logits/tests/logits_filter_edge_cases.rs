@@ -142,15 +142,13 @@ fn softmax_with_neg_infinity_entries() {
 }
 
 #[test]
-fn softmax_all_neg_infinity_gives_uniform() {
+fn softmax_all_neg_infinity_stays_zero() {
     let mut v = vec![f32::NEG_INFINITY; 4];
     softmax_in_place(&mut v);
-    // All exp(-inf - (-inf)) = exp(0) for max=-inf? Actually max = -inf,
-    // so v - max = -inf - (-inf) = NaN → exp(NaN) = NaN.
-    // The implementation checks `v == NEG_INFINITY` and sets to 0.0,
-    // then sum==0 triggers uniform fallback.
+    // Fully masked logits should not reintroduce probability mass into
+    // tokens that upstream filters already removed.
     for &p in &v {
-        assert_approx(p, 0.25, 1e-6);
+        assert_approx(p, 0.0, 1e-6);
     }
 }
 
@@ -158,12 +156,10 @@ fn softmax_all_neg_infinity_gives_uniform() {
 fn softmax_with_positive_infinity() {
     let mut v = vec![1.0, f32::INFINITY, 3.0];
     softmax_in_place(&mut v);
-    // max = inf, so exp(inf - inf) = exp(NaN) = NaN → sum is NaN,
-    // which fails the `sum > 0.0` check, triggering the uniform fallback.
-    let expected = 1.0 / 3.0;
-    for &p in &v {
-        assert_approx(p, expected, 1e-6);
-    }
+    // The +∞ logit dominates the finite logits in the softmax limit.
+    assert_approx(v[0], 0.0, 1e-6);
+    assert_approx(v[1], 1.0, 1e-6);
+    assert_approx(v[2], 0.0, 1e-6);
 }
 
 #[test]

@@ -69,11 +69,14 @@ pub fn apply_temperature(logits: &mut [f32], temperature: f32) {
 
 /// Convert raw logits to a probability distribution in-place via softmax.
 ///
-/// Uses the numerically-stable "subtract max" form.  `f32::NEG_INFINITY`
-/// entries (from [`apply_top_k`]) become `0.0` after exponentiation.
+/// Uses the numerically-stable "subtract max" form. `f32::NEG_INFINITY`
+/// entries (from [`apply_top_k`]) become `0.0` after exponentiation. The
+/// normalization sum is accumulated in `f64` before rounding probabilities back
+/// to `f32`, which reduces drift for large vocabularies.
 ///
-/// Falls back to a uniform distribution when all exponentiated values underflow
-/// to zero (rare with finite logits).
+/// Degenerate non-finite inputs are handled explicitly: all-masked
+/// (`-∞`-only) inputs remain all zero, while one or more `+∞` logits share the
+/// probability mass uniformly and suppress finite logits.
 ///
 /// # Examples
 ///
@@ -91,8 +94,28 @@ pub fn softmax_in_place(logits: &mut [f32]) {
     if logits.is_empty() {
         return;
     }
+
+    let pos_inf_count = logits.iter().filter(|&&l| l == f32::INFINITY).count();
+    if pos_inf_count > 0 {
+        #[allow(clippy::cast_precision_loss)]
+        let probability = 1.0_f32 / pos_inf_count as f32;
+        for l in logits.iter_mut() {
+            *l = if *l == f32::INFINITY { probability } else { 0.0 };
+        }
+        return;
+    }
+
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let mut sum = 0.0f32;
+    if max == f32::NEG_INFINITY {
+        // Preserve a fully masked distribution instead of reintroducing
+        // probability mass into tokens that upstream filters removed.
+        for l in logits.iter_mut() {
+            *l = 0.0;
+        }
+        return;
+    }
+
+    let mut sum = 0.0f64;
     for l in logits.iter_mut() {
         let v = *l;
         // Optimization: skip exp() for NEG_INFINITY which always yields 0.0.
@@ -102,23 +125,13 @@ pub fn softmax_in_place(logits: &mut [f32]) {
         } else {
             let exp = (v - max).exp();
             *l = exp;
-            sum += exp;
+            sum += f64::from(exp);
         }
     }
-    if sum > 0.0 {
-        let inv_sum = 1.0 / sum;
-        for l in logits.iter_mut() {
-            *l *= inv_sum;
-        }
-    } else {
-        // Degenerate case: all exponentiated values underflowed to 0.
-        // Fall back to a uniform distribution so downstream sampling receives
-        // a valid probability distribution.
-        #[allow(clippy::cast_precision_loss)]
-        let uniform = 1.0_f32 / logits.len() as f32;
-        for l in logits.iter_mut() {
-            *l = uniform;
-        }
+
+    let inv_sum = (1.0 / sum) as f32;
+    for l in logits.iter_mut() {
+        *l *= inv_sum;
     }
 }
 
@@ -232,6 +245,20 @@ mod tests {
         softmax_in_place(&mut logits);
         assert!(logits[1] > logits[2]);
         assert!(logits[2] > logits[0]);
+    }
+
+    #[test]
+    fn softmax_all_masked_stays_zero() {
+        let mut logits = vec![f32::NEG_INFINITY; 4];
+        softmax_in_place(&mut logits);
+        assert_eq!(logits, vec![0.0; 4]);
+    }
+
+    #[test]
+    fn softmax_positive_infinity_takes_all_mass() {
+        let mut logits = vec![1.0f32, f32::INFINITY, 2.0, f32::INFINITY];
+        softmax_in_place(&mut logits);
+        assert_eq!(logits, vec![0.0, 0.5, 0.0, 0.5]);
     }
 
     #[test]

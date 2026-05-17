@@ -411,14 +411,14 @@ proptest! {
         );
     }
 
-    /// A single-element NEG_INFINITY input (degenerate): softmax falls back to uniform (= 1.0).
+    /// A single-element NEG_INFINITY input is already fully masked, so it stays zero.
     #[test]
-    fn single_element_neginf_softmax_is_one(_seed in 0u32..=100u32) {
+    fn single_element_neginf_softmax_is_zero(_seed in 0u32..=100u32) {
         let mut logits = vec![f32::NEG_INFINITY];
         softmax_in_place(&mut logits);
         prop_assert!(
-            (logits[0] - 1.0).abs() < 1e-6,
-            "single NEG_INFINITY softmax expected 1.0 (uniform fallback), got {}",
+            logits[0] == 0.0,
+            "single NEG_INFINITY softmax expected 0.0 (fully masked), got {}",
             logits[0]
         );
     }
