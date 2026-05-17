@@ -92,7 +92,7 @@ pub fn softmax_in_place(logits: &mut [f32]) {
         return;
     }
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let mut sum = 0.0f32;
+    let mut sum = 0.0f64;
     for l in logits.iter_mut() {
         let v = *l;
         // Optimization: skip exp() for NEG_INFINITY which always yields 0.0.
@@ -102,11 +102,11 @@ pub fn softmax_in_place(logits: &mut [f32]) {
         } else {
             let exp = (v - max).exp();
             *l = exp;
-            sum += exp;
+            sum += f64::from(exp);
         }
     }
-    if sum > 0.0 {
-        let inv_sum = 1.0 / sum;
+    if sum > 0.0 && sum.is_finite() {
+        let inv_sum = (1.0 / sum) as f32;
         for l in logits.iter_mut() {
             *l *= inv_sum;
         }
@@ -232,6 +232,16 @@ mod tests {
         softmax_in_place(&mut logits);
         assert!(logits[1] > logits[2]);
         assert!(logits[2] > logits[0]);
+    }
+
+    #[test]
+    fn softmax_large_uniform_distribution_stays_normalized() {
+        let mut logits = vec![0.0_f32; 100_000];
+        softmax_in_place(&mut logits);
+
+        let sum: f64 = logits.iter().map(|&p| f64::from(p)).sum();
+        assert!((sum - 1.0).abs() < 1e-6, "softmax sum was {sum}");
+        assert!(logits.iter().all(|p| p.is_finite() && *p > 0.0));
     }
 
     #[test]

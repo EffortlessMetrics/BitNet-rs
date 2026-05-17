@@ -12,12 +12,12 @@ pub fn renormalize_in_place(probs: &mut [f32]) -> bool {
         return false;
     }
 
-    let sum: f32 = probs.iter().sum();
+    let sum: f64 = probs.iter().map(|&prob| f64::from(prob)).sum();
     if sum <= 0.0 || !sum.is_finite() {
         return false;
     }
 
-    let inv_sum = 1.0 / sum;
+    let inv_sum = (1.0 / sum) as f32;
     for p in probs.iter_mut() {
         *p *= inv_sum;
     }
@@ -38,9 +38,10 @@ pub fn sample_categorical(probabilities: &[f32], random_value: f32) -> Option<us
 
     let rv = random_value.clamp(0.0, 1.0 - f32::EPSILON);
 
-    let mut cumulative = 0.0_f32;
+    let rv = f64::from(rv);
+    let mut cumulative = 0.0_f64;
     for (i, &prob) in probabilities.iter().enumerate() {
-        cumulative += prob;
+        cumulative += f64::from(prob);
         if rv <= cumulative {
             return Some(i);
         }
@@ -76,6 +77,21 @@ mod tests {
     fn categorical_returns_last_on_rounding_tail() {
         let probs = vec![0.1_f32, 0.2, 0.3, 0.4];
         assert_eq!(sample_categorical(&probs, 0.999_999_94), Some(3));
+    }
+
+    #[test]
+    fn renormalize_large_uniform_vector_stays_close_to_one() {
+        let mut probs = vec![1.0_f32; 100_000];
+        assert!(renormalize_in_place(&mut probs));
+
+        let sum: f64 = probs.iter().map(|&p| f64::from(p)).sum();
+        assert!((sum - 1.0).abs() < 1e-6, "renormalized sum was {sum}");
+    }
+
+    #[test]
+    fn categorical_uses_precise_tail_accumulation() {
+        let probs = vec![0.000_01_f32; 100_000];
+        assert_eq!(sample_categorical(&probs, 0.999_99), Some(99_999));
     }
 
     proptest! {
