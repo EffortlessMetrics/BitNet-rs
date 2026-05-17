@@ -188,12 +188,14 @@ Engine/MPSGraph/MacBook/broad-claim boundaries.
 
 ## BitNet Chat Gate
 
-`M4-BITNET-PROD-004` makes BitNet chat enablement explicit before any
-`bitnet mac chat --model-family bitnet` route can run. The route currently
-fails before prompt collection and points operators to the gate command:
+`M4-BITNET-PROD-004` made BitNet chat enablement explicit, and
+`M4-BITNET-EX-006` keeps the route gate-required. `bitnet mac chat
+--model-family bitnet` fails before prompt collection unless
+`--bitnet-chat-gate-receipt` points at a ready gate receipt:
 
 ```bash
 bitnet --device apple-m4-cpu-neon mac bitnet-chat-gate \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
   --warm-receipt ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json \
   --failure-receipt <bitnet_apple_m4_warm_session_failure.json> \
   --streaming-receipt <bitnet_apple_m4_chat_streaming_semantics.json> \
@@ -207,8 +209,22 @@ Microsoft I2_S model SHA, external tokenizer SHA and authority,
 determinism, timeout/failure evidence, streaming-semantics evidence, and
 unchanged disabled chat/serve/Metal/QK256/Neural Engine/MPSGraph/MacBook/
 broad-claim boundaries. Missing evidence keeps the receipt `status=blocked`.
-Even `status=ready_to_enable` would only authorize a separate route-enablement
-PR; it does not itself enable BitNet chat or serve.
+Only `status=ready_to_enable` can be consumed by:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac chat \
+  --model-family bitnet \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --bitnet-chat-gate-receipt <bitnet_apple_m4_chat_gate.json> \
+  --prompt "Answer with a single digit: 2+2=" \
+  --prompt "Name the capital of France. Answer with one word."
+```
+
+The chat receipt kind is `bitnet_apple_m4_chat_session`. It enables only the
+accepted BitNet M4 CPU/NEON chat route and keeps BitNet serve, full Metal,
+QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, and broad
+Apple Silicon performance claims disabled.
 
 ## Accepted Artifact Input
 
