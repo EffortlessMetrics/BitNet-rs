@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T09:16:25Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-004-warm-25-50-100"
+pr = 5316
+merge_sha = "1a6a438357fd70dfe251982c742eafeaf460d6b8"
+
+notes = [
+  "Merged PR #5316 for M4-BITNET-EX-004 BitNet warm profile receipts.",
+  "The merged evidence records one apple-m4-cpu-neon BitNet resident 100-prompt warm run with resident_25, resident_50, and resident_100 prefix checkpoints, 100 per-prompt receipts, determinism pass, timeout boundary, and fallback=false.",
+  "BitNet chat and serve remain disabled; no broad quality, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon performance claim changed.",
+]
