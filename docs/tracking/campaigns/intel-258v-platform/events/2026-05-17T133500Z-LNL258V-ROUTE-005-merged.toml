@@ -1,0 +1,26 @@
+timestamp = "2026-05-17T13:35:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-005-npu-gpu-diagnostics"
+pr = 5338
+head_sha = "595dcc6d0cc7fe66af0df9e9671b694fca2e5998"
+merge_sha = "d992e358a70e4e52644ba2722d1f0d76785bfe64"
+summary = "Merged LNL258V-ROUTE-005 route-profile diagnosis wiring."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5338 merged with OpenVINO GPU/NPU diagnosis receipts attached to route-profile candidate rows.",
+  "The merged artifact keeps OpenVINO GPU/NPU routes candidate-only and unpromoted.",
+  "No new inference, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim was added.",
+]
