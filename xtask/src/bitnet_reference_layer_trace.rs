@@ -8592,6 +8592,16 @@ fn layer_prefix_value_mix_history_attribution(
                 .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
         })
         .collect::<BTreeMap<_, _>>();
+    let reference_score_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            if record.layer != reference_layer || !record.stage.ends_with("_history_ref_layout") {
+                return None;
+            }
+            parse_stage_head(&record.stage, "kq_head")
+                .and_then(|head| scalar_reference_tensor(record).map(|tensor| (head, tensor)))
+        })
+        .collect::<BTreeMap<_, _>>();
     let reference_value_cache_heads = reference_records
         .iter()
         .filter_map(|record| {
@@ -8624,6 +8634,18 @@ fn layer_prefix_value_mix_history_attribution(
                 .map(|head| (head, scalar_rust_tensor(record)))
         })
         .collect::<BTreeMap<_, _>>();
+    let rust_score_history_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            if record.layer != rust_layer
+                || !record.stage.as_deref().unwrap_or("").ends_with("_history_ref_layout")
+            {
+                return None;
+            }
+            parse_stage_head(stage, "attention_scores_raw_head")
+                .map(|head| (head, scalar_rust_tensor(record)))
+        })
+        .collect::<BTreeMap<_, _>>();
     let rust_value_cache_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
@@ -8649,6 +8671,9 @@ fn layer_prefix_value_mix_history_attribution(
         })
         .collect::<BTreeMap<_, _>>();
     let numeric_variants = reference_value_mix_numeric_variant_specs();
+    let probability_variants = reference_probability_softmax_variant_specs();
+    let (rust_head_dim, _) =
+        rust_records.get("attention_q_rope").and_then(rust_query_head_dim_count).unwrap_or((0, 0));
 
     let group_size = if reference_value_cache_heads.is_empty()
         || reference_value_mix_heads.is_empty()
@@ -8726,6 +8751,19 @@ fn layer_prefix_value_mix_history_attribution(
     let mut max_rust_numeric_variant_best_abs_delta = 0.0f64;
     let mut max_rust_numeric_variant_best_rms_delta = 0.0f64;
     let mut first_unexplained_rust_numeric_variant_row = Value::Null;
+    let mut probability_source_rows = Vec::<Value>::new();
+    let mut score_source_delta_compared_count = 0usize;
+    let mut score_source_delta_missing_count = 0usize;
+    let mut score_source_delta_material_count = 0usize;
+    let mut max_score_source_abs_delta = 0.0f64;
+    let mut rust_softmax_numeric_compared_count = 0usize;
+    let mut rust_softmax_numeric_missing_count = 0usize;
+    let mut rust_softmax_numeric_unexplained_count = 0usize;
+    let mut rust_softmax_numeric_best_counts = BTreeMap::<String, usize>::new();
+    let mut max_rust_softmax_numeric_abs_delta = 0.0f64;
+    let mut max_rust_softmax_numeric_rms_delta = 0.0f64;
+    let mut first_material_score_source_row = Value::Null;
+    let mut first_unexplained_rust_softmax_numeric_row = Value::Null;
 
     for (token, labels) in targets {
         let mut head_rows = Vec::new();
@@ -8900,6 +8938,104 @@ fn layer_prefix_value_mix_history_attribution(
                 max_probability_source_abs_delta =
                     max_probability_source_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
             }
+            let reference_score = reference_score_history_heads.get(&head);
+            let rust_score = rust_score_history_heads.get(&head);
+            let score_source_delta =
+                reference_score.zip(rust_score).and_then(|(reference, rust)| {
+                    probability_history_token_delta(reference, rust, token)
+                });
+            let score_source_material =
+                score_source_delta.as_ref().is_some_and(delta_has_material_numeric_delta);
+            if score_source_delta.is_some() {
+                score_source_delta_compared_count += 1;
+            } else {
+                score_source_delta_missing_count += 1;
+            }
+            if score_source_material {
+                score_source_delta_material_count += 1;
+                if first_material_score_source_row.is_null()
+                    && let Some(delta) = &score_source_delta
+                {
+                    first_material_score_source_row = value_mix_history_material_row(
+                        layer,
+                        token,
+                        &labels,
+                        head,
+                        kv_head,
+                        "score_source_delta",
+                        delta,
+                    );
+                }
+            }
+            if let Some(delta) = &score_source_delta {
+                max_score_source_abs_delta =
+                    max_score_source_abs_delta.max(delta_metric(delta, "/max_abs_delta"));
+            }
+
+            let rust_softmax_numeric =
+                rust_score.zip(rust_probability).and_then(|(score, target)| {
+                    probability_history_numeric_variant_token_report(
+                        score,
+                        target,
+                        token,
+                        rust_head_dim,
+                        &probability_variants,
+                    )
+                });
+            if let Some(report) = &rust_softmax_numeric {
+                rust_softmax_numeric_compared_count += 1;
+                let best_variant =
+                    report.pointer("/best_variant").and_then(Value::as_str).unwrap_or("");
+                if !best_variant.is_empty() {
+                    *rust_softmax_numeric_best_counts
+                        .entry(best_variant.to_string())
+                        .or_insert(0) += 1;
+                }
+                let best_abs =
+                    report.pointer("/max_abs_delta").and_then(Value::as_f64).unwrap_or(0.0);
+                let best_rms = report.pointer("/rms_delta").and_then(Value::as_f64).unwrap_or(0.0);
+                max_rust_softmax_numeric_abs_delta =
+                    max_rust_softmax_numeric_abs_delta.max(best_abs);
+                max_rust_softmax_numeric_rms_delta =
+                    max_rust_softmax_numeric_rms_delta.max(best_rms);
+                let explained = report
+                    .pointer("/best_variant_explains_target")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                if !explained {
+                    rust_softmax_numeric_unexplained_count += 1;
+                    if first_unexplained_rust_softmax_numeric_row.is_null() {
+                        first_unexplained_rust_softmax_numeric_row = json!({
+                            "layer": layer,
+                            "token": token,
+                            "labels": labels,
+                            "head": head,
+                            "kv_head": kv_head,
+                            "best_variant": best_variant,
+                            "max_abs_delta": best_abs,
+                            "rms_delta": best_rms,
+                            "best_delta": report.pointer("/best_delta").cloned().unwrap_or(Value::Null),
+                        });
+                    }
+                }
+            } else {
+                rust_softmax_numeric_missing_count += 1;
+            }
+            probability_source_rows.push(json!({
+                "layer": layer,
+                "token": token,
+                "labels": labels,
+                "head": head,
+                "kv_head": kv_head,
+                "probability_source_delta": probability_source_delta.clone().unwrap_or(Value::Null),
+                "probability_source_material_mismatch": probability_source_material,
+                "score_source_delta": score_source_delta.clone().unwrap_or(Value::Null),
+                "score_source_material_mismatch": score_source_material,
+                "rust_softmax_numeric_variants": rust_softmax_numeric.clone().unwrap_or(Value::Null),
+                "reference_score_history_present": reference_score.is_some(),
+                "rust_score_history_present": rust_score.is_some(),
+                "rust_probability_history_present": rust_probability.is_some(),
+            }));
 
             let value_cache_source_delta =
                 reference_value_cache.zip(rust_value_cache).and_then(|(reference, rust)| {
@@ -9091,6 +9227,27 @@ fn layer_prefix_value_mix_history_attribution(
         "first_unexplained_row": first_unexplained_rust_numeric_variant_row,
         "rows": rust_numeric_variant_rows,
     });
+    let probability_history_source_summary = probability_history_source_summary(
+        probability_source_delta_compared_count,
+        probability_source_delta_missing_count,
+        probability_source_delta_material_count,
+        score_source_delta_compared_count,
+        score_source_delta_missing_count,
+        score_source_delta_material_count,
+        rust_softmax_numeric_compared_count,
+        rust_softmax_numeric_missing_count,
+        rust_softmax_numeric_unexplained_count,
+        max_probability_source_abs_delta,
+        max_score_source_abs_delta,
+        max_rust_softmax_numeric_abs_delta,
+        max_rust_softmax_numeric_rms_delta,
+        rust_head_dim,
+        &rust_softmax_numeric_best_counts,
+        &first_material_probability_source_row,
+        &first_material_score_source_row,
+        &first_unexplained_rust_softmax_numeric_row,
+        probability_source_rows,
+    );
 
     let source_summary = prefix_value_mix_history_source_summary(
         token_rows.is_empty(),
@@ -9163,6 +9320,7 @@ fn layer_prefix_value_mix_history_attribution(
         "max_rust_self_recompute_abs_delta": max_rust_self_recompute_abs_delta,
         "max_rust_self_recompute_rms_delta": max_rust_self_recompute_rms_delta,
         "rust_self_numeric_variants": rust_self_numeric_variants,
+        "probability_history_source_summary": probability_history_source_summary,
         "probability_source_delta_compared_count": probability_source_delta_compared_count,
         "probability_source_delta_missing_count": probability_source_delta_missing_count,
         "probability_source_delta_material_count": probability_source_delta_material_count,
@@ -9375,6 +9533,226 @@ fn value_mix_history_numeric_variant_token_delta(
         object.insert("output_f16_roundtrip".to_string(), json!(variant.output_f16_roundtrip));
     }
     Some(delta)
+}
+
+fn probability_history_numeric_variant_token_report(
+    score_history: &ScalarTraceTensor,
+    probability_history: &ScalarTraceTensor,
+    query_token: usize,
+    head_dim: usize,
+    variants: &[ReferenceProbabilitySoftmaxVariantSpec],
+) -> Option<Value> {
+    let (score_key_count, score_query_count) = scalar_tensor_dim_token_shape(score_history)?;
+    let (probability_key_count, probability_query_count) =
+        scalar_tensor_dim_token_shape(probability_history)?;
+    let live_key_count =
+        score_key_count.min(probability_key_count).min(query_token.saturating_add(1));
+    if live_key_count == 0
+        || query_token >= score_query_count
+        || query_token >= probability_query_count
+    {
+        return None;
+    }
+    let score_sample_count = score_key_count.checked_mul(score_query_count)?;
+    let probability_sample_count = probability_key_count.checked_mul(probability_query_count)?;
+    if score_history.first_values.len() < score_sample_count
+        || probability_history.first_values.len() < probability_sample_count
+    {
+        return None;
+    }
+
+    let score_values = (0..live_key_count)
+        .map(|key| score_history.first_values[key * score_query_count + query_token])
+        .collect::<Vec<_>>();
+    let target_values = (0..live_key_count)
+        .map(|key| probability_history.first_values[key * probability_query_count + query_token])
+        .collect::<Vec<_>>();
+
+    let mut variant_rows = Vec::<Value>::new();
+    let mut best_variant = "";
+    let mut best_delta = Value::Null;
+    let mut best_rank = (f64::INFINITY, f64::INFINITY, true);
+    let mut best_scale = 1.0f64;
+    let mut best_scale_policy = "";
+    let mut best_mask_policy = "";
+    let mut best_length_policy = "";
+    let mut best_score_f16_roundtrip = false;
+    let mut best_output_f16_roundtrip = false;
+
+    for &variant in variants {
+        let scale = variant.scale_policy.scale(head_dim);
+        let Some(values) = probability_softmax_values_from_scores(
+            &score_values,
+            live_key_count,
+            live_key_count,
+            scale,
+            variant.length_policy,
+            variant.score_f16_roundtrip,
+            variant.output_f16_roundtrip,
+        ) else {
+            continue;
+        };
+        let delta = compare_vectors(&values, &target_values);
+        let rms = delta_metric(&delta, "/rms_abs_delta");
+        let max_abs = delta_metric(&delta, "/max_abs_delta");
+        let count_mismatch =
+            !delta.pointer("/count_match").and_then(Value::as_bool).unwrap_or(false);
+        let rank = (rms, max_abs, count_mismatch);
+        if rank < best_rank {
+            best_rank = rank;
+            best_variant = variant.id;
+            best_delta = delta.clone();
+            best_scale = scale;
+            best_scale_policy = variant.scale_policy.label();
+            best_mask_policy = variant.length_policy.mask_policy();
+            best_length_policy = variant.length_policy.label();
+            best_score_f16_roundtrip = variant.score_f16_roundtrip;
+            best_output_f16_roundtrip = variant.output_f16_roundtrip;
+        }
+        variant_rows.push(json!({
+            "variant": variant.id,
+            "query_token": query_token,
+            "live_key_count": live_key_count,
+            "scale": scale,
+            "scale_policy": variant.scale_policy.label(),
+            "scale_source": variant.scale_policy.source(),
+            "mask_policy": variant.length_policy.mask_policy(),
+            "length_policy": variant.length_policy.label(),
+            "score_f16_roundtrip": variant.score_f16_roundtrip,
+            "output_f16_roundtrip": variant.output_f16_roundtrip,
+            "max_abs_delta": max_abs,
+            "rms_delta": rms,
+            "delta": delta,
+        }));
+    }
+
+    if variant_rows.is_empty() {
+        return None;
+    }
+
+    Some(json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "query_token": query_token,
+        "live_key_count": live_key_count,
+        "head_dim": head_dim,
+        "variant_count": variants.len(),
+        "best_variant": best_variant,
+        "best_variant_explains_target": reference_score_variant_explained(&best_delta),
+        "scale": best_scale,
+        "scale_policy": best_scale_policy,
+        "mask_policy": best_mask_policy,
+        "length_policy": best_length_policy,
+        "score_f16_roundtrip": best_score_f16_roundtrip,
+        "output_f16_roundtrip": best_output_f16_roundtrip,
+        "max_abs_delta": delta_metric(&best_delta, "/max_abs_delta"),
+        "rms_delta": delta_metric(&best_delta, "/rms_abs_delta"),
+        "best_delta": best_delta,
+        "variants": variant_rows,
+    }))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn probability_history_source_summary(
+    probability_source_delta_compared_count: usize,
+    probability_source_delta_missing_count: usize,
+    probability_source_delta_material_count: usize,
+    score_source_delta_compared_count: usize,
+    score_source_delta_missing_count: usize,
+    score_source_delta_material_count: usize,
+    rust_softmax_numeric_compared_count: usize,
+    rust_softmax_numeric_missing_count: usize,
+    rust_softmax_numeric_unexplained_count: usize,
+    max_probability_source_abs_delta: f64,
+    max_score_source_abs_delta: f64,
+    max_rust_softmax_numeric_abs_delta: f64,
+    max_rust_softmax_numeric_rms_delta: f64,
+    rust_head_dim: usize,
+    rust_softmax_numeric_best_counts: &BTreeMap<String, usize>,
+    first_material_probability_source_row: &Value,
+    first_material_score_source_row: &Value,
+    first_unexplained_rust_softmax_numeric_row: &Value,
+    rows: Vec<Value>,
+) -> Value {
+    let probability_source_drift_present = probability_source_delta_material_count > 0;
+    let score_source_drift_present = score_source_delta_material_count > 0;
+    let rust_softmax_numeric_all_explained =
+        rust_softmax_numeric_compared_count > 0 && rust_softmax_numeric_unexplained_count == 0;
+    let classification = if probability_source_delta_missing_count > 0
+        || score_source_delta_missing_count > 0
+        || rust_softmax_numeric_missing_count > 0
+    {
+        "missing_inputs"
+    } else if probability_source_drift_present
+        && score_source_drift_present
+        && rust_softmax_numeric_all_explained
+    {
+        "probability_drift_follows_score_history_drift"
+    } else if probability_source_drift_present
+        && !score_source_drift_present
+        && rust_softmax_numeric_all_explained
+    {
+        "probability_drift_after_clean_score_history"
+    } else if probability_source_drift_present && rust_softmax_numeric_unexplained_count > 0 {
+        "probability_softmax_numeric_or_trace_drift"
+    } else if score_source_drift_present {
+        "score_history_drift_without_probability_material_drift"
+    } else if probability_source_drift_present {
+        "probability_source_drift_unattributed"
+    } else {
+        "probability_source_clean"
+    };
+
+    let next_diagnostic = match classification {
+        "missing_inputs" => {
+            "capture missing score/probability history rows before attributing probability drift"
+        }
+        "probability_drift_follows_score_history_drift" => {
+            "localize raw score-history drift before changing softmax or value-mix arithmetic"
+        }
+        "probability_drift_after_clean_score_history" => {
+            "inspect probability softmax output policy or trace serialization with clean score history"
+        }
+        "probability_softmax_numeric_or_trace_drift" => {
+            "localize Rust softmax numeric policy or probability trace serialization"
+        }
+        "score_history_drift_without_probability_material_drift" => {
+            "score history drifts but prefix probability rows are clean for compared targets"
+        }
+        "probability_source_drift_unattributed" => {
+            "add narrower score/probability source diagnostics for the drifting prefix rows"
+        }
+        _ => "probability source is clean for compared prefix value-mix targets",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "classification": classification,
+        "probability_source_drift_present": probability_source_drift_present,
+        "score_source_drift_present": score_source_drift_present,
+        "rust_softmax_numeric_all_explained": rust_softmax_numeric_all_explained,
+        "probability_source_delta_compared_count": probability_source_delta_compared_count,
+        "probability_source_delta_missing_count": probability_source_delta_missing_count,
+        "probability_source_delta_material_count": probability_source_delta_material_count,
+        "score_source_delta_compared_count": score_source_delta_compared_count,
+        "score_source_delta_missing_count": score_source_delta_missing_count,
+        "score_source_delta_material_count": score_source_delta_material_count,
+        "rust_softmax_numeric_compared_count": rust_softmax_numeric_compared_count,
+        "rust_softmax_numeric_missing_count": rust_softmax_numeric_missing_count,
+        "rust_softmax_numeric_unexplained_count": rust_softmax_numeric_unexplained_count,
+        "rust_softmax_numeric_best_counts": rust_softmax_numeric_best_counts,
+        "max_probability_source_abs_delta": max_probability_source_abs_delta,
+        "max_score_source_abs_delta": max_score_source_abs_delta,
+        "max_rust_softmax_numeric_abs_delta": max_rust_softmax_numeric_abs_delta,
+        "max_rust_softmax_numeric_rms_delta": max_rust_softmax_numeric_rms_delta,
+        "rust_head_dim": rust_head_dim,
+        "first_material_probability_source_row": first_material_probability_source_row,
+        "first_material_score_source_row": first_material_score_source_row,
+        "first_unexplained_rust_softmax_numeric_row": first_unexplained_rust_softmax_numeric_row,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -24993,6 +25371,83 @@ mod tests {
         assert_eq!(report.pointer("/max_abs_delta"), Some(&json!(0.0)));
         assert_eq!(report.pointer("/variant_count"), Some(&json!(10)));
         assert_eq!(report.pointer("/variants").and_then(Value::as_array).map(Vec::len), Some(10));
+    }
+
+    #[test]
+    fn probability_history_numeric_variants_report_best_explanation() {
+        let score = ScalarTraceTensor {
+            first_values: vec![0.0, 0.0, 0.0, 1.0],
+            shape: vec![2, 2],
+            num_elements: 4,
+        };
+        let probability_values = probability_softmax_values_from_scores(
+            &[0.0, 1.0],
+            2,
+            2,
+            1.0,
+            ReferenceScoreLengthPolicy::LiveKeyCountOnly,
+            false,
+            false,
+        )
+        .unwrap();
+        let probability = ScalarTraceTensor {
+            first_values: vec![1.0, probability_values[0], 0.0, probability_values[1]],
+            shape: vec![2, 2],
+            num_elements: 4,
+        };
+        let variants = reference_probability_softmax_variant_specs();
+        let report =
+            probability_history_numeric_variant_token_report(&score, &probability, 1, 1, &variants)
+                .unwrap();
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/best_variant_explains_target"), Some(&json!(true)));
+        assert_eq!(report.pointer("/max_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(report.pointer("/live_key_count"), Some(&json!(2)));
+        assert_eq!(report.pointer("/variant_count"), Some(&json!(8)));
+    }
+
+    #[test]
+    fn probability_history_source_summary_reports_score_driven_drift() {
+        let mut best_counts = BTreeMap::new();
+        best_counts
+            .insert("reference_probability_softmax_scaled_1_sqrt_head_dim_live".to_string(), 1);
+        let summary = probability_history_source_summary(
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1.0e-5,
+            1.0e-4,
+            0.0,
+            0.0,
+            128,
+            &best_counts,
+            &json!({"source": "probability_source_delta"}),
+            &json!({"source": "score_source_delta"}),
+            &Value::Null,
+            Vec::new(),
+        );
+
+        assert_eq!(summary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(summary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            summary.pointer("/classification"),
+            Some(&json!("probability_drift_follows_score_history_drift"))
+        );
+        assert_eq!(summary.pointer("/rust_softmax_numeric_all_explained"), Some(&json!(true)));
+        assert_eq!(
+            summary.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize raw score-history drift before changing softmax or value-mix arithmetic"
+            ))
+        );
     }
 
     #[test]
