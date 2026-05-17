@@ -19297,6 +19297,14 @@ fn score_position_candidate_product_delta(
         "rust_base_candidate": rust_candidate.base_candidate,
         "reference_score_input_variant": reference_candidate.score_input_variant,
         "rust_score_input_variant": rust_candidate.score_input_variant,
+        "reference_query_source": reference_candidate.query_source,
+        "rust_query_source": rust_candidate.query_source,
+        "reference_key_source": reference_candidate.key_source,
+        "rust_key_source": rust_candidate.key_source,
+        "reference_query_f16_roundtrip": reference_candidate.query_f16_roundtrip,
+        "rust_query_f16_roundtrip": rust_candidate.query_f16_roundtrip,
+        "reference_key_f16_roundtrip": reference_candidate.key_f16_roundtrip,
+        "rust_key_f16_roundtrip": rust_candidate.key_f16_roundtrip,
         "head_dim": head_dim,
         "compared_dim_count": head_dim,
         "material_product_delta_count": material_product_delta_count,
@@ -22763,6 +22771,8 @@ fn attention_selected_historical_rope_epsilon_materiality(
     let mut key_delta_match_count = 0usize;
     let mut epsilon_not_product_material_count = 0usize;
     let mut product_uses_post_rope_f16_bucket_count = 0usize;
+    let mut product_uses_score_input_capture_count = 0usize;
+    let mut score_input_capture_uses_post_rope_f16_bucket_count = 0usize;
     let mut max_key_delta_abs_difference = 0.0f64;
     let mut max_product_abs_delta = 0.0f64;
 
@@ -22827,6 +22837,32 @@ fn attention_selected_historical_rope_epsilon_materiality(
                 let post_rope_rust_f16 = epsilon_probe
                     .pointer("/post_rope_bucket/right_f16_value")
                     .and_then(Value::as_f64);
+                let reference_candidate = product_row
+                    .and_then(|row| {
+                        row.pointer("/best_candidate_product_delta/reference_candidate")
+                    })
+                    .and_then(Value::as_str);
+                let rust_candidate = product_row
+                    .and_then(|row| row.pointer("/best_candidate_product_delta/rust_candidate"))
+                    .and_then(Value::as_str);
+                let reference_key_source = product_row
+                    .and_then(|row| {
+                        row.pointer("/best_candidate_product_delta/reference_key_source")
+                    })
+                    .and_then(Value::as_str);
+                let rust_key_source = product_row
+                    .and_then(|row| row.pointer("/best_candidate_product_delta/rust_key_source"))
+                    .and_then(Value::as_str);
+                let reference_key_f16_roundtrip = product_row
+                    .and_then(|row| {
+                        row.pointer("/best_candidate_product_delta/reference_key_f16_roundtrip")
+                    })
+                    .and_then(Value::as_bool);
+                let rust_key_f16_roundtrip = product_row
+                    .and_then(|row| {
+                        row.pointer("/best_candidate_product_delta/rust_key_f16_roundtrip")
+                    })
+                    .and_then(Value::as_bool);
                 let signed_product_delta =
                     product_contributor.pointer("/signed_product_delta").and_then(Value::as_f64);
                 let abs_product_delta = product_contributor
@@ -22877,6 +22913,14 @@ fn attention_selected_historical_rope_epsilon_materiality(
                         .is_some_and(|(product, bucket)| (product - bucket).abs() <= 1.0e-9);
                     let product_uses_post_rope_f16_bucket_values =
                         reference_key_matches_post_rope_f16 && rust_key_matches_post_rope_f16;
+                    let product_uses_score_input_capture = reference_key_source
+                        .is_some_and(|source| source.contains("score_input"))
+                        && rust_key_source.is_some_and(|source| source.contains("score_input"))
+                        && reference_key_f16_roundtrip == Some(false)
+                        && rust_key_f16_roundtrip == Some(false);
+                    let score_input_capture_uses_post_rope_f16_bucket_values =
+                        product_uses_score_input_capture
+                            && product_uses_post_rope_f16_bucket_values;
 
                     compared_count += 1;
                     if key_delta_matches_product {
@@ -22887,6 +22931,12 @@ fn attention_selected_historical_rope_epsilon_materiality(
                     }
                     if product_uses_post_rope_f16_bucket_values {
                         product_uses_post_rope_f16_bucket_count += 1;
+                    }
+                    if product_uses_score_input_capture {
+                        product_uses_score_input_capture_count += 1;
+                    }
+                    if score_input_capture_uses_post_rope_f16_bucket_values {
+                        score_input_capture_uses_post_rope_f16_bucket_count += 1;
                     }
                     max_key_delta_abs_difference =
                         max_key_delta_abs_difference.max(key_delta_abs_difference);
@@ -22925,6 +22975,23 @@ fn attention_selected_historical_rope_epsilon_materiality(
                             "rust_key_matches_post_rope_f16": rust_key_matches_post_rope_f16,
                             "product_uses_post_rope_f16_bucket_values": product_uses_post_rope_f16_bucket_values,
                         },
+                        "score_product_source_policy": {
+                            "reference_candidate": reference_candidate,
+                            "rust_candidate": rust_candidate,
+                            "reference_key_source": reference_key_source,
+                            "rust_key_source": rust_key_source,
+                            "reference_key_f16_roundtrip": reference_key_f16_roundtrip,
+                            "rust_key_f16_roundtrip": rust_key_f16_roundtrip,
+                            "product_uses_score_input_capture": product_uses_score_input_capture,
+                            "score_input_capture_uses_post_rope_f16_bucket_values": score_input_capture_uses_post_rope_f16_bucket_values,
+                            "interpretation": if score_input_capture_uses_post_rope_f16_bucket_values {
+                                "selected score product consumed captured score-input key values that already match post-RoPE F16 buckets"
+                            } else if product_uses_score_input_capture {
+                                "selected score product consumed captured score-input key values, but they do not match the post-RoPE F16 bucket probe"
+                            } else {
+                                "selected score product did not use captured score-input key values for both sides"
+                            },
+                        },
                     });
                 } else {
                     blocked_reasons.push("selected_rope_or_product_delta_missing".to_string());
@@ -22958,6 +23025,10 @@ fn attention_selected_historical_rope_epsilon_materiality(
         "selected_historical_rope_epsilon_product_context_missing"
     } else if key_delta_match_count == compared_count && compared_count > 0 {
         "selected_historical_rope_epsilon_materiality_pinned"
+    } else if score_input_capture_uses_post_rope_f16_bucket_count == compared_count
+        && compared_count > 0
+    {
+        "selected_score_product_uses_score_input_capture_post_rope_f16_buckets"
     } else if product_uses_post_rope_f16_bucket_count == compared_count && compared_count > 0 {
         "selected_historical_rope_product_uses_post_rope_f16_bucket_values"
     } else if epsilon_not_product_material_count == compared_count && compared_count > 0 {
@@ -22974,6 +23045,9 @@ fn attention_selected_historical_rope_epsilon_materiality(
         }
         "selected_historical_rope_epsilon_not_product_material" => {
             "inspect selected key F16 bucket value used by score product before changing RoPE runtime math"
+        }
+        "selected_score_product_uses_score_input_capture_post_rope_f16_buckets" => {
+            "pin whether reference score input capture is the raw reference score operand before changing runtime math"
         }
         "selected_historical_rope_product_uses_post_rope_f16_bucket_values" => {
             "inspect whether selected score product should consume post-RoPE F16 bucket values before changing runtime math"
@@ -22998,6 +23072,8 @@ fn attention_selected_historical_rope_epsilon_materiality(
         "key_delta_match_count": key_delta_match_count,
         "epsilon_not_product_material_count": epsilon_not_product_material_count,
         "product_uses_post_rope_f16_bucket_count": product_uses_post_rope_f16_bucket_count,
+        "product_uses_score_input_capture_count": product_uses_score_input_capture_count,
+        "score_input_capture_uses_post_rope_f16_bucket_count": score_input_capture_uses_post_rope_f16_bucket_count,
         "max_key_delta_abs_difference": max_key_delta_abs_difference,
         "max_product_abs_delta": max_product_abs_delta,
         "rows": rows,
@@ -35461,6 +35537,12 @@ mod tests {
                     "key_slot": 13,
                     "query_token": 3,
                     "best_candidate_product_delta": {
+                        "reference_candidate": "reference_q_history_reference_k_q_f16_k_trace",
+                        "rust_candidate": "rust_q_history_rust_k_q_f16_k_trace",
+                        "reference_key_source": "reference_k_score_input_head",
+                        "rust_key_source": "rust_attention_k_score_input_head",
+                        "reference_key_f16_roundtrip": false,
+                        "rust_key_f16_roundtrip": false,
                         "top_abs_product_delta_contributors": [
                             {
                                 "dim": 77,
@@ -35556,6 +35638,12 @@ mod tests {
                     "key_slot": 13,
                     "query_token": 3,
                     "best_candidate_product_delta": {
+                        "reference_candidate": "reference_q_history_reference_k_q_f16_k_trace",
+                        "rust_candidate": "rust_q_history_rust_k_q_f16_k_trace",
+                        "reference_key_source": "reference_k_score_input_head",
+                        "rust_key_source": "rust_attention_k_score_input_head",
+                        "reference_key_f16_roundtrip": false,
+                        "rust_key_f16_roundtrip": false,
                         "top_abs_product_delta_contributors": [
                             {
                                 "dim": 77,
@@ -35606,10 +35694,15 @@ mod tests {
 
         assert_eq!(
             report.pointer("/classification"),
-            Some(&json!("selected_historical_rope_product_uses_post_rope_f16_bucket_values"))
+            Some(&json!("selected_score_product_uses_score_input_capture_post_rope_f16_buckets"))
         );
         assert_eq!(report.pointer("/epsilon_not_product_material_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/product_uses_post_rope_f16_bucket_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/product_uses_score_input_capture_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/score_input_capture_uses_post_rope_f16_bucket_count"),
+            Some(&json!(1))
+        );
         assert_eq!(
             report.pointer("/rows/0/materiality/key_delta_matches_product"),
             Some(&json!(false))
@@ -35625,9 +35718,21 @@ mod tests {
             Some(&json!(true))
         );
         assert_eq!(
+            report.pointer(
+                "/rows/0/materiality/score_product_source_policy/product_uses_score_input_capture"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/materiality/score_product_source_policy/score_input_capture_uses_post_rope_f16_bucket_values"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
             report.pointer("/next_diagnostic"),
             Some(&json!(
-                "inspect whether selected score product should consume post-RoPE F16 bucket values before changing runtime math"
+                "pin whether reference score input capture is the raw reference score operand before changing runtime math"
             ))
         );
     }
