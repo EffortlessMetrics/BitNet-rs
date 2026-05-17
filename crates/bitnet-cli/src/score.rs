@@ -188,7 +188,8 @@ mod tests {
     }
 
     #[test]
-    fn validate_score_args_accepts_positive_batch_size() {
-        validate_score_args(&score_args_with_batch_size(1)).unwrap();
+    fn validate_score_args_accepts_positive_batch_size() -> Result<()> {
+        validate_score_args(&score_args_with_batch_size(1))?;
+        Ok(())
     }
 }
