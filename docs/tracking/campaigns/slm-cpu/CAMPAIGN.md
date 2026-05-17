@@ -73,6 +73,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-020 | merged | #5108 retries SmolLM2 strict CPU sanity after exact metadata-scoped normalization validation; it reaches tokenizer loading, prompt rendering, and one-token generation with `fallback_used=false`, but the math prompt generates `The`, so CPU answer readiness remains false and the next proof is wrong-first-token diagnosis before CUDA planning. |
 | SLM-CPU-021 | merged | #5133 merged the SmolLM2 wrong-first-token diagnosis from committed reference-runner, prompt/tokenizer, and strict CPU retry evidence; CPU answer readiness and CUDA planning remain blocked until a reference-compatible first-token/top-k or checkpoint comparator localizes the fault. |
 | SLM-CPU-022 | merged | #5140 merged the SmolLM2 comparator contract and `reference-compare` fixture coverage for the first-token/top-k artifact shape. This is support only; a fresh same-prompt external reference comparator remains required before CPU answer readiness or CUDA planning. |
+| SLM-CPU-023 | pr_open | #5312 formalizes the Kaby Lake Qwen3 Q8_0 performance-dashboard baseline from existing 1/2/4/8-thread envelope and operator-profile receipts; this is a baseline/decision surface only, not a new runtime optimization or sustained-throughput claim. |
 
 ## Review Policy
 

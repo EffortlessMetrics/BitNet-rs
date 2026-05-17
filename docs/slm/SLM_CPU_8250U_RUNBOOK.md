@@ -11,11 +11,15 @@ context: 256-512
 max_new_tokens: 4-16
 temperature: 0.0
 greedy: true
-threads: 8
+threads: 4 for the current Qwen3 Q8_0 operator profile
 batch: 1
 ```
 
-Record power and thermal context when available, but do not turn a cold run into a sustained-performance claim.
+The 4-thread default is evidence-scoped to the Qwen3 Q8_0 operator profile and
+the 1/2/4/8-thread envelope recorded under
+`ci/slm-cpu/intel-i5-8250u/2026-05-15/`. It is not a sustained-performance
+claim. Record power and thermal context when available, but do not turn a cold
+run into a sustained-performance claim.
 
 ## Candidate Preflight
 
