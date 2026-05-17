@@ -29,10 +29,10 @@ pub fn rms_norm(x: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
 pub fn rms_norm_into(x: &[f32], weight: &[f32], eps: f32, out: &mut [f32]) {
     assert_eq!(x.len(), weight.len(), "rms_norm: x.len() != weight.len()");
     assert!(out.len() >= x.len(), "rms_norm_into: out buffer too small");
-    let n = x.len() as f32;
-    let sum_sq: f32 = x.iter().map(|v| v * v).sum();
-    let rms = (sum_sq / n + eps).sqrt();
-    let inv_rms = 1.0 / rms;
+    let n = x.len() as f64;
+    let sum_sq: f64 = x.iter().map(|&v| f64::from(v) * f64::from(v)).sum();
+    let rms = (sum_sq / n + f64::from(eps)).sqrt();
+    let inv_rms = (1.0 / rms) as f32;
     for (i, (xi, wi)) in x.iter().zip(weight.iter()).enumerate() {
         out[i] = xi * inv_rms * wi;
     }
@@ -96,14 +96,14 @@ impl DenseLinear {
             let x_row = &x[b * self.in_features..(b + 1) * self.in_features];
             for o in 0..self.out_features {
                 let w_row = &self.weight[o * self.in_features..(o + 1) * self.in_features];
-                let mut acc = 0.0f32;
+                let mut acc = 0.0f64;
                 for (xi, wi) in x_row.iter().zip(w_row.iter()) {
-                    acc += xi * wi;
+                    acc += f64::from(*xi) * f64::from(*wi);
                 }
                 if let Some(ref bias) = self.bias {
-                    acc += bias[o];
+                    acc += f64::from(bias[o]);
                 }
-                out[b * self.out_features + o] = acc;
+                out[b * self.out_features + o] = acc as f32;
             }
         }
     }
@@ -245,13 +245,13 @@ impl DenseAttention {
             for i in 0..seq_len {
                 ws.scores[..seq_len].fill(f32::NEG_INFINITY);
                 for j in 0..=i {
-                    let mut dot = 0.0f32;
+                    let mut dot = 0.0f64;
                     for d in 0..head_dim {
                         let qi = ws.q[i * num_heads * head_dim + h * head_dim + d];
                         let kj = ws.k[j * num_kv_heads * head_dim + kv_h * head_dim + d];
-                        dot += qi * kj;
+                        dot += f64::from(qi) * f64::from(kj);
                     }
-                    ws.scores[j] = dot * scale;
+                    ws.scores[j] = (dot * f64::from(scale)) as f32;
                 }
 
                 let max_score = ws.scores[..=i].iter().copied().fold(f32::NEG_INFINITY, f32::max);
@@ -317,13 +317,13 @@ impl DenseAttention {
                 scores[..seq_len].fill(f32::NEG_INFINITY);
 
                 for j in 0..=i {
-                    let mut dot = 0.0f32;
+                    let mut dot = 0.0f64;
                     for d in 0..head_dim {
                         let qi = q_flat[i * num_heads * head_dim + h * head_dim + d];
                         let kj = k_flat[j * num_kv_heads * head_dim + kv_h * head_dim + d];
-                        dot += qi * kj;
+                        dot += f64::from(qi) * f64::from(kj);
                     }
-                    scores[j] = dot * scale;
+                    scores[j] = (dot * f64::from(scale)) as f32;
                 }
 
                 // Numerically-stable softmax over [0..=i]
