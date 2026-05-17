@@ -150,7 +150,7 @@ fn build_tables_odd_dim_5() {
 #[test]
 fn build_tables_nan_base() {
     let err = build_tables(4, 10, f32::NAN).unwrap_err();
-    assert_eq!(err, RopeTableError::NonFiniteBase { base: f32::NAN });
+    assert!(matches!(err, RopeTableError::NonFiniteBase { base } if base.is_nan()));
 }
 
 #[test]
