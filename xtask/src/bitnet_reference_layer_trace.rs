@@ -19265,6 +19265,8 @@ fn score_position_reduction_order_values(pairs: &[(f32, f32)]) -> Vec<(&'static 
         ),
         ("dim_descending", score_position_sum_products_reverse(&products)),
         ("pairwise_dim_ascending", score_position_sum_products_pairwise(&products)),
+        ("ggml_avx_f16_vec_dot_4x8_fma", score_position_sum_ggml_avx_f16_vec_dot(pairs, true)),
+        ("ggml_avx_f16_vec_dot_4x8_mul_add", score_position_sum_ggml_avx_f16_vec_dot(pairs, false)),
     ];
     rows.dedup_by_key(|(variant, _)| *variant);
     rows
@@ -19305,6 +19307,46 @@ fn score_position_sum_products_pairwise(products: &[f32]) -> f32 {
         partials = next;
     }
     partials[0]
+}
+
+fn score_position_sum_ggml_avx_f16_vec_dot(pairs: &[(f32, f32)], use_fma: bool) -> f32 {
+    const STEP: usize = 32;
+    const EPR: usize = 8;
+    const ARR: usize = STEP / EPR;
+
+    let np = pairs.len() & !(STEP - 1);
+    let mut sum = [[0.0f32; EPR]; ARR];
+    for i in (0..np).step_by(STEP) {
+        for j in 0..ARR {
+            for lane in 0..EPR {
+                let (query, key) = pairs[i + j * EPR + lane];
+                sum[j][lane] = if use_fma {
+                    query.mul_add(key, sum[j][lane])
+                } else {
+                    sum[j][lane] + query * key
+                };
+            }
+        }
+    }
+
+    for lane in 0..EPR {
+        sum[0][lane] += sum[2][lane];
+        sum[1][lane] += sum[3][lane];
+        sum[0][lane] += sum[1][lane];
+    }
+    let low_high = [
+        sum[0][0] + sum[0][4],
+        sum[0][1] + sum[0][5],
+        sum[0][2] + sum[0][6],
+        sum[0][3] + sum[0][7],
+    ];
+    let mut sumf = (low_high[0] + low_high[1]) + (low_high[2] + low_high[3]);
+
+    for (query, key) in &pairs[np..] {
+        sumf += query * key;
+    }
+
+    sumf
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -28662,7 +28704,7 @@ mod tests {
         assert_eq!(probe.pointer("/variant_count"), Some(&json!(9)));
         assert_eq!(probe.pointer("/reduction_order_probe/diagnostic_only"), Some(&json!(true)));
         assert_eq!(probe.pointer("/reduction_order_probe/claim_allowed"), Some(&json!(false)));
-        assert_eq!(probe.pointer("/reduction_order_probe/variant_count"), Some(&json!(14)));
+        assert_eq!(probe.pointer("/reduction_order_probe/variant_count"), Some(&json!(18)));
         assert_eq!(probe.pointer("/best_reference_accum_policy"), Some(&json!("f64_sequential")));
         assert_eq!(probe.pointer("/best_reference_capture_policy"), Some(&json!("f64_raw")));
         assert_eq!(probe.pointer("/best_reference_abs_delta"), Some(&json!(0.0)));
@@ -28763,6 +28805,23 @@ mod tests {
     }
 
     #[test]
+    fn score_position_reduction_order_values_reports_ggml_avx_f16_vec_dot_shape() {
+        let mut query_values = vec![0.0f32; 32];
+        query_values[0] = 1.0e10;
+        query_values[8] = 1.0;
+        query_values[16] = -1.0e10;
+        let key_values = vec![1.0f32; 32];
+        let pairs = query_values.into_iter().zip(key_values).collect::<Vec<_>>();
+        let products = score_position_products(&pairs);
+        let rows =
+            score_position_reduction_order_values(&pairs).into_iter().collect::<BTreeMap<_, _>>();
+
+        assert_eq!(score_position_sum_products(&products), 0.0);
+        assert_eq!(rows.get("ggml_avx_f16_vec_dot_4x8_fma").copied(), Some(1.0));
+        assert_eq!(rows.get("ggml_avx_f16_vec_dot_4x8_mul_add").copied(), Some(1.0));
+    }
+
+    #[test]
     fn score_position_candidate_accumulation_probe_reports_reduction_order_delta() {
         let query_values = vec![1.0e10_f32, -1.0e10_f32, 1.0];
         let key_values = vec![1.0, 1.0, 1.0];
@@ -28803,7 +28862,7 @@ mod tests {
             probe.pointer("/reduction_order_probe").expect("reduction order probe");
         assert_eq!(reduction_probe.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(reduction_probe.pointer("/claim_allowed"), Some(&json!(false)));
-        assert_eq!(reduction_probe.pointer("/variant_count"), Some(&json!(14)));
+        assert_eq!(reduction_probe.pointer("/variant_count"), Some(&json!(18)));
         assert_eq!(
             reduction_probe.pointer("/best_reference_reduction_order"),
             Some(&json!("product_abs_ascending"))
@@ -28820,6 +28879,14 @@ mod tests {
             reduction_probe.pointer("/reference_residual_explained_by_reduction_order"),
             Some(&json!(true))
         );
+        let reduction_variants =
+            reduction_probe.pointer("/variants").and_then(Value::as_array).expect("variants");
+        assert!(reduction_variants.iter().any(|variant| {
+            variant.pointer("/reduction_order") == Some(&json!("ggml_avx_f16_vec_dot_4x8_fma"))
+        }));
+        assert!(reduction_variants.iter().any(|variant| {
+            variant.pointer("/reduction_order") == Some(&json!("ggml_avx_f16_vec_dot_4x8_mul_add"))
+        }));
     }
 
     #[test]
@@ -28946,7 +29013,7 @@ mod tests {
             report.pointer(
                 "/rows/0/best_reference_accumulation_probe/reduction_order_probe/variant_count"
             ),
-            Some(&json!(14))
+            Some(&json!(18))
         );
         assert_eq!(report.pointer("/rows/0/candidates/0/reduction_order_probe"), None);
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
