@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T14:17:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-009"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-009-eval-history"
+
+notes = [
+  "Started M4-BITNET-EX-009 to run a second matching BitNet deterministic eval refresh for the accepted Microsoft I2_S GGUF and external tokenizer identity.",
+  "Preflight confirmed the accepted model and tokenizer are present on Apple M4 with limited disk headroom, so the run stays bounded to existing local artifacts and committed receipt outputs.",
+  "The item will decide whether to stage a larger 250/500-case BitNet corpus before any broader BitNet quality envelope claim.",
+  "No dense Qwen evidence reuse, BitNet chat or serve expansion, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes are in scope.",
+]

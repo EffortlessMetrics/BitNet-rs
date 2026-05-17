@@ -1,0 +1,53 @@
+[
+  {
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+    "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+    "requested_backend": "apple-m4-cpu-neon",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "prompt_count": 100,
+    "generated_tokens": 765,
+    "passed": true,
+    "regression": {
+      "baseline_path": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+      "advisory": true,
+      "matched_context": true,
+      "warning_count": 4,
+      "warnings": [
+        {
+          "profile_id": "bitnet_task_family:constrained_summary",
+          "field": "task_family_summary.constrained_summary.passed",
+          "baseline": 9.0,
+          "observed": 8.0,
+          "threshold_percent": 0.0,
+          "direction": "lower_is_worse"
+        },
+        {
+          "profile_id": "bitnet_task_family:constrained_summary",
+          "field": "task_family_summary.constrained_summary.scoring.passed",
+          "baseline": 9.0,
+          "observed": 8.0,
+          "threshold_percent": 0.0,
+          "direction": "lower_is_worse"
+        },
+        {
+          "profile_id": "bitnet_task_family:constrained_summary",
+          "field": "task_family_summary.constrained_summary.failed",
+          "baseline": 1.0,
+          "observed": 2.0,
+          "threshold_percent": 0.0,
+          "direction": "higher_is_worse"
+        },
+        {
+          "profile_id": "bitnet_task_family:constrained_summary",
+          "field": "task_family_summary.constrained_summary.scoring.failed",
+          "baseline": 1.0,
+          "observed": 2.0,
+          "threshold_percent": 0.0,
+          "direction": "higher_is_worse"
+        }
+      ]
+    }
+  }
+]
