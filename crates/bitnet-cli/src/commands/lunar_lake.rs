@@ -454,6 +454,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
         openvino_corpus_v2: PathBuf,
 
+        /// Active answer corpus v2 fixture used to verify corpus receipt case alignment.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ANSWER_CORPUS_V2)]
+        answer_corpus_v2: Option<PathBuf>,
+
         /// Runtime device to diagnose from the corpus receipt.
         #[arg(long, default_value = "GPU.0")]
         runtime_device: String,
@@ -1481,6 +1486,8 @@ pub struct LunarLakeOpenVinoCorpusV2Diagnosis {
     pub machine_id: String,
     pub artifact_root: String,
     pub openvino_corpus_v2_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_corpus_v2_fixture: Option<String>,
     pub requested_runtime_device: String,
     pub selected_backend: Option<String>,
     pub runtime_api: Option<String>,
@@ -1492,6 +1499,7 @@ pub struct LunarLakeOpenVinoCorpusV2Diagnosis {
     pub quality_summary: CorpusV2QualitySummary,
     pub profile_diagnoses: Vec<CorpusV2ProfileDiagnosis>,
     pub failed_cases: Vec<CorpusV2FailedCaseDiagnosis>,
+    pub case_alignment: CorpusV2CaseAlignmentDiagnosis,
     pub generated_token_visibility: OpenVinoGeneratedTokenVisibility,
     pub route_blocked: bool,
     pub blocker_summary: Vec<String>,
@@ -1499,6 +1507,17 @@ pub struct LunarLakeOpenVinoCorpusV2Diagnosis {
     pub diagnosis_ready: bool,
     pub gaps: Vec<String>,
     pub claim_boundary: CorpusV2DiagnosisClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CorpusV2CaseAlignmentDiagnosis {
+    pub fixture_verified: bool,
+    pub expected_case_count: Option<u64>,
+    pub observed_case_count: u64,
+    pub missing_case_ids: Vec<String>,
+    pub stale_or_unexpected_case_ids: Vec<String>,
+    pub aligned_with_active_fixture: Option<bool>,
+    pub blockers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -2035,6 +2054,7 @@ impl LunarLakeCommand {
             LunarLakeAction::OpenVinoQualityDiagnose {
                 artifact_root,
                 openvino_corpus_v2,
+                answer_corpus_v2,
                 runtime_device,
                 json_out,
                 created_utc,
@@ -2047,6 +2067,7 @@ impl LunarLakeCommand {
                 let receipt = build_openvino_corpus_v2_diagnosis_with_created_utc(
                     artifact_root,
                     openvino_corpus_v2,
+                    answer_corpus_v2.as_deref(),
                     runtime_device,
                     created_utc,
                 )?;
@@ -4599,6 +4620,7 @@ fn mean_f64(values: &[f64]) -> Option<f64> {
 pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
     root: &Path,
     openvino_corpus_v2: &Path,
+    answer_corpus_v2: Option<&Path>,
     runtime_device: &str,
     created_utc: String,
 ) -> Result<LunarLakeOpenVinoCorpusV2Diagnosis> {
@@ -4624,6 +4646,17 @@ pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
         gaps.push(format!("OpenVINO device `{runtime_device}` changed route promotion"));
     }
 
+    let answer_corpus_v2_fixture =
+        answer_corpus_v2.map(|path| path_string(&resolve_receipt_path(root, path)));
+    let route_id = openvino_device_route_id(device).unwrap_or("dense_slm_openvino_candidate");
+    let case_alignment = diagnose_openvino_corpus_case_alignment(
+        root,
+        answer_corpus_v2,
+        route_id,
+        device,
+        &mut gaps,
+    )?;
+
     let failed_cases = device
         .get("cases")
         .and_then(Value::as_array)
@@ -4635,8 +4668,11 @@ pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
     let quality_summary = summarize_openvino_device_quality(device, &failed_cases);
     let profile_diagnoses = diagnose_openvino_device_profiles(device, &failed_cases);
     let generated_token_visibility = openvino_generated_token_visibility(device);
-    let route_blocked = quality_summary.failed > 0 || fallback_used(device) != Some(false);
+    let route_blocked = quality_summary.failed > 0
+        || fallback_used(device) != Some(false)
+        || !case_alignment.blockers.is_empty();
     let mut blocker_summary = corpus_v2_blocker_summary(&quality_summary, fallback_used(device));
+    blocker_summary.extend(case_alignment.blockers.iter().cloned());
     if !generated_token_visibility.direct_generated_token_ids_available {
         blocker_summary.push(
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
@@ -4660,6 +4696,7 @@ pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
         machine_id: "intel-258v".to_string(),
         artifact_root: path_string(root),
         openvino_corpus_v2_receipt: path_string(&openvino_corpus_path),
+        answer_corpus_v2_fixture,
         requested_runtime_device: runtime_device.to_string(),
         selected_backend: string_at(device, "selected_backend"),
         runtime_api: string_at(device, "runtime_api"),
@@ -4671,6 +4708,7 @@ pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
         quality_summary,
         profile_diagnoses,
         failed_cases,
+        case_alignment,
         generated_token_visibility,
         route_blocked,
         blocker_summary,
@@ -4686,6 +4724,61 @@ pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
             arc_or_npu_execution_claim: false,
             bitnet_qk256_i2s_behavior_changed: false,
         },
+    })
+}
+
+fn diagnose_openvino_corpus_case_alignment(
+    root: &Path,
+    answer_corpus_v2: Option<&Path>,
+    route_id: &str,
+    device: &Value,
+    gaps: &mut Vec<String>,
+) -> Result<CorpusV2CaseAlignmentDiagnosis> {
+    let observed = case_ids_from_json_cases(device.get("cases"));
+    let observed_case_count = observed.len() as u64;
+    let Some(fixture_path) = answer_corpus_v2 else {
+        return Ok(CorpusV2CaseAlignmentDiagnosis {
+            fixture_verified: false,
+            expected_case_count: None,
+            observed_case_count,
+            missing_case_ids: Vec::new(),
+            stale_or_unexpected_case_ids: Vec::new(),
+            aligned_with_active_fixture: None,
+            blockers: vec![
+                "active answer corpus v2 fixture was not provided; case alignment was not verified"
+                    .to_string(),
+            ],
+        });
+    };
+
+    let fixture_path = resolve_receipt_path(root, fixture_path);
+    if !fixture_path.exists() {
+        let message = format!("answer corpus v2 fixture missing: {}", path_string(&fixture_path));
+        gaps.push(message.clone());
+        return Ok(CorpusV2CaseAlignmentDiagnosis {
+            fixture_verified: false,
+            expected_case_count: None,
+            observed_case_count,
+            missing_case_ids: Vec::new(),
+            stale_or_unexpected_case_ids: Vec::new(),
+            aligned_with_active_fixture: None,
+            blockers: vec![message],
+        });
+    }
+
+    let (_, expected) = load_answer_corpus_v2_case_ids(&fixture_path)?;
+    let missing_case_ids = expected.difference(&observed).cloned().collect::<Vec<_>>();
+    let stale_or_unexpected_case_ids = observed.difference(&expected).cloned().collect::<Vec<_>>();
+    let blockers = corpus_case_alignment_blockers(route_id, &expected, &observed);
+
+    Ok(CorpusV2CaseAlignmentDiagnosis {
+        fixture_verified: true,
+        expected_case_count: Some(expected.len() as u64),
+        observed_case_count,
+        missing_case_ids,
+        stale_or_unexpected_case_ids,
+        aligned_with_active_fixture: Some(blockers.is_empty()),
+        blockers,
     })
 }
 
@@ -10351,6 +10444,7 @@ mod tests {
     #[test]
     fn openvino_quality_diagnosis_classifies_gpu_corpus_failures() -> Result<()> {
         let temp = tempfile::tempdir()?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
         write_json(
             temp.path(),
             "ov-corpus.json",
@@ -10425,6 +10519,7 @@ mod tests {
         let receipt = build_openvino_corpus_v2_diagnosis_with_created_utc(
             temp.path(),
             Path::new("ov-corpus.json"),
+            Some(Path::new("corpus-v2.yaml")),
             "GPU.0",
             "2026-05-17T09:55:00Z".to_string(),
         )?;
@@ -10436,6 +10531,26 @@ mod tests {
         assert_eq!(receipt.quality_summary.failed, 1);
         assert_eq!(receipt.failed_cases.len(), 1);
         assert_eq!(receipt.failed_cases[0].answer_preview, "Yes, the sky on a clear day");
+        assert_eq!(
+            receipt.answer_corpus_v2_fixture.as_deref(),
+            Some(path_string(&temp.path().join("corpus-v2.yaml")).as_str())
+        );
+        assert!(receipt.case_alignment.fixture_verified);
+        assert_eq!(receipt.case_alignment.observed_case_count, 2);
+        assert_eq!(receipt.case_alignment.expected_case_count, Some(12));
+        assert_eq!(receipt.case_alignment.aligned_with_active_fixture, Some(false));
+        assert!(
+            receipt
+                .case_alignment
+                .missing_case_ids
+                .iter()
+                .any(|case_id| case_id == "short_reasoning_apples_left")
+        );
+        assert!(
+            receipt.blocker_summary.iter().any(
+                |blocker| blocker.contains("corpus-v2 receipt is missing active fixture cases")
+            )
+        );
         assert!(!receipt.generated_token_visibility.direct_generated_token_ids_available);
         assert!(receipt.generated_token_visibility.retokenized_generated_ids_used);
         assert!(
