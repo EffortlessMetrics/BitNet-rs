@@ -162,8 +162,18 @@ struct LayerTraceRunArgs {
     sidecar: PathBuf,
     trace_layer: Option<usize>,
     first_values_limit: Option<usize>,
+    rope_scalar_trace: Option<ReferenceRopeScalarTraceArgs>,
     output: Option<PathBuf>,
     format: String,
+}
+
+#[derive(Debug, Clone)]
+struct ReferenceRopeScalarTraceArgs {
+    path: PathBuf,
+    layer: usize,
+    kv_head: usize,
+    token: usize,
+    dim: usize,
 }
 
 #[derive(Debug)]
@@ -588,7 +598,7 @@ fn print_help() {
 
 fn print_run_help() {
     println!(
-        "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>  BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>        llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>           Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>         Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --trace-layer <N>        Capture layer-specific reference stages for layer N instead of layer 0\n      --first-values-limit <N> Set reference first_values sample limit for this run\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Temporarily apply BitNet reference layer trace instrumentation, run the matched reference plan, and restore source worktrees\n\nUsage: xtask.exe bitnet-reference-layer-trace-run [OPTIONS]\n\nOptions:\n      --reference-root <PATH>      BitNet.cpp checkout root [default: target/external/BitNet-reference]\n      --cpp-root <PATH>            llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --patch <PATH>               Layer-trace instrumentation patch [default: ci/reference-instrumentation/bitnet-rs-layer-trace-main.patch]\n      --plan <PATH>                Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --sidecar <PATH>             Layer-trace sidecar JSON [default: target/a770-diagnostic/reference-first-token-layer-trace.json]\n      --trace-layer <N>            Capture layer-specific reference stages for layer N instead of layer 0\n      --first-values-limit <N>     Set reference first_values sample limit for this run\n      --rope-scalar-trace <PATH>   Optional JSONL output for selected K ROPE scalar probe\n      --rope-scalar-layer <N>      Layer for selected K ROPE scalar probe\n      --rope-scalar-kv-head <N>    KV head for selected K ROPE scalar probe\n      --rope-scalar-token <N>      Token/key slot for selected K ROPE scalar probe\n      --rope-scalar-dim <N>        Dimension for selected K ROPE scalar probe\n      --output <PATH>              Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --format <FORMAT>            Output format: human or json [default: human]\n  -h, --help                       Print help"
     );
 }
 
@@ -699,6 +709,11 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
     let mut sidecar = PathBuf::from(DEFAULT_SIDECAR);
     let mut trace_layer = None::<usize>;
     let mut first_values_limit = None::<usize>;
+    let mut rope_scalar_trace = None::<PathBuf>;
+    let mut rope_scalar_layer = None::<usize>;
+    let mut rope_scalar_kv_head = None::<usize>;
+    let mut rope_scalar_token = None::<usize>;
+    let mut rope_scalar_dim = None::<usize>;
     let mut output = Some(PathBuf::from(DEFAULT_RUN_OUTPUT));
     let mut format = "human".to_string();
     let mut i = 2usize;
@@ -723,11 +738,43 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
                 first_values_limit =
                     Some(value()?.parse().context("--first-values-limit must be an integer")?)
             }
+            "--rope-scalar-trace" => rope_scalar_trace = Some(PathBuf::from(value()?)),
+            "--rope-scalar-layer" => {
+                rope_scalar_layer =
+                    Some(value()?.parse().context("--rope-scalar-layer must be an integer")?)
+            }
+            "--rope-scalar-kv-head" => {
+                rope_scalar_kv_head =
+                    Some(value()?.parse().context("--rope-scalar-kv-head must be an integer")?)
+            }
+            "--rope-scalar-token" => {
+                rope_scalar_token =
+                    Some(value()?.parse().context("--rope-scalar-token must be an integer")?)
+            }
+            "--rope-scalar-dim" => {
+                rope_scalar_dim =
+                    Some(value()?.parse().context("--rope-scalar-dim must be an integer")?)
+            }
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
             other => bail!("unknown bitnet-reference-layer-trace-run option {other}"),
         }
     }
+    let rope_scalar_trace = match (
+        rope_scalar_trace,
+        rope_scalar_layer,
+        rope_scalar_kv_head,
+        rope_scalar_token,
+        rope_scalar_dim,
+    ) {
+        (None, None, None, None, None) => None,
+        (Some(path), Some(layer), Some(kv_head), Some(token), Some(dim)) => {
+            Some(ReferenceRopeScalarTraceArgs { path, layer, kv_head, token, dim })
+        }
+        _ => bail!(
+            "--rope-scalar-trace requires --rope-scalar-layer, --rope-scalar-kv-head, --rope-scalar-token, and --rope-scalar-dim"
+        ),
+    };
     Ok(LayerTraceRunArgs {
         reference_root,
         cpp_root,
@@ -736,6 +783,7 @@ fn parse_run_args(args: &[String]) -> Result<LayerTraceRunArgs> {
         sidecar,
         trace_layer,
         first_values_limit,
+        rope_scalar_trace,
         output,
         format,
     })
@@ -1259,6 +1307,7 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
                 &sidecar,
                 args.trace_layer,
                 args.first_values_limit,
+                args.rope_scalar_trace.as_ref(),
             )?);
             if !run_capture.as_ref().is_some_and(|capture| capture.success) {
                 blocked_reasons.push("reference_layer_trace_run_failed".to_string());
@@ -1267,8 +1316,16 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
     }
 
     let sidecar_value = if sidecar.is_file() { Some(read_json(&sidecar)?) } else { None };
+    let rope_scalar_trace_values =
+        args.rope_scalar_trace.as_ref().and_then(|config| read_jsonl_values(&config.path).ok());
     if run_capture.as_ref().is_some_and(|capture| capture.success) && sidecar_value.is_none() {
         blocked_reasons.push("reference_first_token_layer_trace_sidecar_missing".to_string());
+    }
+    if args.rope_scalar_trace.is_some()
+        && run_capture.as_ref().is_some_and(|capture| capture.success)
+        && rope_scalar_trace_values.as_ref().is_none_or(Vec::is_empty)
+    {
+        blocked_reasons.push("reference_rope_scalar_trace_missing".to_string());
     }
 
     let cleanup_capture = if reference_root.is_dir() && cpp_root.is_dir() {
@@ -1319,6 +1376,7 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
             "build_dir": path_to_string(&build_dir),
             "selected_executable": path_to_string(&selected_exe),
             "sidecar": path_to_string(&sidecar),
+            "rope_scalar_trace": args.rope_scalar_trace.as_ref().map(|config| path_to_string(&config.path)),
         },
         "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
         "prompt_identity": plan.pointer("/prompt_identity").cloned().unwrap_or(Value::Null),
@@ -1347,6 +1405,21 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
                 .first_values_limit
                 .or_else(|| std::env::var("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT").ok().and_then(|value| value.parse().ok())),
             "trace_layer": args.trace_layer,
+            "rope_scalar_trace": args.rope_scalar_trace.as_ref().map(|config| json!({
+                "enabled": true,
+                "path": path_to_string(&config.path),
+                "layer": config.layer,
+                "kv_head": config.kv_head,
+                "token": config.token,
+                "dim": config.dim,
+                "env": {
+                    "path": "BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE",
+                    "layer": "BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_LAYER",
+                    "kv_head": "BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_KV_HEAD",
+                    "token": "BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_TOKEN",
+                    "dim": "BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_DIM",
+                }
+            })),
         },
         "kernel_codegen": capture_json(codegen_capture.as_ref()),
         "compatibility_fixes": compatibility,
@@ -1360,6 +1433,23 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
             "receipt": sidecar_value,
             "policy": "reference-side layer trace is diagnostic evidence only until compared with Rust CPU and strict A770 layer traces",
         },
+        "rope_scalar_trace": args.rope_scalar_trace.as_ref().map(|config| json!({
+            "enabled": true,
+            "diagnostic_only": true,
+            "claim_allowed": false,
+            "path": path_to_string(&config.path),
+            "exists": config.path.is_file(),
+            "sha256": config.path.is_file().then(|| sha256_bytes(&fs::read(&config.path).unwrap_or_default())),
+            "record_count": rope_scalar_trace_values.as_ref().map_or(0, Vec::len),
+            "records": rope_scalar_trace_values,
+            "target": {
+                "layer": config.layer,
+                "kv_head": config.kv_head,
+                "token": config.token,
+                "dim": config.dim,
+            },
+            "policy": "reference ROPE scalar trace is diagnostic producer/storage evidence only; it does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        })),
         "cleanup": {
             "source_restore": capture_json(cleanup_capture.as_ref()),
             "external_worktrees_clean_after_run": clean_after,
@@ -31690,6 +31780,7 @@ fn run_reference_with_sidecar(
     sidecar: &Path,
     trace_layer: Option<usize>,
     first_values_limit: Option<usize>,
+    rope_scalar_trace: Option<&ReferenceRopeScalarTraceArgs>,
 ) -> Result<CommandCapture> {
     let executable = argv.first().context("empty reference command")?;
     let mut command = Command::new(executable);
@@ -31702,6 +31793,26 @@ fn run_reference_with_sidecar(
             "BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT",
             first_values_limit.to_string(),
         );
+    }
+    if let Some(rope_scalar_trace) = rope_scalar_trace {
+        if let Some(parent) =
+            rope_scalar_trace.path.parent().filter(|parent| !parent.as_os_str().is_empty())
+        {
+            fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+        }
+        if rope_scalar_trace.path.exists() {
+            fs::remove_file(&rope_scalar_trace.path)
+                .with_context(|| format!("removing stale {}", rope_scalar_trace.path.display()))?;
+        }
+        command
+            .env("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE", &rope_scalar_trace.path)
+            .env("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_LAYER", rope_scalar_trace.layer.to_string())
+            .env(
+                "BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_KV_HEAD",
+                rope_scalar_trace.kv_head.to_string(),
+            )
+            .env("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_TOKEN", rope_scalar_trace.token.to_string())
+            .env("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE_DIM", rope_scalar_trace.dim.to_string());
     }
     run_command(&mut command)
 }
@@ -34163,6 +34274,16 @@ mod tests {
             "1".to_string(),
             "--first-values-limit".to_string(),
             "124416".to_string(),
+            "--rope-scalar-trace".to_string(),
+            "rope.jsonl".to_string(),
+            "--rope-scalar-layer".to_string(),
+            "0".to_string(),
+            "--rope-scalar-kv-head".to_string(),
+            "3".to_string(),
+            "--rope-scalar-token".to_string(),
+            "13".to_string(),
+            "--rope-scalar-dim".to_string(),
+            "64".to_string(),
             "--output".to_string(),
             "out.json".to_string(),
             "--format".to_string(),
@@ -34178,8 +34299,30 @@ mod tests {
         assert_eq!(parsed.sidecar, PathBuf::from("sidecar.json"));
         assert_eq!(parsed.trace_layer, Some(1));
         assert_eq!(parsed.first_values_limit, Some(124416));
+        let rope_scalar_trace = parsed.rope_scalar_trace.as_ref().unwrap();
+        assert_eq!(rope_scalar_trace.path, PathBuf::from("rope.jsonl"));
+        assert_eq!(rope_scalar_trace.layer, 0);
+        assert_eq!(rope_scalar_trace.kv_head, 3);
+        assert_eq!(rope_scalar_trace.token, 13);
+        assert_eq!(rope_scalar_trace.dim, 64);
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn run_args_reject_incomplete_rope_scalar_trace() {
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-layer-trace-run".to_string(),
+            "--rope-scalar-trace".to_string(),
+            "rope.jsonl".to_string(),
+            "--rope-scalar-layer".to_string(),
+            "0".to_string(),
+        ];
+
+        let err = parse_run_args(&args).unwrap_err().to_string();
+
+        assert!(err.contains("--rope-scalar-trace requires"));
     }
 
     #[test]
@@ -34193,6 +34336,13 @@ mod tests {
             sidecar: dir.path().join("sidecar.json"),
             trace_layer: None,
             first_values_limit: None,
+            rope_scalar_trace: Some(ReferenceRopeScalarTraceArgs {
+                path: dir.path().join("rope-scalar.jsonl"),
+                layer: 0,
+                kv_head: 3,
+                token: 13,
+                dim: 64,
+            }),
             output: None,
             format: "json".to_string(),
         })
@@ -34202,6 +34352,13 @@ mod tests {
 
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/preflight/rope_scalar_trace/enabled"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/preflight/rope_scalar_trace/env/path"),
+            Some(&json!("BITNET_RS_REFERENCE_ROPE_SCALAR_TRACE"))
+        );
+        assert_eq!(report.pointer("/rope_scalar_trace/enabled"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rope_scalar_trace/claim_allowed"), Some(&json!(false)));
         assert!(reasons.contains(&json!("reference_root_missing")));
         assert!(reasons.contains(&json!("reference_layer_trace_patch_missing")));
         assert!(reasons.contains(&json!("reference_plan_missing")));
