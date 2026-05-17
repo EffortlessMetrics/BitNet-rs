@@ -961,9 +961,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-019"
-status = "pr_open"
+status = "merged"
 pr = 5388
 head_sha = "0d19e3ada5c95a8cdf0451a662c4b7c48fed871a"
+merge_sha = "2592ba36eac3dafb18d4f84e4116e95e6f1c2da0"
 branch = "codex/apple-m3-macbook-air/M3MBA-019-post-handoff-roadmap"
 stackable = true
 review_mode = "codex_premerge"
