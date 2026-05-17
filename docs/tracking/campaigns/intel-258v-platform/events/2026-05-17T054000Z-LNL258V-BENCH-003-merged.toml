@@ -1,0 +1,26 @@
+timestamp = "2026-05-17T05:40:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5280
+branch = "codex/lunar-lake/LNL258V-BENCH-003-telemetry-context"
+head_sha = "06f1bedd46ab2d3db9f15d5d01f04b8b229656a8"
+merge_sha = "ecaf249e2439104aeeecf5be81d997b74516657a"
+summary = "Merged LNL258V-BENCH-003 power/thermal context normalization for cold/warm benchmark evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The merged PR attaches a structured power/thermal context availability receipt to cold/warm benchmark route telemetry.",
+  "The committed telemetry receipt records that memory, power, and thermal context are not recorded in the current profile artifacts; low_power route promotion remains blocked until real power telemetry exists.",
+  "The claim boundary remains benchmark/regression telemetry wiring only: no new inference, route promotion, speedup, acceleration, OpenVINO GPU/NPU promotion, or BitNet QK256/I2_S behavior change.",
+]
