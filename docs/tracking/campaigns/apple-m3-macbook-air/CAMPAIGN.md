@@ -69,8 +69,8 @@ artifacts to separate strict proof items.
 | M3MBA-005B | merged | Record Microsoft 2B tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence. |
 | M3MBA-005C | merged | Decide Microsoft 2B reference output acceptance, rejection, or blocker state. |
 | M3MBA-006 | blocked | Evaluate the smaller 0.7B 1bitLLM control candidate after Microsoft 2B is accepted, rejected, or blocked; blocked because the official repo has no GGUF artifact at the recorded revision. |
-| M3MBA-007 | proposed | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim. |
-| M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
+| M3MBA-007 | blocked | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim; blocked because the official repo has no TL1/TL2 GGUF and local free space is below the safe large-candidate floor for the available safetensors shards. |
+| M3MBA-008 | in_progress | Hand the accepted Microsoft 2B I2_S M3 reference-runner artifact to separate M4 strict-proof work without claiming proof in this lane. |
 | M3MBA-009 | merged | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists; merged in #4902. |
 | M3MBA-010 | merged | Audit MacBook model-cache retention and cleanup after the first large BitNet download; merged in #4839. |
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
@@ -78,13 +78,13 @@ artifacts to separate strict proof items.
 | M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
 | M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
 
-Current focus: `M3MBA-007` is the next bounded M3 Air artifact work surface for
-3B TL1/TL2 diagnostics, with `M3MBA-008` reserved for accepted-artifact handoff
-or explicit no-accepted-artifact closure. `M3MBA-006` remains blocked until an
-official GGUF, reproducible conversion path, or explicitly approved third-party
-artifact path exists for the 0.7B candidate. `M3MBA-010` permits another large
-candidate only as serialized work with fresh disk preflight, before/after
-free-space evidence, hash evidence, and no committed model binaries.
+Current focus: `M3MBA-008` is the active handoff item. The Microsoft 2B I2_S
+artifact is accepted only for the recorded M3 Air BitNet.cpp reference-runner
+context and is ready to seed separate M4 strict-proof work with fresh M4
+receipts. `M3MBA-006` and `M3MBA-007` remain blocked because the official
+1bitLLM repositories do not expose the GGUF artifacts required by their command
+shapes, and they are not handoff targets until a future unblocking item records
+artifact authority and storage-safe preflight evidence.
 
 ## Phase Roadmap
 
