@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T08:47:42Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-004-warm-25-50-100"
+
+notes = [
+  "Started M4-BITNET-EX-004 to add and prove BitNet variable warm-session resident_25, resident_50, and resident_100 profile evidence for the accepted Microsoft BitNet I2_S artifact and external tokenizer authority.",
+  "The CLI now exposes `bitnet mac bitnet-warm --profile resident_25 --profile resident_50 --profile resident_100`; profile flags are mutually exclusive with ad hoc --prompt values and generate one resident session with prefix checkpoints for the requested profiles.",
+  "The runtime receipt remains bounded to apple-m4-cpu-neon, fallback=false, explicit accepted GGUF/tokenizer identity, per-turn receipts, determinism, timeout boundary, progress stages, timing/memory, and chat/serve-disabled claim boundaries.",
+]
