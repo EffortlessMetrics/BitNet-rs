@@ -13348,6 +13348,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
     fn extract_logits_2d_into_reuses_host_scratch() -> Result<()> {
         let logits =
             candle_core::Tensor::new(&[[0.25f32, 1.0, 0.5, 1.5]], &candle_core::Device::Cpu)?;
