@@ -15296,6 +15296,13 @@ enum ReferenceScoreAccumPolicy {
 }
 
 #[derive(Debug, Clone, Copy)]
+enum ScoreOutputCapturePolicy {
+    RawAccum,
+    F32Cast,
+    F16Roundtrip,
+}
+
+#[derive(Debug, Clone, Copy)]
 struct ReferenceScoreNumericVariantSpec {
     id: &'static str,
     query_f16_roundtrip: bool,
@@ -15309,6 +15316,24 @@ impl ReferenceScoreAccumPolicy {
             ReferenceScoreAccumPolicy::F64 => "f64_sequential",
             ReferenceScoreAccumPolicy::F32 => "f32_sequential",
             ReferenceScoreAccumPolicy::F32MulAdd => "f32_mul_add",
+        }
+    }
+}
+
+impl ScoreOutputCapturePolicy {
+    fn label(self) -> &'static str {
+        match self {
+            ScoreOutputCapturePolicy::RawAccum => "f64_raw",
+            ScoreOutputCapturePolicy::F32Cast => "f32_cast",
+            ScoreOutputCapturePolicy::F16Roundtrip => "f16_roundtrip",
+        }
+    }
+
+    fn capture(self, raw_value: f64) -> f64 {
+        match self {
+            ScoreOutputCapturePolicy::RawAccum => raw_value,
+            ScoreOutputCapturePolicy::F32Cast => raw_value as f32 as f64,
+            ScoreOutputCapturePolicy::F16Roundtrip => f16_roundtrip(raw_value as f32) as f64,
         }
     }
 }
@@ -18297,7 +18322,10 @@ fn score_position_reference_residual_probe_summary(
     let mut accumulation_probe_present_count = 0usize;
     let mut accumulation_explained_count = 0usize;
     let mut accumulation_improved_count = 0usize;
+    let mut capture_explained_count = 0usize;
+    let mut capture_improved_count = 0usize;
     let mut max_best_reference_abs_delta_after_accumulation = 0.0f64;
+    let mut max_best_reference_abs_delta_after_capture = 0.0f64;
     let mut first_unexplained_reference_residual_row = Value::Null;
     let mut summary_rows = Vec::<Value>::new();
 
@@ -18324,6 +18352,14 @@ fn score_position_reference_residual_probe_summary(
             max_best_reference_abs_delta_after_accumulation =
                 max_best_reference_abs_delta_after_accumulation.max(best_after_accumulation);
         }
+        let best_after_capture = probe
+            .and_then(|probe| probe.pointer("/best_reference_abs_delta_after_capture_probe"))
+            .and_then(Value::as_f64)
+            .unwrap_or(f64::INFINITY);
+        if best_after_capture.is_finite() {
+            max_best_reference_abs_delta_after_capture =
+                max_best_reference_abs_delta_after_capture.max(best_after_capture);
+        }
         let explained = probe
             .and_then(|probe| {
                 probe
@@ -18336,6 +18372,20 @@ fn score_position_reference_residual_probe_summary(
                 probe.pointer("/reference_residual_improved_over_f32").and_then(Value::as_bool)
             })
             .unwrap_or(false);
+        let capture_explained = probe
+            .and_then(|probe| {
+                probe
+                    .pointer("/reference_residual_explained_by_capture_policy")
+                    .and_then(Value::as_bool)
+            })
+            .unwrap_or(false);
+        let capture_improved = probe
+            .and_then(|probe| {
+                probe
+                    .pointer("/reference_residual_improved_over_accumulation")
+                    .and_then(Value::as_bool)
+            })
+            .unwrap_or(false);
         if probe_present {
             accumulation_probe_present_count += 1;
         }
@@ -18345,17 +18395,31 @@ fn score_position_reference_residual_probe_summary(
         if improved {
             accumulation_improved_count += 1;
         }
+        if capture_explained {
+            capture_explained_count += 1;
+        }
+        if capture_improved {
+            capture_improved_count += 1;
+        }
 
         let row_classification = if !probe_present {
             "reference_residual_accumulation_probe_missing"
         } else if explained {
             "reference_residual_explained_by_accumulation_policy"
+        } else if capture_explained {
+            "reference_residual_explained_by_capture_policy"
         } else if improved {
             "reference_residual_improved_but_not_explained_by_accumulation_policy"
+        } else if capture_improved {
+            "reference_residual_improved_but_not_explained_by_capture_policy"
         } else {
             "reference_residual_not_explained_by_accumulation_policy"
         };
-        if probe_present && !explained && first_unexplained_reference_residual_row.is_null() {
+        if probe_present
+            && !explained
+            && !capture_explained
+            && first_unexplained_reference_residual_row.is_null()
+        {
             first_unexplained_reference_residual_row = json!({
                 "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
                 "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
@@ -18363,8 +18427,13 @@ fn score_position_reference_residual_probe_summary(
                 "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
                 "reference_abs_delta_before_accumulation_probe": reference_delta,
                 "best_reference_abs_delta_after_accumulation_probe": best_after_accumulation,
+                "best_reference_abs_delta_after_capture_probe": best_after_capture,
                 "best_reference_accum_policy": probe
                     .and_then(|probe| probe.pointer("/best_reference_accum_policy"))
+                    .cloned()
+                    .unwrap_or(Value::Null),
+                "best_reference_capture_policy": probe
+                    .and_then(|probe| probe.pointer("/best_reference_capture_policy"))
                     .cloned()
                     .unwrap_or(Value::Null),
             });
@@ -18382,13 +18451,24 @@ fn score_position_reference_residual_probe_summary(
             } else {
                 Value::Null
             },
+            "best_reference_abs_delta_after_capture_probe": if best_after_capture.is_finite() {
+                json!(best_after_capture)
+            } else {
+                Value::Null
+            },
             "best_reference_accum_policy": probe
                 .and_then(|probe| probe.pointer("/best_reference_accum_policy"))
+                .cloned()
+                .unwrap_or(Value::Null),
+            "best_reference_capture_policy": probe
+                .and_then(|probe| probe.pointer("/best_reference_capture_policy"))
                 .cloned()
                 .unwrap_or(Value::Null),
             "accumulation_probe_present": probe_present,
             "reference_residual_explained_by_accumulation": explained,
             "reference_residual_improved_over_f32": improved,
+            "reference_residual_explained_by_capture_policy": capture_explained,
+            "reference_residual_improved_over_accumulation": capture_improved,
         }));
     }
 
@@ -18398,8 +18478,12 @@ fn score_position_reference_residual_probe_summary(
         "reference_residual_accumulation_probe_missing"
     } else if accumulation_explained_count == residual_row_count {
         "reference_residual_explained_by_accumulation_policy"
+    } else if capture_explained_count == residual_row_count {
+        "reference_residual_explained_by_capture_policy"
     } else if accumulation_improved_count > 0 {
         "reference_residual_improved_but_not_explained_by_accumulation_policy"
+    } else if capture_improved_count > 0 {
+        "reference_residual_improved_but_not_explained_by_capture_policy"
     } else {
         "reference_residual_not_explained_by_accumulation_policy"
     };
@@ -18410,7 +18494,11 @@ fn score_position_reference_residual_probe_summary(
         "reference_residual_explained_by_accumulation_policy" => {
             "inspect reference score accumulation policy before changing Rust runtime math"
         }
+        "reference_residual_explained_by_capture_policy" => {
+            "inspect reference score output capture policy before changing Rust runtime math"
+        }
         "reference_residual_improved_but_not_explained_by_accumulation_policy"
+        | "reference_residual_improved_but_not_explained_by_capture_policy"
         | "reference_residual_not_explained_by_accumulation_policy" => {
             "inspect reference score input capture precision or exact score input stage for residual rows"
         }
@@ -18427,7 +18515,10 @@ fn score_position_reference_residual_probe_summary(
         "accumulation_probe_present_count": accumulation_probe_present_count,
         "accumulation_explained_count": accumulation_explained_count,
         "accumulation_improved_count": accumulation_improved_count,
+        "capture_explained_count": capture_explained_count,
+        "capture_improved_count": capture_improved_count,
         "max_best_reference_abs_delta_after_accumulation": max_best_reference_abs_delta_after_accumulation,
+        "max_best_reference_abs_delta_after_capture": max_best_reference_abs_delta_after_capture,
         "first_unexplained_reference_residual_row": first_unexplained_reference_residual_row,
         "rows": summary_rows,
         "next_diagnostic": next_diagnostic,
@@ -18829,6 +18920,23 @@ fn score_position_candidate_value(
     )
 }
 
+#[derive(Debug, Clone, Copy)]
+struct ScorePositionCandidateAccumValues {
+    f64_sequential: f64,
+    f32_sequential: f32,
+    f32_mul_add: f32,
+}
+
+impl ScorePositionCandidateAccumValues {
+    fn raw_value(self, accum_policy: ReferenceScoreAccumPolicy) -> f64 {
+        match accum_policy {
+            ReferenceScoreAccumPolicy::F64 => self.f64_sequential,
+            ReferenceScoreAccumPolicy::F32 => self.f32_sequential as f64,
+            ReferenceScoreAccumPolicy::F32MulAdd => self.f32_mul_add as f64,
+        }
+    }
+}
+
 fn score_position_candidate_value_with_accum(
     candidate: ScorePositionInputCandidate<'_>,
     head: usize,
@@ -18838,6 +18946,25 @@ fn score_position_candidate_value_with_accum(
     selected_current_token: Option<usize>,
     accum_policy: ReferenceScoreAccumPolicy,
 ) -> Option<f32> {
+    let values = score_position_candidate_accum_values(
+        candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
+    Some(values.raw_value(accum_policy) as f32)
+}
+
+fn score_position_candidate_accum_values(
+    candidate: ScorePositionInputCandidate<'_>,
+    head: usize,
+    head_dim: usize,
+    key_slot: usize,
+    query_token: usize,
+    selected_current_token: Option<usize>,
+) -> Option<ScorePositionCandidateAccumValues> {
     let query_token_count = match candidate.query_layout {
         ScoreQueryLayout::HeadMajorCurrent => 1,
         ScoreQueryLayout::DimMajorHistory => candidate.query_values.len().checked_div(head_dim)?,
@@ -18885,10 +19012,10 @@ fn score_position_candidate_value_with_accum(
         sum_f32 += query * key;
         sum_f32_mul_add = query.mul_add(key, sum_f32_mul_add);
     }
-    Some(match accum_policy {
-        ReferenceScoreAccumPolicy::F64 => sum_f64 as f32,
-        ReferenceScoreAccumPolicy::F32 => sum_f32,
-        ReferenceScoreAccumPolicy::F32MulAdd => sum_f32_mul_add,
+    Some(ScorePositionCandidateAccumValues {
+        f64_sequential: sum_f64,
+        f32_sequential: sum_f32,
+        f32_mul_add: sum_f32_mul_add,
     })
 }
 
@@ -18905,59 +19032,98 @@ fn score_position_candidate_accumulation_probe(
 ) -> Option<Value> {
     let mut rows = Vec::<Value>::new();
     let mut best_reference_accum_policy = "";
+    let mut best_reference_capture_policy = "";
     let mut best_rust_accum_policy = "";
+    let mut best_rust_capture_policy = "";
     let mut best_reference_abs_delta = f64::INFINITY;
+    let mut best_reference_abs_delta_after_capture_probe = f64::INFINITY;
     let mut best_rust_abs_delta = f64::INFINITY;
+    let mut best_rust_abs_delta_after_capture_probe = f64::INFINITY;
     let mut f32_reference_abs_delta = f64::INFINITY;
     let mut f32_rust_abs_delta = f64::INFINITY;
+    let mut f32_cast_reference_abs_delta = f64::INFINITY;
+    let mut f32_cast_rust_abs_delta = f64::INFINITY;
+
+    let accum_values = score_position_candidate_accum_values(
+        candidate,
+        head,
+        head_dim,
+        key_slot,
+        query_token,
+        selected_current_token,
+    )?;
 
     for accum_policy in [
         ReferenceScoreAccumPolicy::F64,
         ReferenceScoreAccumPolicy::F32,
         ReferenceScoreAccumPolicy::F32MulAdd,
     ] {
-        let value = score_position_candidate_value_with_accum(
-            candidate,
-            head,
-            head_dim,
-            key_slot,
-            query_token,
-            selected_current_token,
-            accum_policy,
-        )?;
-        let reference_abs_delta = reference_score.map(|target| (target - value as f64).abs());
-        let rust_abs_delta = rust_score.map(|target| (target - value as f64).abs());
-        if let Some(delta) = reference_abs_delta {
-            if delta < best_reference_abs_delta {
-                best_reference_abs_delta = delta;
-                best_reference_accum_policy = accum_policy.label();
+        let raw_value = accum_values.raw_value(accum_policy);
+        for capture_policy in [
+            ScoreOutputCapturePolicy::RawAccum,
+            ScoreOutputCapturePolicy::F32Cast,
+            ScoreOutputCapturePolicy::F16Roundtrip,
+        ] {
+            let value = capture_policy.capture(raw_value);
+            let reference_abs_delta = reference_score.map(|target| (target - value).abs());
+            let rust_abs_delta = rust_score.map(|target| (target - value).abs());
+            if matches!(capture_policy, ScoreOutputCapturePolicy::F32Cast) {
+                if let Some(delta) = reference_abs_delta {
+                    if delta < best_reference_abs_delta {
+                        best_reference_abs_delta = delta;
+                        best_reference_accum_policy = accum_policy.label();
+                    }
+                }
+                if let Some(delta) = rust_abs_delta {
+                    if delta < best_rust_abs_delta {
+                        best_rust_abs_delta = delta;
+                        best_rust_accum_policy = accum_policy.label();
+                    }
+                }
             }
-        }
-        if let Some(delta) = rust_abs_delta {
-            if delta < best_rust_abs_delta {
-                best_rust_abs_delta = delta;
-                best_rust_accum_policy = accum_policy.label();
+            if let Some(delta) = reference_abs_delta {
+                if delta < best_reference_abs_delta_after_capture_probe {
+                    best_reference_abs_delta_after_capture_probe = delta;
+                    best_reference_capture_policy = capture_policy.label();
+                }
             }
+            if let Some(delta) = rust_abs_delta {
+                if delta < best_rust_abs_delta_after_capture_probe {
+                    best_rust_abs_delta_after_capture_probe = delta;
+                    best_rust_capture_policy = capture_policy.label();
+                }
+            }
+            if matches!(
+                (accum_policy, capture_policy),
+                (ReferenceScoreAccumPolicy::F32, ScoreOutputCapturePolicy::F32Cast)
+            ) {
+                f32_reference_abs_delta = reference_abs_delta.unwrap_or(f64::INFINITY);
+                f32_rust_abs_delta = rust_abs_delta.unwrap_or(f64::INFINITY);
+            }
+            if matches!(capture_policy, ScoreOutputCapturePolicy::F32Cast) {
+                f32_cast_reference_abs_delta =
+                    f32_cast_reference_abs_delta.min(reference_abs_delta.unwrap_or(f64::INFINITY));
+                f32_cast_rust_abs_delta =
+                    f32_cast_rust_abs_delta.min(rust_abs_delta.unwrap_or(f64::INFINITY));
+            }
+            rows.push(json!({
+                "candidate": candidate.id,
+                "base_candidate": candidate.base_candidate,
+                "score_input_variant": candidate.score_input_variant,
+                "query_source": candidate.query_source,
+                "key_source": candidate.key_source,
+                "query_layout": candidate.query_layout.label(),
+                "key_layout": candidate.key_layout.label(),
+                "query_f16_roundtrip": candidate.query_f16_roundtrip,
+                "key_f16_roundtrip": candidate.key_f16_roundtrip,
+                "accum_policy": accum_policy.label(),
+                "output_capture_policy": capture_policy.label(),
+                "recomputed_score_slot_f64_raw": raw_value,
+                "recomputed_score_slot": value,
+                "reference_abs_delta": reference_abs_delta,
+                "rust_abs_delta": rust_abs_delta,
+            }));
         }
-        if matches!(accum_policy, ReferenceScoreAccumPolicy::F32) {
-            f32_reference_abs_delta = reference_abs_delta.unwrap_or(f64::INFINITY);
-            f32_rust_abs_delta = rust_abs_delta.unwrap_or(f64::INFINITY);
-        }
-        rows.push(json!({
-            "candidate": candidate.id,
-            "base_candidate": candidate.base_candidate,
-            "score_input_variant": candidate.score_input_variant,
-            "query_source": candidate.query_source,
-            "key_source": candidate.key_source,
-            "query_layout": candidate.query_layout.label(),
-            "key_layout": candidate.key_layout.label(),
-            "query_f16_roundtrip": candidate.query_f16_roundtrip,
-            "key_f16_roundtrip": candidate.key_f16_roundtrip,
-            "accum_policy": accum_policy.label(),
-            "recomputed_score_slot": value,
-            "reference_abs_delta": reference_abs_delta,
-            "rust_abs_delta": rust_abs_delta,
-        }));
     }
 
     if rows.is_empty() {
@@ -18983,8 +19149,18 @@ fn score_position_candidate_accumulation_probe(
         } else {
             Value::Null
         },
+        "best_reference_capture_policy": if best_reference_abs_delta_after_capture_probe.is_finite() {
+            json!(best_reference_capture_policy)
+        } else {
+            Value::Null
+        },
         "best_rust_accum_policy": if best_rust_abs_delta.is_finite() {
             json!(best_rust_accum_policy)
+        } else {
+            Value::Null
+        },
+        "best_rust_capture_policy": if best_rust_abs_delta_after_capture_probe.is_finite() {
+            json!(best_rust_capture_policy)
         } else {
             Value::Null
         },
@@ -18993,8 +19169,18 @@ fn score_position_candidate_accumulation_probe(
         } else {
             Value::Null
         },
+        "best_reference_abs_delta_after_capture_probe": if best_reference_abs_delta_after_capture_probe.is_finite() {
+            json!(best_reference_abs_delta_after_capture_probe)
+        } else {
+            Value::Null
+        },
         "best_rust_abs_delta": if best_rust_abs_delta.is_finite() {
             json!(best_rust_abs_delta)
+        } else {
+            Value::Null
+        },
+        "best_rust_abs_delta_after_capture_probe": if best_rust_abs_delta_after_capture_probe.is_finite() {
+            json!(best_rust_abs_delta_after_capture_probe)
         } else {
             Value::Null
         },
@@ -19008,10 +19194,24 @@ fn score_position_candidate_accumulation_probe(
         } else {
             Value::Null
         },
+        "best_f32_cast_reference_abs_delta": if f32_cast_reference_abs_delta.is_finite() {
+            json!(f32_cast_reference_abs_delta)
+        } else {
+            Value::Null
+        },
+        "best_f32_cast_rust_abs_delta": if f32_cast_rust_abs_delta.is_finite() {
+            json!(f32_cast_rust_abs_delta)
+        } else {
+            Value::Null
+        },
         "reference_residual_explained_by_accumulation": best_reference_abs_delta <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
         "reference_residual_improved_over_f32": best_reference_abs_delta < f32_reference_abs_delta,
+        "reference_residual_explained_by_capture_policy": best_reference_abs_delta_after_capture_probe <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "reference_residual_improved_over_accumulation": best_reference_abs_delta_after_capture_probe < best_reference_abs_delta,
         "rust_residual_explained_by_accumulation": best_rust_abs_delta <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
         "rust_residual_improved_over_f32": best_rust_abs_delta < f32_rust_abs_delta,
+        "rust_residual_explained_by_capture_policy": best_rust_abs_delta_after_capture_probe <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "rust_residual_improved_over_accumulation": best_rust_abs_delta_after_capture_probe < best_rust_abs_delta,
         "variants": rows,
     }))
 }
@@ -28140,15 +28340,85 @@ mod tests {
         assert_eq!(f64_value, 1.0);
         assert_eq!(probe.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(probe.pointer("/claim_allowed"), Some(&json!(false)));
-        assert_eq!(probe.pointer("/variant_count"), Some(&json!(3)));
+        assert_eq!(probe.pointer("/variant_count"), Some(&json!(9)));
         assert_eq!(probe.pointer("/best_reference_accum_policy"), Some(&json!("f64_sequential")));
+        assert_eq!(probe.pointer("/best_reference_capture_policy"), Some(&json!("f64_raw")));
         assert_eq!(probe.pointer("/best_reference_abs_delta"), Some(&json!(0.0)));
+        assert_eq!(
+            probe.pointer("/best_reference_abs_delta_after_capture_probe"),
+            Some(&json!(0.0))
+        );
         assert_eq!(probe.pointer("/f32_reference_abs_delta"), Some(&json!(1.0)));
         assert_eq!(
             probe.pointer("/reference_residual_explained_by_accumulation"),
             Some(&json!(true))
         );
+        assert_eq!(
+            probe.pointer("/reference_residual_explained_by_capture_policy"),
+            Some(&json!(true))
+        );
         assert_eq!(probe.pointer("/reference_residual_improved_over_f32"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn score_position_candidate_accumulation_probe_reports_output_capture_policy_delta() {
+        let tiny = f32::from_bits(0x3300_0000);
+        let query_values = vec![1.0, tiny];
+        let key_values = vec![1.0, 1.0];
+        let raw_target = 1.0 + f64::from(tiny);
+        let candidate = ScorePositionInputCandidate {
+            id: "reference_q_history_reference_k_q_trace_k_f32",
+            base_candidate: "reference_q_history_reference_k",
+            score_input_variant: "q_trace_k_f32",
+            query_source: "reference_qcur_history_head",
+            key_source: "reference_kcur_history_kv_head",
+            query_layout: ScoreQueryLayout::DimMajorHistory,
+            key_layout: ScoreKeyLayout::DimMajor,
+            query_f16_roundtrip: false,
+            key_f16_roundtrip: false,
+            query_values: &query_values,
+            key_values: &key_values,
+        };
+
+        let probe = score_position_candidate_accumulation_probe(
+            candidate,
+            0,
+            2,
+            0,
+            0,
+            Some(0),
+            Some(raw_target),
+            Some(1.0),
+        )
+        .expect("capture probe");
+
+        let variants = probe.pointer("/variants").and_then(Value::as_array).expect("variants");
+        let f64_raw = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/accum_policy") == Some(&json!("f64_sequential"))
+                    && variant.pointer("/output_capture_policy") == Some(&json!("f64_raw"))
+            })
+            .expect("f64 raw variant");
+        let f32_cast = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/accum_policy") == Some(&json!("f64_sequential"))
+                    && variant.pointer("/output_capture_policy") == Some(&json!("f32_cast"))
+            })
+            .expect("f32 cast variant");
+
+        assert_eq!(probe.pointer("/variant_count"), Some(&json!(9)));
+        assert_eq!(probe.pointer("/best_reference_capture_policy"), Some(&json!("f64_raw")));
+        assert_eq!(
+            probe.pointer("/reference_residual_improved_over_accumulation"),
+            Some(&json!(true))
+        );
+        assert_eq!(f64_raw.pointer("/reference_abs_delta"), Some(&json!(0.0)));
+        assert!(
+            f32_cast.pointer("/reference_abs_delta").and_then(Value::as_f64).unwrap_or(0.0) > 0.0
+        );
+        assert_eq!(probe.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
@@ -28255,8 +28525,19 @@ mod tests {
             Some(&json!("f64_sequential"))
         );
         assert_eq!(
+            report
+                .pointer("/rows/0/best_reference_accumulation_probe/best_reference_capture_policy"),
+            Some(&json!("f64_raw"))
+        );
+        assert_eq!(
             report.pointer(
                 "/rows/0/best_reference_accumulation_probe/reference_residual_explained_by_accumulation"
+            ),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/best_reference_accumulation_probe/reference_residual_explained_by_capture_policy"
             ),
             Some(&json!(true))
         );
