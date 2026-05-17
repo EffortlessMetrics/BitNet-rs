@@ -338,6 +338,16 @@ chat gate
 serve gate
 ```
 
+`M4-BITNET-EX-001` reuses the existing
+`ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml` corpus from the earlier
+BitNet eval/benchmark lane instead of creating a duplicate fixture. That corpus
+already records the accepted Microsoft I2_S GGUF identity, external tokenizer
+authority, `bitnetcpp-answer` prompt template, deterministic seed `912587`, and
+100 mechanically scored BitNet-specific cases split evenly across ten task
+families. The reuse is corpus/evidence hygiene only; it does not create a fresh
+runtime run or widen BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph,
+MacBook, speedup, broad quality, or broad performance claims.
+
 BitNet chat and serve stay disabled until their specific receipt gates pass.
 
 ## Stability And Service
