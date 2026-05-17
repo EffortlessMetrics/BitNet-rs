@@ -3066,7 +3066,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-006"
-status = "pr_open"
+status = "merged"
 branch = "server/bitnet-qk256-strict-server-smoke"
 stackable = false
 review_mode = "codex_premerge"
