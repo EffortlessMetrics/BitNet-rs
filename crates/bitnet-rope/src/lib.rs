@@ -149,7 +149,12 @@ mod tests {
         let dim = 128usize;
         let pos = 17usize;
         let base = 500_000.0f32;
-        let tables = build_tables(dim, pos + 1, base).expect("tables");
+        let tables_result = build_tables(dim, pos + 1, base);
+        assert!(tables_result.is_ok());
+        let Some(tables) = tables_result.ok() else {
+            return;
+        };
+
         let row = pos * tables.half_dim;
         let theta_scale = base.powf(-2.0 / dim as f32);
         let mut theta = pos as f32;
