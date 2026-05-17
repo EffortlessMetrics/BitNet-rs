@@ -8047,6 +8047,8 @@ async fn run_slm_warm_session(
     let allocation_audit_enabled = allocation_audit;
     let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
     let mut session_buffers = WarmSessionPromptBuffers::default();
+    let mut aggregate_direct_greedy_logits_steps = 0usize;
+    let mut aggregate_logits_vec_extraction_steps = 0usize;
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -8109,6 +8111,8 @@ async fn run_slm_warm_session(
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
+        let mut direct_greedy_logits_steps = 0usize;
+        let mut logits_vec_extraction_steps = 0usize;
 
         let prefill_start = std::time::Instant::now();
         let mut prefill_token_count = 0usize;
@@ -8151,7 +8155,20 @@ async fn run_slm_warm_session(
             let logits_start = std::time::Instant::now();
             let logits_alloc_start = AllocationAuditSnapshot::current();
             let logits = model.logits(&last_hidden)?;
-            let logits_vec = extract_logits_2d(&logits)?;
+            let use_direct_greedy_logits = can_use_direct_greedy_logits(
+                temperature,
+                repetition_penalty,
+                generated_tokens.is_empty(),
+            );
+            let direct_next_token = if use_direct_greedy_logits {
+                direct_greedy_logits_steps += 1;
+                Some(greedy_argmax_token_2d(&logits)?)
+            } else {
+                logits_vec_extraction_steps += 1;
+                None
+            };
+            let logits_vec =
+                if use_direct_greedy_logits { None } else { Some(extract_logits_2d(&logits)?) };
             if allocation_audit_enabled {
                 logits_step_allocs.push(AllocationAuditSnapshot::delta_since(logits_alloc_start));
             }
@@ -8159,7 +8176,11 @@ async fn run_slm_warm_session(
 
             let sample_start = std::time::Instant::now();
             let sample_alloc_start = AllocationAuditSnapshot::current();
-            let next_token = sampler.sample(&logits_vec, generated_tokens)?;
+            let next_token = match (direct_next_token, logits_vec.as_deref()) {
+                (Some(token), None) => token,
+                (None, Some(logits_vec)) => sampler.sample(logits_vec, generated_tokens)?,
+                _ => anyhow::bail!("inconsistent warm-session logits extraction state"),
+            };
             if allocation_audit_enabled {
                 sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
             }
@@ -8408,7 +8429,14 @@ async fn run_slm_warm_session(
                 "stop_tail_buffer_reused": max_stop_len > 0,
                 "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
-                "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+                "logits_buffer_reuse_policy": if logits_vec_extraction_steps == 0 {
+                    "full logits Vec extraction bypassed for guarded deterministic greedy no-penalty decode; model.logits tensor allocation still measured"
+                } else {
+                    "model.logits extraction still allocates tensor/vector outputs for non-direct-greedy steps; sampler logits scratch is preallocated separately"
+                },
+                "logits_vec_extraction_bypassed": logits_vec_extraction_steps == 0,
+                "direct_greedy_logits_steps": direct_greedy_logits_steps,
+                "logits_vec_extraction_steps": logits_vec_extraction_steps,
                 "stop_policy_precomputed_once": true,
                 "stop_sequence_count": all_stop_sequences.len(),
                 "stop_token_id_count": all_stop_ids.len(),
@@ -8512,6 +8540,8 @@ async fn run_slm_warm_session(
         if output.write_prompt_receipts {
             prompt_receipts.push(prompt_receipt_path.display().to_string());
         }
+        aggregate_direct_greedy_logits_steps += direct_greedy_logits_steps;
+        aggregate_logits_vec_extraction_steps += logits_vec_extraction_steps;
         output.status(format!(
             "warm-session: prompt {}/{} completed; first_token_ms={:?}, generated_tokens={}",
             index + 1,
@@ -8574,7 +8604,14 @@ async fn run_slm_warm_session(
             "stop_tail_buffer_reused": max_stop_len > 0,
             "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
             "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
-            "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+            "logits_buffer_reuse_policy": if aggregate_logits_vec_extraction_steps == 0 {
+                "full logits Vec extraction bypassed for guarded deterministic greedy no-penalty decode; model.logits tensor allocation still measured"
+            } else {
+                "model.logits extraction still allocates tensor/vector outputs for non-direct-greedy steps; sampler logits scratch is preallocated separately"
+            },
+            "logits_vec_extraction_bypassed": aggregate_logits_vec_extraction_steps == 0,
+            "direct_greedy_logits_steps": aggregate_direct_greedy_logits_steps,
+            "logits_vec_extraction_steps": aggregate_logits_vec_extraction_steps,
             "stop_policy_precomputed_once": true,
             "stop_sequence_count": all_stop_sequences.len(),
             "stop_token_id_count": all_stop_ids.len(),
@@ -9220,7 +9257,7 @@ impl WarmSessionSpeedAccumulator {
                 "sampler_recreated_per_prompt": true,
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
                 "logits_buffer_reuse_claimed": false,
-                "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+                "logits_buffer_reuse_policy": "full logits Vec extraction is reported by the session receipt; model.logits tensor allocation remains measured",
             },
             "counts": {
                 "prompt_count": self.prompt_count,
@@ -11051,6 +11088,40 @@ fn extract_last_token_hidden(
             // Return mock hidden state [B, H]
             Ok(ConcreteTensor::mock(vec![batch_size, hidden_size]))
         }
+    }
+}
+
+fn can_use_direct_greedy_logits(
+    temperature: f32,
+    repetition_penalty: f32,
+    context_tokens_empty: bool,
+) -> bool {
+    temperature == 0.0 && (repetition_penalty == 1.0 || context_tokens_empty)
+}
+
+/// Select the greedy token from 2D logits \[B,V\] without materializing a full
+/// host logits vector. This is only used under the same deterministic
+/// no-penalty guard as `bitnet_sampling::SamplingStrategy`.
+fn greedy_argmax_token_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<u32> {
+    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
+
+    let shape = tensor.shape();
+    if shape.len() != 2 {
+        return Err(BitNetError::Validation("Expected 2D tensor".into()).into());
+    }
+    if shape[0] == 0 || shape[1] == 0 {
+        return Err(BitNetError::Validation("Expected non-empty logits tensor".into()).into());
+    }
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.as_candle();
+            let batch_0 = candle.i(0)?;
+            let batch_0 =
+                if batch_0.dtype() != DType::F32 { batch_0.to_dtype(DType::F32)? } else { batch_0 };
+            Ok(batch_0.argmax(0)?.to_scalar::<u32>()?)
+        }
+        ConcreteTensor::Mock(_) => Ok(0),
     }
 }
 
@@ -13166,6 +13237,25 @@ mod tests {
         assert_eq!(second["token_capacity_grew"], false);
         assert_eq!(second["generated_token_capacity_grew"], false);
         assert_eq!(second["stop_tail_capacity_grew"], false);
+    }
+
+    #[test]
+    fn direct_greedy_logits_guard_matches_sampler_fast_path_policy() {
+        assert!(can_use_direct_greedy_logits(0.0, 1.0, false));
+        assert!(can_use_direct_greedy_logits(0.0, 1.2, true));
+        assert!(!can_use_direct_greedy_logits(0.7, 1.0, false));
+        assert!(!can_use_direct_greedy_logits(0.0, 1.2, false));
+    }
+
+    #[test]
+    fn greedy_argmax_token_2d_matches_lowest_id_tie_policy() -> Result<()> {
+        let logits =
+            candle_core::Tensor::new(&[[0.25f32, 1.0, 0.5, 1.0]], &candle_core::Device::Cpu)?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(logits));
+
+        assert_eq!(greedy_argmax_token_2d(&tensor)?, 1);
+        Ok(())
     }
 
     #[test]

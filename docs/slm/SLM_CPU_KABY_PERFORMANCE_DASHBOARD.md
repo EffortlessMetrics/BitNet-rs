@@ -13,6 +13,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Thread validation | `ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope-validation.json` | Validates strict provenance, quality, determinism, and no fallback across thread counts |
 | Operator profile | `ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-operator-profile.json` | Default operator evidence with process memory, storage/free-space, warm-session timing, and unsupported-path fields |
 | Greedy sampler fast path | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json` | Validates that the guarded greedy no-penalty sampler fast path preserves the 4-thread generated IDs/text while sampler decode allocations remain zero |
+| Logits extraction isolation | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json` | Validates that direct tensor argmax bypasses full logits Vec extraction only where the sampler fast path is exact, while preserving generated IDs/text |
 
 All rows use:
 
@@ -104,8 +105,10 @@ logits_buffer_reuse_claimed = false
 The next safe optimization slices should start from these known remaining costs:
 
 1. Reuse or isolate KV-cache buffers without changing prompt independence.
-2. Remove remaining logits extraction allocation where the receipt currently
-   says reuse is not claimed.
+2. Continue isolating logits extraction allocation. SLM-CPU-025 bypasses the
+   full logits Vec only for exact deterministic greedy no-penalty steps; the
+   default repetition-penalty steps still use the vector path to preserve
+   count-aware penalty semantics.
 3. Keep sampler and stop policy work out of the per-token hot loop where doing
    so preserves deterministic generated IDs.
 4. Improve Q8_0 dense linear locality only with before/after receipts proving
@@ -136,6 +139,34 @@ sustained_throughput_claim = false
 This closes only the greedy no-penalty sampler scratch-copy boundary. It does
 not remove the remaining `model.logits_and_extract` allocation, change Q8_0
 dense math, or establish a sustained throughput claim.
+
+## Logits Extraction Isolation
+
+SLM-CPU-025 narrows the next allocation boundary without changing generated
+tokens. In the guarded deterministic greedy/no-penalty case it selects the
+argmax directly from the logits tensor, bypassing full host `Vec<f32>` logits
+extraction. For default warm-session steps with active repetition penalty, it
+keeps the existing vector extraction path because that path is still required
+for count-aware repetition-penalty semantics.
+
+```text
+baseline = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json
+after = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json
+generated_outputs_match_baseline = true
+direct_greedy_logits_steps = 6
+logits_vec_extraction_steps = 40
+logits_vec_extraction_bypassed_for_all_steps = false
+model_logits_and_extract_alloc_bytes_delta = -3643896
+fallback_used = false
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+This is an isolation slice, not a full logits-buffer reuse claim. The remaining
+vector extraction steps are explicit in the receipt and should only be removed
+after the repetition-penalty path has an allocation-safe equivalent that
+preserves generated IDs.
 
 ## Claim Boundary
 
