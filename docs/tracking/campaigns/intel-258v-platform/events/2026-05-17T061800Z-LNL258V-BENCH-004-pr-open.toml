@@ -7,7 +7,7 @@ to = "pr_open"
 actor = "codex"
 pr = 5289
 branch = "codex/lunar-lake/LNL258V-BENCH-004-telemetry-capture"
-head_sha = "bfd1260f93125b2c0bdeb3494f20ae61709174c9"
+head_sha = "8b5ec8eb700a5d046ada0158125b3cea7ad55573"
 summary = "Opened LNL258V-BENCH-004 to capture live memory and power telemetry context for Lunar Lake benchmark evidence."
 
 artifacts = [
