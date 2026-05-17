@@ -837,7 +837,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-008"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
 stackable = false
 review_mode = "codex_premerge"
@@ -864,11 +864,14 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "Accepted M3 Air artifact evidence is ready for a separate M4 strict-proof item.",
+  "The official Microsoft 2B I2_S artifact is ready for a separate M4 strict-proof item because M3 Air BitNet.cpp reference-runner evidence accepted it for the recorded M3 context.",
+  "The 0.7B and 3B secondary candidates remain blocked and are not proof handoff targets.",
 ]
 must_not_claim = [
   "The M4 strict proof already passed.",
   "M3 Air evidence is M4 Mac mini evidence.",
+  "The repository Rust Apple backend accepted the artifact.",
+  "The blocked secondary candidates are accepted artifacts.",
 ]
 
 [[work_item]]
