@@ -1382,6 +1382,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
     };
 
     let reference_json = read_json(&reference_path)?;
+    let reference_json_text = fs::read_to_string(&reference_path).ok();
     let reference_records = read_reference_records(&reference_json)?;
     let model_path = reference_json
         .pointer("/model/model_path")
@@ -1436,6 +1437,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             cpu_f64_records,
             &cpu_comparison,
             &f64_capture,
+            reference_json_text.as_deref(),
             0,
         );
         let selected_f64_effect = attention_selected_historical_k_attention_norm_f64_effect(
@@ -11593,6 +11595,7 @@ fn layer_attention_norm_f64_downstream_effect(
     f64_rust_records: &BTreeMap<String, RustTraceRecord>,
     baseline_comparison: &Value,
     f64_capture: &Value,
+    reference_json_text: Option<&str>,
     layer: usize,
 ) -> Value {
     let stage_mapping = reference_stage_mapping();
@@ -11614,8 +11617,11 @@ fn layer_attention_norm_f64_downstream_effect(
         &frontier,
         layer,
     );
-    let f64_probability_history =
-        layer_attention_norm_f64_probability_history_effect(reference_records, f64_rust_records);
+    let f64_probability_history = layer_attention_norm_f64_probability_history_effect(
+        reference_records,
+        f64_rust_records,
+        reference_json_text,
+    );
     let f64_ffn_history = layer_ffn_history_drift(reference_records, f64_rust_record_list, layer);
     let f64_layer_operation =
         layer_operation_boundary_delta(reference_records, f64_rust_record_list, layer);
@@ -12005,6 +12011,7 @@ fn compact_first_material_boundary(row: &Value) -> Value {
 fn layer_attention_norm_f64_probability_history_effect(
     reference_records: &[ReferenceTraceRecord],
     f64_rust_records: &BTreeMap<String, RustTraceRecord>,
+    reference_json_text: Option<&str>,
 ) -> Value {
     let score_raw_history = attention_score_raw_history_delta(reference_records, f64_rust_records);
     let score_raw_live_tail =
@@ -12073,6 +12080,10 @@ fn layer_attention_norm_f64_probability_history_effect(
         attention_norm_f64_selected_k_capture_precision_frontier(
             &selected_historical_k_rope_source_frontier,
         );
+    let selected_k_json_precision_frontier = attention_norm_f64_selected_k_json_precision_frontier(
+        &selected_k_capture_precision_frontier,
+        reference_json_text,
+    );
     let score_history_residual_frontier = attention_norm_f64_score_history_residual_frontier(
         &score_raw_history,
         &score_raw_live_tail,
@@ -12160,6 +12171,7 @@ fn layer_attention_norm_f64_probability_history_effect(
         "selected_key_bucket_source_frontier": selected_key_bucket_source_frontier,
         "selected_historical_k_rope_source_frontier": selected_historical_k_rope_source_frontier,
         "selected_k_capture_precision_frontier": selected_k_capture_precision_frontier,
+        "selected_k_json_precision_frontier": selected_k_json_precision_frontier,
         "score_history_residual_frontier": score_history_residual_frontier,
         "current_blocked_reasons": blocked_reasons,
         "next_action": next_action,
@@ -12964,6 +12976,191 @@ fn attention_norm_f64_selected_k_capture_precision_frontier(
         "rust_projection_record": selected_historical_k_rope_source_frontier.pointer("/rust_projection_record").cloned().unwrap_or(Value::Null),
         "next_diagnostic": next_diagnostic,
     })
+}
+
+fn attention_norm_f64_selected_k_json_precision_frontier(
+    selected_k_capture_precision_frontier: &Value,
+    reference_json_text: Option<&str>,
+) -> Value {
+    let source_classification =
+        selected_k_capture_precision_frontier.pointer("/classification").and_then(Value::as_str);
+    let record = selected_k_capture_precision_frontier
+        .pointer("/reference_post_rope_record")
+        .unwrap_or(&Value::Null);
+    let record_name = record.pointer("/name").and_then(Value::as_str);
+    let contributor_dim = value_u64(selected_k_capture_precision_frontier, "/contributor_dim");
+    let key_slot = value_u64(selected_k_capture_precision_frontier, "/key_slot");
+    let token_count = record
+        .pointer("/shape")
+        .and_then(Value::as_array)
+        .and_then(|shape| shape.get(1))
+        .and_then(Value::as_u64);
+    let first_value_index =
+        contributor_dim.zip(key_slot).zip(token_count).and_then(|((dim, token), token_count)| {
+            dim.checked_mul(token_count).and_then(|base| base.checked_add(token))
+        });
+    let reference_capture = value_f64(selected_k_capture_precision_frontier, "/reference_capture");
+    let midpoint = value_f64(selected_k_capture_precision_frontier, "/f16_midpoint");
+    let raw_decimal = reference_json_text.zip(record_name).zip(first_value_index).and_then(
+        |((text, name), index)| {
+            raw_first_value_decimal_for_record(text, name, usize::try_from(index).ok()?)
+        },
+    );
+    let parsed_f64 = raw_decimal.as_deref().and_then(|raw| raw.parse::<f64>().ok());
+    let parsed_f32 = parsed_f64.map(|value| value as f32);
+    let reference_capture_f32 = reference_capture.map(|value| value as f32);
+    let midpoint_f32 = midpoint.map(|value| value as f32);
+    let parsed_f32_bits = parsed_f32.map(f32_bits_hex);
+    let reference_capture_f32_bits = reference_capture_f32.map(f32_bits_hex);
+    let midpoint_f32_bits = midpoint_f32.map(f32_bits_hex);
+    let parsed_matches_reference_capture_bits = parsed_f32
+        .zip(reference_capture_f32)
+        .is_some_and(|(parsed, capture)| parsed.to_bits() == capture.to_bits());
+    let parsed_matches_midpoint_bits = parsed_f32
+        .zip(midpoint_f32)
+        .is_some_and(|(parsed, midpoint)| parsed.to_bits() == midpoint.to_bits());
+    let decimal_parse_minus_capture =
+        parsed_f64.zip(reference_capture).map(|(parsed, capture)| parsed - capture);
+    let decimal_parse_minus_midpoint =
+        parsed_f64.zip(midpoint).map(|(parsed, midpoint)| parsed - midpoint);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if reference_json_text.is_none() {
+        blocked_reasons.push("reference_json_text_missing".to_string());
+    }
+    if record_name.is_none() {
+        blocked_reasons.push("reference_post_rope_record_name_missing".to_string());
+    }
+    if contributor_dim.is_none() {
+        blocked_reasons.push("contributor_dim_missing".to_string());
+    }
+    if key_slot.is_none() {
+        blocked_reasons.push("key_slot_missing".to_string());
+    }
+    if token_count.is_none() {
+        blocked_reasons.push("reference_post_rope_token_count_missing".to_string());
+    }
+    if first_value_index.is_none() {
+        blocked_reasons.push("reference_first_value_index_unavailable".to_string());
+    }
+    if raw_decimal.is_none() && blocked_reasons.is_empty() {
+        blocked_reasons.push("reference_raw_decimal_missing".to_string());
+    }
+    if parsed_f64.is_none() && raw_decimal.is_some() {
+        blocked_reasons.push("reference_raw_decimal_parse_failed".to_string());
+    }
+    if reference_capture.is_none() {
+        blocked_reasons.push("reference_capture_missing".to_string());
+    }
+    if midpoint.is_none() {
+        blocked_reasons.push("f16_midpoint_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if source_classification
+        != Some("f64_selected_k_reference_capture_midpoint_with_trace_metadata")
+    {
+        "f64_selected_k_json_precision_not_active_frontier"
+    } else if !blocked_reasons.is_empty() {
+        "f64_selected_k_json_precision_unavailable"
+    } else if parsed_matches_reference_capture_bits && parsed_matches_midpoint_bits {
+        "f64_selected_k_json_decimal_preserves_midpoint_capture"
+    } else if parsed_matches_reference_capture_bits {
+        "f64_selected_k_json_decimal_preserves_reference_capture"
+    } else {
+        "f64_selected_k_json_decimal_changes_reference_capture"
+    };
+    let next_diagnostic = match classification {
+        "f64_selected_k_json_decimal_preserves_midpoint_capture" => {
+            "inspect reference tensor capture/storage precision before changing Rust runtime math; JSON decimal serialization preserves the selected midpoint capture"
+        }
+        "f64_selected_k_json_decimal_preserves_reference_capture" => {
+            "inspect whether the reference captured value is truly an F16 midpoint or a non-midpoint reference value"
+        }
+        "f64_selected_k_json_decimal_changes_reference_capture" => {
+            "fix or bypass reference JSON numeric serialization before interpreting the selected K capture midpoint"
+        }
+        "f64_selected_k_json_precision_unavailable" => {
+            "supply a direct reference sidecar JSON with first_values text or add reference f32-bit capture metadata"
+        }
+        "f64_selected_k_json_precision_not_active_frontier" => {
+            "localize selected K capture precision before JSON precision attribution"
+        }
+        _ => "keep selected K JSON precision diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 selected K JSON precision frontier is diagnostic-only evidence for whether the reference sidecar decimal text preserves or changes the selected post-RoPE capture value; it does not change reference instrumentation, Rust runtime math, or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "source_classification": source_classification,
+        "record_name": record_name,
+        "layout": record.pointer("/layout").cloned().unwrap_or(Value::Null),
+        "contributor_dim": contributor_dim,
+        "key_slot": key_slot,
+        "token_count": token_count,
+        "first_value_index": first_value_index,
+        "raw_decimal": raw_decimal,
+        "parsed_f64": parsed_f64,
+        "parsed_f32": parsed_f32,
+        "parsed_f32_bits": parsed_f32_bits,
+        "reference_capture": reference_capture,
+        "reference_capture_f32_bits": reference_capture_f32_bits,
+        "f16_midpoint": midpoint,
+        "f16_midpoint_f32_bits": midpoint_f32_bits,
+        "parsed_matches_reference_capture_bits": parsed_matches_reference_capture_bits,
+        "parsed_matches_midpoint_bits": parsed_matches_midpoint_bits,
+        "decimal_parse_minus_capture": decimal_parse_minus_capture,
+        "decimal_parse_minus_midpoint": decimal_parse_minus_midpoint,
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn raw_first_value_decimal_for_record(
+    text: &str,
+    record_name: &str,
+    index: usize,
+) -> Option<String> {
+    let name_json = serde_json::to_string(record_name).ok()?;
+    let name_pos = find_json_key_string_value(text, "name", &name_json)?;
+    let first_values_key = text[name_pos..].find("\"first_values\"")? + name_pos;
+    let array_start = text[first_values_key..].find('[')? + first_values_key + 1;
+    let array_end = text[array_start..].find(']')? + array_start;
+    text[array_start..array_end].split(',').nth(index).map(|raw| raw.trim().to_string())
+}
+
+fn find_json_key_string_value(text: &str, key: &str, value_json: &str) -> Option<usize> {
+    let key_json = serde_json::to_string(key).ok()?;
+    let mut search_start = 0usize;
+    while let Some(relative_pos) = text[search_start..].find(&key_json) {
+        let key_pos = search_start + relative_pos;
+        let mut cursor = key_pos + key_json.len();
+        cursor = skip_ascii_whitespace(text, cursor);
+        if text.as_bytes().get(cursor).copied() != Some(b':') {
+            search_start = key_pos + key_json.len();
+            continue;
+        }
+        cursor = skip_ascii_whitespace(text, cursor + 1);
+        if text[cursor..].starts_with(value_json) {
+            return Some(key_pos);
+        }
+        search_start = key_pos + key_json.len();
+    }
+    None
+}
+
+fn skip_ascii_whitespace(text: &str, mut cursor: usize) -> usize {
+    while text.as_bytes().get(cursor).is_some_and(|byte| byte.is_ascii_whitespace()) {
+        cursor += 1;
+    }
+    cursor
+}
+
+fn f32_bits_hex(value: f32) -> String {
+    format!("0x{:08x}", value.to_bits())
 }
 
 fn attention_norm_f64_score_history_residual_frontier(
@@ -36874,6 +37071,7 @@ mod tests {
             &rust_map,
             &baseline,
             &f64_capture,
+            None,
             0,
         );
 
@@ -40723,6 +40921,81 @@ mod tests {
             Some(&json!(
                 "inspect the reference post-RoPE trace capture path or capture pre-serialization values before changing Rust runtime math"
             ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_json_precision_frontier_reports_raw_decimal_bits() {
+        let mut first_values = vec!["0".to_string(); 40 * 18 + 3];
+        first_values[40 * 18 + 2] = "-4.14648438".to_string();
+        let reference_json_text = format!(
+            "{{\"records\":[{{\"name\":\"kcur_history_kv_head1_ref_layout-0\",\"first_values\":[{}]}}]}}",
+            first_values.join(",")
+        );
+        let selected_capture_frontier = json!({
+            "classification": "f64_selected_k_reference_capture_midpoint_with_trace_metadata",
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "reference_capture": -4.146484375_f64,
+            "f16_midpoint": -4.146484375_f64,
+            "reference_post_rope_record": {
+                "name": "kcur_history_kv_head1_ref_layout-0",
+                "stage": "kcur_history_kv_head1_ref_layout",
+                "shape": [128, 18, 1, 1],
+                "layout": "dim_major_token_minor",
+            },
+        });
+
+        let frontier = attention_norm_f64_selected_k_json_precision_frontier(
+            &selected_capture_frontier,
+            Some(&reference_json_text),
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_k_json_decimal_preserves_midpoint_capture"))
+        );
+        assert_eq!(frontier.pointer("/first_value_index"), Some(&json!(722)));
+        assert_eq!(frontier.pointer("/raw_decimal"), Some(&json!("-4.14648438")));
+        assert_eq!(frontier.pointer("/parsed_f32_bits"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/reference_capture_f32_bits"), Some(&json!("0xc084b000")));
+        assert_eq!(frontier.pointer("/parsed_matches_reference_capture_bits"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/parsed_matches_midpoint_bits"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/blocked_reasons"), Some(&json!([])));
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect reference tensor capture/storage precision before changing Rust runtime math; JSON decimal serialization preserves the selected midpoint capture"
+            ))
+        );
+    }
+
+    #[test]
+    fn attention_norm_f64_selected_k_json_precision_frontier_reports_missing_text() {
+        let selected_capture_frontier = json!({
+            "classification": "f64_selected_k_reference_capture_midpoint_with_trace_metadata",
+            "key_slot": 2,
+            "contributor_dim": 40,
+            "reference_capture": -4.146484375_f64,
+            "f16_midpoint": -4.146484375_f64,
+            "reference_post_rope_record": {
+                "name": "kcur_history_kv_head1_ref_layout-0",
+                "shape": [128, 18, 1, 1],
+            },
+        });
+
+        let frontier =
+            attention_norm_f64_selected_k_json_precision_frontier(&selected_capture_frontier, None);
+
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("f64_selected_k_json_precision_unavailable"))
+        );
+        assert_eq!(
+            frontier.pointer("/blocked_reasons"),
+            Some(&json!(["reference_json_text_missing"]))
         );
     }
 
