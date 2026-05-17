@@ -7465,6 +7465,12 @@ fn compare_reference_to_rust_with_records_with_model(
         &report["attention_key_cache_store_readback_boundary"],
         &report["attention_key_kcur_cache_boundary"],
     );
+    report["attention_selected_key_projection_rope_source"] =
+        attention_selected_key_projection_rope_source(
+            &report["attention_selected_key_score_input_source"],
+            &report["attention_key_rope_input_attribution"],
+            &report["attention_key_current_projection_rope_boundary"],
+        );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
             reference_records,
@@ -22112,6 +22118,236 @@ fn selected_key_boundary_classification(
     }
 }
 
+fn attention_selected_key_projection_rope_source(
+    selected_key_source: &Value,
+    rope_input_attribution: &Value,
+    current_projection_rope_boundary: &Value,
+) -> Value {
+    let selected_rows = selected_key_source.pointer("/rows").and_then(Value::as_array);
+    let current_probe_token =
+        rope_input_attribution.pointer("/selected_token").and_then(Value::as_u64).or_else(|| {
+            current_projection_rope_boundary.pointer("/selected_token").and_then(Value::as_u64)
+        });
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut current_token_matched_count = 0usize;
+    let mut historical_slot_uncovered_count = 0usize;
+    let mut missing_attribution_count = 0usize;
+    let mut before_rope_input_count = 0usize;
+    let mut rust_rope_delta_count = 0usize;
+    let mut reference_rope_delta_count = 0usize;
+    let mut clean_current_rope_count = 0usize;
+
+    if let Some(selected_rows) = selected_rows {
+        for row in selected_rows {
+            if row.pointer("/status").and_then(Value::as_str) != Some("compared") {
+                continue;
+            }
+            selected_count += 1;
+            let kv_head = row.pointer("/kv_head").and_then(Value::as_u64);
+            let key_slot = row.pointer("/key_slot").and_then(Value::as_u64);
+            let contributor_dim = row.pointer("/contributor_dim").and_then(Value::as_u64);
+            let current_token_matches = key_slot.is_some()
+                && current_probe_token.is_some()
+                && key_slot == current_probe_token;
+            let mut blocked_reasons = Vec::<String>::new();
+            let mut attribution_row = Value::Null;
+            let mut current_boundary_row = Value::Null;
+            let mut selected_dim_summary = Value::Null;
+            let row_classification: &'static str;
+
+            if !current_token_matches {
+                historical_slot_uncovered_count += 1;
+                blocked_reasons.push("selected_key_slot_not_current_rope_probe".to_string());
+                if key_slot.is_none() {
+                    blocked_reasons.push("selected_key_slot_missing".to_string());
+                }
+                if current_probe_token.is_none() {
+                    blocked_reasons.push("current_rope_probe_token_missing".to_string());
+                }
+                row_classification = "selected_key_projection_rope_source_missing_historical_slot";
+            } else if let Some(kv_head) = kv_head {
+                current_token_matched_count += 1;
+                attribution_row = rope_attribution_row_for_kv_head(rope_input_attribution, kv_head)
+                    .cloned()
+                    .unwrap_or(Value::Null);
+                current_boundary_row = current_key_projection_rope_row_for_kv_head(
+                    current_projection_rope_boundary,
+                    kv_head,
+                )
+                .cloned()
+                .unwrap_or(Value::Null);
+                if attribution_row.is_null() {
+                    missing_attribution_count += 1;
+                    blocked_reasons.push("selected_key_rope_attribution_row_missing".to_string());
+                    row_classification = "selected_key_projection_rope_source_missing_attribution";
+                } else {
+                    let attribution = attribution_row
+                        .pointer("/attribution")
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown");
+                    selected_dim_summary =
+                        selected_current_rope_dim_summary(&attribution_row, contributor_dim);
+                    row_classification = match attribution {
+                        "input_bucket_drift_before_rope" => {
+                            before_rope_input_count += 1;
+                            "selected_key_drift_before_rope_input"
+                        }
+                        "rust_runtime_rope_implementation_delta" => {
+                            rust_rope_delta_count += 1;
+                            "selected_key_drift_from_rust_rope"
+                        }
+                        "reference_rope_arithmetic_differs_from_runtime_variant" => {
+                            reference_rope_delta_count += 1;
+                            "selected_key_reference_rope_arithmetic_delta"
+                        }
+                        "no_post_rope_bucket_drift" => {
+                            clean_current_rope_count += 1;
+                            "selected_key_current_rope_source_clean"
+                        }
+                        _ => "selected_key_projection_rope_source_unpinned",
+                    };
+                }
+            } else {
+                missing_attribution_count += 1;
+                blocked_reasons.push("selected_key_kv_head_missing".to_string());
+                row_classification = "selected_key_projection_rope_source_missing_attribution";
+            }
+
+            rows.push(json!({
+                "status": if blocked_reasons.is_empty() { "compared" } else { "blocked" },
+                "classification": row_classification,
+                "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": kv_head,
+                "key_slot": key_slot,
+                "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "contributor_dim": contributor_dim,
+                "current_probe_token": current_probe_token,
+                "current_token_matches": current_token_matches,
+                "blocked_reasons": blocked_reasons,
+                "selected_key_source_classification": row.pointer("/classification").cloned().unwrap_or(Value::Null),
+                "rope_input_attribution": attribution_row,
+                "current_projection_rope_boundary": current_boundary_row,
+                "selected_dim_summary": selected_dim_summary,
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "no_selected_key_source_rows"
+    } else if historical_slot_uncovered_count == selected_count {
+        "selected_key_projection_rope_source_missing_historical_slot"
+    } else if before_rope_input_count > 0 {
+        "selected_key_drift_before_rope_input"
+    } else if rust_rope_delta_count > 0 {
+        "selected_key_drift_from_rust_rope"
+    } else if reference_rope_delta_count > 0 {
+        "selected_key_reference_rope_arithmetic_delta"
+    } else if missing_attribution_count > 0 {
+        "selected_key_projection_rope_source_missing_attribution"
+    } else if clean_current_rope_count == selected_count {
+        "selected_key_current_rope_source_clean"
+    } else {
+        "selected_key_projection_rope_source_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_key_projection_rope_source_missing_historical_slot" => {
+            "capture historical pre-RoPE K projection/RoPE rows for the selected key slot"
+        }
+        "selected_key_drift_before_rope_input" => {
+            "localize selected key projection output before changing score math"
+        }
+        "selected_key_drift_from_rust_rope" => {
+            "pin selected key RoPE numeric policy before changing runtime math"
+        }
+        "selected_key_reference_rope_arithmetic_delta" => {
+            "pin reference selected key RoPE arithmetic before changing runtime math"
+        }
+        "selected_key_projection_rope_source_missing_attribution" => {
+            "capture missing selected key RoPE attribution rows"
+        }
+        "selected_key_current_rope_source_clean" => {
+            "inspect selected key cache/score expansion despite clean current RoPE source"
+        }
+        "no_selected_key_source_rows" => {
+            "localize selected key score-input source before projection/RoPE attribution"
+        }
+        _ => "add narrower selected key projection/RoPE probes before changing runtime math",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "selected key projection/RoPE source is diagnostic-only evidence for whether a selected key-dominant score slot can be attributed to current-token K projection/RoPE inputs; historical selected key slots must report missing source coverage rather than reusing current-token evidence, and this does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "current_probe_token": current_probe_token,
+        "current_token_matched_count": current_token_matched_count,
+        "historical_slot_uncovered_count": historical_slot_uncovered_count,
+        "missing_attribution_count": missing_attribution_count,
+        "before_rope_input_count": before_rope_input_count,
+        "rust_rope_delta_count": rust_rope_delta_count,
+        "reference_rope_delta_count": reference_rope_delta_count,
+        "clean_current_rope_count": clean_current_rope_count,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn rope_attribution_row_for_kv_head(section: &Value, kv_head: u64) -> Option<&Value> {
+    section.pointer("/rows").and_then(Value::as_array)?.iter().find(|row| {
+        row.pointer("/kv_head").or_else(|| row.pointer("/head")).and_then(Value::as_u64)
+            == Some(kv_head)
+    })
+}
+
+fn current_key_projection_rope_row_for_kv_head(section: &Value, kv_head: u64) -> Option<&Value> {
+    section.pointer("/rows").and_then(Value::as_array)?.iter().find(|row| {
+        row.pointer("/kv_head").or_else(|| row.pointer("/head")).and_then(Value::as_u64)
+            == Some(kv_head)
+    })
+}
+
+fn selected_current_rope_dim_summary(attribution_row: &Value, selected_dim: Option<u64>) -> Value {
+    let selected_dim = selected_dim.unwrap_or(u64::MAX);
+    let sections = [
+        ("input", "/input_f16_bucket_delta"),
+        ("actual_post_rope", "/actual_post_rope_f16_bucket_delta"),
+        ("runtime_replay_input_shift", "/runtime_replay_input_shift_f16_bucket_delta"),
+        ("rust_runtime_replay_to_actual", "/rust_runtime_replay_to_actual_f16_bucket_delta"),
+        (
+            "reference_runtime_replay_to_reference",
+            "/reference_runtime_replay_to_reference_f16_bucket_delta",
+        ),
+    ];
+    let mut rows = Vec::<Value>::new();
+    let mut selected_dim_bucket_count = 0usize;
+
+    for (stage, pointer) in sections {
+        let delta = attribution_row.pointer(pointer).unwrap_or(&Value::Null);
+        let first_bucket =
+            delta.pointer("/first_f16_bucket_mismatch").cloned().unwrap_or(Value::Null);
+        let exact_selected_dim =
+            first_bucket.pointer("/index").and_then(Value::as_u64) == Some(selected_dim);
+        if exact_selected_dim {
+            selected_dim_bucket_count += 1;
+        }
+        rows.push(json!({
+            "stage": stage,
+            "status": if delta.is_null() { "missing_delta" } else { "compared" },
+            "f16_bucket_mismatch_count": delta.pointer("/f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+            "first_f16_bucket_mismatch": first_bucket,
+            "exact_selected_dim": exact_selected_dim,
+        }));
+    }
+
+    json!({
+        "selected_dim": if selected_dim == u64::MAX { Value::Null } else { json!(selected_dim) },
+        "selected_dim_bucket_count": selected_dim_bucket_count,
+        "rows": rows,
+    })
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScoreKeyHistoryEffectVariant<'a> {
     id: &'static str,
@@ -33853,6 +34089,132 @@ mod tests {
         assert_eq!(
             report.pointer("/rows/0/legacy_score_input/classification"),
             Some(&json!("selected_slot_is_first_f16_bucket_mismatch"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_key_projection_rope_source_reports_historical_slot_blocker() {
+        let selected_key_source = json!({
+            "rows": [
+                {
+                    "status": "compared",
+                    "classification": "selected_key_drift_enters_before_cache_store",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 2,
+                    "query_token": 10,
+                    "contributor_dim": 40,
+                }
+            ]
+        });
+        let rope_input_attribution = json!({
+            "selected_token": 17,
+            "rows": [
+                {
+                    "kv_head": 1,
+                    "status": "compared",
+                    "attribution": "input_bucket_drift_before_rope",
+                }
+            ]
+        });
+        let current_projection_rope_boundary = json!({
+            "selected_token": 17,
+            "rows": [
+                {
+                    "kv_head": 1,
+                    "status": "compared",
+                }
+            ]
+        });
+
+        let report = attention_selected_key_projection_rope_source(
+            &selected_key_source,
+            &rope_input_attribution,
+            &current_projection_rope_boundary,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_projection_rope_source_missing_historical_slot"))
+        );
+        assert_eq!(report.pointer("/historical_slot_uncovered_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/current_token_matched_count"), Some(&json!(0)));
+        assert!(report.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| reasons.contains(&json!("selected_key_slot_not_current_rope_probe"))
+        ));
+        assert_eq!(report.pointer("/rows/0/current_token_matches"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_key_projection_rope_source_reports_current_token_input_drift() {
+        let selected_key_source = json!({
+            "rows": [
+                {
+                    "status": "compared",
+                    "classification": "selected_key_drift_enters_before_cache_store",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 2,
+                    "query_token": 10,
+                    "contributor_dim": 40,
+                }
+            ]
+        });
+        let rope_input_attribution = json!({
+            "selected_token": 2,
+            "rows": [
+                {
+                    "kv_head": 1,
+                    "status": "compared",
+                    "attribution": "input_bucket_drift_before_rope",
+                    "input_f16_bucket_delta": {
+                        "f16_bucket_mismatch_count": 1,
+                        "first_f16_bucket_mismatch": {
+                            "index": 40,
+                        },
+                    },
+                    "actual_post_rope_f16_bucket_delta": {
+                        "f16_bucket_mismatch_count": 1,
+                        "first_f16_bucket_mismatch": {
+                            "index": 40,
+                        },
+                    },
+                }
+            ]
+        });
+        let current_projection_rope_boundary = json!({
+            "selected_token": 2,
+            "rows": [
+                {
+                    "kv_head": 1,
+                    "status": "compared",
+                }
+            ]
+        });
+
+        let report = attention_selected_key_projection_rope_source(
+            &selected_key_source,
+            &rope_input_attribution,
+            &current_projection_rope_boundary,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_drift_before_rope_input"))
+        );
+        assert_eq!(report.pointer("/current_token_matched_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/before_rope_input_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rows/0/status"), Some(&json!("compared")));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_key_drift_before_rope_input"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/selected_dim_summary/selected_dim_bucket_count"),
+            Some(&json!(2))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
