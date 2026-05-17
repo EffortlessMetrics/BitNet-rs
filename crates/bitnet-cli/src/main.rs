@@ -7242,6 +7242,10 @@ async fn run_cuda_warm_session(
         total_session_ms,
         "strict RTX 5070 Ti CUDA warm answer session",
         "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+        false,
+        "recreated_per_prompt_for_rng_state_independence",
+        0,
+        prompts.len(),
     );
     let cuda_execution_residency =
         cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
@@ -8050,6 +8054,18 @@ async fn run_slm_warm_session(
     let mut aggregate_direct_greedy_logits_steps = 0usize;
     let mut aggregate_logits_vec_extraction_steps = 0usize;
     let mut aggregate_logits_scratch_reuse_steps = 0usize;
+    let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
+    let sampling_config =
+        SamplingConfig { temperature, top_k: top_k as u32, top_p, repetition_penalty, seed };
+    let sampler_reuse_enabled = warm_session_sampler_reuse_enabled(&sampling_config);
+    let sampler_reuse_policy = warm_session_sampler_reuse_policy(sampler_reuse_enabled);
+    let mut session_sampler = sampler_reuse_enabled.then(|| {
+        let mut sampler = SamplingStrategy::new(sampling_config.clone());
+        sampler.reserve_logits_capacity(logits_capacity);
+        sampler
+    });
+    let mut sampler_reused_prompt_count = 0usize;
+    let mut sampler_recreated_prompt_count = 0usize;
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -8076,7 +8092,6 @@ async fn run_slm_warm_session(
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
-        let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
         let buffer_reuse_evidence = session_buffers.reset(
             encoded_prompt_tokens.len(),
             max_new_tokens,
@@ -8107,13 +8122,18 @@ async fn run_slm_warm_session(
         let prompt_token_count = tokens.len();
         let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
         let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
-        let mut sampler = SamplingStrategy::new(SamplingConfig {
-            temperature,
-            top_k: top_k as u32,
-            top_p,
-            repetition_penalty,
-            seed,
-        });
+        let mut prompt_sampler = if sampler_reuse_enabled {
+            sampler_reused_prompt_count += 1;
+            None
+        } else {
+            sampler_recreated_prompt_count += 1;
+            let mut sampler = SamplingStrategy::new(sampling_config.clone());
+            sampler.reserve_logits_capacity(logits_capacity);
+            Some(sampler)
+        };
+        if let Some(sampler) = session_sampler.as_mut() {
+            sampler.reset();
+        }
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
@@ -8187,7 +8207,13 @@ async fn run_slm_warm_session(
             let sample_alloc_start = AllocationAuditSnapshot::current();
             let next_token = match direct_next_token {
                 Some(token) => token,
-                None => sampler.sample_in_place(logits_scratch, generated_tokens)?,
+                None => {
+                    let sampler = session_sampler
+                        .as_mut()
+                        .or(prompt_sampler.as_mut())
+                        .expect("warm-session sampler must be available");
+                    sampler.sample_in_place(logits_scratch, generated_tokens)?
+                }
             };
             if allocation_audit_enabled {
                 sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
@@ -8436,7 +8462,9 @@ async fn run_slm_warm_session(
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": max_stop_len > 0,
                 "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+                "sampler_reuse_policy": sampler_reuse_policy,
+                "sampler_reused_across_prompts": sampler_reuse_enabled,
+                "sampler_recreated_per_prompt": !sampler_reuse_enabled,
                 "logits_buffer_reuse_policy": if logits_vec_extraction_steps == 0 {
                     "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
                 } else {
@@ -8569,6 +8597,10 @@ async fn run_slm_warm_session(
         total_session_ms,
         &format!("validated SLM warm session on {}", backend_identity.selected_backend.as_str()),
         "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+        sampler_reuse_enabled,
+        sampler_reuse_policy,
+        sampler_reused_prompt_count,
+        sampler_recreated_prompt_count,
     );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
@@ -8613,7 +8645,11 @@ async fn run_slm_warm_session(
             "allocation_audit_buffers_reused": true,
             "stop_tail_buffer_reused": max_stop_len > 0,
             "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-            "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+            "sampler_reuse_policy": sampler_reuse_policy,
+            "sampler_reused_across_prompts": sampler_reuse_enabled,
+            "sampler_recreated_per_prompt": !sampler_reuse_enabled,
+            "sampler_reused_prompt_count": sampler_reused_prompt_count,
+            "sampler_recreated_prompt_count": sampler_recreated_prompt_count,
             "logits_buffer_reuse_policy": if aggregate_logits_vec_extraction_steps == 0 {
                 "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
             } else {
@@ -9266,6 +9302,10 @@ impl WarmSessionSpeedAccumulator {
         total_session_ms: f64,
         measurement_scope: &str,
         claim: &str,
+        sampler_reuse_enabled: bool,
+        sampler_reuse_policy: &str,
+        sampler_reused_prompt_count: usize,
+        sampler_recreated_prompt_count: usize,
     ) -> serde_json::Value {
         serde_json::json!({
             "measurement_scope": measurement_scope,
@@ -9286,8 +9326,11 @@ impl WarmSessionSpeedAccumulator {
                 "stop_tail_buffer_reused": true,
                 "kv_cache_recreated_per_prompt": true,
                 "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-                "sampler_recreated_per_prompt": true,
-                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+                "sampler_recreated_per_prompt": !sampler_reuse_enabled,
+                "sampler_reused_across_prompts": sampler_reuse_enabled,
+                "sampler_reuse_policy": sampler_reuse_policy,
+                "sampler_reused_prompt_count": sampler_reused_prompt_count,
+                "sampler_recreated_prompt_count": sampler_recreated_prompt_count,
                 "logits_buffer_reuse_claimed": false,
                 "logits_buffer_reuse_policy": "full logits Vec extraction is reported by the session receipt; model.logits tensor allocation remains measured",
             },
@@ -9315,6 +9358,20 @@ impl WarmSessionSpeedAccumulator {
                 "decode_generated_tok_s": tokens_per_second_json(self.generated_tokens, self.decode_total_ms),
             },
         })
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_sampler_reuse_enabled(config: &bitnet_sampling::SamplingConfig) -> bool {
+    config.temperature.abs() <= f32::EPSILON
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_sampler_reuse_policy(reuse_enabled: bool) -> &'static str {
+    if reuse_enabled {
+        "single_sampler_reused_for_temperature_zero_prompt_independence"
+    } else {
+        "recreated_per_prompt_for_rng_state_independence"
     }
 }
 
@@ -13128,6 +13185,10 @@ mod tests {
             1600.0,
             "strict RTX 5070 Ti CUDA warm answer session",
             "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+            true,
+            "single_sampler_reused_for_temperature_zero_prompt_independence",
+            2,
+            0,
         );
 
         assert_eq!(receipt["counts"]["prompt_count"], 2);
@@ -13139,6 +13200,35 @@ mod tests {
         assert_eq!(receipt["broad_performance_claim"], false);
         assert_eq!(receipt["reuse"]["model_loaded_once"], true);
         assert_eq!(receipt["reuse"]["logits_buffer_reuse_claimed"], false);
+        assert_eq!(receipt["reuse"]["sampler_recreated_per_prompt"], false);
+        assert_eq!(receipt["reuse"]["sampler_reused_across_prompts"], true);
+        assert_eq!(receipt["reuse"]["sampler_reused_prompt_count"], 2);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_sampler_reuse_is_only_for_temperature_zero() {
+        let greedy = bitnet_sampling::SamplingConfig {
+            temperature: 0.0,
+            repetition_penalty: 1.1,
+            ..Default::default()
+        };
+        let sampled = bitnet_sampling::SamplingConfig {
+            temperature: 0.7,
+            seed: Some(42),
+            ..Default::default()
+        };
+
+        assert!(warm_session_sampler_reuse_enabled(&greedy));
+        assert!(!warm_session_sampler_reuse_enabled(&sampled));
+        assert_eq!(
+            warm_session_sampler_reuse_policy(true),
+            "single_sampler_reused_for_temperature_zero_prompt_independence"
+        );
+        assert_eq!(
+            warm_session_sampler_reuse_policy(false),
+            "recreated_per_prompt_for_rng_state_independence"
+        );
     }
 
     #[test]

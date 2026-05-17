@@ -15,6 +15,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Greedy sampler fast path | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json` | Validates that the guarded greedy no-penalty sampler fast path preserves the 4-thread generated IDs/text while sampler decode allocations remain zero |
 | Logits extraction isolation | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json` | Validates that direct tensor argmax bypasses full logits Vec extraction only where the sampler fast path is exact, while preserving generated IDs/text |
 | Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
+| Warm-session sampler reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json` | Validates that the temperature-zero warm-session profile reuses one sampler across prompts while preserving generated IDs/text and strict provenance |
 
 All rows use:
 
@@ -99,7 +100,8 @@ stop_tail_buffer_reused = true
 timing_buffers_reused = true
 allocation_audit_buffers_reused = true
 kv_cache_recreated_per_prompt = true
-sampler_recreated_per_prompt = true
+sampler_recreated_per_prompt = false
+sampler_reused_across_prompts = true
 logits_buffer_reuse_claimed = false
 ```
 
@@ -110,8 +112,10 @@ The next safe optimization slices should start from these known remaining costs:
    SLM-CPU-026 removes fresh full logits Vec allocation from default
    repetition-penalty decode steps by reusing a host scratch buffer, but the
    model still produces logits tensors per token.
-3. Keep sampler and stop policy work out of the per-token hot loop where doing
-   so preserves deterministic generated IDs.
+3. Continue keeping sampler and stop policy work out of the per-token hot loop
+   where doing so preserves deterministic generated IDs. SLM-CPU-029 reuses one
+   sampler across prompts for the temperature-zero Qwen3 profile only; nonzero
+   temperature modes still recreate samplers to avoid RNG-state coupling.
 4. Improve Q8_0 dense linear locality only with before/after receipts proving
    identical prompt IDs, generated IDs, decoded text, backend identity,
    tokenizer authority, model SHA, and `fallback=false`.
@@ -194,6 +198,34 @@ sustained_throughput_claim = false
 This still does not claim sustained throughput or dense math acceleration. It
 only narrows the host allocation boundary for the existing Qwen3 Q8_0 CPU
 behavior oracle.
+
+## Warm-Session Sampler Reuse
+
+SLM-CPU-029 removes the remaining per-prompt sampler object recreation in the
+bounded Qwen3 Q8_0 warm-session appliance profile. The reuse is deliberately
+guarded to `temperature = 0.0`, where the sampler does not need cross-prompt RNG
+state. Sampling modes with nonzero temperature retain per-prompt sampler
+creation for request independence.
+
+```text
+baseline = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse.json
+after = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json
+generated_outputs_match_baseline = true
+sampler_recreated_per_prompt = false
+sampler_reused_across_prompts = true
+sampler_reused_prompt_count = 6
+sampler_recreated_prompt_count = 0
+fallback_used = false
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+This slice does not change KV-cache isolation: the KV cache is still recreated
+per prompt to preserve prompt independence. It also does not claim a measured
+speedup; allocation counters for the dominant tensor-producing components are
+unchanged, and the evidence is scoped to removal of avoidable sampler setup in
+the existing 4-thread appliance profile.
 
 ## Claim Boundary
 
