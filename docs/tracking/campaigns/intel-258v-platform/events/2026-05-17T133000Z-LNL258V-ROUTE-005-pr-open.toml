@@ -1,0 +1,25 @@
+timestamp = "2026-05-17T13:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-005-npu-gpu-diagnostics"
+pr = 5338
+head_sha = "6818f7a063249044ce986598a048b87074caa54f"
+summary = "Opened LNL258V-ROUTE-005 to attach OpenVINO GPU/NPU diagnosis blockers to Lunar Lake route-profile comparison."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5338 keeps OpenVINO GPU/NPU routes candidate-only and unpromoted.",
+  "The route-profile comparison now indexes GPU/NPU quality diagnosis receipts and the NPU cold-start diagnosis receipt.",
+  "The PR preserves no new inference, no speedup, no power-advantage, no acceleration, and no BitNet QK256/I2_S behavior-change boundaries.",
+]

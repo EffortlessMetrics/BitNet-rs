@@ -245,6 +245,21 @@ pub enum LunarLakeAction {
         #[arg(long)]
         telemetry_context: Option<PathBuf>,
 
+        /// Optional OpenVINO GPU corpus-v2 diagnosis receipt to attach candidate-route blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)]
+        gpu_quality_diagnosis: Option<PathBuf>,
+
+        /// Optional OpenVINO NPU corpus-v2 diagnosis receipt to attach candidate-route blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = "lunar-lake-openvino-npu-corpus-v2-diagnosis.json")]
+        npu_quality_diagnosis: Option<PathBuf>,
+
+        /// Optional OpenVINO NPU cold-start diagnosis receipt to attach cold-route blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_NPU_COLD_START_DIAGNOSIS)]
+        npu_cold_start_diagnosis: Option<PathBuf>,
+
         /// Output JSON profile comparison to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -949,6 +964,8 @@ pub struct LunarLakeRouteProfileComparison {
     pub openvino_corpus_v2_receipt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub telemetry_context_receipt: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub route_diagnosis_receipts: Vec<String>,
     pub profile_comparison_ready: bool,
     pub default_route_id: String,
     pub profiles: Vec<WorkloadProfileEvaluation>,
@@ -1828,6 +1845,9 @@ impl LunarLakeCommand {
                 cpu_corpus_v2,
                 openvino_corpus_v2,
                 telemetry_context,
+                gpu_quality_diagnosis,
+                npu_quality_diagnosis,
+                npu_cold_start_diagnosis,
                 json_out,
                 created_utc,
                 strict,
@@ -1836,13 +1856,16 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_route_profile_comparison_with_created_utc_and_inputs(
+                let receipt = build_route_profile_comparison_with_created_utc_and_diagnostics(
                     artifact_root,
                     promotion_ledger,
                     phase_comparison,
                     cpu_corpus_v2.as_deref(),
                     openvino_corpus_v2.as_deref(),
                     telemetry_context.as_deref(),
+                    gpu_quality_diagnosis.as_deref(),
+                    npu_quality_diagnosis.as_deref(),
+                    npu_cold_start_diagnosis.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
@@ -3297,6 +3320,7 @@ pub fn build_route_profile_comparison_with_created_utc(
     )
 }
 
+#[cfg(test)]
 pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     root: &Path,
     promotion_ledger: &Path,
@@ -3304,6 +3328,32 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     cpu_corpus_v2: Option<&Path>,
     openvino_corpus_v2: Option<&Path>,
     telemetry_context: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
+    build_route_profile_comparison_with_created_utc_and_diagnostics(
+        root,
+        promotion_ledger,
+        phase_comparison,
+        cpu_corpus_v2,
+        openvino_corpus_v2,
+        telemetry_context,
+        None,
+        None,
+        None,
+        created_utc,
+    )
+}
+
+pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+    telemetry_context: Option<&Path>,
+    gpu_quality_diagnosis: Option<&Path>,
+    npu_quality_diagnosis: Option<&Path>,
+    npu_cold_start_diagnosis: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
     let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
@@ -3314,6 +3364,13 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
 
     let mut gaps = Vec::new();
     let telemetry_context = load_benchmark_telemetry_context(root, telemetry_context, &mut gaps)?;
+    let route_diagnostics = load_route_diagnostics_index(
+        root,
+        gpu_quality_diagnosis,
+        npu_quality_diagnosis,
+        npu_cold_start_diagnosis,
+        &mut gaps,
+    )?;
     if !ledger.promotion_ready {
         gaps.push(format!("promotion ledger not ready: {}", ledger.gaps.join("; ")));
     }
@@ -3341,6 +3398,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
                 &phase_comparison_json,
                 &quality_index,
                 telemetry_context.as_ref(),
+                &route_diagnostics,
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -3384,6 +3442,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
         telemetry_context_receipt: telemetry_context
             .as_ref()
             .map(|context| context.receipt.clone()),
+        route_diagnosis_receipts: route_diagnostics.source_receipts(),
         profile_comparison_ready,
         default_route_id: ledger.default_route_id,
         profiles,
@@ -7250,6 +7309,176 @@ impl ProfileQualityIndex {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct RouteDiagnosticsIndex {
+    by_route: BTreeMap<String, RouteDiagnosticEvidence>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct RouteDiagnosticEvidence {
+    source_receipts: Vec<String>,
+    blockers: Vec<String>,
+}
+
+impl RouteDiagnosticsIndex {
+    fn add(&mut self, route_id: &str, source_receipt: String, blockers: Vec<String>) {
+        let entry = self.by_route.entry(route_id.to_string()).or_default();
+        if !entry.source_receipts.contains(&source_receipt) {
+            entry.source_receipts.push(source_receipt);
+        }
+        entry.blockers.extend(blockers);
+        entry.blockers.sort();
+        entry.blockers.dedup();
+    }
+
+    fn get(&self, route_id: &str) -> Option<&RouteDiagnosticEvidence> {
+        self.by_route.get(route_id)
+    }
+
+    fn source_receipts(&self) -> Vec<String> {
+        self.by_route
+            .values()
+            .flat_map(|evidence| evidence.source_receipts.iter().cloned())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+fn load_route_diagnostics_index(
+    root: &Path,
+    gpu_quality_diagnosis: Option<&Path>,
+    npu_quality_diagnosis: Option<&Path>,
+    npu_cold_start_diagnosis: Option<&Path>,
+    gaps: &mut Vec<String>,
+) -> Result<RouteDiagnosticsIndex> {
+    let mut index = RouteDiagnosticsIndex::default();
+    if let Some(path) = gpu_quality_diagnosis {
+        load_openvino_quality_diagnostic(
+            root,
+            path,
+            "dense_slm_openvino_gpu_candidate",
+            &mut index,
+            gaps,
+        )?;
+    }
+    if let Some(path) = npu_quality_diagnosis {
+        load_openvino_quality_diagnostic(
+            root,
+            path,
+            "dense_slm_openvino_npu_candidate",
+            &mut index,
+            gaps,
+        )?;
+    }
+    if let Some(path) = npu_cold_start_diagnosis {
+        load_npu_cold_start_diagnostic(root, path, &mut index, gaps)?;
+    }
+    Ok(index)
+}
+
+fn load_openvino_quality_diagnostic(
+    root: &Path,
+    path: &Path,
+    route_id: &str,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!("route diagnosis receipt missing: {}", path_string(&path)));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_corpus_v2_diagnosis")
+    {
+        gaps.push(format!(
+            "route diagnosis receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+    let mut blockers = Vec::new();
+    if bool_at_any(&json, &["route_blocked"]) == Some(true) {
+        blockers.push("OpenVINO corpus-v2 diagnosis keeps route blocked".to_string());
+    }
+    if let Some(failed) = u64_at(&json, "quality_summary.failed")
+        && failed > 0
+    {
+        blockers.push(format!("OpenVINO diagnosis reports {failed} corpus-v2 quality failures"));
+    }
+    if bool_at_any(&json, &["generated_token_visibility.direct_generated_token_ids_available"])
+        == Some(false)
+    {
+        blockers.push(
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                .to_string(),
+        );
+    }
+    blockers.extend(string_array_at(&json, "blocker_summary"));
+    if bool_at_any(&json, &["claim_boundary.route_promotion_changed"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.speedup_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.arc_or_npu_execution_claim"]) == Some(true)
+    {
+        gaps.push(format!(
+            "route diagnosis receipt violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+    blockers.sort();
+    blockers.dedup();
+    index.add(route_id, path_string(&path), blockers);
+    Ok(())
+}
+
+fn load_npu_cold_start_diagnostic(
+    root: &Path,
+    path: &Path,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!("NPU cold-start diagnosis receipt missing: {}", path_string(&path)));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_npu_cold_start_diagnosis")
+    {
+        gaps.push(format!(
+            "NPU cold-start diagnosis receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+    let mut blockers = Vec::new();
+    if bool_at_any(&json, &["cold_start.cold_load_dominant"]) == Some(true) {
+        let classification = string_at(&json, "cold_start.classification")
+            .unwrap_or_else(|| "cold_load_dominated".to_string());
+        blockers.push(format!("NPU cold start is {classification}"));
+        blockers.push("NPU cache or resident warm-route proof is missing".to_string());
+    }
+    if bool_at_any(&json, &["corpus_v2_context.route_blocked_by_quality"]) == Some(true)
+        && let Some(failed) = u64_at(&json, "corpus_v2_context.failed")
+    {
+        blockers.push(format!("NPU corpus-v2 context has {failed} failed cases"));
+    }
+    if bool_at_any(&json, &["claim_boundary.route_promotion_changed"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.speedup_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.power_advantage_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.acceleration_claim"]) == Some(true)
+    {
+        gaps.push(format!(
+            "NPU cold-start diagnosis violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+    blockers.sort();
+    blockers.dedup();
+    index.add("dense_slm_openvino_npu_candidate", path_string(&path), blockers);
+    Ok(())
+}
+
 fn load_profile_quality_index(
     root: &Path,
     cpu_corpus_v2: Option<&Path>,
@@ -7840,6 +8069,7 @@ fn evaluate_workload_profile(
     phase_comparison: &Value,
     quality_index: &ProfileQualityIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
+    route_diagnostics: &RouteDiagnosticsIndex,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
     if let Some(route_id) = &profile.promoted_route {
@@ -7862,6 +8092,7 @@ fn evaluate_workload_profile(
                 phase_comparison,
                 quality_index,
                 telemetry_context,
+                route_diagnostics,
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -7934,6 +8165,7 @@ fn evaluate_profile_route(
     phase_comparison: &Value,
     quality_index: &ProfileQualityIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
+    route_diagnostics: &RouteDiagnosticsIndex,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
         .routes
@@ -7944,6 +8176,9 @@ fn evaluate_profile_route(
     let mut blockers = route.missing_evidence.clone();
     let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
     let telemetry = telemetry_context.map(telemetry_for_profile_route);
+    if let Some(diagnostic) = route_diagnostics.get(route_id) {
+        blockers.extend(diagnostic.blockers.iter().cloned());
+    }
     if route.status != "promoted" || !route.promoted_for.contains(&profile.profile_id) {
         blockers.push(format!("route not promoted for profile {}", profile.profile_id));
     }
@@ -7992,6 +8227,13 @@ fn evaluate_profile_route(
         && !evidence.contains(&quality.source_receipt)
     {
         evidence.push(quality.source_receipt.clone());
+    }
+    if let Some(diagnostic) = route_diagnostics.get(route_id) {
+        for source in &diagnostic.source_receipts {
+            if !evidence.contains(source) {
+                evidence.push(source.clone());
+            }
+        }
     }
 
     Ok(ProfileRouteEvidence {
@@ -9127,6 +9369,63 @@ mod tests {
                 }
             }),
         )?;
+        write_json(
+            temp.path(),
+            OPENVINO_GPU_CORPUS_V2_DIAGNOSIS,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
+                "route_blocked": true,
+                "quality_summary": {"failed": 5},
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "blocker_summary": ["GPU diagnosis blocker"],
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "arc_or_npu_execution_claim": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            json!({
+                "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
+                "route_blocked": true,
+                "quality_summary": {"failed": 4},
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "blocker_summary": ["NPU diagnosis blocker"],
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "arc_or_npu_execution_claim": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            OPENVINO_NPU_COLD_START_DIAGNOSIS,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_npu_cold_start_diagnosis",
+                "cold_start": {
+                    "cold_load_dominant": true,
+                    "classification": "openvino_pipeline_load_or_device_compile_dominated"
+                },
+                "corpus_v2_context": {
+                    "route_blocked_by_quality": true,
+                    "failed": 4
+                },
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false
+                }
+            }),
+        )?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -9154,17 +9453,21 @@ mod tests {
         )?;
         fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
 
-        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+        let profiles = build_route_profile_comparison_with_created_utc_and_diagnostics(
             temp.path(),
             Path::new(ROUTE_PROMOTION_LEDGER),
             Path::new(DENSE_PHASE_COMPARISON),
             Some(Path::new(DENSE_CPU_CORPUS_V2)),
             Some(Path::new(DENSE_OV_CORPUS_V2)),
             None,
+            Some(Path::new(OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)),
+            Some(Path::new("lunar-lake-openvino-npu-corpus-v2-diagnosis.json")),
+            Some(Path::new(OPENVINO_NPU_COLD_START_DIAGNOSIS)),
             "2026-05-16T07:30:00Z".to_string(),
         )?;
 
         assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
+        assert_eq!(profiles.route_diagnosis_receipts.len(), 3);
         let cpu_corpus_path = path_string(&temp.path().join(DENSE_CPU_CORPUS_V2));
         assert_eq!(profiles.cpu_corpus_v2_receipt.as_deref(), Some(cpu_corpus_path.as_str()));
         let Some(ask_short) =
@@ -9194,6 +9497,33 @@ mod tests {
         assert!(gpu_route.blockers.iter().any(|blocker| {
             blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
         }));
+        assert!(
+            gpu_route.blockers.contains(&"GPU diagnosis blocker".to_string()),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            gpu_route.blockers.contains(
+                &"OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                    .to_string()
+            )
+        );
+        let Some(npu_route) = ask_short
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+        else {
+            bail!("missing NPU route evidence");
+        };
+        assert!(npu_route.blockers.contains(&"NPU diagnosis blocker".to_string()));
+        assert!(npu_route.blockers.contains(
+            &"NPU cold start is openvino_pipeline_load_or_device_compile_dominated".to_string()
+        ));
+        assert!(
+            npu_route
+                .blockers
+                .contains(&"NPU cache or resident warm-route proof is missing".to_string())
+        );
         Ok(())
     }
 
