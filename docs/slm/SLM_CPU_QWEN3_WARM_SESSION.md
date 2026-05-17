@@ -152,3 +152,29 @@ thread count, timing, memory/storage context, and unsupported-path boundaries
 must be inspectable. It does not claim sustained throughput, Q4/Q5 support, a
 second dense model, server inference, GPU/NPU/OpenVINO/UHD 620 execution,
 Qwen3.5 support, or BitNet QK256 kernel changes.
+
+## SLM-CPU-024 Greedy Sampler Fast-Path Boundary
+
+The sampler now bypasses its logits scratch buffer for the deterministic
+greedy path when `temperature = 0.0` and repetition penalty is inactive, or
+when there are no context tokens to penalize. Penalty-aware greedy sampling
+continues to use scratch logits so repeated-token penalties remain observable
+before argmax.
+
+The i5-8250U after artifact preserves the SLM-CPU-015 4-thread behavior oracle:
+
+```text
+baseline = ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-4.json
+after = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json
+generated_outputs_match_baseline = true
+sampler_decode_allocations_zero = true
+quality_summary.passed = true
+determinism.passed = true
+fallback_used = false
+```
+
+This is sampler allocation cleanup only. It does not claim sustained
+throughput, broad answer quality, Q4/Q5 support, a second dense model, server
+inference, GPU/NPU/OpenVINO/UHD 620 execution, Qwen3.5 support, or BitNet
+QK256 kernel changes.

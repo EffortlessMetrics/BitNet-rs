@@ -12,6 +12,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Thread envelope | `ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope.json` | 1, 2, 4, and 8 thread warm-session timing comparison |
 | Thread validation | `ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-thread-timing-envelope-validation.json` | Validates strict provenance, quality, determinism, and no fallback across thread counts |
 | Operator profile | `ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-operator-profile.json` | Default operator evidence with process memory, storage/free-space, warm-session timing, and unsupported-path fields |
+| Greedy sampler fast path | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json` | Validates that the guarded greedy no-penalty sampler fast path preserves the 4-thread generated IDs/text while sampler decode allocations remain zero |
 
 All rows use:
 
@@ -110,6 +111,31 @@ The next safe optimization slices should start from these known remaining costs:
 4. Improve Q8_0 dense linear locality only with before/after receipts proving
    identical prompt IDs, generated IDs, decoded text, backend identity,
    tokenizer authority, model SHA, and `fallback=false`.
+
+## Greedy Sampler Fast Path
+
+SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
+repetition penalty is inactive, or when there is no context to penalize. The
+sampler returns the greedy argmax directly instead of copying logits into its
+scratch buffer first.
+
+The after-change validation compares the new 4-thread warm-session receipt
+against the SLM-CPU-015 4-thread baseline:
+
+```text
+baseline = ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-4.json
+after = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json
+generated_outputs_match_baseline = true
+sampler_decode_allocations_zero = true
+fallback_used = false
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+This closes only the greedy no-penalty sampler scratch-copy boundary. It does
+not remove the remaining `model.logits_and_extract` allocation, change Q8_0
+dense math, or establish a sustained throughput claim.
 
 ## Claim Boundary
 

@@ -160,6 +160,12 @@ impl SamplingStrategy {
             return Err(anyhow::anyhow!("Empty logits slice"));
         }
 
+        if self.config.temperature == 0.0
+            && (self.config.repetition_penalty == 1.0 || context_tokens.is_empty())
+        {
+            return greedy_sample(logits);
+        }
+
         // Optimization: Use pre-allocated buffer instead of allocating `vocab_size` every time.
         // We use std::mem::take to avoid borrow checker conflicts with `&mut self` later.
         let mut buf = std::mem::take(&mut self.logits_buffer);
@@ -595,5 +601,35 @@ mod property_tests {
         let token = strategy.sample(&[0.1, 0.4, 0.2], &[]).unwrap();
         assert_eq!(token, 1);
         assert!(strategy.logits_buffer_capacity() >= 128);
+    }
+
+    #[test]
+    fn greedy_no_penalty_sampling_bypasses_logits_scratch() {
+        let mut strategy = SamplingStrategy::new(SamplingConfig {
+            temperature: 0.0,
+            repetition_penalty: 1.0,
+            seed: Some(7),
+            ..Default::default()
+        });
+
+        let token = strategy.sample(&[0.1, 0.4, 0.2], &[1, 2, 1]).unwrap();
+
+        assert_eq!(token, 1);
+        assert_eq!(strategy.logits_buffer_capacity(), 0);
+    }
+
+    #[test]
+    fn greedy_repetition_penalty_still_uses_scratch_and_changes_choice() {
+        let mut strategy = SamplingStrategy::new(SamplingConfig {
+            temperature: 0.0,
+            repetition_penalty: 2.0,
+            seed: Some(7),
+            ..Default::default()
+        });
+
+        let token = strategy.sample(&[0.1, 0.4, 0.3], &[1]).unwrap();
+
+        assert_eq!(token, 2);
+        assert!(strategy.logits_buffer_capacity() >= 3);
     }
 }

@@ -2041,6 +2041,58 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-024"
+status = "in_progress"
+branch = "codex/slm-cpu-024-greedy-sampler-fast-path"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-023"]
+acceptance = "Add a guarded greedy no-penalty sampler fast path that bypasses sampler logits scratch copying for temperature=0.0 and inactive repetition penalty, then record a real i5-8250U Qwen3 Q8_0 warm-session after artifact proving the same model SHA, generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, fallback=false, and zero sampler decode allocations. This slice must not claim sustained throughput, broad answer quality, Q4/Q5 quant expansion, a second dense model, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-sampling",
+  "cargo clippy --locked -p bitnet-sampling -- -D warnings",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-greedy-sampler-fast-path.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-sampling/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 quant expansion",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "After merge, deterministic greedy sampling without active repetition penalty bypasses sampler logits scratch copying.",
+  "The recorded i5-8250U Qwen3 Q8_0 warm-session after artifact preserves generated IDs, decoded text, strict tokenizer authority, selected CPU backend, and fallback=false against the 4-thread baseline.",
+  "The after artifact records zero sampler decode allocations for the fixed warm-session corpus.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Broad Qwen answer quality is proven.",
+  "Q4/Q5 quant expansion is in scope.",
+  "A second dense model is supported.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-023"
 status = "merged"
 pr = 5312
