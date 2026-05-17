@@ -1,0 +1,23 @@
+timestamp = "2026-05-17T14:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-006"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-REG-006-corpus-receipt-alignment"
+summary = "Started corpus-v2 fixture-to-receipt alignment blockers for Lunar Lake route-profile comparison."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The item reads the active answer-corpus-v2 fixture and existing CPU/OpenVINO corpus-v2 receipts without running new inference.",
+  "OpenVINO candidate routes remain unpromoted when their committed corpus-v2 receipt case IDs are stale relative to the active fixture.",
+  "The work preserves no speedup, power-advantage, acceleration, route-promotion, or BitNet QK256/I2_S behavior-change claims.",
+]

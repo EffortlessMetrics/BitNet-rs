@@ -2,11 +2,12 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-17T13:00:00Z",
+  "created_utc": "2026-05-17T14:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
   "phase_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+  "answer_corpus_v2_fixture": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
   "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
@@ -90,7 +91,8 @@
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": []
         }
@@ -173,7 +175,8 @@
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": []
         },
@@ -242,6 +245,7 @@
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
@@ -255,6 +259,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_short has 1 quality failures",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
@@ -326,6 +332,7 @@
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
@@ -343,6 +350,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_short has 1 quality failures",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
@@ -428,7 +437,8 @@
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": []
         },
@@ -497,6 +507,7 @@
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
@@ -510,6 +521,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_normal has 1 quality failures",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
@@ -581,6 +594,7 @@
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
@@ -598,6 +612,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_normal has 1 quality failures",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
@@ -684,7 +700,8 @@
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
             "route not promoted for profile prefill_heavy"
@@ -755,6 +772,7 @@
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
@@ -768,6 +786,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile prefill_heavy has 1 quality failures",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
@@ -839,6 +859,7 @@
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
@@ -856,6 +877,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile prefill_heavy has 1 quality failures",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
@@ -942,7 +965,8 @@
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
             "route not promoted for profile decode_heavy"
@@ -1013,6 +1037,7 @@
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
@@ -1026,6 +1051,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile decode_heavy has 1 quality failures",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
@@ -1097,6 +1124,7 @@
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
@@ -1114,6 +1142,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile decode_heavy has 1 quality failures",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
@@ -1198,7 +1228,8 @@
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
             "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
             "route not promoted for profile structured"
@@ -1271,7 +1302,9 @@
           },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
           "blockers": [
             "corpus_v2 profile quality evidence missing",
@@ -1329,6 +1362,8 @@
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
@@ -1346,6 +1381,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
@@ -1403,6 +1440,8 @@
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
@@ -1416,6 +1455,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
+            "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",

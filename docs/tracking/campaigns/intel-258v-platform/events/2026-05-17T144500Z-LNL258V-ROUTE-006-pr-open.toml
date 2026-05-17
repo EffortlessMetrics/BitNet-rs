@@ -1,0 +1,25 @@
+timestamp = "2026-05-17T14:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-006"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-REG-006-corpus-receipt-alignment"
+pr = 5344
+head_sha = "a585cdbe7504cf4cf535f95d024ccf71025e131f"
+summary = "Opened LNL258V-ROUTE-006 to block stale dense SLM corpus-v2 receipts in Lunar Lake route-profile comparison."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5344 keeps OpenVINO GPU/NPU routes candidate-only and unpromoted.",
+  "The route-profile comparison now verifies CPU/OpenVINO corpus-v2 receipt case IDs against the active answer-corpus-v2 fixture.",
+  "The PR preserves no new inference, no speedup, no power-advantage, no acceleration, and no BitNet QK256/I2_S behavior-change boundaries.",
+]
