@@ -2279,21 +2279,27 @@ mod tests {
         assert!(!receipt.full_cuda_residency_claimed);
         assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
         assert!(receipt.bitnet_packed_i2s_qk256_proof);
-        let plan = receipt.execution_plan.as_ref().expect("execution plan");
-        assert_eq!(plan.selected_route, "bitnet_qk256_cuda");
-        assert!(plan.bitnet_packed_qk256_cuda);
-        assert_eq!(plan.cuda_bitnet_qk256_ops, 420);
-        assert_eq!(plan.cpu_fallback_ops, 0);
-        assert_eq!(plan.cuda_dense_regular_llm_ops, 0);
-        assert!(plan.strict_cuda_ready);
-        let coverage = receipt.execution_coverage.as_ref().expect("execution coverage");
-        assert_eq!(coverage.bitnet_linear_layers_on_cuda, 420);
-        assert_eq!(coverage.bitnet_linear_layers_cpu_fallback, 0);
-        let stats = receipt.kernel_stats.as_ref().expect("kernel stats");
-        assert_eq!(stats[0].kernel_id, "qk256_gemv_cuda");
-        assert_eq!(stats[0].invocations, 420);
-        assert_eq!(stats[0].fallback_invocations, 0);
-        assert_eq!(stats[0].cpu_fallback_invocations, 0);
+        assert!(receipt.execution_plan.is_some(), "execution plan missing");
+        if let Some(plan) = receipt.execution_plan.as_ref() {
+            assert_eq!(plan.selected_route, "bitnet_qk256_cuda");
+            assert!(plan.bitnet_packed_qk256_cuda);
+            assert_eq!(plan.cuda_bitnet_qk256_ops, 420);
+            assert_eq!(plan.cpu_fallback_ops, 0);
+            assert_eq!(plan.cuda_dense_regular_llm_ops, 0);
+            assert!(plan.strict_cuda_ready);
+        }
+        assert!(receipt.execution_coverage.is_some(), "execution coverage missing");
+        if let Some(coverage) = receipt.execution_coverage.as_ref() {
+            assert_eq!(coverage.bitnet_linear_layers_on_cuda, 420);
+            assert_eq!(coverage.bitnet_linear_layers_cpu_fallback, 0);
+        }
+        assert!(receipt.kernel_stats.is_some(), "kernel stats missing");
+        if let Some(stats) = receipt.kernel_stats.as_ref() {
+            assert_eq!(stats[0].kernel_id, "qk256_gemv_cuda");
+            assert_eq!(stats[0].invocations, 420);
+            assert_eq!(stats[0].fallback_invocations, 0);
+            assert_eq!(stats[0].cpu_fallback_invocations, 0);
+        }
     }
 
     #[test]
