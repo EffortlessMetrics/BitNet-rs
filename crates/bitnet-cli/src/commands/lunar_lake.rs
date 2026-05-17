@@ -38,6 +38,7 @@ const NPU_RMSNORM: &str = "npu-bitnet-rmsnorm-subgraph-parity.json";
 const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
 const NPU_FFN: &str = "npu-bitnet-ffn-subgraph-parity.json";
 const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
+#[cfg(test)]
 const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
 const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
@@ -163,8 +164,8 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = OPERATOR_READINESS)]
         operator_receipt: PathBuf,
 
-        /// Regression bundle to compare. Relative paths are resolved under artifact-root.
-        #[arg(long, default_value = REGRESSION_BUNDLE)]
+        /// Strict regression-v2 bundle to compare. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = REGRESSION_BUNDLE_V2)]
         regression_bundle: PathBuf,
 
         /// Output JSON comparison receipt to file.
@@ -636,6 +637,8 @@ pub struct LunarLakeComparisonReceipt {
     pub comparison_ready: bool,
     pub operator_ready: bool,
     pub regression_passed: bool,
+    #[serde(default)]
+    pub regression_surface: RegressionSurfaceSummary,
     pub default_route_id: String,
     pub routes: Vec<RouteComparison>,
     pub evidence: Vec<EvidenceStatus>,
@@ -2295,6 +2298,7 @@ pub fn build_comparison_receipt_with_created_utc(
         comparison_ready,
         operator_ready: operator.operator_ready,
         regression_passed: regression.regression_passed,
+        regression_surface: regression.regression_surface,
         default_route_id: operator.default_route.route_id.clone(),
         routes,
         evidence: operator.evidence,
@@ -5407,6 +5411,49 @@ mod tests {
         assert!(comparison.routes.iter().all(|route| !route.acceleration_claim));
         assert!(comparison.checks.iter().all(|check| check.status == "passed"));
         assert!(!comparison.claim_boundary.hidden_fallback_allowed);
+        Ok(())
+    }
+
+    #[test]
+    fn comparison_receipt_carries_strict_regression_v2_surface() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-17T02:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let mut regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-17T02:05:00Z".to_string(),
+        )?;
+        regression.regression_surface.answer_corpus_v2_indexed = true;
+        regression.regression_surface.route_profile_comparison_indexed = true;
+        regression.regression_surface.cold_warm_benchmark_indexed = true;
+        regression.regression_surface.durability_bundle_indexed = true;
+        regression.regression_surface.cold_warm_benchmark_ready = true;
+        regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.candidate_routes_remain_unpromoted = true;
+        regression.regression_surface.strict_ready = true;
+        regression.regression_surface.gaps.clear();
+        fs::write(temp.path().join(REGRESSION_BUNDLE_V2), serde_json::to_vec_pretty(&regression)?)?;
+
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE_V2),
+            "2026-05-17T02:10:00Z".to_string(),
+        )?;
+
+        assert!(comparison.comparison_ready, "{:?}", comparison.gaps);
+        assert!(comparison.regression_bundle.ends_with(REGRESSION_BUNDLE_V2));
+        assert!(comparison.regression_surface.strict_ready);
+        assert!(comparison.regression_surface.answer_corpus_v2_indexed);
+        assert!(comparison.regression_surface.route_profile_comparison_indexed);
+        assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
+        assert!(comparison.regression_surface.durability_bundle_indexed);
+        assert!(comparison.regression_surface.durability_stability_proven);
         Ok(())
     }
 
