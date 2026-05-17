@@ -113,7 +113,10 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BITNET-EX-006 | merged | Enable BitNet chat only after warm, timeout, determinism, and streaming gates pass. |
 | M4-BITNET-EX-007 | merged | Enable BitNet serve only after chat and service receipts pass. |
 | M4-BITNET-EX-008 | merged | Publish BitNet task-family and failure-taxonomy reports. |
-| M4-BITNET-EX-009 | in_progress | Add matching BitNet eval history and a larger-corpus decision. |
+| M4-BITNET-EX-009 | merged | Add matching BitNet eval history and a larger-corpus decision. |
+| M4-BITNET-EX-010 | proposed | Define the staged 250-case BitNet corpus and scorer contract. |
+| M4-BITNET-EX-011 | proposed | Run and publish bounded 250-case BitNet M4 receipts. |
+| M4-BITNET-EX-012 | proposed | Decide whether BitNet expands to 500 cases or repairs corpus/scoring first. |
 | M4-OPS-UX-001 | proposed | Add an operator-facing M4 evidence summary. |
 | M4-OPS-UX-002 | proposed | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
 | M4-OPS-UX-003 | proposed | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
