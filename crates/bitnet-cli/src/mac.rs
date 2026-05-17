@@ -11084,10 +11084,11 @@ fn ensure_bitnet_warm_session_regression_context_matches(
             baseline["generation"]["repetition_penalty"].as_f64(),
         ),
     ] {
-        if observed.is_none()
-            || expected.is_none()
-            || (observed.unwrap() - expected.unwrap()).abs() > f64::EPSILON
-        {
+        let values_match = match (observed, expected) {
+            (Some(observed), Some(expected)) => (observed - expected).abs() <= f64::EPSILON,
+            _ => false,
+        };
+        if !values_match {
             anyhow::bail!(
                 "{} cannot be compared to baseline {}: {label} mismatch",
                 path.display(),
