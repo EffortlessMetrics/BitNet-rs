@@ -154,3 +154,47 @@ fn infer_json_mode_clean_stdout() {
     assert!(!stdout.contains("Model expects"));
     assert!(!stdout.contains("LLaMA"));
 }
+
+#[test]
+fn check_greedy_argmax_accepts_valid_dump() {
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(
+        tmp.path(),
+        r#"{
+            "logits_dump": [{
+                "chosen_id": 7,
+                "top_logits": [
+                    {"token_id": 3, "logit": 0.25},
+                    {"token_id": 7, "logit": 1.5}
+                ]
+            }]
+        }"#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_bin_cmd!("xtask");
+    cmd.args(["check-greedy-argmax", tmp.path().to_str().unwrap()]);
+    cmd.assert().success().stdout(predicate::str::contains("Greedy invariant holds"));
+}
+
+#[test]
+fn check_greedy_argmax_exits_7_on_mismatch() {
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(
+        tmp.path(),
+        r#"{
+            "logits_dump": [{
+                "chosen_id": 3,
+                "top_logits": [
+                    {"token_id": 3, "logit": 0.25},
+                    {"token_id": 7, "logit": 1.5}
+                ]
+            }]
+        }"#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_bin_cmd!("xtask");
+    cmd.args(["check-greedy-argmax", tmp.path().to_str().unwrap()]);
+    cmd.assert().failure().code(7).stderr(predicate::str::contains("greedy argmax mismatch"));
+}

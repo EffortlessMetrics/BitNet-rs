@@ -48,7 +48,7 @@ TMP_JSON="$(mktemp)"
   --prompt "Greedy invariant smoke." --max-new-tokens 16 \
   --greedy --deterministic --threads 1 \
   --dump-logit-steps 8 --logits-topk 10 --json-out "$TMP_JSON" >/dev/null
-python3 scripts/check_greedy_argmax.py "$TMP_JSON" || { echo "Greedy invariant failed"; exit 7; }
+cargo run --locked -p xtask --no-default-features -- check-greedy-argmax "$TMP_JSON" || { echo "Greedy invariant failed"; exit 7; }
 rm -f "$TMP_JSON"
 
 # ---- Logit parity (teacher-forced shared path; τ-b) -------------------------

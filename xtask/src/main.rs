@@ -44,6 +44,7 @@ mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
 mod gates;
+mod greedy_argmax;
 mod grid_check;
 mod hardware;
 #[allow(dead_code)]
@@ -757,6 +758,18 @@ enum Cmd {
         /// Number of warmup tokens to generate and discard
         #[arg(long, default_value_t = 10)]
         warmup_tokens: usize,
+    },
+
+    /// Check that greedy decoding chose the argmax logit at every dumped step.
+    ///
+    /// Rust replacement for `scripts/check_greedy_argmax.py`.
+    #[command(name = "check-greedy-argmax")]
+    CheckGreedyArgmax {
+        /// Path to CLI JSON output containing `logits_dump` records.
+        json_file: PathBuf,
+        /// Print additional check statistics to stderr.
+        #[arg(short, long, default_value_t = false)]
+        verbose: bool,
     },
 
     /// Compare metrics with baseline for regression detection
@@ -1573,6 +1586,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
     if msg.contains("benchmark failed") {
         return EXIT_BENCHMARK_FAILED;
     }
+    if msg.contains("greedy argmax mismatch") {
+        return greedy_argmax::EXIT_ARGMAX_MISMATCH;
+    }
 
     // Default to network error
     EXIT_NETWORK
@@ -1820,6 +1836,7 @@ fn real_main() -> Result<()> {
             json.as_deref(),
             warmup_tokens,
         ),
+        Cmd::CheckGreedyArgmax { json_file, verbose } => greedy_argmax::run(&json_file, verbose),
         Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
             compare_metrics(&baseline, &current, ppl_max, latency_p95_max, tok_s_min)
         }
