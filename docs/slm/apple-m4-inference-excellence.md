@@ -427,6 +427,69 @@ quality, enable BitNet chat or serve, prove broad Apple Silicon performance,
 claim a speedup, or widen Metal, QK256, Neural Engine, MPSGraph, or MacBook
 support.
 
+`M4-BITNET-EX-004` adds named warm-session profiles to
+`bitnet mac bitnet-warm` and records bounded 25/50/100 prompt evidence for the
+accepted BitNet artifact/tokenizer identity. The profile run executes the
+largest requested profile once as a single resident 100-prompt session, then
+records `resident_25`, `resident_50`, and `resident_100` as prefix
+checkpoints. Named profiles are mutually exclusive with explicit `--prompt`
+values so operator-supplied prompts and campaign profiles stay separate.
+
+Recorded warm-profile artifacts:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session-prompts/
+```
+
+The run uses explicit authority for both required BitNet artifacts:
+
+```text
+model path: models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+model sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+tokenizer path: models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json
+tokenizer sha256: e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+backend: apple-m4-cpu-neon
+fallback_used: false
+chat_enabled: false
+serve_enabled: false
+```
+
+The aggregate receipt validates as `bitnet_apple_m4_warm_session`, records 100
+per-prompt receipts plus the aggregate receipt, loads the model and tokenizer
+once, enforces a 1200 second timeout without reaching it, and records 406
+generated tokens. Determinism is checked across 12 repeated-prompt groups and
+passes with stable generated token IDs and decoded text for each repeated
+prompt. The quality gate here is the warm-session gate: non-empty valid output
+with generated token IDs and no failed prompt indices. It is not a BitNet
+accuracy or broad quality claim.
+
+Profile checkpoint metrics:
+
+| Profile | Prompts | Generated tokens | Quality gate | Determinism | TTFT p50 | Total wall p50 | Decode total p50 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `resident_25` | 25 | 100 | pass | pass | 7892.0 ms | 8375.524 ms | 957.319 ms |
+| `resident_50` | 50 | 200 | pass | pass | 7892.0 ms | 8373.339 ms | 957.319 ms |
+| `resident_100` | 100 | 406 | pass | pass | 7892.0 ms | 8375.301 ms | 957.472 ms |
+
+Aggregate timing and memory:
+
+```text
+model_load_ms: 4336.870
+tokenizer_load_ms: 166.163
+prefill_ms: 647474.830
+warm_prompt_wall_ms: 842793.459
+total_session_ms: 847724.769
+decode_generated_tok_s: 2.091
+warm_prompt_generated_tok_s: 0.482
+resident_memory_bytes: 2682978304
+```
+
+This is bounded BitNet warm-session evidence for the accepted artifact,
+tokenizer, backend, and machine context. It does not claim BitNet chat, BitNet
+serve, BitNet broad quality, full Metal inference, QK256, Neural Engine,
+MPSGraph, MacBook evidence, speedup, or broad Apple Silicon performance.
+
 BitNet chat and serve stay disabled until their specific receipt gates pass.
 
 ## Stability And Service

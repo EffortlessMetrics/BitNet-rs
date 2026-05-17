@@ -1063,6 +1063,8 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
         .stdout(predicate::str::contains("--model-path"))
         .stdout(predicate::str::contains("--tokenizer"))
         .stdout(predicate::str::contains("--prompt <TEXT>"))
+        .stdout(predicate::str::contains("--profile <PROFILE>"))
+        .stdout(predicate::str::contains("resident_25"))
         .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
         .stdout(predicate::str::contains("--json-out"));
@@ -1235,6 +1237,27 @@ fn mac_bitnet_warm_rejects_empty_operator_prompt_before_cache_lookup() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("value 2 must not be empty"))
+        .stderr(predicate::str::contains("BitNet warm session requires").not());
+}
+
+#[test]
+fn mac_bitnet_warm_rejects_profile_prompt_mix_before_cache_lookup() {
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--profile",
+            "resident_25",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "`bitnet mac bitnet-warm --profile` cannot be combined with --prompt",
+        ))
         .stderr(predicate::str::contains("BitNet warm session requires").not());
 }
 

@@ -72,6 +72,20 @@ const BITNET_WARM_PROMPTS: &[&str] = &[
     "Name the capital of France. Answer with one word.",
     "Answer with a single digit: 2+2=",
 ];
+const BITNET_WARM_PROFILE_PROMPTS: &[&str] = &[
+    "Answer with a single digit: 2+2=",
+    "Name the capital of France. Answer with one word.",
+    "Return exactly READY.",
+    "Answer with a single digit: 3+1=",
+    "Write exactly the word blue.",
+    "Answer yes or no: is fire hot?",
+    "Answer with a single digit: 5-2=",
+    "Write exactly OK.",
+    "Answer with one word: what color is the sky on a clear day?",
+    "Answer with a single digit: 1+1=",
+    "Write exactly local.",
+    "Answer yes or no: is ice warm?",
+];
 const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
     "short_prompt_16_out",
     "short_prompt_64_out",
@@ -189,6 +203,37 @@ impl MacBenchmarkProfile {
             Self::Resident25 => "resident_25",
             Self::Resident50 => "resident_50",
             Self::Resident100 => "resident_100",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, ValueEnum)]
+enum BitnetWarmProfile {
+    /// Resident 25-prompt variable warm-session profile.
+    #[value(name = "resident_25")]
+    Resident25,
+    /// Resident 50-prompt variable warm-session profile.
+    #[value(name = "resident_50")]
+    Resident50,
+    /// Resident 100-prompt variable warm-session profile.
+    #[value(name = "resident_100")]
+    Resident100,
+}
+
+impl BitnetWarmProfile {
+    const fn id(self) -> &'static str {
+        match self {
+            Self::Resident25 => "resident_25",
+            Self::Resident50 => "resident_50",
+            Self::Resident100 => "resident_100",
+        }
+    }
+
+    const fn prompt_count(self) -> usize {
+        match self {
+            Self::Resident25 => 25,
+            Self::Resident50 => 50,
+            Self::Resident100 => 100,
         }
     }
 }
@@ -408,6 +453,10 @@ enum MacAction {
         /// Operator prompt to run in the warm session. Repeat the flag and include at least one exact repeated prompt for determinism. Defaults to the fixed proof prompt set when omitted.
         #[arg(long = "prompt", value_name = "TEXT")]
         prompts: Vec<String>,
+
+        /// Resident variable warm-session profile to run. Repeat for resident_25, resident_50, and resident_100 checkpoints.
+        #[arg(long = "profile", value_enum, value_name = "PROFILE")]
+        profiles: Vec<BitnetWarmProfile>,
 
         /// Maximum new tokens per warm prompt.
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
@@ -979,6 +1028,7 @@ impl MacCommand {
                 model_path,
                 tokenizer,
                 prompts,
+                profiles,
                 max_new_tokens,
                 threads,
                 timeout_seconds,
@@ -993,6 +1043,7 @@ impl MacCommand {
                     model_path,
                     tokenizer,
                     prompts,
+                    profiles,
                     max_new_tokens,
                     threads,
                     timeout_seconds,
@@ -3789,6 +3840,7 @@ struct BitnetWarmRun<'a> {
     model_path: Option<PathBuf>,
     tokenizer: Option<PathBuf>,
     prompts: Vec<String>,
+    profiles: Vec<BitnetWarmProfile>,
     max_new_tokens: usize,
     threads: usize,
     timeout_seconds: Option<u64>,
@@ -3804,6 +3856,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         model_path,
         tokenizer,
         prompts,
+        profiles,
         max_new_tokens,
         threads,
         timeout_seconds,
@@ -3821,7 +3874,8 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
             "`bitnet mac bitnet-warm` only supports {BITNET_M4_MODEL_ID}; got `{model_id}`"
         );
     }
-    let (prompts, prompt_source) = resolve_bitnet_warm_prompts(prompts)?;
+    let (prompts, prompt_source, profile_plan) =
+        resolve_bitnet_warm_prompt_plan(prompts, profiles)?;
     let prompt_count = prompts.len();
     let mut failure_context = BitNetWarmFailureContext {
         model_id: model_id.to_string(),
@@ -3831,6 +3885,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         prompt_count,
         prompt_source,
         prompt_sha256s: prompts.iter().map(|prompt| sha256_hex(prompt.as_bytes())).collect(),
+        profile_plan: profile_plan.clone(),
         max_new_tokens,
         timeout_seconds,
         progress_enabled,
@@ -3958,6 +4013,8 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         &tokenizer,
         &tokenizer_sha256,
         prompt_source,
+        profile_plan.as_ref(),
+        timeout_seconds,
     ) {
         return fail_bitnet_warm_with_receipt(
             &json_out,
@@ -3985,6 +4042,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
 enum BitnetWarmPromptSource {
     FixedProof,
     OperatorPrompts,
+    ProfilePrompts,
 }
 
 impl BitnetWarmPromptSource {
@@ -3992,12 +4050,56 @@ impl BitnetWarmPromptSource {
         match self {
             Self::FixedProof => "fixed_proof_prompts",
             Self::OperatorPrompts => "operator_prompts",
+            Self::ProfilePrompts => "profile_prompts",
         }
     }
 
     const fn variable_prompts(self) -> bool {
-        matches!(self, Self::OperatorPrompts)
+        matches!(self, Self::OperatorPrompts | Self::ProfilePrompts)
     }
+}
+
+#[derive(Clone, Debug)]
+struct BitnetWarmProfilePlan {
+    profiles: Vec<BitnetWarmProfile>,
+    max_prompt_count: usize,
+}
+
+impl BitnetWarmProfilePlan {
+    fn profile_ids(&self) -> Vec<&'static str> {
+        self.profiles.iter().map(|profile| profile.id()).collect()
+    }
+}
+
+fn resolve_bitnet_warm_prompt_plan(
+    prompts: Vec<String>,
+    profiles: Vec<BitnetWarmProfile>,
+) -> Result<(Vec<String>, BitnetWarmPromptSource, Option<BitnetWarmProfilePlan>)> {
+    if profiles.is_empty() {
+        let (prompts, source) = resolve_bitnet_warm_prompts(prompts)?;
+        return Ok((prompts, source, None));
+    }
+    if !prompts.is_empty() {
+        anyhow::bail!(
+            "`bitnet mac bitnet-warm --profile` cannot be combined with --prompt; use named resident profiles or explicit prompts, not both"
+        );
+    }
+    let mut unique = std::collections::BTreeSet::new();
+    for profile in profiles {
+        unique.insert(profile);
+    }
+    let profiles = unique.into_iter().collect::<Vec<_>>();
+    let max_prompt_count =
+        profiles.iter().map(|profile| profile.prompt_count()).max().unwrap_or_default();
+    if max_prompt_count == 0 {
+        anyhow::bail!("`bitnet mac bitnet-warm --profile` requires at least one resident profile");
+    }
+    let plan = BitnetWarmProfilePlan { profiles, max_prompt_count };
+    Ok((
+        bitnet_warm_profile_prompts(max_prompt_count),
+        BitnetWarmPromptSource::ProfilePrompts,
+        Some(plan),
+    ))
 }
 
 fn resolve_bitnet_warm_prompts(
@@ -4034,6 +4136,21 @@ fn resolve_bitnet_warm_prompts(
     Ok((prompts, BitnetWarmPromptSource::OperatorPrompts))
 }
 
+fn bitnet_warm_profile_prompts(count: usize) -> Vec<String> {
+    let mut prompts = (0..count)
+        .map(|index| {
+            BITNET_WARM_PROFILE_PROMPTS[index % BITNET_WARM_PROFILE_PROMPTS.len()].to_string()
+        })
+        .collect::<Vec<_>>();
+    if prompts.len() >= 2 {
+        let first = prompts[0].clone();
+        if let Some(last) = prompts.last_mut() {
+            *last = first;
+        }
+    }
+    prompts
+}
+
 #[derive(Clone)]
 struct BitNetWarmFailureContext {
     model_id: String,
@@ -4043,6 +4160,7 @@ struct BitNetWarmFailureContext {
     prompt_count: usize,
     prompt_source: BitnetWarmPromptSource,
     prompt_sha256s: Vec<String>,
+    profile_plan: Option<BitnetWarmProfilePlan>,
     max_new_tokens: usize,
     timeout_seconds: Option<u64>,
     progress_enabled: bool,
@@ -4117,6 +4235,7 @@ fn write_bitnet_warm_failure_receipt(
             "sha256s": context.prompt_sha256s,
             "template_family": BITNET_M4_PROMPT_TEMPLATE,
         },
+        "profile_set": bitnet_warm_profile_plan_metadata_json(context.profile_plan.as_ref()),
         "generation": {
             "max_new_tokens": context.max_new_tokens,
             "generated_text": "",
@@ -4431,6 +4550,7 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
         model_path,
         tokenizer,
         prompts: Vec::new(),
+        profiles: Vec::new(),
         max_new_tokens,
         threads,
         timeout_seconds: None,
@@ -8066,6 +8186,8 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     tokenizer: &Path,
     tokenizer_sha256: &str,
     prompt_source: BitnetWarmPromptSource,
+    profile_plan: Option<&BitnetWarmProfilePlan>,
+    timeout_seconds: Option<u64>,
 ) -> Result<()> {
     let bytes = std::fs::read(path).with_context(|| {
         format!("failed to read BitNet warm-session receipt {}", path.display())
@@ -8108,6 +8230,14 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     if prompt_source == BitnetWarmPromptSource::OperatorPrompts && prompt_count < 2 {
         anyhow::bail!("{} must record at least two operator BitNet warm prompts", path.display());
     }
+    if let Some(profile_plan) = profile_plan
+        && prompt_count != profile_plan.max_prompt_count as u64
+    {
+        anyhow::bail!(
+            "{} must record the requested BitNet warm profile prompt count",
+            path.display()
+        );
+    }
     if receipt["session"]["model_loaded_once"].as_bool() != Some(true)
         || receipt["session"]["tokenizer_loaded_once"].as_bool() != Some(true)
     {
@@ -8121,6 +8251,9 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     {
         anyhow::bail!("{} must record passing repeated-prompt determinism", path.display());
     }
+    let profile_set_receipt = profile_plan
+        .map(|plan| bitnet_warm_profile_set_receipt_json(&receipt, plan))
+        .transpose()?;
     let Some(object) = receipt.as_object_mut() else {
         anyhow::bail!("BitNet warm-session receipt {} is not a JSON object", path.display());
     };
@@ -8135,6 +8268,19 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
             "fixed_proof_prompt_count": BITNET_WARM_PROMPTS.len(),
             "session_prompt_count": prompt_count,
             "determinism_requires_repeated_prompt": true,
+        }),
+    );
+    if let Some(profile_set_receipt) = profile_set_receipt {
+        object.insert("bitnet_warm_profile_set".to_string(), profile_set_receipt);
+    }
+    object.insert(
+        "timeout_boundary".to_string(),
+        serde_json::json!({
+            "configured_seconds": timeout_seconds,
+            "reached": false,
+            "enforced": timeout_seconds.is_some(),
+            "status": "not_reached",
+            "stage": serde_json::Value::Null,
         }),
     );
     object.insert(
@@ -8192,6 +8338,103 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
         format!("failed to update BitNet warm-session receipt {}", path.display())
     })?;
     Ok(())
+}
+
+fn bitnet_warm_profile_plan_metadata_json(
+    plan: Option<&BitnetWarmProfilePlan>,
+) -> serde_json::Value {
+    let Some(plan) = plan else {
+        return serde_json::Value::Null;
+    };
+    serde_json::json!({
+        "profiles_requested": plan.profile_ids(),
+        "max_prompt_count": plan.max_prompt_count,
+        "profile_execution_model": "single resident warm-session run with prefix checkpoints",
+    })
+}
+
+fn bitnet_warm_profile_set_receipt_json(
+    receipt: &serde_json::Value,
+    plan: &BitnetWarmProfilePlan,
+) -> Result<serde_json::Value> {
+    let prompts = receipt["prompts"]
+        .as_array()
+        .ok_or_else(|| anyhow!("BitNet warm profile receipt is missing prompt summaries"))?;
+    let prompt_receipts =
+        receipt["session"]["per_prompt_receipts"].as_array().ok_or_else(|| {
+            anyhow!("BitNet warm profile receipt is missing per-prompt receipt paths")
+        })?;
+    let mut profiles = Vec::with_capacity(plan.profiles.len());
+    for profile in &plan.profiles {
+        let prompt_count = profile.prompt_count();
+        if prompts.len() < prompt_count || prompt_receipts.len() < prompt_count {
+            anyhow::bail!(
+                "BitNet warm profile {} requires {prompt_count} prompts, got {} summaries and {} receipt paths",
+                profile.id(),
+                prompts.len(),
+                prompt_receipts.len()
+            );
+        }
+        let prompt_slice = &prompts[..prompt_count];
+        let generated_tokens = prompt_slice
+            .iter()
+            .map(|prompt| prompt["generated_tokens"].as_u64().unwrap_or_default())
+            .sum::<u64>();
+        let quality_passed = prompt_slice
+            .iter()
+            .all(|prompt| prompt["quality"]["passed"].as_bool().unwrap_or(false));
+        let mut ttft_ms = Vec::with_capacity(prompt_count);
+        let mut total_wall_ms = Vec::with_capacity(prompt_count);
+        let mut decode_total_ms = Vec::with_capacity(prompt_count);
+        for prompt in prompt_slice {
+            if let Some(value) = prompt["timing"]["time_to_first_token_ms"].as_f64() {
+                ttft_ms.push(value);
+            }
+            if let Some(value) = prompt["timing"]["total_ms"].as_f64() {
+                total_wall_ms.push(value);
+            }
+            if let Some(value) = prompt["timing"]["decode_total_ms"].as_f64() {
+                decode_total_ms.push(value);
+            }
+        }
+        profiles.push(serde_json::json!({
+            "profile_id": profile.id(),
+            "prompt_count": prompt_count,
+            "receipt_scope": "prefix_checkpoint",
+            "profile_execution_model": "same resident session as the aggregate receipt",
+            "per_prompt_receipts": prompt_receipts[..prompt_count].to_vec(),
+            "generated_tokens": generated_tokens,
+            "quality_passed": quality_passed,
+            "determinism_checked": receipt["determinism"]["checked"].as_bool().unwrap_or(false),
+            "determinism_passed": receipt["determinism"]["passed"].as_bool().unwrap_or(false),
+            "timing": {
+                "time_to_first_token_ms": benchmark_stat_json(&ttft_ms),
+                "total_wall_ms": benchmark_stat_json(&total_wall_ms),
+                "decode_total_ms": benchmark_stat_json(&decode_total_ms),
+            },
+            "memory": receipt["memory"].clone(),
+            "claim_boundary": {
+                "scope": "this profile checkpoint, model, backend, and machine receipt only",
+                "chat_enabled": false,
+                "serve_enabled": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+        }));
+    }
+    Ok(serde_json::json!({
+        "profiles_requested": plan.profile_ids(),
+        "max_prompt_count": plan.max_prompt_count,
+        "resident_session_count": 1,
+        "profile_execution_model": "single resident warm-session run with prefix checkpoints",
+        "profile_summaries": profiles,
+        "per_turn_receipts": receipt["session"]["per_prompt_receipts"].clone(),
+        "aggregate_timing": receipt["speed"]["timing"].clone(),
+        "aggregate_memory": receipt["memory"].clone(),
+        "determinism": receipt["determinism"].clone(),
+        "chat_enabled": false,
+        "serve_enabled": false,
+    }))
 }
 
 fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: bool) -> Result<()> {
@@ -14206,6 +14449,48 @@ mod tests {
             None,
         );
         Ok((temp, state))
+    }
+
+    #[test]
+    fn bitnet_warm_profile_prompt_plan_builds_resident_100_checkpoints()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (prompts, source, plan) = resolve_bitnet_warm_prompt_plan(
+            Vec::new(),
+            vec![
+                BitnetWarmProfile::Resident100,
+                BitnetWarmProfile::Resident25,
+                BitnetWarmProfile::Resident50,
+            ],
+        )?;
+        let plan = plan.ok_or_else(|| std::io::Error::other("missing profile plan"))?;
+
+        assert_eq!(source, BitnetWarmPromptSource::ProfilePrompts);
+        assert_eq!(plan.profile_ids(), vec!["resident_25", "resident_50", "resident_100"]);
+        assert_eq!(plan.max_prompt_count, 100);
+        assert_eq!(prompts.len(), 100);
+        assert_eq!(prompts.first(), prompts.last());
+
+        let mut counts = std::collections::BTreeMap::new();
+        for prompt in &prompts {
+            *counts.entry(prompt).or_insert(0usize) += 1;
+        }
+        assert!(counts.values().any(|count| *count >= 2));
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_warm_profile_prompt_plan_rejects_prompt_mix() {
+        let err = resolve_bitnet_warm_prompt_plan(
+            vec![
+                "Answer with a single digit: 2+2=".to_string(),
+                "Answer with a single digit: 2+2=".to_string(),
+            ],
+            vec![BitnetWarmProfile::Resident25],
+        )
+        .expect_err("profile and prompt mix should fail")
+        .to_string();
+
+        assert!(err.contains("cannot be combined with --prompt"), "got: {err}");
     }
 
     #[test]
