@@ -586,26 +586,26 @@ mod data_type_conversion {
     fn i8_to_u8_quantized_format_offset() {
         // Quantized i8 [-128..127] → u8 [0..255] via offset 128
         let i8_val: i8 = -128;
-        let u8_val = (i8_val as i16 + 128) as u8;
+        let u8_val = (i16::from(i8_val) + 128) as u8;
         assert_eq!(u8_val, 0);
 
         let i8_val: i8 = 0;
-        let u8_val = (i8_val as i16 + 128) as u8;
+        let u8_val = (i16::from(i8_val) + 128) as u8;
         assert_eq!(u8_val, 128);
 
         let i8_val: i8 = 127;
-        let u8_val = (i8_val as i16 + 128) as u8;
+        let u8_val = (i16::from(i8_val) + 128) as u8;
         assert_eq!(u8_val, 255);
     }
 
     #[test]
     fn u8_to_i8_quantized_format_offset() {
         let u8_val: u8 = 0;
-        let i8_val = (u8_val as i16 - 128) as i8;
+        let i8_val = (i16::from(u8_val) - 128) as i8;
         assert_eq!(i8_val, -128);
 
         let u8_val: u8 = 128;
-        let i8_val = (u8_val as i16 - 128) as i8;
+        let i8_val = (i16::from(u8_val) - 128) as i8;
         assert_eq!(i8_val, 0);
     }
 

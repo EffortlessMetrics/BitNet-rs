@@ -990,8 +990,8 @@ mod shared_memory_patterns {
 
     #[test]
     fn reduction_max_all_same() {
-        let data = vec![3.14f32; 64];
-        assert!((parallel_reduction_max(&data) - 3.14).abs() < 1e-6);
+        let data = vec![3.125f32; 64];
+        assert!((parallel_reduction_max(&data) - 3.125).abs() < 1e-6);
     }
 
     #[test]
