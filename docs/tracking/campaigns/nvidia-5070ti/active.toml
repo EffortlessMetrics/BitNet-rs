@@ -3008,7 +3008,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-SERVER-005"
-status = "proposed"
+status = "in_progress"
 branch = "docs/dense-qwen-exact-server-readiness"
 stackable = false
 review_mode = "codex_premerge"
@@ -3017,9 +3017,9 @@ human_gate = "on_blocker_only"
 blocked_by = ["CUDA-SERVER-004"]
 acceptance = "Promote dense Qwen2.5 0.5B Q8_0 server_ready only for the exact bounded RTX 5070 Ti profile after a refreshed or supplemental shared-engine server receipt carries artifact checksum identity, endpoint/request-profile scope, generation policy, route and claim booleans required by BITNET-SPEC-0010, passes the server_shared_engine_chat_completion validator, and keeps speedup, full residency, global dense server readiness, and BitNet QK256 proof false."
 commands = [
-  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\server-strict-dense-qwen25-q8-smoke.json",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-17\\server-strict-dense-qwen25-q8-smoke.json",
   "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features server_shared_engine_chat_completion",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\server-strict-dense-qwen25-q8-smoke.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-17\\server-strict-dense-qwen25-q8-smoke.json",
   "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -3029,6 +3029,8 @@ commands = [
 allowed_paths = [
   "ci/hardware/windows-9950x3d-rtx5070ti/**",
   "ci/model-artifacts/model-coverage-matrix.toml",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-receipts/tests/cuda_receipt_validation.rs",
   "docs/model-artifacts/**",
   "docs/reports/**",
   "docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md",
@@ -3036,9 +3038,11 @@ allowed_paths = [
   "plans/cuda-5070ti-productization/**",
   "docs/tracking/campaigns/nvidia-5070ti/**",
   "docs/tracking/generated/**",
+  "docs/tutorials/rtx5070ti-dense-qwen-cuda.md",
+  "xtask/src/model_coverage.rs",
 ]
 forbidden_paths = [
-  "crates/**",
+  "crates/bitnet-server/src/**",
   "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
   "crates/bitnet-qk256-dispatch/**",
   ".github/workflows/**",

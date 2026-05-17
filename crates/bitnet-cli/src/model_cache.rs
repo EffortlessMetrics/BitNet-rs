@@ -3063,7 +3063,7 @@ mod tests {
         assert!(!dense.bitnet_packed_i2s_qk256_proof);
         assert!(!dense.benchmark_qualified);
         assert!(!dense.speedup_claim);
-        assert!(!dense.server_ready);
+        assert!(dense.server_ready);
         assert!(!dense.full_residency_claim);
         assert_eq!(dense.one_token, "ready");
         assert_eq!(dense.short_decode, "ready");
@@ -3127,7 +3127,7 @@ mod tests {
                 model["id"] == "dense_qwen25_05b_q8_cuda"
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["speedup_claim"] == false
-                    && model["server_ready"] == false
+                    && model["server_ready"] == true
                     && model["bitnet_packed_i2s_qk256_proof"] == false
                     && model["dense_regular_llm_cuda_proof"] == true
             })

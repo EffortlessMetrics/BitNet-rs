@@ -33,7 +33,7 @@ bitnet receipts explain --latest
 | Model | Class | Tier | Route | Ask | Warm/session | Bench | Speed | Server | Boundary |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Microsoft BitNet 2B I2_S/QK256 | BitNet | `product_cli_ready` | `bitnet_qk256_cuda` | yes | yes | reviewed | no | no | Official packed I2_S/QK256 only. |
-| Qwen2.5 0.5B Q8_0 | dense SLM | `product_cli_ready` | `dense_regular_llm_cuda` | yes | yes | reviewed | no | no | Dense regular-LLM CUDA only; not BitNet proof. |
+| Qwen2.5 0.5B Q8_0 | dense SLM | `product_cli_ready` | `dense_regular_llm_cuda` | yes | yes | reviewed | no | exact profile only | Dense regular-LLM CUDA only; not BitNet proof. |
 | Qwen3 0.6B Q8_0 | dense SLM candidate | `accelerator_answer_ready` | `dense_regular_llm_cuda` | proof receipt only | proof receipt only | reviewed | no | no | Own Qwen3 receipts only; not Qwen2.5 or BitNet proof. |
 | SmolLM2 360M Q8_0 | dense SLM candidate | `structurally_valid` | none | no | no | no | no | no | CPU quality is blocked pending same-prompt reference comparator capture. |
 | Llama 3.2 1B | dense SLM candidate | `registered` | none | no | no | no | no | no | Artifact, tokenizer, prompt, CPU sanity, and route plan still required. |
@@ -54,15 +54,17 @@ bitnet receipts explain --latest
   strict RTX 5070 Ti CUDA proof.
 - `speedup_claim=false` remains correct until a governed benchmark
   qualification receipt accepts an exact model/profile.
-- `server_ready=false` remains correct unless the model coverage row is
-  promoted by an exact-profile server readiness receipt and policy decision.
+- `server_ready=true` is exact-profile only. The dense Qwen row is ready only
+  for the refreshed non-streaming RTX 5070 Ti shared-engine
+  `/v1/chat/completions` receipt; it does not imply broad dense serving,
+  concurrency, deployment readiness, speedup, full residency, or BitNet proof.
 
 ## Next Proofs
 
 | Row | Next proof |
 | --- | --- |
 | `bitnet_official_2b_i2s_qk256` | Profile-specific speedup qualification and deeper residency/transfer timing. |
-| `dense_qwen25_05b_q8_cuda` | Refresh or supplement the bounded server-smoke receipt with artifact checksum identity, endpoint/profile scope, and generation policy before any exact-profile `server_ready=true` promotion under `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`. |
+| `dense_qwen25_05b_q8_cuda` | Exact-profile server readiness is promoted by `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`; later work still needs governed speedup/full-residency evidence and separate BitNet server proof. |
 | `dense_qwen3_06b_q8_candidate` | User-facing ask/chat product UX or repeated same-artifact comparator evidence before product CLI promotion. |
 | `dense_smollm2_360m_candidate` | Same-prompt SmolLM2 first-token/top-k or checkpoint comparator capture using the SLM-CPU-022 contract. |
 | Later dense SLM / small-LLM candidates | Artifact contract, tokenizer/prompt authority, CPU answer sanity, all-layer plan, boundary fixtures, strict CUDA proof, warm session, and benchmark review. |

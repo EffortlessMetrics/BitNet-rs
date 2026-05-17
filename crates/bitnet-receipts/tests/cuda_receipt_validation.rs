@@ -187,6 +187,17 @@ fn committed_stale_server_shared_engine_chat_completion_receipt_fails_hardened_v
 }
 
 #[test]
+fn committed_refreshed_server_shared_engine_chat_completion_receipt_validates()
+-> Result<(), serde_json::Error> {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json"
+    ))?;
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_ok());
+    Ok(())
+}
+
+#[test]
 fn server_shared_engine_chat_completion_receipt_rejects_missing_profile_fields() {
     let mut missing_checksum = server_shared_engine_chat_completion_receipt();
     missing_checksum["model_identity"]["model_sha256"] = Value::Null;
