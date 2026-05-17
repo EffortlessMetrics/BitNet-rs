@@ -1438,6 +1438,14 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             &f64_capture,
             0,
         );
+        let selected_f64_effect = attention_selected_historical_k_attention_norm_f64_effect(
+            &cpu_comparison["attention_selected_historical_k_attention_norm_source"],
+            &reference_records,
+            &cpu_records,
+            cpu_f64_records,
+        );
+        cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
+            selected_f64_effect;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -25208,6 +25216,241 @@ fn attention_selected_historical_k_attention_norm_source(
     })
 }
 
+fn attention_selected_historical_k_attention_norm_f64_effect(
+    selected_source: &Value,
+    reference_records: &[ReferenceTraceRecord],
+    baseline_rust_records: &BTreeMap<String, RustTraceRecord>,
+    f64_rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let source_rows = selected_source.pointer("/rows").and_then(Value::as_array);
+    let reference_output = reference_records.iter().find(|record| {
+        record.layer == Some(0)
+            && record.stage == "attn_norm_history_ref_layout"
+            && record.values_available
+            && !record.first_values.is_empty()
+    });
+    let baseline_output = baseline_rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| record.layer == Some(0))
+        .filter(|record| !record.first_values.is_empty());
+    let f64_output = f64_rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| record.layer == Some(0))
+        .filter(|record| !record.first_values.is_empty());
+
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut compared_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut f64_improves_count = 0usize;
+    let mut f64_clears_bucket_count = 0usize;
+    let mut f64_residual_count = 0usize;
+    let mut f64_not_better_count = 0usize;
+    let mut max_baseline_abs_delta = 0.0f64;
+    let mut max_f64_abs_delta = 0.0f64;
+
+    if let Some(source_rows) = source_rows {
+        for source_row in source_rows {
+            if source_row.pointer("/classification").and_then(Value::as_str)
+                != Some(
+                    "selected_historical_k_attention_norm_source_output_replay_explains_epsilon",
+                )
+            {
+                continue;
+            }
+            selected_count += 1;
+
+            let key_slot = source_row
+                .pointer("/key_slot")
+                .and_then(Value::as_u64)
+                .and_then(|value| usize::try_from(value).ok());
+            let mut blocked_reasons = Vec::<String>::new();
+            if reference_output.is_none() {
+                blocked_reasons.push("reference_attention_norm_output_history_missing".to_string());
+            }
+            if baseline_output.is_none() {
+                blocked_reasons.push("baseline_attention_norm_output_history_missing".to_string());
+            }
+            if f64_output.is_none() {
+                blocked_reasons.push("f64_attention_norm_output_history_missing".to_string());
+            }
+            if key_slot.is_none() {
+                blocked_reasons.push("selected_key_slot_missing".to_string());
+            }
+
+            let reference_token = reference_output
+                .zip(key_slot)
+                .and_then(|(record, token)| reference_dim_major_token(record, token).ok());
+            let baseline_token = baseline_output
+                .zip(key_slot)
+                .and_then(|(record, token)| rust_dim_major_token(record, token).ok());
+            let f64_token = f64_output
+                .zip(key_slot)
+                .and_then(|(record, token)| rust_dim_major_token(record, token).ok());
+            if reference_token.is_none() {
+                blocked_reasons
+                    .push("reference_selected_attention_norm_output_token_missing".to_string());
+            }
+            if baseline_token.is_none() {
+                blocked_reasons
+                    .push("baseline_selected_attention_norm_output_token_missing".to_string());
+            }
+            if f64_token.is_none() {
+                blocked_reasons
+                    .push("f64_selected_attention_norm_output_token_missing".to_string());
+            }
+
+            let baseline_delta = reference_token
+                .as_ref()
+                .zip(baseline_token.as_ref())
+                .map(|(reference, baseline)| compare_vectors(reference, baseline))
+                .unwrap_or(Value::Null);
+            let f64_delta = reference_token
+                .as_ref()
+                .zip(f64_token.as_ref())
+                .map(|(reference, f64)| compare_vectors(reference, f64))
+                .unwrap_or(Value::Null);
+            let baseline_f16_delta = reference_token
+                .as_ref()
+                .zip(baseline_token.as_ref())
+                .map(|(reference, baseline)| f16_bucket_delta(reference, baseline))
+                .unwrap_or(Value::Null);
+            let f64_f16_delta = reference_token
+                .as_ref()
+                .zip(f64_token.as_ref())
+                .map(|(reference, f64)| f16_bucket_delta(reference, f64))
+                .unwrap_or(Value::Null);
+            let baseline_max = delta_metric(&baseline_delta, "/max_abs_delta");
+            let f64_max = delta_metric(&f64_delta, "/max_abs_delta");
+            max_baseline_abs_delta = max_baseline_abs_delta.max(baseline_max);
+            max_f64_abs_delta = max_f64_abs_delta.max(f64_max);
+            let baseline_bucket_mismatches = f16_bucket_mismatch_count(&baseline_f16_delta);
+            let f64_bucket_mismatches = f16_bucket_mismatch_count(&f64_f16_delta);
+            let f64_improves = blocked_reasons.is_empty() && f64_max < baseline_max;
+            let f64_clears_bucket = blocked_reasons.is_empty()
+                && baseline_bucket_mismatches > 0
+                && f64_bucket_mismatches == 0;
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "selected_historical_k_attention_norm_f64_effect_missing_context"
+            } else if f64_clears_bucket && f64_max > 0.0 {
+                f64_improves_count += usize::from(f64_improves);
+                f64_clears_bucket_count += 1;
+                f64_residual_count += 1;
+                "selected_historical_k_attention_norm_f64_effect_clears_bucket_with_residual"
+            } else if f64_clears_bucket {
+                f64_improves_count += usize::from(f64_improves);
+                f64_clears_bucket_count += 1;
+                "selected_historical_k_attention_norm_f64_effect_clears_bucket_exact"
+            } else if f64_improves {
+                f64_improves_count += 1;
+                f64_residual_count += 1;
+                "selected_historical_k_attention_norm_f64_effect_improves_but_bucket_remains"
+            } else {
+                f64_not_better_count += 1;
+                "selected_historical_k_attention_norm_f64_effect_not_better"
+            };
+            if blocked_reasons.is_empty() {
+                compared_count += 1;
+            }
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": source_row.pointer("/head").cloned().unwrap_or(Value::Null),
+                "kv_head": source_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": source_row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+                "selected_k_output_dim": source_row.pointer("/selected_k_output_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "reference_output_stage": "attn_norm_history_ref_layout",
+                "baseline_output_stage": "attention_v_input_history_ref_layout",
+                "f64_output_stage": "attention_v_input_history_ref_layout",
+                "baseline_delta": baseline_delta,
+                "f64_delta": f64_delta,
+                "baseline_f16_delta": baseline_f16_delta,
+                "f64_f16_delta": f64_f16_delta,
+                "baseline_max_abs_delta": baseline_max,
+                "f64_max_abs_delta": f64_max,
+                "baseline_f16_bucket_mismatch_count": baseline_bucket_mismatches,
+                "f64_f16_bucket_mismatch_count": f64_bucket_mismatches,
+                "f64_improves": f64_improves,
+                "f64_clears_bucket": f64_clears_bucket,
+                "runtime_change_candidate": match row_classification {
+                    "selected_historical_k_attention_norm_f64_effect_clears_bucket_with_residual" => {
+                        "attention_rmsnorm_f64_accumulation_clears_selected_bucket_but_residual_trace_delta_remains"
+                    }
+                    "selected_historical_k_attention_norm_f64_effect_clears_bucket_exact" => {
+                        "attention_rmsnorm_f64_accumulation_matches_selected_reference_output"
+                    }
+                    "selected_historical_k_attention_norm_f64_effect_improves_but_bucket_remains" => {
+                        "attention_rmsnorm_f64_accumulation_improves_selected_output_but_not_enough"
+                    }
+                    "selected_historical_k_attention_norm_f64_effect_not_better" => {
+                        "attention_rmsnorm_f64_accumulation_does_not_explain_selected_output"
+                    }
+                    _ => "selected_attention_norm_f64_effect_context_missing",
+                },
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "no_selected_attention_norm_source_output_replay_rows"
+    } else if missing_context_count == selected_count {
+        "selected_historical_k_attention_norm_f64_effect_missing_context"
+    } else if f64_clears_bucket_count > 0 && f64_residual_count > 0 {
+        "selected_historical_k_attention_norm_f64_effect_clears_bucket_with_residual"
+    } else if f64_clears_bucket_count > 0 {
+        "selected_historical_k_attention_norm_f64_effect_clears_bucket_exact"
+    } else if f64_improves_count > 0 {
+        "selected_historical_k_attention_norm_f64_effect_improves_but_bucket_remains"
+    } else if f64_not_better_count > 0 {
+        "selected_historical_k_attention_norm_f64_effect_not_better"
+    } else {
+        "selected_historical_k_attention_norm_f64_effect_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_historical_k_attention_norm_f64_effect_clears_bucket_with_residual" => {
+            "localize the remaining f64 downstream residual before promoting any production RMSNorm runtime change"
+        }
+        "selected_historical_k_attention_norm_f64_effect_clears_bucket_exact" => {
+            "rerun downstream score and value-mix diagnostics under f64 RMSNorm before changing production math"
+        }
+        "selected_historical_k_attention_norm_f64_effect_improves_but_bucket_remains" => {
+            "pin the remaining selected attention-norm output bucket mismatch before runtime changes"
+        }
+        "selected_historical_k_attention_norm_f64_effect_not_better" => {
+            "do not change RMSNorm accumulation; inspect trace serialization or another selected source"
+        }
+        "selected_historical_k_attention_norm_f64_effect_missing_context" => {
+            "capture matching baseline and f64 attention-norm output histories before selected f64 attribution"
+        }
+        "no_selected_attention_norm_source_output_replay_rows" => {
+            "pin selected K attention-norm source before f64 effect attribution"
+        }
+        _ => "keep selected K f64 attention-norm effect diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected historical K attention-norm f64 effect is diagnostic-only evidence for whether BITNET_DIAG_RMSNORM_F64_ACCUM clears the selected attention-norm output bucket drift; it does not change production RMSNorm, QK256, RoPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "compared_count": compared_count,
+        "missing_context_count": missing_context_count,
+        "f64_improves_count": f64_improves_count,
+        "f64_clears_bucket_count": f64_clears_bucket_count,
+        "f64_residual_count": f64_residual_count,
+        "f64_not_better_count": f64_not_better_count,
+        "max_baseline_abs_delta": max_baseline_abs_delta,
+        "max_f64_abs_delta": max_f64_abs_delta,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -38474,6 +38717,87 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "capture model and full attention-norm input/output histories before selected K attention-norm attribution"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_historical_k_attention_norm_f64_effect_reports_bucket_clear() {
+        let selected_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_historical_k_attention_norm_source_output_replay_explains_epsilon",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 1,
+                    "query_token": 3,
+                    "selected_k_output_dim": 0,
+                }
+            ]
+        });
+        let reference_records = vec![ReferenceTraceRecord {
+            shape: vec![2, 2, 1, 1],
+            full_shape: vec![2, 2, 1, 1],
+            nelements: 4,
+            first_values: vec![0.0, 1.0, 0.0, 2.0],
+            ..test_reference_trace_record("attn_norm_history_ref_layout", vec![0.0, 1.0, 0.0, 2.0])
+        }];
+        let mut baseline_records = BTreeMap::new();
+        baseline_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![0.0, 1.001, 0.0, 2.001],
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![0.0, 1.001, 0.0, 2.001],
+                )
+            },
+        );
+        let mut f64_records = BTreeMap::new();
+        f64_records.insert(
+            "attention_v_input_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![0.0, 1.0000001, 0.0, 2.0000001],
+                ..test_rust_trace_record(
+                    "attention_v_input_history_ref_layout",
+                    vec![0.0, 1.0000001, 0.0, 2.0000001],
+                )
+            },
+        );
+
+        let report = attention_selected_historical_k_attention_norm_f64_effect(
+            &selected_source,
+            &reference_records,
+            &baseline_records,
+            &f64_records,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_historical_k_attention_norm_f64_effect_clears_bucket_with_residual"
+            ))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/f64_clears_bucket_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/f64_residual_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/runtime_change_candidate"),
+            Some(&json!(
+                "attention_rmsnorm_f64_accumulation_clears_selected_bucket_but_residual_trace_delta_remains"
+            ))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize the remaining f64 downstream residual before promoting any production RMSNorm runtime change"
             ))
         );
     }
