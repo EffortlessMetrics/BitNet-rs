@@ -48,6 +48,7 @@ const COLD_WARM_PROFILE_BENCHMARK: &str =
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
+const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -320,6 +321,11 @@ pub enum LunarLakeAction {
         /// Strict regression-v2 bundle to inspect. Relative paths are resolved under artifact-root.
         #[arg(long, default_value = REGRESSION_BUNDLE_V2)]
         regression_bundle: PathBuf,
+
+        /// Optional repeated dense Qwen CPU warm-session receipt to index.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DURABLE_QWEN_CPU_WARM_SESSION)]
+        repeated_warm_session: Option<PathBuf>,
 
         /// Repeated executions required before a profile can be called durable.
         #[arg(long, default_value_t = 10)]
@@ -930,6 +936,7 @@ pub struct LunarLakeDurabilityBundle {
     pub cold_warm_benchmark_receipt: String,
     pub cpu_corpus_v2_receipt: String,
     pub regression_bundle_receipt: String,
+    pub repeated_warm_session_receipt: Option<String>,
     pub required_repeat_count: u64,
     pub durability_index_ready: bool,
     pub stability_proven: bool,
@@ -1160,6 +1167,7 @@ impl LunarLakeCommand {
                 cold_warm_benchmark,
                 cpu_corpus_v2,
                 regression_bundle,
+                repeated_warm_session,
                 required_repeats,
                 json_out,
                 created_utc,
@@ -1175,6 +1183,7 @@ impl LunarLakeCommand {
                     cold_warm_benchmark,
                     cpu_corpus_v2,
                     regression_bundle,
+                    repeated_warm_session.as_deref(),
                     *required_repeats,
                     created_utc,
                 )?;
@@ -2443,6 +2452,7 @@ pub fn build_durability_bundle_with_created_utc(
     cold_warm_benchmark: &Path,
     cpu_corpus_v2: &Path,
     regression_bundle: &Path,
+    repeated_warm_session: Option<&Path>,
     required_repeat_count: u64,
     created_utc: String,
 ) -> Result<LunarLakeDurabilityBundle> {
@@ -2450,12 +2460,18 @@ pub fn build_durability_bundle_with_created_utc(
     let cold_warm_benchmark_path = resolve_receipt_path(root, cold_warm_benchmark);
     let cpu_corpus_v2_path = resolve_receipt_path(root, cpu_corpus_v2);
     let regression_bundle_path = resolve_receipt_path(root, regression_bundle);
+    let repeated_warm_session_path =
+        repeated_warm_session.map(|path| resolve_receipt_path(root, path));
 
     let comparison: LunarLakeRouteProfileComparison =
         read_json_receipt(&route_profile_comparison_path)?;
     let benchmark: LunarLakeColdWarmBenchmark = read_json_receipt(&cold_warm_benchmark_path)?;
     let corpus: Value = read_json_receipt(&cpu_corpus_v2_path)?;
     let regression: LunarLakeRegressionBundle = read_json_receipt(&regression_bundle_path)?;
+    let repeated_warm_session_json = repeated_warm_session_path
+        .as_ref()
+        .map(|path| read_json_receipt::<Value>(path))
+        .transpose()?;
 
     let mut gaps = Vec::new();
     if !comparison.profile_comparison_ready {
@@ -2490,6 +2506,10 @@ pub fn build_durability_bundle_with_created_utc(
     if fallback_used(&corpus) == Some(true) {
         gaps.push("CPU corpus-v2 receipt observed fallback_used=true".to_string());
     }
+    let repeated_profile_evidence = repeated_warm_session_json
+        .as_ref()
+        .map(|receipt| repeated_warm_session_profile_evidence(receipt, &mut gaps))
+        .unwrap_or_default();
 
     let corpus_profiles = corpus_profile_counts(&corpus);
     let benchmark_profiles = benchmark
@@ -2519,7 +2539,10 @@ pub fn build_durability_bundle_with_created_utc(
             continue;
         };
 
-        let observed_execution_count = if counts.total > 0 { 1 } else { 0 };
+        let repeated_evidence = repeated_profile_evidence.get(*profile_id);
+        let observed_execution_count = repeated_evidence
+            .map(|evidence| evidence.observed_execution_count)
+            .unwrap_or(if counts.total > 0 { 1 } else { 0 });
         let mut blockers = route.blockers.clone();
         if counts.total == 0 {
             blockers.push("no CPU corpus-v2 baseline cases for profile".to_string());
@@ -2527,8 +2550,25 @@ pub fn build_durability_bundle_with_created_utc(
         if counts.failed > 0 {
             blockers.push(format!("CPU corpus-v2 profile has {} quality failures", counts.failed));
         }
-        if route.fallback_used == Some(true) || counts.fallback_observed {
+        let repeated_fallback_observed =
+            repeated_evidence.map(|evidence| evidence.fallback_drift_detected).unwrap_or(false);
+        let fallback_observed = route.fallback_used == Some(true)
+            || counts.fallback_observed
+            || repeated_fallback_observed;
+        if fallback_observed {
             blockers.push("fallback_used=true observed in indexed profile evidence".to_string());
+        }
+        if let Some(evidence) = repeated_evidence {
+            blockers.extend(evidence.blockers.iter().cloned());
+            if evidence.answer_drift_detected {
+                blockers
+                    .push("answer drift detected in repeated warm-session evidence".to_string());
+            }
+            if !evidence.quality_passed {
+                blockers.push(
+                    "answer gate failure detected in repeated warm-session evidence".to_string(),
+                );
+            }
         }
         if observed_execution_count < required_repeat_count {
             blockers.push(format!(
@@ -2562,16 +2602,20 @@ pub fn build_durability_bundle_with_created_utc(
             baseline_cases_failed: counts.failed,
             observed_execution_count,
             required_execution_count: required_repeat_count,
-            answer_drift_detected: if observed_execution_count >= 2 { Some(false) } else { None },
+            answer_drift_detected: repeated_evidence
+                .map(|evidence| evidence.answer_drift_detected)
+                .or(if observed_execution_count >= 2 { Some(false) } else { None }),
             route_drift_detected: profile.promoted_route.as_deref() != Some(DEFAULT_ASK_ROUTE),
-            fallback_drift_detected: Some(
-                route.fallback_used == Some(true) || counts.fallback_observed,
-            ),
-            latency_variance_status: if observed_execution_count >= 2 {
-                "variance_window_available".to_string()
-            } else {
-                "not_evaluated_single_execution".to_string()
-            },
+            fallback_drift_detected: Some(fallback_observed),
+            latency_variance_status: repeated_evidence
+                .map(RepeatedWarmSessionProfileEvidence::latency_variance_status)
+                .unwrap_or_else(|| {
+                    if observed_execution_count >= 2 {
+                        "variance_window_available".to_string()
+                    } else {
+                        "not_evaluated_single_execution".to_string()
+                    }
+                }),
             stability_status: stability_status.to_string(),
             blockers,
         });
@@ -2610,6 +2654,9 @@ pub fn build_durability_bundle_with_created_utc(
         cold_warm_benchmark_receipt: path_string(&cold_warm_benchmark_path),
         cpu_corpus_v2_receipt: path_string(&cpu_corpus_v2_path),
         regression_bundle_receipt: path_string(&regression_bundle_path),
+        repeated_warm_session_receipt: repeated_warm_session_path
+            .as_ref()
+            .map(|path| path_string(path)),
         required_repeat_count,
         durability_index_ready,
         stability_proven,
@@ -2624,7 +2671,7 @@ pub fn build_durability_bundle_with_created_utc(
             acceleration_claim: false,
             hidden_fallback_allowed: false,
             dense_slm_as_bitnet_proof: false,
-            repeated_run_stability_claim: false,
+            repeated_run_stability_claim: stability_proven,
         },
     })
 }
@@ -2654,6 +2701,232 @@ fn corpus_profile_counts(corpus: &Value) -> BTreeMap<String, CorpusProfileCounts
         entry.fallback_observed |= top_level_fallback || fallback_used(case) == Some(true);
     }
     counts
+}
+
+#[derive(Default, Clone)]
+struct RepeatedWarmSessionProfileEvidence {
+    observed_execution_count: u64,
+    groups_seen: u64,
+    answer_drift_detected: bool,
+    fallback_drift_detected: bool,
+    quality_passed: bool,
+    timing_sample_count: usize,
+    blockers: Vec<String>,
+}
+
+impl RepeatedWarmSessionProfileEvidence {
+    fn merge_group(&mut self, group: RepeatedWarmSessionGroupEvidence) {
+        if self.groups_seen == 0 {
+            self.observed_execution_count = group.attempt_count;
+            self.quality_passed = group.quality_passed;
+        } else {
+            self.observed_execution_count = self.observed_execution_count.min(group.attempt_count);
+            self.quality_passed &= group.quality_passed;
+        }
+        self.groups_seen += 1;
+        self.answer_drift_detected |= group.answer_drift_detected;
+        self.fallback_drift_detected |= group.fallback_drift_detected;
+        self.timing_sample_count += group.timing_sample_count;
+        self.blockers.extend(group.blockers);
+        self.blockers.sort();
+        self.blockers.dedup();
+    }
+
+    fn latency_variance_status(&self) -> String {
+        if self.timing_sample_count >= 2 {
+            "variance_window_available".to_string()
+        } else {
+            "not_evaluated_missing_timing_samples".to_string()
+        }
+    }
+}
+
+struct RepeatedWarmSessionGroupEvidence {
+    attempt_count: u64,
+    answer_drift_detected: bool,
+    fallback_drift_detected: bool,
+    quality_passed: bool,
+    timing_sample_count: usize,
+    blockers: Vec<String>,
+}
+
+fn repeated_warm_session_profile_evidence(
+    receipt: &Value,
+    gaps: &mut Vec<String>,
+) -> BTreeMap<String, RepeatedWarmSessionProfileEvidence> {
+    if string_at(receipt, "artifact_kind").as_deref() != Some("slm_cpu_warm_session") {
+        gaps.push(
+            "repeated warm-session receipt must have artifact_kind=slm_cpu_warm_session"
+                .to_string(),
+        );
+    }
+    if string_at_any(receipt, &["selected_backend", "backend.selected_backend"]).as_deref()
+        != Some("cpu-rust")
+    {
+        gaps.push("repeated warm-session receipt must select backend cpu-rust".to_string());
+    }
+    if string_at_any(receipt, &["runtime_api", "backend.runtime_api"]).as_deref() != Some("cpu") {
+        gaps.push("repeated warm-session receipt must record runtime_api=cpu".to_string());
+    }
+    if fallback_used(receipt) != Some(false) {
+        gaps.push("repeated warm-session receipt must record fallback_used=false".to_string());
+    }
+    if bool_at_any(receipt, &["quality_summary.passed"]) != Some(true) {
+        gaps.push("repeated warm-session receipt must record passing quality gates".to_string());
+    }
+    if bool_at_any(receipt, &["determinism.passed"]) != Some(true) {
+        gaps.push("repeated warm-session receipt must record determinism.passed=true".to_string());
+    }
+    if bool_at_any(
+        receipt,
+        &[
+            "speedup_claim",
+            "claim_boundary.speedup_claim",
+            "claim_boundary.broad_performance_claim",
+            "claim_boundary.full_metal_inference_claimed",
+            "claim_boundary.bitnet_quality_claimed",
+        ],
+    ) == Some(true)
+    {
+        gaps.push(
+            "durability index refuses speedup, accelerator, or BitNet claims from repeated receipt"
+                .to_string(),
+        );
+    }
+
+    let prompt_by_index = receipt
+        .get("prompts")
+        .and_then(Value::as_array)
+        .map(|prompts| {
+            prompts
+                .iter()
+                .filter_map(|prompt| {
+                    let index = u64_at(prompt, "prompt_index")?;
+                    Some((index, prompt))
+                })
+                .collect::<BTreeMap<_, _>>()
+        })
+        .unwrap_or_default();
+
+    let mut profiles = BTreeMap::<String, RepeatedWarmSessionProfileEvidence>::new();
+    let groups = receipt.pointer("/determinism/groups").and_then(Value::as_array);
+    let Some(groups) = groups else {
+        gaps.push("repeated warm-session receipt has no determinism.groups".to_string());
+        return profiles;
+    };
+
+    for group in groups {
+        let Some(case_id) = group.get("case_id").and_then(Value::as_str) else {
+            gaps.push("repeated warm-session determinism group is missing case_id".to_string());
+            continue;
+        };
+        let Some(profile_id) = durability_profile_for_case_id(case_id) else {
+            continue;
+        };
+        let evidence = repeated_warm_session_group_evidence(group, &prompt_by_index);
+        profiles.entry(profile_id.to_string()).or_default().merge_group(evidence);
+    }
+
+    profiles
+}
+
+fn repeated_warm_session_group_evidence(
+    group: &Value,
+    prompt_by_index: &BTreeMap<u64, &Value>,
+) -> RepeatedWarmSessionGroupEvidence {
+    let case_id = group.get("case_id").and_then(Value::as_str).unwrap_or("unknown_case");
+    let attempt_count = u64_at(group, "attempt_count").unwrap_or(0);
+    let stable_ids = bool_at_any(group, &["stable_generated_token_ids"]) == Some(true);
+    let stable_text = bool_at_any(group, &["stable_text"]) == Some(true);
+    let mut blockers = Vec::new();
+    if attempt_count == 0 {
+        blockers.push(format!("repeated warm-session group {case_id} is missing attempt_count"));
+    }
+    if !stable_ids {
+        blockers.push(format!("repeated warm-session group {case_id} generated token IDs drifted"));
+    }
+    if !stable_text {
+        blockers.push(format!("repeated warm-session group {case_id} decoded text drifted"));
+    }
+
+    let prompt_indices = group
+        .get("prompt_indices")
+        .and_then(Value::as_array)
+        .map(|indices| indices.iter().filter_map(Value::as_u64).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if prompt_indices.len() < attempt_count as usize {
+        blockers.push(format!(
+            "repeated warm-session group {case_id} has {}/{} prompt receipts",
+            prompt_indices.len(),
+            attempt_count
+        ));
+    }
+
+    let mut quality_passed = true;
+    let mut fallback_drift_detected = false;
+    let mut timing_sample_count = 0usize;
+    for index in prompt_indices {
+        let Some(prompt) = prompt_by_index.get(&index) else {
+            blockers.push(format!(
+                "repeated warm-session group {case_id} references missing prompt_index {index}"
+            ));
+            quality_passed = false;
+            continue;
+        };
+        if fallback_used(prompt) != Some(false) {
+            fallback_drift_detected = true;
+        }
+        if answer_gate_passed(prompt) != Some(true) {
+            quality_passed = false;
+        }
+        if durability_prompt_has_timing(prompt) {
+            timing_sample_count += 1;
+        }
+    }
+    if !quality_passed {
+        blockers.push(format!("repeated warm-session group {case_id} has answer-gate failures"));
+    }
+    if fallback_drift_detected {
+        blockers.push(format!("repeated warm-session group {case_id} observed fallback"));
+    }
+    if timing_sample_count < 2 {
+        blockers.push(format!("repeated warm-session group {case_id} lacks enough timing samples"));
+    }
+
+    RepeatedWarmSessionGroupEvidence {
+        attempt_count,
+        answer_drift_detected: !stable_ids || !stable_text || !quality_passed,
+        fallback_drift_detected,
+        quality_passed,
+        timing_sample_count,
+        blockers,
+    }
+}
+
+fn durability_profile_for_case_id(case_id: &str) -> Option<&'static str> {
+    if case_id.starts_with("regression_tiny") {
+        Some("regression_tiny")
+    } else if case_id.starts_with("ask_short") {
+        Some("ask_short")
+    } else if case_id.starts_with("ask_normal") {
+        Some("ask_normal")
+    } else {
+        None
+    }
+}
+
+fn durability_prompt_has_timing(prompt: &Value) -> bool {
+    number_at_any(
+        prompt,
+        &[
+            "timing.total_ms",
+            "timing.first_token_ms",
+            "timing.first_token_decode_ms",
+            "timing.time_to_first_token_ms",
+            "timing.decode_total_ms",
+        ],
+    )
+    .is_some()
 }
 
 pub fn build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
@@ -5354,7 +5627,7 @@ mod tests {
     }
 
     #[test]
-    fn durability_bundle_indexes_repeat_gap_without_claiming_stability() -> Result<()> {
+    fn durability_bundle_indexes_repeat_gap_and_repeated_stability() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
         write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
@@ -5505,6 +5778,7 @@ mod tests {
             Path::new("cold-warm.json"),
             Path::new(DENSE_CPU_CORPUS_V2),
             Path::new(REGRESSION_BUNDLE_V2),
+            None,
             10,
             "2026-05-16T20:20:00Z".to_string(),
         )?;
@@ -5529,6 +5803,39 @@ mod tests {
                 .iter()
                 .any(|evidence| { evidence.contains("collect repeated-run receipts") })
         );
+
+        write_repeated_warm_session_receipt(temp.path(), "durable-warm.json")?;
+        let durability = build_durability_bundle_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new("cold-warm.json"),
+            Path::new(DENSE_CPU_CORPUS_V2),
+            Path::new(REGRESSION_BUNDLE_V2),
+            Some(Path::new("durable-warm.json")),
+            10,
+            "2026-05-16T20:40:00Z".to_string(),
+        )?;
+
+        assert!(durability.durability_index_ready, "{:?}", durability.gaps);
+        assert!(durability.stability_proven, "{:?}", durability.profiles);
+        assert!(durability.claim_boundary.repeated_run_stability_claim);
+        let expected_repeated_receipt = path_string(&temp.path().join("durable-warm.json"));
+        assert_eq!(durability.repeated_warm_session_receipt, Some(expected_repeated_receipt));
+        assert!(
+            durability
+                .next_required_evidence
+                .iter()
+                .all(|evidence| !evidence.contains("repeated-run"))
+        );
+        for profile in &durability.profiles {
+            assert_eq!(profile.observed_execution_count, 10);
+            assert_eq!(profile.required_execution_count, 10);
+            assert_eq!(profile.answer_drift_detected, Some(false));
+            assert_eq!(profile.fallback_drift_detected, Some(false));
+            assert_eq!(profile.latency_variance_status, "variance_window_available");
+            assert_eq!(profile.stability_status, "stable");
+            assert!(profile.blockers.is_empty(), "{profile:?}");
+        }
         Ok(())
     }
 
@@ -6172,6 +6479,84 @@ mod tests {
         fs::create_dir_all(root)?;
         fs::write(root.join(file), serde_json::to_vec_pretty(&value)?)?;
         Ok(())
+    }
+
+    fn write_repeated_warm_session_receipt(root: &Path, file: &str) -> Result<()> {
+        let cases = [
+            ("regression_tiny_math_2_plus_2_brief", 0u64),
+            ("ask_short_capital_france", 10u64),
+            ("ask_normal_instruction_rust", 20u64),
+        ];
+        let groups = cases
+            .iter()
+            .map(|(case_id, start)| {
+                json!({
+                    "case_id": case_id,
+                    "attempt_count": 10,
+                    "prompt_indices": (*start..*start + 10).collect::<Vec<_>>(),
+                    "stable_generated_token_ids": true,
+                    "stable_text": true
+                })
+            })
+            .collect::<Vec<_>>();
+        let prompts = cases
+            .iter()
+            .flat_map(|(case_id, start)| {
+                (*start..*start + 10).map(move |prompt_index| {
+                    json!({
+                        "case_id": case_id,
+                        "prompt_index": prompt_index,
+                        "repeat_index": prompt_index - *start,
+                        "fallback_used": false,
+                        "backend": {
+                            "fallback_used": false,
+                            "runtime_api": "cpu",
+                            "selected_backend": "cpu-rust"
+                        },
+                        "quality": {
+                            "passed": true
+                        },
+                        "timing": {
+                            "total_ms": 1.0,
+                            "first_token_ms": 1.0,
+                            "decode_total_ms": 1.0
+                        }
+                    })
+                })
+            })
+            .collect::<Vec<_>>();
+
+        write_json(
+            root,
+            file,
+            json!({
+                "artifact_kind": "slm_cpu_warm_session",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "backend": {
+                    "selected_backend": "cpu-rust",
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                },
+                "quality_summary": {
+                    "passed": true,
+                    "failed_prompt_indices": []
+                },
+                "determinism": {
+                    "passed": true,
+                    "repeated_prompt_groups": 3,
+                    "groups": groups
+                },
+                "claim_boundary": {
+                    "speedup_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "bitnet_quality_claimed": false
+                },
+                "prompts": prompts
+            }),
+        )
     }
 
     fn write_answer_corpus_v2(root: &Path, file: &str) -> Result<()> {

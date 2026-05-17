@@ -290,6 +290,7 @@
 | intel-258v-platform | LNL258V-REG-004 | LNL258V-REG-003, LNL258V-ROUTE-003, LNL258V-BENCH-001 | merged |
 | intel-258v-platform | LNL258V-DURABLE-001 | LNL258V-REG-004, LNL258V-BENCH-001 | merged |
 | intel-258v-platform | LNL258V-DURABLE-002 | LNL258V-DURABLE-001, LNL258V-QUAL-002, LNL258V-BENCH-001 | merged |
+| intel-258v-platform | LNL258V-DURABLE-003 | LNL258V-DURABLE-001, LNL258V-DURABLE-002, LNL258V-REG-004 | pr_open |
 | intel-258v-platform | LNL258V-ASK-003 | LNL258V-ASK-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |

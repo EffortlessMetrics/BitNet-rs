@@ -2,16 +2,17 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_durability_bundle",
   "proof_stage": "repeated_run_requirements_indexed_no_new_inference",
-  "created_utc": "2026-05-16T20:20:00Z",
+  "created_utc": "2026-05-16T23:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
   "cold_warm_benchmark_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
   "regression_bundle_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "repeated_warm_session_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durable-qwen25-cpu-warm-session.json",
   "required_repeat_count": 10,
   "durability_index_ready": true,
-  "stability_proven": false,
+  "stability_proven": true,
   "profiles": [
     {
       "profile_id": "regression_tiny",
@@ -21,16 +22,14 @@
       "baseline_case_count": 4,
       "baseline_cases_passed": 4,
       "baseline_cases_failed": 0,
-      "observed_execution_count": 1,
+      "observed_execution_count": 10,
       "required_execution_count": 10,
-      "answer_drift_detected": null,
+      "answer_drift_detected": false,
       "route_drift_detected": false,
       "fallback_drift_detected": false,
-      "latency_variance_status": "not_evaluated_single_execution",
-      "stability_status": "awaiting_repeated_run_evidence",
-      "blockers": [
-        "repeated-run evidence missing: observed 1/10 executions"
-      ]
+      "latency_variance_status": "variance_window_available",
+      "stability_status": "stable",
+      "blockers": []
     },
     {
       "profile_id": "ask_short",
@@ -40,16 +39,14 @@
       "baseline_case_count": 2,
       "baseline_cases_passed": 2,
       "baseline_cases_failed": 0,
-      "observed_execution_count": 1,
+      "observed_execution_count": 10,
       "required_execution_count": 10,
-      "answer_drift_detected": null,
+      "answer_drift_detected": false,
       "route_drift_detected": false,
       "fallback_drift_detected": false,
-      "latency_variance_status": "not_evaluated_single_execution",
-      "stability_status": "awaiting_repeated_run_evidence",
-      "blockers": [
-        "repeated-run evidence missing: observed 1/10 executions"
-      ]
+      "latency_variance_status": "variance_window_available",
+      "stability_status": "stable",
+      "blockers": []
     },
     {
       "profile_id": "ask_normal",
@@ -59,25 +56,18 @@
       "baseline_case_count": 3,
       "baseline_cases_passed": 3,
       "baseline_cases_failed": 0,
-      "observed_execution_count": 1,
+      "observed_execution_count": 10,
       "required_execution_count": 10,
-      "answer_drift_detected": null,
+      "answer_drift_detected": false,
       "route_drift_detected": false,
       "fallback_drift_detected": false,
-      "latency_variance_status": "not_evaluated_single_execution",
-      "stability_status": "awaiting_repeated_run_evidence",
-      "blockers": [
-        "repeated-run evidence missing: observed 1/10 executions"
-      ]
+      "latency_variance_status": "variance_window_available",
+      "stability_status": "stable",
+      "blockers": []
     }
   ],
   "gaps": [],
-  "next_required_evidence": [
-    "collect repeated-run receipts before promoting durability or latency-variance claims",
-    "run ask_normal on dense_slm_default_cpu 10 times and record answer, route, fallback, and latency variance",
-    "run ask_short on dense_slm_default_cpu 10 times and record answer, route, fallback, and latency variance",
-    "run regression_tiny on dense_slm_default_cpu 10 times and record answer, route, fallback, and latency variance"
-  ],
+  "next_required_evidence": [],
   "claim_boundary": {
     "new_inference_executed": false,
     "route_promotion_changed": false,
@@ -86,6 +76,6 @@
     "acceleration_claim": false,
     "hidden_fallback_allowed": false,
     "dense_slm_as_bitnet_proof": false,
-    "repeated_run_stability_claim": false
+    "repeated_run_stability_claim": true
   }
 }
