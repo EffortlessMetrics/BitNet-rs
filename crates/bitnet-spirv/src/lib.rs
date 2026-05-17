@@ -409,3 +409,253 @@ pub fn build_test_spirv(version_major: u8, version_minor: u8) -> Vec<u8> {
     buf.extend_from_slice(&0u32.to_le_bytes());
     buf
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn module(hash: &str) -> SpirVModule {
+        SpirVModule {
+            bytecode: build_test_spirv(1, 0),
+            source_hash: hash.to_string(),
+            compiler: Some(CompilerBackend::Clang),
+        }
+    }
+
+    fn validation_message(result: Result<(), SpirVError>) -> Option<String> {
+        match result {
+            Err(SpirVError::ValidationFailed(msg)) => Some(msg),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn optimization_level_flag_strings() {
+        assert_eq!(OptimizationLevel::None.as_flag(), "-O0");
+        assert_eq!(OptimizationLevel::Basic.as_flag(), "-O1");
+        assert_eq!(OptimizationLevel::Full.as_flag(), "-O2");
+    }
+
+    #[test]
+    fn compile_options_default_values() {
+        let opts = CompileOptions::default();
+        assert!(opts.target_device.is_none());
+        assert_eq!(opts.optimization_level, OptimizationLevel::Full);
+        assert!(opts.defines.is_empty());
+    }
+
+    #[test]
+    fn spirv_magic_constant_value() {
+        assert_eq!(SPIRV_MAGIC, 0x0723_0203);
+    }
+
+    #[test]
+    fn check_magic_accepts_valid_header() {
+        let bin = build_test_spirv(1, 0);
+        assert!(SpirVValidator::check_magic(&bin).is_ok());
+    }
+
+    #[test]
+    fn check_magic_rejects_wrong_magic() {
+        let mut bin = build_test_spirv(1, 0);
+        bin[0] ^= 0xFF;
+        let msg = validation_message(SpirVValidator::check_magic(&bin));
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("bad magic")), "got: {msg:?}",);
+    }
+
+    #[test]
+    fn check_magic_rejects_too_short() {
+        let msg = validation_message(SpirVValidator::check_magic(&[0x03, 0x02, 0x23]));
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("too short")), "got: {msg:?}",);
+    }
+
+    #[test]
+    fn check_length_accepts_20_bytes() {
+        let bin = build_test_spirv(1, 0);
+        assert_eq!(bin.len(), 20);
+        assert!(SpirVValidator::check_length(&bin).is_ok());
+    }
+
+    #[test]
+    fn check_length_rejects_short_input() {
+        let msg = validation_message(SpirVValidator::check_length(&[0u8; 19]));
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("19 bytes")), "got: {msg:?}",);
+    }
+
+    #[test]
+    fn check_version_accepts_versions_1_0_through_1_6() {
+        for minor in 0..=6 {
+            let bin = build_test_spirv(1, minor);
+            assert!(
+                SpirVValidator::check_version(&bin).is_ok(),
+                "version 1.{minor} should be accepted",
+            );
+        }
+    }
+
+    #[test]
+    fn check_version_rejects_unsupported_versions() {
+        // 1.7 too new
+        let bin = build_test_spirv(1, 7);
+        assert!(SpirVValidator::check_version(&bin).is_err());
+        // 2.0 wrong major
+        let bin = build_test_spirv(2, 0);
+        let msg = validation_message(SpirVValidator::check_version(&bin));
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("unsupported")), "got: {msg:?}",);
+    }
+
+    #[test]
+    fn check_version_rejects_too_short_for_version_word() {
+        let msg = validation_message(SpirVValidator::check_version(&[0u8; 7]));
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("version word")), "got: {msg:?}",);
+    }
+
+    #[test]
+    fn validate_bytes_passes_for_synthetic_header() {
+        let bin = build_test_spirv(1, 3);
+        assert!(SpirVValidator::validate_bytes(&bin).is_ok());
+    }
+
+    #[test]
+    fn validate_bytes_fails_on_bad_magic_after_length_passes() {
+        let mut bin = build_test_spirv(1, 0);
+        // Corrupt magic but keep full length.
+        bin[3] = 0;
+        assert!(SpirVValidator::validate_bytes(&bin).is_err());
+    }
+
+    #[test]
+    fn build_test_spirv_round_trip_header_layout() {
+        let bin = build_test_spirv(1, 5);
+        assert_eq!(bin.len(), 20);
+
+        let magic = u32::from_le_bytes([bin[0], bin[1], bin[2], bin[3]]);
+        assert_eq!(magic, SPIRV_MAGIC);
+
+        let version = u32::from_le_bytes([bin[4], bin[5], bin[6], bin[7]]);
+        assert_eq!((version >> 16) & 0xFF, 1);
+        assert_eq!((version >> 8) & 0xFF, 5);
+    }
+
+    #[test]
+    fn has_capability_finds_present_capability() {
+        // Build a 28-byte binary: 20-byte header + 1 OpCapability instruction (2 words = 8 bytes).
+        let mut bin = build_test_spirv(1, 0);
+        let op_capability: u32 = (2 << 16) | 0x0011;
+        bin.extend_from_slice(&op_capability.to_le_bytes());
+        bin.extend_from_slice(&42u32.to_le_bytes());
+        assert!(SpirVValidator::has_capability(&bin, 42));
+    }
+
+    #[test]
+    fn has_capability_returns_false_when_absent() {
+        let mut bin = build_test_spirv(1, 0);
+        let op_capability: u32 = (2 << 16) | 0x0011;
+        bin.extend_from_slice(&op_capability.to_le_bytes());
+        bin.extend_from_slice(&7u32.to_le_bytes());
+        assert!(!SpirVValidator::has_capability(&bin, 42));
+    }
+
+    #[test]
+    fn has_capability_returns_false_on_short_binary() {
+        let bin = build_test_spirv(1, 0); // 20 bytes, < 24
+        assert!(!SpirVValidator::has_capability(&bin, 1));
+    }
+
+    #[test]
+    fn source_hash_is_deterministic() {
+        let opts = CompileOptions::default();
+        let a = source_hash("kernel void k() {}", &opts);
+        let b = source_hash("kernel void k() {}", &opts);
+        assert_eq!(a, b);
+        assert_eq!(a.len(), 16);
+    }
+
+    #[test]
+    fn source_hash_changes_with_source() {
+        let opts = CompileOptions::default();
+        assert_ne!(source_hash("a", &opts), source_hash("b", &opts));
+    }
+
+    #[test]
+    fn source_hash_changes_with_optimization_level() {
+        let mut opts = CompileOptions::default();
+        let h1 = source_hash("src", &opts);
+        opts.optimization_level = OptimizationLevel::None;
+        let h2 = source_hash("src", &opts);
+        assert_ne!(h1, h2);
+    }
+
+    #[test]
+    fn source_hash_changes_with_defines_and_target_device() {
+        let mut opts = CompileOptions::default();
+        let base = source_hash("src", &opts);
+        opts.defines.push(("FOO".into(), "1".into()));
+        let with_define = source_hash("src", &opts);
+        assert_ne!(base, with_define);
+
+        opts.target_device = Some("intel".into());
+        let with_device = source_hash("src", &opts);
+        assert_ne!(with_define, with_device);
+    }
+
+    #[test]
+    fn cache_new_is_empty() {
+        let c = SpirVCache::new();
+        assert!(c.is_empty());
+        assert_eq!(c.len(), 0);
+    }
+
+    #[test]
+    fn cache_default_matches_new() {
+        let c = SpirVCache::default();
+        assert!(c.is_empty());
+    }
+
+    #[test]
+    fn cache_insert_get_and_len() {
+        let c = SpirVCache::new();
+        c.insert(module("h1"));
+        assert_eq!(c.len(), 1);
+        assert!(!c.is_empty());
+
+        let got = c.get("h1");
+        assert!(got.as_ref().is_some_and(|module| module.source_hash == "h1"), "got: {got:?}",);
+
+        assert!(c.get("missing").is_none());
+    }
+
+    #[test]
+    fn cache_insert_replaces_same_hash() {
+        let c = SpirVCache::new();
+        c.insert(module("h"));
+        c.insert(module("h"));
+        assert_eq!(c.len(), 1);
+    }
+
+    #[test]
+    fn cache_clear_empties_entries() {
+        let c = SpirVCache::new();
+        c.insert(module("a"));
+        c.insert(module("b"));
+        assert_eq!(c.len(), 2);
+        c.clear();
+        assert!(c.is_empty());
+    }
+
+    #[test]
+    fn compiler_with_backend_overrides_detection() {
+        let compiler = SpirVCompiler::with_backend(Some(CompilerBackend::Ocloc));
+        assert_eq!(compiler.backend(), Some(CompilerBackend::Ocloc));
+
+        let none_compiler = SpirVCompiler::with_backend(None);
+        assert!(none_compiler.backend().is_none());
+    }
+
+    #[test]
+    fn compile_to_spirv_fails_without_backend() {
+        let compiler = SpirVCompiler::with_backend(None);
+        let result = compiler.compile_to_spirv("kernel void k() {}", &CompileOptions::default());
+        assert!(matches!(result, Err(SpirVError::NoCompilerAvailable)));
+    }
+}
