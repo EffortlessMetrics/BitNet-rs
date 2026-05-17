@@ -897,6 +897,47 @@ impl MultiHeadAttention {
         #[cfg(feature = "trace")]
         if self.layer_idx == trace_target_layer() {
             let k_for_scores_f16_probe = attention_score_key_f16_probe_input(&k_expanded)?;
+            for head_idx in 0..self.n_heads {
+                let query_head = q
+                    .narrow(1, head_idx, 1)?
+                    .reshape(&[seq_len, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_q_rope_head{head_idx}_history_ref_layout",
+                    self.layer_idx
+                );
+                let stage = format!("attention_q_rope_head{head_idx}_history_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &query_head,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
+            }
+            for head_idx in 0..self.n_heads {
+                let query_head = q_for_scores
+                    .narrow(1, head_idx, 1)?
+                    .reshape(&[seq_len, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_seq = trace_target_seq().unwrap_or(_trace_base_seq);
+                let trace_name = format!(
+                    "t{trace_seq}/blk{}/attention_q_rope_f16_roundtrip_head{head_idx}_history_ref_layout",
+                    self.layer_idx
+                );
+                let stage =
+                    format!("attention_q_rope_f16_roundtrip_head{head_idx}_history_ref_layout");
+                trace_tensor_record(
+                    &trace_name,
+                    &query_head,
+                    trace_seq,
+                    Some(self.layer_idx as isize),
+                    &stage,
+                )?;
+            }
             trace_layer0_tensor(
                 self.layer_idx,
                 _trace_base_seq,

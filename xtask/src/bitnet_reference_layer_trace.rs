@@ -7356,6 +7356,8 @@ fn compare_reference_to_rust_with_records_with_model(
         attention_key_score_input_history_delta(reference_records, rust_records);
     report["attention_query_score_input_history_delta"] =
         attention_query_score_input_history_delta(reference_records, rust_records);
+    report["attention_query_score_input_boundary"] =
+        attention_query_score_input_boundary(reference_records, rust_records);
     report["attention_score_key_history_effect"] =
         attention_score_key_history_effect(reference_records, rust_records);
     report["attention_score_kcur_f16_effect"] =
@@ -20745,6 +20747,340 @@ fn attention_query_score_input_history_delta(
     })
 }
 
+#[derive(Clone, Copy)]
+struct DimMajorHistorySample<'a> {
+    values: &'a [f32],
+    dim_count: usize,
+    token_count: usize,
+}
+
+fn reference_dim_major_history_sample(record: &ReferenceTraceRecord) -> DimMajorHistorySample<'_> {
+    DimMajorHistorySample {
+        values: &record.first_values,
+        dim_count: record.shape.first().and_then(|dim| usize::try_from(*dim).ok()).unwrap_or(0),
+        token_count: record.shape.get(1).and_then(|dim| usize::try_from(*dim).ok()).unwrap_or(0),
+    }
+}
+
+fn rust_dim_major_history_sample(record: &RustTraceRecord) -> DimMajorHistorySample<'_> {
+    DimMajorHistorySample {
+        values: &record.first_values,
+        dim_count: record.shape.first().copied().unwrap_or(0),
+        token_count: record.shape.get(1).copied().unwrap_or(0),
+    }
+}
+
+fn query_history_pair_delta(
+    left: Option<DimMajorHistorySample<'_>>,
+    right: Option<DimMajorHistorySample<'_>>,
+    dim_count: usize,
+    token_count: usize,
+    left_missing_reason: &str,
+    right_missing_reason: &str,
+    left_incomplete_reason: &str,
+    right_incomplete_reason: &str,
+) -> Value {
+    let mut blocked_reasons = Vec::<String>::new();
+    let mut status = "missing_input";
+    let mut delta = Value::Null;
+    let mut material_mismatch = false;
+    let required_sample_count = dim_count.saturating_mul(token_count);
+
+    match (left, right) {
+        (Some(left), Some(right)) => {
+            if dim_count == 0 || token_count == 0 {
+                blocked_reasons.push("query_history_shape_unusable".to_string());
+            }
+            if left.values.len() < required_sample_count {
+                blocked_reasons.push(left_incomplete_reason.to_string());
+            }
+            if right.values.len() < required_sample_count {
+                blocked_reasons.push(right_incomplete_reason.to_string());
+            }
+            if blocked_reasons.is_empty() {
+                delta =
+                    f16_bucket_delta_dim_major(left.values, right.values, dim_count, token_count);
+                material_mismatch = f16_bucket_mismatch_count(&delta) > 0
+                    || delta_metric(&delta, "/max_abs_delta") > 1.0e-6;
+                status = "compared";
+            }
+        }
+        (None, Some(_)) => {
+            blocked_reasons.push(left_missing_reason.to_string());
+        }
+        (Some(_), None) => {
+            blocked_reasons.push(right_missing_reason.to_string());
+        }
+        (None, None) => {
+            blocked_reasons.push(left_missing_reason.to_string());
+            blocked_reasons.push(right_missing_reason.to_string());
+        }
+    }
+
+    json!({
+        "status": status,
+        "material_mismatch": material_mismatch,
+        "dim_count": dim_count,
+        "token_count": token_count,
+        "required_sample_count": required_sample_count,
+        "left_sample_count": left.map(|sample| sample.values.len()),
+        "right_sample_count": right.map(|sample| sample.values.len()),
+        "blocked_reasons": blocked_reasons,
+        "delta": delta,
+    })
+}
+
+fn query_boundary_material(delta: &Value) -> bool {
+    delta.pointer("/material_mismatch").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn query_boundary_compared(delta: &Value) -> bool {
+    delta.pointer("/status").and_then(Value::as_str) == Some("compared")
+}
+
+fn attention_query_score_input_boundary(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let reference_score_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "q_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "qcur_history_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_rope_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_q_rope_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_f16_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_q_rope_f16_roundtrip_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_score_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_q_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let mut head_ids = reference_score_heads
+        .keys()
+        .chain(reference_history_heads.keys())
+        .chain(rust_rope_heads.keys())
+        .chain(rust_f16_heads.keys())
+        .chain(rust_score_heads.keys())
+        .copied()
+        .collect::<Vec<_>>();
+    head_ids.sort_unstable();
+    head_ids.dedup();
+
+    let mut rows = Vec::new();
+    let mut compared_head_count = 0usize;
+    let mut fully_compared_head_count = 0usize;
+    let mut missing_head_count = 0usize;
+    let mut first_material_head = Value::Null;
+    let mut boundary_counts = BTreeMap::<&'static str, usize>::new();
+    let mut max_abs_delta = 0.0f64;
+    let mut max_rms_delta = 0.0f64;
+    let mut blocked_reasons = Vec::<String>::new();
+
+    if reference_score_heads.is_empty() && reference_history_heads.is_empty() {
+        blocked_reasons.push("reference_query_score_input_history_records_missing".to_string());
+    }
+    if rust_rope_heads.is_empty() {
+        blocked_reasons.push("rust_attention_q_rope_history_records_missing".to_string());
+    }
+    if rust_f16_heads.is_empty() {
+        blocked_reasons
+            .push("rust_attention_q_rope_f16_roundtrip_history_records_missing".to_string());
+    }
+    if rust_score_heads.is_empty() {
+        blocked_reasons.push("rust_attention_q_score_input_records_missing".to_string());
+    }
+
+    for &head in &head_ids {
+        let (reference, reference_stage_prefix, reference_source_priority) =
+            if let Some(reference) = reference_score_heads.get(&head).copied() {
+                (Some(reference), "q_score_input_head", "score_input")
+            } else if let Some(reference) = reference_history_heads.get(&head).copied() {
+                (Some(reference), "qcur_history_head", "query_history")
+            } else {
+                (None, "none", "missing")
+            };
+        let reference_sample = reference.map(reference_dim_major_history_sample);
+        let rust_rope_sample =
+            rust_rope_heads.get(&head).copied().map(rust_dim_major_history_sample);
+        let rust_f16_sample = rust_f16_heads.get(&head).copied().map(rust_dim_major_history_sample);
+        let rust_score_sample =
+            rust_score_heads.get(&head).copied().map(rust_dim_major_history_sample);
+
+        let dim_count = reference_sample
+            .or(rust_rope_sample)
+            .or(rust_f16_sample)
+            .or(rust_score_sample)
+            .map(|sample| sample.dim_count)
+            .unwrap_or(0);
+        let token_count = reference_sample
+            .or(rust_rope_sample)
+            .or(rust_f16_sample)
+            .or(rust_score_sample)
+            .map(|sample| sample.token_count)
+            .unwrap_or(0);
+
+        let reference_to_rope_delta = query_history_pair_delta(
+            reference_sample,
+            rust_rope_sample,
+            dim_count,
+            token_count,
+            "reference_query_score_input_history_head_missing",
+            "rust_attention_q_rope_head_missing",
+            "reference_query_score_input_history_sample_incomplete",
+            "rust_attention_q_rope_sample_incomplete",
+        );
+        let rope_to_f16_delta = query_history_pair_delta(
+            rust_rope_sample,
+            rust_f16_sample,
+            dim_count,
+            token_count,
+            "rust_attention_q_rope_head_missing",
+            "rust_attention_q_rope_f16_roundtrip_head_missing",
+            "rust_attention_q_rope_sample_incomplete",
+            "rust_attention_q_rope_f16_roundtrip_sample_incomplete",
+        );
+        let f16_to_score_delta = query_history_pair_delta(
+            rust_f16_sample,
+            rust_score_sample,
+            dim_count,
+            token_count,
+            "rust_attention_q_rope_f16_roundtrip_head_missing",
+            "rust_attention_q_score_input_head_missing",
+            "rust_attention_q_rope_f16_roundtrip_sample_incomplete",
+            "rust_attention_q_score_input_sample_incomplete",
+        );
+        let reference_to_score_delta = query_history_pair_delta(
+            reference_sample,
+            rust_score_sample,
+            dim_count,
+            token_count,
+            "reference_query_score_input_history_head_missing",
+            "rust_attention_q_score_input_head_missing",
+            "reference_query_score_input_history_sample_incomplete",
+            "rust_attention_q_score_input_sample_incomplete",
+        );
+
+        for delta in [
+            &reference_to_rope_delta,
+            &rope_to_f16_delta,
+            &f16_to_score_delta,
+            &reference_to_score_delta,
+        ] {
+            if query_boundary_compared(delta) {
+                max_abs_delta = max_abs_delta.max(delta_metric(delta, "/delta/max_abs_delta"));
+                max_rms_delta = max_rms_delta.max(delta_metric(delta, "/delta/rms_abs_delta"));
+            }
+        }
+
+        let first_material_boundary = if query_boundary_material(&reference_to_rope_delta) {
+            "reference_to_rust_query_rope"
+        } else if query_boundary_material(&rope_to_f16_delta) {
+            "rust_query_f16_score_conversion"
+        } else if query_boundary_material(&f16_to_score_delta) {
+            "rust_query_score_input_serialization"
+        } else if query_boundary_material(&reference_to_score_delta) {
+            "unexplained_reference_to_score_input"
+        } else if query_boundary_compared(&reference_to_score_delta) {
+            "none"
+        } else {
+            "missing_input"
+        };
+        *boundary_counts.entry(first_material_boundary).or_insert(0) += 1;
+
+        if query_boundary_compared(&reference_to_score_delta) {
+            compared_head_count += 1;
+        } else {
+            missing_head_count += 1;
+        }
+        if query_boundary_compared(&reference_to_rope_delta)
+            && query_boundary_compared(&rope_to_f16_delta)
+            && query_boundary_compared(&f16_to_score_delta)
+            && query_boundary_compared(&reference_to_score_delta)
+        {
+            fully_compared_head_count += 1;
+        }
+
+        let row = json!({
+            "head": head,
+            "reference_stage_prefix": reference_stage_prefix,
+            "reference_source_priority": reference_source_priority,
+            "rust_rope_stage_prefix": "attention_q_rope_head",
+            "rust_f16_stage_prefix": "attention_q_rope_f16_roundtrip_head",
+            "rust_score_stage_prefix": "attention_q_score_input_head",
+            "reference_stage_present": reference_sample.is_some(),
+            "rust_rope_stage_present": rust_rope_sample.is_some(),
+            "rust_f16_stage_present": rust_f16_sample.is_some(),
+            "rust_score_stage_present": rust_score_sample.is_some(),
+            "dim_count": dim_count,
+            "token_count": token_count,
+            "first_material_boundary": first_material_boundary,
+            "reference_to_rust_rope_delta": reference_to_rope_delta,
+            "rust_rope_to_f16_delta": rope_to_f16_delta,
+            "rust_f16_to_score_input_delta": f16_to_score_delta,
+            "reference_to_score_input_delta": reference_to_score_delta,
+        });
+        if first_material_boundary != "none"
+            && first_material_boundary != "missing_input"
+            && first_material_head.is_null()
+        {
+            first_material_head = row.clone();
+        }
+        rows.push(row);
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "query score-input boundary localization is diagnostic-only evidence for whether query score-input drift appears before Rust F16 score conversion, during conversion, or during score-input serialization; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "reference_score_stage_prefix": "q_score_input_head",
+        "reference_history_stage_prefix": "qcur_history_head",
+        "reference_layout": "dim_major_token_minor",
+        "rust_rope_stage_prefix": "attention_q_rope_head",
+        "rust_f16_stage_prefix": "attention_q_rope_f16_roundtrip_head",
+        "rust_score_stage_prefix": "attention_q_score_input_head",
+        "rust_layout": "dim_major_token_minor",
+        "reference_score_head_count": reference_score_heads.len(),
+        "reference_history_head_count": reference_history_heads.len(),
+        "rust_rope_head_count": rust_rope_heads.len(),
+        "rust_f16_head_count": rust_f16_heads.len(),
+        "rust_score_head_count": rust_score_heads.len(),
+        "compared_head_count": compared_head_count,
+        "fully_compared_head_count": fully_compared_head_count,
+        "missing_head_count": missing_head_count,
+        "first_material_head": first_material_head,
+        "boundary_counts": boundary_counts,
+        "max_abs_delta": max_abs_delta,
+        "max_rms_delta": max_rms_delta,
+        "all_compared": !head_ids.is_empty() && missing_head_count == 0,
+        "blocked_reasons": blocked_reasons,
+        "rows": rows,
+    })
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScoreKeyHistoryEffectVariant<'a> {
     id: &'static str,
@@ -31997,6 +32333,119 @@ mod tests {
         );
         assert_eq!(
             history.pointer("/first_material_head/delta/first_f16_bucket_mismatch_layout/token"),
+            Some(&json!(1))
+        );
+    }
+
+    #[test]
+    fn compare_reports_query_score_input_boundary_f16_conversion() {
+        let mut reference_head0 = test_reference_trace_record(
+            "q_score_input_head0_history_ref_layout",
+            vec![1.0, 2.0, 3.0, 4.0],
+        );
+        reference_head0.shape = vec![2, 2];
+        reference_head0.nelements = 4;
+        reference_head0.layer = Some(0);
+        let reference_records = vec![reference_head0];
+
+        let mut rust_records = BTreeMap::new();
+        for (stage, values) in [
+            ("attention_q_rope_head0_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0]),
+            ("attention_q_rope_f16_roundtrip_head0_history_ref_layout", vec![1.0, 2.5, 3.0, 4.0]),
+            ("attention_q_score_input_head0_history_ref_layout", vec![1.0, 2.5, 3.0, 4.0]),
+        ] {
+            rust_records.insert(
+                stage.to_string(),
+                RustTraceRecord {
+                    shape: vec![2, 2],
+                    num_elements: 4,
+                    layer: Some(0),
+                    name: format!("t1/blk0/{stage}"),
+                    first_values: values.clone(),
+                    ..test_rust_trace_record(stage, values)
+                },
+            );
+        }
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_query_score_input_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/fully_compared_head_count"), Some(&json!(1)));
+        assert_eq!(
+            boundary.pointer("/first_material_head/first_material_boundary"),
+            Some(&json!("rust_query_f16_score_conversion"))
+        );
+        assert_eq!(
+            boundary.pointer("/boundary_counts/rust_query_f16_score_conversion"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            boundary.pointer(
+                "/first_material_head/rust_rope_to_f16_delta/delta/first_f16_bucket_mismatch_layout/dim"
+            ),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            boundary.pointer(
+                "/first_material_head/rust_rope_to_f16_delta/delta/first_f16_bucket_mismatch_layout/token"
+            ),
+            Some(&json!(1))
+        );
+    }
+
+    #[test]
+    fn compare_reports_query_score_input_boundary_serialization() {
+        let mut reference_head0 = test_reference_trace_record(
+            "q_score_input_head0_history_ref_layout",
+            vec![1.0, 2.0, 3.0, 4.0],
+        );
+        reference_head0.shape = vec![2, 2];
+        reference_head0.nelements = 4;
+        reference_head0.layer = Some(0);
+        let reference_records = vec![reference_head0];
+
+        let mut rust_records = BTreeMap::new();
+        for (stage, values) in [
+            ("attention_q_rope_head0_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0]),
+            ("attention_q_rope_f16_roundtrip_head0_history_ref_layout", vec![1.0, 2.0, 3.0, 4.0]),
+            ("attention_q_score_input_head0_history_ref_layout", vec![1.0, 2.5, 3.0, 4.0]),
+        ] {
+            rust_records.insert(
+                stage.to_string(),
+                RustTraceRecord {
+                    shape: vec![2, 2],
+                    num_elements: 4,
+                    layer: Some(0),
+                    name: format!("t1/blk0/{stage}"),
+                    first_values: values.clone(),
+                    ..test_rust_trace_record(stage, values)
+                },
+            );
+        }
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_query_score_input_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            boundary.pointer("/first_material_head/first_material_boundary"),
+            Some(&json!("rust_query_score_input_serialization"))
+        );
+        assert_eq!(
+            boundary.pointer("/boundary_counts/rust_query_score_input_serialization"),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            boundary.pointer("/first_material_head/rust_rope_to_f16_delta/material_mismatch"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            boundary.pointer(
+                "/first_material_head/rust_f16_to_score_input_delta/delta/first_f16_bucket_mismatch_layout/token"
+            ),
             Some(&json!(1))
         );
     }
