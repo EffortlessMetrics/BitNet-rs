@@ -155,12 +155,13 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_spans() {
+    fn test_merge_spans() -> Result<(), &'static str> {
         let spans = vec![TokenSpan::new(1, "hel", 0, 3), TokenSpan::new(2, "lo", 3, 5)];
-        let merged = merge_spans(&spans).expect("non-empty input should merge");
+        let merged = merge_spans(&spans).ok_or("non-empty input should merge")?;
         assert_eq!(merged.text, "hello");
         assert_eq!(merged.start, 0);
         assert_eq!(merged.end, 5);
+        Ok(())
     }
 
     #[test]
