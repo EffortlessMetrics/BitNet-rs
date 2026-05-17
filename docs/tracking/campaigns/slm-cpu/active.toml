@@ -2206,14 +2206,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-027"
-status = "ready"
+status = "blocked"
 branch = "codex/slm-cpu-027-second-dense-sanity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-026"]
-acceptance = "Add a bounded second-small-dense-GGUF sanity item after the Qwen3 Q8_0 Kaby proof-appliance profile. The slice must select or validate one non-Qwen3 small dense candidate by explicit model SHA, architecture metadata, strict tokenizer authority, selected CPU backend, fallback=false, prompt/generated token receipts, and reference-comparison or explicit blocker evidence. It must prove adapter generality only; it must not claim broad answer quality, sustained throughput, Q4/Q5 quant expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+acceptance = "Duplicate tracker item retained as blocked because the second-small-dense-GGUF sanity requirement was already satisfied by SLM-CPU-017 and SLM-CPU-017A. Do not implement this item as a new runtime slice; use SLM-CPU-028 for the next non-duplicative Q4 planning gate."
 commands = [
   "cargo run -p xtask --no-default-features -- campaign generate",
   "cargo run -p xtask --no-default-features -- campaign doctor",
@@ -2240,13 +2240,59 @@ forbidden_paths = [
 ]
 may_claim = [
   "The Kaby Lake Qwen3 Q8_0 proof-appliance profile is complete through SLM-CPU-026.",
-  "A valid SLM-CPU-027 slice checks one second small dense model candidate for strict CPU operability or records the exact blocker.",
-  "The goal is adapter generality evidence, not speed or broad chat quality.",
+  "SLM-CPU-017 and SLM-CPU-017A already provide the second-model blocker and positive Qwen2.5 Q8_0 sanity evidence.",
+  "SLM-CPU-027 is blocked to prevent duplicate second-model work.",
 ]
 must_not_claim = [
   "Sustained 8250U throughput is proven.",
   "Broad answer quality is proven.",
   "Q4/Q5 quant expansion is in scope.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-028"
+status = "ready"
+branch = "codex/slm-cpu-028-q4-planning-gates"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-026"]
+acceptance = "Define the bounded Kaby Lake Q4_K_M/Q4_K_S expansion plan after the Qwen3 Q8_0 proof-appliance profile and Qwen2.5 Q8_0 second-model sanity evidence. The slice must identify candidate GGUF artifacts only by pinned SHA256 and metadata, define the strict load/tokenizer/backend/fallback gates, require constrained corpus, multi-token determinism, warm-session receipts, operator-profile timing/memory/storage context, and before/after generated-ID preservation before any Q4 support claim. It must not implement Q4 runtime support or claim broad answer quality, sustained throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+  "ci/slm-cpu/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The Qwen3 Q8_0 Kaby proof-appliance profile is complete through SLM-CPU-026.",
+  "Qwen2.5 Q8_0 second-model sanity evidence already exists via SLM-CPU-017A.",
+  "A valid SLM-CPU-028 slice defines Q4_K_M/Q4_K_S expansion gates before runtime support starts.",
+]
+must_not_claim = [
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
   "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
   "Qwen3.5 or hybrid architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
