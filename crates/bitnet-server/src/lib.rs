@@ -2210,7 +2210,8 @@ mod tests {
     }
 
     #[test]
-    fn bitnet_qk256_server_smoke_receipt_records_qk256_claim_boundary() {
+    fn bitnet_qk256_server_smoke_receipt_records_qk256_claim_boundary() -> Result<(), &'static str>
+    {
         let request = ChatCompletionRequest {
             model: "microsoft-bitnet-b1.58-2B-4T-i2s".to_string(),
             messages: vec![ChatCompletionMessage {
@@ -2300,6 +2301,7 @@ mod tests {
             assert_eq!(stats[0].fallback_invocations, 0);
             assert_eq!(stats[0].cpu_fallback_invocations, 0);
         }
+        Ok(())
     }
 
     #[test]
