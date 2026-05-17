@@ -1,0 +1,30 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-019"
+event = "in_progress"
+timestamp = "2026-05-17T16:31:12Z"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-019-post-handoff-roadmap"
+
+summary = "Started the post-handoff M3 Air roadmap refresh so the lane continues as explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks."
+
+artifacts = [
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "The Microsoft 2B I2_S handoff stack is closed, but the M3 Air lane should not collapse into an empty backlog.",
+  "The roadmap refresh keeps secondary 1bitLLM candidates blocked until exact artifact authority and storage-safe preflight evidence exist.",
+  "The next M3 support work is split into device-model hardening, accuracy comparison profiles, bounded performance envelopes, artifact unblock preflights, and M4 strict-proof handoff alignment.",
+  "No new M3 inference, artifact download, M4 proof, Metal, MPSGraph, Neural Engine, QK256, or broad Apple Silicon performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]

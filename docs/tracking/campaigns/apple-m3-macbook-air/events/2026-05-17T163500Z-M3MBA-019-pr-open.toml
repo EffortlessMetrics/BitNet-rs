@@ -1,0 +1,33 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-019"
+event = "pr_open"
+timestamp = "2026-05-17T16:35:00Z"
+actor = "codex"
+pr = 5388
+head_sha = "0d19e3ada5c95a8cdf0451a662c4b7c48fed871a"
+branch = "codex/apple-m3-macbook-air/M3MBA-019-post-handoff-roadmap"
+
+summary = "Opened #5388 with the post-handoff M3 Air roadmap refresh."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5388",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "The roadmap now splits follow-on M3 work into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks.",
+  "The secondary 1bitLLM candidates remain blocked until exact artifact authority and storage-safe preflight evidence exist.",
+  "The selected-long-job CI rule remains explicit: route irrelevant PRs away, preflight before expensive work, upload phase evidence, and size caps from healthy completed runs with cushion.",
+  "No new M3 inference, artifact download, M4 proof, Metal, MPSGraph, Neural Engine, QK256, or broad Apple Silicon performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "target/debug/xtask campaign check apple-m3-macbook-air",
+  "target/debug/xtask campaign doctor",
+  "target/debug/xtask campaign generate --check",
+  "git diff --check",
+]

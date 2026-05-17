@@ -139,13 +139,52 @@ candidate remains serialized behind fresh disk preflight and cleanup/retention
 evidence.
 
 The next sequence should stay as small PRs, with each PR either merging evidence
-or naming a blocker:
+or naming a blocker. The handoff stack is closed, so the next work is no longer
+"run the old list"; it is a post-handoff execution plan:
+
+| Stack position | Track | PR shape | Blocks |
+|---:|---|---|---|
+| 1 | `M3MBA-019` | Refresh the roadmap and tracker after the handoff stack closes. | Merged setup work from being treated as the next active task. |
+| 2 | M3 device model | Tighten `apple-m3-air-*` capability surfaces, unsupported-backend rejection, and receipt wording without weakening M4 labels. | Hidden fallback, generic Metal/MPSGraph wording, or M4/M3 aliasing. |
+| 3 | M3 accuracy comparison | Add a bounded comparison profile that reuses the accepted dense SLM receipt fields and records prompt IDs, generated IDs, decoded text, tokenizer authority, fallback status, and comparable/non-comparable gaps. | Accuracy claims without exact prompt/model/tokenizer/backend context. |
+| 4 | M3 performance envelope | Record only completed-run actuals with power, thermal, storage, thread count, token budget, and cap sizing; use caps with cushion rather than near-completion termination. | Performance claims from cancelled, timed-out, or missing-context jobs. |
+| 5 | Secondary artifact unblock | Re-check 0.7B and 3B candidates only through exact repo/file/revision/size/SHA/tokenizer/storage preflight before any download or run. | Official/approved artifact authority or storage-safe preflight is still missing. |
+| 6 | M4 proof alignment | Keep accepted M3 artifact evidence linked to separate M4 strict-proof items and require fresh M4 receipts before any M4 claim. | A handoff would imply M3 reference-runner output is M4 proof. |
+
+The follow-on implementation items should be created from these tracks as
+single-purpose work items. M3 accuracy and performance work should prefer dense
+SLM comparison receipts first because the lane already has model/tokenizer and
+backend discipline there. BitNet artifact work should stay blocked until the
+artifact authority surface changes or a separate approved third-party path is
+recorded.
+
+The just-closed stack is retained below as history:
 
 | Stack position | Item | PR shape | Blocks |
 |---:|---|---|---|
 | 1 | `M3MBA-018` | Refresh the roadmap and campaign state after M3MBA-017. | Merged; prevents stale instructions from sending operators back through merged setup work. |
 | 2 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Blocked until an official/approved TL diagnostic artifact and safe storage state exist. |
 | 3 | `M3MBA-008` | Hand accepted Microsoft 2B I2_S evidence to separate M4 strict-proof work. | Merged; fresh M4 receipts remain required before proof claims. |
+
+## Post-Handoff Tracks
+
+After `M3MBA-008`, the M3 Air lane has five active improvement tracks. These
+tracks are intentionally narrower than the campaign objective so each PR can be
+reviewed and merged independently.
+
+| Track | Next evidence | Done when | Must not claim |
+|---|---|---|---|
+| Device model hardening | Tests, help text, and receipt wording proving `apple-m3-air-cpu-neon`, `apple-m3-air-metal`, and `apple-m3-air-mpsgraph` remain distinct. | Unsupported Metal/MPSGraph model requests fail closed and CPU fallback cannot masquerade as accelerator evidence. | Metal/MPSGraph model inference works. |
+| Accuracy comparison | A bounded dense SLM profile with exact prompt/model/tokenizer/backend fields and comparable/non-comparable decisions against M4 and SLM CPU receipts. | Prompt IDs, generated IDs, decoded text, fallback status, and tokenizer authority are preserved for every comparison case. | Broad answer quality or BitNet behavior. |
+| Performance envelope | Completed M3 Air run actuals with cap sizing, thermal/power context, storage state, thread count, token budget, and repeat policy. | The report separates healthy completed runtimes from timeouts/cancellations and sizes future caps from completed runs plus cushion. | Sustained broad Apple Silicon performance or M4 replacement timing. |
+| Artifact unblock | Exact artifact preflights for blocked 0.7B/3B candidates or an explicit no-go refresh. | Repo, file, revision, size, SHA256, tokenizer authority, route, and free-space floor are known before any large download. | Candidate acceptance before local authority and cleanup evidence. |
+| M4 proof alignment | Tracker linkage from accepted M3 artifact evidence to a separate M4 proof item. | The M4 item names the M3 evidence as input and requires fresh M4 backend receipts before proof. | M3 reference-runner output is M4 proof. |
+
+For CI design, post-handoff M3 jobs follow the selected-long-job rule already
+encoded by `M3MBA-013`: route irrelevant PRs away, preflight before expensive
+work, upload phase evidence, and set caps from healthy completed runs with
+cushion. Ending a selected M3 job just before receipt emission is treated as
+wasted CI, not cost control.
 
 ## 2026-05-13 Tactical Plan
 
@@ -628,11 +667,11 @@ Accepted candidates may stay in the local cache until M4 handoff is created.
 Rejected candidates should be deleted unless their failure evidence cannot be
 reproduced cheaply. The committed report should state what happened either way.
 
-## PR Stack
+## Historical PR Stack
 
-This table mirrors the canonical tactical order above. It includes synthesis and
-storage side paths so later PRs do not silently skip the cleanup and comparison
-work.
+This table records the closed tactical order that brought the lane to the
+Microsoft 2B handoff. It is retained for auditability; it is not the next active
+execution queue.
 
 | Order | Branch / item | Scope | Stop condition |
 |---:|---|---|---|
@@ -831,18 +870,26 @@ work.
    docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md
    ```
 
-## Near-Term Order
+## Post-Handoff Near-Term Order
 
-1. Merge `M3MBA-018` so the roadmap, campaign prose, and generated tracker agree
-   with the post-device-model state.
-2. Keep `M3MBA-006` blocked unless a concrete 0.7B GGUF, reproducible conversion
+1. Merge `M3MBA-019` so the roadmap, campaign prose, and generated tracker agree
+   with the post-handoff state.
+2. Create the next device-model hardening item only around concrete M3 Air
+   receipt, help, or rejection behavior that keeps CPU/NEON, Metal, and MPSGraph
+   labels distinct.
+3. Create the next accuracy comparison item around bounded dense SLM receipts
+   with exact prompt IDs, generated IDs, tokenizer authority, backend identity,
+   fallback state, and comparable/non-comparable decisions.
+4. Create the next M3 performance item only from completed-run actuals with
+   thermal, power, storage, thread, token-budget, and cap-sizing evidence.
+5. Keep `M3MBA-006` blocked unless a concrete 0.7B GGUF, reproducible conversion
    path, or explicitly approved third-party artifact path is named.
-3. Run `M3MBA-007` only as 3B TL1/TL2 diagnostic work after fresh disk preflight
-   and with an explicit I2_S non-claim.
-4. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
-   reference output with tokenizer authority and the secondary-candidate
-   decision surface is explicit; otherwise close it as no accepted artifact.
-5. Preserve the `M3MBA-013` selected-long-job rule for any future live M3 lane:
+6. Keep `M3MBA-007` blocked until an official or explicitly approved 3B TL1/TL2
+   diagnostic artifact and safe local storage state exist.
+7. Keep M4 proof handoff separate from M3 evidence. `M3MBA-008` closed the first
+   handoff report; any follow-on M4 proof item must run fresh M4 receipts before
+   claiming proof.
+8. Preserve the `M3MBA-013` selected-long-job rule for any future live M3 lane:
    route irrelevant work before it starts, preflight before expensive phases,
    upload partial phase artifacts, and size caps from completed runs plus
    cushion instead of ending selected jobs near completion.
@@ -912,9 +959,13 @@ the next item requires a fresh M4 strict receipt
    authority, and runner route should be used for the smaller control candidate?
 2. `M3MBA-007`: which TL1/TL2 3B artifact is small and authoritative enough to
    justify a diagnostic-only M3 run after the 0.7B decision?
-3. `M3MBA-008`: should the accepted Microsoft 2B I2_S reference context open
-   the M4 strict-proof handoff immediately, or should handoff wait for the
-   smaller 0.7B control decision?
+3. Which dense SLM comparison profile is the smallest useful next M3 accuracy
+   surface: the existing smoke corpus, a warm-session subset, or a new
+   comparison-only prompt set?
+4. Which completed M3 run actuals should seed future cap sizing, and which
+   cancelled or timed-out runs must be excluded from healthy-runtime percentiles?
+5. Which M4 strict-proof item should consume the Microsoft 2B I2_S handoff, and
+   which fresh M4 receipt fields are required before it can claim local proof?
 
 The default answer is conservative: keep one MacBook lane until actual receipts
 show enough work to justify a separate M3 performance campaign; keep artifacts

@@ -958,3 +958,41 @@ must_not_claim = [
   "Cache retention proves model quality.",
   "Large model binaries were committed.",
 ]
+
+[[work_item]]
+id = "M3MBA-019"
+status = "pr_open"
+pr = 5388
+head_sha = "0d19e3ada5c95a8cdf0451a662c4b7c48fed871a"
+branch = "codex/apple-m3-macbook-air/M3MBA-019-post-handoff-roadmap"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-008"]
+acceptance = "Refresh the M3 Air roadmap after the Microsoft 2B handoff stack closes so the next lane work is not a vague backlog: define post-handoff tracks for device-model hardening, M3 accuracy comparison profiles, bounded performance evidence from completed runs, secondary artifact unblock preflights, and M4 strict-proof handoff alignment while preserving M3/M4 claim boundaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air lane has a post-handoff roadmap for device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment work.",
+]
+must_not_claim = [
+  "Any new M3 Air model inference was run.",
+  "Any new BitNet artifact was downloaded or accepted.",
+  "M3 Air evidence proves M4 Mac mini performance or local-answer quality.",
+]
