@@ -368,32 +368,35 @@ mod tests {
     }
 
     #[test]
-    fn preserves_commas_and_colons_inside_strings() {
-        let j = MinimalJson::parse(r#"{"message":"ready: yes, continue","tail":"ok"}"#).unwrap();
+    fn preserves_commas_and_colons_inside_strings() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"message":"ready: yes, continue","tail":"ok"}"#)?;
         assert_eq!(j.get_str("message"), Some("ready: yes, continue".to_string()));
         assert_eq!(j.get_str("tail"), Some("ok".to_string()));
+        Ok(())
     }
 
     #[test]
-    fn handles_escaped_quotes_and_even_backslashes_before_quotes() {
+    fn handles_escaped_quotes_and_even_backslashes_before_quotes() -> Result<(), String> {
         let j =
-            MinimalJson::parse(r#"{"quote":"say \"hi\", then C:\\tools","after":"still parsed"}"#)
-                .unwrap();
+            MinimalJson::parse(r#"{"quote":"say \"hi\", then C:\\tools","after":"still parsed"}"#)?;
         assert_eq!(j.get_str("quote"), Some("say \"hi\", then C:\\tools".to_string()));
         assert_eq!(j.get_str("after"), Some("still parsed".to_string()));
+        Ok(())
     }
 
     #[test]
-    fn decodes_common_string_escapes_in_keys_and_values() {
-        let j = MinimalJson::parse(r#"{"line\nkey":"one\ntwo\tthree"}"#).unwrap();
+    fn decodes_common_string_escapes_in_keys_and_values() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"line\nkey":"one\ntwo\tthree"}"#)?;
         assert_eq!(j.get_str("line\nkey"), Some("one\ntwo\tthree".to_string()));
+        Ok(())
     }
 
     #[test]
-    fn decodes_unicode_string_escapes() {
-        let j = MinimalJson::parse(r#"{"snowman":"\u2603","face":"\uD83D\uDE00"}"#).unwrap();
+    fn decodes_unicode_string_escapes() -> Result<(), String> {
+        let j = MinimalJson::parse(r#"{"snowman":"\u2603","face":"\uD83D\uDE00"}"#)?;
         assert_eq!(j.get_str("snowman"), Some("☃".to_string()));
         assert_eq!(j.get_str("face"), Some("😀".to_string()));
+        Ok(())
     }
 
     #[test]
