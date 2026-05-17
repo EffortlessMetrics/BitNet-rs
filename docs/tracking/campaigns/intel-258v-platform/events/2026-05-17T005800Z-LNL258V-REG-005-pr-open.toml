@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T00:58:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5247
+branch = "codex/lunar-lake/LNL258V-REG-005-durability-regression"
+head_sha = "cacec939c0c2c03cc30645c24d6bf0b7719cb983"
+summary = "Opened LNL258V-REG-005 to gate strict regression v2 on repeated-run durability evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+]
+
+notes = [
+  "The PR adds durability-bundle inspection to `bitnet lunar-lake regress` and regenerates the strict regression bundle with durability_bundle_indexed=true.",
+  "The claim boundary remains regression wiring only: no new inference, route promotion, speedup, Arc/NPU acceleration, OpenVINO GPU/NPU stability, or BitNet QK256/I2_S behavior change.",
+]

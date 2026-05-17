@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-16T19:05:00Z",
+  "created_utc": "2026-05-17T00:40:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -118,12 +118,31 @@
     "regression_ready": true,
     "gaps": []
   },
+  "durability_bundle": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+    "durability_index_ready": true,
+    "stability_proven": true,
+    "profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal"
+    ],
+    "required_repeat_count": 10,
+    "stable_profile_count": 3,
+    "fallback_observed": false,
+    "answer_drift_detected": false,
+    "route_drift_detected": false,
+    "repeated_run_stability_claim": true,
+    "regression_ready": true,
+    "gaps": []
+  },
   "regression_surface": {
     "surface_id": "lunar_lake_regression_v2",
     "strict_default": true,
     "answer_corpus_v2_indexed": true,
     "route_profile_comparison_indexed": true,
     "cold_warm_benchmark_indexed": true,
+    "durability_bundle_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -155,10 +174,16 @@
       "low_power",
       "bitnet_strict_reference"
     ],
+    "required_durability_profiles": [
+      "regression_tiny",
+      "ask_short",
+      "ask_normal"
+    ],
     "fallback_observed": false,
     "candidate_routes_remain_unpromoted": true,
     "benchmark_qualified_advantage_claimed": false,
     "cold_warm_benchmark_ready": true,
+    "durability_stability_proven": true,
     "strict_ready": true,
     "gaps": []
   },
@@ -281,6 +306,24 @@
         "benchmark_qualified_advantage_claimed=false",
         "fallback_observed=false",
         "telemetry_gap_count=18"
+      ]
+    },
+    {
+      "check_id": "durability_bundle_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json"
+      ],
+      "notes": [
+        "profiles=regression_tiny,ask_short,ask_normal",
+        "durability_index_ready=true",
+        "stability_proven=true",
+        "required_repeat_count=10",
+        "stable_profile_count=3",
+        "fallback_observed=false",
+        "answer_drift_detected=false",
+        "route_drift_detected=false",
+        "repeated_run_stability_claim=true"
       ]
     }
   ],

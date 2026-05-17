@@ -135,6 +135,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
         cold_warm_benchmark: Option<PathBuf>,
 
+        /// Optional durability bundle to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = DURABILITY_BUNDLE)]
+        durability_bundle: Option<PathBuf>,
+
         /// Output JSON regression bundle to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -472,6 +477,8 @@ pub struct LunarLakeRegressionBundle {
     pub route_profile_comparison: Option<RouteProfileRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cold_warm_benchmark: Option<ColdWarmRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub durability_bundle: Option<DurabilityRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -487,13 +494,19 @@ pub struct RegressionSurfaceSummary {
     pub answer_corpus_v2_indexed: bool,
     pub route_profile_comparison_indexed: bool,
     pub cold_warm_benchmark_indexed: bool,
+    #[serde(default)]
+    pub durability_bundle_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
+    #[serde(default = "default_durability_required_profiles")]
+    pub required_durability_profiles: Vec<String>,
     pub fallback_observed: bool,
     pub candidate_routes_remain_unpromoted: bool,
     pub benchmark_qualified_advantage_claimed: bool,
     pub cold_warm_benchmark_ready: bool,
+    #[serde(default)]
+    pub durability_stability_proven: bool,
     pub strict_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -506,6 +519,7 @@ impl Default for RegressionSurfaceSummary {
             answer_corpus_v2_indexed: false,
             route_profile_comparison_indexed: false,
             cold_warm_benchmark_indexed: false,
+            durability_bundle_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -518,18 +532,25 @@ impl Default for RegressionSurfaceSummary {
                 .iter()
                 .map(|profile| (*profile).to_string())
                 .collect(),
+            required_durability_profiles: default_durability_required_profiles(),
             fallback_observed: false,
             candidate_routes_remain_unpromoted: false,
             benchmark_qualified_advantage_claimed: false,
             cold_warm_benchmark_ready: false,
+            durability_stability_proven: false,
             strict_ready: false,
             gaps: vec![
                 "answer corpus v2 is not indexed".to_string(),
                 "route profile comparison is not indexed".to_string(),
                 "cold/warm benchmark qualification is not indexed".to_string(),
+                "durability bundle is not indexed".to_string(),
             ],
         }
     }
+}
+
+fn default_durability_required_profiles() -> Vec<String> {
+    DURABILITY_REQUIRED_PROFILES.iter().map(|profile| (*profile).to_string()).collect()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -582,6 +603,22 @@ pub struct ColdWarmRegressionSummary {
     pub fallback_observed: bool,
     pub benchmark_qualified_advantage_claimed: bool,
     pub telemetry_gaps: Vec<String>,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DurabilityRegressionSummary {
+    pub path: String,
+    pub durability_index_ready: bool,
+    pub stability_proven: bool,
+    pub profiles: Vec<String>,
+    pub required_repeat_count: u64,
+    pub stable_profile_count: usize,
+    pub fallback_observed: bool,
+    pub answer_drift_detected: bool,
+    pub route_drift_detected: bool,
+    pub repeated_run_stability_claim: bool,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -1003,6 +1040,7 @@ impl LunarLakeCommand {
                 answer_corpus_v2,
                 route_profile_comparison,
                 cold_warm_benchmark,
+                durability_bundle,
                 json_out,
                 created_utc,
                 strict,
@@ -1017,6 +1055,7 @@ impl LunarLakeCommand {
                     answer_corpus_v2.as_deref(),
                     route_profile_comparison.as_deref(),
                     cold_warm_benchmark.as_deref(),
+                    durability_bundle.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -1398,6 +1437,7 @@ pub fn build_regression_bundle_with_created_utc(
         None,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -1408,6 +1448,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     answer_corpus_v2: Option<&Path>,
     route_profile_comparison: Option<&Path>,
     cold_warm_benchmark: Option<&Path>,
+    durability_bundle: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -1546,6 +1587,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     } else {
         None
     };
+    let durability_bundle = if let Some(path) = durability_bundle {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_durability_regression(&path)?;
+        checks.push(regression_check_owned(
+            "durability_bundle_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            durability_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -1555,6 +1609,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         answer_corpus_v2.as_ref(),
         route_profile_comparison.as_ref(),
         cold_warm_benchmark.as_ref(),
+        durability_bundle.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -1568,6 +1623,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         answer_corpus_v2,
         route_profile_comparison,
         cold_warm_benchmark,
+        durability_bundle,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -1580,11 +1636,13 @@ fn build_regression_surface_summary(
     answer_corpus_v2: Option<&AnswerCorpusV2Summary>,
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
     cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
+    durability_bundle: Option<&DurabilityRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
         cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
+        durability_bundle_indexed: durability_bundle.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
@@ -1600,6 +1658,9 @@ fn build_regression_surface_summary(
             || cold_warm_benchmark.map(|summary| summary.fallback_observed).unwrap_or(false),
         cold_warm_benchmark_ready: cold_warm_benchmark
             .map(|summary| summary.regression_ready)
+            .unwrap_or(false),
+        durability_stability_proven: durability_bundle
+            .map(|summary| summary.stability_proven)
             .unwrap_or(false),
         gaps: Vec::new(),
         ..RegressionSurfaceSummary::default()
@@ -1662,6 +1723,31 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("cold/warm benchmark qualification is not indexed".to_string());
+    }
+
+    if let Some(durability) = durability_bundle {
+        if !durability.regression_ready {
+            summary.gaps.push(format!(
+                "durability bundle is not regression-ready: {}",
+                durability.gaps.join("; ")
+            ));
+        }
+        if !durability.stability_proven {
+            summary
+                .gaps
+                .push("durability bundle has not proven repeated-run stability".to_string());
+        }
+        if durability.fallback_observed {
+            summary.gaps.push("durability bundle observed fallback_used=true".to_string());
+        }
+        if durability.answer_drift_detected {
+            summary.gaps.push("durability bundle observed answer drift".to_string());
+        }
+        if durability.route_drift_detected {
+            summary.gaps.push("durability bundle observed route drift".to_string());
+        }
+    } else {
+        summary.gaps.push("durability bundle is not indexed".to_string());
     }
 
     summary.gaps.sort();
@@ -1962,6 +2048,131 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
     })
 }
 
+fn inspect_durability_regression(path: &Path) -> Result<DurabilityRegressionSummary> {
+    let bundle: LunarLakeDurabilityBundle = read_json_receipt(path)?;
+    let profiles =
+        bundle.profiles.iter().map(|profile| profile.profile_id.clone()).collect::<Vec<_>>();
+    let mut gaps = Vec::new();
+    if !bundle.durability_index_ready {
+        gaps.push(format!("durability bundle is not ready: {}", bundle.gaps.join("; ")));
+    }
+    if !bundle.stability_proven {
+        gaps.push("durability bundle has stability_proven=false".to_string());
+    }
+    if let Some(missing) = first_missing(&profiles, DURABILITY_REQUIRED_PROFILES) {
+        gaps.push(format!("durability bundle missing profile {missing}"));
+    }
+    if !bundle.next_required_evidence.is_empty() {
+        gaps.push(format!(
+            "durability bundle still requires evidence: {}",
+            bundle.next_required_evidence.join("; ")
+        ));
+    }
+    if bundle.claim_boundary.new_inference_executed {
+        gaps.push("durability bundle executed new inference".to_string());
+    }
+    if bundle.claim_boundary.route_promotion_changed {
+        gaps.push("durability bundle changed route promotion".to_string());
+    }
+    if bundle.claim_boundary.broad_quality_claim {
+        gaps.push("durability bundle made a broad quality claim".to_string());
+    }
+    if bundle.claim_boundary.speedup_claim || bundle.claim_boundary.acceleration_claim {
+        gaps.push("durability bundle claimed speedup or acceleration".to_string());
+    }
+    if bundle.claim_boundary.hidden_fallback_allowed {
+        gaps.push("durability bundle allows hidden fallback".to_string());
+    }
+    if bundle.claim_boundary.dense_slm_as_bitnet_proof {
+        gaps.push("durability bundle treats dense SLM evidence as BitNet proof".to_string());
+    }
+    if !bundle.claim_boundary.repeated_run_stability_claim {
+        gaps.push(
+            "durability bundle must carry the bounded repeated-run stability claim".to_string(),
+        );
+    }
+
+    let mut fallback_observed = false;
+    let mut answer_drift_detected = false;
+    let mut route_drift_detected = false;
+    let mut stable_profile_count = 0usize;
+    for profile_id in DURABILITY_REQUIRED_PROFILES {
+        let Some(profile) =
+            bundle.profiles.iter().find(|profile| profile.profile_id == *profile_id)
+        else {
+            continue;
+        };
+        if profile.route_id != DEFAULT_ASK_ROUTE {
+            gaps.push(format!(
+                "durability profile {profile_id} route changed to {}",
+                profile.route_id
+            ));
+        }
+        if profile.observed_execution_count < profile.required_execution_count {
+            gaps.push(format!(
+                "durability profile {profile_id} observed {}/{} executions",
+                profile.observed_execution_count, profile.required_execution_count
+            ));
+        }
+        if profile.observed_execution_count < bundle.required_repeat_count {
+            gaps.push(format!(
+                "durability profile {profile_id} is below bundle required_repeat_count {}",
+                bundle.required_repeat_count
+            ));
+        }
+        if profile.answer_drift_detected != Some(false) {
+            answer_drift_detected = true;
+        }
+        if profile.route_drift_detected {
+            route_drift_detected = true;
+        }
+        if profile.fallback_drift_detected != Some(false) {
+            fallback_observed = true;
+        }
+        if profile.stability_status != "stable" {
+            gaps.push(format!(
+                "durability profile {profile_id} stability_status={}",
+                profile.stability_status
+            ));
+        }
+        if !profile.blockers.is_empty() {
+            gaps.push(format!(
+                "durability profile {profile_id} blockers: {}",
+                profile.blockers.join("; ")
+            ));
+        }
+        if profile.stability_status == "stable" && profile.blockers.is_empty() {
+            stable_profile_count += 1;
+        }
+    }
+    if fallback_observed {
+        gaps.push("durability bundle observed fallback drift".to_string());
+    }
+    if answer_drift_detected {
+        gaps.push("durability bundle observed answer drift".to_string());
+    }
+    if route_drift_detected {
+        gaps.push("durability bundle observed route drift".to_string());
+    }
+
+    gaps.sort();
+    gaps.dedup();
+    Ok(DurabilityRegressionSummary {
+        path: path_string(path),
+        durability_index_ready: bundle.durability_index_ready,
+        stability_proven: bundle.stability_proven,
+        profiles,
+        required_repeat_count: bundle.required_repeat_count,
+        stable_profile_count,
+        fallback_observed,
+        answer_drift_detected,
+        route_drift_detected,
+        repeated_run_stability_claim: bundle.claim_boundary.repeated_run_stability_claim,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -2008,6 +2219,22 @@ fn cold_warm_regression_notes(summary: &ColdWarmRegressionSummary) -> Vec<String
         ),
         format!("fallback_observed={}", summary.fallback_observed),
         format!("telemetry_gap_count={}", summary.telemetry_gaps.len()),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn durability_regression_notes(summary: &DurabilityRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profiles={}", summary.profiles.join(",")),
+        format!("durability_index_ready={}", summary.durability_index_ready),
+        format!("stability_proven={}", summary.stability_proven),
+        format!("required_repeat_count={}", summary.required_repeat_count),
+        format!("stable_profile_count={}", summary.stable_profile_count),
+        format!("fallback_observed={}", summary.fallback_observed),
+        format!("answer_drift_detected={}", summary.answer_drift_detected),
+        format!("route_drift_detected={}", summary.route_drift_detected),
+        format!("repeated_run_stability_claim={}", summary.repeated_run_stability_claim),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -5759,14 +5986,21 @@ mod tests {
             "2026-05-16T18:00:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
-        let regression_v2 = build_regression_bundle_with_created_utc_and_inputs(
+        let mut regression_v2 = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
+            None,
             "2026-05-16T19:05:00Z".to_string(),
         )?;
+        // Seed the durability builder with the pre-REG-005 strict surface it
+        // originally consumed; REG-005 adds durability back into regression.
+        regression_v2.regression_passed = true;
+        regression_v2.gaps.clear();
+        regression_v2.regression_surface.strict_ready = true;
+        regression_v2.regression_surface.gaps.clear();
         fs::write(
             temp.path().join(REGRESSION_BUNDLE_V2),
             serde_json::to_vec_pretty(&regression_v2)?,
@@ -5915,6 +6149,63 @@ mod tests {
             "2026-05-14T17:45:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "fallback_used": false,
+                "cases": [
+                    {"id": "math_2_plus_2_brief", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "copy_exact_color_triplet", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "stop_token_one_word_done", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "arithmetic_add_7_8", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "yes_no_clear_sky", "profile": "ask_short", "status": "passed"},
+                    {"id": "short_factual_capital_france", "profile": "ask_short", "status": "passed"},
+                    {"id": "instruction_single_sentence_rust", "profile": "ask_normal", "status": "passed"},
+                    {"id": "transcript_context_code_word", "profile": "ask_normal", "status": "passed"},
+                    {"id": "short_reasoning_apples_left", "profile": "ask_normal", "status": "passed"}
+                ]
+            }),
+        )?;
+
+        write_json(
+            temp.path(),
+            "durability.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_durability_bundle",
+                "proof_stage": "repeated_run_requirements_indexed_no_new_inference",
+                "created_utc": "2026-05-14T23:45:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(temp.path()),
+                "route_profile_comparison_receipt": path_string(&temp.path().join(ROUTE_PROFILE_COMPARISON)),
+                "cold_warm_benchmark_receipt": path_string(&temp.path().join("cold-warm.json")),
+                "cpu_corpus_v2_receipt": path_string(&temp.path().join(DENSE_CPU_CORPUS_V2)),
+                "regression_bundle_receipt": path_string(&temp.path().join(REGRESSION_BUNDLE_V2)),
+                "repeated_warm_session_receipt": path_string(&temp.path().join("durable-warm.json")),
+                "required_repeat_count": 10,
+                "durability_index_ready": true,
+                "stability_proven": true,
+                "profiles": [
+                    stable_durability_profile("regression_tiny", 4, 4),
+                    stable_durability_profile("ask_short", 2, 2),
+                    stable_durability_profile("ask_normal", 3, 3)
+                ],
+                "gaps": [],
+                "next_required_evidence": [],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "broad_quality_claim": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false,
+                    "dense_slm_as_bitnet_proof": false,
+                    "repeated_run_stability_claim": true
+                }
+            }),
+        )?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
@@ -5922,6 +6213,7 @@ mod tests {
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
+            Some(Path::new("durability.json")),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -5949,11 +6241,19 @@ mod tests {
         assert!(bundle.regression_surface.route_profile_comparison_indexed);
         assert!(bundle.regression_surface.cold_warm_benchmark_indexed);
         assert!(bundle.regression_surface.cold_warm_benchmark_ready);
+        assert!(bundle.regression_surface.durability_bundle_indexed);
+        assert!(bundle.regression_surface.durability_stability_proven);
         let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
             bail!("missing cold_warm_benchmark summary");
         };
         assert!(cold_warm.promoted_routes_have_critical_timing);
         assert!(cold_warm.candidate_routes_remain_unpromoted);
+        let Some(durability) = bundle.durability_bundle.as_ref() else {
+            bail!("missing durability bundle summary");
+        };
+        assert!(durability.regression_ready, "{:?}", durability.gaps);
+        assert!(durability.stability_proven);
+        assert_eq!(durability.stable_profile_count, 3);
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }
@@ -6047,6 +6347,7 @@ mod tests {
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
+            None,
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -6479,6 +6780,26 @@ mod tests {
         fs::create_dir_all(root)?;
         fs::write(root.join(file), serde_json::to_vec_pretty(&value)?)?;
         Ok(())
+    }
+
+    fn stable_durability_profile(profile_id: &str, total: u64, passed: u64) -> Value {
+        json!({
+            "profile_id": profile_id,
+            "route_id": DEFAULT_ASK_ROUTE,
+            "route_status": "promoted",
+            "promoted_route": DEFAULT_ASK_ROUTE,
+            "baseline_case_count": total,
+            "baseline_cases_passed": passed,
+            "baseline_cases_failed": total.saturating_sub(passed),
+            "observed_execution_count": 10,
+            "required_execution_count": 10,
+            "answer_drift_detected": false,
+            "route_drift_detected": false,
+            "fallback_drift_detected": false,
+            "latency_variance_status": "variance_window_available",
+            "stability_status": "stable",
+            "blockers": []
+        })
     }
 
     fn write_repeated_warm_session_receipt(root: &Path, file: &str) -> Result<()> {
