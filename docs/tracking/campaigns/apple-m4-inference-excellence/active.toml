@@ -1099,13 +1099,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-006"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-006-chat-gate"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-004", "M4-BITNET-EX-005"]
+pr = 5330
 acceptance = "Enable BitNet chat only after variable warm receipts, determinism, timeout/failure receipts, streaming semantics, strict backend/fallback fields, and chat claim boundaries pass the gate."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_chat -- --nocapture",
