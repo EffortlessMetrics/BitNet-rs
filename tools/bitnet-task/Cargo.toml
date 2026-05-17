@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
+bitnet-generation-events-core = { path = "../../crates/bitnet-generation-events-core", version = "0.2.1-dev" }
 clap = { workspace = true, features = ["derive"] }
 fs2 = "0.4.3"
 serde_json.workspace = true

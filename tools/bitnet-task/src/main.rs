@@ -42,8 +42,8 @@ use self::{
     },
     validation::{
         cmd_check_codeowners_teams, cmd_check_coverage, cmd_check_envlock, cmd_check_feature_gates,
-        cmd_check_ignore_annotations, cmd_check_serial_annotations, cmd_check_units,
-        cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
+        cmd_check_greedy_argmax, cmd_check_ignore_annotations, cmd_check_serial_annotations,
+        cmd_check_units, cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
         cmd_validate_iq2s_build, cmd_validate_strict,
     },
 };
@@ -93,6 +93,11 @@ enum Task {
     CheckSerialAnnotations,
     /// Equivalent of scripts/check-codeowners-teams.sh
     CheckCodeownersTeams,
+    /// Equivalent of scripts/check_greedy_argmax.py
+    CheckGreedyArgmax {
+        /// Path to CLI JSON output.
+        json_file: PathBuf,
+    },
     /// Equivalent of scripts/check_coverage.sh
     CheckCoverage {
         /// Coverage report file (JSON).
@@ -291,6 +296,7 @@ fn main() -> Result<()> {
         Task::TestTokenGeneration { model } => cmd_test_token_generation(&root, model),
         Task::CheckSerialAnnotations => cmd_check_serial_annotations(&root),
         Task::CheckCodeownersTeams => cmd_check_codeowners_teams(&root),
+        Task::CheckGreedyArgmax { json_file } => cmd_check_greedy_argmax(&json_file),
         Task::CheckCoverage { coverage_file, threshold } => {
             cmd_check_coverage(&coverage_file, threshold)
         }

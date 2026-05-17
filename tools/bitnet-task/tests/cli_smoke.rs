@@ -409,3 +409,56 @@ fn vendor_wrapper_injects_master_default() {
         ]
     );
 }
+
+#[test]
+fn check_greedy_argmax_accepts_matching_logit_dump() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let json_path = temp.path().join("greedy.json");
+    fs::write(
+        &json_path,
+        r#"{
+            "logits_dump": [
+                {
+                    "step": 0,
+                    "chosen_id": 9,
+                    "top_logits": [
+                        {"token_id": 7, "logit": 1.5},
+                        {"token_id": 9, "logit": 3.25}
+                    ]
+                }
+            ]
+        }"#,
+    )
+    .expect("write json");
+
+    let output = run_bitnet_task(&["check-greedy-argmax", json_path.to_str().unwrap()]);
+    let stdout = assert_success(&output);
+    assert!(stdout.contains("Greedy invariant holds for all 1 steps"));
+}
+
+#[test]
+fn check_greedy_argmax_rejects_mismatched_logit_dump() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let json_path = temp.path().join("greedy.json");
+    fs::write(
+        &json_path,
+        r#"{
+            "logits_dump": [
+                {
+                    "step": 0,
+                    "chosen_id": 7,
+                    "top_logits": [
+                        {"token_id": 7, "logit": 1.5},
+                        {"token_id": 9, "logit": 3.25}
+                    ]
+                }
+            ]
+        }"#,
+    )
+    .expect("write json");
+
+    let output = run_bitnet_task(&["check-greedy-argmax", json_path.to_str().unwrap()]);
+    let stderr = assert_failure(&output);
+    assert!(stderr.contains("Greedy violation"));
+    assert!(stderr.contains("argmax=9"));
+}

@@ -1633,6 +1633,7 @@ name = "bitnet-task"
 version = "0.2.1-dev"
 dependencies = [
  "anyhow",
+ "bitnet-generation-events-core",
  "clap",
  "fs2",
  "serde_json",

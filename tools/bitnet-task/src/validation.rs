@@ -117,6 +117,118 @@ fn coverage_percentage(coverage_data: &Value) -> Result<f64> {
     }
 }
 
+pub(crate) fn cmd_check_greedy_argmax(json_file: &Path) -> Result<()> {
+    use bitnet_generation_events_core::check_greedy_argmax;
+
+    let content = fs::read_to_string(json_file)
+        .with_context(|| format!("failed to read {}", json_file.display()))?;
+    let data: Value = serde_json::from_str(&content)
+        .with_context(|| format!("failed to parse JSON from {}", json_file.display()))?;
+    let logits_dump = data
+        .get("logits_dump")
+        .and_then(Value::as_array)
+        .context("No logits dump found in JSON")?;
+
+    let steps = logits_dump
+        .iter()
+        .enumerate()
+        .map(|(idx, step)| parse_greedy_logit_step(idx, step))
+        .collect::<Result<Vec<_>>>()?;
+    let report = check_greedy_argmax(&steps);
+
+    for missing in &report.missing_evidence {
+        eprintln!("Step {}: Missing data ({})", missing.step, missing.reason);
+    }
+
+    for violation in &report.violations {
+        eprintln!(
+            "Step {}: Greedy violation! argmax={} (logit={:.4}) but chosen={}",
+            violation.step, violation.argmax_token_id, violation.argmax_logit, violation.chosen_id
+        );
+        if let Some(step) = steps.iter().find(|step| step.step == violation.step) {
+            eprintln!("  Top logits at step {}:", violation.step);
+            for (rank, entry) in step.top_logits.iter().take(5).enumerate() {
+                let marker = if entry.token_id == violation.chosen_id { " <-- CHOSEN" } else { "" };
+                eprintln!(
+                    "    {}. token={} logit={:.4}{}",
+                    rank + 1,
+                    entry.token_id,
+                    entry.logit,
+                    marker
+                );
+            }
+        }
+    }
+
+    if report.is_valid() {
+        println!("✓ Greedy invariant holds for all {} steps", report.checked_steps);
+        Ok(())
+    } else {
+        bail!(
+            "greedy argmax invariant failed: {} violation(s), {} missing-evidence step(s)",
+            report.violations.len(),
+            report.missing_evidence.len()
+        )
+    }
+}
+
+fn parse_greedy_logit_step(
+    idx: usize,
+    step: &Value,
+) -> Result<bitnet_generation_events_core::GreedyLogitStep> {
+    let step_no = step.get("step").and_then(Value::as_u64).map_or(idx, |value| value as usize);
+    let chosen_id = step.get("chosen_id").and_then(Value::as_u64).map(|value| value as u32);
+    let top_logits_value = step.get("top_logits").or_else(|| step.get("topk"));
+    let top_logits = top_logits_value
+        .and_then(Value::as_array)
+        .map(|entries| {
+            entries
+                .iter()
+                .enumerate()
+                .map(|(entry_idx, entry)| parse_top_logit(step_no, entry_idx, entry))
+                .collect::<Result<Vec<_>>>()
+        })
+        .transpose()?
+        .unwrap_or_default();
+
+    Ok(bitnet_generation_events_core::GreedyLogitStep { step: step_no, top_logits, chosen_id })
+}
+
+fn parse_top_logit(
+    step: usize,
+    entry_idx: usize,
+    entry: &Value,
+) -> Result<bitnet_generation_events_core::TopLogit> {
+    if let Some(object) = entry.as_object() {
+        let token_id = object
+            .get("token_id")
+            .and_then(Value::as_u64)
+            .with_context(|| format!("step {step} top_logits[{entry_idx}] missing token_id"))?;
+        let logit = object
+            .get("logit")
+            .and_then(Value::as_f64)
+            .with_context(|| format!("step {step} top_logits[{entry_idx}] missing logit"))?;
+        return Ok(bitnet_generation_events_core::TopLogit {
+            token_id: token_id as u32,
+            logit: logit as f32,
+        });
+    }
+
+    let pair = entry.as_array().with_context(|| {
+        format!("step {step} top_logits[{entry_idx}] must be object or [token_id, logit]")
+    })?;
+    if pair.len() != 2 {
+        bail!("step {step} top_logits[{entry_idx}] pair must contain exactly 2 values");
+    }
+    let token_id = pair[0]
+        .as_u64()
+        .with_context(|| format!("step {step} top_logits[{entry_idx}][0] must be token id"))?;
+    let logit = pair[1]
+        .as_f64()
+        .with_context(|| format!("step {step} top_logits[{entry_idx}][1] must be logit"))?;
+    Ok(bitnet_generation_events_core::TopLogit { token_id: token_id as u32, logit: logit as f32 })
+}
+
 pub(crate) fn cmd_check_units_imports(root: &Path) -> Result<()> {
     let mut violations = Vec::new();
     for path in collect_rust_files(root.join("tests"))? {
