@@ -7665,6 +7665,14 @@ fn compare_reference_to_rust_with_records_with_model(
             &report["attention_selected_score_key_f16_policy"],
             &report["attention_selected_key_historical_projection_rope_source"],
         );
+    report["attention_post_fix_score_input_frontier"] = attention_post_fix_score_input_frontier(
+        &report["attention_rust_score_input_operand_drift"],
+        &report["attention_selected_key_score_input_source"],
+        &report["attention_selected_key_score_input_capture_source"],
+        &report["attention_selected_score_key_f16_policy"],
+        &report["attention_selected_post_rope_raw_key_epsilon"],
+        &report["attention_selected_key_historical_projection_rope_source"],
+    );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -27341,6 +27349,293 @@ fn attention_selected_post_rope_raw_key_epsilon(
     })
 }
 
+fn attention_post_fix_score_input_frontier(
+    operand_drift: &Value,
+    selected_key_source: &Value,
+    capture_source: &Value,
+    score_key_policy: &Value,
+    post_rope_raw_key_epsilon: &Value,
+    historical_rope_source: &Value,
+) -> Value {
+    let drift_rows = operand_drift.pointer("/rows").and_then(Value::as_array);
+    let selected_key_rows = selected_key_source.pointer("/rows").and_then(Value::as_array);
+    let capture_rows = capture_source.pointer("/rows").and_then(Value::as_array);
+    let policy_rows = score_key_policy.pointer("/rows").and_then(Value::as_array);
+    let epsilon_rows = post_rope_raw_key_epsilon.pointer("/rows").and_then(Value::as_array);
+    let historical_rows = historical_rope_source.pointer("/rows").and_then(Value::as_array);
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut post_rope_f16_view_count = 0usize;
+    let mut exact_boundary_count = 0usize;
+    let mut selected_dim_token_context_count = 0usize;
+    let mut historical_pre_rope_available_count = 0usize;
+    let mut post_rope_epsilon_reported_count = 0usize;
+    let mut capture_replay_mismatch_count = 0usize;
+    let mut projection_subbucket_midpoint_count = 0usize;
+    let mut history_expansion_context_count = 0usize;
+    let mut max_abs_key_delta = 0.0f64;
+    let mut max_abs_product_delta = 0.0f64;
+
+    if let Some(drift_rows) = drift_rows {
+        for drift_row in drift_rows {
+            if drift_row.pointer("/classification").and_then(Value::as_str)
+                != Some("selected_score_input_operand_drift_key_bucket_crossing")
+            {
+                continue;
+            }
+            selected_count += 1;
+            let head = drift_row.pointer("/head").and_then(Value::as_u64);
+            let key_slot = drift_row.pointer("/key_slot").and_then(Value::as_u64);
+            let query_token = drift_row.pointer("/query_token").and_then(Value::as_u64);
+            let selected_key_row =
+                find_qk_recompute_row(selected_key_rows, head, key_slot, query_token);
+            let capture_row = find_qk_recompute_row(capture_rows, head, key_slot, query_token);
+            let policy_row = find_qk_recompute_row(policy_rows, head, key_slot, query_token);
+            let epsilon_row = find_qk_recompute_row(epsilon_rows, head, key_slot, query_token);
+            let historical_row =
+                find_qk_recompute_row(historical_rows, head, key_slot, query_token);
+
+            let key_delta = drift_row.pointer("/key_delta").and_then(Value::as_f64).unwrap_or(0.0);
+            let abs_product_delta =
+                drift_row.pointer("/abs_product_delta").and_then(Value::as_f64).unwrap_or(0.0);
+            max_abs_key_delta = max_abs_key_delta.max(key_delta.abs());
+            max_abs_product_delta = max_abs_product_delta.max(abs_product_delta);
+
+            let selected_key_classification = selected_key_row
+                .and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let capture_classification =
+                capture_row.and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let policy_classification =
+                policy_row.and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let epsilon_classification =
+                epsilon_row.and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let historical_classification = historical_row
+                .and_then(|row| row.pointer("/classification").and_then(Value::as_str));
+            let post_rope_f16_view = matches!(
+                capture_classification,
+                Some("selected_key_score_input_capture_source_post_rope_f16_view")
+                    | Some("selected_key_score_input_capture_source_post_rope_f16_value")
+            );
+            let exact_boundary = matches!(
+                selected_key_classification,
+                Some("selected_key_drift_enters_before_cache_store")
+                    | Some("selected_key_drift_enters_cache_readback")
+                    | Some("selected_key_drift_follows_cache_f16_roundtrip")
+                    | Some("selected_key_drift_visible_at_score_input")
+            );
+            let selected_dim_token_context = selected_key_row
+                .is_some_and(selected_key_source_row_has_selected_dim_token_context);
+            let historical_pre_rope_available = historical_row
+                .and_then(|row| row.pointer("/selected_dim_values/reference_projection"))
+                .is_some_and(|value| !value.is_null());
+            let post_rope_epsilon_reported = epsilon_row.is_some_and(|row| {
+                row.pointer("/post_rope_epsilon_probe_present").and_then(Value::as_bool)
+                    == Some(true)
+            });
+            let capture_replay_mismatch = epsilon_classification
+                == Some("selected_post_rope_raw_key_epsilon_capture_replay_mismatch");
+            let projection_subbucket_midpoint = epsilon_classification
+                == Some(
+                    "selected_post_rope_raw_key_epsilon_projection_subbucket_midpoint_crossing",
+                );
+            let history_expansion_context = selected_dim_token_context
+                && post_rope_f16_view
+                && historical_pre_rope_available
+                && !exact_boundary;
+
+            if post_rope_f16_view {
+                post_rope_f16_view_count += 1;
+            }
+            if exact_boundary {
+                exact_boundary_count += 1;
+            }
+            if selected_dim_token_context {
+                selected_dim_token_context_count += 1;
+            }
+            if historical_pre_rope_available {
+                historical_pre_rope_available_count += 1;
+            }
+            if post_rope_epsilon_reported {
+                post_rope_epsilon_reported_count += 1;
+            }
+            if capture_replay_mismatch {
+                capture_replay_mismatch_count += 1;
+            }
+            if projection_subbucket_midpoint {
+                projection_subbucket_midpoint_count += 1;
+            }
+            if history_expansion_context {
+                history_expansion_context_count += 1;
+            }
+
+            let mut blocked_reasons = Vec::<String>::new();
+            if selected_key_row.is_none() {
+                blocked_reasons.push("selected_key_source_row_missing".to_string());
+            }
+            if capture_row.is_none() {
+                blocked_reasons.push("selected_key_capture_source_row_missing".to_string());
+            }
+            if policy_row.is_none() {
+                blocked_reasons.push("selected_score_key_f16_policy_row_missing".to_string());
+            }
+            if historical_row.is_none() {
+                blocked_reasons
+                    .push("selected_historical_projection_rope_source_row_missing".to_string());
+            }
+            if epsilon_row.is_none() {
+                blocked_reasons.push("selected_post_rope_raw_key_epsilon_row_missing".to_string());
+            }
+            if !historical_pre_rope_available {
+                blocked_reasons.push("selected_pre_rope_k_value_missing".to_string());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "post_fix_score_input_frontier_missing_context"
+            } else if exact_boundary {
+                "post_fix_score_input_frontier_exact_boundary_attributed"
+            } else if history_expansion_context {
+                "post_fix_score_input_frontier_selected_dim_token_score_history_context"
+            } else if projection_subbucket_midpoint {
+                "post_fix_score_input_frontier_projection_subbucket_midpoint"
+            } else if capture_replay_mismatch {
+                "post_fix_score_input_frontier_post_rope_capture_replay_mismatch"
+            } else if post_rope_f16_view {
+                "post_fix_score_input_frontier_post_rope_f16_view_bucket_sensitive"
+            } else {
+                "post_fix_score_input_frontier_unpinned"
+            };
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": head,
+                "kv_head": drift_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": query_token,
+                "contributor_dim": drift_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "key_delta": drift_row.pointer("/key_delta").cloned().unwrap_or(Value::Null),
+                "abs_product_delta": drift_row.pointer("/abs_product_delta").cloned().unwrap_or(Value::Null),
+                "product_contributor": drift_row.pointer("/product_contributor").cloned().unwrap_or(Value::Null),
+                "selected_key_source_classification": selected_key_classification,
+                "capture_source_classification": capture_classification,
+                "score_key_f16_policy_classification": policy_classification,
+                "post_rope_raw_key_epsilon_classification": epsilon_classification,
+                "historical_projection_rope_classification": historical_classification,
+                "post_rope_f16_view": post_rope_f16_view,
+                "exact_boundary": exact_boundary,
+                "selected_dim_token_context": selected_dim_token_context,
+                "historical_pre_rope_available": historical_pre_rope_available,
+                "post_rope_epsilon_reported": post_rope_epsilon_reported,
+                "history_expansion_context": history_expansion_context,
+                "pre_rope_k": historical_row.and_then(|row| row.pointer("/selected_dim_values/reference_projection")).cloned().unwrap_or(Value::Null),
+                "rust_pre_rope_k": historical_row.and_then(|row| row.pointer("/selected_dim_values/rust_projection")).cloned().unwrap_or(Value::Null),
+                "post_rope_k": historical_row.and_then(|row| row.pointer("/selected_dim_values/reference_post_rope")).cloned().unwrap_or(Value::Null),
+                "rust_post_rope_k": historical_row.and_then(|row| row.pointer("/selected_dim_values/rust_post_rope")).cloned().unwrap_or(Value::Null),
+                "score_input_k": capture_row.and_then(|row| row.pointer("/product_reference_key")).cloned().unwrap_or(Value::Null),
+                "rust_score_input_k": capture_row.and_then(|row| row.pointer("/product_rust_key")).cloned().unwrap_or(Value::Null),
+                "reference_post_rope_raw": capture_row.and_then(|row| row.pointer("/reference_post_rope_raw")).cloned().unwrap_or(Value::Null),
+                "rust_post_rope_raw": capture_row.and_then(|row| row.pointer("/rust_post_rope_raw")).cloned().unwrap_or(Value::Null),
+                "reference_post_rope_f16": capture_row.and_then(|row| row.pointer("/reference_post_rope_f16")).cloned().unwrap_or(Value::Null),
+                "rust_post_rope_f16": capture_row.and_then(|row| row.pointer("/rust_post_rope_f16")).cloned().unwrap_or(Value::Null),
+                "selected_key_source_row": selected_key_row.cloned().unwrap_or(Value::Null),
+                "capture_source_row": capture_row.cloned().unwrap_or(Value::Null),
+                "score_key_f16_policy_row": policy_row.cloned().unwrap_or(Value::Null),
+                "post_rope_raw_key_epsilon_row": epsilon_row.cloned().unwrap_or(Value::Null),
+                "historical_projection_rope_row": historical_row.cloned().unwrap_or(Value::Null),
+            }));
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "post_fix_score_input_frontier_no_key_bucket_crossings"
+    } else if missing_context_count == selected_count {
+        "post_fix_score_input_frontier_missing_context"
+    } else if exact_boundary_count > 0 {
+        "post_fix_score_input_frontier_exact_boundary_attributed"
+    } else if history_expansion_context_count > 0 {
+        "post_fix_score_input_frontier_selected_dim_token_score_history_context"
+    } else if projection_subbucket_midpoint_count > 0 {
+        "post_fix_score_input_frontier_projection_subbucket_midpoint"
+    } else if capture_replay_mismatch_count > 0 {
+        "post_fix_score_input_frontier_post_rope_capture_replay_mismatch"
+    } else if post_rope_f16_view_count > 0 {
+        "post_fix_score_input_frontier_post_rope_f16_view_bucket_sensitive"
+    } else {
+        "post_fix_score_input_frontier_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "post_fix_score_input_frontier_selected_dim_token_score_history_context" => {
+            "emit selected key dim/token slot probes across pre-RoPE, post-RoPE, and score-input history before changing runtime math"
+        }
+        "post_fix_score_input_frontier_post_rope_capture_replay_mismatch" => {
+            "pin post-RoPE capture versus replay after the ROPE expression fix before changing runtime math"
+        }
+        "post_fix_score_input_frontier_projection_subbucket_midpoint" => {
+            "localize projection subbucket midpoint source before changing runtime math"
+        }
+        "post_fix_score_input_frontier_exact_boundary_attributed" => {
+            "follow the exact selected key boundary classification before changing runtime math"
+        }
+        "post_fix_score_input_frontier_missing_context" => {
+            "capture missing selected K pre-RoPE/post-RoPE/score-input context rows"
+        }
+        "post_fix_score_input_frontier_no_key_bucket_crossings" => {
+            "move downstream from score-input operand drift"
+        }
+        _ => "keep the post-fix score-input frontier diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Post-fix score-input frontier is diagnostic-only evidence after the selected-K ROPE expression policy fix; it classifies remaining K bucket crossings by selected head/token/dim, pre-RoPE K, post-RoPE K, score-input K, and product contribution without changing runtime math or promoting reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "missing_context_count": missing_context_count,
+        "post_rope_f16_view_count": post_rope_f16_view_count,
+        "exact_boundary_count": exact_boundary_count,
+        "selected_dim_token_context_count": selected_dim_token_context_count,
+        "historical_pre_rope_available_count": historical_pre_rope_available_count,
+        "post_rope_epsilon_reported_count": post_rope_epsilon_reported_count,
+        "capture_replay_mismatch_count": capture_replay_mismatch_count,
+        "projection_subbucket_midpoint_count": projection_subbucket_midpoint_count,
+        "history_expansion_context_count": history_expansion_context_count,
+        "max_abs_key_delta": max_abs_key_delta,
+        "max_abs_product_delta": max_abs_product_delta,
+        "source_classifications": {
+            "operand_drift": operand_drift.pointer("/classification").cloned().unwrap_or(Value::Null),
+            "selected_key_source": selected_key_source.pointer("/classification").cloned().unwrap_or(Value::Null),
+            "selected_key_boundary_context": selected_key_source.pointer("/boundary_context_classification").cloned().unwrap_or(Value::Null),
+            "capture_source": capture_source.pointer("/classification").cloned().unwrap_or(Value::Null),
+            "score_key_f16_policy": score_key_policy.pointer("/classification").cloned().unwrap_or(Value::Null),
+            "post_rope_raw_key_epsilon": post_rope_raw_key_epsilon.pointer("/classification").cloned().unwrap_or(Value::Null),
+            "historical_projection_rope": historical_rope_source.pointer("/classification").cloned().unwrap_or(Value::Null),
+        },
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn selected_key_source_row_has_selected_dim_token_context(row: &Value) -> bool {
+    [
+        "/legacy_before_cache_store",
+        "/legacy_cache_readback",
+        "/legacy_cache_f16_roundtrip",
+        "/legacy_score_input",
+        "/kcur_before_cache_store",
+        "/kcur_score_input",
+    ]
+    .iter()
+    .any(|pointer| {
+        row.pointer(pointer)
+            .and_then(|summary| summary.pointer("/selected_dim_and_token_bucket"))
+            .and_then(Value::as_bool)
+            == Some(true)
+    })
+}
+
 fn attention_selected_historical_k_projection_subbucket_epsilon_source(
     post_rope_raw_key_epsilon: &Value,
 ) -> Value {
@@ -41953,6 +42248,254 @@ mod tests {
             Some(&json!(
                 "localize the selected post-RoPE raw key epsilon that crosses the F16 bucket boundary; do not change score-input F16 policy"
             ))
+        );
+    }
+
+    #[test]
+    fn post_fix_score_input_frontier_reports_selected_dim_token_context() {
+        let operand_drift = json!({
+            "classification": "score_input_operand_drift_key_bucket_crossing",
+            "rows": [
+                {
+                    "classification": "selected_score_input_operand_drift_key_bucket_crossing",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "key_delta": 0.0009765625_f64,
+                    "abs_product_delta": 0.0005550384521484375_f64,
+                    "product_contributor": {
+                        "dim": 77,
+                        "reference_key": 1.4814453125_f64,
+                        "rust_key": 1.48046875_f64,
+                    }
+                }
+            ]
+        });
+        let selected_key_source = json!({
+            "classification": "selected_key_score_input_source_unpinned",
+            "boundary_context_classification": "selected_key_selected_dim_token_bucket_context_unpinned",
+            "rows": [
+                {
+                    "status": "compared",
+                    "classification": "selected_key_boundary_unpinned",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "legacy_score_input": {
+                        "classification": "selected_token_has_f16_bucket_mismatch",
+                        "selected_dim_and_token_bucket": true,
+                    }
+                }
+            ]
+        });
+        let capture_source = json!({
+            "classification": "selected_key_score_input_capture_source_post_rope_f16_view",
+            "rows": [
+                {
+                    "classification": "selected_key_score_input_capture_source_post_rope_f16_view",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "score_key_stage_is_f16": true,
+                    "f16_bucket_crossing": true,
+                    "product_reference_key": 1.4814453125_f64,
+                    "product_rust_key": 1.48046875_f64,
+                    "reference_post_rope_raw": 1.4809578657150269_f64,
+                    "rust_post_rope_raw": 1.4809563159942627_f64,
+                    "reference_post_rope_f16": 1.4814453125_f64,
+                    "rust_post_rope_f16": 1.48046875_f64,
+                }
+            ]
+        });
+        let score_key_policy = json!({
+            "classification": "selected_score_key_f16_policy_aligned_bucket_sensitive",
+            "rows": [
+                {
+                    "classification": "selected_score_key_f16_policy_aligned_bucket_sensitive",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                }
+            ]
+        });
+        let post_rope_raw_key_epsilon = json!({
+            "classification": "selected_post_rope_raw_key_epsilon_capture_replay_mismatch",
+            "rows": [
+                {
+                    "classification": "selected_post_rope_raw_key_epsilon_capture_replay_mismatch",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "post_rope_epsilon_probe_present": true,
+                }
+            ]
+        });
+        let historical_rope_source = json!({
+            "classification": "selected_key_historical_post_rope_epsilon_reported",
+            "rows": [
+                {
+                    "classification": "selected_key_historical_post_rope_epsilon_reported",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "selected_dim_values": {
+                        "reference_projection": 1.25_f64,
+                        "rust_projection": 1.2499_f64,
+                        "reference_post_rope": 1.4809578657150269_f64,
+                        "rust_post_rope": 1.4809563159942627_f64,
+                    }
+                }
+            ]
+        });
+
+        let frontier = attention_post_fix_score_input_frontier(
+            &operand_drift,
+            &selected_key_source,
+            &capture_source,
+            &score_key_policy,
+            &post_rope_raw_key_epsilon,
+            &historical_rope_source,
+        );
+
+        assert_eq!(frontier.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("post_fix_score_input_frontier_selected_dim_token_score_history_context"))
+        );
+        assert_eq!(frontier.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(frontier.pointer("/post_rope_f16_view_count"), Some(&json!(1)));
+        assert_eq!(frontier.pointer("/selected_dim_token_context_count"), Some(&json!(1)));
+        assert_eq!(frontier.pointer("/capture_replay_mismatch_count"), Some(&json!(1)));
+        assert_eq!(frontier.pointer("/rows/0/pre_rope_k"), Some(&json!(1.25_f64)));
+        assert_eq!(frontier.pointer("/rows/0/score_input_k"), Some(&json!(1.4814453125_f64)));
+        assert_eq!(
+            frontier.pointer("/rows/0/classification"),
+            Some(&json!("post_fix_score_input_frontier_selected_dim_token_score_history_context"))
+        );
+        assert_eq!(
+            frontier.pointer("/next_diagnostic"),
+            Some(&json!(
+                "emit selected key dim/token slot probes across pre-RoPE, post-RoPE, and score-input history before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn post_fix_score_input_frontier_treats_missing_pre_rope_as_missing_context() {
+        let operand_drift = json!({
+            "rows": [
+                {
+                    "classification": "selected_score_input_operand_drift_key_bucket_crossing",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "key_delta": 0.0009765625_f64,
+                    "abs_product_delta": 0.0005550384521484375_f64,
+                }
+            ]
+        });
+        let selected_key_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_boundary_unpinned",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "legacy_score_input": {
+                        "selected_dim_and_token_bucket": true,
+                    }
+                }
+            ]
+        });
+        let capture_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_score_input_capture_source_post_rope_f16_view",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "product_reference_key": 1.4814453125_f64,
+                    "product_rust_key": 1.48046875_f64,
+                }
+            ]
+        });
+        let score_key_policy = json!({
+            "rows": [
+                {
+                    "classification": "selected_score_key_f16_policy_aligned_bucket_sensitive",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                }
+            ]
+        });
+        let post_rope_raw_key_epsilon = json!({
+            "rows": [
+                {
+                    "classification": "selected_post_rope_raw_key_epsilon_capture_replay_mismatch",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "post_rope_epsilon_probe_present": true,
+                }
+            ]
+        });
+        let historical_rope_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_key_historical_post_rope_epsilon_reported",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "selected_dim_values": {
+                        "reference_post_rope": 1.4809578657150269_f64,
+                        "rust_post_rope": 1.4809563159942627_f64,
+                    }
+                }
+            ]
+        });
+
+        let frontier = attention_post_fix_score_input_frontier(
+            &operand_drift,
+            &selected_key_source,
+            &capture_source,
+            &score_key_policy,
+            &post_rope_raw_key_epsilon,
+            &historical_rope_source,
+        );
+
+        assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            frontier.pointer("/classification"),
+            Some(&json!("post_fix_score_input_frontier_missing_context"))
+        );
+        assert_eq!(frontier.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(frontier.pointer("/historical_pre_rope_available_count"), Some(&json!(0)));
+        assert_eq!(frontier.pointer("/history_expansion_context_count"), Some(&json!(0)));
+        assert_eq!(
+            frontier.pointer("/rows/0/classification"),
+            Some(&json!("post_fix_score_input_frontier_missing_context"))
+        );
+        assert_eq!(frontier.pointer("/rows/0/historical_pre_rope_available"), Some(&json!(false)));
+        assert_eq!(frontier.pointer("/rows/0/pre_rope_k"), Some(&Value::Null));
+        assert_eq!(
+            frontier.pointer("/rows/0/blocked_reasons/0"),
+            Some(&json!("selected_pre_rope_k_value_missing"))
         );
     }
 
