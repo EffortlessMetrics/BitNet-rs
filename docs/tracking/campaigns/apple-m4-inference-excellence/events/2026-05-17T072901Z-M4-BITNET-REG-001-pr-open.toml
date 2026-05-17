@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T07:29:01Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-REG-001"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5299
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-REG-001-warm-regression"
+head_sha = "5593a9f6a129bb7131ce834185b99bf4f078484f"
+summary = "Opened PR #5299 for direct BitNet M4 warm-session regression support."
+
+notes = [
+  "PR #5299 adds direct `bitnet mac regression --baseline` support for `bitnet_apple_m4_warm_session` receipts and keeps comparisons limited to matching accepted artifact/tokenizer identity, backend, fallback state, prompt set, warm profile, timeout policy, and receipt schema.",
+  "The PR is comparison-support only: it does not run live models, publish new timing or quality evidence, enable BitNet chat or serve, make mismatched receipts comparable, or claim Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance.",
+]
