@@ -523,7 +523,32 @@ still recorded as unavailable unless the generation path can safely provide it.
 This is operator UX and receipt-contract hardening only; it does not claim
 BitNet quality and does not enable BitNet chat or serve.
 
-BitNet chat and serve stay disabled until their specific receipt gates pass.
+`M4-BITNET-EX-006` adds the explicit BitNet chat route behind the chat gate.
+`bitnet mac chat --model-family bitnet` still refuses before prompt collection
+unless the operator passes `--bitnet-chat-gate-receipt <gate.json>` and that
+receipt validates as `status=ready_to_enable` with all warm-session,
+timeout/failure, streaming-semantics, backend, fallback, and claim-boundary
+requirements passed.
+
+When the gate is ready, the route remains narrow:
+
+```bash
+bitnet mac chat \
+  --model-family bitnet \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --bitnet-chat-gate-receipt <bitnet_apple_m4_chat_gate.json> \
+  --prompt "Answer with a single digit: 2+2=" \
+  --prompt "Name the capital of France. Answer with one word."
+```
+
+The successful chat receipt kind is `bitnet_apple_m4_chat_session`. It records
+the accepted model/tokenizer identity, the consumed ready gate receipt SHA,
+`apple-m4-cpu-neon`, `fallback_used=false`, generated text, token IDs, per-turn
+receipt state, timing, memory, and `chat_enabled=true` for this gated route.
+It keeps `serve_enabled=false` and does not claim BitNet serve, broad BitNet
+quality, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook
+evidence, speedup, or broad Apple Silicon performance.
 
 ## Stability And Service
 

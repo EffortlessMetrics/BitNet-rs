@@ -1099,17 +1099,18 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-006"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-006-chat-gate"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-004", "M4-BITNET-EX-005"]
+pr = 5330
 acceptance = "Enable BitNet chat only after variable warm receipts, determinism, timeout/failure receipts, streaming semantics, strict backend/fallback fields, and chat claim boundaries pass the gate."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_chat -- --nocapture",
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-chat-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/gate.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-chat-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --warm-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json --failure-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/failure.json --streaming-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/streaming-semantics.json --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/gate.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

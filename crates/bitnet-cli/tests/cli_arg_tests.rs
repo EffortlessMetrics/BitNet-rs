@@ -33,6 +33,28 @@ fn workspace_path(path: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
 }
 
+fn write_bitnet_chat_streaming_semantics_receipt(
+    path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_chat_streaming_semantics",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "streaming_semantics": {
+            "token_order_preserved": true,
+            "final_receipt_exported": true
+        }
+    });
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
+
 // ============================================================================
 // Run subcommand: required arguments
 // ============================================================================
@@ -1097,14 +1119,16 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
 }
 
 #[test]
-fn mac_chat_rejects_bitnet_model_family_before_prompt_collection() {
+fn mac_bitnet_chat_requires_ready_gate_before_prompt_collection() {
     bitnet()
         .args(["mac", "chat", "--model-family", "bitnet"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("BitNet Mac chat is disabled"))
-        .stderr(predicate::str::contains("M4-BITNET-PROD-004"))
+        .stderr(predicate::str::contains(
+            "BitNet Mac chat requires a ready M4-BITNET-EX-006 gate receipt",
+        ))
         .stderr(predicate::str::contains("bitnet mac bitnet-chat-gate"))
+        .stderr(predicate::str::contains("--bitnet-chat-gate-receipt"))
         .stderr(predicate::str::contains("mac chat requires at least two prompts").not());
 }
 
@@ -1133,6 +1157,7 @@ fn mac_bitnet_chat_gate_writes_blocked_receipt_without_required_evidence()
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_chat_gate");
+    assert_eq!(receipt_json["model_id"], "microsoft-bitnet-b1.58-2B-4T-i2s");
     assert_eq!(receipt_json["status"], "blocked");
     assert_eq!(receipt_json["chat_enablement"]["gate_passed"], false);
     assert_eq!(receipt_json["chat_enablement"]["chat_enabled"], false);
@@ -1157,6 +1182,242 @@ fn mac_bitnet_chat_gate_writes_blocked_receipt_without_required_evidence()
         .success()
         .stdout(predicate::str::contains("bitnet_apple_m4_chat_gate"))
         .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_chat_gate_writes_ready_receipt_with_required_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let failure_receipt = dir.path().join("bitnet-warm-failure.json");
+    let streaming_receipt = dir.path().join("bitnet-chat-streaming.json");
+    let gate_receipt = dir.path().join("bitnet-chat-gate.json");
+    let missing_tokenizer = dir.path().join("missing-tokenizer.json");
+    let warm_receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    let missing_tokenizer_str = missing_tokenizer.to_string_lossy().into_owned();
+    let warm_receipt_str = warm_receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            missing_tokenizer_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--json-out",
+            failure_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failure receipt written"));
+    write_bitnet_chat_streaming_semantics_receipt(&streaming_receipt)?;
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-chat-gate",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--warm-receipt",
+            warm_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ready-to-enable"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_chat_gate");
+    assert_eq!(receipt_json["status"], "ready_to_enable");
+    assert_eq!(receipt_json["chat_enablement"]["gate_passed"], true);
+    assert_eq!(receipt_json["chat_enablement"]["chat_enabled"], false);
+    assert_eq!(receipt_json["chat_enablement"]["serve_enabled"], false);
+    assert_eq!(receipt_json["requirements"]["variable_warm_session_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["timeout_failure_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["streaming_semantics_receipt"]["passed"], true);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_chat_gate"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_chat_ready_gate_reaches_model_verification() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let failure_receipt = dir.path().join("bitnet-warm-failure.json");
+    let streaming_receipt = dir.path().join("bitnet-chat-streaming.json");
+    let gate_receipt = dir.path().join("bitnet-chat-gate.json");
+    let missing_tokenizer = dir.path().join("missing-tokenizer.json");
+    let warm_receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    let missing_tokenizer_str = missing_tokenizer.to_string_lossy().into_owned();
+    let warm_receipt_str = warm_receipt.to_string_lossy().into_owned();
+    let tokenizer = workspace_path("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json");
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            missing_tokenizer_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--json-out",
+            failure_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failure receipt written"));
+    write_bitnet_chat_streaming_semantics_receipt(&streaming_receipt)?;
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-chat-gate",
+            "--warm-receipt",
+            warm_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat",
+            "--model-family",
+            "bitnet",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--bitnet-chat-gate-receipt",
+            gate_receipt_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Name the capital of France. Answer with one word.",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("accepted GGUF"))
+        .stderr(predicate::str::contains("ready M4-BITNET-EX-006 gate receipt").not())
+        .stderr(predicate::str::contains("mac chat requires at least two prompts").not());
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_chat_session_receipt_validates_claim_boundary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let source = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let receipt_path = dir.path().join("bitnet-chat-session.json");
+    let receipt_path_str = receipt_path.to_string_lossy().into_owned();
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(source)?)?;
+    let prompt_count = receipt["session"]["prompt_count"].clone();
+    let object = receipt.as_object_mut().ok_or("receipt must be object")?;
+    object.insert("artifact_kind".to_string(), serde_json::json!("bitnet_apple_m4_chat_session"));
+    object.insert("operator_command".to_string(), serde_json::json!("mac chat"));
+    object.insert("model_id".to_string(), serde_json::json!("microsoft-bitnet-b1.58-2B-4T-i2s"));
+    object.insert(
+        "bitnet_chat_gate".to_string(),
+        serde_json::json!({
+            "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0000Z/bitnet-chat-gate/gate.json",
+            "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "status": "ready_to_enable",
+            "gate_passed": true,
+            "validated": true,
+            "work_item": "M4-BITNET-EX-006"
+        }),
+    );
+    object.insert(
+        "bitnet_chat".to_string(),
+        serde_json::json!({
+            "enabled": true,
+            "route": "bitnet mac chat --model-family bitnet",
+            "prompt_count": prompt_count,
+            "serve_enabled": false,
+            "streaming_requested": true,
+            "per_turn_receipts_enabled": true,
+            "gate_required": true
+        }),
+    );
+    object.insert(
+        "mac_bitnet_claim_boundary".to_string(),
+        serde_json::json!({
+            "bitnet_chat_session": true,
+            "answer_corpus_proof_gate": "MODEL-ARTIFACT-007/M4-QA-001",
+            "chat_gate_work_item": "M4-BITNET-EX-006",
+            "requested_backend": "apple-m4-cpu-neon",
+            "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+            "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+            "chat_enabled": true,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }),
+    );
+    if let Some(claim_boundary) =
+        object.get_mut("claim_boundary").and_then(|value| value.as_object_mut())
+    {
+        claim_boundary.insert("bitnet_chat_session".to_string(), serde_json::json!(true));
+        claim_boundary.insert("chat_enabled".to_string(), serde_json::json!(true));
+        claim_boundary.insert("serve_enabled".to_string(), serde_json::json!(false));
+        claim_boundary.insert("qk256_apple_claimed".to_string(), serde_json::json!(false));
+        claim_boundary
+            .insert("neural_engine_execution_claimed".to_string(), serde_json::json!(false));
+        claim_boundary.insert("mpsgraph_inference_claimed".to_string(), serde_json::json!(false));
+    }
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_path_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_chat_session"))
+        .stdout(predicate::str::contains("\"prompt_count\": 100"));
     Ok(())
 }
 
@@ -1482,6 +1743,9 @@ fn mac_chat_help_documents_resident_prompts() {
         .stdout(predicate::str::contains("--stdin"))
         .stdout(predicate::str::contains("--interactive"))
         .stdout(predicate::str::contains("/exit"))
+        .stdout(predicate::str::contains("--model-path <PATH>"))
+        .stdout(predicate::str::contains("--tokenizer <PATH>"))
+        .stdout(predicate::str::contains("--bitnet-chat-gate-receipt <PATH>"))
         .stdout(predicate::str::contains("--no-stream"))
         .stdout(predicate::str::contains("--no-turn-receipts"));
 }
