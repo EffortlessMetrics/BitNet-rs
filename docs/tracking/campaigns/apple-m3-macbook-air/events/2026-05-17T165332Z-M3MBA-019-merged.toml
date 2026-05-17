@@ -1,0 +1,20 @@
+timestamp = "2026-05-17T16:53:32Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-019"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5388
+branch = "codex/apple-m3-macbook-air-m4-post-handoff-roadmap"
+head_sha = "0d19e3ada5c95a8cdf0451a662c4b7c48fed871a"
+merge_sha = "2592ba36eac3dafb18d4f84e4116e95e6f1c2da0"
+summary = "Merged the post-handoff M3 Air roadmap reset."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5388",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+]
+notes = [
+  "Merged the post-handoff M3 Air roadmap reset.",
+  "No new M3 model inference, artifact download, BitNet acceptance, M4 proof, Metal/MPSGraph/Neural Engine/QK256, or broad Apple Silicon performance claim was made.",
+]
