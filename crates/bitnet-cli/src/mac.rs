@@ -9304,24 +9304,23 @@ fn compare_bitnet_eval_answer_corpus_regression(
     )?;
 
     let mut warnings = Vec::new();
-    for field in ["passed"] {
-        compare_lower_is_worse(
-            &mut warnings,
-            "bitnet_eval:quality_summary",
-            &format!("quality_summary.{field}"),
-            regression_metric(&baseline.receipt, &["quality_summary", field])?,
-            regression_metric(receipt, &["quality_summary", field])?,
-            STRICT_QUALITY_PCT,
-        );
-        compare_lower_is_worse(
-            &mut warnings,
-            "bitnet_eval:scoring_summary",
-            &format!("scoring_summary.{field}"),
-            regression_metric(&baseline.receipt, &["scoring_summary", field])?,
-            regression_metric(receipt, &["scoring_summary", field])?,
-            STRICT_QUALITY_PCT,
-        );
-    }
+    let field = "passed";
+    compare_lower_is_worse(
+        &mut warnings,
+        "bitnet_eval:quality_summary",
+        &format!("quality_summary.{field}"),
+        regression_metric(&baseline.receipt, &["quality_summary", field])?,
+        regression_metric(receipt, &["quality_summary", field])?,
+        STRICT_QUALITY_PCT,
+    );
+    compare_lower_is_worse(
+        &mut warnings,
+        "bitnet_eval:scoring_summary",
+        &format!("scoring_summary.{field}"),
+        regression_metric(&baseline.receipt, &["scoring_summary", field])?,
+        regression_metric(receipt, &["scoring_summary", field])?,
+        STRICT_QUALITY_PCT,
+    );
     for field in ["failed", "timeout", "not_run"] {
         compare_higher_is_worse(
             &mut warnings,
@@ -9914,44 +9913,43 @@ fn compare_bitnet_eval_task_family_regression(
                 baseline_path.display()
             )
         })?;
-        for field in ["passed"] {
-            compare_lower_is_worse(
-                warnings,
-                &format!("bitnet_task_family:{family}"),
-                &format!("task_family_summary.{family}.{field}"),
-                metric_value(&baseline_family[field]).ok_or_else(|| {
-                    anyhow!(
-                        "regression baseline {} is missing numeric regression metric task_family_summary.{family}.{field}",
-                        baseline_path.display()
-                    )
-                })?,
-                metric_value(&observed_family[field]).ok_or_else(|| {
-                    anyhow!(
-                        "{} is missing numeric regression metric task_family_summary.{family}.{field}",
-                        path.display()
-                    )
-                })?,
-                threshold_percent,
-            );
-            compare_lower_is_worse(
-                warnings,
-                &format!("bitnet_task_family:{family}"),
-                &format!("task_family_summary.{family}.scoring.{field}"),
-                metric_value(&baseline_family["scoring"][field]).ok_or_else(|| {
-                    anyhow!(
-                        "regression baseline {} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
-                        baseline_path.display()
-                    )
-                })?,
-                metric_value(&observed_family["scoring"][field]).ok_or_else(|| {
-                    anyhow!(
-                        "{} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
-                        path.display()
-                    )
-                })?,
-                threshold_percent,
-            );
-        }
+        let field = "passed";
+        compare_lower_is_worse(
+            warnings,
+            &format!("bitnet_task_family:{family}"),
+            &format!("task_family_summary.{family}.{field}"),
+            metric_value(&baseline_family[field]).ok_or_else(|| {
+                anyhow!(
+                    "regression baseline {} is missing numeric regression metric task_family_summary.{family}.{field}",
+                    baseline_path.display()
+                )
+            })?,
+            metric_value(&observed_family[field]).ok_or_else(|| {
+                anyhow!(
+                    "{} is missing numeric regression metric task_family_summary.{family}.{field}",
+                    path.display()
+                )
+            })?,
+            threshold_percent,
+        );
+        compare_lower_is_worse(
+            warnings,
+            &format!("bitnet_task_family:{family}"),
+            &format!("task_family_summary.{family}.scoring.{field}"),
+            metric_value(&baseline_family["scoring"][field]).ok_or_else(|| {
+                anyhow!(
+                    "regression baseline {} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
+                    baseline_path.display()
+                )
+            })?,
+            metric_value(&observed_family["scoring"][field]).ok_or_else(|| {
+                anyhow!(
+                    "{} is missing numeric regression metric task_family_summary.{family}.scoring.{field}",
+                    path.display()
+                )
+            })?,
+            threshold_percent,
+        );
         for field in ["failed", "timeout", "not_run"] {
             compare_higher_is_worse(
                 warnings,
@@ -10561,23 +10559,22 @@ fn compare_slm_eval_scoring_summary_regression(
             baseline_path.display()
         );
     }
-    for field in ["passed"] {
-        compare_lower_is_worse(
-            warnings,
-            "seeded_corpus",
-            &format!("scoring_summary.{field}"),
-            metric_value(&baseline["scoring_summary"][field]).ok_or_else(|| {
-                anyhow!(
-                    "regression baseline {} is missing numeric regression metric scoring_summary.{field}",
-                    baseline_path.display()
-                )
-            })?,
-            metric_value(&receipt["scoring_summary"][field]).ok_or_else(|| {
-                anyhow!("{} is missing numeric regression metric scoring_summary.{field}", path.display())
-            })?,
-            threshold_percent,
-        );
-    }
+    let field = "passed";
+    compare_lower_is_worse(
+        warnings,
+        "seeded_corpus",
+        &format!("scoring_summary.{field}"),
+        metric_value(&baseline["scoring_summary"][field]).ok_or_else(|| {
+            anyhow!(
+                "regression baseline {} is missing numeric regression metric scoring_summary.{field}",
+                baseline_path.display()
+            )
+        })?,
+        metric_value(&receipt["scoring_summary"][field]).ok_or_else(|| {
+            anyhow!("{} is missing numeric regression metric scoring_summary.{field}", path.display())
+        })?,
+        threshold_percent,
+    );
     for field in ["failed", "not_run"] {
         compare_higher_is_worse(
             warnings,
