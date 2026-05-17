@@ -1,0 +1,13 @@
+timestamp = "2026-05-17T17:19:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-010"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
+
+notes = [
+  "Started M4-BITNET-EX-010 to define the deterministic 250-case BitNet corpus staged by the M4-BITNET-EX-009 larger-corpus decision.",
+  "Scope is corpus and dry-run/schema validation only: no live runtime proof, no BitNet broad quality envelope, no chat or serve enablement, no Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad performance, or broad Apple Silicon claim.",
+]

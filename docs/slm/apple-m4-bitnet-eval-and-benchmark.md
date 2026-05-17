@@ -158,6 +158,12 @@ The follow-on inference-excellence tracker work splits that stage into
 `M4-BITNET-EX-011` for bounded 250-case M4 receipts, and `M4-BITNET-EX-012`
 for the 500-case expansion-or-repair decision.
 
+`M4-BITNET-EX-010` defines that first stage as
+`ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml`: a dry-run-checked
+250-case corpus with the same accepted artifact/tokenizer identity and
+mechanical scoring authority, but no new runtime pass-rate or performance
+claim.
+
 The receipt records generated text, generated token IDs, tokenizer authority,
 model SHA, per-case timing, task-family scoring, and failure taxonomy for the
 bounded corpus. It also keeps the explicit claim boundary: this is not a broad
