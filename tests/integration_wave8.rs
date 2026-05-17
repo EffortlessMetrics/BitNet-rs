@@ -309,12 +309,7 @@ mod conv_activation_pooling_tests {
         let weight = vec![1.0f32, 0.0, -1.0];
         let result = conv1d_forward(&input, &weight, None, &config).unwrap();
 
-        let pool_cfg = PoolConfig {
-            pool_type: PoolType::GlobalAverage,
-            kernel_size: 1,
-            stride: 1,
-            padding: 0,
-        };
+        let pool_cfg = PoolConfig::new(PoolType::GlobalAverage, 1, 1, 0);
         let pooled = PoolingKernel::apply(&result, &pool_cfg).unwrap();
         assert_eq!(pooled.len(), 1, "global avg pool should produce 1 value");
     }
@@ -335,8 +330,7 @@ mod conv_activation_pooling_tests {
         let weight = vec![0.5f32, 1.0, 0.5];
         let conv_out = conv1d_forward(&input, &weight, None, &config).unwrap();
 
-        let pool_cfg =
-            PoolConfig { pool_type: PoolType::Max, kernel_size: 2, stride: 1, padding: 0 };
+        let pool_cfg = PoolConfig::new(PoolType::Max, 2, 1, 0);
         let pooled = PoolingKernel::apply(&conv_out, &pool_cfg).unwrap();
         assert!(!pooled.is_empty(), "max pool output should be non-empty");
     }
