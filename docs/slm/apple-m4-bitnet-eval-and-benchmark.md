@@ -136,6 +136,12 @@ Task-family pass rates:
 | rewrite_normalized | 9 | 1 |
 | synthetic_extraction | 7 | 3 |
 
+The inference-excellence tracker later publishes a standalone derived rollup at
+`ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json`.
+That report keeps these BitNet task-family pass rates, mechanical failure
+taxonomy, and the reference-vs-Rust comparison deltas in one BitNet-only
+artifact. It is derived from committed receipts and is not a fresh runtime run.
+
 The receipt records generated text, generated token IDs, tokenizer authority,
 model SHA, per-case timing, task-family scoring, and failure taxonomy for the
 bounded corpus. It also keeps the explicit claim boundary: this is not a broad
