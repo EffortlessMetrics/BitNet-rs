@@ -1,0 +1,58 @@
+{
+    "receipt_kind":  "server_shared_engine_chat_completion",
+    "request_id":  "72360a5e-a713-4d59-ab83-f0b861c891f2",
+    "runtime_path":  "shared_local_inference_engine",
+    "runtime_api":  "cuda",
+    "model_identity":  {
+                           "model_id":  "qwen2.5-0.5b-instruct-q8_0",
+                           "requested_model":  "qwen2.5-0.5b-instruct-q8_0",
+                           "active_model_id":  "model-1",
+                           "active_model_path":  "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+                           "model_sha256":  "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+                       },
+    "endpoint_profile":  {
+                             "endpoint":  "/v1/chat/completions",
+                             "method":  "POST",
+                             "request_profile":  "non_streaming_chat_completion",
+                             "streaming":  false,
+                             "message_count":  1
+                         },
+    "generation_policy":  {
+                              "max_tokens":  2,
+                              "temperature":  0.0,
+                              "top_p":  1.0,
+                              "decoding":  "greedy"
+                          },
+    "requested_model":  "qwen2.5-0.5b-instruct-q8_0",
+    "active_model_id":  "model-1",
+    "active_model_path":  "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "model_sha256":  "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "model_coverage_row":  "dense_qwen25_05b_q8_cuda",
+    "model_coverage_tier":  "product_cli_ready",
+    "selected_backend":  "nvidia-rtx-5070-ti-cuda",
+    "requested_backend":  "nvidia-rtx-5070-ti-cuda",
+    "selected_route":  "dense_regular_llm_cuda",
+    "prompt_template":  "chatml",
+    "tokenizer_authority":  "active_model_tokenizer",
+    "prompt_authority":  "server_chat_template",
+    "fallback_used":  false,
+    "simulated_inference":  false,
+    "streaming":  false,
+    "generated_text_non_empty":  true,
+    "prompt_tokens":  15,
+    "completion_tokens":  1,
+    "total_ms":  293,
+    "quality_gate":  {
+                         "gate":  "server_non_empty_utf8_response",
+                         "passed":  true,
+                         "generated_text_non_empty":  true,
+                         "utf8_valid":  true,
+                         "broad_chat_quality_claimed":  false
+                     },
+    "server_smoke_response_claimed":  true,
+    "server_ready_claimed":  false,
+    "speedup_claim":  false,
+    "full_cuda_residency_claimed":  false,
+    "dense_regular_llm_cuda_inference_claimed":  true,
+    "bitnet_packed_i2s_qk256_proof":  false
+}

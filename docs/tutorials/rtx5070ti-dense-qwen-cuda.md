@@ -165,17 +165,20 @@ accepted_profiles = []
 Speed remains unqualified until a later governed review accepts an exact
 same-artifact, fallback-free profile.
 
-## Server Smoke Is Not Broad Readiness
+## Server Readiness Is Exact-Profile Only
 
-The bounded server-smoke receipt exists for the exact dense Qwen profile:
+The refreshed bounded server-smoke receipt promotes readiness only for the exact
+dense Qwen non-streaming shared-engine chat-completions profile:
 
 ```powershell
-bitnet receipts explain ci\hardware\windows-9950x3d-rtx5070ti\2026-05-15\server-strict-dense-qwen25-q8-smoke.json
+bitnet receipts explain ci\hardware\windows-9950x3d-rtx5070ti\2026-05-17\server-strict-dense-qwen25-q8-smoke.json
 ```
 
-That receipt is useful server evidence, but the model coverage row still keeps
-`server_ready=false`. Do not turn one bounded server smoke into broad dense
-server readiness or production-serving readiness.
+That receipt carries the model SHA-256, `/v1/chat/completions` endpoint
+profile, non-streaming request profile, greedy generation policy, strict
+`nvidia-rtx-5070-ti-cuda` backend, dense route, and non-empty UTF-8 response
+quality gate. Do not turn this exact-profile readiness into broad dense server
+readiness or production-serving readiness.
 
 ## What This Guide Does Not Claim
 
@@ -184,7 +187,7 @@ This guide does not claim:
 - BitNet I2_S, QK256, 1-bit, or packed-kernel proof
 - Qwen3, SmolLM2, Llama, Gemma, or Phi support
 - accepted CUDA speedup
-- broad server readiness
+- broad server readiness beyond the exact dense Qwen profile
 - full CUDA residency
 - global dense GGUF support
 - generic `cuda`, WGPU, Vulkan, or CPU fallback as strict RTX 5070 Ti proof

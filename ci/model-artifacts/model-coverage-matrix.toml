@@ -222,7 +222,7 @@ model_class = "dense_slm"
 family = "qwen2"
 artifact_kind = "gguf_q8_0"
 capability_id = "qwen2.5-0.5b-instruct-q8_0"
-status = "cuda_answer_ready_cli_ready"
+status = "cuda_answer_ready_cli_server_ready"
 current_tier = "product_cli_ready"
 verifier_surface = "bitnet model verify qwen2.5-0.5b-instruct-q8_0"
 tokenizer_authority = "contract_authoritative_qwen2"
@@ -237,16 +237,16 @@ required_receipts = [
   "dense_gguf_qwen_one_token_strict_cuda_proof",
   "dense_gguf_qwen_short_decode_strict_cuda_proof",
   "dense_gguf_qwen_warm_session_strict_cuda",
+  "server_shared_engine_chat_completion",
   "dense_gguf_benchmark_baseline",
 ]
 forbidden_claims = [
   "bitnet_packed_i2s_qk256_proof",
   "global_dense_gguf_inference",
   "global_speedup",
-  "server_ready",
 ]
-next_proof = "bounded dense Qwen strict CUDA server-smoke receipt exists, but CUDA-SERVER-003 records that it is missing artifact checksum identity, endpoint/request-profile scope, and generation-policy fields required by BITNET-SPEC-0010. Refresh or supplement the receipt with the updated server shared-engine receipt fields and pass the server_shared_engine_chat_completion validator before any exact-profile server_ready=true promotion; keep speedup false unless a later governed benchmark review accepts a profile."
-claim_boundary = "Qwen2.5 0.5B Q8_0 is the first dense CUDA SLM answer lane. Its receipts do not satisfy BitNet packed I2_S/QK256 proof."
+next_proof = "exact-profile dense Qwen server readiness is promoted only for the refreshed non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json. Speedup and full residency remain false unless later governed benchmark or residency receipts accept an exact profile."
+claim_boundary = "Qwen2.5 0.5B Q8_0 is the first dense CUDA SLM answer lane and has exact-profile RTX 5070 Ti server readiness for the refreshed non-streaming shared-engine chat-completions receipt only. Its receipts do not satisfy BitNet packed I2_S/QK256 proof, broad dense GGUF readiness, speedup, or full residency."
 
   [entry.claims]
   registered = true
@@ -256,7 +256,7 @@ claim_boundary = "Qwen2.5 0.5B Q8_0 is the first dense CUDA SLM answer lane. Its
   accelerator_answer_ready = true
   benchmark_qualified = false
   product_cli_ready = true
-  server_ready = false
+  server_ready = true
   speedup_claim = false
   full_residency_claim = false
   bitnet_packed_i2s_qk256_proof = false
