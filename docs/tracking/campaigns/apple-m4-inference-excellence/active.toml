@@ -1019,13 +1019,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-004"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-004-warm-25-50-100"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-002"]
+pr = 5316
 acceptance = "Add BitNet variable warm-session 25/50/100 prompt soaks with per-turn receipts, aggregate timing/memory, determinism checks, timeout evidence, and chat/serve-disabled boundaries."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --profile resident_25 --profile resident_50 --profile resident_100 --timeout-seconds 1200 --progress --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json",

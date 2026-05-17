@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T09:09:07Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-004"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-004-warm-25-50-100"
+pr = 5316
+head_sha = "2dbbf2fe91d0c29c63b9b9fc772e29f9ae2c5881"
+
+notes = [
+  "Opened PR #5316 for M4-BITNET-EX-004 BitNet warm profile receipts.",
+  "The PR adds `bitnet mac bitnet-warm --profile resident_25|resident_50|resident_100` and commits the M4 apple-m4-cpu-neon aggregate plus 100 per-prompt warm-session receipts.",
+  "Claim boundary remains bounded to the accepted Microsoft I2_S GGUF, explicit external tokenizer, fallback=false, chat=false, serve=false, and no broad quality, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon performance claim.",
+]
