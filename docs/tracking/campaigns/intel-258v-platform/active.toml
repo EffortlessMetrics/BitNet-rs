@@ -3697,10 +3697,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OV-QUAL-001"
-status = "pr_open"
+status = "merged"
 pr = 5347
+merge_sha = "1e334913089bb4b79af3c4bf6cfab966c060f3b5"
 branch = "codex/lunar-lake/LNL258V-OV-QUAL-001-fixture-aware-diagnosis"
-head_sha = "75bb8bdb10af0e7f16e249b422c241089ceff6d6"
+head_sha = "700fcce5f120346906c10fce37cd9c3c53a4d26d"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
