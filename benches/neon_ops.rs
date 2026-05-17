@@ -307,7 +307,7 @@ fn bench_neon_pooling(c: &mut Criterion) {
 
     for &(label, pool_type) in &[("max", PoolType::Max), ("avg", PoolType::Average)] {
         for &kernel_size in &[2usize, 4, 8] {
-            let config = PoolConfig { pool_type, kernel_size, stride: kernel_size, padding: 0 };
+            let config = PoolConfig::new(pool_type, kernel_size, kernel_size, 0);
             group.bench_with_input(
                 BenchmarkId::new(label, format!("k{kernel_size}")),
                 &kernel_size,
