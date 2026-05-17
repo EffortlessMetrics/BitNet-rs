@@ -13224,6 +13224,27 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
                 usize::try_from(index).ok()?,
             )
         });
+    let raw_storage_offset = reference_json_text.zip(record_name).zip(first_value_index).and_then(
+        |((text, name), index)| {
+            raw_first_value_u64_for_record(
+                text,
+                name,
+                "first_value_storage_offsets_u64",
+                usize::try_from(index).ok()?,
+            )
+        },
+    );
+    let raw_storage_source_bits_u32 = reference_json_text
+        .zip(record_name)
+        .zip(first_value_index)
+        .and_then(|((text, name), index)| {
+            raw_first_value_u32_for_record(
+                text,
+                name,
+                "first_value_storage_source_bits_u32",
+                usize::try_from(index).ok()?,
+            )
+        });
     let source_bits_present = selected_k_json_precision_frontier
         .pointer("/reference_source_bits_u32")
         .and_then(Value::as_u64)
@@ -13237,6 +13258,9 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
     let direct_source_bits_match_reference_source_bits = raw_direct_source_bits_u32
         .zip(reference_source_bits_u32)
         .is_some_and(|(direct, source)| direct == source);
+    let storage_source_bits_match_direct_source_bits = raw_storage_source_bits_u32
+        .zip(raw_direct_source_bits_u32)
+        .is_some_and(|(storage, direct)| storage == direct);
     let capture_path_pinned = source_classification
         == Some("f64_selected_k_reference_source_bits_preserve_midpoint_capture")
         && stage.is_some_and(|stage| stage.starts_with("kcur_history_kv_head"))
@@ -13248,6 +13272,9 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
     let direct_source_pinned = capture_path_pinned
         && source_tensor_index_matches_emitted
         && direct_source_bits_match_reference_source_bits;
+    let storage_source_pinned = direct_source_pinned
+        && raw_storage_offset.is_some()
+        && storage_source_bits_match_direct_source_bits;
 
     let mut blocked_reasons = Vec::<String>::new();
     if source_classification
@@ -13300,6 +13327,12 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
     if raw_direct_source_bits_u32.is_none() {
         blocked_reasons.push("reference_direct_source_bits_missing".to_string());
     }
+    if raw_storage_offset.is_none() {
+        blocked_reasons.push("reference_storage_source_offset_missing".to_string());
+    }
+    if raw_storage_source_bits_u32.is_none() {
+        blocked_reasons.push("reference_storage_source_bits_missing".to_string());
+    }
     if raw_source_tensor_flat_index.is_some()
         && source_tensor_flat_index.is_some()
         && !source_tensor_index_matches_emitted
@@ -13312,10 +13345,18 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
     {
         blocked_reasons.push("reference_direct_source_bits_mismatch".to_string());
     }
+    if raw_storage_source_bits_u32.is_some()
+        && raw_direct_source_bits_u32.is_some()
+        && !storage_source_bits_match_direct_source_bits
+    {
+        blocked_reasons.push("reference_storage_source_bits_mismatch".to_string());
+    }
     blocked_reasons.sort_unstable();
     blocked_reasons.dedup();
 
-    let classification = if direct_source_pinned {
+    let classification = if storage_source_pinned {
+        "f64_selected_k_reference_storage_source_value_preserves_midpoint_capture"
+    } else if direct_source_pinned {
         "f64_selected_k_reference_direct_source_value_preserves_midpoint_capture"
     } else if capture_path_pinned {
         "f64_selected_k_reference_capture_path_pinned_to_kcur_history_tensor_value"
@@ -13327,6 +13368,9 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
         "f64_selected_k_capture_path_unpinned"
     };
     let next_diagnostic = match classification {
+        "f64_selected_k_reference_storage_source_value_preserves_midpoint_capture" => {
+            "inspect the reference graph producer before Kcur tensor materialization, because storage-source bits, direct source bits, and copied Kcur history bits all preserve the selected midpoint"
+        }
         "f64_selected_k_reference_direct_source_value_preserves_midpoint_capture" => {
             "inspect the reference tensor value before trace values-vector extraction, because direct source bits and copied Kcur history bits both preserve the selected midpoint"
         }
@@ -13339,7 +13383,7 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
         _ => "attach missing Kcur history capture metadata before changing Rust runtime math",
     };
 
-    json!({
+    let mut result = json!({
         "diagnostic_only": true,
         "claim_allowed": false,
         "policy": "Selected K capture-path frontier is diagnostic-only evidence for how the reference Kcur history sidecar value is copied before JSON and f32-bit emission; it does not change reference instrumentation, Rust runtime math, or promote reference parity, A770 semantic quality, attention score residency, softmax residency, selected attention, resident KV, value-mix residency, full residency, performance, or completion",
@@ -13380,7 +13424,20 @@ fn attention_norm_f64_selected_k_capture_path_frontier(
         "source_bits_present": source_bits_present,
         "blocked_reasons": blocked_reasons,
         "next_diagnostic": next_diagnostic,
-    })
+    });
+    if let Some(object) = result.as_object_mut() {
+        object.insert("storage_source_offset".to_string(), json!(raw_storage_offset));
+        object.insert("storage_source_bits_u32".to_string(), json!(raw_storage_source_bits_u32));
+        object.insert(
+            "storage_source_bits_hex".to_string(),
+            json!(raw_storage_source_bits_u32.map(u32_bits_hex)),
+        );
+        object.insert(
+            "storage_source_bits_match_direct_source_bits".to_string(),
+            json!(storage_source_bits_match_direct_source_bits),
+        );
+    }
+    result
 }
 
 fn json_array_u64(value: &Value, pointer: &str, index: usize) -> Option<u64> {
@@ -32051,13 +32108,19 @@ mod tests {
         assert!(patch.matches("out << \"],\\\"first_value_bits_u32\\\":[\"").count() >= 2);
         assert!(patch.contains("out << bitnet_rs_reference_layer_trace_f32_bits(head_values[i])"));
         assert!(patch.contains("std::vector<int64_t> head_source_indices"));
+        assert!(patch.contains("std::vector<uint64_t> head_storage_offsets"));
         assert!(patch.contains("std::vector<uint32_t> head_source_bits"));
+        assert!(patch.contains("std::vector<uint32_t> head_storage_source_bits"));
         assert!(patch.contains("head_source_indices.push_back(index)"));
+        assert!(patch.contains("head_storage_offsets.push_back(source_offsets[(size_t) index])"));
         assert!(patch.contains(
             "head_source_bits.push_back(bitnet_rs_reference_layer_trace_f32_bits(value_f32))"
         ));
+        assert!(patch.contains("head_storage_source_bits.push_back(source_bits[(size_t) index])"));
         assert!(patch.contains("out << \"],\\\"first_value_source_indices_u64\\\":[\""));
         assert!(patch.contains("out << \"],\\\"first_value_source_bits_u32\\\":[\""));
+        assert!(patch.contains("out << \"],\\\"first_value_storage_offsets_u64\\\":[\""));
+        assert!(patch.contains("out << \"],\\\"first_value_storage_source_bits_u32\\\":[\""));
         assert!(patch.contains("out << \",\\\"layer\\\":\" << bitnet_rs_kcur_history_layer"));
         assert!(!patch.contains("strcmp(name, \"Kcur-0\") == 0 && values_available"));
         assert!(
@@ -41344,12 +41407,18 @@ mod tests {
     fn attention_norm_f64_selected_k_capture_path_frontier_pins_kcur_copy_indices() {
         let mut source_indices = vec!["0".to_string(); 40 * 18 + 3];
         let mut source_bits = vec!["0".to_string(); 40 * 18 + 3];
+        let mut storage_offsets = vec!["0".to_string(); 40 * 18 + 3];
+        let mut storage_bits = vec!["0".to_string(); 40 * 18 + 3];
         source_indices[40 * 18 + 2] = "1448".to_string();
         source_bits[40 * 18 + 2] = "3229921280".to_string();
+        storage_offsets[40 * 18 + 2] = "5792".to_string();
+        storage_bits[40 * 18 + 2] = "3229921280".to_string();
         let reference_json_text = format!(
-            "{{\"records\":[{{\"name\":\"kcur_history_kv_head1_ref_layout-0\",\"first_value_source_indices_u64\":[{}],\"first_value_source_bits_u32\":[{}]}}]}}",
+            "{{\"records\":[{{\"name\":\"kcur_history_kv_head1_ref_layout-0\",\"first_value_source_indices_u64\":[{}],\"first_value_source_bits_u32\":[{}],\"first_value_storage_offsets_u64\":[{}],\"first_value_storage_source_bits_u32\":[{}]}}]}}",
             source_indices.join(","),
-            source_bits.join(",")
+            source_bits.join(","),
+            storage_offsets.join(","),
+            storage_bits.join(",")
         );
         let selected_capture_frontier = json!({
             "classification": "f64_selected_k_reference_capture_midpoint_with_trace_metadata",
@@ -41391,7 +41460,9 @@ mod tests {
         assert_eq!(frontier.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(
             frontier.pointer("/classification"),
-            Some(&json!("f64_selected_k_reference_direct_source_value_preserves_midpoint_capture"))
+            Some(&json!(
+                "f64_selected_k_reference_storage_source_value_preserves_midpoint_capture"
+            ))
         );
         assert_eq!(frontier.pointer("/layout"), Some(&json!("dim_major_token_minor")));
         assert_eq!(
@@ -41409,6 +41480,13 @@ mod tests {
             frontier.pointer("/direct_source_bits_match_reference_source_bits"),
             Some(&json!(true))
         );
+        assert_eq!(frontier.pointer("/storage_source_offset"), Some(&json!(5792)));
+        assert_eq!(frontier.pointer("/storage_source_bits_u32"), Some(&json!(3229921280u32)));
+        assert_eq!(frontier.pointer("/storage_source_bits_hex"), Some(&json!("0xc084b000")));
+        assert_eq!(
+            frontier.pointer("/storage_source_bits_match_direct_source_bits"),
+            Some(&json!(true))
+        );
         assert_eq!(frontier.pointer("/kv_head"), Some(&json!(1)));
         assert_eq!(frontier.pointer("/kv_head_count"), Some(&json!(5)));
         assert_eq!(frontier.pointer("/source_bits_present"), Some(&json!(true)));
@@ -41416,7 +41494,7 @@ mod tests {
         assert_eq!(
             frontier.pointer("/next_diagnostic"),
             Some(&json!(
-                "inspect the reference tensor value before trace values-vector extraction, because direct source bits and copied Kcur history bits both preserve the selected midpoint"
+                "inspect the reference graph producer before Kcur tensor materialization, because storage-source bits, direct source bits, and copied Kcur history bits all preserve the selected midpoint"
             ))
         );
     }
@@ -41460,6 +41538,8 @@ mod tests {
                 "reference_direct_source_index_missing",
                 "reference_kv_head_missing_from_stage",
                 "reference_post_rope_stage_not_kcur_history",
+                "reference_storage_source_bits_missing",
+                "reference_storage_source_offset_missing",
                 "source_tensor_flat_index_unavailable"
             ]))
         );
