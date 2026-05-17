@@ -92,7 +92,17 @@ pub fn softmax_in_place(logits: &mut [f32]) {
         return;
     }
     let max = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let mut sum = 0.0f32;
+    if max == f32::INFINITY {
+        let positive_infinity_count =
+            logits.iter().filter(|&&value| value == f32::INFINITY).count();
+        let probability = 1.0 / positive_infinity_count as f32;
+        for l in logits.iter_mut() {
+            *l = if *l == f32::INFINITY { probability } else { 0.0 };
+        }
+        return;
+    }
+
+    let mut sum = 0.0f64;
     for l in logits.iter_mut() {
         let v = *l;
         // Optimization: skip exp() for NEG_INFINITY which always yields 0.0.
@@ -100,13 +110,13 @@ pub fn softmax_in_place(logits: &mut [f32]) {
         if v == f32::NEG_INFINITY {
             *l = 0.0;
         } else {
-            let exp = (v - max).exp();
-            *l = exp;
+            let exp = f64::from(v - max).exp();
+            *l = exp as f32;
             sum += exp;
         }
     }
-    if sum > 0.0 {
-        let inv_sum = 1.0 / sum;
+    if sum > 0.0 && sum.is_finite() {
+        let inv_sum = (1.0 / sum) as f32;
         for l in logits.iter_mut() {
             *l *= inv_sum;
         }
@@ -216,6 +226,26 @@ mod tests {
         let mut logits = original.clone();
         apply_temperature(&mut logits, 1.0);
         assert_eq!(logits, original);
+    }
+
+    #[test]
+    fn softmax_handles_large_vocab_with_accurate_normalization() {
+        let mut logits = vec![-12.0f32; 65_536];
+        logits[0] = 0.0;
+        softmax_in_place(&mut logits);
+
+        let sum: f64 = logits.iter().map(|&p| f64::from(p)).sum();
+        assert!((sum - 1.0).abs() < 1e-7, "softmax sum = {sum}");
+        assert!(logits[0] > logits[1]);
+        assert!(logits.iter().all(|p| p.is_finite() && *p >= 0.0));
+    }
+
+    #[test]
+    fn softmax_preserves_positive_infinity_winners() {
+        let mut logits = vec![1.0f32, f32::INFINITY, 2.0, f32::INFINITY];
+        softmax_in_place(&mut logits);
+
+        assert_eq!(logits, vec![0.0, 0.5, 0.0, 0.5]);
     }
 
     #[test]

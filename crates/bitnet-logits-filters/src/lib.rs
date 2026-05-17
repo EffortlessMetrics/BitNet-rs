@@ -64,11 +64,11 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
 
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
 
-    let mut cumsum = 0.0f32;
+    let mut cumsum = 0.0f64;
     let mut cutoff = indexed.len();
     for (rank, (_, p)) in indexed.iter().enumerate() {
-        cumsum += p;
-        if cumsum >= top_p {
+        cumsum += f64::from(*p);
+        if cumsum >= f64::from(top_p) {
             cutoff = rank + 1;
             break;
         }
@@ -113,12 +113,12 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
 
     // First pass: collect non-zero probabilities, accumulate entropy, and
     // cache surprise (-p.ln()) so we don't re-evaluate ln() per element.
-    let mut entropy = 0.0f32;
+    let mut entropy = 0.0f64;
     let mut deviations: Vec<(usize, f32, f32)> = Vec::with_capacity(probs.len());
     for (i, &p) in probs.iter().enumerate() {
         if p > 0.0 {
             let surprise = -p.ln();
-            entropy += p * surprise;
+            entropy += f64::from(p * surprise);
             deviations.push((i, p, surprise));
         }
     }
@@ -129,16 +129,16 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
 
     // Second pass: turn the cached surprise into the deviation from entropy.
     for entry in &mut deviations {
-        entry.2 = (entry.2 - entropy).abs();
+        entry.2 = (f64::from(entry.2) - entropy).abs() as f32;
     }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
-    let mut cumsum = 0.0f32;
+    let mut cumsum = 0.0f64;
     let mut cutoff = deviations.len();
     for (rank, &(_, p, _)) in deviations.iter().enumerate() {
-        cumsum += p;
-        if cumsum >= typical_p {
+        cumsum += f64::from(p);
+        if cumsum >= f64::from(typical_p) {
             cutoff = rank + 1;
             break;
         }
@@ -162,6 +162,15 @@ fn f32_ascending(a: f32, b: f32) -> Ordering {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn top_p_uses_accurate_cumulative_sum_for_large_vocab() {
+        let mut probs = vec![1.0e-5f32; 100_000];
+        apply_top_p(&mut probs, 0.5);
+
+        let kept = probs.iter().filter(|&&p| p > 0.0).count();
+        assert_eq!(kept, 50_001);
+    }
 
     #[test]
     fn top_k_keeps_k_largest() {

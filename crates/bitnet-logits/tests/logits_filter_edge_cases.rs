@@ -158,12 +158,12 @@ fn softmax_all_neg_infinity_gives_uniform() {
 fn softmax_with_positive_infinity() {
     let mut v = vec![1.0, f32::INFINITY, 3.0];
     softmax_in_place(&mut v);
-    // max = inf, so exp(inf - inf) = exp(NaN) = NaN → sum is NaN,
-    // which fails the `sum > 0.0` check, triggering the uniform fallback.
-    let expected = 1.0 / 3.0;
-    for &p in &v {
-        assert_approx(p, expected, 1e-6);
-    }
+    // Infinite logits dominate finite logits. This avoids the old NaN path
+    // from `inf - inf`, which incorrectly fell back to a uniform distribution
+    // across finite and infinite entries.
+    assert_approx(v[0], 0.0, 1e-6);
+    assert_approx(v[1], 1.0, 1e-6);
+    assert_approx(v[2], 0.0, 1e-6);
 }
 
 #[test]
