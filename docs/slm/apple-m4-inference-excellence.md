@@ -427,6 +427,48 @@ broaden chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup,
 or broad Apple Silicon performance claims. `M4-BITNET-EX-009` remains the
 matching-history eval refresh and larger-corpus decision point.
 
+`M4-BITNET-EX-009` runs the second matching BitNet deterministic eval refresh
+for the same accepted Microsoft I2_S GGUF, external tokenizer, prompt template,
+and `apple-m4-cpu-neon` backend:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/task-family-pass-rates.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/reference-vs-rust-comparison.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/regression-vs-2026-05-15T2214Z.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/larger-corpus-decision.json
+```
+
+The fresh Rust M4 run records 100 mechanically scored cases, 79 passes, zero
+timeouts, valid child receipts for every prompt, and `fallback_used=false`.
+The matching regression against `2026-05-15T2214Z` reports
+`matched_context=true` and four advisory warnings, all isolated to
+`constrained_summary` moving from 9/10 to 8/10. The derived
+reference-vs-current comparison records 54/100 text matches, 83/100 mechanical
+scoring matches, four reference-pass/current-fail cases, 13
+current-pass/reference-fail cases, and no comparable reference generated token
+IDs because the reference runner still does not expose them.
+
+| Task family | Current Rust pass rate | Regression note |
+|---|---:|---|
+| arithmetic_exact | 10 / 10 | stable |
+| closed_label_classification | 9 / 10 | stable |
+| constrained_summary | 8 / 10 | advisory warning |
+| fixed_table_qa | 6 / 10 | weak |
+| format_constrained_json | 10 / 10 | improved; needs another stage before broad claims |
+| numeric_tolerance | 5 / 10 | weak |
+| ordering_sorting | 8 / 10 | stable |
+| required_forbidden_tokens | 7 / 10 | weak |
+| rewrite_normalized | 9 / 10 | stable |
+| synthetic_extraction | 7 / 10 | weak |
+
+The recorded larger-corpus decision is conservative: stage a 250-case BitNet
+corpus next, focused on weak or variable task families, before any 500-case
+expansion or broad BitNet quality envelope. This is matching-history and
+decision evidence only. It does not enable BitNet chat or serve, does not use
+dense Qwen evidence, and does not widen Metal, QK256, Neural Engine, MPSGraph,
+MacBook, broad Apple Silicon performance, or speedup claims.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:

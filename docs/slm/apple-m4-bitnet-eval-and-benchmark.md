@@ -142,6 +142,17 @@ That report keeps these BitNet task-family pass rates, mechanical failure
 taxonomy, and the reference-vs-Rust comparison deltas in one BitNet-only
 artifact. It is derived from committed receipts and is not a fresh runtime run.
 
+`M4-BITNET-EX-009` then adds a fresh matching eval refresh at
+`ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json`
+with the same accepted artifact/tokenizer/backend identity. The run records
+79/100 mechanical passes, zero timeouts, and `fallback_used=false`. Its
+matching regression against `2026-05-15T2214Z` reports `matched_context=true`
+with four advisory warnings isolated to the constrained-summary family. The
+same directory includes a fresh task-family rollup, a current
+reference-vs-Rust comparison, and `larger-corpus-decision.json`, which stages a
+250-case BitNet corpus before any 500-case expansion or broad BitNet quality
+envelope claim.
+
 The receipt records generated text, generated token IDs, tokenizer authority,
 model SHA, per-case timing, task-family scoring, and failure taxonomy for the
 bounded corpus. It also keeps the explicit claim boundary: this is not a broad
