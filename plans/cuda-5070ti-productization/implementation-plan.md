@@ -32,8 +32,9 @@ promotion tied to receipts.
 | 22 | CUDA-MODEL-SMOLLM2-001 | `model(cuda): add SmolLM2 360M artifact contract` | model artifact docs |
 | 23 | CUDA-MODEL-SMOLLM2-002 | `docs(cuda): sync SmolLM2 CPU blocker state` | model coverage and plan docs |
 | 24 | CUDA-SERVER-003 | `docs(cuda): define server readiness promotion boundary` | server readiness spec |
-| 25 | CUDA-SERVER-004 | `docs(cuda): promote dense Qwen exact-profile server readiness` | model coverage and status |
-| 26 | CUDA-SERVER-005 | `server(cuda): official BitNet strict server smoke` | server receipt path |
+| 25 | CUDA-SERVER-004 | `server(cuda): harden dense Qwen server receipt fields` | server receipt path |
+| 26 | CUDA-SERVER-005 | `docs(cuda): promote dense Qwen exact-profile server readiness` | model coverage and status |
+| 27 | CUDA-SERVER-006 | `server(cuda): official BitNet strict server smoke` | server receipt path |
 
 ## Shared Links
 
@@ -531,13 +532,13 @@ Status and docs summarize proof. They do not create new proof.
 
 Revert the status/docs/server-smoke PR and demote the server row if needed.
 
-## Work items: CUDA-SERVER-003 through CUDA-SERVER-005
+## Work items: CUDA-SERVER-003 through CUDA-SERVER-006
 
-Status: CUDA-SERVER-003 blocked; CUDA-SERVER-004 and CUDA-SERVER-005 proposed
+Status: CUDA-SERVER-003 merged; CUDA-SERVER-004, CUDA-SERVER-005, and CUDA-SERVER-006 proposed
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
-Campaign items: `CUDA-SERVER-003` through `CUDA-SERVER-005`
+Campaign items: `CUDA-SERVER-003` through `CUDA-SERVER-006`
 Blocked by: CUDA-SERVER-002
 Blocks: exact-profile server readiness status promotion
 
@@ -557,15 +558,24 @@ cross-family proof inheritance.
 
 ### Acceptance
 
-`CUDA-SERVER-003` audits the bounded dense Qwen server-smoke receipt against the
-readiness boundary and records that it is not promotable as-is. Later promotion
-PRs can set `server_ready=true` only for the exact model/profile whose refreshed
-or supplemental receipt satisfies the server readiness spec.
+`CUDA-SERVER-003` audited the bounded dense Qwen server-smoke receipt against
+the readiness boundary and recorded that it is not promotable as-is.
+`CUDA-SERVER-004` adds the missing shared-engine receipt fields and validator
+for future receipts without promoting `server_ready`. Later promotion PRs can
+set `server_ready=true` only for the exact model/profile whose refreshed or
+supplemental receipt satisfies the server readiness spec and passes the server
+shared-engine receipt validator.
+`CUDA-SERVER-004` also gates dense Qwen server route and claim emission on the
+exact request model plus active artifact SHA-256 loaded through CUDA; missing or
+mismatched artifact identity, or a CPU-loaded active model, stays generic and
+cannot populate dense coverage or server-smoke claims.
 
 ### Proof commands
 
 ```bash
 git diff --check
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features server_shared_engine_chat_completion
+cargo test --locked -p bitnet-server --no-default-features --features cpu server_shared_engine_receipt
 cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
 ```
 

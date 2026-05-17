@@ -109,6 +109,11 @@ dense_regular_llm_cuda_proof = true only for the exact artifact
 bitnet_packed_i2s_qk256_proof = false
 ```
 
+Server receipts must not mark the dense route/proof or populate a dense
+model-coverage row unless the exact dense profile artifact identity matches and
+the active model was loaded through CUDA. Otherwise, the shared-engine receipt
+stays generic and no dense readiness or proof claim is emitted.
+
 ### 4. Fallback Must Fail Closed
 
 Strict server readiness cannot allow hidden fallback. A promotion is blocked if
@@ -190,6 +195,7 @@ internal test path they use, plus receipt validation. For example:
 
 ```bash
 cargo run --locked -p bitnet-server --no-default-features --features cpu,cuda -- --device nvidia-rtx-5070-ti-cuda --model <verified-model>
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features server_shared_engine_chat_completion
 cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain <server-receipt>
 ```
 

@@ -11520,7 +11520,7 @@ fn apple_backend_failure_note(requested_backend_label: &str) -> Option<&'static 
             "apple-m3-air-metal is the Apple M3 MacBook Air native Metal identity lane; it is not M4 Mac mini evidence, MPSGraph model inference, Neural Engine execution, or CPU fallback proof.",
         ),
         "apple-m3-air-mpsgraph" => Some(
-            "apple-m3-air-mpsgraph is the Apple M3 MacBook Air graph/reference identity lane; it is not native Metal kernel proof, M4 Mac mini evidence, or Neural Engine execution.",
+            "apple-m3-air-mpsgraph is the Apple M3 MacBook Air graph/reference identity lane; it is not native Metal kernel proof, not M4 Mac mini evidence, and not Neural Engine execution.",
         ),
         "apple-m3-air-cpu-neon" => Some(
             "apple-m3-air-cpu-neon is the Apple M3 MacBook Air CPU/NEON lane; it is not M4 Mac mini evidence, Metal acceleration, Neural Engine execution, or MPSGraph model inference.",
