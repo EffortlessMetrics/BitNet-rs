@@ -3238,9 +3238,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-CPU-SLM-PERF-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-002-resident-cpu"
 pr = 5320
+merge_sha = "0eb1a1f69842d2b98b853a0cc139d3e36133a060"
 head_sha = "90cc7faabbb55841c3f1e859b42f284027488278"
 stackable = false
 review_mode = "codex_premerge"
