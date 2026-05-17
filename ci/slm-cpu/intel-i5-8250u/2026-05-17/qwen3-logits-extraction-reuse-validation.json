@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_kaby_performance_validation",
+  "work_item": "SLM-CPU-025",
+  "baseline": "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json",
+  "after": "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse.json",
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_claim": false,
+    "second_model_claim": false,
+    "server_claim": false,
+    "gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_claim": false
+  },
+  "provenance_preserved": {
+    "model_sha256_match": true,
+    "selected_backend_match": true,
+    "runtime_api_match": true,
+    "fallback_false": true,
+    "strict_tokenizer_source_match": true
+  },
+  "behavior_oracle": {
+    "generated_token_ids_match_baseline": true,
+    "decoded_text_match_baseline": true,
+    "prompt_count_match": true
+  },
+  "logits_extraction": {
+    "direct_greedy_logits_steps": 6,
+    "logits_vec_extraction_steps": 40,
+    "logits_vec_extraction_bypassed_for_all_steps": false,
+    "remaining_vec_extraction_reason": "default repetition_penalty path must preserve count-aware penalty semantics; direct tensor argmax is used only where the sampler fast path is already exact",
+    "model_logits_and_extract_alloc_bytes_before": 55949754,
+    "model_logits_and_extract_alloc_bytes_after": 52305858,
+    "model_logits_and_extract_alloc_bytes_delta": -3643896,
+    "model_logits_and_extract_alloc_count_before": 690,
+    "model_logits_and_extract_alloc_count_after": 732,
+    "model_logits_and_extract_alloc_count_delta": 42
+  },
+  "passed": true
+}

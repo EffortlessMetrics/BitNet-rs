@@ -3377,6 +3377,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
     root: &Path,
     promotion_ledger: &Path,
@@ -8395,6 +8396,7 @@ fn evaluate_workload_profile(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn evaluate_profile_route(
     root: &Path,
     profile: &WorkloadProfile,
