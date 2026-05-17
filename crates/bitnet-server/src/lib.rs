@@ -76,6 +76,10 @@ use monitoring::{
     metrics::MetricsCollector,
 };
 
+const DENSE_QWEN25_Q8_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
+const DENSE_QWEN25_Q8_MODEL_SHA256: &str =
+    "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+
 #[derive(Deserialize)]
 pub struct InferenceRequest {
     pub prompt: String,
@@ -180,9 +184,14 @@ pub struct ServerSharedEngineReceipt {
     pub request_id: String,
     pub runtime_path: String,
     pub runtime_api: String,
+    pub model_identity: ServerSharedEngineModelIdentity,
+    pub endpoint_profile: ServerSharedEngineEndpointProfile,
+    pub generation_policy: ServerSharedEngineGenerationPolicy,
     pub requested_model: String,
     pub active_model_id: String,
     pub active_model_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
     pub model_coverage_row: Option<String>,
     pub model_coverage_tier: Option<String>,
     pub selected_backend: String,
@@ -205,6 +214,36 @@ pub struct ServerSharedEngineReceipt {
     pub full_cuda_residency_claimed: bool,
     pub dense_regular_llm_cuda_inference_claimed: bool,
     pub bitnet_packed_i2s_qk256_proof: bool,
+}
+
+/// Stable model identity attached to a server shared-engine receipt.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineModelIdentity {
+    pub model_id: String,
+    pub requested_model: String,
+    pub active_model_id: String,
+    pub active_model_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
+}
+
+/// Endpoint and request-shape profile attached to a server shared-engine receipt.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineEndpointProfile {
+    pub endpoint: String,
+    pub method: String,
+    pub request_profile: String,
+    pub streaming: bool,
+    pub message_count: usize,
+}
+
+/// Generation policy attached to a server shared-engine receipt.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineGenerationPolicy {
+    pub max_tokens: usize,
+    pub temperature: f32,
+    pub top_p: f32,
+    pub decoding: String,
 }
 
 /// Bounded quality gate attached to a server shared-engine receipt.
@@ -275,6 +314,7 @@ pub struct ServerReadinessModelState {
 pub struct ServerReadinessActiveModel {
     pub model_id: String,
     pub model_path: String,
+    pub model_sha256: Option<String>,
     pub device: String,
     pub quantization_type: String,
     pub size_mb: u64,
@@ -918,33 +958,59 @@ fn build_server_shared_engine_receipt(
     generated_text: &str,
     total_ms: u64,
 ) -> ServerSharedEngineReceipt {
+    let requested_backend = configured_device.backend_label();
     let selected_backend = selected_backend_label(configured_device, active_model);
     let route = server_receipt_route(configured_device, request, active_model);
     let coverage = server_receipt_model_coverage(&route, request, active_model);
+    let fallback_used = matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
+        && selected_backend != requested_backend;
     let generated_text_non_empty = !generated_text.trim().is_empty();
     let server_smoke_response_claimed = generated_text_non_empty
         && selected_backend == "nvidia-rtx-5070-ti-cuda"
+        && !fallback_used
         && route == "dense_regular_llm_cuda";
+    let streaming = request.stream.unwrap_or(false);
+    let generation_policy = server_receipt_generation_policy(request);
 
     ServerSharedEngineReceipt {
         receipt_kind: "server_shared_engine_chat_completion".to_string(),
         request_id: request_id.to_string(),
         runtime_path: "shared_local_inference_engine".to_string(),
         runtime_api: runtime_api_label(configured_device, active_model),
+        model_identity: ServerSharedEngineModelIdentity {
+            model_id: request.model.clone(),
+            requested_model: request.model.clone(),
+            active_model_id: active_model.model_id.clone(),
+            active_model_path: active_model.model_path.clone(),
+            model_sha256: active_model.model_sha256.clone(),
+        },
+        endpoint_profile: ServerSharedEngineEndpointProfile {
+            endpoint: "/v1/chat/completions".to_string(),
+            method: "POST".to_string(),
+            request_profile: if streaming {
+                "streaming_chat_completion".to_string()
+            } else {
+                "non_streaming_chat_completion".to_string()
+            },
+            streaming,
+            message_count: request.messages.len(),
+        },
+        generation_policy,
         requested_model: request.model.clone(),
         active_model_id: active_model.model_id.clone(),
         active_model_path: active_model.model_path.clone(),
+        model_sha256: active_model.model_sha256.clone(),
         model_coverage_row: coverage.as_ref().map(|coverage| coverage.row.to_string()),
         model_coverage_tier: coverage.as_ref().map(|coverage| coverage.tier.to_string()),
-        requested_backend: configured_device.backend_label(),
+        requested_backend,
         selected_backend,
         selected_route: route,
         prompt_template: prompt_template.to_string(),
         tokenizer_authority: "active_model_tokenizer".to_string(),
         prompt_authority: "server_chat_template".to_string(),
-        fallback_used: false,
+        fallback_used,
         simulated_inference: false,
-        streaming: request.stream.unwrap_or(false),
+        streaming,
         generated_text_non_empty,
         prompt_tokens: usage.prompt_tokens,
         completion_tokens: usage.completion_tokens,
@@ -962,6 +1028,20 @@ fn build_server_shared_engine_receipt(
         full_cuda_residency_claimed: false,
         dense_regular_llm_cuda_inference_claimed: server_smoke_response_claimed,
         bitnet_packed_i2s_qk256_proof: false,
+    }
+}
+
+fn server_receipt_generation_policy(
+    request: &ChatCompletionRequest,
+) -> ServerSharedEngineGenerationPolicy {
+    let temperature = request.temperature.unwrap_or(0.0);
+    let top_p = request.top_p.unwrap_or(1.0);
+
+    ServerSharedEngineGenerationPolicy {
+        max_tokens: request.max_tokens.unwrap_or(16),
+        temperature,
+        top_p,
+        decoding: if temperature == 0.0 { "greedy".to_string() } else { "sampling".to_string() },
     }
 }
 
@@ -1002,26 +1082,25 @@ fn is_dense_qwen25_q8_model(
     request: &ChatCompletionRequest,
     active_model: &model_manager::ModelMetadata,
 ) -> bool {
-    let mut text = String::new();
-    text.push_str(&request.model);
-    text.push(' ');
-    text.push_str(&active_model.model_id);
-    text.push(' ');
-    text.push_str(&active_model.model_path);
-    text.push(' ');
-    text.push_str(&active_model.quantization_type);
-    let normalized = text.to_ascii_lowercase();
+    request.model == DENSE_QWEN25_Q8_MODEL_ID
+        && active_model_device_is_cuda(active_model)
+        && active_model
+            .model_sha256
+            .as_deref()
+            .is_some_and(|sha256| sha256.eq_ignore_ascii_case(DENSE_QWEN25_Q8_MODEL_SHA256))
+}
 
-    (normalized.contains("qwen2.5") || normalized.contains("qwen25"))
-        && normalized.contains("0.5")
-        && (normalized.contains("q8_0") || normalized.contains("q8"))
+fn active_model_device_is_cuda(active_model: &model_manager::ModelMetadata) -> bool {
+    active_model.device.to_ascii_lowercase().contains("cuda")
 }
 
 fn runtime_api_label(
     configured_device: &DeviceConfig,
     active_model: &model_manager::ModelMetadata,
 ) -> String {
-    if selected_backend_label(configured_device, active_model).contains("cuda") {
+    if preserves_configured_backend_label(configured_device)
+        && active_model_device_is_cuda(active_model)
+    {
         "cuda".to_string()
     } else {
         active_model.device.clone()
@@ -1032,6 +1111,12 @@ fn selected_backend_label(
     configured_device: &DeviceConfig,
     active_model: &model_manager::ModelMetadata,
 ) -> String {
+    if matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
+        && !active_model_device_is_cuda(active_model)
+    {
+        return active_model.device.clone();
+    }
+
     if preserves_configured_backend_label(configured_device) {
         configured_device.backend_label()
     } else {
@@ -1225,6 +1310,7 @@ fn build_server_readiness_response(
     let active_model_summary = active_model.as_ref().map(|metadata| ServerReadinessActiveModel {
         model_id: metadata.model_id.clone(),
         model_path: metadata.model_path.clone(),
+        model_sha256: metadata.model_sha256.clone(),
         device: metadata.device.clone(),
         quantization_type: metadata.quantization_type.clone(),
         size_mb: metadata.size_mb,
@@ -1280,7 +1366,7 @@ fn build_server_readiness_response(
             },
         },
         claim_boundary: ServerReadinessClaimBoundary {
-            server_ready_claimed: ready,
+            server_ready_claimed: false,
             dense_regular_llm_cuda_inference_claimed: false,
             bitnet_packed_i2s_qk256_proof: false,
             speedup_claim: false,
@@ -1524,6 +1610,7 @@ mod tests {
             Some(ModelMetadata {
                 model_id: "model-1".to_string(),
                 model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+                model_sha256: None,
                 device: "Cuda(0)".to_string(),
                 quantization_type: "Q8_0".to_string(),
                 loaded_at: SystemTime::UNIX_EPOCH,
@@ -1551,7 +1638,7 @@ mod tests {
         assert!(!response.inference.batch_inference_ready);
         assert_eq!(response.inference.runtime_path, "shared_local_inference_engine");
         assert_eq!(response.inference.unavailable_reason, "available");
-        assert!(response.claim_boundary.server_ready_claimed);
+        assert!(!response.claim_boundary.server_ready_claimed);
         assert!(!response.claim_boundary.dense_regular_llm_cuda_inference_claimed);
         assert!(!response.claim_boundary.bitnet_packed_i2s_qk256_proof);
         assert!(!response.claim_boundary.speedup_claim);
@@ -1617,6 +1704,7 @@ mod tests {
         let metadata = ModelMetadata {
             model_id: "model-1".to_string(),
             model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            model_sha256: None,
             device: "Cuda(0)".to_string(),
             quantization_type: "Q8_0".to_string(),
             loaded_at: SystemTime::UNIX_EPOCH,
@@ -1649,6 +1737,10 @@ mod tests {
         assert!(!receipt.simulated_inference);
         assert!(!receipt.streaming);
         assert!(receipt.generated_text_non_empty);
+        assert_eq!(receipt.prompt_template.as_str(), "chatml");
+        assert_eq!(receipt.tokenizer_authority.as_str(), "active_model_tokenizer");
+        assert_eq!(receipt.prompt_authority.as_str(), "server_chat_template");
+        assert_eq!(receipt.quality_gate.gate.as_str(), "server_non_empty_utf8_response");
         assert!(receipt.quality_gate.passed);
         assert!(receipt.quality_gate.utf8_valid);
         assert!(!receipt.quality_gate.broad_chat_quality_claimed);
@@ -1681,6 +1773,9 @@ mod tests {
         let metadata = ModelMetadata {
             model_id: "model-1".to_string(),
             model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            model_sha256: Some(
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+            ),
             device: "Cuda(0)".to_string(),
             quantization_type: "Q8_0".to_string(),
             loaded_at: SystemTime::UNIX_EPOCH,
@@ -1704,6 +1799,30 @@ mod tests {
 
         assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(receipt.runtime_api, "cuda");
+        assert_eq!(receipt.model_identity.model_id, request.model.as_str());
+        assert_eq!(receipt.model_identity.requested_model, request.model.as_str());
+        assert_eq!(receipt.model_identity.active_model_id.as_str(), "model-1");
+        assert_eq!(
+            receipt.model_identity.model_sha256.as_deref(),
+            Some("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e")
+        );
+        assert_eq!(receipt.model_sha256.as_deref(), receipt.model_identity.model_sha256.as_deref());
+        assert_eq!(receipt.endpoint_profile.endpoint.as_str(), "/v1/chat/completions");
+        assert_eq!(receipt.endpoint_profile.method.as_str(), "POST");
+        assert_eq!(
+            receipt.endpoint_profile.request_profile.as_str(),
+            "non_streaming_chat_completion"
+        );
+        assert!(!receipt.endpoint_profile.streaming);
+        assert_eq!(receipt.endpoint_profile.message_count, 1);
+        assert_eq!(receipt.generation_policy.max_tokens, 16);
+        assert_eq!(receipt.generation_policy.temperature, 0.0);
+        assert_eq!(receipt.generation_policy.top_p, 1.0);
+        assert_eq!(receipt.generation_policy.decoding.as_str(), "greedy");
+        assert_eq!(receipt.prompt_template.as_str(), "chatml");
+        assert_eq!(receipt.tokenizer_authority.as_str(), "active_model_tokenizer");
+        assert_eq!(receipt.prompt_authority.as_str(), "server_chat_template");
+        assert_eq!(receipt.quality_gate.gate.as_str(), "server_non_empty_utf8_response");
         assert_eq!(receipt.requested_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(receipt.selected_route, "dense_regular_llm_cuda");
         assert_eq!(receipt.model_coverage_row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
@@ -1714,6 +1833,176 @@ mod tests {
         assert!(receipt.server_smoke_response_claimed);
         assert!(!receipt.server_ready_claimed);
         assert!(!receipt.speedup_claim);
+        assert!(receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+    }
+
+    #[test]
+    fn server_shared_engine_receipt_requires_exact_qwen_artifact_for_dense_claims() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "What is working capital?".to_string(),
+            }],
+            max_tokens: Some(16),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            model_sha256: None,
+            device: "Cuda(0)".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 512,
+            parameters: 500_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        let receipt = build_server_shared_engine_receipt(
+            "request-1",
+            &request,
+            &metadata,
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            "chatml",
+            &usage,
+            "Working capital is current assets minus current liabilities.",
+            25,
+        );
+
+        assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.runtime_api, "cuda");
+        assert_eq!(receipt.selected_route, "shared_validated_local_inference_engine");
+        assert!(receipt.model_coverage_row.is_none());
+        assert!(receipt.generated_text_non_empty);
+        assert!(!receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
+        assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+    }
+
+    #[test]
+    fn server_shared_engine_receipt_requires_cuda_loaded_artifact_for_dense_claims() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "What is working capital?".to_string(),
+            }],
+            max_tokens: Some(16),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            model_sha256: Some(
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+            ),
+            device: "Cpu".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 512,
+            parameters: 500_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        let receipt = build_server_shared_engine_receipt(
+            "request-1",
+            &request,
+            &metadata,
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            "chatml",
+            &usage,
+            "Working capital is current assets minus current liabilities.",
+            25,
+        );
+
+        assert_eq!(receipt.selected_backend, "Cpu");
+        assert_eq!(receipt.runtime_api, "Cpu");
+        assert_eq!(receipt.selected_route, "shared_validated_local_inference_engine");
+        assert!(receipt.model_coverage_row.is_none());
+        assert!(receipt.fallback_used);
+        assert!(!receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
+        assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+    }
+
+    #[test]
+    fn server_shared_engine_receipt_records_streaming_sampling_profile() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![
+                ChatCompletionMessage {
+                    role: "system".to_string(),
+                    content: "Answer concisely.".to_string(),
+                },
+                ChatCompletionMessage {
+                    role: "user".to_string(),
+                    content: "Summarize liquidity risk.".to_string(),
+                },
+            ],
+            max_tokens: Some(24),
+            temperature: Some(0.7),
+            top_p: Some(0.9),
+            stream: Some(true),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 18, completion_tokens: 6, total_tokens: 24 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            model_sha256: Some(
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+            ),
+            device: "Cuda(0)".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 512,
+            parameters: 500_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        let receipt = build_server_shared_engine_receipt(
+            "request-2",
+            &request,
+            &metadata,
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            "chatml",
+            &usage,
+            "Liquidity risk is the chance cash is unavailable when needed.",
+            31,
+        );
+
+        assert!(receipt.streaming);
+        assert_eq!(receipt.endpoint_profile.request_profile.as_str(), "streaming_chat_completion");
+        assert!(receipt.endpoint_profile.streaming);
+        assert_eq!(receipt.endpoint_profile.message_count, 2);
+        assert_eq!(receipt.generation_policy.max_tokens, 24);
+        assert_eq!(receipt.generation_policy.temperature, 0.7);
+        assert_eq!(receipt.generation_policy.top_p, 0.9);
+        assert_eq!(receipt.generation_policy.decoding.as_str(), "sampling");
+        assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.selected_route, "dense_regular_llm_cuda");
+        assert!(receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
+        assert!(!receipt.speedup_claim);
+        assert!(!receipt.full_cuda_residency_claimed);
         assert!(receipt.dense_regular_llm_cuda_inference_claimed);
         assert!(!receipt.bitnet_packed_i2s_qk256_proof);
     }

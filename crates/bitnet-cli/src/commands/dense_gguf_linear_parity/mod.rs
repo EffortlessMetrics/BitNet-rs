@@ -13471,7 +13471,7 @@ mod tests {
 
     #[test]
     fn dense_gguf_norm_fixture_receipt_records_missing_cuda_kernel() {
-        let data = build_complete_qwen_layer_gguf();
+        let data = build_model_boundary_qwen_gguf();
         let reader = GgufReader::new(&data).expect("parse qwen fixture");
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
         let fixtures = [DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm]
@@ -13503,7 +13503,7 @@ mod tests {
 
     #[test]
     fn dense_gguf_norm_cuda_parity_receipt_records_cuda_kernel() {
-        let data = build_complete_qwen_layer_gguf();
+        let data = build_model_boundary_qwen_gguf();
         let reader = GgufReader::new(&data).expect("parse qwen fixture");
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
         let roles = [DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm];
@@ -13542,7 +13542,7 @@ mod tests {
 
     #[test]
     fn dense_gguf_rope_cuda_parity_receipt_records_cuda_kernel() {
-        let data = build_complete_qwen_layer_gguf();
+        let data = build_model_boundary_qwen_gguf();
         let reader = GgufReader::new(&data).expect("parse qwen fixture");
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
         let fixture = dense_gguf_rope_cuda_fixture_from_reader(&reader, &inspection, 0, 4, 1)

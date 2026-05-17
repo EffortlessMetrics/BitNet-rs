@@ -32,10 +32,10 @@ fn bitnet_stdout(args: &[&str]) -> String {
 
 /// Run `bitnet <args>` and return its stderr as a `String`.
 /// Panics if the process exits with a zero code (we expect failure here).
-fn bitnet_stderr_failure(args: &[&str]) -> String {
+fn bitnet_stderr_failure(args: &[&str]) -> Result<String, std::string::FromUtf8Error> {
     let output = cargo_bin_cmd!("bitnet").args(args).output().expect("failed to spawn bitnet");
     assert!(!output.status.success(), "expected bitnet {:?} to fail, but it succeeded", args);
-    String::from_utf8(output.stderr).expect("stderr is not valid UTF-8")
+    Ok(trim_trailing_line_whitespace(String::from_utf8(output.stderr)?))
 }
 
 fn trim_trailing_line_whitespace(output: String) -> String {
@@ -181,22 +181,25 @@ fn mac_receipts_check_help() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn run_missing_required_args_error() {
+fn run_missing_required_args_error() -> Result<(), std::string::FromUtf8Error> {
     // `run` needs at least --model and --prompt; omitting them should fail.
-    let err = bitnet_stderr_failure(&["run"]);
+    let err = bitnet_stderr_failure(&["run"])?;
     assert_snapshot!("run_missing_required_args_error", err);
+    Ok(())
 }
 
 #[test]
-fn compat_check_missing_path_error() {
+fn compat_check_missing_path_error() -> Result<(), std::string::FromUtf8Error> {
     // `compat-check` requires a positional <PATH>; omitting it should fail.
-    let err = bitnet_stderr_failure(&["compat-check"]);
+    let err = bitnet_stderr_failure(&["compat-check"])?;
     assert_snapshot!("compat_check_missing_path_error", err);
+    Ok(())
 }
 
 #[test]
-fn unknown_subcommand_error() {
+fn unknown_subcommand_error() -> Result<(), std::string::FromUtf8Error> {
     // An unrecognised subcommand should fail with a helpful error.
-    let err = bitnet_stderr_failure(&["this-does-not-exist"]);
+    let err = bitnet_stderr_failure(&["this-does-not-exist"])?;
     assert_snapshot!("unknown_subcommand_error", err);
+    Ok(())
 }

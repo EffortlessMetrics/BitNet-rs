@@ -226,6 +226,14 @@ pub const DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
 /// BitNet packed I2_S/QK256 proof claims false.
 pub const DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
     "dense_gguf_qwen_chat_strict_cuda_proof";
+
+/// Receipt kind for server shared-engine chat-completion receipts.
+///
+/// This receipt kind is used by the server path, not the CLI ask/chat path.
+/// It must keep server readiness false until an exact-profile promotion PR
+/// updates the model coverage matrix.
+pub const SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND: &str =
+    "server_shared_engine_chat_completion";
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =

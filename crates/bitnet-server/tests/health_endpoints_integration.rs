@@ -35,8 +35,13 @@ async fn test_health_endpoint_returns_json() -> Result<()> {
 
     let response = app.oneshot(request).await?;
 
-    // Verify response
-    assert_eq!(response.status(), StatusCode::OK);
+    // Real host metrics can make the comprehensive health check degraded or
+    // unhealthy. The endpoint should still return a JSON health response.
+    assert!(
+        response.status() == StatusCode::OK || response.status() == StatusCode::SERVICE_UNAVAILABLE,
+        "Health endpoint should return 200 or 503, got {}",
+        response.status()
+    );
 
     // Parse JSON body
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await?;

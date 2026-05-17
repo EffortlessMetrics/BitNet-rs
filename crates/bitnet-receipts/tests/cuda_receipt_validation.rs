@@ -36,9 +36,84 @@ use bitnet_receipts::{
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
     validate_dense_regular_llm_cuda_tensor_residency_receipt_json,
+    validate_server_shared_engine_chat_completion_receipt_json,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+
+fn server_shared_engine_chat_completion_receipt() -> Value {
+    json!({
+        "receipt_kind": "server_shared_engine_chat_completion",
+        "request_id": "request-1",
+        "runtime_path": "shared_local_inference_engine",
+        "runtime_api": "cuda",
+        "model_identity": {
+            "model_id": "qwen2.5-0.5b-instruct-q8_0",
+            "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+            "active_model_id": "model-1",
+            "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+        },
+        "endpoint_profile": {
+            "endpoint": "/v1/chat/completions",
+            "method": "POST",
+            "request_profile": "non_streaming_chat_completion",
+            "streaming": false,
+            "message_count": 1
+        },
+        "generation_policy": {
+            "max_tokens": 16,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "decoding": "greedy"
+        },
+        "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+        "active_model_id": "model-1",
+        "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+        "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+        "model_coverage_tier": "product_cli_ready",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_route": "dense_regular_llm_cuda",
+        "prompt_template": "chatml",
+        "tokenizer_authority": "active_model_tokenizer",
+        "prompt_authority": "server_chat_template",
+        "fallback_used": false,
+        "simulated_inference": false,
+        "streaming": false,
+        "generated_text_non_empty": true,
+        "prompt_tokens": 12,
+        "completion_tokens": 4,
+        "total_ms": 25,
+        "quality_gate": {
+            "gate": "server_non_empty_utf8_response",
+            "passed": true,
+            "generated_text_non_empty": true,
+            "utf8_valid": true,
+            "broad_chat_quality_claimed": false
+        },
+        "server_smoke_response_claimed": true,
+        "server_ready_claimed": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false,
+        "dense_regular_llm_cuda_inference_claimed": true,
+        "bitnet_packed_i2s_qk256_proof": false
+    })
+}
+
+fn remove_top_level_field(receipt: &mut Value, field: &str) {
+    let removed = receipt.as_object_mut().and_then(|object| object.remove(field));
+    assert!(removed.is_some(), "expected receipt field `{field}` to exist");
+}
+
+fn remove_nested_field(receipt: &mut Value, object_field: &str, field: &str) {
+    let removed = receipt
+        .get_mut(object_field)
+        .and_then(Value::as_object_mut)
+        .and_then(|object| object.remove(field));
+    assert!(removed.is_some(), "expected receipt field `{object_field}.{field}` to exist");
+}
 
 #[test]
 fn committed_cuda_smoke_receipt_validates() {
@@ -91,6 +166,214 @@ fn committed_dense_regular_llm_cuda_persistent_residency_receipt_validates() {
 
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt).unwrap();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_validates() {
+    let receipt = server_shared_engine_chat_completion_receipt();
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_ok());
+}
+
+#[test]
+fn committed_stale_server_shared_engine_chat_completion_receipt_fails_hardened_validator()
+-> Result<(), serde_json::Error> {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json"
+    ))?;
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_err());
+    Ok(())
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_missing_profile_fields() {
+    let mut missing_checksum = server_shared_engine_chat_completion_receipt();
+    missing_checksum["model_identity"]["model_sha256"] = Value::Null;
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&missing_checksum).is_err());
+
+    let mut missing_endpoint = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_endpoint, "endpoint_profile");
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&missing_endpoint).is_err());
+
+    let mut missing_policy = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_policy, "generation_policy");
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&missing_policy).is_err());
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_missing_request_authority_or_usage_fields()
+{
+    let mut missing_request_id = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_request_id, "request_id");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_request_id).is_err()
+    );
+
+    let mut missing_prompt_template = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_prompt_template, "prompt_template");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_prompt_template)
+            .is_err()
+    );
+
+    let mut missing_tokenizer_authority = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_tokenizer_authority, "tokenizer_authority");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_tokenizer_authority)
+            .is_err()
+    );
+
+    let mut missing_prompt_authority = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_prompt_authority, "prompt_authority");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_prompt_authority)
+            .is_err()
+    );
+
+    let mut missing_prompt_tokens = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_prompt_tokens, "prompt_tokens");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_prompt_tokens).is_err()
+    );
+
+    let mut missing_completion_tokens = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_completion_tokens, "completion_tokens");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_completion_tokens)
+            .is_err()
+    );
+
+    let mut missing_total_ms = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_total_ms, "total_ms");
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&missing_total_ms).is_err());
+
+    let mut missing_quality_gate_name = server_shared_engine_chat_completion_receipt();
+    remove_nested_field(&mut missing_quality_gate_name, "quality_gate", "gate");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_quality_gate_name)
+            .is_err()
+    );
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_checksum_identity_mismatch() {
+    let mut mismatch = server_shared_engine_chat_completion_receipt();
+    mismatch["model_sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&mismatch).is_err());
+
+    let mut missing_top_level = server_shared_engine_chat_completion_receipt();
+    remove_top_level_field(&mut missing_top_level, "model_sha256");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&missing_top_level).is_err()
+    );
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_inconsistent_model_identity() {
+    let mut receipt = server_shared_engine_chat_completion_receipt();
+    receipt["model_identity"]["model_id"] = json!("qwen2.5-0.5b-instruct-q4_k_m");
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_err());
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_wrong_dense_model_scope() {
+    let mut receipt = server_shared_engine_chat_completion_receipt();
+    receipt["model_identity"]["model_id"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model_identity"]["requested_model"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["requested_model"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model_identity"]["model_sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["model_sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["model_coverage_row"] = json!("dense_qwen3_06b_q8_candidate");
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_err());
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_hidden_fallback_and_ready_claims() {
+    let mut generic_backend = server_shared_engine_chat_completion_receipt();
+    generic_backend["selected_backend"] = json!("cuda");
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&generic_backend).is_err());
+
+    let mut generic_requested_backend = server_shared_engine_chat_completion_receipt();
+    generic_requested_backend["requested_backend"] = json!("cuda");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&generic_requested_backend)
+            .is_err()
+    );
+
+    let mut non_cuda_runtime_api = server_shared_engine_chat_completion_receipt();
+    non_cuda_runtime_api["runtime_api"] = json!("wgpu");
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&non_cuda_runtime_api).is_err()
+    );
+
+    let mut fallback = server_shared_engine_chat_completion_receipt();
+    fallback["fallback_used"] = json!(true);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&fallback).is_err());
+
+    let mut not_smoke = server_shared_engine_chat_completion_receipt();
+    not_smoke["server_smoke_response_claimed"] = json!(false);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&not_smoke).is_err());
+
+    let mut promoted = server_shared_engine_chat_completion_receipt();
+    promoted["server_ready_claimed"] = json!(true);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&promoted).is_err());
+
+    let mut speedup = server_shared_engine_chat_completion_receipt();
+    speedup["speedup_claim"] = json!(true);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&speedup).is_err());
+
+    let mut full_residency = server_shared_engine_chat_completion_receipt();
+    full_residency["full_cuda_residency_claimed"] = json!(true);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&full_residency).is_err());
+
+    let mut broad_quality = server_shared_engine_chat_completion_receipt();
+    broad_quality["quality_gate"]["broad_chat_quality_claimed"] = json!(true);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&broad_quality).is_err());
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_simulated_or_low_quality_smoke() {
+    let mut simulated = server_shared_engine_chat_completion_receipt();
+    simulated["simulated_inference"] = json!(true);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&simulated).is_err());
+
+    let mut empty_text = server_shared_engine_chat_completion_receipt();
+    empty_text["generated_text_non_empty"] = json!(false);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&empty_text).is_err());
+
+    let mut quality_failed = server_shared_engine_chat_completion_receipt();
+    quality_failed["quality_gate"]["passed"] = json!(false);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&quality_failed).is_err());
+
+    let mut invalid_utf8 = server_shared_engine_chat_completion_receipt();
+    invalid_utf8["quality_gate"]["utf8_valid"] = json!(false);
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&invalid_utf8).is_err());
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_streaming_profile_mismatch() {
+    let mut streaming_mismatch = server_shared_engine_chat_completion_receipt();
+    streaming_mismatch["endpoint_profile"]["streaming"] = json!(true);
+
+    assert!(
+        validate_server_shared_engine_chat_completion_receipt_json(&streaming_mismatch).is_err()
+    );
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_bitnet_route_without_qk256_evidence() {
+    let mut bitnet_route = server_shared_engine_chat_completion_receipt();
+    bitnet_route["selected_route"] = json!("bitnet_qk256_cuda");
+    bitnet_route["dense_regular_llm_cuda_inference_claimed"] = json!(false);
+    bitnet_route["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&bitnet_route).is_err());
 }
 
 #[test]
