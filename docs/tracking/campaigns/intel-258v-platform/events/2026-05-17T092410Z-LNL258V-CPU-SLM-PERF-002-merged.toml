@@ -1,0 +1,22 @@
+timestamp = "2026-05-17T09:24:10Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5320
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-002-resident-cpu"
+head_sha = "90cc7faabbb55841c3f1e859b42f284027488278"
+merge_sha = "0eb1a1f69842d2b98b853a0cc139d3e36133a060"
+summary = "Merged LNL258V-CPU-SLM-PERF-002 dense Qwen CPU resident-session timing."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-resident-session.json",
+]
+
+notes = [
+  "PR #5320 merged the no-new-inference resident CPU no-reload timing command and receipt.",
+  "The receipt indexes repeated warm-session evidence for regression_tiny, ask_short, and ask_normal with model/tokenizer loaded once.",
+  "The merge preserves no route-promotion, speedup, power-advantage, Arc/NPU acceleration, and BitNet QK256/I2_S behavior-change boundaries.",
+]
