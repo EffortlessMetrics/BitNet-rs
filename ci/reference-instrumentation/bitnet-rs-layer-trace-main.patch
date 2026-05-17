@@ -1834,7 +1834,7 @@ diff --git a/ggml/src/ggml.c b/ggml/src/ggml.c
 index 121f72da..02ddfd91 100644
 --- a/ggml/src/ggml.c
 +++ b/ggml/src/ggml.c
-@@ -14940,6 +14940,124 @@ void ggml_rope_yarn_corr_dims(
+@@ -14940,6 +14940,138 @@ void ggml_rope_yarn_corr_dims(
      dims[1] = MIN(n_dims - 1, end);
  }
  
@@ -1922,10 +1922,16 @@ index 121f72da..02ddfd91 100644
 +    const bool lower_component = strcmp(component, "lower_x0_cos_minus_x1_sin") == 0;
 +    const float term0 = lower_component ? x0*cos_theta : x0*sin_theta;
 +    const float term1 = lower_component ? x1*sin_theta : x1*cos_theta;
-+    const float arithmetic_replay = lower_component ? term0 - term1 : term0 + term1;
++    const float term_split_replay = lower_component ? term0 - term1 : term0 + term1;
++    const float fma_x0_product_contracted = lower_component
++        ? fmaf(x0, cos_theta, -term1)
++        : fmaf(x0, sin_theta, term1);
++    const float fma_x1_product_contracted = lower_component
++        ? fmaf(-x1, sin_theta, term0)
++        : fmaf(x1, cos_theta, term0);
 +    fprintf(
 +        file,
-+        "{\"stage\":\"kcur_rope_scalar_probe\",\"tensor_name\":\"%s\",\"layer\":%d,\"kv_head\":%" PRId64 ",\"token\":%" PRId64 ",\"dim\":%" PRId64 ",\"paired_dim\":%" PRId64 ",\"component\":\"%s\",\"x0\":%.9g,\"x0_bits_u32\":%" PRIu32 ",\"x1\":%.9g,\"x1_bits_u32\":%" PRIu32 ",\"cos_theta\":%.9g,\"cos_theta_bits_u32\":%" PRIu32 ",\"sin_theta\":%.9g,\"sin_theta_bits_u32\":%" PRIu32 ",\"term0_f32\":%.9g,\"term0_bits_u32\":%" PRIu32 ",\"term1_f32\":%.9g,\"term1_bits_u32\":%" PRIu32 ",\"arithmetic_replay_f32\":%.9g,\"arithmetic_replay_bits_u32\":%" PRIu32 ",\"before_store_f32\":%.9g,\"before_store_bits_u32\":%" PRIu32 ",\"after_store_f32\":%.9g,\"after_store_bits_u32\":%" PRIu32 ",\"dst_offset_bytes\":%" PRIdPTR ",\"src_offset_bytes\":%" PRIdPTR "}\n",
++        "{\"stage\":\"kcur_rope_scalar_probe\",\"tensor_name\":\"%s\",\"layer\":%d,\"kv_head\":%" PRId64 ",\"token\":%" PRId64 ",\"dim\":%" PRId64 ",\"paired_dim\":%" PRId64 ",\"component\":\"%s\",\"x0\":%.9g,\"x0_bits_u32\":%" PRIu32 ",\"x1\":%.9g,\"x1_bits_u32\":%" PRIu32 ",\"cos_theta\":%.9g,\"cos_theta_bits_u32\":%" PRIu32 ",\"sin_theta\":%.9g,\"sin_theta_bits_u32\":%" PRIu32 ",\"term0_f32\":%.9g,\"term0_bits_u32\":%" PRIu32 ",\"term1_f32\":%.9g,\"term1_bits_u32\":%" PRIu32 ",\"term_split_replay_f32\":%.9g,\"term_split_replay_bits_u32\":%" PRIu32 ",\"arithmetic_replay_f32\":%.9g,\"arithmetic_replay_bits_u32\":%" PRIu32 ",\"fma_x0_product_contracted_f32\":%.9g,\"fma_x0_product_contracted_bits_u32\":%" PRIu32 ",\"fma_x1_product_contracted_f32\":%.9g,\"fma_x1_product_contracted_bits_u32\":%" PRIu32 ",\"direct_expression_f32\":%.9g,\"direct_expression_bits_u32\":%" PRIu32 ",\"before_store_f32\":%.9g,\"before_store_bits_u32\":%" PRIu32 ",\"after_store_f32\":%.9g,\"after_store_bits_u32\":%" PRIu32 ",\"dst_offset_bytes\":%" PRIdPTR ",\"src_offset_bytes\":%" PRIdPTR "}\n",
 +        tensor_name,
 +        layer,
 +        i1,
@@ -1945,8 +1951,16 @@ index 121f72da..02ddfd91 100644
 +        bitnet_rs_reference_rope_scalar_trace_f32_bits(term0),
 +        term1,
 +        bitnet_rs_reference_rope_scalar_trace_f32_bits(term1),
-+        arithmetic_replay,
-+        bitnet_rs_reference_rope_scalar_trace_f32_bits(arithmetic_replay),
++        term_split_replay,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(term_split_replay),
++        term_split_replay,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(term_split_replay),
++        fma_x0_product_contracted,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(fma_x0_product_contracted),
++        fma_x1_product_contracted,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(fma_x1_product_contracted),
++        before_store,
++        bitnet_rs_reference_rope_scalar_trace_f32_bits(before_store),
 +        before_store,
 +        bitnet_rs_reference_rope_scalar_trace_f32_bits(before_store),
 +        after_store,
