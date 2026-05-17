@@ -29,7 +29,7 @@ index 666fcc4d..23ee29ff 100644
  #include <numeric>
  #include <set>
  #include <sstream>
-@@ -3441,6 +3444,1696 @@ struct llama_context {
+@@ -3441,6 +3444,1738 @@ struct llama_context {
      struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
  };
  
@@ -422,7 +422,9 @@ index 666fcc4d..23ee29ff 100644
 +static bool bitnet_rs_reference_layer_trace_read_f32_values(
 +    llama_context & lctx,
 +    struct ggml_tensor * tensor,
-+    std::vector<float> & values
++    std::vector<float> & values,
++    std::vector<uint64_t> * source_offsets = nullptr,
++    std::vector<uint32_t> * source_bits = nullptr
 +) {
 +    if (tensor == nullptr || ggml_nelements(tensor) <= 0) {
 +        return false;
@@ -446,6 +448,14 @@ index 666fcc4d..23ee29ff 100644
 +    ggml_backend_tensor_get(storage, bytes.data(), 0, storage_nbytes);
 +    values.clear();
 +    values.reserve((size_t) ggml_nelements(tensor));
++    if (source_offsets != nullptr) {
++        source_offsets->clear();
++        source_offsets->reserve((size_t) ggml_nelements(tensor));
++    }
++    if (source_bits != nullptr) {
++        source_bits->clear();
++        source_bits->reserve((size_t) ggml_nelements(tensor));
++    }
 +    const size_t base = tensor->view_src != nullptr ? tensor->view_offs : 0;
 +    const size_t type_size = tensor->type == GGML_TYPE_F32 ? sizeof(float) : sizeof(ggml_fp16_t);
 +    for (int64_t i3 = 0; i3 < tensor->ne[3]; ++i3) {
@@ -460,14 +470,24 @@ index 666fcc4d..23ee29ff 100644
 +                    if (offset + type_size > bytes.size()) {
 +                        return false;
 +                    }
++                    if (source_offsets != nullptr) {
++                        source_offsets->push_back((uint64_t) offset);
++                    }
 +                    if (tensor->type == GGML_TYPE_F32) {
 +                        float value = 0.0f;
 +                        memcpy(&value, bytes.data() + offset, sizeof(float));
 +                        values.push_back(value);
++                        if (source_bits != nullptr) {
++                            source_bits->push_back(bitnet_rs_reference_layer_trace_f32_bits(value));
++                        }
 +                    } else {
 +                        ggml_fp16_t value = 0;
 +                        memcpy(&value, bytes.data() + offset, sizeof(ggml_fp16_t));
-+                        values.push_back(ggml_fp16_to_fp32(value));
++                        const float value_f32 = ggml_fp16_to_fp32(value);
++                        values.push_back(value_f32);
++                        if (source_bits != nullptr) {
++                            source_bits->push_back(bitnet_rs_reference_layer_trace_f32_bits(value_f32));
++                        }
 +                    }
 +                }
 +            }
@@ -757,6 +777,8 @@ index 666fcc4d..23ee29ff 100644
 +    const size_t storage_nbytes = ggml_nbytes(storage);
 +    bool values_available = false;
 +    std::vector<float> values;
++    std::vector<uint64_t> source_offsets;
++    std::vector<uint32_t> source_bits;
 +    int token_axis = -1;
 +    int64_t sample_offset = 0;
 +    int64_t sample_nelements = nelements;
@@ -767,7 +789,7 @@ index 666fcc4d..23ee29ff 100644
 +    double max_value = -std::numeric_limits<double>::infinity();
 +    uint64_t value_hash = 0;
 +
-+    if (bitnet_rs_reference_layer_trace_read_f32_values(lctx, tensor, values)) {
++    if (bitnet_rs_reference_layer_trace_read_f32_values(lctx, tensor, values, &source_offsets, &source_bits)) {
 +            if (n_outputs == 1 && n_tokens > 1) {
 +                if (tensor->ne[1] == (int64_t) n_tokens) {
 +                    token_axis = 1;
@@ -1150,10 +1172,14 @@ index 666fcc4d..23ee29ff 100644
 +            double head_max = -std::numeric_limits<double>::infinity();
 +            std::vector<float> head_values;
 +            std::vector<int64_t> head_source_indices;
++            std::vector<uint64_t> head_storage_offsets;
 +            std::vector<uint32_t> head_source_bits;
++            std::vector<uint32_t> head_storage_source_bits;
 +            head_values.reserve((size_t) head_nelements);
 +            head_source_indices.reserve((size_t) head_nelements);
++            head_storage_offsets.reserve((size_t) head_nelements);
 +            head_source_bits.reserve((size_t) head_nelements);
++            head_storage_source_bits.reserve((size_t) head_nelements);
 +            for (int64_t dim = 0; dim < head_dim; ++dim) {
 +                for (int64_t token = 0; token < token_count; ++token) {
 +                    const int64_t index = dim + head_dim * head + head_dim * kv_head_count * token;
@@ -1164,7 +1190,9 @@ index 666fcc4d..23ee29ff 100644
 +                    const double value = value_f32;
 +                    head_values.push_back(value_f32);
 +                    head_source_indices.push_back(index);
++                    head_storage_offsets.push_back(source_offsets[(size_t) index]);
 +                    head_source_bits.push_back(bitnet_rs_reference_layer_trace_f32_bits(value_f32));
++                    head_storage_source_bits.push_back(source_bits[(size_t) index]);
 +                    head_sum += value;
 +                    head_sq_sum += value * value;
 +                    head_min = value < head_min ? value : head_min;
@@ -1244,6 +1272,20 @@ index 666fcc4d..23ee29ff 100644
 +                    out << ",";
 +                }
 +                out << head_source_bits[i];
++            }
++            out << "],\"first_value_storage_offsets_u64\":[";
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                out << head_storage_offsets[i];
++            }
++            out << "],\"first_value_storage_source_bits_u32\":[";
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                out << head_storage_source_bits[i];
 +            }
 +            out << "]}";
 +        }
