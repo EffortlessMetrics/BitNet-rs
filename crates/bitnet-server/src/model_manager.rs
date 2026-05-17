@@ -4,6 +4,7 @@ use anyhow::Result;
 use bitnet_common::Device;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::Model;
+use bitnet_models::checkpoint::compute_sha256;
 use bitnet_models::formats::gguf::GgufLoader;
 use bitnet_models::loader::{FormatLoader, LoadConfig};
 use serde::{Deserialize, Serialize};
@@ -42,6 +43,8 @@ impl Default for ModelManagerConfig {
 pub struct ModelMetadata {
     pub model_id: String,
     pub model_path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
     pub device: String,
     pub quantization_type: String,
     pub loaded_at: std::time::SystemTime,
@@ -304,6 +307,7 @@ impl ModelManager {
         ModelMetadata {
             model_id: model_id.to_string(),
             model_path: model_path.to_string_lossy().to_string(),
+            model_sha256: compute_sha256(model_path).ok(),
             device: format!("{:?}", device),
             quantization_type,
             loaded_at: std::time::SystemTime::now(),

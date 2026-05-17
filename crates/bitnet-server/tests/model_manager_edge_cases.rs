@@ -64,6 +64,7 @@ fn model_metadata_construction() {
     let meta = ModelMetadata {
         model_id: "phi-4".to_string(),
         model_path: "/models/phi4.gguf".to_string(),
+        model_sha256: None,
         device: "cpu".to_string(),
         quantization_type: "I2S".to_string(),
         loaded_at: SystemTime::now(),
@@ -83,6 +84,7 @@ fn model_metadata_clone() {
     let meta = ModelMetadata {
         model_id: "test".to_string(),
         model_path: "/path".to_string(),
+        model_sha256: None,
         device: "cpu".to_string(),
         quantization_type: "TL1".to_string(),
         loaded_at: SystemTime::UNIX_EPOCH,
@@ -102,6 +104,9 @@ fn model_metadata_serde_roundtrip() {
     let meta = ModelMetadata {
         model_id: "model-1".to_string(),
         model_path: "/some/path".to_string(),
+        model_sha256: Some(
+            "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+        ),
         device: "cuda:0".to_string(),
         quantization_type: "I2S".to_string(),
         loaded_at: SystemTime::UNIX_EPOCH,
@@ -114,7 +119,30 @@ fn model_metadata_serde_roundtrip() {
     let json = serde_json::to_string(&meta).unwrap();
     let meta2: ModelMetadata = serde_json::from_str(&json).unwrap();
     assert_eq!(meta.model_id, meta2.model_id);
+    assert_eq!(meta.model_sha256, meta2.model_sha256);
     assert_eq!(meta.size_mb, meta2.size_mb);
+}
+
+#[test]
+fn model_metadata_deserializes_legacy_json_without_checksum() -> Result<(), serde_json::Error> {
+    let json = r#"{
+        "model_id": "legacy-model",
+        "model_path": "/some/path",
+        "device": "cuda:0",
+        "quantization_type": "I2S",
+        "loaded_at": {"secs_since_epoch": 0, "nanos_since_epoch": 0},
+        "size_mb": 200,
+        "parameters": 100000,
+        "context_length": 2048,
+        "inference_count": 0,
+        "avg_tokens_per_second": 0.0
+    }"#;
+
+    let meta: ModelMetadata = serde_json::from_str(json)?;
+
+    assert_eq!(meta.model_id, "legacy-model");
+    assert_eq!(meta.model_sha256, None);
+    Ok(())
 }
 
 #[test]
@@ -122,6 +150,7 @@ fn model_metadata_debug() {
     let meta = ModelMetadata {
         model_id: "dbg-test".to_string(),
         model_path: "p".to_string(),
+        model_sha256: None,
         device: "cpu".to_string(),
         quantization_type: "I2S".to_string(),
         loaded_at: SystemTime::UNIX_EPOCH,
@@ -154,6 +183,7 @@ fn model_load_status_ready() {
     let meta = ModelMetadata {
         model_id: "m".to_string(),
         model_path: "p".to_string(),
+        model_sha256: None,
         device: "cpu".to_string(),
         quantization_type: "I2S".to_string(),
         loaded_at: SystemTime::UNIX_EPOCH,

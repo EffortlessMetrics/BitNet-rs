@@ -596,7 +596,7 @@ fn model_coverage_explanation(
         coverage.bitnet_packed_i2s_qk256_proof = Some(entry.claims.bitnet_packed_i2s_qk256_proof);
         coverage.dense_regular_llm_cuda_proof = Some(entry.claims.dense_regular_llm_cuda_proof);
         coverage.claim_boundary = Some(entry.claim_boundary.clone());
-        add_model_coverage_warnings(&mut coverage, entry, explanation);
+        add_model_coverage_warnings(&mut coverage, entry, explanation, receipt);
     } else {
         coverage.warnings.push("no model coverage row matched this receipt".to_string());
     }
@@ -738,6 +738,7 @@ fn add_model_coverage_warnings(
     coverage: &mut ModelCoverageExplanation,
     entry: &ModelCoverageEntry,
     explanation: &ReceiptExplanation,
+    receipt: &Value,
 ) {
     if !entry.claims.speedup_claim {
         coverage.warnings.push("speedup is not qualified by the model coverage row".to_string());
@@ -765,6 +766,61 @@ fn add_model_coverage_warnings(
             "receipt route `{route}` does not match model coverage routes: {}",
             entry.accelerator_routes.join(", ")
         ));
+    }
+    add_server_shared_engine_warnings(coverage, entry, receipt);
+}
+
+fn add_server_shared_engine_warnings(
+    coverage: &mut ModelCoverageExplanation,
+    entry: &ModelCoverageEntry,
+    receipt: &Value,
+) {
+    if string_at(receipt, &["receipt_kind"]).as_deref()
+        != Some("server_shared_engine_chat_completion")
+    {
+        return;
+    }
+
+    let model_identity_sha256 = string_at(receipt, &["model_identity", "model_sha256"]);
+    let top_level_sha256 = string_at(receipt, &["model_sha256"]);
+    let checksum_identity_matches =
+        match (model_identity_sha256.as_deref(), top_level_sha256.as_deref()) {
+            (Some(identity), Some(top_level)) => {
+                is_sha256_hex(identity) && is_sha256_hex(top_level) && identity == top_level
+            }
+            _ => false,
+        };
+    if !checksum_identity_matches {
+        coverage.warnings.push(
+            "server shared-engine receipt is missing exact artifact checksum identity".to_string(),
+        );
+    }
+
+    if string_at(receipt, &["endpoint_profile", "endpoint"]).as_deref()
+        != Some("/v1/chat/completions")
+        || string_at(receipt, &["endpoint_profile", "method"]).as_deref() != Some("POST")
+        || string_at(receipt, &["endpoint_profile", "request_profile"]).is_none()
+    {
+        coverage.warnings.push(
+            "server shared-engine receipt is missing endpoint/request profile scope".to_string(),
+        );
+    }
+
+    if u64_at(receipt, &["generation_policy", "max_tokens"]).is_none()
+        || f64_at(receipt, &["generation_policy", "temperature"]).is_none()
+        || f64_at(receipt, &["generation_policy", "top_p"]).is_none()
+        || string_at(receipt, &["generation_policy", "decoding"]).is_none()
+    {
+        coverage
+            .warnings
+            .push("server shared-engine receipt is missing generation-policy scope".to_string());
+    }
+
+    if bool_at(receipt, &["server_ready_claimed"]) == Some(true) && !entry.claims.server_ready {
+        coverage.warnings.push(
+            "receipt claims server readiness, but the model coverage row does not promote server_ready"
+                .to_string(),
+        );
     }
 }
 
@@ -1236,6 +1292,10 @@ fn u64_at(value: &Value, path: &[&str]) -> Option<u64> {
     value_at(value, path).and_then(Value::as_u64)
 }
 
+fn is_sha256_hex(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
     let mut current = value;
     for key in path {
@@ -1499,9 +1559,30 @@ mod tests {
             "receipt_kind": "server_shared_engine_chat_completion",
             "runtime_path": "shared_local_inference_engine",
             "runtime_api": "cuda",
+            "model_identity": {
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+                "active_model_id": "model-1",
+                "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+            },
+            "endpoint_profile": {
+                "endpoint": "/v1/chat/completions",
+                "method": "POST",
+                "request_profile": "non_streaming_chat_completion",
+                "streaming": false,
+                "message_count": 1
+            },
+            "generation_policy": {
+                "max_tokens": 16,
+                "temperature": 0.0,
+                "top_p": 1.0,
+                "decoding": "greedy"
+            },
             "requested_model": "qwen2.5-0.5b-instruct-q8_0",
             "active_model_id": "model-1",
             "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
             "model_coverage_row": "dense_qwen25_05b_q8_cuda",
             "model_coverage_tier": "product_cli_ready",
             "requested_backend": "nvidia-rtx-5070-ti-cuda",
@@ -1545,6 +1626,120 @@ mod tests {
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert!(
+            !explanation
+                .model_coverage
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("missing exact artifact checksum"))
+        );
+        assert!(
+            !explanation
+                .model_coverage
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("missing endpoint/request profile"))
+        );
+        assert!(
+            !explanation
+                .model_coverage
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("missing generation-policy"))
+        );
+    }
+
+    #[test]
+    fn receipts_explain_warns_on_inconsistent_server_checksum_identity() {
+        let receipt = json!({
+            "receipt_kind": "server_shared_engine_chat_completion",
+            "runtime_path": "shared_local_inference_engine",
+            "runtime_api": "cuda",
+            "model_identity": {
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+                "active_model_id": "model-1",
+                "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+            },
+            "endpoint_profile": {
+                "endpoint": "/v1/chat/completions",
+                "method": "POST",
+                "request_profile": "non_streaming_chat_completion",
+                "streaming": false,
+                "message_count": 1
+            },
+            "generation_policy": {
+                "max_tokens": 16,
+                "temperature": 0.0,
+                "top_p": 1.0,
+                "decoding": "greedy"
+            },
+            "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+            "active_model_id": "model-1",
+            "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+            "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+            "model_coverage_tier": "product_cli_ready",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "fallback_used": false,
+            "quality_gate": {
+                "passed": true
+            },
+            "server_smoke_response_claimed": true,
+            "server_ready_claimed": false,
+            "speedup_claim": false,
+            "dense_regular_llm_cuda_inference_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false
+        });
+
+        let explanation = explain_receipt(Path::new("server-smoke-mismatched-sha.json"), &receipt);
+        let warnings = &explanation.model_coverage.warnings;
+
+        assert!(warnings.iter().any(|warning| warning.contains("missing exact artifact checksum")));
+        assert!(
+            !warnings.iter().any(|warning| warning.contains("missing endpoint/request profile"))
+        );
+        assert!(!warnings.iter().any(|warning| warning.contains("missing generation-policy")));
+    }
+
+    #[test]
+    fn receipts_explain_warns_on_unpromoted_server_ready_claim() {
+        let receipt = json!({
+            "receipt_kind": "server_shared_engine_chat_completion",
+            "runtime_path": "shared_local_inference_engine",
+            "runtime_api": "cuda",
+            "requested_model": "qwen2.5-0.5b-instruct-q8_0",
+            "active_model_id": "model-1",
+            "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+            "model_coverage_tier": "product_cli_ready",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "fallback_used": false,
+            "quality_gate": {
+                "passed": true
+            },
+            "server_smoke_response_claimed": true,
+            "server_ready_claimed": true,
+            "speedup_claim": false,
+            "dense_regular_llm_cuda_inference_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false
+        });
+
+        let explanation = explain_receipt(Path::new("server-smoke-stale.json"), &receipt);
+        let warnings = &explanation.model_coverage.warnings;
+
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert!(warnings.iter().any(|warning| warning.contains("missing exact artifact checksum")));
+        assert!(
+            warnings.iter().any(|warning| warning.contains("missing endpoint/request profile"))
+        );
+        assert!(warnings.iter().any(|warning| warning.contains("missing generation-policy")));
+        assert!(warnings.iter().any(|warning| warning.contains("does not promote server_ready")));
     }
 
     #[test]

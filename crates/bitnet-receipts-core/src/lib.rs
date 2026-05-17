@@ -54,7 +54,7 @@ pub use artifact_kinds::{
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
     DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS, RECEIPT_SCHEMA,
-    RECEIPT_SCHEMA_VERSION,
+    RECEIPT_SCHEMA_VERSION, SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND,
 };
 pub use schema::{
     AccuracyMetric, AccuracyTestResults, CacheEfficiency, CrossValidation, DeterminismTestResults,
@@ -192,6 +192,112 @@ pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<(
     require_non_negative_number(parity, "mean_abs_error")?;
     require_non_negative_number(parity, "tolerance")?;
     require_string_non_empty(parity, "tolerance_source")?;
+
+    Ok(())
+}
+
+/// Validate a strict RTX 5070 Ti server shared-engine chat-completion receipt.
+///
+/// This validates the exact-profile fields required before a server smoke can
+/// be considered for promotion. It deliberately keeps `server_ready_claimed`
+/// false; a later promotion validator can narrow this further when model
+/// coverage actually sets `server_ready=true` for an exact profile.
+pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Value) -> Result<()> {
+    require_string_eq(receipt, "receipt_kind", SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND)?;
+    require_string_eq(receipt, "runtime_path", "shared_local_inference_engine")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "simulated_inference", false)?;
+    require_bool_eq(receipt, "generated_text_non_empty", true)?;
+    require_bool_eq(receipt, "server_smoke_response_claimed", true)?;
+    require_bool_eq(receipt, "server_ready_claimed", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
+    require_string_non_empty(receipt, "request_id")?;
+    require_string_non_empty(receipt, "prompt_template")?;
+    require_string_non_empty(receipt, "tokenizer_authority")?;
+    require_string_non_empty(receipt, "prompt_authority")?;
+    require_positive_u64(receipt, "prompt_tokens")?;
+    require_positive_u64(receipt, "completion_tokens")?;
+    required_u64(receipt, "total_ms")?;
+
+    let model_identity = object_field(receipt, "model_identity")?;
+    require_string_non_empty(model_identity, "model_id")?;
+    require_string_eq(model_identity, "model_id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
+    require_string_non_empty(model_identity, "requested_model")?;
+    require_string_non_empty(model_identity, "active_model_id")?;
+    require_string_non_empty(model_identity, "active_model_path")?;
+    require_sha256(model_identity, "model_sha256")?;
+    require_sha256(receipt, "model_sha256")?;
+    require_string_eq(model_identity, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_same_string(receipt, "model_sha256", model_identity, "model_sha256", "model_sha256")?;
+    require_same_string(
+        receipt,
+        "requested_model",
+        model_identity,
+        "requested_model",
+        "requested_model",
+    )?;
+    require_same_string(
+        model_identity,
+        "model_id",
+        model_identity,
+        "requested_model",
+        "model_identity.model_id",
+    )?;
+    require_same_string(
+        receipt,
+        "active_model_id",
+        model_identity,
+        "active_model_id",
+        "active_model_id",
+    )?;
+    require_same_string(
+        receipt,
+        "active_model_path",
+        model_identity,
+        "active_model_path",
+        "active_model_path",
+    )?;
+
+    let endpoint = object_field(receipt, "endpoint_profile")?;
+    require_string_eq(endpoint, "endpoint", "/v1/chat/completions")?;
+    require_string_eq(endpoint, "method", "POST")?;
+    require_string_non_empty(endpoint, "request_profile")?;
+    let endpoint_streaming = object_field(endpoint, "streaming")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `streaming` must be a bool"))?;
+    let receipt_streaming = object_field(receipt, "streaming")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `streaming` must be a bool"))?;
+    if endpoint_streaming != receipt_streaming {
+        return Err(anyhow!(
+            "`streaming` must match between `endpoint_profile` and top-level receipt"
+        ));
+    }
+    require_positive_u64(endpoint, "message_count")?;
+
+    let generation_policy = object_field(receipt, "generation_policy")?;
+    require_positive_u64(generation_policy, "max_tokens")?;
+    require_non_negative_number(generation_policy, "temperature")?;
+    require_positive_number(generation_policy, "top_p")?;
+    require_string_non_empty(generation_policy, "decoding")?;
+
+    require_string_eq(receipt, "model_coverage_row", "dense_qwen25_05b_q8_cuda")?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_string_eq(receipt, "selected_route", "dense_regular_llm_cuda")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let quality = object_field(receipt, "quality_gate")?;
+    require_string_non_empty(quality, "gate")?;
+    require_bool_eq(quality, "passed", true)?;
+    require_bool_eq(quality, "generated_text_non_empty", true)?;
+    require_bool_eq(quality, "utf8_valid", true)?;
+    require_bool_eq(quality, "broad_chat_quality_claimed", false)?;
 
     Ok(())
 }
@@ -7831,6 +7937,21 @@ fn require_string_eq(object: &Value, field: &str, expected: &str) -> Result<()> 
     let actual = required_string(object, field)?;
     if actual != expected {
         return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+    }
+    Ok(())
+}
+
+fn require_same_string(
+    left: &Value,
+    left_field: &str,
+    right: &Value,
+    right_field: &str,
+    label: &str,
+) -> Result<()> {
+    let left = required_string(left, left_field)?;
+    let right = required_string(right, right_field)?;
+    if left != right {
+        return Err(anyhow!("`{label}` must match between `{left_field}` and `{right_field}`"));
     }
     Ok(())
 }

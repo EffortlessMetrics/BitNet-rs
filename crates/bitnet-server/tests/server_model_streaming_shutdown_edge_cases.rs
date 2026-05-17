@@ -89,6 +89,7 @@ fn model_metadata_construction() {
     let meta = ModelMetadata {
         model_id: "model-1".into(),
         model_path: "/tmp/model.gguf".into(),
+        model_sha256: None,
         device: "cpu".into(),
         quantization_type: "I2_S".into(),
         loaded_at: SystemTime::now(),
@@ -107,6 +108,9 @@ fn model_metadata_serde_roundtrip() {
     let meta = ModelMetadata {
         model_id: "test".into(),
         model_path: "/path".into(),
+        model_sha256: Some(
+            "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+        ),
         device: "cuda:0".into(),
         quantization_type: "FP16".into(),
         loaded_at: SystemTime::UNIX_EPOCH,
@@ -119,6 +123,10 @@ fn model_metadata_serde_roundtrip() {
     let json = serde_json::to_string(&meta).unwrap();
     let meta2: ModelMetadata = serde_json::from_str(&json).unwrap();
     assert_eq!(meta2.model_id, "test");
+    assert_eq!(
+        meta2.model_sha256.as_deref(),
+        Some("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e")
+    );
     assert_eq!(meta2.context_length, 16384);
     assert_eq!(meta2.inference_count, 42);
 }
@@ -128,6 +136,7 @@ fn model_metadata_clone() {
     let meta = ModelMetadata {
         model_id: "clone-test".into(),
         model_path: "p".into(),
+        model_sha256: None,
         device: "cpu".into(),
         quantization_type: "Q4".into(),
         loaded_at: SystemTime::now(),
