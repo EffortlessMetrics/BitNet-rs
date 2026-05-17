@@ -7482,6 +7482,11 @@ fn compare_reference_to_rust_with_records_with_model(
             &report["attention_selected_score_mixed_qk_contribution"],
             &report["attention_selected_key_historical_projection_rope_source"],
         );
+    report["attention_reference_score_input_operand_policy"] =
+        attention_reference_score_input_operand_policy(
+            &score_position_qk_recompute,
+            &report["attention_selected_historical_rope_epsilon_materiality"],
+        );
     report["attention_query_score_input_f16_policy_effect"] =
         attention_query_score_input_f16_policy_effect(
             reference_records,
@@ -23081,6 +23086,240 @@ fn attention_selected_historical_rope_epsilon_materiality(
     })
 }
 
+fn attention_reference_score_input_operand_policy(
+    qk_recompute: &Value,
+    materiality: &Value,
+) -> Value {
+    let materiality_rows = materiality.pointer("/rows").and_then(Value::as_array);
+    let qk_rows = qk_recompute.pointer("/rows").and_then(Value::as_array);
+    let provenance_rows =
+        qk_recompute.pointer("/reference_input_stage_provenance/rows").and_then(Value::as_array);
+
+    let mut rows = Vec::<Value>::new();
+    let mut candidate_row_count = 0usize;
+    let mut matched_qk_row_count = 0usize;
+    let mut reference_score_input_candidate_count = 0usize;
+    let mut exact_graph_bound_count = 0usize;
+    let mut exact_operand_count = 0usize;
+    let mut tolerance_operand_count = 0usize;
+    let mut residual_over_warn_count = 0usize;
+    let mut score_input_capture_post_rope_bucket_count = 0usize;
+    let mut max_reference_abs_delta = 0.0f64;
+
+    if let Some(materiality_rows) = materiality_rows {
+        for materiality_row in materiality_rows {
+            let source_policy = materiality_row
+                .pointer("/materiality/score_product_source_policy")
+                .unwrap_or(&Value::Null);
+            if source_policy
+                .pointer("/score_input_capture_uses_post_rope_f16_bucket_values")
+                .and_then(Value::as_bool)
+                != Some(true)
+            {
+                continue;
+            }
+            candidate_row_count += 1;
+
+            let head = materiality_row.pointer("/head").and_then(Value::as_u64);
+            let key_slot = materiality_row.pointer("/key_slot").and_then(Value::as_u64);
+            let query_token = materiality_row.pointer("/query_token").and_then(Value::as_u64);
+            let qk_row = find_qk_recompute_row(qk_rows, head, key_slot, query_token);
+            let provenance_row =
+                find_qk_recompute_row(provenance_rows, head, key_slot, query_token);
+            let mut blocked_reasons = Vec::<String>::new();
+
+            if qk_row.is_none() {
+                blocked_reasons.push("selected_qk_recompute_row_missing".to_string());
+            }
+            if provenance_row.is_none() {
+                blocked_reasons.push("reference_score_input_provenance_row_missing".to_string());
+            }
+
+            let best_reference_candidate = qk_row
+                .and_then(|row| row.pointer("/best_reference_candidate"))
+                .unwrap_or(&Value::Null);
+            let reference_abs_delta =
+                best_reference_candidate.pointer("/reference_abs_delta").and_then(Value::as_f64);
+            let reference_base_candidate =
+                best_reference_candidate.pointer("/base_candidate").and_then(Value::as_str);
+            let reference_query_source =
+                best_reference_candidate.pointer("/query_source").and_then(Value::as_str);
+            let reference_key_source =
+                best_reference_candidate.pointer("/key_source").and_then(Value::as_str);
+            let reference_query_f16_roundtrip =
+                best_reference_candidate.pointer("/query_f16_roundtrip").and_then(Value::as_bool);
+            let reference_key_f16_roundtrip =
+                best_reference_candidate.pointer("/key_f16_roundtrip").and_then(Value::as_bool);
+            let exact_graph_bound = provenance_row
+                .and_then(|row| row.pointer("/exact_score_graph_source_bound"))
+                .and_then(Value::as_bool)
+                == Some(true);
+            let residual_over_warn = provenance_row
+                .and_then(|row| row.pointer("/reference_residual_over_warn"))
+                .and_then(Value::as_bool)
+                .unwrap_or_else(|| {
+                    reference_abs_delta
+                        .is_some_and(|delta| delta > SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS)
+                });
+            let reference_score_input_candidate = reference_base_candidate
+                == Some("reference_q_score_input_reference_k_score_input")
+                && reference_query_source == Some("reference_q_score_input_head")
+                && reference_key_source == Some("reference_k_score_input_head")
+                && reference_query_f16_roundtrip == Some(true)
+                && reference_key_f16_roundtrip == Some(false);
+            let exact_operand = reference_abs_delta.is_some_and(|delta| delta <= 1.0e-12);
+            let tolerance_operand = reference_abs_delta
+                .is_some_and(|delta| delta <= SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS);
+            let score_input_capture_post_rope_bucket = source_policy
+                .pointer("/score_input_capture_uses_post_rope_f16_bucket_values")
+                .and_then(Value::as_bool)
+                == Some(true);
+
+            if qk_row.is_some() {
+                matched_qk_row_count += 1;
+            }
+            if reference_score_input_candidate {
+                reference_score_input_candidate_count += 1;
+            }
+            if exact_graph_bound {
+                exact_graph_bound_count += 1;
+            }
+            if exact_operand {
+                exact_operand_count += 1;
+            }
+            if tolerance_operand {
+                tolerance_operand_count += 1;
+            }
+            if residual_over_warn {
+                residual_over_warn_count += 1;
+            }
+            if score_input_capture_post_rope_bucket {
+                score_input_capture_post_rope_bucket_count += 1;
+            }
+            if let Some(delta) = reference_abs_delta {
+                max_reference_abs_delta = max_reference_abs_delta.max(delta);
+            }
+            if !reference_score_input_candidate {
+                blocked_reasons
+                    .push("reference_best_candidate_not_score_input_capture".to_string());
+            }
+            if !exact_graph_bound {
+                blocked_reasons.push("reference_score_input_not_exact_graph_bound".to_string());
+            }
+            if reference_abs_delta.is_none() {
+                blocked_reasons.push("reference_score_abs_delta_missing".to_string());
+            }
+            if residual_over_warn {
+                blocked_reasons.push("reference_score_recompute_residual_over_warn".to_string());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                "reference_score_input_operand_unpinned"
+            } else if exact_operand {
+                "reference_score_input_capture_exact_raw_operand"
+            } else if tolerance_operand {
+                "reference_score_input_capture_tolerance_pinned_operand"
+            } else {
+                "reference_score_input_operand_unpinned"
+            };
+
+            rows.push(json!({
+                "classification": row_classification,
+                "head": head,
+                "kv_head": materiality_row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+                "key_slot": key_slot,
+                "query_token": query_token,
+                "contributor_dim": materiality_row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+                "blocked_reasons": blocked_reasons,
+                "qk_recompute_row_present": qk_row.is_some(),
+                "provenance_row_present": provenance_row.is_some(),
+                "reference_score_input_candidate": reference_score_input_candidate,
+                "exact_graph_bound": exact_graph_bound,
+                "exact_operand": exact_operand,
+                "tolerance_operand": tolerance_operand,
+                "reference_abs_delta": reference_abs_delta,
+                "reference_residual_warn_abs": SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+                "reference_residual_over_warn": residual_over_warn,
+                "score_input_capture_uses_post_rope_f16_bucket_values": score_input_capture_post_rope_bucket,
+                "best_reference_candidate": best_reference_candidate.clone(),
+                "reference_stage_provenance": provenance_row.cloned().unwrap_or(Value::Null),
+                "score_product_source_policy": source_policy.clone(),
+            }));
+        }
+    }
+
+    let classification = if candidate_row_count == 0 {
+        "no_selected_score_input_capture_rows"
+    } else if matched_qk_row_count != candidate_row_count {
+        "reference_score_input_operand_missing_qk_recompute"
+    } else if reference_score_input_candidate_count != candidate_row_count
+        || exact_graph_bound_count != candidate_row_count
+    {
+        "reference_score_input_operand_unpinned"
+    } else if residual_over_warn_count > 0 {
+        "reference_score_input_operand_residual_over_warn"
+    } else if exact_operand_count == candidate_row_count {
+        "reference_score_input_capture_exact_raw_operand"
+    } else if tolerance_operand_count == candidate_row_count {
+        "reference_score_input_capture_tolerance_pinned_operand"
+    } else {
+        "reference_score_input_operand_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "reference_score_input_capture_exact_raw_operand" => {
+            "compare Rust score-input key/query captures against exact reference score operands before changing runtime math"
+        }
+        "reference_score_input_capture_tolerance_pinned_operand" => {
+            "compare Rust score-input key/query captures against tolerance-pinned reference score operands before changing runtime math"
+        }
+        "reference_score_input_operand_residual_over_warn" => {
+            "pin reference score accumulation or capture precision before interpreting Rust/reference operand drift"
+        }
+        "reference_score_input_operand_unpinned" => {
+            "bind reference score input stages to raw score operands before changing runtime math"
+        }
+        "reference_score_input_operand_missing_qk_recompute" => {
+            "capture selected Q/K recompute rows for score-input operand policy"
+        }
+        "no_selected_score_input_capture_rows" => {
+            "capture selected score product source policy before evaluating reference score operands"
+        }
+        _ => "keep reference score input operand policy diagnostic-only",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Reference score-input operand policy is diagnostic-only evidence for whether selected reference score products consume graph-bound score-input captures; tolerance-pinned rows are not bit-exact parity and do not promote runtime math changes, reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "reference_residual_warn_abs": SCORE_POSITION_RECOMPUTE_RESIDUAL_WARN_ABS,
+        "candidate_row_count": candidate_row_count,
+        "matched_qk_row_count": matched_qk_row_count,
+        "reference_score_input_candidate_count": reference_score_input_candidate_count,
+        "exact_graph_bound_count": exact_graph_bound_count,
+        "exact_operand_count": exact_operand_count,
+        "tolerance_operand_count": tolerance_operand_count,
+        "residual_over_warn_count": residual_over_warn_count,
+        "score_input_capture_post_rope_bucket_count": score_input_capture_post_rope_bucket_count,
+        "max_reference_abs_delta": max_reference_abs_delta,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn find_qk_recompute_row<'a>(
+    rows: Option<&'a Vec<Value>>,
+    head: Option<u64>,
+    key_slot: Option<u64>,
+    query_token: Option<u64>,
+) -> Option<&'a Value> {
+    rows?.iter().find(|row| {
+        row.pointer("/head").and_then(Value::as_u64) == head
+            && row.pointer("/key_slot").and_then(Value::as_u64) == key_slot
+            && row.pointer("/query_token").and_then(Value::as_u64) == query_token
+    })
+}
+
 fn selected_key_historical_dim_values(
     contributor_dim: Option<usize>,
     reference_projection: Option<&[f32]>,
@@ -35733,6 +35972,84 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "pin whether reference score input capture is the raw reference score operand before changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn reference_score_input_operand_policy_reports_tolerance_pinned_operand() {
+        let qk_recompute = json!({
+            "rows": [
+                {
+                    "status": "recomputed",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "best_reference_candidate": {
+                        "base_candidate": "reference_q_score_input_reference_k_score_input",
+                        "query_source": "reference_q_score_input_head",
+                        "key_source": "reference_k_score_input_head",
+                        "query_f16_roundtrip": true,
+                        "key_f16_roundtrip": false,
+                        "reference_abs_delta": 0.000030517578125_f64,
+                    }
+                }
+            ],
+            "reference_input_stage_provenance": {
+                "rows": [
+                    {
+                        "head": 0,
+                        "kv_head": 0,
+                        "key_slot": 13,
+                        "query_token": 3,
+                        "exact_score_graph_source_bound": true,
+                        "reference_residual_over_warn": false,
+                    }
+                ]
+            }
+        });
+        let materiality = json!({
+            "rows": [
+                {
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "contributor_dim": 77,
+                    "materiality": {
+                        "score_product_source_policy": {
+                            "product_uses_score_input_capture": true,
+                            "score_input_capture_uses_post_rope_f16_bucket_values": true,
+                        }
+                    }
+                }
+            ]
+        });
+
+        let report = attention_reference_score_input_operand_policy(&qk_recompute, &materiality);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("reference_score_input_capture_tolerance_pinned_operand"))
+        );
+        assert_eq!(report.pointer("/candidate_row_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/exact_graph_bound_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/exact_operand_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/tolerance_operand_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("reference_score_input_capture_tolerance_pinned_operand"))
+        );
+        assert_eq!(report.pointer("/rows/0/exact_operand"), Some(&json!(false)));
+        assert_eq!(report.pointer("/rows/0/tolerance_operand"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rows/0/reference_score_input_candidate"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "compare Rust score-input key/query captures against tolerance-pinned reference score operands before changing runtime math"
             ))
         );
     }
