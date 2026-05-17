@@ -15,5 +15,8 @@ safetensors = "0.7.0"
 half = "2.7.1"
 bytemuck = { version = "1.24.0", features = ["extern_crate_alloc"] }
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true
