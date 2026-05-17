@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T08:21:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5306
+merge_sha = "058ae7fa08a3537f454f467d4ae5f5e6f0bce895"
+
+notes = [
+  "Merged PR #5306, adding M4-BITNET-EX-002 reference-vs-Rust comparison evidence for the accepted Microsoft BitNet I2_S artifact and external tokenizer authority.",
+  "The recorded artifacts include 100 BitNet.cpp reference prompt outputs, comparison against the existing Rust M4 eval receipt, text-match counts, Rust generated token IDs, reference token-ID unavailability, and mechanical scoring deltas.",
+  "M4-BITNET-EX-002 is tracker-closed as comparison evidence only; it does not claim a fresh Rust runtime run, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance.",
+]

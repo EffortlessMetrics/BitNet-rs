@@ -937,7 +937,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-002-reference-vs-rust"
 stackable = false
 review_mode = "codex_premerge"
@@ -945,6 +945,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-001"]
 pr = 5306
+merge_sha = "058ae7fa08a3537f454f467d4ae5f5e6f0bce895"
 acceptance = "Compare reference-runner and Rust M4 BitNet answers for the accepted artifact/tokenizer identity, recording prompt template, token IDs where available, generated text, and mechanical scoring deltas."
 commands = [
   "$HOME/.cache/bitnet_cpp/build/bin/llama-cli -m models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -n <case.max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p 'User: <case.question><|eot_id|>Assistant:'",
