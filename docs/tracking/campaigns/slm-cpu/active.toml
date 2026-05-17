@@ -2042,8 +2042,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-023"
-status = "pr_open"
+status = "merged"
 pr = 5312
+merge_sha = "1484b7123767d47f280e1757ac8df2cd29ebda6b"
 branch = "codex/slm-cpu-019-kaby-performance-dashboard"
 stackable = false
 review_mode = "codex_premerge"
