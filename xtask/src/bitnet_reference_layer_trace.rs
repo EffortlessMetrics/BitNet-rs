@@ -7454,6 +7454,12 @@ fn compare_reference_to_rust_with_records_with_model(
             rust_records,
             &score_position_drilldown,
         );
+    report["attention_query_score_input_f16_policy_effect"] =
+        attention_query_score_input_f16_policy_effect(
+            reference_records,
+            rust_records,
+            &score_position_drilldown,
+        );
     report["attention_score_raw_history_position_drilldown"] = score_position_drilldown;
     report["attention_score_raw_history_source_summary"] =
         attention_score_raw_history_source_summary(reference_records, rust_records);
@@ -21081,6 +21087,429 @@ fn attention_query_score_input_boundary(
     })
 }
 
+fn query_f16_policy_candidate_value(
+    id: &'static str,
+    query_source: &'static str,
+    query_values: &[f32],
+    key_source: &'static str,
+    key_values: &[f32],
+    key_layout: ScoreKeyLayout,
+    head: usize,
+    head_dim: usize,
+    key_slot: usize,
+    query_token: usize,
+) -> Value {
+    let candidate = ScorePositionInputCandidate {
+        id,
+        base_candidate: id,
+        score_input_variant: "query_state_fixed_reference_key",
+        query_source,
+        key_source,
+        query_layout: ScoreQueryLayout::DimMajorHistory,
+        key_layout,
+        query_f16_roundtrip: false,
+        key_f16_roundtrip: false,
+        query_values,
+        key_values,
+    };
+    match score_position_candidate_value(candidate, head, head_dim, key_slot, query_token, None) {
+        Some(value) => json!({
+            "status": "computed",
+            "candidate": id,
+            "query_source": query_source,
+            "key_source": key_source,
+            "score": value,
+        }),
+        None => json!({
+            "status": "missing_input",
+            "candidate": id,
+            "query_source": query_source,
+            "key_source": key_source,
+            "score": Value::Null,
+        }),
+    }
+}
+
+fn score_value(candidate: &Value) -> Option<f64> {
+    candidate.pointer("/score").and_then(Value::as_f64)
+}
+
+fn score_shift(left: &Value, right: &Value) -> Value {
+    match (score_value(left), score_value(right)) {
+        (Some(left), Some(right)) => json!(right - left),
+        _ => Value::Null,
+    }
+}
+
+fn score_shift_residual(predicted_shift: &Value, actual_shift: Option<f64>) -> Value {
+    match (predicted_shift.as_f64(), actual_shift) {
+        (Some(predicted), Some(actual)) => json!((actual - predicted).abs()),
+        _ => Value::Null,
+    }
+}
+
+fn attention_query_score_input_f16_policy_effect(
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    position_drilldown: &Value,
+) -> Value {
+    let reference_score_query_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "q_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_query_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "qcur_history_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_rope_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_q_rope_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_f16_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_q_rope_f16_roundtrip_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_score_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_q_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_score_key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_score_input_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_kcur_history_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "kcur_history_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let reference_legacy_key_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "k_kv_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+
+    let (head_dim, head_count) =
+        reference_trace_history_head_dim_count(&reference_score_query_heads)
+            .or_else(|| reference_trace_history_head_dim_count(&reference_query_history_heads))
+            .or_else(|| rust_trace_history_head_dim_count(&rust_rope_heads))
+            .or_else(|| rust_trace_history_head_dim_count(&rust_f16_heads))
+            .or_else(|| rust_trace_history_head_dim_count(&rust_score_heads))
+            .unwrap_or((0, 0));
+    let key_head_count = reference_score_key_heads
+        .keys()
+        .next_back()
+        .map(|head| head + 1)
+        .or_else(|| reference_kcur_history_heads.keys().next_back().map(|head| head + 1))
+        .or_else(|| reference_legacy_key_heads.keys().next_back().map(|head| head + 1))
+        .unwrap_or(0);
+    let group_size = if head_count > 0 && key_head_count > 0 && head_count % key_head_count == 0 {
+        Some(head_count / key_head_count)
+    } else {
+        None
+    };
+
+    let mut rows = Vec::new();
+    let mut selected_count = 0usize;
+    let mut compared_count = 0usize;
+    let mut missing_input_count = 0usize;
+    let mut f16_shift_closer_count = 0usize;
+    let mut rope_shift_closer_count = 0usize;
+    let mut score_input_matches_f16_count = 0usize;
+    let mut blocked_reasons = Vec::<String>::new();
+
+    if head_dim == 0 || head_count == 0 {
+        blocked_reasons.push("query_score_input_head_shape_missing".to_string());
+    }
+    if group_size.is_none() {
+        blocked_reasons.push("query_score_input_group_size_missing".to_string());
+    }
+
+    for label in ["first_material_position", "max_material_position"] {
+        let Some(position) = position_drilldown.pointer(&format!("/{label}")) else {
+            continue;
+        };
+        if position.is_null() {
+            continue;
+        }
+        selected_count += 1;
+        let head = value_u64(position, "/head").and_then(|value| usize::try_from(value).ok());
+        let key_slot = value_u64(position, "/dim").and_then(|value| usize::try_from(value).ok());
+        let query_token =
+            value_u64(position, "/token").and_then(|value| usize::try_from(value).ok());
+        let reference_score = position.pointer("/left").and_then(Value::as_f64);
+        let rust_score = position.pointer("/right").and_then(Value::as_f64);
+        let actual_score_shift = reference_score.zip(rust_score).map(|(left, right)| right - left);
+        let kv_head = head.zip(group_size).map(|(head, group_size)| head / group_size);
+        let reference_query = head
+            .and_then(|head| reference_score_query_heads.get(&head).copied())
+            .or_else(|| head.and_then(|head| reference_query_history_heads.get(&head).copied()));
+        let rust_rope = head.and_then(|head| rust_rope_heads.get(&head).copied());
+        let rust_f16 = head.and_then(|head| rust_f16_heads.get(&head).copied());
+        let rust_score_query = head.and_then(|head| rust_score_heads.get(&head).copied());
+        let reference_key_score =
+            kv_head.and_then(|kv_head| reference_score_key_heads.get(&kv_head).copied());
+        let reference_key = reference_key_score.or_else(|| {
+            kv_head.and_then(|kv_head| {
+                reference_kcur_history_heads
+                    .get(&kv_head)
+                    .copied()
+                    .or_else(|| reference_legacy_key_heads.get(&kv_head).copied())
+            })
+        });
+        let reference_key_layout = if reference_key_score.is_some()
+            || kv_head
+                .and_then(|kv_head| reference_kcur_history_heads.get(&kv_head).copied())
+                .is_some()
+        {
+            ScoreKeyLayout::DimMajor
+        } else {
+            ScoreKeyLayout::TokenMajor
+        };
+        let reference_key_source = if reference_key_score.is_some() {
+            "reference_k_score_input_head"
+        } else if matches!(reference_key_layout, ScoreKeyLayout::DimMajor) {
+            "reference_kcur_history_kv_head"
+        } else {
+            "reference_k_kv_head"
+        };
+
+        let mut row_blockers = Vec::<String>::new();
+        if head.is_none() {
+            row_blockers.push("selected_score_head_missing".to_string());
+        }
+        if key_slot.is_none() {
+            row_blockers.push("selected_score_key_slot_missing".to_string());
+        }
+        if query_token.is_none() {
+            row_blockers.push("selected_score_query_token_missing".to_string());
+        }
+        if reference_query.is_none() {
+            row_blockers.push("reference_query_score_input_head_missing".to_string());
+        }
+        if rust_rope.is_none() {
+            row_blockers.push("rust_attention_q_rope_head_missing".to_string());
+        }
+        if rust_f16.is_none() {
+            row_blockers.push("rust_attention_q_rope_f16_roundtrip_head_missing".to_string());
+        }
+        if rust_score_query.is_none() {
+            row_blockers.push("rust_attention_q_score_input_head_missing".to_string());
+        }
+        if reference_key.is_none() {
+            row_blockers.push("reference_score_key_head_missing".to_string());
+        }
+        if head_dim == 0 {
+            row_blockers.push("query_score_input_head_dim_missing".to_string());
+        }
+
+        let mut candidates = Vec::<Value>::new();
+        let mut f16_shift = Value::Null;
+        let mut rope_shift = Value::Null;
+        let mut score_input_shift = Value::Null;
+        let mut f16_shift_residual = Value::Null;
+        let mut rope_shift_residual = Value::Null;
+        let mut score_input_shift_residual = Value::Null;
+        let mut classification = "missing_input";
+
+        if row_blockers.is_empty() {
+            let head = head.expect("checked above");
+            let key_slot = key_slot.expect("checked above");
+            let query_token = query_token.expect("checked above");
+            let reference_query = reference_query.expect("checked above");
+            let rust_rope = rust_rope.expect("checked above");
+            let rust_f16 = rust_f16.expect("checked above");
+            let rust_score_query = rust_score_query.expect("checked above");
+            let reference_key = reference_key.expect("checked above");
+
+            let reference_candidate = query_f16_policy_candidate_value(
+                "reference_query_fixed_reference_key",
+                "reference_q_score_input_or_qcur_history",
+                &reference_query.first_values,
+                reference_key_source,
+                &reference_key.first_values,
+                reference_key_layout,
+                head,
+                head_dim,
+                key_slot,
+                query_token,
+            );
+            let rust_rope_candidate = query_f16_policy_candidate_value(
+                "rust_rope_query_fixed_reference_key",
+                "rust_attention_q_rope_head",
+                &rust_rope.first_values,
+                reference_key_source,
+                &reference_key.first_values,
+                reference_key_layout,
+                head,
+                head_dim,
+                key_slot,
+                query_token,
+            );
+            let rust_f16_candidate = query_f16_policy_candidate_value(
+                "rust_f16_query_fixed_reference_key",
+                "rust_attention_q_rope_f16_roundtrip_head",
+                &rust_f16.first_values,
+                reference_key_source,
+                &reference_key.first_values,
+                reference_key_layout,
+                head,
+                head_dim,
+                key_slot,
+                query_token,
+            );
+            let rust_score_candidate = query_f16_policy_candidate_value(
+                "rust_score_query_fixed_reference_key",
+                "rust_attention_q_score_input_head",
+                &rust_score_query.first_values,
+                reference_key_source,
+                &reference_key.first_values,
+                reference_key_layout,
+                head,
+                head_dim,
+                key_slot,
+                query_token,
+            );
+
+            rope_shift = score_shift(&reference_candidate, &rust_rope_candidate);
+            f16_shift = score_shift(&reference_candidate, &rust_f16_candidate);
+            score_input_shift = score_shift(&reference_candidate, &rust_score_candidate);
+            rope_shift_residual = score_shift_residual(&rope_shift, actual_score_shift);
+            f16_shift_residual = score_shift_residual(&f16_shift, actual_score_shift);
+            score_input_shift_residual =
+                score_shift_residual(&score_input_shift, actual_score_shift);
+
+            let rope_residual = rope_shift_residual.as_f64().unwrap_or(f64::INFINITY);
+            let f16_residual = f16_shift_residual.as_f64().unwrap_or(f64::INFINITY);
+            let score_residual = score_input_shift_residual.as_f64().unwrap_or(f64::INFINITY);
+            classification = if score_value(&rust_f16_candidate)
+                == score_value(&rust_score_candidate)
+                && f16_residual <= rope_residual
+            {
+                score_input_matches_f16_count += 1;
+                "score_input_matches_f16_conversion"
+            } else if f16_residual < rope_residual && f16_residual <= score_residual {
+                f16_shift_closer_count += 1;
+                "score_delta_better_predicted_by_query_f16_conversion"
+            } else if rope_residual < f16_residual && rope_residual <= score_residual {
+                rope_shift_closer_count += 1;
+                "score_delta_better_predicted_by_pre_f16_query"
+            } else {
+                "score_delta_not_explained_by_query_f16_policy"
+            };
+            candidates = vec![
+                reference_candidate,
+                rust_rope_candidate,
+                rust_f16_candidate,
+                rust_score_candidate,
+            ];
+            compared_count += 1;
+        } else {
+            missing_input_count += 1;
+        }
+
+        rows.push(json!({
+            "label": label,
+            "status": if row_blockers.is_empty() { "compared" } else { "missing_input" },
+            "classification": classification,
+            "head": head,
+            "kv_head": kv_head,
+            "key_slot": key_slot,
+            "query_token": query_token,
+            "head_dim": head_dim,
+            "reference_score": reference_score,
+            "rust_score": rust_score,
+            "actual_score_shift": actual_score_shift,
+            "reference_key_source": reference_key_source,
+            "reference_key_layout": reference_key_layout.label(),
+            "blocked_reasons": row_blockers,
+            "candidates": candidates,
+            "rope_shift_from_reference": rope_shift,
+            "f16_shift_from_reference": f16_shift,
+            "score_input_shift_from_reference": score_input_shift,
+            "rope_shift_residual_abs": rope_shift_residual,
+            "f16_shift_residual_abs": f16_shift_residual,
+            "score_input_shift_residual_abs": score_input_shift_residual,
+        }));
+    }
+
+    let classification = if selected_count == 0 {
+        "no_selected_score_positions"
+    } else if missing_input_count > 0 {
+        "selected_score_positions_missing_inputs"
+    } else if score_input_matches_f16_count == compared_count && compared_count > 0 {
+        "selected_score_drift_follows_query_f16_score_input"
+    } else if f16_shift_closer_count > rope_shift_closer_count {
+        "selected_score_drift_partially_follows_query_f16_conversion"
+    } else if rope_shift_closer_count > 0 {
+        "selected_score_drift_not_improved_by_query_f16_conversion"
+    } else {
+        "selected_score_drift_query_f16_policy_unpinned"
+    };
+    let next_diagnostic = match classification {
+        "selected_score_drift_follows_query_f16_score_input"
+        | "selected_score_drift_partially_follows_query_f16_conversion" => {
+            "probe whether Rust query F16 conversion policy should be aligned with the reference score operand before changing runtime math"
+        }
+        "selected_score_drift_not_improved_by_query_f16_conversion" => {
+            "do not change query F16 conversion from this evidence; inspect key contribution, mixed Q/K score slots, or reference-to-Rust query RoPE rows"
+        }
+        "selected_score_positions_missing_inputs" => {
+            "capture missing query/key score-input stages before interpreting F16 policy"
+        }
+        "no_selected_score_positions" => {
+            "capture score-position drift before probing query F16 policy"
+        }
+        _ => "add a narrower selected-position Q/K source probe before changing runtime math",
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "query score-input F16 policy effect is diagnostic-only evidence for whether selected raw score slots follow Rust query F16 conversion against a fixed reference key; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "compared_count": compared_count,
+        "missing_input_count": missing_input_count,
+        "score_input_matches_f16_count": score_input_matches_f16_count,
+        "f16_shift_closer_count": f16_shift_closer_count,
+        "rope_shift_closer_count": rope_shift_closer_count,
+        "reference_query_head_count": reference_score_query_heads.len().max(reference_query_history_heads.len()),
+        "rust_rope_head_count": rust_rope_heads.len(),
+        "rust_f16_head_count": rust_f16_heads.len(),
+        "rust_score_head_count": rust_score_heads.len(),
+        "reference_key_head_count": key_head_count,
+        "head_dim": if head_dim == 0 { Value::Null } else { json!(head_dim) },
+        "head_count": if head_count == 0 { Value::Null } else { json!(head_count) },
+        "group_size": group_size,
+        "blocked_reasons": blocked_reasons,
+        "rows": rows,
+        "next_diagnostic": next_diagnostic,
+    })
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScoreKeyHistoryEffectVariant<'a> {
     id: &'static str,
@@ -32448,6 +32877,87 @@ mod tests {
             ),
             Some(&json!(1))
         );
+    }
+
+    #[test]
+    fn compare_reports_query_score_input_f16_policy_effect() {
+        let mut reference_score =
+            test_reference_trace_record("kq_head0_history_ref_layout", vec![50.0, 0.0, 0.0, 0.0]);
+        reference_score.shape = vec![2, 2];
+        reference_score.nelements = 4;
+        reference_score.layer = Some(0);
+        let mut reference_query = test_reference_trace_record(
+            "q_score_input_head0_history_ref_layout",
+            vec![1.0, 9.0, 2.0, 8.0],
+        );
+        reference_query.shape = vec![2, 2];
+        reference_query.nelements = 4;
+        reference_query.layer = Some(0);
+        let mut reference_key = test_reference_trace_record(
+            "k_score_input_head0_history_ref_layout",
+            vec![10.0, 11.0, 20.0, 21.0],
+        );
+        reference_key.shape = vec![2, 2];
+        reference_key.nelements = 4;
+        reference_key.layer = Some(0);
+        let reference_records = vec![reference_score, reference_query, reference_key];
+
+        let mut rust_records = BTreeMap::new();
+        rust_records.insert(
+            "attention_scores_raw_head0_history_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                layer: Some(0),
+                name: "t1/blk0/attention_scores_raw_head0_history_ref_layout".to_string(),
+                first_values: vec![55.0, 0.0, 0.0, 0.0],
+                ..test_rust_trace_record(
+                    "attention_scores_raw_head0_history_ref_layout",
+                    vec![55.0, 0.0, 0.0, 0.0],
+                )
+            },
+        );
+        for (stage, values) in [
+            ("attention_q_rope_head0_history_ref_layout", vec![1.0, 9.0, 2.0, 8.0]),
+            ("attention_q_rope_f16_roundtrip_head0_history_ref_layout", vec![1.5, 9.0, 2.0, 8.0]),
+            ("attention_q_score_input_head0_history_ref_layout", vec![1.5, 9.0, 2.0, 8.0]),
+        ] {
+            rust_records.insert(
+                stage.to_string(),
+                RustTraceRecord {
+                    shape: vec![2, 2],
+                    num_elements: 4,
+                    layer: Some(0),
+                    name: format!("t1/blk0/{stage}"),
+                    first_values: values.clone(),
+                    ..test_rust_trace_record(stage, values)
+                },
+            );
+        }
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let effect = report.pointer("/attention_query_score_input_f16_policy_effect").unwrap();
+
+        assert_eq!(effect.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(effect.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            effect.pointer("/classification"),
+            Some(&json!("selected_score_drift_follows_query_f16_score_input"))
+        );
+        assert_eq!(
+            effect.pointer("/next_diagnostic"),
+            Some(&json!(
+                "probe whether Rust query F16 conversion policy should be aligned with the reference score operand before changing runtime math"
+            ))
+        );
+        assert_eq!(effect.pointer("/score_input_matches_f16_count"), Some(&json!(2)));
+        assert_eq!(
+            effect.pointer("/rows/0/classification"),
+            Some(&json!("score_input_matches_f16_conversion"))
+        );
+        assert_eq!(effect.pointer("/rows/0/actual_score_shift"), Some(&json!(5.0)));
+        assert_eq!(effect.pointer("/rows/0/f16_shift_from_reference"), Some(&json!(5.0)));
+        assert_eq!(effect.pointer("/rows/0/f16_shift_residual_abs"), Some(&json!(0.0)));
     }
 
     #[test]
