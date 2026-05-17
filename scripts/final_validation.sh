@@ -123,7 +123,7 @@ echo -e "${BOLD}5. Documentation Sync${NC}"
 echo "──────────────────────"
 if [ -f "$ST_PERF" ] && [ -f "$GGUF_PERF" ]; then
     # Regenerate and compare
-    python3 "${SCRIPT_DIR}/render_perf_md.py" "$ST_PERF" "$GGUF_PERF" > /tmp/perf_check.md 2>/dev/null
+    cargo run --locked --no-default-features -p xtask -- render-perf-md "$ST_PERF" "$GGUF_PERF" > /tmp/perf_check.md 2>/dev/null
 
     if [ -f docs/PERF_COMPARISON.md ]; then
         if diff -q <(grep -v "Generated from" docs/PERF_COMPARISON.md) \

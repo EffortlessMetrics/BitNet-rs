@@ -169,7 +169,7 @@ run_performance() {
             log_pass "Performance JSONs generated ($PERF_JSONS files)"
 
             # Render markdown
-            python3 "$SCRIPT_DIR/render_perf_md.py" \
+            cargo run --locked --no-default-features -p xtask -- render-perf-md \
                 bench/results/*-safetensors.json \
                 bench/results/*-gguf.json \
                 > "$OUTPUT_DIR/PERF_COMPARISON.md" 2>&1

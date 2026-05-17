@@ -98,7 +98,7 @@ run_cmd "Measuring GGUF performance" \
 # Step 4: Render performance documentation
 echo -e "\n${GREEN}[4/8] Rendering performance documentation...${NC}"
 if [ "$DRY_RUN" = false ]; then
-    python3 "${SCRIPT_DIR}/render_perf_md.py" bench/results/*.json > docs/PERF_COMPARISON.md
+    cargo run --locked --no-default-features -p xtask -- render-perf-md bench/results/*.json > docs/PERF_COMPARISON.md
     echo "  Performance comparison saved to docs/PERF_COMPARISON.md"
 else
     echo "  [DRY RUN] Would render performance documentation"

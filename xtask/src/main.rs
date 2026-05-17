@@ -44,6 +44,7 @@ mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
 mod gates;
+mod greedy_argmax;
 mod grid_check;
 mod hardware;
 #[allow(dead_code)]
@@ -53,6 +54,7 @@ mod model_coverage;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
+mod perf_report;
 mod policy;
 mod prompt_suite;
 mod quality_gates;
@@ -757,6 +759,32 @@ enum Cmd {
         /// Number of warmup tokens to generate and discard
         #[arg(long, default_value_t = 10)]
         warmup_tokens: usize,
+    },
+
+    /// Render measured performance JSON as Markdown.
+    ///
+    /// Rust replacement for `scripts/render_perf_md.py`; accepts one measured
+    /// JSON file for a single report or a second JSON file for SafeTensors vs
+    /// GGUF comparison output.
+    #[command(name = "render-perf-md")]
+    RenderPerfMd {
+        /// Primary performance JSON file.
+        json_file: PathBuf,
+        /// Optional comparison performance JSON file. Extra positional files are accepted for legacy glob callers and ignored.
+        comparison_json: Vec<PathBuf>,
+    },
+
+    /// Check that CLI JSON greedy choices match the top-logit argmax.
+    ///
+    /// Rust replacement for `scripts/check_greedy_argmax.py`. Exits with code
+    /// 7 when the invariant is violated, preserving the legacy script contract.
+    #[command(name = "check-greedy-argmax")]
+    CheckGreedyArgmax {
+        /// Path to CLI JSON output containing `logits_dump`.
+        json_file: PathBuf,
+        /// Accepted for compatibility with the old script; diagnostics are always emitted on failure.
+        #[arg(short, long, default_value_t = false)]
+        verbose: bool,
     },
 
     /// Compare metrics with baseline for regression detection
@@ -1573,6 +1601,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
     if msg.contains("benchmark failed") {
         return EXIT_BENCHMARK_FAILED;
     }
+    if msg.contains("greedy argmax invariant failed") {
+        return greedy_argmax::EXIT_ARGMAX_MISMATCH;
+    }
 
     // Default to network error
     EXIT_NETWORK
@@ -1799,6 +1830,19 @@ fn real_main() -> Result<()> {
         Cmd::Gate { which } => match which {
             GateWhich::Mapper { model } => std::process::exit(gates::mapper_gate(model)?),
         },
+        Cmd::RenderPerfMd { json_file, comparison_json } => {
+            let markdown = perf_report::render_perf_md(
+                &json_file,
+                comparison_json.first().map(PathBuf::as_path),
+            )?;
+            print!("{markdown}");
+            Ok(())
+        }
+        Cmd::CheckGreedyArgmax { json_file, verbose: _ } => {
+            let report = greedy_argmax::check_greedy_argmax(&json_file)?;
+            greedy_argmax::print_greedy_argmax_report(&report);
+            if report.is_valid() { Ok(()) } else { bail!("greedy argmax invariant failed") }
+        }
         Cmd::Benchmark {
             model,
             tokenizer,
