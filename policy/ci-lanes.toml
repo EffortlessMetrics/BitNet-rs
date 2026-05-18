@@ -111,6 +111,30 @@ runner = "ubuntu_22_04"
 default_pr = true
 blocking = false
 
+[lane.performance-tracking-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
+[lane.performance-tracking-smoke]
+base_lem = 20
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
+[lane.performance-tracking-benchmark]
+base_lem = 1320
+runner = "macos_latest"
+default_pr = false
+blocking = false
+
+[lane.performance-tracking-summary]
+base_lem = 15
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
 [lane.gpu-native]
 base_lem = 18
 runner = "ubuntu_22_04"
