@@ -15,7 +15,7 @@ and committed receipts.
 | --- | --- | --- |
 | Official BitNet 2B I2_S/QK256 | Product CLI ready on `nvidia-rtx-5070-ti-cuda`; route is `bitnet_qk256_cuda`; fallback is rejected in strict CUDA receipts. | Dense SLM proof, server readiness, global CUDA speedup, or generic GPU proof. |
 | Qwen2.5 0.5B Q8_0 dense SLM | Product CLI ready for the bounded dense CUDA lane; route is `dense_regular_llm_cuda`; one-token, short-decode, warm-session, benchmark review, and exact-profile server-readiness receipts exist. | BitNet packed I2_S/QK256 proof, accepted speedup, full CUDA residency, broad dense GGUF support, or broad/concurrent/deployment server readiness. |
-| Qwen3 0.6B Q8_0 dense SLM candidate | Accelerator-answer-ready candidate with its own artifact, CPU sanity, all-layer plan, strict CUDA one-token, short-decode, warm-session, and benchmark-review receipts. | Product CLI readiness, inherited Qwen2.5 proof, BitNet proof, accepted speedup, server readiness, or full CUDA residency. |
+| Qwen3 0.6B Q8_0 dense SLM | Product CLI ready for bounded ask/chat CLI paths after its own artifact, CPU sanity, all-layer plan, strict CUDA one-token, short-decode, warm-session, benchmark-review, and user-path ask/chat receipts. | Inherited Qwen2.5 proof, BitNet proof, accepted speedup, server readiness, broad dense GGUF support, or full CUDA residency. |
 | SmolLM2, Llama, Gemma, Phi candidates | SmolLM2 360M is structurally valid but CPU quality-blocked; later Llama, Gemma, and Phi rows are registered only. | CUDA answer readiness without their own ladder, inherited Qwen/Qwen3 proof, BitNet proof, speedup, or server readiness. |
 
 ## Use A CUDA-Capable Build
@@ -206,6 +206,17 @@ The useful issue-report fields are:
 If the receipt says generic `cuda`, CPU fallback, WGPU, Vulkan, or a different
 model family, it does not prove the strict RTX 5070 Ti CUDA claim.
 
+For a pasteable support artifact, use:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+```
+
+The bundle combines model status, the latest receipt explanation, selected
+backend/route, fallback state, quality gate, server-readiness scope,
+speed/residency claims, proof-family booleans, binary identity, and runtime
+identity when the receipt records it.
+
 ## Current Stop Lines
 
 Do not use this quickstart to claim:
@@ -215,9 +226,8 @@ Do not use this quickstart to claim:
 - broad or inherited server readiness; exact-profile server readiness must name
   the accepted receipt and profile
 - full CUDA residency
-- Qwen3 product CLI/server readiness, or any later candidate CUDA readiness
-  without that model's own artifact, CPU, route, CUDA, warm-session, and
-  benchmark-review receipts
+- Qwen3 server readiness, accepted speedup, full residency, broad dense GGUF
+  support, or Qwen2.5 proof inheritance
 - dense Qwen proof as BitNet proof
 - official BitNet QK256 proof as dense SLM proof
 - WGPU, Vulkan, CPU fallback, or generic `cuda` as selected RTX 5070 Ti proof
