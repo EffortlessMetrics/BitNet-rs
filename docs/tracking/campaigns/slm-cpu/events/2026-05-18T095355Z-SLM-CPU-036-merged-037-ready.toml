@@ -1,0 +1,19 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:53:55Z"
+event = "merged"
+item = "SLM-CPU-036"
+pr = 5625
+head_sha = "5874d82525cecdb4b9de10f471f70d4ecf0710d3"
+merge_sha = "e03b877d3340ebf235d3739a731fb8d4d3351756"
+branch = "codex/slm-cpu-036-prefill-forward-buffer-boundary"
+actor = "codex"
+summary = "Merged the prompt_prefill.forward allocation boundary classification and advanced SLM-CPU-037."
+
+notes = [
+  "SLM-CPU-036 records transformer forward workspace and owned tensor outputs as the next safe prefill-forward allocation boundary.",
+  "The slice updates warm-session allocation receipts and dashboard text without changing Q8_0 dense math, tokenizer behavior, generated tokens, or accelerator/server lanes.",
+  "The validation preserved the SLM warm-session tests, aggregate allocation audit tests, bitnet-cli clippy, campaign generate/check, campaign doctor, and diff hygiene.",
+  "SLM-CPU-037 is ready to add or explicitly rule out the first bounded reusable transformer-forward buffer/workspace while preserving generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, model SHA, and fallback=false.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
