@@ -6444,9 +6444,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-DOCS-002"
-status = "pr_open"
+status = "merged"
 pr = 5583
-head_sha = "60a50ff16926f27a3f490e82eab51639967631d1"
+head_sha = "63e5d3056bb08d4ec59271e426a250c50b5c0ed0"
+merge_sha = "a6b9cf51e8b67f9ec158bb8281b12795177ae28b"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-002-dense-slm-contract"
 stackable = false
 review_mode = "codex_premerge"
