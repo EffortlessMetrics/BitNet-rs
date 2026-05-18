@@ -1562,16 +1562,19 @@ fn normalize_embed_and_lm_head(
                 tensor_map.insert("token_embd.weight".to_string(), embed);
             }
             [h, v] if *h == hidden_size && *v == vocab_size => {
-                // Transposed [hidden, vocab] -> transpose to [vocab, hidden]
+                // GGML stores ne[0] as the fastest-moving dimension. For
+                // embeddings shaped [hidden, vocab], each token row is already
+                // contiguous in file order; only the Candle shape needs to
+                // become [vocab, hidden].
                 tracing::info!(
-                    "Transposing embed_tokens from [hidden={}, vocab={}] to [vocab={}, hidden={}]",
+                    "Reshaping embed_tokens from GGML [hidden={}, vocab={}] to [vocab={}, hidden={}] without transposing token rows",
                     h,
                     v,
                     vocab_size,
                     hidden_size
                 );
-                let embed_t = embed.t()?.contiguous()?;
-                tensor_map.insert("token_embd.weight".to_string(), embed_t);
+                let embed_reshaped = embed.reshape(&[vocab_size, hidden_size])?;
+                tensor_map.insert("token_embd.weight".to_string(), embed_reshaped);
             }
             _ => {
                 tracing::warn!(
@@ -1912,7 +1915,41 @@ mod tests {
     use super::{GGUFLoaderConfig, load_gguf_full};
     use bitnet_common::Device;
     use serial_test::serial;
+    use std::collections::HashMap;
     use tempfile::TempDir;
+
+    #[test]
+    fn normalize_embed_preserves_ggml_hidden_vocab_token_rows() -> super::Result<()> {
+        let device = super::CDevice::Cpu;
+        let mut config = bitnet_common::BitNetConfig::default();
+        config.model.vocab_size = 3;
+        config.model.hidden_size = 4;
+
+        let embed = super::CandleTensor::from_vec(
+            vec![
+                1.0f32, 2.0, 3.0, 4.0, // token 0
+                10.0, 20.0, 30.0, 40.0, // token 1
+                100.0, 200.0, 300.0, 400.0, // token 2
+            ],
+            (4usize, 3usize),
+            &device,
+        )?;
+        let mut tensor_map = HashMap::from([("model.embed_tokens.weight".to_string(), embed)]);
+
+        super::normalize_embed_and_lm_head(&mut tensor_map, &config, &device)?;
+
+        let normalized = tensor_map.get("token_embd.weight").expect("normalized embedding");
+        assert_eq!(normalized.shape().dims(), &[3, 4]);
+        assert_eq!(
+            normalized.to_vec2::<f32>()?,
+            vec![
+                vec![1.0, 2.0, 3.0, 4.0],
+                vec![10.0, 20.0, 30.0, 40.0],
+                vec![100.0, 200.0, 300.0, 400.0],
+            ]
+        );
+        Ok(())
+    }
 
     #[test]
     #[serial]
