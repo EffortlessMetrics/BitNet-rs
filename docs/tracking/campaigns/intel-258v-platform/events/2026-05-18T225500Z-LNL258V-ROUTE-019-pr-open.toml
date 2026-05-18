@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T22:55:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-019"
+event = "pr_open"
+pr = 5792
+branch = "codex/lunar-lake/LNL258V-ROUTE-019-warm-resident"
+head_sha = "a46f3aa8cc9a2a65876e4dacce3a1436866882ea"
+actor = "codex"
+summary = "Opened PR #5792 for LNL258V-ROUTE-019 warm-resident route-profile evidence."
+
+notes = [
+  "The PR adds warm_resident to route promotion/profile comparison and strict regression surfaces.",
+  "Existing OpenVINO NPU resident-session/cache receipts provide warm-route timing context while NPU remains candidate-only and unpromoted.",
+  "Cold-start blockers remain scoped to cold NPU profiles.",
+  "The PR does not run inference, promote routes, claim speedup or power advantage, claim Arc/NPU acceleration, claim native OpenCL/NPU execution, or change BitNet QK256/I2_S behavior.",
+]
