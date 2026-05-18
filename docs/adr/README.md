@@ -4,8 +4,9 @@ ADRs record durable BitNet-rs decisions. Use them when a lane needs a stable
 architecture, proof, or policy choice that should survive individual PRs.
 
 ADRs do not own active work state or generated dashboards. Active execution
-state belongs in campaign-local `active.toml`; generated dashboards are derived
-from campaign manifests and events.
+state belongs in `.bitnet-rs/goals/active.toml` or an explicitly linked
+campaign-local `active.toml`; generated dashboards are derived from active
+manifests, campaign manifests, and events.
 
 ## Current ADRs
 
@@ -21,7 +22,7 @@ from campaign manifests and events.
 | Spec | What must be true |
 | ADR | What decision was made and why it is durable |
 | Plan | PR order and proof commands |
-| Campaign `active.toml` | Current executable work |
+| Active goal / campaign `active.toml` | Current executable work |
 | Policy TOML | Enforceable ledger |
 | Receipt or artifact | Evidence |
 

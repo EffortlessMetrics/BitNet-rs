@@ -15,7 +15,7 @@ how that authority is used.
 | Why does this lane exist? | `docs/proposals/` |
 | What must be true? | `docs/specs/` |
 | What decision did we make? | `docs/adr/` |
-| What PRs execute it? | `plans/` and campaign `active.toml` |
+| What PRs execute it? | `plans/` and `.bitnet-rs/goals/active.toml` or explicitly linked campaign `active.toml` |
 | What is currently supported? | `docs/status/` plus proof artifacts |
 | What does CI enforce? | `policy/*.toml` and workflow gates |
 | What happened? | Receipts, artifacts, campaign events, closeouts |

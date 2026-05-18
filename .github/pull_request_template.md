@@ -1,6 +1,48 @@
 ## Summary
 
-<!-- Brief description of what this PR accomplishes -->
+<!-- What changed? -->
+
+## Source-of-truth links
+
+Proposal:
+Spec:
+ADR:
+Plan item:
+Active goal:
+
+## Scope
+
+- [ ] Proposal / why
+- [ ] Spec / behavior contract
+- [ ] ADR / durable decision
+- [ ] Plan / sequencing
+- [ ] Active goal / current execution state
+- [ ] Runtime / implementation
+- [ ] Policy ledger
+- [ ] Support-tier update
+- [ ] Generated status / receipt
+
+## Non-goals
+
+<!-- What this PR explicitly does not do. -->
+
+## Proof
+
+```bash
+# commands run
+```
+
+## Results
+
+<!-- What passed? What failed? What could not run? -->
+
+## Claim boundary
+
+<!-- What may be claimed after this PR? What may not be claimed yet? -->
+
+## Rollback
+
+<!-- How to revert safely. -->
 
 ## CI Requirements (check all that apply)
 
@@ -8,27 +50,9 @@
 
 - [ ] Actions are **SHA-pinned** (no @vN/@main/@stable/@latest)
 - [ ] Workflow `cargo`/`cross` commands use **--locked**
-- [ ] Toolchain respects **rust-toolchain.toml** (MSRV 1.89.0)
+- [ ] Toolchain respects **rust-toolchain.toml**
 - [ ] Receipt workflow: builds exclude Python/WASM (`--exclude bitnet-py --exclude bitnet-wasm`) in CPU+GPU lanes (if touching `verify-receipts.yml`)
 - [ ] **Guards** passes in CI (and locally if you run it)
-
-<!-- optional local preflight -->
-<!-- make guards  # or run scripts/guard equivalents locally -->
-
-## Changes
-
-<!-- List the main changes in this PR -->
-
-- <!-- Add a bullet point for each meaningful change -->
--
-
-## Testing
-
-<!-- Describe how you tested these changes -->
-
-- [ ] Tests pass locally with `cargo test --workspace --no-default-features --features cpu`
-- [ ] Code formatted with `cargo fmt --all`
-- [ ] Linting passes with `cargo clippy --all-targets --all-features -- -D warnings`
 
 ## CI cost and verification discipline
 
