@@ -93,6 +93,7 @@ const REQUIRED_ROUTE_PROFILES: &[&str] = &[
     "low_power",
     "bitnet_strict_reference",
 ];
+const BENCHMARK_QUALIFIED_LATENCY_RATIO_MAX: f64 = 0.90;
 const DURABILITY_REQUIRED_PROFILES: &[&str] = &["regression_tiny", "ask_short", "ask_normal"];
 
 /// Lunar Lake operator commands.
@@ -2726,9 +2727,6 @@ fn build_regression_surface_summary(
         if route_profiles.fallback_observed {
             summary.gaps.push("route profile comparison observed fallback_used=true".to_string());
         }
-        if route_profiles.benchmark_qualified_advantage_claimed {
-            summary.gaps.push("benchmark-qualified route advantage was claimed".to_string());
-        }
         if !route_profiles.candidate_routes_remain_unpromoted {
             summary
                 .gaps
@@ -2759,11 +2757,6 @@ fn build_regression_surface_summary(
         }
         if benchmark.fallback_observed {
             summary.gaps.push("cold/warm benchmark observed fallback_used=true".to_string());
-        }
-        if benchmark.benchmark_qualified_advantage_claimed {
-            summary.gaps.push(
-                "cold/warm benchmark recorded benchmark-qualified route advantage".to_string(),
-            );
         }
         if !benchmark.candidate_routes_remain_unpromoted {
             summary
@@ -3014,9 +3007,6 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     if fallback_observed {
         gaps.push("route profile comparison observed fallback_used=true".to_string());
     }
-    if benchmark_qualified_advantage_claimed {
-        gaps.push("benchmark-qualified route advantage was claimed".to_string());
-    }
     if candidate_promotion_eligible {
         gaps.push("OpenVINO GPU/NPU candidate route became promotion-eligible".to_string());
     }
@@ -3120,9 +3110,6 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
     }
     if fallback_observed {
         gaps.push("cold/warm benchmark observed fallback_used=true".to_string());
-    }
-    if benchmark_qualified_advantage_claimed {
-        gaps.push("cold/warm benchmark recorded benchmark-qualified route advantage".to_string());
     }
     if !promoted_routes_have_critical_timing {
         gaps.push("promoted routes are missing critical cold/warm timing".to_string());
@@ -3691,12 +3678,6 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
             if route.fallback_used == Some(true) {
                 gaps.push(format!(
                     "{} route {} observed fallback_used=true",
-                    profile.profile_id, route.route_id
-                ));
-            }
-            if route.benchmark_qualified_advantage {
-                gaps.push(format!(
-                    "{} route {} unexpectedly records benchmark-qualified advantage",
                     profile.profile_id, route.route_id
                 ));
             }
@@ -6114,12 +6095,6 @@ fn cold_warm_route_benchmark(
             profile.profile_id, route.route_id
         ));
     }
-    if route.route_status != "promoted" && route.benchmark_qualified_advantage {
-        global_gaps.push(format!(
-            "{} candidate route {} claims benchmark-qualified advantage outside route promotion",
-            profile.profile_id, route.route_id
-        ));
-    }
     if route.route_status != "promoted" && !blockers.is_empty() {
         profile_gaps.push(format!(
             "{} route {} remains blocked: {}",
@@ -6130,8 +6105,8 @@ fn cold_warm_route_benchmark(
     }
 
     let benchmark_qualified_advantage =
-        route.benchmark_qualified_advantage && critical_timing_present && blockers.is_empty();
-    let promotion_blocked = route.route_status != "promoted" && !benchmark_qualified_advantage;
+        route.benchmark_qualified_advantage && critical_timing_present;
+    let promotion_blocked = route.route_status != "promoted";
     ColdWarmRouteBenchmark {
         route_id: route.route_id.clone(),
         route_status: route.route_status.clone(),
@@ -9262,12 +9237,6 @@ fn evaluate_workload_profile(
         if route.fallback_used == Some(true) {
             gaps.push(format!("{} fallback_used=true", route.route_id));
         }
-        if route.route_status == "candidate" && route.benchmark_qualified_advantage {
-            gaps.push(format!(
-                "{} records benchmark advantage while still candidate",
-                route.route_id
-            ));
-        }
     }
 
     let promoted_ready = route_evidence.iter().any(|route| route.promotion_eligible_for_profile);
@@ -9546,9 +9515,66 @@ fn attach_route_advantage_context(
         if route.route_id == baseline.route_id {
             continue;
         }
+        if route_has_benchmark_qualified_latency_advantage(profile, &baseline, route) {
+            route.benchmark_qualified_advantage = true;
+            route.blockers.retain(|blocker| {
+                blocker != "benchmark_qualified_speedup_or_power_advantage"
+                    && blocker != "candidate route requires benchmark-qualified profile evidence"
+            });
+            route
+                .timing
+                .known_gaps
+                .retain(|gap| gap != "benchmark-qualified speedup or power advantage missing");
+            route.timing.phase_coverage.push("benchmark_qualified_latency_advantage".to_string());
+        }
         route.route_advantage_context =
             Some(profile_route_advantage_context(profile, &baseline, route));
     }
+}
+
+fn route_has_benchmark_qualified_latency_advantage(
+    profile: &WorkloadProfile,
+    baseline: &ProfileRouteEvidence,
+    route: &ProfileRouteEvidence,
+) -> bool {
+    if !is_openvino_candidate_route(&route.route_id) || profile.profile_id == "low_power" {
+        return false;
+    }
+    if !baseline.promotion_eligible_for_profile {
+        return false;
+    }
+    if route.fallback_used != Some(false)
+        || route.answer_gate_passed != Some(true)
+        || route.phase_timing_present != Some(true)
+        || !route.timing_applicability.timing_matches_profile
+    {
+        return false;
+    }
+    let Some(quality) = route.profile_quality.as_ref() else {
+        return false;
+    };
+    if !quality.profile_present || quality.failed > 0 || quality.fallback_used != Some(false) {
+        return false;
+    }
+    let (Some(route_total), Some(baseline_total)) =
+        (route.timing.total_response_ms, baseline.timing.total_response_ms)
+    else {
+        return false;
+    };
+    if baseline_total <= 0.0 || route_total / baseline_total > BENCHMARK_QUALIFIED_LATENCY_RATIO_MAX
+    {
+        return false;
+    }
+    route
+        .blockers
+        .iter()
+        .all(|blocker| blocker_allows_latency_advantage_qualification(blocker, &profile.profile_id))
+}
+
+fn blocker_allows_latency_advantage_qualification(blocker: &str, profile_id: &str) -> bool {
+    blocker == "benchmark_qualified_speedup_or_power_advantage"
+        || blocker == "candidate route requires benchmark-qualified profile evidence"
+        || blocker == format!("route not promoted for profile {profile_id}")
 }
 
 fn profile_route_advantage_context(
@@ -9571,10 +9597,21 @@ fn profile_route_advantage_context(
             _ => None,
         };
 
-    let mut qualification_blockers = route.blockers.clone();
+    let mut qualification_blockers = route
+        .blockers
+        .iter()
+        .filter(|blocker| !blocker_is_route_promotion_only(blocker, &profile.profile_id))
+        .cloned()
+        .collect::<Vec<_>>();
     if baseline_total_response_ms.is_none() {
         qualification_blockers
             .push(format!("baseline route {} has no total response timing", baseline.route_id));
+    }
+    if !baseline.promotion_eligible_for_profile {
+        qualification_blockers.push(format!(
+            "baseline route {} is not promotion-eligible for profile {}",
+            baseline.route_id, profile.profile_id
+        ));
     }
     if route_total_response_ms.is_none() {
         qualification_blockers.push("route has no total response timing".to_string());
@@ -9589,10 +9626,6 @@ fn profile_route_advantage_context(
         qualification_blockers.push(
             "benchmark-qualified advantage is false; comparison is diagnostic only".to_string(),
         );
-    }
-    if route.route_status != "promoted" {
-        qualification_blockers
-            .push("route is not promoted; candidate evidence remains blocked".to_string());
     }
     qualification_blockers.sort();
     qualification_blockers.dedup();
@@ -9618,6 +9651,12 @@ fn profile_route_advantage_context(
                 .to_string(),
         );
     }
+    if route.route_status != "promoted" {
+        notes.push(
+            "route remains unpromoted; benchmark qualification does not change route selection"
+                .to_string(),
+        );
+    }
 
     ProfileRouteAdvantageContext {
         baseline_route_id: baseline.route_id.clone(),
@@ -9631,6 +9670,11 @@ fn profile_route_advantage_context(
         qualification_blockers,
         notes,
     }
+}
+
+fn blocker_is_route_promotion_only(blocker: &str, profile_id: &str) -> bool {
+    blocker == format!("route not promoted for profile {profile_id}")
+        || blocker == "candidate route requires benchmark-qualified profile evidence"
 }
 
 fn timing_applicability_for_profile(
@@ -11459,12 +11503,9 @@ mod tests {
                 .iter()
                 .any(|blocker| { blocker.contains("benchmark-qualified advantage is false") })
         );
-        assert!(
-            gpu_advantage
-                .qualification_blockers
-                .iter()
-                .any(|blocker| { blocker.contains("route is not promoted") })
-        );
+        assert!(gpu_advantage.qualification_blockers.iter().any(|blocker| {
+            blocker.contains("baseline route dense_slm_default_cpu is not promotion-eligible")
+        }));
         assert!(
             gpu_route.timing.phase_coverage.iter().any(|coverage| {
                 coverage == "profile_timing_supplemented_from_corpus_v2_case_yes_no_clear_sky"
