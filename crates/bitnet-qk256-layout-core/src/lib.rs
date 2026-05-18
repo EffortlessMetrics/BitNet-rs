@@ -229,6 +229,26 @@ mod tests {
         codes
     }
 
+    fn layout_2x257() -> Qk256Layout {
+        Qk256Layout {
+            rows: 2,
+            row_stride_bytes: 128,
+            cols: 257,
+            blocks_per_row: 2,
+            packed_len_bytes: 256,
+        }
+    }
+
+    fn layout_3x257() -> Qk256Layout {
+        Qk256Layout {
+            rows: 3,
+            row_stride_bytes: 128,
+            cols: 257,
+            blocks_per_row: 2,
+            packed_len_bytes: 384,
+        }
+    }
+
     #[test]
     fn constants_match_qk256_block_geometry() {
         assert_eq!(QK256_BLOCK_COLS, 256);
@@ -257,42 +277,31 @@ mod tests {
 
     #[test]
     fn layout_from_rows_cols_records_derived_sizes() {
-        let layout = Qk256Layout::from_rows_cols(3, 257).unwrap();
-
-        assert_eq!(
-            layout,
-            Qk256Layout {
-                rows: 3,
-                row_stride_bytes: 128,
-                cols: 257,
-                blocks_per_row: 2,
-                packed_len_bytes: 384,
-            }
-        );
+        assert_eq!(Qk256Layout::from_rows_cols(3, 257), Ok(layout_3x257()));
         assert_eq!(qk256_packed_len_bytes(3, 257), Ok(384));
     }
 
     #[test]
     fn layout_from_rows_cols_allows_zero_sized_layouts() {
         assert_eq!(
-            Qk256Layout::from_rows_cols(0, 257).unwrap(),
-            Qk256Layout {
+            Qk256Layout::from_rows_cols(0, 257),
+            Ok(Qk256Layout {
                 rows: 0,
                 row_stride_bytes: 128,
                 cols: 257,
                 blocks_per_row: 2,
                 packed_len_bytes: 0,
-            }
+            })
         );
         assert_eq!(
-            Qk256Layout::from_rows_cols(3, 0).unwrap(),
-            Qk256Layout {
+            Qk256Layout::from_rows_cols(3, 0),
+            Ok(Qk256Layout {
                 rows: 3,
                 row_stride_bytes: 0,
                 cols: 0,
                 blocks_per_row: 0,
                 packed_len_bytes: 0,
-            }
+            })
         );
     }
 
@@ -307,14 +316,14 @@ mod tests {
     #[test]
     fn layout_from_rows_stride_converts_aligned_stride_to_cols() {
         assert_eq!(
-            Qk256Layout::from_rows_stride(2, 128).unwrap(),
-            Qk256Layout {
+            Qk256Layout::from_rows_stride(2, 128),
+            Ok(Qk256Layout {
                 rows: 2,
                 row_stride_bytes: 128,
                 cols: 512,
                 blocks_per_row: 2,
                 packed_len_bytes: 256,
-            }
+            })
         );
     }
 
@@ -351,13 +360,13 @@ mod tests {
 
     #[test]
     fn validate_packed_len_accepts_exact_length() {
-        let layout = Qk256Layout::from_rows_cols(2, 257).unwrap();
+        let layout = layout_2x257();
         assert_eq!(layout.validate_packed_len(256), Ok(()));
     }
 
     #[test]
     fn validate_packed_len_reports_mismatch_details() {
-        let layout = Qk256Layout::from_rows_cols(2, 257).unwrap();
+        let layout = layout_2x257();
 
         assert_eq!(
             layout.validate_packed_len(255),
@@ -372,7 +381,7 @@ mod tests {
 
     #[test]
     fn row_range_returns_stride_sized_ranges() {
-        let layout = Qk256Layout::from_rows_cols(3, 257).unwrap();
+        let layout = layout_3x257();
 
         assert_eq!(layout.row_range(0), Ok(0..128));
         assert_eq!(layout.row_range(1), Ok(128..256));
@@ -381,14 +390,14 @@ mod tests {
 
     #[test]
     fn row_range_rejects_out_of_bounds_rows() {
-        let layout = Qk256Layout::from_rows_cols(3, 257).unwrap();
+        let layout = layout_3x257();
 
         assert_eq!(layout.row_range(3), Err(Qk256LayoutError::RowOutOfBounds { row: 3, rows: 3 }));
     }
 
     #[test]
     fn block_range_returns_block_sized_ranges_within_row() {
-        let layout = Qk256Layout::from_rows_cols(2, 257).unwrap();
+        let layout = layout_2x257();
 
         assert_eq!(layout.block_range(0, 0), Ok(0..64));
         assert_eq!(layout.block_range(0, 1), Ok(64..128));
@@ -398,7 +407,7 @@ mod tests {
 
     #[test]
     fn block_range_rejects_out_of_bounds_blocks_before_rows() {
-        let layout = Qk256Layout::from_rows_cols(2, 257).unwrap();
+        let layout = layout_2x257();
 
         assert_eq!(
             layout.block_range(99, 2),
@@ -408,7 +417,7 @@ mod tests {
 
     #[test]
     fn block_range_propagates_row_bounds_for_valid_block() {
-        let layout = Qk256Layout::from_rows_cols(2, 257).unwrap();
+        let layout = layout_2x257();
 
         assert_eq!(
             layout.block_range(2, 1),
@@ -418,7 +427,7 @@ mod tests {
 
     #[test]
     fn row_ranges_iterates_all_rows_with_exact_size() {
-        let layout = Qk256Layout::from_rows_cols(3, 257).unwrap();
+        let layout = layout_3x257();
         let mut ranges = layout.row_ranges();
 
         assert_eq!(ranges.len(), 3);
@@ -430,14 +439,14 @@ mod tests {
     #[test]
     fn parse_qk256_layout_accepts_two_dimensional_layout_shape() {
         assert_eq!(
-            parse_qk256_layout("blk.0.weight", &[2, 64]).unwrap(),
-            Qk256Layout {
+            parse_qk256_layout("blk.0.weight", &[2, 64]),
+            Ok(Qk256Layout {
                 rows: 2,
                 row_stride_bytes: 64,
                 cols: 256,
                 blocks_per_row: 1,
                 packed_len_bytes: 128,
-            }
+            })
         );
     }
 
@@ -499,9 +508,10 @@ mod tests {
 
     #[test]
     fn pack_qk256_codes_packs_four_two_bit_codes_per_byte_little_endian() {
-        let packed = pack_qk256_codes(&patterned_codes()).unwrap();
-
-        assert!(packed.iter().all(|byte| *byte == 0b11_10_01_00));
+        assert_eq!(
+            pack_qk256_codes(&patterned_codes()),
+            Ok([0b11_10_01_00; QK256_PACKED_BYTES_PER_BLOCK])
+        );
     }
 
     #[test]
@@ -529,8 +539,6 @@ mod tests {
             *code = ((offset * 17 + offset / 7) % 4) as u8;
         }
 
-        let packed = pack_qk256_codes(&codes).unwrap();
-
-        assert_eq!(unpack_qk256_codes(&packed), codes);
+        assert_eq!(pack_qk256_codes(&codes).map(|packed| unpack_qk256_codes(&packed)), Ok(codes));
     }
 }
