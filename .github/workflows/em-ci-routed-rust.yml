@@ -63,27 +63,44 @@ jobs:
             exit 0
           fi
 
-          if ! idle_cx53="$(printf '%s' "$runners_json" | jq '
+          idle_runner_count() {
+            local runner_label="$1"
+            printf '%s' "$runners_json" | jq --arg runner_label "$runner_label" '
               [ .runners[]?
                 | select(.status == "online")
                 | select(.busy == false)
                 | ([.labels[].name] // []) as $have
                 | select(
                     ($have | index("em-ci")) and
-                    ($have | index("cx53")) and
+                    ($have | index($runner_label)) and
                     ($have | index("rust-small")) and
                     ($have | index("trusted-pr"))
                   )
               ] | length
-            ' 2>/tmp/jq.err)"; then
+            '
+          }
+
+          if ! idle_cx53="$(idle_runner_count "cx53" 2>/tmp/jq.err)"; then
             echo "runner API parse failed:" >&2
             cat /tmp/jq.err >&2 || true
             emit "github" "parse_failed" "true"
             exit 0
           fi
 
+          if ! idle_cx43="$(idle_runner_count "cx43" 2>/tmp/jq.err)"; then
+            echo "runner API parse failed:" >&2
+            cat /tmp/jq.err >&2 || true
+            emit "github" "parse_failed" "true"
+            exit 0
+          fi
+
+          echo "idle_cx53=${idle_cx53:-0}"
+          echo "idle_cx43=${idle_cx43:-0}"
+
           if [ "${idle_cx53:-0}" -gt 0 ]; then
             emit "cx53" "cx53_idle" "false"
+          elif [ "${idle_cx43:-0}" -gt 0 ]; then
+            emit "cx43" "cx43_idle" "false"
           else
             emit "github" "no_idle_runner" "false"
           fi
@@ -200,6 +217,118 @@ jobs:
         run: |
           df -h / /mnt/docker /mnt/actions /mnt/ci-scratch /mnt/ci-cache /mnt/ci-artifacts 2>/dev/null || true
 
+  rust-small-cx43:
+    name: BitNet Rust Small on CX43
+    needs: route-rust-small
+    if: needs.route-rust-small.outputs.target == 'cx43'
+    runs-on:
+      group: em-ci-small
+      labels: [self-hosted, linux, x64, em-ci, cx43, rust-small, trusted-pr]
+    timeout-minutes: 90
+    env:
+      JOB_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      CARGO_HOME: /mnt/ci-cache/cargo-home
+      SCCACHE_DIR: /mnt/ci-cache/sccache
+      SCCACHE_CACHE_SIZE: 30G
+      RUSTC_WRAPPER: /usr/local/cargo/bin/sccache
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "4"
+      TMPDIR: /mnt/ci-scratch/tmp/${{ github.run_id }}-${{ github.run_attempt }}
+      CARGO_TARGET_DIR: /mnt/ci-scratch/target/${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Disk guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          ci-disk-guard /mnt/ci-scratch 50
+          ci-disk-guard /mnt/docker 10
+          ci-disk-guard /mnt/ci-cache 10
+
+      - name: Prepare scratch dirs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$TMPDIR" "$CARGO_TARGET_DIR" "$CARGO_HOME" "$SCCACHE_DIR"
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Build and test BitNet rust-small (cx43)
+        shell: bash
+        env:
+          IMAGE: em-ci-rust:1.95
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --cpus="6" \
+            --memory="12g" \
+            -e CARGO_HOME=/cargo-home \
+            -e SCCACHE_DIR=/sccache \
+            -e SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE}" \
+            -e RUSTC_WRAPPER=/usr/local/cargo/bin/sccache \
+            -e CARGO_INCREMENTAL="${CARGO_INCREMENTAL}" \
+            -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS}" \
+            -e CARGO_TARGET_DIR=/target \
+            -e TMPDIR=/tmp/jobtmp \
+            -v "${GITHUB_WORKSPACE}:/workspace" \
+            -v "${CARGO_HOME}:/cargo-home" \
+            -v "${SCCACHE_DIR}:/sccache" \
+            -v "${CARGO_TARGET_DIR}:/target" \
+            -v "${TMPDIR}:/tmp/jobtmp" \
+            -w /workspace \
+            "${IMAGE}" \
+            bash -eu -o pipefail -c '
+              rustc --version
+              cargo --version
+              just --version || true
+              sccache --version
+              cargo fetch --locked
+              cargo build --locked \
+                -p bitnet-common \
+                -p bitnet-models \
+                -p bitnet-tokenizers \
+                -p bitnet-quantization \
+                -p bitnet-kernels \
+                --no-default-features --features cpu
+              cargo test --locked \
+                -p bitnet-common \
+                -p bitnet-models \
+                -p bitnet-tokenizers \
+                -p bitnet-quantization \
+                -p bitnet-kernels \
+                --lib \
+                --no-default-features --features cpu \
+                -- --nocapture
+              sccache --show-stats || true
+            '
+
+      - name: Cleanup scratch dirs
+        if: always()
+        shell: bash
+        env:
+          IMAGE: em-ci-rust:1.95
+        run: |
+          set -eu
+          docker run --rm \
+            -v "${TMPDIR}:/tmp/jobtmp" \
+            -v "${CARGO_TARGET_DIR}:/target" \
+            "${IMAGE}" \
+            bash -c '
+              rm -rf /tmp/jobtmp/* /tmp/jobtmp/.[!.]* /tmp/jobtmp/..?* 2>/dev/null || true
+              rm -rf /target/*    /target/.[!.]*    /target/..?*    2>/dev/null || true
+            ' || true
+          rmdir "$TMPDIR" 2>/dev/null || true
+          rmdir "$CARGO_TARGET_DIR" 2>/dev/null || true
+
+      - name: Disk report
+        if: always()
+        shell: bash
+        run: |
+          df -h / /mnt/docker /mnt/actions /mnt/ci-scratch /mnt/ci-cache /mnt/ci-artifacts 2>/dev/null || true
+
   rust-small-github:
     name: BitNet Rust Small on GitHub Hosted
     needs: route-rust-small
@@ -250,6 +379,7 @@ jobs:
     needs:
       - route-rust-small
       - rust-small-cx53
+      - rust-small-cx43
       - rust-small-github
     if: >-
       always()
@@ -266,12 +396,14 @@ jobs:
           TARGET: ${{ needs.route-rust-small.outputs.target }}
           ROUTER_RESULT: ${{ needs.route-rust-small.result }}
           CX53_RESULT: ${{ needs.rust-small-cx53.result }}
+          CX43_RESULT: ${{ needs.rust-small-cx43.result }}
           GITHUB_RESULT: ${{ needs.rust-small-github.result }}
         run: |
           set -eu
           echo "router_target=${TARGET:-<empty>}"
           echo "router_result=${ROUTER_RESULT:-<empty>}"
           echo "cx53_result=${CX53_RESULT:-<empty>}"
+          echo "cx43_result=${CX43_RESULT:-<empty>}"
           echo "github_result=${GITHUB_RESULT:-<empty>}"
 
           if [ "${ROUTER_RESULT}" != "success" ]; then
@@ -283,6 +415,12 @@ jobs:
             cx53)
               if [ "${CX53_RESULT}" != "success" ]; then
                 echo "selected target cx53 but rust-small-cx53 result was ${CX53_RESULT}" >&2
+                exit 1
+              fi
+              ;;
+            cx43)
+              if [ "${CX43_RESULT}" != "success" ]; then
+                echo "selected target cx43 but rust-small-cx43 result was ${CX43_RESULT}" >&2
                 exit 1
               fi
               ;;
