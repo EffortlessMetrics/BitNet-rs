@@ -2616,3 +2616,45 @@ must_not_claim = [
   "The phase proves end-to-end speedup.",
   "QK256, Neural Engine, or MPSGraph inference is supported.",
 ]
+
+[[work_item]]
+id = "APPLE-SILICON-DOCS-000"
+status = "proposed"
+branch = "codex/apple-silicon/source-of-truth-map"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the Apple Silicon source-of-truth map and docs/rails implementation plan so M4 Mac Mini, MacBook, dense SLM, BitNet CPU/NEON, Metal phase, MPSGraph reference, Neural Engine research, corpus, benchmark, reproducibility, and service proof families have explicit authorities without promoting new runtime claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "plans/apple-silicon/**",
+  "docs/specs/INDEX.md",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Apple Silicon proof families and source-of-truth authorities are mapped for future docs/spec work.",
+]
+must_not_claim = [
+  "The map promotes new runtime support, service readiness, quality, benchmark, or support-tier state.",
+  "Full apple-m4-metal inference works.",
+  "Neural Engine execution is proven.",
+  "MPSGraph smoke is native Metal proof.",
+  "Dense SLM evidence proves BitNet behavior.",
+  "BitNet CPU/NEON evidence proves Metal behavior.",
+  "MacBook evidence proves M4 Mac Mini runtime behavior.",
+]
