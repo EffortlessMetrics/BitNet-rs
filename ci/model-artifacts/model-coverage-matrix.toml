@@ -331,6 +331,8 @@ required_receipts = [
   "short_decode_strict_cuda",
   "warm_session_strict_cuda",
   "benchmark_qualification_review",
+  "ask_user_path_strict_cuda",
+  "chat_user_path_strict_cuda",
 ]
 forbidden_claims = [
   "product_cli_ready",
@@ -340,8 +342,8 @@ forbidden_claims = [
   "full_residency",
   "qwen2_5_proof_inheritance",
 ]
-next_proof = "Qwen3 user-facing ask/chat product UX or repeated same-artifact comparator evidence before any product CLI or speed profile promotion."
-claim_boundary = "Qwen3 0.6B Q8_0 has exact artifact, CPU answer sanity, all-layer plan, one-token, short-decode, warm-session, and benchmark review receipts for the dense_regular_llm_cuda RTX 5070 Ti route. It remains a candidate for product UX and does not inherit Qwen2.5 CUDA receipts, prove speed, server readiness, full residency, broad dense GGUF support, or BitNet QK256 behavior."
+next_proof = "CUDA-MODEL-012 product CLI promotion review, then separate server or performance comparator evidence before any server, speed, or residency promotion."
+claim_boundary = "Qwen3 0.6B Q8_0 has exact artifact, CPU answer sanity, all-layer plan, one-token, short-decode, warm-session, benchmark review, ask user-path, and chat user-path receipts for the dense_regular_llm_cuda RTX 5070 Ti route. It remains a candidate pending product review and does not inherit Qwen2.5 CUDA receipts, prove speed, server readiness, full residency, broad dense GGUF support, or BitNet QK256 behavior."
 
   [entry.claims]
   registered = true

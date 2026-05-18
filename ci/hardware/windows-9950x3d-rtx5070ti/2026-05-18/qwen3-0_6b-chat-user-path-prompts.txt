@@ -1,0 +1,2 @@
+What is 2+2? Answer with one number.
+Now name the arithmetic operation used.
