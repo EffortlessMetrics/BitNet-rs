@@ -8138,9 +8138,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-016"
-status = "in_progress"
+status = "merged"
 pr = 5774
-head_sha = "297e814584032a3907cce141cb58ff0ff7d93298"
+head_sha = "3fc68acb4b440ee1113685972cc9f297a5c229f3"
+merge_sha = "46e4cadf00e752f5ff7ae008c006ac1dafdf4524"
 branch = "codex/lunar-lake/LNL258V-ROUTE-016-openvino-gpu-profile-promotion"
 stackable = false
 review_mode = "codex_premerge"
