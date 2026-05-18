@@ -135,6 +135,20 @@ const DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT: &str =
 const DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json";
 const DEFAULT_DENSE_QWEN_SHORT_DECODE_PROOF_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json";
 const DEFAULT_DENSE_QWEN_WARM_SESSION_PROOF_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json";
+const DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-cuda-all-layer-plan.json";
+const DEFAULT_QWEN3_MODEL_BOUNDARY_FIXTURES_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-model-boundary-fixtures.json";
+const DEFAULT_QWEN3_KV_CACHE_POLICY_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-kv-cache-policy.json";
+const DEFAULT_QWEN3_SAMPLING_POLICY_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-sampling-policy.json";
+const DEFAULT_QWEN3_ONE_TOKEN_PROOF_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-one-token-cuda.json";
+const DEFAULT_QWEN3_SHORT_DECODE_PROOF_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-short-decode-cuda.json";
+const DEFAULT_QWEN3_WARM_SESSION_PROOF_RECEIPT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-warm-session-cuda.json";
 const DEFAULT_QWEN_WARM_SESSION_PROMPTS: &[&str] = &[
     "What is 2+2?",
     "Name one color of the sky.",
@@ -148,6 +162,8 @@ struct DenseQwenProofModel {
     file: &'static str,
     architecture: &'static str,
     sha256: &'static str,
+    model_coverage_row: &'static str,
+    model_coverage_tier: &'static str,
     work_item: &'static str,
 }
 
@@ -156,6 +172,8 @@ const QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL: DenseQwenProofModel = DenseQwenProof
     file: QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE,
     architecture: "qwen2",
     sha256: QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256,
+    model_coverage_row: "dense_qwen25_05b_q8_cuda",
+    model_coverage_tier: "product_cli_ready",
     work_item: "CUDA-DENSE-051",
 };
 
@@ -164,8 +182,70 @@ const QWEN3_06B_INSTRUCT_Q8_0_PROOF_MODEL: DenseQwenProofModel = DenseQwenProofM
     file: QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE,
     architecture: "qwen3",
     sha256: QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256,
+    model_coverage_row: "dense_qwen3_06b_q8_candidate",
+    model_coverage_tier: "accelerator_answer_ready",
     work_item: "CUDA-MODEL-004",
 };
+
+#[derive(Debug, Clone, Copy)]
+struct DenseQwenProofReceiptBundle {
+    all_layer_plan: &'static str,
+    model_boundary_fixtures: &'static str,
+    kv_cache_policy: &'static str,
+    sampling_policy: &'static str,
+    one_token_proof: &'static str,
+    short_decode_proof: &'static str,
+    warm_session_proof: &'static str,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DenseQwenProofContext {
+    proof_model: &'static DenseQwenProofModel,
+    receipts: &'static DenseQwenProofReceiptBundle,
+}
+
+const QWEN25_05B_INSTRUCT_Q8_0_RECEIPTS: DenseQwenProofReceiptBundle =
+    DenseQwenProofReceiptBundle {
+        all_layer_plan: DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+        model_boundary_fixtures: DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+        kv_cache_policy: DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+        sampling_policy: DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+        one_token_proof: DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT,
+        short_decode_proof: DEFAULT_DENSE_QWEN_SHORT_DECODE_PROOF_RECEIPT,
+        warm_session_proof: DEFAULT_DENSE_QWEN_WARM_SESSION_PROOF_RECEIPT,
+    };
+
+const QWEN3_06B_INSTRUCT_Q8_0_RECEIPTS: DenseQwenProofReceiptBundle = DenseQwenProofReceiptBundle {
+    all_layer_plan: DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT,
+    model_boundary_fixtures: DEFAULT_QWEN3_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+    kv_cache_policy: DEFAULT_QWEN3_KV_CACHE_POLICY_RECEIPT,
+    sampling_policy: DEFAULT_QWEN3_SAMPLING_POLICY_RECEIPT,
+    one_token_proof: DEFAULT_QWEN3_ONE_TOKEN_PROOF_RECEIPT,
+    short_decode_proof: DEFAULT_QWEN3_SHORT_DECODE_PROOF_RECEIPT,
+    warm_session_proof: DEFAULT_QWEN3_WARM_SESSION_PROOF_RECEIPT,
+};
+
+pub(crate) fn is_supported_dense_qwen_cuda_model_path(model: &Path) -> bool {
+    let Some(file_name) = model.file_name().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    file_name.eq_ignore_ascii_case(QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)
+        || file_name.eq_ignore_ascii_case(QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE)
+}
+
+fn dense_qwen_proof_context_for_model_path(model: &Path) -> DenseQwenProofContext {
+    let file_name = model.file_name().and_then(|value| value.to_str()).unwrap_or_default();
+    if file_name.eq_ignore_ascii_case(QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE) {
+        return DenseQwenProofContext {
+            proof_model: &QWEN3_06B_INSTRUCT_Q8_0_PROOF_MODEL,
+            receipts: &QWEN3_06B_INSTRUCT_Q8_0_RECEIPTS,
+        };
+    }
+    DenseQwenProofContext {
+        proof_model: &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL,
+        receipts: &QWEN25_05B_INSTRUCT_Q8_0_RECEIPTS,
+    }
+}
 
 /// Run dense GGUF single-linear CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
@@ -1452,6 +1532,8 @@ pub async fn run_dense_qwen_cuda_ask(
     let receipt_path =
         options.receipt_out.clone().unwrap_or_else(dense_qwen_cuda_ask_default_receipt_path);
     let source_short_decode_path = dense_qwen_cuda_ask_source_receipt_path(&receipt_path);
+    let proof_context = dense_qwen_proof_context_for_model_path(&options.model);
+    let proof_receipts = proof_context.receipts;
 
     let short_decode = DenseGgufQwenShortDecodeStrictCudaCommand {
         model: options.model.clone(),
@@ -1459,22 +1541,25 @@ pub async fn run_dense_qwen_cuda_ask(
         max_new_tokens: options.max_new_tokens,
         top_k: options.top_k,
         device_index: options.device_index,
-        all_layer_plan: PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
-        model_boundary_fixtures: PathBuf::from(DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT),
-        kv_cache_policy: PathBuf::from(DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT),
-        sampling_policy: PathBuf::from(DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT),
-        one_token_proof: PathBuf::from(DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT),
+        all_layer_plan: PathBuf::from(proof_receipts.all_layer_plan),
+        model_boundary_fixtures: PathBuf::from(proof_receipts.model_boundary_fixtures),
+        kv_cache_policy: PathBuf::from(proof_receipts.kv_cache_policy),
+        sampling_policy: PathBuf::from(proof_receipts.sampling_policy),
+        one_token_proof: PathBuf::from(proof_receipts.one_token_proof),
         json_out: Some(source_short_decode_path.clone()),
     };
     short_decode.execute().await?;
 
-    let (source_short_decode_receipt, source_short_decode_sha256) = read_and_validate_receipt(
-        &source_short_decode_path,
-        validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
-    )?;
-    let (_, warm_session_sha256) = read_and_validate_receipt(
-        Path::new(DEFAULT_DENSE_QWEN_WARM_SESSION_PROOF_RECEIPT),
+    let (source_short_decode_receipt, source_short_decode_sha256) =
+        read_and_validate_receipt_for_qwen_model(
+            &source_short_decode_path,
+            validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
+            proof_context.proof_model,
+        )?;
+    let (_, warm_session_sha256) = read_and_validate_receipt_for_qwen_model(
+        Path::new(proof_receipts.warm_session_proof),
         validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
+        proof_context.proof_model,
     )?;
 
     let source_proof = source_short_decode_receipt
@@ -1501,6 +1586,7 @@ pub async fn run_dense_qwen_cuda_ask(
         &options.question,
         &answer,
         generated_tokens_count,
+        proof_context.proof_model,
     )?;
     validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt)?;
 
@@ -1556,6 +1642,8 @@ pub async fn run_dense_qwen_cuda_chat(
     let receipt_path =
         options.receipt_out.clone().unwrap_or_else(dense_qwen_cuda_chat_default_receipt_path);
     let source_warm_session_path = dense_qwen_cuda_chat_source_receipt_path(&receipt_path);
+    let proof_context = dense_qwen_proof_context_for_model_path(&options.model);
+    let proof_receipts = proof_context.receipts;
 
     let warm_session = DenseGgufQwenWarmSessionStrictCudaCommand {
         model: options.model.clone(),
@@ -1564,20 +1652,22 @@ pub async fn run_dense_qwen_cuda_chat(
         max_new_tokens: options.max_new_tokens,
         top_k: options.top_k,
         device_index: options.device_index,
-        all_layer_plan: PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
-        model_boundary_fixtures: PathBuf::from(DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT),
-        kv_cache_policy: PathBuf::from(DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT),
-        sampling_policy: PathBuf::from(DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT),
-        one_token_proof: PathBuf::from(DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT),
-        short_decode_proof: PathBuf::from(DEFAULT_DENSE_QWEN_SHORT_DECODE_PROOF_RECEIPT),
+        all_layer_plan: PathBuf::from(proof_receipts.all_layer_plan),
+        model_boundary_fixtures: PathBuf::from(proof_receipts.model_boundary_fixtures),
+        kv_cache_policy: PathBuf::from(proof_receipts.kv_cache_policy),
+        sampling_policy: PathBuf::from(proof_receipts.sampling_policy),
+        one_token_proof: PathBuf::from(proof_receipts.one_token_proof),
+        short_decode_proof: PathBuf::from(proof_receipts.short_decode_proof),
         json_out: Some(source_warm_session_path.clone()),
     };
     warm_session.execute().await?;
 
     let (source_warm_session_receipt, source_warm_session_sha256) =
-        read_and_validate_receipt(&source_warm_session_path, |receipt| {
-            validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(receipt)
-        })?;
+        read_and_validate_receipt_for_qwen_model(
+            &source_warm_session_path,
+            |receipt| validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(receipt),
+            proof_context.proof_model,
+        )?;
 
     let source_proof = source_warm_session_receipt
         .get("warm_session_proof")
@@ -1605,6 +1695,7 @@ pub async fn run_dense_qwen_cuda_chat(
         &timestamp_utc,
         &prompts,
         &answers,
+        proof_context.proof_model,
     )?;
     validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)?;
 
@@ -1642,6 +1733,7 @@ fn dense_qwen_cuda_chat_receipt_json(
     timestamp_utc: &str,
     prompts: &[String],
     answers: &[String],
+    proof_model: &DenseQwenProofModel,
 ) -> Result<Value> {
     let source_proof = source_warm_session_receipt
         .get("warm_session_proof")
@@ -1687,6 +1779,8 @@ fn dense_qwen_cuda_chat_receipt_json(
     receipt["artifact_kind"] = json!(DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND);
     receipt["artifact_path"] = json!(receipt_path.display().to_string());
     receipt["claim"] = json!("dense_gguf_qwen_chat_strict_cuda_proof_recorded");
+    receipt["model_coverage_row"] = json!(proof_model.model_coverage_row);
+    receipt["model_coverage_tier"] = json!(proof_model.model_coverage_tier);
     receipt["timestamp_utc"] = json!(timestamp_utc);
     receipt["execution_path"]["kernel_family"] = json!("dense_qwen_chat_strict_cuda");
     receipt["execution_path"]["quantization_family"] =
@@ -1783,7 +1877,10 @@ fn dense_qwen_cuda_chat_receipt_json(
     receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
     receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
     receipt["notes"] = json!([
-        "CUDA-UX-004 exposes the bounded dense Qwen CUDA chat path through the user-facing CLI.",
+        format!(
+            "{} exposes the bounded dense Qwen CUDA chat path through the user-facing CLI.",
+            dense_qwen_chat_work_item(proof_model)
+        ),
         "This receipt wraps the warm-session runtime proof without claiming server readiness, speedup, persistent residency, full CUDA residency, broad dense GGUF inference, or BitNet packed I2_S/QK256 proof."
     ]);
     receipt["source_warm_session_receipt"] = source_warm_session_receipt.clone();
@@ -1806,6 +1903,7 @@ fn dense_qwen_cuda_ask_receipt_json(
     question: &str,
     answer: &str,
     generated_tokens_count: u64,
+    proof_model: &DenseQwenProofModel,
 ) -> Result<Value> {
     let source_proof = source_short_decode_receipt
         .get("short_decode_proof")
@@ -1818,6 +1916,8 @@ fn dense_qwen_cuda_ask_receipt_json(
     receipt["artifact_kind"] = json!(DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND);
     receipt["artifact_path"] = json!(receipt_path.display().to_string());
     receipt["claim"] = json!("dense_gguf_qwen_ask_strict_cuda_proof_recorded");
+    receipt["model_coverage_row"] = json!(proof_model.model_coverage_row);
+    receipt["model_coverage_tier"] = json!(proof_model.model_coverage_tier);
     receipt["timestamp_utc"] = json!(timestamp_utc);
     receipt["execution_path"]["kernel_family"] = json!("dense_qwen_ask_strict_cuda");
     receipt["execution_path"]["quantization_family"] =
@@ -1919,7 +2019,10 @@ fn dense_qwen_cuda_ask_receipt_json(
     receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
     receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
     receipt["notes"] = json!([
-        "CUDA-UX-003 exposes the bounded dense Qwen CUDA ask path through the user-facing CLI.",
+        format!(
+            "{} exposes the bounded dense Qwen CUDA ask path through the user-facing CLI.",
+            dense_qwen_ask_work_item(proof_model)
+        ),
         "This receipt wraps the short-decode runtime proof and warm-session prerequisite without claiming chat, server readiness, speedup, persistent residency, full CUDA residency, or BitNet packed I2_S/QK256 proof."
     ]);
     receipt["source_short_decode_receipt"] = source_short_decode_receipt.clone();
@@ -3568,13 +3671,6 @@ impl Drop for ScopedEnvVar {
             }
         }
     }
-}
-
-fn read_and_validate_receipt(
-    path: &Path,
-    validate: impl FnOnce(&Value) -> Result<()>,
-) -> Result<(Value, String)> {
-    read_and_validate_receipt_for_qwen_model(path, validate, &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL)
 }
 
 fn read_and_validate_receipt_for_qwen_model(
@@ -10740,6 +10836,8 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
         "artifact_kind": DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
         "artifact_path": artifact_path,
         "claim": "dense_gguf_qwen_one_token_strict_cuda_proof_recorded",
+        "model_coverage_row": proof_model.model_coverage_row,
+        "model_coverage_tier": proof_model.model_coverage_tier,
         "machine_id": MACHINE_ID,
         "hardware_lane": HARDWARE_LANE,
         "timestamp_utc": timestamp_utc,
@@ -11138,6 +11236,8 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         "artifact_kind": DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
         "artifact_path": artifact_path,
         "claim": "dense_gguf_qwen_short_decode_strict_cuda_proof_recorded",
+        "model_coverage_row": proof_model.model_coverage_row,
+        "model_coverage_tier": proof_model.model_coverage_tier,
         "machine_id": MACHINE_ID,
         "hardware_lane": HARDWARE_LANE,
         "timestamp_utc": timestamp_utc,
@@ -11664,6 +11764,8 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
         "artifact_kind": DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
         "artifact_path": artifact_path,
         "claim": "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
+        "model_coverage_row": proof_model.model_coverage_row,
+        "model_coverage_tier": proof_model.model_coverage_tier,
         "machine_id": MACHINE_ID,
         "hardware_lane": HARDWARE_LANE,
         "timestamp_utc": timestamp_utc,
@@ -11941,6 +12043,22 @@ fn dense_qwen_warm_session_work_item(proof_model: &DenseQwenProofModel) -> &'sta
     match proof_model.id {
         QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-DENSE-046",
         QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-MODEL-006",
+        _ => proof_model.work_item,
+    }
+}
+
+fn dense_qwen_ask_work_item(proof_model: &DenseQwenProofModel) -> &'static str {
+    match proof_model.id {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-UX-003",
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-MODEL-010",
+        _ => proof_model.work_item,
+    }
+}
+
+fn dense_qwen_chat_work_item(proof_model: &DenseQwenProofModel) -> &'static str {
+    match proof_model.id {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-UX-004",
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => "CUDA-MODEL-011",
         _ => proof_model.work_item,
     }
 }
@@ -12956,6 +13074,21 @@ mod tests {
     };
     use bitnet_models::formats::gguf::GgufTensorType;
     use bitnet_models::formats::gguf::{GgufReader, GgufValue};
+
+    #[test]
+    fn qwen3_user_path_uses_qwen3_prerequisite_receipts() {
+        let model = Path::new("Qwen3-0.6B-Q8_0.gguf");
+        let context = dense_qwen_proof_context_for_model_path(model);
+
+        assert_eq!(context.proof_model.id, QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID);
+        assert_eq!(context.proof_model.model_coverage_row, "dense_qwen3_06b_q8_candidate");
+        assert_eq!(context.proof_model.model_coverage_tier, "accelerator_answer_ready");
+        assert_eq!(context.receipts.one_token_proof, DEFAULT_QWEN3_ONE_TOKEN_PROOF_RECEIPT);
+        assert_eq!(context.receipts.short_decode_proof, DEFAULT_QWEN3_SHORT_DECODE_PROOF_RECEIPT);
+        assert_eq!(context.receipts.warm_session_proof, DEFAULT_QWEN3_WARM_SESSION_PROOF_RECEIPT);
+        assert_eq!(dense_qwen_ask_work_item(context.proof_model), "CUDA-MODEL-010");
+        assert_eq!(dense_qwen_chat_work_item(context.proof_model), "CUDA-MODEL-011");
+    }
 
     #[test]
     fn extracted_dense_qwen_linear_maps_to_kernel_fixture() {

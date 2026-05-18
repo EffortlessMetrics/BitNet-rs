@@ -6366,12 +6366,8 @@ pub fn validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(receipt: &Val
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
@@ -6626,12 +6622,8 @@ pub fn validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(receipt: &Va
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;

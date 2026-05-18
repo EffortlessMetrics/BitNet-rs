@@ -731,6 +731,14 @@ fn match_model_coverage_entry<'a>(
     let search_text = receipt_search_text(receipt, explanation);
     let route = explanation.execution_plan.selected_route.as_deref();
     if route == Some("dense_regular_llm_cuda")
+        && (search_text.contains("qwen3")
+            || search_text.contains("qwen3-0.6b-instruct-q8_0")
+            || search_text.contains("qwen3-0.6b-q8_0.gguf"))
+    {
+        return matrix.entry.iter().find(|entry| entry.id == "dense_qwen3_06b_q8_candidate");
+    }
+
+    if route == Some("dense_regular_llm_cuda")
         && (search_text.contains("qwen")
             || search_text.contains("qwen25")
             || search_text.contains("qwen2.5"))
@@ -1658,6 +1666,59 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("not BitNet packed I2_S/QK256 proof"))
         );
+    }
+
+    #[test]
+    fn receipts_explain_links_qwen3_dense_receipt_to_candidate_coverage() {
+        let receipt = json!({
+            "artifact_kind": "dense_gguf_qwen_ask_strict_cuda_proof",
+            "claim": "dense_gguf_qwen_ask_strict_cuda_proof_recorded",
+            "model": {
+                "id": "qwen3-0.6b-instruct-q8_0",
+                "file": "Qwen3-0.6B-Q8_0.gguf",
+                "architecture": "qwen3"
+            },
+            "execution_plan": {
+                "selected_route": "dense_regular_llm_cuda",
+                "model_family": "qwen",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "fallback_used": false,
+                "speedup_claim": false
+            },
+            "claim_boundary": {
+                "bitnet_packed_i2s_qk256_proof": false,
+                "dense_regular_llm_cuda_claimed": true,
+                "server_ready_claimed": false,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("dense-qwen3.json"), &receipt);
+
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
+        assert_eq!(
+            explanation.model_coverage.current_tier.as_deref(),
+            Some("accelerator_answer_ready")
+        );
+        assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
+        assert_eq!(explanation.model_coverage.full_residency_claim, Some(false));
+        assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
+        assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
+        assert_eq!(explanation.current_tier.as_deref(), Some("accelerator_answer_ready"));
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.server_ready, Some(false));
+        assert_eq!(explanation.speedup_claim, Some(false));
+        assert_eq!(explanation.full_residency_claim, Some(false));
+        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
     }
 
     #[test]
