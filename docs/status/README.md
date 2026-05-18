@@ -36,6 +36,7 @@ Current maintained status surfaces:
 
 ```text
 docs/status/CUDA_CAPABILITY_MATRIX.md
+docs/status/OPENVINO_CAPABILITY_MATRIX.md
 ```
 
 Planned status surfaces include:

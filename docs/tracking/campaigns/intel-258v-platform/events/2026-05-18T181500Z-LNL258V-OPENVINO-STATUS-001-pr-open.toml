@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T18:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-STATUS-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-STATUS-001-capability-matrix"
+pr = 5620
+head_sha = "8155e8b2960c984ed9bb5ca23e81adfbe105f4f0"
+summary = "Opened LNL258V-OPENVINO-STATUS-001 as PR #5620."
+
+artifacts = [
+  "docs/status/OPENVINO_CAPABILITY_MATRIX.md",
+  "docs/status/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5620 adds the claim-neutral Lunar Lake OpenVINO status matrix and links the current route status, source receipts, validator command, and promotion blockers.",
+  "The PR remains documentation/status only and does not run inference, promote OpenVINO routes, claim speedup, claim power advantage, claim server readiness, or change BitNet QK256/I2_S behavior.",
+]

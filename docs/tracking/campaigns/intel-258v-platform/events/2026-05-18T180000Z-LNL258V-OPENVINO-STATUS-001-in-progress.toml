@@ -1,0 +1,20 @@
+timestamp = "2026-05-18T18:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-STATUS-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-STATUS-001-capability-matrix"
+summary = "Started LNL258V-OPENVINO-STATUS-001 to add a claim-neutral Lunar Lake OpenVINO capability matrix."
+
+artifacts = [
+  "docs/status/OPENVINO_CAPABILITY_MATRIX.md",
+  "docs/status/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The status matrix is scoped to documenting current Qwen2.5 OpenVINO CPU/GPU/NPU route status, BitNet OpenVINO subgraph research boundaries, source receipts, validation commands, and promotion blockers.",
+  "No inference, route promotion, OpenVINO speedup, power advantage, server readiness, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU execution, full BitNet accelerator inference, or QK256 accelerator decode claim is in scope.",
+]
