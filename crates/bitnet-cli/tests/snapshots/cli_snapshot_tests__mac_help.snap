@@ -26,6 +26,7 @@ Commands:
   chat                  Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
   chat-smoke            Run a fixed dense SLM resident chat conformance smoke and write a receipt
   validate              Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
+  eval                  Dry-run supported Apple M4 eval suites and write receipt-backed summaries
   benchmark             Run release-mode dense SLM benchmark profiles for v2 M4 receipts
   benchmark-preflight   Record benchmark environment preflight evidence without running model inference
   bitnet-proof          Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing

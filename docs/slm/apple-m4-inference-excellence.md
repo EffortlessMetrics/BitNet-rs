@@ -208,6 +208,28 @@ compact dense SLM plus BitNet fixture. It is drift-localization evidence only,
 not a fresh live runtime proof, broad quality claim, broad performance claim,
 BitNet chat/serve enablement, or full Metal inference claim.
 
+## Robustness And Negative Cases
+
+`M4-ROBUSTNESS-001` adds a model-free dry-run lane for negative and robustness
+fixtures before any live robustness claim is made:
+
+```bash
+bitnet mac eval --suite m4-robustness --dry-run --json
+```
+
+The suite is defined in `ci/quality/apple-m4-robustness-corpus.yaml` and covers
+false-premise, ambiguous, instruction-conflict, prompt-injection-style,
+format-trap, and unsupported-request cases. The receipt expands the same
+fixtures into separate dense SLM and BitNet families with their own prompt
+template, model identity scope, category summary, and mechanical scoring plan.
+
+This lane is deliberately narrow. It proves that the M4 evidence system can
+track robustness cases separately by model family, validate the corpus
+contract, and reject overclaims through `bitnet mac receipts-check`. It does
+not prove broad safety, alignment, factuality, dense-to-BitNet transfer,
+BitNet chat, BitNet serve, Metal inference, QK256, Neural Engine, MPSGraph, or
+speedup.
+
 ## Reproducible Run Identity
 
 `M4-REPRO-001` introduces the shared `m4-run-identity-v1` contract in

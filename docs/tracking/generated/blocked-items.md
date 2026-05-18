@@ -76,7 +76,7 @@
 | apple-m4-inference-excellence | M4-DENSE-REF-000 | M4-CANARY-001, M4-REPRO-003, M4-REPRO-004 | merged |
 | apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-DENSE-REF-000, M4-REPRO-004 | merged |
 | apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | merged |
-| apple-m4-inference-excellence | M4-ROBUSTNESS-001 | M4-ACCURACY-007, M4-BITNET-EX-012, M4-CANARY-001, M4-REPRO-003 | proposed |
+| apple-m4-inference-excellence | M4-ROBUSTNESS-001 | M4-ACCURACY-007, M4-BITNET-EX-012, M4-CANARY-001, M4-REPRO-003 | in_progress |
 | apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-BENCH-002 | M4-BENCH-001, M4-BENCH-004, M4-BENCH-007 | proposed |
 | apple-m4-inference-excellence | M4-BENCH-005 | M4-BENCH-002 | proposed |

@@ -566,8 +566,132 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("bitnet-chat-gate"))
         .stdout(predicate::str::contains("doctor"))
         .stdout(predicate::str::contains("validate"))
+        .stdout(predicate::str::contains("eval"))
         .stdout(predicate::str::contains("bitnet-proof"))
         .stdout(predicate::str::contains("receipts-check"));
+}
+
+#[test]
+fn mac_eval_help_documents_robustness_dry_run() {
+    bitnet()
+        .args(["mac", "eval", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--suite <SUITE>"))
+        .stdout(predicate::str::contains("m4-robustness"))
+        .stdout(predicate::str::contains("--dry-run"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_eval_robustness_dry_run_writes_separate_family_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let corpus = workspace_path("ci/quality/apple-m4-robustness-corpus.yaml");
+    let receipt = dir.path().join("robustness-summary.json");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-robustness",
+            "--corpus",
+            corpus_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_robustness_eval_summary"))
+        .stdout(predicate::str::contains("\"model_family\": \"dense_slm\""))
+        .stdout(predicate::str::contains("\"model_family\": \"bitnet\""));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_robustness_eval_summary");
+    assert_eq!(receipt_json["suite"], "m4-robustness");
+    assert_eq!(receipt_json["work_item"], "M4-ROBUSTNESS-001");
+    assert_eq!(receipt_json["requested_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["dry_run"], true);
+    assert_eq!(receipt_json["corpus"]["mechanical_scoring_only"], true);
+    assert_eq!(receipt_json["corpus"]["required_llm_judge"], false);
+    assert_eq!(receipt_json["scoring_summary"]["total"], 24);
+    assert_eq!(receipt_json["scoring_summary"]["not_run"], 24);
+    assert_eq!(receipt_json["claim_boundary"]["broad_safety_claim"], false);
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_evidence_proves_bitnet"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_serve_enabled"], false);
+    let families = receipt_json["families"].as_array().ok_or("missing families")?;
+    assert_eq!(families.len(), 2);
+    assert!(families.iter().any(|family| {
+        family["model_family"] == "dense_slm"
+            && family["cases_total"] == 12
+            && family["prompt_template"] == "qwen2.5"
+    }));
+    assert!(families.iter().any(|family| {
+        family["model_family"] == "bitnet"
+            && family["cases_total"] == 12
+            && family["prompt_template"] == "bitnetcpp-answer"
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_robustness_eval_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 24"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_eval_robustness_requires_dry_run_until_live_gate() {
+    bitnet()
+        .args(["mac", "eval", "--suite", "m4-robustness"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("currently supports only --dry-run"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_robustness_broad_safety_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let corpus = workspace_path("ci/quality/apple-m4-robustness-corpus.yaml");
+    let receipt = dir.path().join("robustness-summary.json");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-robustness",
+            "--corpus",
+            corpus_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json["claim_boundary"]["broad_safety_claim"] = serde_json::json!(true);
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("claim_boundary.broad_safety_claim"));
+    Ok(())
 }
 
 #[test]
