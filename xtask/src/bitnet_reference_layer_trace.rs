@@ -40,6 +40,7 @@ const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trac
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 const DEFAULT_ATTN_OUTPUT_WEIGHT: &str = "blk.0.attn_output.weight";
+const DEFAULT_QUERY_PROJECTION_WEIGHT: &str = "blk.0.attn_q.weight";
 const DEFAULT_KEY_PROJECTION_WEIGHT: &str = "blk.0.attn_k.weight";
 const DEFAULT_VALUE_PROJECTION_WEIGHT: &str = "blk.0.attn_v.weight";
 const DEFAULT_ATTN_NORM_WEIGHT: &str = "blk.0.attn_norm.weight";
@@ -1587,6 +1588,14 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             attention_selected_query_rope_expression_policy_frontier(
                 &selected_query_pre_rope_epsilon_materiality,
             );
+        let selected_query_projection_epsilon_source =
+            attention_selected_query_projection_epsilon_source(
+                &selected_query_rope_expression_policy,
+                &selected_query_pre_rope_epsilon_materiality,
+                &reference_records,
+                cpu_f64_records,
+                Some(&model_path),
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1604,6 +1613,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_pre_rope_epsilon_materiality;
         cpu_comparison["attention_selected_query_rope_expression_policy_frontier"] =
             selected_query_rope_expression_policy;
+        cpu_comparison["attention_selected_query_projection_epsilon_source"] =
+            selected_query_projection_epsilon_source;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -32624,6 +32635,555 @@ fn attention_selected_query_rope_expression_policy_frontier(materiality: &Value)
     })
 }
 
+fn selected_query_projection_epsilon_source_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_query_projection_epsilon_source_attention_norm_input_history" => {
+            "localize selected query attention-norm input-history epsilon before changing Q projection, RoPE, or score-input runtime math"
+        }
+        "selected_query_projection_epsilon_source_reference_projection_replay_mismatch" => {
+            "pin reference Q projection semantics or GGUF query weight interpretation before changing Rust runtime math"
+        }
+        "selected_query_projection_epsilon_source_rust_projection_replay_mismatch" => {
+            "pin Rust Q projection dispatch or trace capture before changing runtime math"
+        }
+        "selected_query_projection_epsilon_source_replay_delta_unpinned" => {
+            "explain selected Q projection replay delta before changing runtime math"
+        }
+        "selected_query_projection_epsilon_source_missing_context" => {
+            "capture model, attention-norm histories, and selected query projection traces before replay attribution"
+        }
+        "selected_query_projection_epsilon_source_not_active" => {
+            "pin selected query RoPE expression policy before projection epsilon source attribution"
+        }
+        "selected_query_projection_epsilon_source_clean" => {
+            "selected query projection epsilon source is clean; inspect upstream selection or downstream score residual before runtime math changes"
+        }
+        _ => "keep selected query projection epsilon source diagnostic-only",
+    }
+}
+
+fn classify_selected_query_projection_epsilon_source(
+    selected_count: usize,
+    missing_context_count: usize,
+    reference_replay_mismatch_count: usize,
+    rust_replay_mismatch_count: usize,
+    replay_delta_unpinned_count: usize,
+    input_history_explained_count: usize,
+) -> &'static str {
+    if selected_count == 0 {
+        "selected_query_projection_epsilon_source_not_active"
+    } else if missing_context_count == selected_count {
+        "selected_query_projection_epsilon_source_missing_context"
+    } else if reference_replay_mismatch_count > 0 {
+        "selected_query_projection_epsilon_source_reference_projection_replay_mismatch"
+    } else if rust_replay_mismatch_count > 0 {
+        "selected_query_projection_epsilon_source_rust_projection_replay_mismatch"
+    } else if replay_delta_unpinned_count > 0 {
+        "selected_query_projection_epsilon_source_replay_delta_unpinned"
+    } else if input_history_explained_count > 0 {
+        "selected_query_projection_epsilon_source_attention_norm_input_history"
+    } else {
+        "selected_query_projection_epsilon_source_clean"
+    }
+}
+
+fn selected_query_projection_input_history_delta_summary(
+    reference_input: Option<&ReferenceTraceRecord>,
+    rust_input: Option<&RustTraceRecord>,
+    token: Option<usize>,
+) -> Value {
+    let mut blocked_reasons = Vec::<String>::new();
+    let reference_dims = reference_input.and_then(|record| dim_major_dim_count(record).ok());
+    let reference_tokens = reference_input.and_then(|record| dim_major_token_count(record).ok());
+    let rust_dims = rust_input.and_then(|record| record.shape.first().copied());
+    let rust_tokens = rust_input.and_then(|record| record.shape.get(1).copied());
+    if reference_input.is_none() {
+        blocked_reasons.push("reference_attention_norm_history_missing".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push("rust_attention_norm_history_missing".to_string());
+    }
+    if token.is_none() {
+        blocked_reasons.push("selected_query_token_missing".to_string());
+    }
+    if reference_dims.is_none() || reference_tokens.is_none() {
+        blocked_reasons.push("reference_attention_norm_history_shape_missing".to_string());
+    }
+    if rust_dims.is_none() || rust_tokens.is_none() {
+        blocked_reasons.push("rust_attention_norm_history_shape_missing".to_string());
+    }
+    if reference_dims.zip(rust_dims).is_some_and(|(left, right)| left != right) {
+        blocked_reasons.push("attention_norm_history_dim_count_mismatch".to_string());
+    }
+    if reference_tokens.zip(rust_tokens).is_some_and(|(left, right)| left != right) {
+        blocked_reasons.push("attention_norm_history_token_count_mismatch".to_string());
+    }
+    if token.zip(reference_tokens).is_some_and(|(token, tokens)| token >= tokens)
+        || token.zip(rust_tokens).is_some_and(|(token, tokens)| token >= tokens)
+    {
+        blocked_reasons.push("selected_query_token_out_of_range".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    if !blocked_reasons.is_empty() {
+        return json!({
+            "present": false,
+            "blocked_reasons": blocked_reasons,
+            "reference_dim_count": reference_dims,
+            "rust_dim_count": rust_dims,
+            "reference_token_count": reference_tokens,
+            "rust_token_count": rust_tokens,
+        });
+    }
+
+    let reference_input = reference_input.expect("checked reference input");
+    let rust_input = rust_input.expect("checked rust input");
+    let dim_count = reference_dims.expect("checked dim count");
+    let token_count = reference_tokens.expect("checked token count");
+    let token = token.expect("checked token");
+    let mut max_abs_delta = 0.0f64;
+    let mut first_delta_dim = None::<usize>;
+    let mut first_bucket_mismatch = Value::Null;
+    let mut f16_bucket_mismatch_count = 0usize;
+    let mut nonzero_delta_count = 0usize;
+    for dim in 0..dim_count {
+        let reference =
+            dim_major_value(&reference_input.first_values, dim_count, token_count, dim, token);
+        let rust = dim_major_value(&rust_input.first_values, dim_count, token_count, dim, token);
+        if let Some(delta) = scalar_delta_abs(reference, rust) {
+            if delta > 0.0 {
+                nonzero_delta_count += 1;
+                if first_delta_dim.is_none() {
+                    first_delta_dim = Some(dim);
+                }
+            }
+            max_abs_delta = max_abs_delta.max(delta);
+        }
+        let bucket = scalar_f16_bucket_delta(reference, rust);
+        if bucket.pointer("/f16_bucket_match").and_then(Value::as_bool) == Some(false) {
+            f16_bucket_mismatch_count += 1;
+            if first_bucket_mismatch.is_null() {
+                first_bucket_mismatch = json!({
+                    "dim": dim,
+                    "token": token,
+                    "bucket": bucket,
+                });
+            }
+        }
+    }
+
+    json!({
+        "present": true,
+        "blocked_reasons": [],
+        "reference_dim_count": dim_count,
+        "rust_dim_count": dim_count,
+        "reference_token_count": token_count,
+        "rust_token_count": token_count,
+        "token": token,
+        "nonzero_delta_count": nonzero_delta_count,
+        "max_abs_delta": max_abs_delta,
+        "first_delta_dim": first_delta_dim,
+        "f16_bucket_mismatch_count": f16_bucket_mismatch_count,
+        "first_f16_bucket_mismatch": first_bucket_mismatch,
+    })
+}
+
+fn attention_selected_query_projection_epsilon_source(
+    expression_policy: &Value,
+    materiality: &Value,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    model_path: Option<&Path>,
+) -> Value {
+    let expression_classification =
+        expression_policy.pointer("/classification").and_then(Value::as_str);
+    let materiality_classification = materiality.pointer("/classification").and_then(Value::as_str);
+    let active = expression_classification
+        == Some("selected_query_rope_expression_policy_same_expression_input_epsilon_bucket")
+        && materiality_classification
+            == Some("selected_query_pre_rope_projection_epsilon_explains_rope_bucket");
+    let head = value_u64(materiality, "/head").and_then(|value| usize::try_from(value).ok());
+    let selected_token =
+        value_u64(materiality, "/selected_token").and_then(|value| usize::try_from(value).ok());
+    let head_dim =
+        value_u64(materiality, "/head_dim").and_then(|value| usize::try_from(value).ok());
+    let input_pair = materiality.pointer("/input_pair").unwrap_or(&Value::Null);
+    let source_dims = [
+        (
+            "x0",
+            input_pair.pointer("/x0_dim").and_then(Value::as_u64),
+            value_f64(input_pair, "/delta_x0"),
+            value_f64(input_pair, "/x0_coefficient_for_probe_dim"),
+        ),
+        (
+            "x1",
+            input_pair.pointer("/x1_dim").and_then(Value::as_u64),
+            value_f64(input_pair, "/delta_x1"),
+            value_f64(input_pair, "/x1_coefficient_for_probe_dim"),
+        ),
+    ];
+    let reference_input = reference_records.iter().find(|record| {
+        record.stage == "attn_norm_history_ref_layout"
+            && record.values_available
+            && !record.first_values.is_empty()
+    });
+    let rust_input = rust_records
+        .get("attention_v_input_history_ref_layout")
+        .filter(|record| !record.first_values.is_empty());
+    let reference_projection_heads = reference_records
+        .iter()
+        .filter_map(|record| {
+            parse_stage_head(&record.stage, "q_projection_history_head").map(|head| (head, record))
+        })
+        .filter(|(_, record)| record.values_available && !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
+    let rust_projection =
+        rust_records.get("attention_q").filter(|record| !record.first_values.is_empty());
+    let input_history_delta = selected_query_projection_input_history_delta_summary(
+        reference_input,
+        rust_input,
+        selected_token,
+    );
+
+    let mut model_report = json!({
+        "path": model_path.map(|path| json!(path_to_string(path))).unwrap_or(Value::Null),
+        "exists": model_path.is_some_and(|path| path.is_file()),
+    });
+    let mut weight_report = json!({
+        "name": DEFAULT_QUERY_PROJECTION_WEIGHT,
+    });
+    let mut weight_load_error = Value::Null;
+    let projection = match model_path {
+        Some(path) if path.is_file() => {
+            match reference_input.map(dim_major_dim_count).transpose().and_then(|input_dim| {
+                load_qk256_same_input_projection(
+                    path,
+                    DEFAULT_QUERY_PROJECTION_WEIGHT,
+                    input_dim.unwrap_or(0),
+                    None,
+                )
+            }) {
+                Ok(projection) => {
+                    model_report = projection.model_report.clone();
+                    weight_report = projection.weight_report.clone();
+                    Some(projection)
+                }
+                Err(err) => {
+                    weight_load_error = json!(err.to_string());
+                    None
+                }
+            }
+        }
+        _ => None,
+    };
+    let (reference_replay, reference_replay_error) = match (reference_input, projection.as_ref()) {
+        (Some(input), Some(projection)) => match dim_major_dim_count(input).and_then(|input_dim| {
+            let token_count = dim_major_token_count(input)?;
+            replay_qk256_dim_major_history(&input.first_values, input_dim, token_count, projection)
+        }) {
+            Ok(values) => (Some(values), Value::Null),
+            Err(err) => (None, json!(err.to_string())),
+        },
+        _ => (None, Value::Null),
+    };
+    let (rust_replay, rust_replay_error) = match (rust_input, reference_input, projection.as_ref())
+    {
+        (Some(input), Some(reference_input), Some(projection)) => {
+            match dim_major_dim_count(reference_input).and_then(|input_dim| {
+                let token_count = dim_major_token_count(reference_input)?;
+                replay_qk256_dim_major_history(
+                    &input.first_values,
+                    input_dim,
+                    token_count,
+                    projection,
+                )
+            }) {
+                Ok(values) => (Some(values), Value::Null),
+                Err(err) => (None, json!(err.to_string())),
+            }
+        }
+        _ => (None, Value::Null),
+    };
+
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut compared_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut reference_replay_mismatch_count = 0usize;
+    let mut rust_replay_mismatch_count = 0usize;
+    let mut replay_delta_unpinned_count = 0usize;
+    let mut input_history_explained_count = 0usize;
+    let mut max_abs_target_delta = 0.0f64;
+    let mut max_abs_replay_delta = 0.0f64;
+
+    if active {
+        for (input_label, dim, materiality_delta, coefficient) in source_dims {
+            selected_count += 1;
+            let dim = dim.and_then(|value| usize::try_from(value).ok());
+            let mut blocked_reasons = Vec::<String>::new();
+            if model_path.is_none() {
+                blocked_reasons.push("model_path_missing_for_query_projection_replay".to_string());
+            } else if model_path.is_some_and(|path| !path.is_file()) {
+                blocked_reasons.push("model_gguf_missing_for_query_projection_replay".to_string());
+            }
+            if weight_load_error != Value::Null {
+                blocked_reasons.push("query_projection_weight_load_failed".to_string());
+            }
+            if reference_input.is_none() {
+                blocked_reasons.push("reference_attention_norm_history_missing".to_string());
+            }
+            if rust_input.is_none() {
+                blocked_reasons.push("rust_attention_norm_history_missing".to_string());
+            }
+            if reference_replay.is_none() {
+                blocked_reasons.push("reference_query_projection_replay_missing".to_string());
+            }
+            if rust_replay.is_none() {
+                blocked_reasons.push("rust_query_projection_replay_missing".to_string());
+            }
+            if head.is_none() {
+                blocked_reasons.push("selected_query_head_missing".to_string());
+            }
+            if selected_token.is_none() {
+                blocked_reasons.push("selected_query_token_missing".to_string());
+            }
+            if head_dim.is_none() {
+                blocked_reasons.push("selected_query_head_dim_missing".to_string());
+            }
+            if dim.is_none() {
+                blocked_reasons.push("selected_query_projection_dim_missing".to_string());
+            }
+            if materiality_delta.is_none() {
+                blocked_reasons
+                    .push("selected_query_projection_materiality_delta_missing".to_string());
+            }
+            let reference_target =
+                head.and_then(|head| reference_projection_heads.get(&head).copied());
+            if reference_target.is_none() {
+                blocked_reasons.push("reference_query_projection_target_head_missing".to_string());
+            }
+            if rust_projection.is_none() {
+                blocked_reasons.push("rust_attention_q_target_missing".to_string());
+            }
+            let token_count = reference_input
+                .and_then(|record| dim_major_token_count(record).ok())
+                .or_else(|| reference_target.and_then(|record| dim_major_token_count(record).ok()));
+            let overall_projection_dim = head
+                .zip(head_dim)
+                .zip(dim)
+                .map(|((head, head_dim), dim)| head.saturating_mul(head_dim).saturating_add(dim));
+            if token_count.is_none() {
+                blocked_reasons.push("query_projection_token_count_missing".to_string());
+            }
+            if overall_projection_dim.is_none() {
+                blocked_reasons.push("overall_query_projection_dim_missing".to_string());
+            }
+
+            let reference_replay_value =
+                reference_replay.as_ref().zip(overall_projection_dim).zip(token_count).and_then(
+                    |((values, dim), token_count)| {
+                        dim_major_value(
+                            values,
+                            projection.as_ref()?.rows,
+                            token_count,
+                            dim,
+                            selected_token?,
+                        )
+                    },
+                );
+            let rust_replay_value =
+                rust_replay.as_ref().zip(overall_projection_dim).zip(token_count).and_then(
+                    |((values, dim), token_count)| {
+                        dim_major_value(
+                            values,
+                            projection.as_ref()?.rows,
+                            token_count,
+                            dim,
+                            selected_token?,
+                        )
+                    },
+                );
+            let reference_target_value =
+                reference_target.zip(dim).zip(selected_token).and_then(|((record, dim), token)| {
+                    let head_dim = dim_major_dim_count(record).ok()?;
+                    let tokens = dim_major_token_count(record).ok()?;
+                    dim_major_value(&record.first_values, head_dim, tokens, dim, token)
+                });
+            let rust_target_value =
+                head.zip(dim).zip(head_dim).and_then(|((head, dim), head_dim)| {
+                    rust_projection.and_then(|_| {
+                        rust_query_flat_selected_value(
+                            rust_records,
+                            "attention_q",
+                            head,
+                            dim,
+                            head_dim,
+                        )
+                    })
+                });
+
+            let reference_replay_vs_reference_target =
+                scalar_f16_bucket_delta(reference_replay_value, reference_target_value);
+            let rust_replay_vs_rust_target =
+                scalar_f16_bucket_delta(rust_replay_value, rust_target_value);
+            let reference_replay_vs_rust_replay =
+                scalar_f16_bucket_delta(reference_replay_value, rust_replay_value);
+            let reference_target_vs_rust_target =
+                scalar_f16_bucket_delta(reference_target_value, rust_target_value);
+            let reference_replay_matches_target =
+                scalar_delta_abs(reference_replay_value, reference_target_value)
+                    .is_some_and(|delta| delta <= 1.0e-5);
+            let rust_replay_matches_target = scalar_delta_abs(rust_replay_value, rust_target_value)
+                .is_some_and(|delta| delta <= 1.0e-5);
+            let target_delta = reference_target_value
+                .zip(rust_target_value)
+                .map(|(reference, rust)| rust as f64 - reference as f64);
+            let replay_delta = reference_replay_value
+                .zip(rust_replay_value)
+                .map(|(reference, rust)| rust as f64 - reference as f64);
+            let replay_delta_minus_target_delta =
+                replay_delta.zip(target_delta).map(|(replay, target)| replay - target);
+            let replay_delta_matches_target_delta =
+                replay_delta_minus_target_delta.is_some_and(|delta| delta.abs() <= 1.0e-5);
+            let target_delta_matches_materiality_delta = target_delta
+                .zip(materiality_delta)
+                .is_some_and(|(target, materiality)| (target - materiality).abs() <= 1.0e-12);
+            let input_history_delta_present = value_f64(&input_history_delta, "/max_abs_delta")
+                .is_some_and(|delta| delta > 0.0)
+                || value_u64(&input_history_delta, "/nonzero_delta_count")
+                    .is_some_and(|count| count > 0);
+
+            if reference_replay_value.is_none() {
+                blocked_reasons.push("reference_replay_selected_value_missing".to_string());
+            }
+            if rust_replay_value.is_none() {
+                blocked_reasons.push("rust_replay_selected_value_missing".to_string());
+            }
+            if reference_target_value.is_none() {
+                blocked_reasons.push("reference_target_selected_value_missing".to_string());
+            }
+            if rust_target_value.is_none() {
+                blocked_reasons.push("rust_target_selected_value_missing".to_string());
+            }
+
+            if let Some(delta) = target_delta {
+                max_abs_target_delta = max_abs_target_delta.max(delta.abs());
+            }
+            if let Some(delta) = replay_delta {
+                max_abs_replay_delta = max_abs_replay_delta.max(delta.abs());
+            }
+
+            let row_classification = if !blocked_reasons.is_empty() {
+                missing_context_count += 1;
+                "selected_query_projection_epsilon_source_missing_context"
+            } else if !reference_replay_matches_target {
+                reference_replay_mismatch_count += 1;
+                "selected_query_projection_epsilon_source_reference_projection_replay_mismatch"
+            } else if !rust_replay_matches_target {
+                rust_replay_mismatch_count += 1;
+                "selected_query_projection_epsilon_source_rust_projection_replay_mismatch"
+            } else if !replay_delta_matches_target_delta || !target_delta_matches_materiality_delta
+            {
+                replay_delta_unpinned_count += 1;
+                "selected_query_projection_epsilon_source_replay_delta_unpinned"
+            } else if input_history_delta_present {
+                input_history_explained_count += 1;
+                "selected_query_projection_epsilon_source_attention_norm_input_history"
+            } else {
+                "selected_query_projection_epsilon_source_clean"
+            };
+            if blocked_reasons.is_empty() {
+                compared_count += 1;
+            }
+
+            rows.push(json!({
+                "classification": row_classification,
+                "input_pair_component": input_label,
+                "head": head,
+                "selected_token": selected_token,
+                "projection_dim": dim,
+                "head_dim": head_dim,
+                "overall_projection_dim": overall_projection_dim,
+                "coefficient_for_probe_dim": coefficient,
+                "materiality_delta": materiality_delta,
+                "materiality_linearized_contribution": materiality_delta.zip(coefficient).map(|(delta, coefficient)| delta * coefficient),
+                "blocked_reasons": blocked_reasons,
+                "reference_input_stage": "attn_norm_history_ref_layout",
+                "rust_input_stage": "attention_v_input_history_ref_layout",
+                "reference_target_stage": head.map(|head| format!("q_projection_history_head{head}_ref_layout")),
+                "rust_target_stage": "attention_q",
+                "weight": DEFAULT_QUERY_PROJECTION_WEIGHT,
+                "reference_replay_error": reference_replay_error,
+                "rust_replay_error": rust_replay_error,
+                "reference_replay_value": reference_replay_value,
+                "reference_target_value": reference_target_value,
+                "rust_replay_value": rust_replay_value,
+                "rust_target_value": rust_target_value,
+                "target_delta_rust_minus_reference": target_delta,
+                "replay_delta_rust_minus_reference": replay_delta,
+                "replay_delta_minus_target_delta": replay_delta_minus_target_delta,
+                "target_delta_matches_materiality_delta": target_delta_matches_materiality_delta,
+                "reference_replay_matches_target": reference_replay_matches_target,
+                "rust_replay_matches_target": rust_replay_matches_target,
+                "replay_delta_matches_target_delta": replay_delta_matches_target_delta,
+                "reference_replay_vs_reference_target": reference_replay_vs_reference_target,
+                "rust_replay_vs_rust_target": rust_replay_vs_rust_target,
+                "reference_replay_vs_rust_replay": reference_replay_vs_rust_replay,
+                "reference_target_vs_rust_target": reference_target_vs_rust_target,
+                "runtime_change_candidate": match row_classification {
+                    "selected_query_projection_epsilon_source_attention_norm_input_history" => {
+                        "none_from_q_projection_weight_layout_or_runtime_trace"
+                    }
+                    "selected_query_projection_epsilon_source_reference_projection_replay_mismatch" => {
+                        "pin_reference_q_projection_semantics_or_weight_layout"
+                    }
+                    "selected_query_projection_epsilon_source_rust_projection_replay_mismatch" => {
+                        "pin_rust_q_projection_runtime_dispatch_or_trace_capture"
+                    }
+                    "selected_query_projection_epsilon_source_replay_delta_unpinned" => {
+                        "pin_selected_query_projection_replay_delta_before_runtime_change"
+                    }
+                    _ => "selected_query_projection_epsilon_source_context_missing",
+                },
+            }));
+        }
+    }
+
+    let classification = classify_selected_query_projection_epsilon_source(
+        selected_count,
+        missing_context_count,
+        reference_replay_mismatch_count,
+        rust_replay_mismatch_count,
+        replay_delta_unpinned_count,
+        input_history_explained_count,
+    );
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query projection epsilon source is diagnostic-only evidence for whether the selected pre-RoPE Q projection epsilon is reproduced by replaying reference and Rust attention-norm histories through the loaded blk.0.attn_q.weight; it does not change QK256, RMSNorm, RoPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "expression_policy_classification": expression_classification,
+        "materiality_classification": materiality_classification,
+        "selected_count": selected_count,
+        "compared_count": compared_count,
+        "missing_context_count": missing_context_count,
+        "reference_replay_mismatch_count": reference_replay_mismatch_count,
+        "rust_replay_mismatch_count": rust_replay_mismatch_count,
+        "replay_delta_unpinned_count": replay_delta_unpinned_count,
+        "input_history_explained_count": input_history_explained_count,
+        "max_abs_target_delta": max_abs_target_delta,
+        "max_abs_replay_delta": max_abs_replay_delta,
+        "model": model_report,
+        "weight": weight_report,
+        "weight_load_error": weight_load_error,
+        "input_history_delta": input_history_delta,
+        "rows": rows,
+        "next_diagnostic": selected_query_projection_epsilon_source_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -48689,6 +49249,7 @@ mod tests {
             "head": 5,
             "selected_dim": 69,
             "selected_token": 17,
+            "head_dim": 128,
             "input_pair": {
                 "x0_dim": 5,
                 "x1_dim": 69,
@@ -49011,6 +49572,77 @@ mod tests {
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         let reasons = report.pointer("/blocked_reasons").and_then(Value::as_array).unwrap();
         assert!(reasons.contains(&json!("selected_query_rope_component_missing")));
+    }
+
+    #[test]
+    fn selected_query_projection_epsilon_source_classifies_input_history() {
+        assert_eq!(
+            classify_selected_query_projection_epsilon_source(2, 0, 0, 0, 0, 2),
+            "selected_query_projection_epsilon_source_attention_norm_input_history"
+        );
+    }
+
+    #[test]
+    fn selected_query_projection_epsilon_source_prioritizes_projection_replay_mismatch() {
+        assert_eq!(
+            classify_selected_query_projection_epsilon_source(2, 0, 1, 1, 1, 2),
+            "selected_query_projection_epsilon_source_reference_projection_replay_mismatch"
+        );
+        assert_eq!(
+            classify_selected_query_projection_epsilon_source(2, 0, 0, 1, 1, 2),
+            "selected_query_projection_epsilon_source_rust_projection_replay_mismatch"
+        );
+        assert_eq!(
+            classify_selected_query_projection_epsilon_source(2, 0, 0, 0, 1, 2),
+            "selected_query_projection_epsilon_source_replay_delta_unpinned"
+        );
+    }
+
+    #[test]
+    fn selected_query_projection_epsilon_source_reports_missing_context_without_model() {
+        let component = "upper_x0_sin_plus_x1_cos";
+        let reference_x0 = -3.5094399452209473_f32;
+        let reference_x1 = -0.9128643274307251_f32;
+        let rust_x0 = -3.5094401836395264_f32;
+        let rust_x1 = -0.9128644466400146_f32;
+        let sin = -0.18372225761413574_f32;
+        let cos = 0.9829781651496887_f32;
+        let reference_replay =
+            rope_expression_replay(reference_x0, reference_x1, sin, cos, component)
+                .expect("reference replay");
+        let rust_replay =
+            rope_expression_replay(rust_x0, rust_x1, sin, cos, component).expect("rust replay");
+        let materiality = selected_query_expression_materiality(
+            component,
+            reference_x0,
+            reference_x1,
+            rust_x0,
+            rust_x1,
+            sin,
+            cos,
+            reference_replay.x0_product_contracted,
+            rust_replay.x0_product_contracted,
+        );
+        let expression_policy =
+            attention_selected_query_rope_expression_policy_frontier(&materiality);
+
+        let report = attention_selected_query_projection_epsilon_source(
+            &expression_policy,
+            &materiality,
+            &[],
+            &BTreeMap::new(),
+            None,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_projection_epsilon_source_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        let row = report.pointer("/rows/0").expect("first row");
+        let reasons = row.pointer("/blocked_reasons").and_then(Value::as_array).unwrap();
+        assert!(reasons.contains(&json!("model_path_missing_for_query_projection_replay")));
+        assert!(reasons.contains(&json!("reference_attention_norm_history_missing")));
     }
 
     #[test]
