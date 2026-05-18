@@ -3058,10 +3058,9 @@ mod tests {
     }
 
     #[test]
-    fn verify_model_includes_bitnet_contract_summary() {
-        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
-        let result =
-            verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf"), None).unwrap();
+    fn verify_model_includes_bitnet_contract_summary() -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")?;
+        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf"), None)?;
         let contract = result.model_contract.expect("model contract summary");
 
         assert!(!result.passed);
@@ -3078,6 +3077,7 @@ mod tests {
         assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
         assert!(contract.permitted_claims.contains(&"answer_ready".to_string()));
         assert!(contract.required_receipts.contains(&"execution_plan".to_string()));
+        Ok(())
     }
 
     #[test]
@@ -3157,7 +3157,8 @@ mod tests {
     }
 
     #[test]
-    fn m4_supported_models_emit_complete_artifact_provenance_manifests() {
+    fn m4_supported_models_emit_complete_artifact_provenance_manifests()
+    -> Result<(), Box<dyn std::error::Error>> {
         let cache_root = Path::new("/tmp/bitnet-m4-provenance-cache");
         for id in [
             "qwen2.5-0.5b-instruct-q8_0",
@@ -3165,7 +3166,7 @@ mod tests {
             "qwen2.5-1.5b-instruct-q4_k_m",
             "microsoft-bitnet-b1.58-2B-4T-i2s",
         ] {
-            let model = supported_model(id).unwrap();
+            let model = supported_model(id)?;
             let cache_path = model_path(cache_root, model);
             let manifest = model_provenance_manifest(
                 model,
@@ -3191,6 +3192,7 @@ mod tests {
             assert!(manifest.repair.verify_command.contains(model.id));
             assert!(manifest.claim_boundary.contains("Artifact provenance"));
         }
+        Ok(())
     }
 
     #[cfg(feature = "full-cli")]
@@ -3331,9 +3333,10 @@ mod tests {
     }
 
     #[test]
-    fn verify_model_includes_qwen_dense_capability_summary() {
-        let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf"), None).unwrap();
+    fn verify_model_includes_qwen_dense_capability_summary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("qwen2.5-0.5b-instruct-q8_0")?;
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf"), None)?;
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
@@ -3375,12 +3378,14 @@ mod tests {
         );
         assert!(capability.claim_boundary.contains("bounded RTX 5070 Ti dense CUDA ask/chat"));
         assert!(capability.claim_boundary.contains("does not prove broad dense GGUF inference"));
+        Ok(())
     }
 
     #[test]
-    fn qwen_q4_capability_is_storage_conscious_answer_lane() {
-        let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf"), None).unwrap();
+    fn qwen_q4_capability_is_storage_conscious_answer_lane()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m")?;
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf"), None)?;
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
@@ -3395,12 +3400,14 @@ mod tests {
         assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
         assert!(capability.required_receipts.contains(&"slm_answer_receipt".to_string()));
         assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+        Ok(())
     }
 
     #[test]
-    fn larger_qwen_capability_is_non_default_answer_lane() {
-        let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf"), None).unwrap();
+    fn larger_qwen_capability_is_non_default_answer_lane() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m")?;
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf"), None)?;
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
@@ -3418,16 +3425,18 @@ mod tests {
             capability.required_receipts.contains(&"fallback_free_backend_receipt".to_string())
         );
         assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+        Ok(())
     }
 
     #[test]
-    fn bitnet_contract_artifact_does_not_emit_dense_capability_summary() {
-        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
-        let result =
-            verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf"), None).unwrap();
+    fn bitnet_contract_artifact_does_not_emit_dense_capability_summary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")?;
+        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf"), None)?;
 
         assert!(result.model_contract.is_some());
         assert!(result.model_capability.is_none());
+        Ok(())
     }
 
     #[test]

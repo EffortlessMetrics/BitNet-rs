@@ -1184,13 +1184,12 @@ fn model_fetch_offline_missing_cache_explains_repair_options()
 }
 
 #[test]
-fn model_verify_corrupt_cache_explains_prune_and_fetch() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_verify_corrupt_cache_explains_prune_and_fetch() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
-    std::fs::create_dir_all(&model_dir).expect("model dir");
-    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")
-        .expect("partial model");
+    std::fs::create_dir_all(&model_dir)?;
+    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")?;
     let cache_str = cache.to_string_lossy().into_owned();
 
     bitnet()
@@ -1202,11 +1201,13 @@ fn model_verify_corrupt_cache_explains_prune_and_fetch() {
         .stderr(predicate::str::contains("got bytes=7"))
         .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+    Ok(())
 }
 
 #[test]
-fn model_verify_json_includes_dense_m4_artifact_provenance() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_verify_json_includes_dense_m4_artifact_provenance()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -1232,6 +1233,7 @@ fn model_verify_json_includes_dense_m4_artifact_provenance() {
         .stdout(predicate::str::contains("\"symlink_status\": \"not_symlink\""))
         .stdout(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
         .stdout(predicate::str::contains("runtime quality and performance require separate eval"));
+    Ok(())
 }
 
 #[test]
