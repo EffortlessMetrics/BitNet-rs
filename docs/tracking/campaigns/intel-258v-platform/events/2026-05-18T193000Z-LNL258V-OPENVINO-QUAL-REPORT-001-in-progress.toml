@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T19:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-REPORT-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-001-corpus-v2-failures"
+summary = "Started the no-new-inference OpenVINO Lunar Lake corpus-v2 failure report."
+
+artifacts = [
+  "docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The report classifies existing OpenVINO GPU/NPU corpus-v2 candidate failures by route, profile, case, and failure class using committed diagnosis receipts.",
+  "The work remains diagnostic only and does not run inference, promote GPU/NPU routes, claim speedup or power advantage, claim native OpenCL/NPU execution, or change BitNet QK256/I2_S behavior.",
+]
