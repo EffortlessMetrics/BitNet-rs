@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T16:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-006"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5608
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-006-rust-bridge-server"
+head_sha = "45c0530e6b217b95107b7c83ef35df4c3a5dbafd"
+merge_sha = "fd5e612b21a93acdd9516ffe662b8356512c3042"
+summary = "Merged PR #5608, completing the OpenVINO Rust bridge and exact-profile server contract specs."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5608",
+  "docs/specs/BITNET-SPEC-OPENVINO-RUST-BRIDGE.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-SERVER.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The merged specs define staged Python-to-Rust bridge requirements, receipt equivalence, fail-closed behavior, exact-profile server route identity, underlying-route linkage, cold/warm server timing, fallback behavior, exposure fields, and streaming/concurrency boundaries.",
+  "The closeout records no route promotion, Rust-native OpenVINO execution, server readiness, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode claim.",
+]

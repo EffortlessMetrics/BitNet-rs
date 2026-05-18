@@ -6604,9 +6604,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-DOCS-006"
-status = "pr_open"
+status = "merged"
 pr = 5608
-head_sha = "f054d6bef605ad00daa908e096473b5ef8167268"
+head_sha = "45c0530e6b217b95107b7c83ef35df4c3a5dbafd"
+merge_sha = "fd5e612b21a93acdd9516ffe662b8356512c3042"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-006-rust-bridge-server"
 stackable = false
 review_mode = "codex_premerge"
