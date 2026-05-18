@@ -114,8 +114,13 @@ fn decision_reason(
             kernel.as_str(),
             claim.as_str()
         ),
-        ModelKernelSupport::SupportedReference | ModelKernelSupport::Supported => {
-            unreachable!("supported routes are allowed at the compatibility layer")
-        }
+        ModelKernelSupport::SupportedReference | ModelKernelSupport::Supported => format!(
+            "{} {} {} is {}; artifact, receipt, and benchmark gates still apply before {} can be claimed",
+            model_id,
+            arch.as_str(),
+            kernel.as_str(),
+            support.as_str(),
+            claim.as_str()
+        ),
     }
 }
