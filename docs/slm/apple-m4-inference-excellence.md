@@ -812,6 +812,13 @@ dashboard groups, then writes an `apple_m4_operator_evidence_summary` receipt
 without running live inference or downloading models. `bitnet mac status`,
 `doctor`, `report-refresh`, and `regression-dashboard` remain model-free by
 default. Live model runs belong in local, advisory, scheduled, or release lanes.
+`bitnet mac report-refresh --explain --open-targets` and
+`bitnet mac regression-dashboard --explain --open-targets` expose the same
+model-free operator contract in a more navigable form: status meanings,
+per-family or per-group reasons, receipt/Markdown/report targets, and the
+command to run next. `comparable` means matching-history comparison can proceed;
+`warning` requires operator review; `failed` blocks claims until the receipt is
+repaired; `insufficient_history` means a second matching report is needed.
 
 Envelope classes should translate evidence into local user expectations:
 

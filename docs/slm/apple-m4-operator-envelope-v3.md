@@ -57,14 +57,23 @@ bitnet mac evidence \
   --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
+  --explain \
+  --open-targets \
   --json
 bitnet mac regression-dashboard \
   --json-out target/apple-m4-inference-excellence/regression-dashboard.json \
   --markdown-out target/apple-m4-inference-excellence/regression-dashboard.md \
+  --explain \
+  --open-targets \
   --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
 ```
+
+The `--explain` and `--open-targets` flags are operator affordances only. They
+print status meanings, per-family or per-group reasons, and openable receipt,
+Markdown, latest-report, and baseline-report targets without launching live
+inference or downloading models.
 
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:
 

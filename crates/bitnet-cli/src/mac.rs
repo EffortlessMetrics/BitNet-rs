@@ -315,6 +315,14 @@ enum MacAction {
         #[arg(long, value_name = "PATH", default_value = MAC_REPORT_REFRESH_DEFAULT_RECEIPT)]
         json_out: PathBuf,
 
+        /// Print status explanations for report families.
+        #[arg(long, default_value_t = false)]
+        explain: bool,
+
+        /// Print openable receipt/report targets without launching an application.
+        #[arg(long = "open-targets", default_value_t = false)]
+        open_targets: bool,
+
         /// Emit JSON to stdout after writing --json-out.
         #[arg(long, default_value_t = false)]
         json: bool,
@@ -337,6 +345,14 @@ enum MacAction {
             default_value = MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN
         )]
         markdown_out: PathBuf,
+
+        /// Print status explanations for dashboard groups.
+        #[arg(long, default_value_t = false)]
+        explain: bool,
+
+        /// Print openable receipt, markdown, latest, and baseline targets without launching an application.
+        #[arg(long = "open-targets", default_value_t = false)]
+        open_targets: bool,
 
         /// Emit JSON to stdout after writing --json-out and --markdown-out.
         #[arg(long, default_value_t = false)]
@@ -1049,13 +1065,20 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac evidence")?;
                 run_evidence(cache_dir, root, json_out, json)
             }
-            MacAction::ReportRefresh { root, json_out, json } => {
+            MacAction::ReportRefresh { root, json_out, explain, open_targets, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac report-refresh")?;
-                run_report_refresh_manifest(root, json_out, json)
+                run_report_refresh_manifest(root, json_out, explain, open_targets, json)
             }
-            MacAction::RegressionDashboard { root, json_out, markdown_out, json } => {
+            MacAction::RegressionDashboard {
+                root,
+                json_out,
+                markdown_out,
+                explain,
+                open_targets,
+                json,
+            } => {
                 ensure_supported_mac_device(explicit_device_label, "mac regression-dashboard")?;
-                run_regression_dashboard(root, json_out, markdown_out, json)
+                run_regression_dashboard(root, json_out, markdown_out, explain, open_targets, json)
             }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
@@ -1564,7 +1587,7 @@ fn apple_m4_inference_status_receipt(
         "bitnet_chat_gate": format!("bitnet mac bitnet-chat-gate --model-id {BITNET_M4_MODEL_ID} --warm-receipt <warm.json> --failure-receipt <failure.json> --streaming-receipt <streaming.json>"),
     });
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_inference_status",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac status",
@@ -1734,7 +1757,7 @@ fn apple_m4_operator_evidence_receipt(
         "bitnet mac regression-dashboard".to_string()
     };
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_operator_evidence_summary",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac evidence",
@@ -2001,7 +2024,13 @@ fn collect_matching_reports(root: &Path, segment: &str, filename: &str, out: &mu
     }
 }
 
-fn run_report_refresh_manifest(root: PathBuf, json_out: PathBuf, json: bool) -> Result<()> {
+fn run_report_refresh_manifest(
+    root: PathBuf,
+    json_out: PathBuf,
+    explain: bool,
+    open_targets: bool,
+    json: bool,
+) -> Result<()> {
     let receipt = apple_m4_report_refresh_manifest_receipt(&root, &json_out);
     validate_mac_receipt_value(&json_out, &receipt)?;
     write_json_receipt(&json_out, &receipt)?;
@@ -2009,6 +2038,12 @@ fn run_report_refresh_manifest(root: PathBuf, json_out: PathBuf, json: bool) -> 
         println!("{}", serde_json::to_string_pretty(&receipt)?);
     } else {
         print_report_refresh_manifest_summary(&receipt, &json_out);
+        if explain {
+            print_m4_status_explanations(&receipt);
+        }
+        if open_targets {
+            print_report_refresh_open_targets(&receipt);
+        }
     }
     Ok(())
 }
@@ -2037,6 +2072,13 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
         "report_root": root,
         "family_count": families.len(),
         "report_count": report_count,
+        "operator_affordances": {
+            "explain_command": format!("bitnet mac report-refresh --root {} --json-out {} --explain", root.display(), json_out.display()),
+            "open_targets_command": format!("bitnet mac report-refresh --root {} --json-out {} --open-targets", root.display(), json_out.display()),
+            "open_receipt_hint": format!("open {}", json_out.display()),
+            "open_report_root_hint": format!("open {}", root.display()),
+        },
+        "status_explanations": apple_m4_operator_status_explanations_json(),
         "refresh_modes": {
             "advisory_manifest": true,
             "nightly_manifest": true,
@@ -2168,6 +2210,7 @@ fn apple_m4_report_refresh_family_json(
     let mut artifact_kinds = std::collections::BTreeSet::new();
     let mut fallback_free_count = 0_u64;
     let mut strict_cpu_neon_count = 0_u64;
+    let mut parse_problem_count = 0_u64;
     for report in &reports {
         if let Some(date) = report["date"].as_str() {
             dates.insert(date.to_string());
@@ -2184,11 +2227,24 @@ fn apple_m4_report_refresh_family_json(
         if report["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON) {
             strict_cpu_neon_count = strict_cpu_neon_count.saturating_add(1);
         }
+        if report["parse_status"].as_str() != Some("ok")
+            || report["artifact_kind_matches"].as_bool() != Some(true)
+        {
+            parse_problem_count = parse_problem_count.saturating_add(1);
+        }
     }
+    let (operator_status, operator_status_reason) = apple_m4_report_family_operator_status(
+        reports.len(),
+        parse_problem_count,
+        fallback_free_count,
+        strict_cpu_neon_count,
+    );
     serde_json::json!({
         "id": id,
         "evidence_family": evidence_family,
         "description": description,
+        "operator_status": operator_status,
+        "operator_status_reason": operator_status_reason,
         "path_segment": path_segment,
         "summary_filename": summary_filename,
         "expected_artifact_kind": expected_artifact_kind,
@@ -2205,11 +2261,16 @@ fn apple_m4_report_refresh_family_json(
         ],
         "report_count": reports.len(),
         "latest_report": report_paths.last().map(|path| path.to_string_lossy().to_string()),
+        "open_targets": {
+            "latest_report": report_paths.last().map(|path| path.to_string_lossy().to_string()),
+            "report_root_segment": format!("{}/**/{}", path_segment, summary_filename),
+        },
         "dates": dates.into_iter().collect::<Vec<_>>(),
         "model_ids": model_ids.into_iter().collect::<Vec<_>>(),
         "artifact_kinds": artifact_kinds.into_iter().collect::<Vec<_>>(),
         "fallback_free_count": fallback_free_count,
         "strict_cpu_neon_count": strict_cpu_neon_count,
+        "parse_problem_count": parse_problem_count,
         "reports": reports,
         "claim_boundary": {
             "dense_slm_evidence": evidence_family == "dense_slm",
@@ -2332,10 +2393,47 @@ fn print_report_refresh_manifest_summary(receipt: &serde_json::Value, json_out: 
     );
 }
 
+fn print_m4_status_explanations(receipt: &serde_json::Value) {
+    println!("Status explanations:");
+    if let Some(explanations) = receipt["status_explanations"].as_object() {
+        for status in ["comparable", "warning", "failed", "insufficient_history"] {
+            let explanation = &explanations[status];
+            println!(
+                "- {status}: {} Next: {}",
+                explanation["meaning"].as_str().unwrap_or("<missing meaning>"),
+                explanation["next_action"].as_str().unwrap_or("<missing action>")
+            );
+        }
+    }
+}
+
+fn print_report_refresh_open_targets(receipt: &serde_json::Value) {
+    println!("Open targets:");
+    println!(
+        "- receipt: {}",
+        receipt["operator_affordances"]["open_receipt_hint"].as_str().unwrap_or("<missing>")
+    );
+    println!(
+        "- report root: {}",
+        receipt["operator_affordances"]["open_report_root_hint"].as_str().unwrap_or("<missing>")
+    );
+    if let Some(families) = receipt["families"].as_array() {
+        for family in families {
+            println!(
+                "- {} latest: {}",
+                family["id"].as_str().unwrap_or("<unknown>"),
+                family["open_targets"]["latest_report"].as_str().unwrap_or("<missing>")
+            );
+        }
+    }
+}
+
 fn run_regression_dashboard(
     root: PathBuf,
     json_out: PathBuf,
     markdown_out: PathBuf,
+    explain: bool,
+    open_targets: bool,
     json: bool,
 ) -> Result<()> {
     let receipt = apple_m4_regression_dashboard_receipt(&root, &json_out, &markdown_out);
@@ -2354,6 +2452,13 @@ fn run_regression_dashboard(
         println!("{}", serde_json::to_string_pretty(&receipt)?);
     } else {
         print_regression_dashboard_summary(&receipt, &json_out, &markdown_out);
+        if explain {
+            print_m4_status_explanations(&receipt);
+            print_regression_dashboard_group_explanations(&receipt);
+        }
+        if open_targets {
+            print_regression_dashboard_open_targets(&receipt);
+        }
     }
     Ok(())
 }
@@ -2393,6 +2498,14 @@ fn apple_m4_regression_dashboard_receipt(
         "family_count": families.len(),
         "group_count": group_count,
         "comparable_group_count": comparable_group_count,
+        "operator_affordances": {
+            "explain_command": format!("bitnet mac regression-dashboard --root {} --json-out {} --markdown-out {} --explain", root.display(), json_out.display(), markdown_out.display()),
+            "open_targets_command": format!("bitnet mac regression-dashboard --root {} --json-out {} --markdown-out {} --open-targets", root.display(), json_out.display(), markdown_out.display()),
+            "open_receipt_hint": format!("open {}", json_out.display()),
+            "open_markdown_hint": format!("open {}", markdown_out.display()),
+            "open_report_root_hint": format!("open {}", root.display()),
+        },
+        "status_explanations": apple_m4_operator_status_explanations_json(),
         "dashboard_contract": {
             "model_free": true,
             "committed_reports_only": true,
@@ -2469,6 +2582,8 @@ fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serd
         let comparison_status = if report_count > 1 { "ready" } else { "insufficient_history" };
         let latest_path = latest["path"].as_str().unwrap_or("<missing>");
         let baseline_path = baseline["path"].as_str().unwrap_or(latest_path);
+        let (operator_status, operator_status_reason) =
+            apple_m4_dashboard_group_operator_status(report_count, &latest, comparison_status);
         dashboard_groups.push(serde_json::json!({
             "group_key": group_key,
             "evidence_family": evidence_family,
@@ -2481,9 +2596,16 @@ fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serd
             "fallback_used": latest["identity"]["fallback_used"].clone(),
             "report_count": report_count,
             "comparison_status": comparison_status,
+            "operator_status": operator_status,
+            "operator_status_reason": operator_status_reason,
             "latest_report": latest_path,
             "baseline_report": if report_count > 1 { serde_json::Value::String(baseline_path.to_string()) } else { serde_json::Value::Null },
             "regression_command": format!("bitnet mac regression {latest_path} --baseline {baseline_path}"),
+            "open_targets": {
+                "latest_report": latest_path,
+                "baseline_report": if report_count > 1 { serde_json::Value::String(baseline_path.to_string()) } else { serde_json::Value::Null },
+                "regression_command": format!("bitnet mac regression {latest_path} --baseline {baseline_path}"),
+            },
             "latest_metrics": latest["metrics"].clone(),
             "reports": reports,
             "claim_boundary": {
@@ -2515,6 +2637,107 @@ fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serd
             "speedup_claim": false,
         },
     })
+}
+
+fn apple_m4_operator_status_explanations_json() -> serde_json::Value {
+    serde_json::json!({
+        "comparable": {
+            "meaning": "At least two committed reports share the required identity fields and can be compared by the regression command.",
+            "why": "Same evidence family, artifact kind, model, tokenizer authority, backend, and fallback=false identity are present for the group.",
+            "next_action": "Run the emitted regression command or inspect the latest and baseline receipts.",
+        },
+        "warning": {
+            "meaning": "Evidence exists, but the dashboard cannot treat the group as cleanly comparable without operator review.",
+            "why": "The group has missing identity or metric fields, parse issues, or an incomplete report family.",
+            "next_action": "Inspect the emitted latest report, repair the receipt or rerun the matching evidence lane.",
+        },
+        "failed": {
+            "meaning": "The committed receipt shape violates the M4 evidence contract for this operator view.",
+            "why": "Examples include malformed receipts, artifact-kind mismatch, fallback ambiguity, or non-CPU/NEON evidence in a strict M4 group.",
+            "next_action": "Do not use the group for claims; fix or replace the bad receipt and rerun receipts-check.",
+        },
+        "insufficient_history": {
+            "meaning": "The group has fewer than two matching-history reports, so trend or regression interpretation is not available yet.",
+            "why": "A latest report exists without a matching baseline under the required identity, or the report family is empty.",
+            "next_action": "Collect a second matching report before interpreting drift.",
+        },
+    })
+}
+
+fn apple_m4_report_family_operator_status(
+    report_count: usize,
+    parse_problem_count: u64,
+    fallback_free_count: u64,
+    strict_cpu_neon_count: u64,
+) -> (&'static str, String) {
+    if parse_problem_count > 0 {
+        return (
+            "failed",
+            format!(
+                "{parse_problem_count} committed report(s) are unreadable or have an artifact-kind mismatch."
+            ),
+        );
+    }
+    if fallback_free_count != report_count as u64 || strict_cpu_neon_count != report_count as u64 {
+        return (
+            "failed",
+            "One or more committed reports are not fallback-free strict apple-m4-cpu-neon evidence."
+                .to_string(),
+        );
+    }
+    match report_count {
+        0 => (
+            "insufficient_history",
+            "No committed reports were found for this evidence family.".to_string(),
+        ),
+        1 => (
+            "insufficient_history",
+            "Only one committed report was found; collect a second matching report before trend interpretation."
+                .to_string(),
+        ),
+        _ => (
+            "comparable",
+            format!("{report_count} committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity."),
+        ),
+    }
+}
+
+fn apple_m4_dashboard_group_operator_status(
+    report_count: usize,
+    latest: &serde_json::Value,
+    comparison_status: &str,
+) -> (&'static str, String) {
+    if latest["identity"]["model_id"].as_str() == Some("<unknown>")
+        || latest["identity"]["model_sha256"].as_str() == Some("<unknown>")
+        || latest["identity"]["tokenizer_authority"].as_str() == Some("<unknown>")
+        || latest["identity"]["selected_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+        || latest["identity"]["fallback_used"].as_bool() != Some(false)
+    {
+        return (
+            "warning",
+            "The latest report is missing a required identity field or strict fallback-free CPU/NEON evidence."
+                .to_string(),
+        );
+    }
+    if comparison_status == "insufficient_history" {
+        return (
+            "insufficient_history",
+            "Only one matching report exists for this exact evidence identity.".to_string(),
+        );
+    }
+    if report_count > 1 {
+        return (
+            "comparable",
+            format!(
+                "{report_count} matching reports share this evidence identity; the emitted regression command can compare latest against baseline."
+            ),
+        );
+    }
+    (
+        "warning",
+        "The dashboard could not classify this group; inspect the receipt before making a claim."
+            .to_string(),
+    )
 }
 
 fn apple_m4_dashboard_group_key(family_id: &str, identity: &serde_json::Value) -> String {
@@ -2635,7 +2858,9 @@ fn apple_m4_regression_dashboard_markdown(receipt: &serde_json::Value) -> String
                         group["evidence_family"].as_str().unwrap_or("<unknown>"),
                         group["model_id"].as_str().unwrap_or("<unknown>"),
                         group["report_count"].as_u64().unwrap_or(0),
-                        group["comparison_status"].as_str().unwrap_or("<unknown>"),
+                        group["operator_status"].as_str().unwrap_or_else(|| {
+                            group["comparison_status"].as_str().unwrap_or("<unknown>")
+                        }),
                         group["latest_report"].as_str().unwrap_or("<missing>"),
                         group["baseline_report"].as_str().unwrap_or("<none>")
                     ));
@@ -2665,6 +2890,54 @@ fn print_regression_dashboard_summary(
     println!(
         "Claim boundary: dashboard only; no live model run, no model downloads, dense SLM and BitNet evidence stay separate."
     );
+}
+
+fn print_regression_dashboard_group_explanations(receipt: &serde_json::Value) {
+    println!("Group explanations:");
+    if let Some(families) = receipt["families"].as_array() {
+        for family in families {
+            if let Some(groups) = family["groups"].as_array() {
+                for group in groups {
+                    println!(
+                        "- {} / {}: {} because {}",
+                        family["id"].as_str().unwrap_or("<unknown>"),
+                        group["model_id"].as_str().unwrap_or("<unknown>"),
+                        group["operator_status"].as_str().unwrap_or("<unknown>"),
+                        group["operator_status_reason"].as_str().unwrap_or("<missing reason>")
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn print_regression_dashboard_open_targets(receipt: &serde_json::Value) {
+    println!("Open targets:");
+    println!(
+        "- receipt: {}",
+        receipt["operator_affordances"]["open_receipt_hint"].as_str().unwrap_or("<missing>")
+    );
+    println!(
+        "- markdown: {}",
+        receipt["operator_affordances"]["open_markdown_hint"].as_str().unwrap_or("<missing>")
+    );
+    if let Some(families) = receipt["families"].as_array() {
+        for family in families {
+            if let Some(groups) = family["groups"].as_array() {
+                for group in groups {
+                    println!(
+                        "- {} / {} latest: {}",
+                        family["id"].as_str().unwrap_or("<unknown>"),
+                        group["model_id"].as_str().unwrap_or("<unknown>"),
+                        group["open_targets"]["latest_report"].as_str().unwrap_or("<missing>")
+                    );
+                    if let Some(baseline) = group["open_targets"]["baseline_report"].as_str() {
+                        println!("  baseline: {}", baseline);
+                    }
+                }
+            }
+        }
+    }
 }
 
 struct MacChatPrompts {
@@ -14289,7 +14562,8 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
     path: &Path,
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
-    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    let require_operator_affordances = schema_version == "1.1.0";
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_report_refresh_manifest")?;
     require_exact_string_at(path, receipt, &["operator_command"], "mac report-refresh")?;
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
@@ -14321,6 +14595,22 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    if require_operator_affordances {
+        require_non_empty_string_at(path, receipt, &["operator_affordances", "explain_command"])?;
+        require_non_empty_string_at(
+            path,
+            receipt,
+            &["operator_affordances", "open_targets_command"],
+        )?;
+        require_non_empty_string_at(path, receipt, &["operator_affordances", "open_receipt_hint"])?;
+        require_non_empty_string_at(
+            path,
+            receipt,
+            &["operator_affordances", "open_report_root_hint"],
+        )?;
+        require_m4_status_explanations(path, receipt)?;
+    }
 
     for field in
         ["manifest_command", "manifest_receipt_check", "report_receipt_check", "regression_check"]
@@ -14360,6 +14650,10 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
         require_non_empty_string_at(path, family, &["summary_filename"])?;
         let expected_artifact_kind =
             require_non_empty_string_at(path, family, &["expected_artifact_kind"])?;
+        if require_operator_affordances {
+            require_m4_operator_status_at(path, family, &["operator_status"])?;
+            require_non_empty_string_at(path, family, &["operator_status_reason"])?;
+        }
         require_non_empty_string_at(path, family, &["refresh_command_template"])?;
         require_non_empty_string_array_at(path, family, &["refresh_tiers"])?;
         require_non_empty_string_array_at(path, family, &["validation_commands"])?;
@@ -14401,11 +14695,18 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
         }
         let fallback_free_count = require_u64_at(path, family, &["fallback_free_count"], true)?;
         let strict_cpu_neon_count = require_u64_at(path, family, &["strict_cpu_neon_count"], true)?;
+        if require_operator_affordances {
+            require_u64_at(path, family, &["parse_problem_count"], false)?;
+        }
         if fallback_free_count != report_count || strict_cpu_neon_count != report_count {
             anyhow::bail!(
                 "{} report refresh manifest family {id} must be fallback-free and strict apple-m4-cpu-neon for every committed report",
                 path.display()
             );
+        }
+        if require_operator_affordances {
+            require_non_empty_string_at(path, family, &["open_targets", "latest_report"])?;
+            require_non_empty_string_at(path, family, &["open_targets", "report_root_segment"])?;
         }
         for report in reports {
             require_non_empty_string_at(path, report, &["path"])?;
@@ -14453,7 +14754,8 @@ fn validate_apple_m4_regression_dashboard_receipt(
     path: &Path,
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
-    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    let require_operator_affordances = schema_version == "1.1.0";
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_regression_dashboard")?;
     require_exact_string_at(path, receipt, &["operator_command"], "mac regression-dashboard")?;
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
@@ -14523,6 +14825,26 @@ fn validate_apple_m4_regression_dashboard_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    if require_operator_affordances {
+        require_non_empty_string_at(path, receipt, &["operator_affordances", "explain_command"])?;
+        require_non_empty_string_at(
+            path,
+            receipt,
+            &["operator_affordances", "open_targets_command"],
+        )?;
+        require_non_empty_string_at(path, receipt, &["operator_affordances", "open_receipt_hint"])?;
+        require_non_empty_string_at(
+            path,
+            receipt,
+            &["operator_affordances", "open_markdown_hint"],
+        )?;
+        require_non_empty_string_at(
+            path,
+            receipt,
+            &["operator_affordances", "open_report_root_hint"],
+        )?;
+        require_m4_status_explanations(path, receipt)?;
+    }
 
     let families = receipt["families"].as_array().ok_or_else(|| {
         anyhow!("{} regression dashboard is missing families array", path.display())
@@ -14597,8 +14919,23 @@ fn validate_apple_m4_regression_dashboard_receipt(
                     path.display()
                 );
             }
+            if require_operator_affordances {
+                let operator_status =
+                    require_m4_operator_status_at(path, group, &["operator_status"])?;
+                if status == "insufficient_history" && operator_status != "insufficient_history" {
+                    anyhow::bail!(
+                        "{} regression dashboard insufficient-history group must expose operator_status=insufficient_history",
+                        path.display()
+                    );
+                }
+            }
             require_non_empty_string_at(path, group, &["latest_report"])?;
             require_non_empty_string_at(path, group, &["regression_command"])?;
+            if require_operator_affordances {
+                require_non_empty_string_at(path, group, &["operator_status_reason"])?;
+                require_non_empty_string_at(path, group, &["open_targets", "latest_report"])?;
+                require_non_empty_string_at(path, group, &["open_targets", "regression_command"])?;
+            }
             require_bool_at(path, group, &["claim_boundary", "evidence_families_mixed"], false)?;
             require_bool_at(path, group, &["claim_boundary", "broad_model_quality_claim"], false)?;
             require_bool_at(path, group, &["claim_boundary", "broad_performance_claim"], false)?;
@@ -14652,6 +14989,48 @@ fn validate_apple_m4_regression_dashboard_receipt(
         );
     }
     Ok((Some(0), Some(0)))
+}
+
+fn require_m4_status_explanations(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    for status in ["comparable", "warning", "failed", "insufficient_history"] {
+        require_non_empty_string_at(path, receipt, &["status_explanations", status, "meaning"])?;
+        require_non_empty_string_at(path, receipt, &["status_explanations", status, "why"])?;
+        require_non_empty_string_at(
+            path,
+            receipt,
+            &["status_explanations", status, "next_action"],
+        )?;
+    }
+    Ok(())
+}
+
+fn require_m4_report_ops_schema_version<'a>(
+    path: &Path,
+    receipt: &'a serde_json::Value,
+) -> Result<&'a str> {
+    let schema_version = require_non_empty_string_at(path, receipt, &["schema_version"])?;
+    if schema_version != "1.0.0" && schema_version != "1.1.0" {
+        anyhow::bail!(
+            "{} unsupported M4 report ops schema_version {schema_version:?}; expected 1.0.0 or 1.1.0",
+            path.display()
+        );
+    }
+    Ok(schema_version)
+}
+
+fn require_m4_operator_status_at<'a>(
+    path: &Path,
+    value: &'a serde_json::Value,
+    segments: &[&str],
+) -> Result<&'a str> {
+    let status = require_non_empty_string_at(path, value, segments)?;
+    if !["comparable", "warning", "failed", "insufficient_history"].contains(&status) {
+        anyhow::bail!(
+            "{} unsupported M4 operator status {status:?}; expected comparable, warning, failed, or insufficient_history",
+            path.display()
+        );
+    }
+    Ok(status)
 }
 
 fn validate_slm_eval_summary_receipt(
