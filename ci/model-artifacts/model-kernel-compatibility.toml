@@ -109,3 +109,50 @@ notes = [
   arch = "arm"
   kernel = "tl2"
   status = "unsupported_upstream"
+
+[[model_kernel_support]]
+model = "HF1BitLLM/Llama3-8B-1.58-100B-tokens"
+model_aliases = [
+  "Llama3-8B-1.58-100B-tokens",
+  "hf1bitllm_llama3_8b_158_100b_tokens",
+  "llama3_8b_158_100b_tokens_candidate",
+]
+family = "llama3_bitnet_b1_58"
+role = "large_supported_model_candidate"
+answer_authority = false
+notes = [
+  "Upstream bitnet.cpp lists this model under supported models, not official Microsoft answer authority.",
+  "The current BitNet-rs state is safetensors-visible with no approved GGUF, conversion, reference-good receipt, CPU claim, CUDA claim, Apple claim, server claim, or speed claim.",
+  "Do not inherit official Microsoft 2B I2_S/QK256 proof, dense Llama3 proof, or dense Qwen proof.",
+  "I2_S/QK256 compatibility requires model-specific converted-layout and scalar-oracle proof before kernel reuse.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"

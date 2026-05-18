@@ -754,33 +754,37 @@ claim_boundary = "1bitLLM large-family artifacts are diagnostic until artifact a
   dense_regular_llm_cuda_proof = false
 
 [[entry]]
-id = "bitnet_llama3_8b_158_diagnostic"
+id = "llama3_8b_158_100b_tokens_candidate"
 model_class = "bitnet"
-family = "llama3_1_58"
-artifact_kind = "ptq_or_native_158_variant"
-contract_id = "llama3_8b_158_diagnostic"
-status = "diagnostic_only"
+family = "llama3_bitnet_b1_58"
+artifact_kind = "safetensors_candidate"
+contract_id = "hf1bitllm_llama3_8b_158_100b_tokens"
+status = "registered_safetensors_no_approved_gguf"
 current_tier = "registered"
-verifier_surface = "model coverage matrix only"
-tokenizer_authority = "pending_family_specific_contract"
-prompt_authority = "pending_family_specific_contract"
-cpu_reference = "reference_runner_and_tensor_contract_required"
+verifier_surface = "bitnet model verify llama3-8b-1.58-100b-tokens"
+tokenizer_authority = "llama3_tokenizer_files_present_unproven"
+prompt_authority = "pending_llama3_prompt_audit"
+cpu_reference = "pending_reference_good"
 accelerator_routes = []
 required_receipts = [
-  "artifact_contract",
+  "artifact_inventory",
+  "conversion_path",
   "tokenizer_prompt_authority",
-  "kernel_route_map",
-  "reference_runner_evidence",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "tl1_tl2_layout_spec",
 ]
 forbidden_claims = [
-  "official_bitnet_answer_authority",
-  "i2_s_qk256_proof",
-  "dense_regular_llm_cuda_proof",
+  "official_microsoft_2b_proof_inheritance",
+  "dense_llama3_proof_inheritance",
+  "cpu_answer_ready",
+  "cuda_answer_ready",
+  "apple_answer_ready",
   "speedup",
   "server_ready",
 ]
-next_proof = "Per-model artifact contract, reference-runner evidence, tokenizer/prompt authority, and supported kernel route map."
-claim_boundary = "Llama3-family 1.58-bit variants are supported-upstream-style diagnostics, not official Microsoft 2B I2_S answer authority."
+next_proof = "Exact HF artifact inventory, tokenizer/prompt audit, conversion or approved runner route, reference-good corpus, and I2_S/TL layout proof."
+claim_boundary = "Registered large BitNet-family Llama3-derived candidate only. Upstream-listed x86 I2_S/TL2 and ARM I2_S/TL1 routes require BitNet-rs artifact, conversion/runner, tokenizer/prompt, layout, reference, CPU, backend, and performance receipts before support claims."
 
   [entry.claims]
   registered = true
