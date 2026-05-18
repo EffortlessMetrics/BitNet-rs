@@ -94,6 +94,7 @@ const REQUIRED_ROUTE_PROFILES: &[&str] = &[
     "decode_heavy",
     "structured",
     "low_power",
+    "warm_resident",
     "bitnet_strict_reference",
 ];
 const BENCHMARK_QUALIFIED_LATENCY_RATIO_MAX: f64 = 0.90;
@@ -9199,7 +9200,19 @@ fn load_npu_cold_start_diagnostic(
     }
     blockers.sort();
     blockers.dedup();
-    index.add("dense_slm_openvino_npu_candidate", path_string(&path), blockers);
+    let source_receipt = path_string(&path);
+    for profile_id in REQUIRED_ROUTE_PROFILES
+        .iter()
+        .copied()
+        .filter(|profile_id| !matches!(*profile_id, "warm_resident" | "bitnet_strict_reference"))
+    {
+        index.add_for_profile(
+            "dense_slm_openvino_npu_candidate",
+            profile_id,
+            source_receipt.clone(),
+            blockers.clone(),
+        );
+    }
     Ok(())
 }
 
@@ -10901,7 +10914,14 @@ fn profile_timing_for_route(
             route_id,
             &profile.profile_id,
             quality_index,
-        ),
+        )
+        .and_then(|timing| {
+            if profile.profile_id == "warm_resident" {
+                npu_resident_profile_timing(root).or_else(|_| Ok(timing))
+            } else {
+                Ok(timing)
+            }
+        }),
         "bitnet_reference_cpu" => Ok(ProfileTimingSummary {
             timing_scope: "bitnet_reference_cpu_not_dense_slm_profile".to_string(),
             source_receipts: vec![BITNET_PERF_APPLIED.to_string(), BITNET_CPU_BUNDLE.to_string()],
@@ -11025,6 +11045,61 @@ fn dense_cpu_profile_timing(
         throughput_tokens_per_s,
         phase_coverage,
         known_gaps,
+    })
+}
+
+fn npu_resident_profile_timing(root: &Path) -> Result<ProfileTimingSummary> {
+    let path = root.join(OPENVINO_NPU_RESIDENT_SESSION);
+    let json: Value = read_json_receipt(&path)?;
+    let warm = value_at(&json, "resident_session.warm_resident_asks")
+        .context("NPU resident-session receipt missing warm_resident_asks")?;
+    let warm_asks = json
+        .get("asks")
+        .and_then(Value::as_array)
+        .map(|asks| {
+            asks.iter()
+                .filter(|ask| string_at(ask, "phase").as_deref() == Some("warm_resident_ask"))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let prompt_tokens = warm_asks.iter().filter_map(|ask| u64_at(ask, "prompt_token_count")).max();
+    let output_tokens =
+        warm_asks.iter().filter_map(|ask| u64_at(ask, "generated_token_count")).max();
+    let direct_generated_token_ids_available = warm_asks.iter().any(|ask| {
+        bool_at_any(ask, &["generated_token_ids_available_from_pipeline"]) == Some(true)
+    });
+    let generation_total_ms = number_at_any(warm, &["generation_wall_ms.mean"]);
+    let throughput_tokens_per_s = number_at_any(warm, &["throughput_tokens_per_s.mean"])
+        .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
+
+    let mut phase_coverage = vec![
+        "npu_resident_same_process_warm_asks".to_string(),
+        "openvino_genai_perf_metrics".to_string(),
+        "pipeline_construct_excluded_from_warm_resident_timing".to_string(),
+    ];
+    if direct_generated_token_ids_available {
+        phase_coverage.push("direct_openvino_generated_token_ids".to_string());
+    }
+
+    Ok(ProfileTimingSummary {
+        timing_scope: "openvino_npu_resident_warm_session".to_string(),
+        source_receipts: vec![OPENVINO_NPU_RESIDENT_SESSION.to_string()],
+        prompt_tokens,
+        cold_load_ms: None,
+        tokenize_ms: None,
+        prefill_ms: None,
+        first_token_ms: number_at_any(warm, &["openvino_time_to_first_token_ms.mean"])
+            .or_else(|| number_at_any(warm, &["first_streamed_text_chunk_ms.mean"])),
+        decode_total_ms: generation_total_ms,
+        generation_total_ms,
+        total_response_ms: generation_total_ms,
+        output_tokens,
+        throughput_tokens_per_s,
+        phase_coverage,
+        known_gaps: vec![
+            "warm_resident timing excludes one-off NPU pipeline construction".to_string(),
+            "resident evidence is not a route promotion or power-advantage claim".to_string(),
+        ],
     })
 }
 
@@ -11416,6 +11491,18 @@ fn workload_profiles_with_openvino_gpu_promotions(
             purpose:
                 "battery or quiet-mode ask where NPU/GPU must prove power or stability advantage"
                     .to_string(),
+            promoted_route: None,
+            candidate_routes: vec![
+                DEFAULT_ASK_ROUTE.to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+            ],
+        },
+        WorkloadProfile {
+            profile_id: "warm_resident".to_string(),
+            prompt_tokens: "<=512".to_string(),
+            output_tokens: "<=128".to_string(),
+            purpose: "same-process warm or resident ask where NPU must prove stable reuse without cold-start promotion".to_string(),
             promoted_route: None,
             candidate_routes: vec![
                 DEFAULT_ASK_ROUTE.to_string(),
@@ -13308,6 +13395,18 @@ mod tests {
                 .contains(&"NPU cache or resident warm-route proof is missing".to_string()),
             "{:?}",
             evidence.blockers
+        );
+        let warm_evidence = diagnostics.get("dense_slm_openvino_npu_candidate", "warm_resident");
+        assert!(
+            !warm_evidence.blockers.iter().any(|blocker| blocker.contains("NPU cold start")),
+            "{:?}",
+            warm_evidence.blockers
+        );
+        assert!(
+            warm_evidence
+                .source_receipts
+                .iter()
+                .any(|source| { source.ends_with(OPENVINO_NPU_RESIDENT_SESSION) })
         );
         Ok(())
     }

@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T22:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-019"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-ROUTE-019-warm-resident"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-019 to add warm-resident profile routing evidence."
+
+notes = [
+  "The work adds a warm_resident workload profile to Lunar Lake route promotion/profile comparison.",
+  "Existing OpenVINO NPU resident-session and cache receipts are indexed as warm-route evidence with profile-specific warm timing.",
+  "Cold-start blockers remain attached to cold NPU profiles and no route is promoted by this work.",
+  "The claim boundary remains no new inference, no speedup or power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]

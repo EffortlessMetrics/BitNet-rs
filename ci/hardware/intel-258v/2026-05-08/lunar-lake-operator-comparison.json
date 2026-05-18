@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T06:15:00Z",
+  "created_utc": "2026-05-18T22:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -47,6 +47,7 @@
       "decode_heavy",
       "structured",
       "low_power",
+      "warm_resident",
       "bitnet_strict_reference"
     ],
     "required_durability_profiles": [
@@ -59,12 +60,12 @@
     "benchmark_qualified_advantage_claimed": true,
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
-      "route_count": 20,
-      "profile_specific_route_count": 14,
+      "route_count": 23,
+      "profile_specific_route_count": 17,
       "proxy_or_missing_route_count": 6,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
-      "candidate_route_count": 12,
+      "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 4,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
@@ -561,13 +562,13 @@
         "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json"
       ],
       "notes": [
-        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,warm_resident,bitnet_strict_reference",
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=14/20",
+        "profile_specific_timing=17/23",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=15",
+        "promotion_blocker_summary_count=16",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"
@@ -580,14 +581,14 @@
         "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json"
       ],
       "notes": [
-        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,warm_resident,bitnet_strict_reference",
         "benchmark_gate_ready=true",
         "promoted_routes_have_critical_timing=true",
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "telemetry_gap_count=60",
-        "profile_specific_timing=14/20",
+        "telemetry_gap_count=69",
+        "profile_specific_timing=17/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
