@@ -1,10 +1,20 @@
-# Intel GPU plans
+# Intel GPU productization plans
 
-This directory sequences Intel GPU productization without conflating A770 native
-OpenCL, Arc 140V native OpenCL, OpenVINO GPU, Intel NPU, CPU fallback, CUDA,
-BitNet QK256/I2_S, or dense SLM evidence.
+Status: proposed
+Owner: intel-gpu/product
+Created: 2026-05-18
+Linked proposal: `docs/proposals/BITNET-PROP-0006-intel-gpu-productization.md`
+Linked specs: `docs/specs/BITNET-SPEC-INTEL-GPU-ROUTE-CONTRACT.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-DEVICE-IDENTITY.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-BITNET-QK256.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-DENSE-SLM.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-QUALITY.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-PERFORMANCE.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-RESIDENCY.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-STATUS-SURFACE.md`
+Linked ADRs: n/a
+Linked plan: `plans/intel-gpu/implementation-plan.md`
+Linked issues: n/a
+Linked PRs: n/a
+Support-tier impact: Documentation only; no support-tier promotion.
+Policy impact: Keeps A770, Arc 140V, OpenVINO GPU, NPU, CPU, and CUDA proof families separate.
 
-Start with `implementation-plan.md`. The first plan item is documentation-only:
-it adds the source-of-truth map, indexes the lane in the specs index, and links
-the A770 and Lunar Lake active campaign manifests to the shared proof-family
-boundary. It does not promote routes, alter kernels, or change model coverage.
+This directory sequences Intel GPU productization work. It spans the A770
+native OpenCL BitNet lane and the Lunar Lake Arc 140V OpenVINO/native OpenCL
+lanes while preserving strict proof-family boundaries.
+
+Start with `implementation-plan.md` for PR order, proof commands, non-goals,
+and rollback guidance.

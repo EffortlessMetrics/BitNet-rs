@@ -1,55 +1,50 @@
 # Intel GPU implementation plan
 
-## Purpose
+Status: proposed
+Owner: intel-gpu/product
+Created: 2026-05-18
+Linked proposal: `docs/proposals/BITNET-PROP-0006-intel-gpu-productization.md`
+Linked specs: `docs/specs/BITNET-SPEC-INTEL-GPU-ROUTE-CONTRACT.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-DEVICE-IDENTITY.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-BITNET-QK256.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-DENSE-SLM.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-QUALITY.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-PERFORMANCE.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-RESIDENCY.md`, `docs/specs/BITNET-SPEC-INTEL-GPU-STATUS-SURFACE.md`
+Linked ADRs: n/a
+Linked plan: n/a
+Linked issues: n/a
+Linked PRs: n/a
+Support-tier impact: Documentation only until a later runtime PR provides receipts.
+Policy impact: Adds no exceptions.
 
-Intel GPU support must become a receipt-backed family of exact routes rather
-than a generic GPU label. The plan keeps these lanes separate:
+## Goal
 
-- A770 native OpenCL for BitNet I2_S/QK256 named-operation acceleration.
-- A770 OpenVINO GPU as a reference runtime lane only.
-- Arc 140V native OpenCL for Lunar Lake selected-device smoke/parity work.
-- Arc 140V OpenVINO GPU for dense SLM candidate routing and profile-specific
-  promotion.
-- Intel NPU as a separate OpenVINO NPU proof family.
-- CPU as the reference plate and fallback detector, not GPU proof.
+Productize Intel GPU as a receipt-backed family of exact routes without
+conflating A770 native OpenCL, Arc 140V native OpenCL, OpenVINO GPU, Intel NPU,
+CPU, CUDA, BitNet QK256, and dense SLM proof.
 
-## Global hard rules
+## Phase 0: source-of-truth alignment
 
-- Do not promote runtime claims in documentation/specification PRs.
-- Do not claim generic Intel GPU support.
-- Do not claim OpenVINO GPU is native OpenCL.
-- Do not claim Arc 140V proof is A770 proof.
-- Do not claim A770 proof is Arc 140V proof.
-- Do not claim dense SLM proof is BitNet QK256/I2_S proof.
-- Do not claim full device residency from linears, graph smoke, or LLMPipeline
-  output.
-- Do not claim speedup without quality-gated, profile-specific benchmark
-  receipts and same-device history.
-- Do not change QK256 kernels, OpenCL kernels, model coverage, or route
-  promotion state in documentation-only PRs.
+### INTELGPU-DOCS-000: source map and contracts
 
-## PR sequence
+Add:
 
-### PR 0: `docs(intel-gpu): add Intel GPU source-of-truth map`
+- `docs/intel-gpu/README.md`
+- `plans/intel-gpu/README.md`
+- `plans/intel-gpu/implementation-plan.md`
+- `docs/proposals/BITNET-PROP-0006-intel-gpu-productization.md`
+- Intel GPU route, identity, BitNet QK256, dense SLM, quality, performance,
+  residency, and status-surface specs.
 
-Scope:
+Update:
 
-- Add `docs/intel-gpu/README.md`.
-- Add `plans/intel-gpu/README.md`.
-- Add `plans/intel-gpu/implementation-plan.md`.
-- Update `docs/specs/INDEX.md` with the Intel GPU map.
-- Update `docs/tracking/campaigns/intel-a770/active.toml` and
-  `docs/tracking/campaigns/intel-258v-platform/active.toml` so their campaign
-  constraints point to the shared Intel GPU proof-family boundary.
+- `docs/specs/INDEX.md`
+- `docs/tracking/campaigns/intel-a770/active.toml`
+- `docs/tracking/campaigns/intel-258v-platform/active.toml`
+- generated campaign dashboards if required by `xtask`.
 
 Acceptance:
 
 - Documentation only.
 - No route promotion.
 - No receipt changes.
-- No kernel, QK256, OpenCL, model-coverage, or CLI behavior changes.
-- Campaign checks and generated campaign check pass, or any unavailable proof is
-  recorded with a reason.
+- No QK256/OpenCL kernel or model coverage changes.
+- Campaign checks and `git diff --check` pass.
 
 Proof commands:
 
@@ -60,87 +55,66 @@ cargo run --locked -p xtask --no-default-features -- campaign generate --check
 git diff --check
 ```
 
-### PR 1: `docs(proposal): add Intel GPU productization proposal`
+Rollback:
 
-Add `docs/proposals/BITNET-PROP-0006-intel-gpu-productization.md` explaining why
-Intel GPU exists as a product family and why selected-device, selected-model,
-receipt-backed local inference is the value rather than generic GPU detection.
+Revert the Intel GPU docs, specs, plan files, index update, campaign active
+manifest additions, and any generated dashboard changes from this plan item.
 
-### PR 2: `docs(spec): add Intel GPU route contract`
+## Phase 1: specs
 
-Add:
+1. `docs(proposal): add Intel GPU productization proposal`
+2. `docs(spec): add Intel GPU route contract`
+3. `docs(spec): add Intel GPU device identity contract`
+4. `docs(spec): add Intel GPU BitNet QK256 contract`
+5. `docs(spec): add Intel GPU dense SLM contract`
+6. `docs(spec): add Intel GPU quality/performance/residency contracts`
+7. `docs(spec): add Intel GPU status surface contract`
 
-- `docs/specs/BITNET-SPEC-INTEL-GPU-ROUTE-CONTRACT.md`.
-- `docs/specs/BITNET-SPEC-INTEL-GPU-DEVICE-IDENTITY.md`.
+These PRs must not promote runtime claims. They define the proof rules that
+later runtime and receipt PRs must satisfy.
 
-Define concrete backend labels, runtime APIs, device identity requirements,
-OpenCL platform/device recording, OpenVINO `GPU.X` recording, PCI IDs, and
-fallback rules.
+## Phase 2: A770 route truth and proof ledger
 
-### PR 3: `docs(spec): add Intel GPU BitNet QK256 contract`
+- Reconcile committed A770 proof receipts with `ci/hardware/device-kernel-routing.toml`.
+- Keep diagnostic rows diagnostic unless claim-grade receipts are committed.
+- Add validators that prevent promoted A770 rows without receipt paths,
+  `fallback_used=false`, selected backend `intel-arc-a770-opencl`, and explicit
+  not-claims.
 
-Add `docs/specs/BITNET-SPEC-INTEL-GPU-BITNET-QK256.md` for the native Intel GPU
-BitNet route, including official I2_S/QK256 semantics, scalar oracle parity,
-OpenCL kernels, tail/stride behavior, tokenizer/template authority, and the rule
-that diagnostic toy I2_S kernels cannot satisfy official QK256 proof.
+## Phase 3: A770 native OpenCL productization
 
-### PR 4: `docs(spec): add Intel GPU dense SLM contract`
+- Refresh selected-device OpenCL/Level Zero identity.
+- Lock QK256 scaled I2S-I8S scalar oracle and OpenCL parity fixtures.
+- Record claim-grade QK256 OpenCL receipts.
+- Add deterministic BitNet answer behavior gates.
+- Add quality-gated profile timings.
+- Promote only named trusted partial acceleration after all gates pass.
 
-Add `docs/specs/BITNET-SPEC-INTEL-GPU-DENSE-SLM.md` for Qwen2.5 0.5B Instruct
-OpenVINO INT4 symmetric export on Lunar Lake Arc 140V GPU.0, including the
-promotion ladder from export manifest through profile comparison and optional
-server exact-profile proof.
+## Phase 4: Lunar Lake Arc 140V OpenVINO GPU route
 
-### PR 5: `docs(spec): add Intel GPU quality/performance/residency contracts`
+- Classify OpenVINO GPU corpus-v2 failures.
+- Fix profile-specific timing applicability gaps.
+- Promote only exact OpenVINO GPU dense SLM profiles where quality,
+  fallback-free execution, comparator advantage, and telemetry rules pass.
 
-Add:
+## Phase 5: Arc 140V native OpenCL BitNet-adjacent lane
 
-- `docs/specs/BITNET-SPEC-INTEL-GPU-QUALITY.md`.
-- `docs/specs/BITNET-SPEC-INTEL-GPU-PERFORMANCE.md`.
-- `docs/specs/BITNET-SPEC-INTEL-GPU-RESIDENCY.md`.
+- Refresh selected-device native OpenCL parity.
+- Add BitNet QK256 candidate fixtures without claiming full BitNet support.
+- Decide whether Arc 140V native OpenCL should pursue BitNet QK256 before A770.
 
-Define route-specific quality gates, failure taxonomy, exact performance
-profiles and timing fields, promotion requirements, residency classes, and phase
-residency tables.
+## Phase 6: shared Intel GPU UX
 
-### PR 6: `docs(spec): add Intel GPU status surface contract`
+- Teach `receipts explain` to state proof families and not-claims.
+- Add an Intel GPU capability matrix.
+- Add `bitnet gpu doctor --vendor intel --format json` for route readiness and
+  driver/runtime identity.
 
-Add `docs/specs/BITNET-SPEC-INTEL-GPU-STATUS-SURFACE.md` for status commands,
-route matrices, `receipts explain`, and `gpu doctor --vendor intel` output.
+## Non-goals for docs/spec PRs
 
-### PR 7: `claims(a770): reconcile A770 proof state`
-
-Inspect committed A770 receipts, `verify-receipts.py`, the device-kernel routing
-matrix, and the A770 campaign. Keep routes diagnostic unless claim-grade receipts
-are committed and the route matrix can point to them.
-
-### PR 8: `receipts(a770): validate route matrix against receipts`
-
-Add a validator that rejects promoted A770 routes without proof receipts,
-strict selected backend identity, fallback-free receipts, not-claims, and
-accepted speed/residency claim evidence.
-
-### PR 9-14: A770 native OpenCL productization
-
-Refresh selected-device identity, lock official QK256 scalar/oracle parity,
-record claim-grade QK256 OpenCL receipts, add deterministic answer behavior
-proof, add quality-gated profile timings, and promote only trusted partial
-acceleration when all gates pass.
-
-### PR 15-17: Lunar Lake Arc 140V OpenVINO GPU route
-
-Classify corpus-v2 failures, fix profile-specific timing applicability, and
-promote only exact profiles that pass quality, fallback, profile-timing,
-comparator, telemetry, and claim-boundary gates.
-
-### PR 18-20: Arc 140V native OpenCL BitNet-adjacent lane
-
-Refresh selected-device OpenCL parity, add BitNet QK256 candidate fixtures, and
-record whether Arc 140V should pursue native BitNet QK256 before A770. The
-expected default is that A770 owns native BitNet OpenCL first.
-
-### PR 21-23: Shared Intel GPU UX
-
-Add route-family explanations to receipts, publish an Intel GPU capability
-matrix, and add `bitnet gpu doctor --vendor intel --format json` for route
-readiness and device/runtime diagnostics.
+- Do not add or modify QK256 kernels.
+- Do not add or modify OpenCL kernels.
+- Do not promote route-matrix rows.
+- Do not change model coverage.
+- Do not claim generic Intel GPU support.
+- Do not claim speedup, full residency, or cross-family proof inheritance.
