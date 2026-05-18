@@ -1471,7 +1471,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-UX-003"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-003-doctor-bitnet"
 stackable = false
 review_mode = "codex_premerge"

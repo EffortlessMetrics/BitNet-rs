@@ -75,6 +75,12 @@ print status meanings, per-family or per-group reasons, and openable receipt,
 Markdown, latest-report, and baseline-report targets without launching live
 inference or downloading models.
 
+`bitnet mac status` and `bitnet mac doctor` expose dense SLM and BitNet
+readiness as separate operator states. Dense readiness is tied to supported
+Qwen cache repair and the latest dense receipts. BitNet readiness is tied to
+the accepted artifact/tokenizer, one-shot ask, warm-session evidence, and
+explicit chat/serve-disabled boundaries.
+
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:
 
 ```bash

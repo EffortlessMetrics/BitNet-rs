@@ -1568,6 +1568,16 @@ fn apple_m4_inference_status_receipt(
     let disk_available = catalog["disk"]["available"].clone();
     let disk_low = catalog["disk"]["low_disk"].clone();
     let recommended_first_model_id = catalog["disk"]["recommended_first_model_id"].clone();
+    let report_inventory = apple_m4_report_inventory_json();
+    let readiness = apple_m4_status_readiness_json(
+        default_model_id.as_str(),
+        default_cache_ready,
+        dense_rows.len(),
+        dense_ready,
+        &catalog,
+        &bitnet,
+        &report_inventory,
+    );
     let commands = serde_json::json!({
         "models": "bitnet mac models",
         "status": "bitnet mac status",
@@ -1633,7 +1643,8 @@ fn apple_m4_inference_status_receipt(
             "serve_enabled": false,
             "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
         },
-        "report_inventory": apple_m4_report_inventory_json(),
+        "readiness": readiness,
+        "report_inventory": report_inventory,
         "commands": commands,
         "claim_boundary": {
             "status_only": true,
@@ -1652,6 +1663,103 @@ fn apple_m4_inference_status_receipt(
             "speedup_claim": false,
         },
     })
+}
+
+fn apple_m4_status_readiness_json(
+    default_model_id: &str,
+    default_cache_ready: bool,
+    dense_supported_count: usize,
+    dense_ready_count: usize,
+    catalog: &serde_json::Value,
+    bitnet: &serde_json::Value,
+    report_inventory: &serde_json::Value,
+) -> serde_json::Value {
+    let default_row = catalog["rows"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(default_model_id)));
+    let dense_cache_repair_guidance = if default_cache_ready {
+        format!("Default dense SLM cache is ready for {default_model_id}.")
+    } else {
+        default_row
+            .and_then(|row| row["fetch_command"].as_str())
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| format!("bitnet model fetch {default_model_id}"))
+    };
+    let bitnet_ready = bitnet["ready"].as_bool().unwrap_or(false);
+    serde_json::json!({
+        "dense_slm": {
+            "status": if default_cache_ready { "ready" } else { "cache_repair_required" },
+            "ready": default_cache_ready,
+            "default_model_id": default_model_id,
+            "supported_model_count": dense_supported_count,
+            "ready_model_count": dense_ready_count,
+            "cache_repair_guidance": dense_cache_repair_guidance,
+            "routes": {
+                "ask": if default_cache_ready { "ready" } else { "cache_repair_required" },
+                "chat": if default_cache_ready { "ready" } else { "cache_repair_required" },
+                "serve": if default_cache_ready { "ready" } else { "cache_repair_required" },
+            },
+            "last_matching_receipts": {
+                "eval": report_inventory["dense_slm_eval_v2"].clone(),
+                "benchmark": report_inventory["dense_slm_benchmark_v2"].clone(),
+            },
+            "claim_boundary": {
+                "dense_slm_only": true,
+                "bitnet_evidence_used": false,
+                "broad_quality_claim": false,
+                "broad_performance_claim": false,
+            },
+        },
+        "bitnet": {
+            "status": if bitnet_ready { "ready_for_ask_and_warm" } else { "cache_or_tokenizer_repair_required" },
+            "ready": bitnet_ready,
+            "model_id": BITNET_M4_MODEL_ID,
+            "ask_enabled": true,
+            "warm_enabled": true,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "disabled_surfaces": ["chat", "serve"],
+            "cache_repair_guidance": bitnet_readiness_repair_guidance(bitnet),
+            "routes": {
+                "ask": if bitnet_ready { "ready" } else { "cache_or_tokenizer_repair_required" },
+                "warm": if bitnet_ready { "ready" } else { "cache_or_tokenizer_repair_required" },
+                "chat": "disabled_until_gate_receipts",
+                "serve": "disabled_until_gate_receipts",
+            },
+            "last_matching_receipts": {
+                "eval": report_inventory["bitnet_eval"].clone(),
+                "benchmark": report_inventory["bitnet_benchmark"].clone(),
+                "variable_warm": report_inventory["bitnet_variable_warm"].clone(),
+            },
+            "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
+        },
+        "disk_pressure": {
+            "available": catalog["disk"]["available"].clone(),
+            "low_disk": catalog["disk"]["low_disk"].clone(),
+            "guidance": catalog["disk"]["guidance"].clone(),
+            "recommendation": catalog["disk"]["recommendation"].clone(),
+        },
+    })
+}
+
+fn bitnet_readiness_repair_guidance(bitnet: &serde_json::Value) -> String {
+    if bitnet["ready"].as_bool().unwrap_or(false) {
+        return "Accepted BitNet model and tokenizer are ready for one-shot ask and warm-session routes."
+            .to_string();
+    }
+    if let Some(fetch) = bitnet["model"]["fetch_command"].as_str() {
+        return fetch.to_string();
+    }
+    if let Some(fetch) = bitnet["commands"]["fetch"].as_str() {
+        return fetch.to_string();
+    }
+    if bitnet["tokenizer"]["present"].as_bool() == Some(false) {
+        return format!("install or restore tokenizer at {BITNET_M4_DEFAULT_TOKENIZER_PATH}");
+    }
+    bitnet["commands"]["models"]
+        .as_str()
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| "bitnet mac models".to_string())
 }
 
 fn print_mac_status_summary(receipt: &serde_json::Value, json_out: &Path) {
@@ -1680,6 +1788,26 @@ fn print_mac_status_summary(receipt: &serde_json::Value, json_out: &Path) {
         bitnet["warm_enabled"].as_bool().unwrap_or(false),
         bitnet["readiness"]["ready"].as_bool().unwrap_or(false)
     );
+    println!(
+        "Dense readiness: {}, repair={}",
+        receipt["readiness"]["dense_slm"]["status"].as_str().unwrap_or("unknown"),
+        receipt["readiness"]["dense_slm"]["cache_repair_guidance"].as_str().unwrap_or("unknown")
+    );
+    println!(
+        "BitNet readiness: {}, repair={}",
+        receipt["readiness"]["bitnet"]["status"].as_str().unwrap_or("unknown"),
+        receipt["readiness"]["bitnet"]["cache_repair_guidance"].as_str().unwrap_or("unknown")
+    );
+    println!(
+        "Last receipts: dense={}, BitNet={}",
+        receipt["readiness"]["dense_slm"]["last_matching_receipts"]["eval"]
+            .as_str()
+            .unwrap_or("<missing>"),
+        receipt["readiness"]["bitnet"]["last_matching_receipts"]["eval"]
+            .as_str()
+            .unwrap_or("<missing>")
+    );
+    println!("Disabled: BitNet chat=false, BitNet serve=false");
     println!("Next: {}", receipt["commands"]["models"].as_str().unwrap_or("bitnet mac models"));
     println!("Receipt: {}", json_out.display());
     println!(
@@ -1986,15 +2114,36 @@ fn print_mac_evidence_summary(receipt: &serde_json::Value, json_out: &Path) {
 }
 
 fn apple_m4_report_inventory_json() -> serde_json::Value {
-    let root = Path::new(APPLE_M4_REPORT_ROOT);
+    let root = apple_m4_default_report_root();
     serde_json::json!({
         "root": root,
-        "dense_slm_eval_v2": latest_matching_report(root, "slm-eval-v2", "summary.json"),
-        "dense_slm_benchmark_v2": latest_matching_report(root, "slm-benchmark-v2", "summary.json"),
-        "bitnet_eval": latest_matching_report(root, "bitnet-eval", "answer-corpus.json"),
-        "bitnet_benchmark": latest_matching_report(root, "bitnet-benchmark", "summary.json"),
-        "bitnet_variable_warm": latest_matching_report(root, "bitnet-productization", "variable-warm-session.json"),
+        "dense_slm_eval_v2": latest_matching_report(&root, "slm-eval-v2", "summary.json"),
+        "dense_slm_benchmark_v2": latest_matching_report(&root, "slm-benchmark-v2", "summary.json"),
+        "bitnet_eval": latest_of_matching_reports(&root, &[
+            ("bitnet-eval-250", "answer-corpus.json"),
+            ("bitnet-eval", "answer-corpus.json"),
+        ]),
+        "bitnet_benchmark": latest_matching_report(&root, "bitnet-benchmark", "summary.json"),
+        "bitnet_variable_warm": latest_matching_report(&root, "bitnet-productization", "variable-warm-session.json"),
     })
+}
+
+fn apple_m4_default_report_root() -> PathBuf {
+    let cwd_relative = PathBuf::from(APPLE_M4_REPORT_ROOT);
+    if cwd_relative.exists() {
+        return cwd_relative;
+    }
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let workspace_relative = manifest_dir
+        .parent()
+        .and_then(Path::parent)
+        .map(|workspace| workspace.join(APPLE_M4_REPORT_ROOT));
+    if let Some(candidate) = workspace_relative {
+        if candidate.exists() {
+            return candidate;
+        }
+    }
+    cwd_relative
 }
 
 fn latest_matching_report(root: &Path, segment: &str, filename: &str) -> Option<String> {
@@ -7973,6 +8122,9 @@ fn mac_doctor_base_receipt(
         .as_str()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
+    let report_inventory = apple_m4_report_inventory_json();
+    let readiness =
+        apple_m4_doctor_readiness_json(&cache_status, &bitnet_ask_readiness, &report_inventory);
     serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "apple_m4_slm_doctor",
@@ -8024,6 +8176,7 @@ fn mac_doctor_base_receipt(
             },
             "bitnet_ask": bitnet_ask_readiness,
         },
+        "readiness": readiness,
         "mac_claim_boundary": {
             "slm_local_answer": true,
             "doctor": true,
@@ -8040,6 +8193,68 @@ fn mac_doctor_base_receipt(
         },
         "broad_performance_claim": false,
         "speedup_claim": false,
+    })
+}
+
+fn apple_m4_doctor_readiness_json(
+    cache_status: &serde_json::Value,
+    bitnet: &serde_json::Value,
+    report_inventory: &serde_json::Value,
+) -> serde_json::Value {
+    let dense_ready = cache_status["ready"].as_bool().unwrap_or(false);
+    let bitnet_ready = bitnet["ready"].as_bool().unwrap_or(false);
+    serde_json::json!({
+        "dense_slm": {
+            "status": if dense_ready { "ready" } else { "cache_repair_required" },
+            "ready": dense_ready,
+            "model_id": cache_status["id"].as_str().unwrap_or(model_cache::M4_SLM_RUNTIME_MODEL_ID),
+            "cache_state": cache_status["state"].clone(),
+            "cache_path": cache_status["cache_path"].clone(),
+            "cache_repair_guidance": cache_status["next_step"].as_str().unwrap_or("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"),
+            "routes": {
+                "ask": if dense_ready { "ready" } else { "cache_repair_required" },
+                "chat": if dense_ready { "ready" } else { "cache_repair_required" },
+                "serve": if dense_ready { "ready" } else { "cache_repair_required" },
+            },
+            "last_matching_receipts": {
+                "eval": report_inventory["dense_slm_eval_v2"].clone(),
+                "benchmark": report_inventory["dense_slm_benchmark_v2"].clone(),
+            },
+            "claim_boundary": {
+                "dense_slm_only": true,
+                "bitnet_evidence_used": false,
+                "broad_quality_claim": false,
+                "broad_performance_claim": false,
+            },
+        },
+        "bitnet": {
+            "status": if bitnet_ready { "ready_for_ask_and_warm" } else { "cache_or_tokenizer_repair_required" },
+            "ready": bitnet_ready,
+            "model_id": BITNET_M4_MODEL_ID,
+            "ask_enabled": true,
+            "warm_enabled": true,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "disabled_surfaces": ["chat", "serve"],
+            "cache_repair_guidance": bitnet_readiness_repair_guidance(bitnet),
+            "routes": {
+                "ask": if bitnet_ready { "ready" } else { "cache_or_tokenizer_repair_required" },
+                "warm": if bitnet_ready { "ready" } else { "cache_or_tokenizer_repair_required" },
+                "chat": "disabled_until_gate_receipts",
+                "serve": "disabled_until_gate_receipts",
+            },
+            "last_matching_receipts": {
+                "eval": report_inventory["bitnet_eval"].clone(),
+                "benchmark": report_inventory["bitnet_benchmark"].clone(),
+                "variable_warm": report_inventory["bitnet_variable_warm"].clone(),
+            },
+            "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
+        },
+        "disk_pressure": {
+            "cache_root": cache_status["cache_root"].clone(),
+            "cache_path": cache_status["cache_path"].clone(),
+            "repair_default": cache_status["next_step"].clone(),
+        },
     })
 }
 
@@ -14360,7 +14575,7 @@ fn validate_apple_m4_inference_status_receipt(
     path: &Path,
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
-    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_inference_status")?;
     require_exact_string_at(path, receipt, &["operator_command"], "mac status")?;
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
@@ -14416,6 +14631,10 @@ fn validate_apple_m4_inference_status_receipt(
     require_bool_at(path, receipt, &["bitnet", "claim_boundary", "chat_enabled"], false)?;
     require_bool_at(path, receipt, &["bitnet", "claim_boundary", "serve_enabled"], false)?;
     require_bool_at(path, receipt, &["bitnet", "claim_boundary", "bitnet_quality_claimed"], false)?;
+
+    if schema_version == "1.1.0" {
+        require_m4_operator_route_readiness(path, receipt, &["readiness"])?;
+    }
 
     for field in [
         "models",
@@ -15000,6 +15219,50 @@ fn require_m4_status_explanations(path: &Path, receipt: &serde_json::Value) -> R
             receipt,
             &["status_explanations", status, "next_action"],
         )?;
+    }
+    Ok(())
+}
+
+fn require_m4_operator_route_readiness(
+    path: &Path,
+    receipt: &serde_json::Value,
+    prefix: &[&str],
+) -> Result<()> {
+    let mut dense_status = prefix.to_vec();
+    dense_status.extend(["dense_slm", "status"]);
+    require_non_empty_string_at(path, receipt, &dense_status)?;
+    let mut dense_repair = prefix.to_vec();
+    dense_repair.extend(["dense_slm", "cache_repair_guidance"]);
+    require_non_empty_string_at(path, receipt, &dense_repair)?;
+    let mut dense_eval = prefix.to_vec();
+    dense_eval.extend(["dense_slm", "last_matching_receipts", "eval"]);
+    require_non_empty_string_at(path, receipt, &dense_eval)?;
+    let mut dense_benchmark = prefix.to_vec();
+    dense_benchmark.extend(["dense_slm", "last_matching_receipts", "benchmark"]);
+    require_non_empty_string_at(path, receipt, &dense_benchmark)?;
+
+    let mut bitnet_status = prefix.to_vec();
+    bitnet_status.extend(["bitnet", "status"]);
+    require_non_empty_string_at(path, receipt, &bitnet_status)?;
+    let mut bitnet_repair = prefix.to_vec();
+    bitnet_repair.extend(["bitnet", "cache_repair_guidance"]);
+    require_non_empty_string_at(path, receipt, &bitnet_repair)?;
+    let mut bitnet_chat = prefix.to_vec();
+    bitnet_chat.extend(["bitnet", "chat_enabled"]);
+    require_bool_at(path, receipt, &bitnet_chat, false)?;
+    let mut bitnet_serve = prefix.to_vec();
+    bitnet_serve.extend(["bitnet", "serve_enabled"]);
+    require_bool_at(path, receipt, &bitnet_serve, false)?;
+    let mut bitnet_eval = prefix.to_vec();
+    bitnet_eval.extend(["bitnet", "last_matching_receipts", "eval"]);
+    require_non_empty_string_at(path, receipt, &bitnet_eval)?;
+    let mut bitnet_warm = prefix.to_vec();
+    bitnet_warm.extend(["bitnet", "last_matching_receipts", "variable_warm"]);
+    require_non_empty_string_at(path, receipt, &bitnet_warm)?;
+    let mut disk = prefix.to_vec();
+    disk.push("disk_pressure");
+    if json_value_at(receipt, &disk).is_null() {
+        anyhow::bail!("{} M4 operator readiness must record disk_pressure", path.display());
     }
     Ok(())
 }

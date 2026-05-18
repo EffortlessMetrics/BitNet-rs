@@ -694,6 +694,10 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
         .stdout(predicate::str::contains("Apple M4 inference status"))
         .stdout(predicate::str::contains("Dense SLM:"))
         .stdout(predicate::str::contains("BitNet:"))
+        .stdout(predicate::str::contains("Dense readiness:"))
+        .stdout(predicate::str::contains("BitNet readiness:"))
+        .stdout(predicate::str::contains("Last receipts:"))
+        .stdout(predicate::str::contains("Disabled: BitNet chat=false, BitNet serve=false"))
         .stdout(predicate::str::contains("no live model run"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
@@ -708,6 +712,33 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
     assert_eq!(receipt_json["bitnet"]["warm_enabled"], true);
     assert_eq!(receipt_json["bitnet"]["chat_enabled"], false);
     assert_eq!(receipt_json["bitnet"]["serve_enabled"], false);
+    assert_eq!(receipt_json["readiness"]["dense_slm"]["status"], "cache_repair_required");
+    assert!(
+        receipt_json["readiness"]["dense_slm"]["cache_repair_guidance"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("bitnet model fetch"))
+    );
+    assert_eq!(
+        receipt_json["readiness"]["dense_slm"]["last_matching_receipts"]["eval"]
+            .as_str()
+            .is_some_and(|path| path.contains("slm-eval-v2")),
+        true
+    );
+    assert_eq!(
+        receipt_json["readiness"]["bitnet"]["disabled_surfaces"]
+            .as_array()
+            .is_some_and(|surfaces| surfaces.iter().any(|surface| surface == "chat")
+                && surfaces.iter().any(|surface| surface == "serve")),
+        true
+    );
+    assert_eq!(receipt_json["readiness"]["bitnet"]["chat_enabled"], false);
+    assert_eq!(receipt_json["readiness"]["bitnet"]["serve_enabled"], false);
+    assert!(
+        receipt_json["readiness"]["bitnet"]["last_matching_receipts"]["variable_warm"]
+            .as_str()
+            .is_some_and(|path| path.contains("bitnet-productization"))
+    );
+    assert_eq!(receipt_json["readiness"]["disk_pressure"]["low_disk"].as_bool().is_some(), true);
     assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["claim_boundary"]["full_metal_inference_claimed"], false);
@@ -2423,6 +2454,23 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
             .as_str()
             .unwrap_or_default()
             .contains("bitnet mac models")
+    );
+    assert_eq!(receipt_json["readiness"]["dense_slm"]["status"], "cache_repair_required");
+    assert!(
+        receipt_json["readiness"]["dense_slm"]["cache_repair_guidance"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("bitnet model fetch"))
+    );
+    assert_eq!(receipt_json["readiness"]["bitnet"]["chat_enabled"], false);
+    assert_eq!(receipt_json["readiness"]["bitnet"]["serve_enabled"], false);
+    assert!(
+        receipt_json["readiness"]["bitnet"]["last_matching_receipts"]["variable_warm"]
+            .as_str()
+            .is_some_and(|path| path.contains("variable-warm-session.json"))
+    );
+    assert_eq!(
+        receipt_json["readiness"]["bitnet"]["claim_boundary"]["bitnet_quality_claimed"],
+        false
     );
     assert_eq!(receipt_json["mac_claim_boundary"]["bitnet_quality_claimed"], false);
     Ok(())
