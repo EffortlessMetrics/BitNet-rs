@@ -1,6 +1,6 @@
 # A770 Diagnostic Lineage Map
 
-Status: active disposition map
+Status: active lineage and content-audit map
 Owner: Codex
 Created: 2026-05-18
 Linked proposal: n/a
@@ -24,9 +24,9 @@ Policy impact: none
 
 ## Scope
 
-This report maps the open A770 diagnostic PR chain into mainline disposition
+This report maps the open A770 diagnostic PR chain into mainline content-audit
 buckets. It is a queue-recovery aid, not proof that any branch-chain PR is
-mergeable into `main`.
+mergeable into `main`, and not proof that any branch-chain PR is obsolete.
 
 The committed A770 source of truth remains diagnostic. This report does not add
 kernels, model support, runtime behavior, benchmark claims, receipt promotion,
@@ -65,6 +65,19 @@ evidence. A follow-up queue refresh showed 153 open scoped PRs: 152 `a770/*`,
 
 Do not merge current A770 diagnostic probes directly into `main`.
 
+Do not close a PR because it is old, far behind `main`, noisy, or part of an
+earlier branch chain.
+
+Close only after a content audit proves one of:
+
+- the exact useful content already landed, with successor PR or commit named;
+- the exact useful content was clean-ported elsewhere, with successor PR or
+  commit named;
+- it is a true duplicate of another open PR, with the kept PR named;
+- it is historical diagnostic evidence already captured here or in another
+  ledger, with no unique code/test/report left to port;
+- the idea is no longer wanted for a content reason recorded in the PR.
+
 Use them as source material for replacement PRs only when the replacement:
 
 - is based on current `main`;
@@ -76,14 +89,14 @@ Use them as source material for replacement PRs only when the replacement:
 
 ## Extraction Buckets
 
-| Bucket | Representative PRs | Durable value | Disposition |
+| Bucket | Representative PRs | Durable value | Audit action |
 | --- | --- | --- | --- |
 | Backend identity and claim guards | #4744, #4745, #4750 | Backend/fallback/status vocabulary and non-claiming route identity. | Rebuild as A770-003/A770-004 replacement PRs only. Do not inherit old generated/dependency edits. |
 | Loader, tokenizer, and model invariants | #4751-#4756, #4801, #4841, #4847, #4887, #4959, #4961, #4966 | Candidate strict GGUF, tied-logit, embedding-row, tokenizer, and model-contract fixes. | Compare against current `main`; port only confirmed invariants with direct tests. |
 | QK256/OpenCL mechanics | #4763, #4764, #4767, #4770, #4774, #4776, #4850, #4853, #4855, #4856 | QK256 layout, activation quantization, and OpenCL dispatch evidence. | Hold until A770-005/A770-006 smoke/parity path exists. No support or performance claim. |
 | Reference setup and compare tools | #4782, #4788, #4793, #4796, #4799, #4819, #4821, #4823, #4825, #4827, #4830, #4831, #4833, #4862-#4908, #4910-#4949 | Reference setup, prompt identity, hidden/logit/layer trace planning, run, and compare tooling. | Collapse into one or two durable `xtask` trace/compare PRs with stable command names and tests. |
 | Attention score, softmax, and value-mix hypotheses | #4990-#5064, #5098-#5131, #5711 | Diagnostic localization of score input, value cache, probability, value mix, history, and selected query boundary rows. | Archive lineage first. Port no runtime math fix until contradictory hypotheses are reconciled against current `main`. |
-| Transient probe rows | Most one-off `diag-*history*`, `diag-*boundary*`, and selected-row probes in #4976-#5131 and #5711 | Local investigation evidence. | Close as superseded after the durable trace tools and lineage summary preserve the useful conclusion. |
+| Transient probe rows | Most one-off `diag-*history*`, `diag-*boundary*`, and selected-row probes in #4976-#5131 and #5711 | Local investigation evidence. | Audit for unique report/test/tool value. Close only after an exact successor, duplicate, or historical-only ledger entry is recorded. |
 | Draft AVX2 perf branch | #5092 | Possible QK256 AVX2 optimization. | Leave draft until parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
 
 ## Immediate Queue Decisions
@@ -124,7 +137,7 @@ claim.
 ## Replacement PR Order
 
 1. `docs(a770): archive diagnostic lineage and current blockers`
-   - Preserve the branch-chain decision map and close/supersession criteria.
+   - Preserve the branch-chain decision map and content-audit criteria.
    - No runtime, route, or support-tier change.
 2. `identity(a770): preserve requested and selected backend identity`
    - Implement the A770-003 identity slice from current `main`.
@@ -136,16 +149,18 @@ claim.
    - Port only small confirmed loader/tokenizer/model fixes with direct tests.
    - No A770 quality, reference-parity, residency, or performance claim.
 
-After each replacement lands, close the corresponding transient branch-chain PRs
-with a link to the replacement and this map.
+After each replacement lands, audit the corresponding branch-chain PRs for
+remaining unique code, tests, reports, or receipts. Close only those proven to
+have no unique remaining value, with a link to the replacement and this map.
 
 ## Claim Boundary
 
 This report may claim only:
 
 ```text
-The open A770 diagnostic queue has been mapped into replacement and closure
-buckets, and none of the current diagnostic probes is a direct merge candidate.
+The open A770 diagnostic queue has been mapped into content-audit and
+replacement buckets, and none of the current diagnostic probes is a direct
+support-claim candidate.
 ```
 
 It must not claim:
