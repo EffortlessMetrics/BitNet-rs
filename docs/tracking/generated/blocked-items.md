@@ -99,7 +99,7 @@
 | apple-m4-inference-excellence | M4-OPS-SLO-001 | M4-ACCURACY-007, M4-BENCH-005, M4-BENCH-006, M4-BITNET-EX-003, M4-OPS-UX-003 | proposed |
 | apple-m4-inference-excellence | M4-CONTEXT-001 | M4-BENCH-002, M4-OPS-SLO-001 | proposed |
 | apple-m4-inference-excellence | M4-CONTEXT-002 | M4-CONTEXT-001, M4-BENCH-007, M4-REPRO-003 | proposed |
-| apple-m4-inference-excellence | M4-REPRO-002 | M4-REPRO-001 | in_progress |
+| apple-m4-inference-excellence | M4-REPRO-002 | M4-REPRO-001 | pr_open |
 | apple-m4-inference-excellence | M4-REPRO-003 | M4-REPRO-001 | proposed |
 | apple-m4-inference-excellence | M4-RECEIPT-001 | M4-REPRO-001 | proposed |
 | apple-m4-inference-excellence | M4-STABILITY-001 | M4-BENCH-002, M4-EXCELLENCE-003 | proposed |
