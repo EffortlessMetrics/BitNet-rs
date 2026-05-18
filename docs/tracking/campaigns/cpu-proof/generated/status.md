@@ -28,6 +28,7 @@
 | CPU-ANSWER-005 | merged | #4003 | `codex/cpu-answer-005-tokenizer-authority` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Strict Rust CPU answer receipts record the MODEL-ARTIFACT-007 external Llama-BPE tokenizer/pre-tokenizer authority instead of `unknown` when an explicit or sibling Llama-3 tokenizer is used; failed answer-corpus artifacts remain diagnostic and no answer-quality, throughput, server, GPU, or NPU claim is made. |
 | CPU-ANSWER-006 | merged | #4005 | `codex/cpu-answer-006-reference-token-artifact` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | A Microsoft BitNet.cpp reference-divergence artifact records the MODEL-ARTIFACT-007 prompt envelope, BOS policy, external Llama-BPE tokenizer/pre-tokenizer authority, prompt token IDs, generated token IDs, decoded text, and first-step top-k/logit evidence where available, so strict Rust CPU failures can be classified as prompt/tokenizer divergence, shared decode/logits divergence, or backend-specific execution without claiming answer quality. |
 | CPU-ANSWER-007 | merged | #4019 | `codex/cpu-answer-007-bitnet-subnorms` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Strict Rust CPU answer-corpus runs pass the MODEL-ARTIFACT-007 official Microsoft I2_S answer-ready artifact by aligning BitNet B1.58 model math with BitNet.cpp: RMSNorm/ReLU^2 defaults, attention and FFN sub-layernorms, BitNet.cpp I2_S QK256 layout, inline scale and I8_S GEMV semantics, and GGML token-major F16 token embeddings. |
+| CPU-AVX512-000 | in_progress | TBD | `codex/cpu-avx512-kernel-contract` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the AVX-512 kernel contract, strict CPU ISA selection rails, implementation plan, 9950X3D proof requirements, and kernel-matrix claim boundary before runtime AVX-512 implementation starts. |
 
 ## Hard Constraints
 
@@ -37,3 +38,4 @@
 - No coherent local-answer claim from an artifact that is not answer_ready under docs/model-artifacts/ANSWER_ARTIFACT_GATE.md.
 - No performance claim without receipt artifacts.
 - No helper-only SIMD work unless it is wired to real inference or explicitly scoped as preparation.
+- No AVX-512 speed or auto-selection claim from CPUID detection, receipt labels, or AVX2 proof alone.

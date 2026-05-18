@@ -40,7 +40,11 @@ This is a dual-CCD X3D CPU. Receipts should record scheduler, core placement, an
 ## Claim Boundary
 
 - AVX-512 detection is not AVX-512 kernel proof.
+- An AVX-512 receipt label is not AVX-512 hot-path execution proof without a
+  distinct selected kernel ID and AVX-512 invocation counters.
 - AVX2 proof is not AVX-512 proof.
+- AVX-512 execution is not an AVX-512 speedup claim.
+- AVX-512 microbench speedup is not decode, warm-session, or sustained proof.
 - Short boost behavior is not sustained performance.
 - X3D/cache-sensitive wins must be tied to benchmark receipts.
 - CPU proof is not GPU/NPU proof.
@@ -51,10 +55,45 @@ This is a dual-CCD X3D CPU. Receipts should record scheduler, core placement, an
 | Level | Evidence | Allowed claim |
 |---|---|---|
 | 0 | CPU model detected | 9950X3D detected |
-| 1 | Runtime feature probe records AVX2 and AVX-512 | CPU feature profile recorded |
-| 2 | Scalar, AVX2, and AVX-512 kernel smoke pass | CPU kernel smoke tested |
-| 3 | Strict CPU inference receipt validates | CPU proof receipt backed |
-| 4 | Cache-sensitive and sustained-power baselines exist | Modern desktop CPU benchmark recorded |
+| 1 | Runtime feature probe records AVX2 and AVX-512 subfeatures | CPU feature profile recorded |
+| 2 | Scalar, AVX2, and AVX-512 kernel smoke pass with distinct kernel IDs | CPU kernel smoke tested |
+| 3 | Strict CPU inference receipt validates selected kernel, fallback=false, and AVX-512 invocation counters | CPU proof receipt backed |
+| 4 | Scalar-vs-AVX512 and AVX2-vs-AVX512 parity receipts pass | AVX-512 parity recorded for the governed profile |
+| 5 | Cache-sensitive phase benchmark baselines exist | Modern desktop CPU phase benchmark recorded |
+| 6 | Sustained-power baseline exists with cache-domain/core-affinity context | Sustained 9950X3D CPU profile recorded |
+
+## Required AVX-512 Profiles
+
+The AVX-512 lane must keep profile names precise. At minimum, the 9950X3D proof
+queue must cover:
+
+```text
+micro_qk256_f32_gemv
+micro_qk256_i8s_scaled_gemv
+layer_0_decode
+prefill_128
+prefill_512
+first_token
+decode_32
+decode_128
+warm_session_3_turns
+sustained_decode_10min
+```
+
+## Required Comparisons
+
+AVX-512 receipts must compare against the narrower CPU proof lanes before any
+speed claim:
+
+```text
+scalar vs avx2
+scalar vs avx512
+avx2 vs avx512
+avx512 vs cuda diagnostic
+```
+
+The CUDA comparison is diagnostic only for this CPU lane. It must not be used to
+claim GPU proof or server readiness from a 9950X3D CPU receipt.
 
 ## Receipt Fields
 
@@ -78,9 +117,25 @@ Minimum CPU proof receipt:
     "avx512_detected": true,
     "tdp_watts": 170
   },
+  "cpu_topology": {
+    "ccd_count": 2,
+    "x3d_cache_domain": "...",
+    "core_affinity": "...",
+    "scheduler_policy": "...",
+    "smt_enabled": true
+  },
   "power": {
     "mode": "...",
-    "sustained_run": true
+    "sustained_run": true,
+    "duration_seconds": 600
+  },
+  "qk256_hot_path": {
+    "f32_scalar_invocations": 0,
+    "f32_avx2_invocations": 0,
+    "f32_avx512_invocations": 0,
+    "i8s_scaled_scalar_invocations": 0,
+    "i8s_scaled_avx2_invocations": 0,
+    "i8s_scaled_avx512_invocations": 0
   }
 }
 ```
@@ -97,7 +152,11 @@ Collect OS, CPU flags, topology, scheduler/core placement context, memory, gover
 
 ### AMD9950X3D-003 - Scalar, AVX2, and AVX-512 Dispatch Proof
 
-Prove scalar, AVX2, and AVX-512 paths can be forced independently and receipts record selected CPU kernel path.
+Prove scalar, AVX2, and AVX-512 paths can be forced independently and receipts
+record requested kernel, selected kernel, fallback status, fallback reason, CPU
+features required/used, and AVX-512 hot-path invocation counters. Strict
+requested AVX-512 must fail if the required AVX-512 subfeatures or compiled
+kernel are unavailable.
 
 ### AMD9950X3D-004 - Strict CPU Proof Run
 
@@ -133,3 +192,5 @@ How does the CPU-first path behave on a modern high-end AVX-512 and large-cache 
 - Do not ignore cache-domain or scheduler context for X3D behavior.
 - Do not treat CPU proof as GPU/NPU proof.
 - Do not make performance claims without sustained-power receipts.
+- Do not promote auto AVX-512 selection from CPUID alone; promotion is
+  profile-scoped and receipt-gated.
