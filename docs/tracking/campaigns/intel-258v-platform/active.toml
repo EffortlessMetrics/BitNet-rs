@@ -8138,9 +8138,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-006"
-status = "in_progress"
+status = "merged"
 pr = 5749
 head_sha = "9299adc019210fd9ecac7e14f1d1361bce8cfe45"
+merge_sha = "185fb868672d75e0b02ae98dacc80cd15c20786b"
 branch = "codex/lunar-lake/LNL258V-OP-006-openvino-ask-runtime-blocker"
 stackable = false
 review_mode = "codex_premerge"
