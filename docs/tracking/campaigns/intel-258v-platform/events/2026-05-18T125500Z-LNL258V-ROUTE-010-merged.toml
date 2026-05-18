@@ -1,0 +1,26 @@
+timestamp = "2026-05-18T12:55:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-010"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 5580
+head_sha = "1e0ab335b3e7423bc8584d19670a2c8a34f097a1"
+merge_sha = "f19f2d5d12989d41cad432ce86f4023d5dd97d7c"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-010-openvino-token-context"
+summary = "Merged LNL258V-ROUTE-010 after supplementing OpenVINO candidate route timing with corpus-v2 prompt-token context and preserving candidate-only GPU/NPU route boundaries."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "OpenVINO GPU/NPU candidate short-profile timing now records corpus-v2 prompt-token context where the operator ask receipt lacks direct prompt-token counts.",
+  "GPU and NPU remain unpromoted; no speedup, power-advantage, acceleration, new inference, or BitNet QK256/I2_S behavior-change claim was added.",
+]
