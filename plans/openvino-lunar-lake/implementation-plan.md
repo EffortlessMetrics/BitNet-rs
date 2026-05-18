@@ -1,0 +1,245 @@
+# OpenVINO Lunar Lake Implementation Plan
+
+Status: active
+Owner: intel/openvino
+Created: 2026-05-18
+Linked proposal: [BITNET-PROP-0004](../../docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md)
+Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md)
+Linked ADRs: n/a
+Linked plan: n/a
+Linked issues: n/a
+Linked PRs: n/a
+Support-tier impact: no promotion; PR sequencing only
+Policy impact: no policy exception
+
+## Scope
+
+This plan sequences OpenVINO Lunar Lake work in PR-sized increments. Phase A is
+source-of-truth documentation and proof-boundary work. Later phases improve
+validators, quality diagnosis, timing evidence, route promotion reviews, status
+UX, Rust bridge surfaces, server readiness, and BitNet subgraph research.
+
+The campaign must keep OpenVINO dense SLM, OpenVINO GPU, OpenVINO NPU, native
+OpenCL, BitNet QK256, and server proof families separate.
+
+## Phase A: Encode Docs and Proof Boundaries
+
+### Work item: LNL258V-OPENVINO-DOCS-001
+
+Status: ready
+Campaign item: `LNL258V-OPENVINO-DOCS-001`
+Linked proposal: `BITNET-PROP-0004`
+Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-CONTRACT`
+Blocked by: none
+Blocks: `LNL258V-OPENVINO-DOCS-002`
+
+#### Goal
+
+Add the OpenVINO Lunar Lake productization proposal, route contract, and
+implementation plan.
+
+#### Production delta
+
+Docs/specs only. No runtime code, scripts, model artifacts, generated receipts,
+or route promotion.
+
+#### Acceptance
+
+- Proposal defines why OpenVINO exists as a governed Intel-runtime lane.
+- Route contract defines CPU/GPU/NPU identities, proof families, required
+  receipt fields, fallback rules, and claim boundaries.
+- Implementation plan lists PR-sized next steps.
+- Campaign tracker adds docs/spec work items only.
+- No runtime claims are promoted.
+
+#### Allowed paths
+
+```text
+docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md
+docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md
+plans/openvino-lunar-lake/README.md
+plans/openvino-lunar-lake/implementation-plan.md
+docs/tracking/campaigns/intel-258v-platform/active.toml
+```
+
+#### Forbidden paths
+
+```text
+crates/**
+scripts/**
+ci/hardware/**
+ci/model-artifacts/**
+README.md
+```
+
+#### Proof commands
+
+```bash
+cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+git diff --check
+```
+
+#### Claim boundary
+
+No OpenVINO GPU/NPU route promotion, speedup, power advantage, broad dense SLM
+quality, BitNet QK256, native OpenCL, cold one-off NPU usability, model-binary,
+or server-readiness claim.
+
+### Work item: LNL258V-OPENVINO-DOCS-002
+
+Status: proposed
+Linked proposal: `BITNET-PROP-0004`
+Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-CONTRACT`, future `BITNET-SPEC-OPENVINO-DENSE-SLM`
+Blocked by: `LNL258V-OPENVINO-DOCS-001`
+
+Add `docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md` defining dense SLM support
+through OpenVINO GenAI, exact model/export contract fields, the proof ladder,
+and profile-scoped promotion prerequisites. Do not promote any route.
+
+### Work item: LNL258V-OPENVINO-DOCS-003
+
+Status: proposed
+Linked proposal: `BITNET-PROP-0004`
+Linked specs: future `BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE`
+Blocked by: `LNL258V-OPENVINO-DOCS-002`
+
+Add `docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md` defining NPU
+first-ever compile, cached startup, warm second ask, resident session, cache,
+`PREFILL_HINT`, `GENERATE_HINT`, `MAX_PROMPT_LEN`, and `MIN_RESPONSE_LEN`
+receipt requirements. Do not claim cold one-off NPU usability.
+
+### Work item: LNL258V-OPENVINO-DOCS-004
+
+Status: proposed
+Linked proposal: `BITNET-PROP-0004`
+Linked specs: future quality and phase-timing specs
+Blocked by: `LNL258V-OPENVINO-DOCS-003`
+
+Add:
+
+```text
+docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md
+docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md
+```
+
+Define corpus-v2 profile gates, failure taxonomy, retokenized token-ID marking,
+prompt evidence, generation config, and profile-specific timing fields.
+
+### Work item: LNL258V-OPENVINO-DOCS-005
+
+Status: proposed
+Linked proposal: `BITNET-PROP-0004`
+Linked specs: future route-promotion and BitNet-boundary specs
+Blocked by: `LNL258V-OPENVINO-DOCS-004`
+
+Add:
+
+```text
+docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md
+docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md
+```
+
+Define route states, exact-profile promotion gates, and the separation between
+OpenVINO dense SLM proof and BitNet QK256/I2_S proof.
+
+### Work item: LNL258V-OPENVINO-DOCS-006
+
+Status: proposed
+Linked proposal: `BITNET-PROP-0004`
+Linked specs: future Rust bridge and server specs
+Blocked by: `LNL258V-OPENVINO-DOCS-005`
+
+Add:
+
+```text
+docs/specs/BITNET-SPEC-OPENVINO-RUST-BRIDGE.md
+docs/specs/BITNET-SPEC-OPENVINO-SERVER.md
+```
+
+Define the Python-to-Rust bridge stages and exact-profile server readiness only
+after ask/chat route readiness.
+
+## Phase B: Improve Receipt Validation and Status Without Runtime Promotion
+
+### Work item: LNL258V-OPENVINO-VALIDATE-001
+
+Status: proposed
+Blocked by: Phase A specs
+
+Add validators for selected backend/device consistency, `fallback_used=false` on
+strict routes, retokenized token-ID marking, no dense-SLM-to-BitNet claim leak,
+no OpenVINO-GPU-to-native-OpenCL claim leak, and NPU cache/warm fields when NPU
+promotion is attempted.
+
+### Work item: LNL258V-OPENVINO-STATUS-001
+
+Status: proposed
+Blocked by: `LNL258V-OPENVINO-VALIDATE-001`
+
+Add `docs/status/OPENVINO_CAPABILITY_MATRIX.md` with claim-neutral rows for
+Qwen2.5 OpenVINO CPU/GPU/NPU and BitNet OpenVINO subgraph research.
+
+### Work item: LNL258V-OPENVINO-UX-001
+
+Status: proposed
+Blocked by: `LNL258V-OPENVINO-STATUS-001`
+
+Teach `receipts explain` to summarize OpenVINO route ID, selected backend,
+device, proof family, quality status, timing scope, promotion status, blockers,
+and what the receipt does not prove.
+
+## Phase C: Close Quality Gaps
+
+1. Add `docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md` and classify
+   failures by route and failure class.
+2. Codify generation-budget sensitivity evidence for normalized-match failures.
+3. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
+
+No route can promote until profile cases pass or an explicit spec marks a case
+diagnostic-only.
+
+## Phase D: Close Performance Evidence Gaps
+
+1. Add a profile-specific OpenVINO phase runner with prompt/output token counts,
+   pipeline construction, tokenization, first chunk, TTFT, decode, throughput,
+   perf metrics, and cache config.
+2. Run GPU profile benchmarks for regression, ask, prefill, decode, and
+   structured profiles.
+3. Run NPU cold/cache/warm/resident benchmarks with cache and GenAI NPU config.
+4. Upgrade power/thermal telemetry or record explicit unavailable reasons.
+
+No speed or power claim is allowed without exact-profile benchmark
+qualification.
+
+## Phase E: Route Promotion Reviews
+
+- GPU route promotion review may promote only exact profiles that pass quality,
+  select GPU.0 / Arc 140V without fallback, include profile timing, compare
+  against same-profile CPU evidence, and avoid OpenCL/BitNet claim leakage.
+- NPU route promotion review may promote only exact warm/resident/low-power
+  profiles that pass quality, select NPU without fallback, include cache and
+  resident proof, expose cold-start caveats, and include power/thermal or
+  accepted power-proxy evidence.
+
+## Phase F: Rust-Native Product Surface
+
+Wrap existing Python OpenVINO proof harnesses before replacing them:
+
+```text
+stage 0: Python proof harness, committed receipts
+stage 1: Rust CLI wrapper invokes Python script with strict args
+stage 2: Rust receipt validator consumes Python receipt schema
+stage 3: Rust OpenVINO runtime binding / subprocess bridge
+stage 4: Rust-native OpenVINO GenAI wrapper if feasible
+stage 5: user-facing ask/chat/bench/server surfaces
+```
+
+Do not delete Python proof harnesses until Rust surfaces emit equivalent
+receipts and pass the same validators.
+
+## Phase G: Server and BitNet OpenVINO Research
+
+Server readiness is exact-profile only and follows ask/chat readiness. BitNet
+OpenVINO starts with static subgraph parity and does not become full BitNet
+QK256 decode or speedup proof without a later spec, ADR, plan, and receipts.

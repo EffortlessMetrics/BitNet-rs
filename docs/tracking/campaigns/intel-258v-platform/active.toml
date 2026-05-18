@@ -6308,3 +6308,90 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "BitNet QK256/I2_S behavior changed.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-001"
+status = "ready"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-001-productization-route-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the OpenVINO Lunar Lake productization proposal, OpenVINO route identity contract, and PR-sized implementation plan while preserving docs/spec-only scope, candidate-only OpenVINO GPU/NPU state, and no runtime promotion, speedup, broad dense SLM quality, BitNet QK256, native OpenCL, cold one-off NPU, model-binary, or server-readiness claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md",
+  "plans/openvino-lunar-lake/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO is documented as a governed Intel-runtime lane for dense SLMs and selected small LLMs on Lunar Lake CPU/GPU/NPU.",
+  "OpenVINO CPU, GPU.0 / Arc 140V, NPU / Intel AI Boost, BitNet subgraph reference, and exact-profile server proof families have separate route identities and claim boundaries.",
+  "OpenVINO GPU/NPU routes remain candidates and unpromoted.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Broad dense SLM quality is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Cold one-off NPU usability is proven from hot-path timing.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed BitNet QK256 decode works on Arc or NPU.",
+  "Dense SLM OpenVINO receipts prove BitNet QK256/I2_S behavior.",
+  "OpenVINO GPU receipts prove native OpenCL execution.",
+  "OpenVINO Model Server is broadly ready.",
+  "Model binaries are committed.",
+]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-002"
+status = "proposed"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-002-dense-slm-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-001"]
+acceptance = "Add the OpenVINO dense SLM model/export contract spec for Qwen2.5 0.5B Instruct and future small LLM candidates, including artifact/export manifest, CPU/GPU/NPU smoke, operator ask, corpus-v2, phase profile, route profile, promotion review, model status, and optional exact-profile server ladder without route promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO dense SLM model/export and proof-ladder requirements are documented.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, cold one-off NPU usability, or server readiness is proven.",
+]
