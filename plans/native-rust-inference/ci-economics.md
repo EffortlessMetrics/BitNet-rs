@@ -81,6 +81,47 @@ cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check
 
 Restore default PR performance trigger.
 
+## Work item: CI-3
+
+Status: ready
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0001-source-of-truth-and-claim-boundaries.md`
+Linked ADRs:
+Campaign:
+Blocks: CI-5
+Blocked by: CI-1
+
+### Goal
+
+Preserve in-flight CI evidence for bounded Apple and hardware-adjacent lanes.
+
+### Production delta
+
+Selected Apple Silicon, Apple M4 SLM eval, and Apple M4 inference-ops tier-0
+jobs use timeout caps as the budget control and no longer cancel started runs
+on a newer push to the same PR/ref.
+
+### Non-goals
+
+No expansion of default PR coverage, no live model downloads, and no removal of
+job-level `timeout-minutes` caps.
+
+### Acceptance
+
+Selected bounded Apple lanes set `cancel-in-progress: false` and document why
+timeouts, not cancellation, are the cap for long-running evidence jobs.
+
+### Proof commands
+
+```bash
+git diff --check
+rg -n "cancel-in-progress: true" .github/workflows/apple-silicon.yml .github/workflows/apple-m4-slm-eval-tier0.yml .github/workflows/apple-m4-inference-ops-tier0.yml
+```
+
+### Rollback
+
+Restore `cancel-in-progress: true` for the affected workflows.
+
 ## Work item: CI-5
 
 Status: blocked

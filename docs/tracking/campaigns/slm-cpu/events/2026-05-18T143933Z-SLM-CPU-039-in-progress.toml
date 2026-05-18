@@ -1,0 +1,12 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T14:39:33Z"
+event = "in_progress"
+item = "SLM-CPU-039"
+branch = "codex/slm-cpu-039-workspace-owned-tensor-output"
+actor = "codex"
+summary = "Started the workspace-owned transformer output boundary slice."
+notes = [
+  "The slice is limited to routing or classifying one owned transformer tensor output through TransformerForwardWorkspace.",
+  "It must preserve the Qwen3 Q8_0 strict behavior oracle and must not claim speedup, sustained throughput, Q4/Q5 runtime support, accelerators, Qwen3.5, server work, or BitNet QK256 changes.",
+]
