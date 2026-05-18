@@ -8281,9 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-PROFILE-RUN-002"
-status = "pr_open"
+status = "merged"
 pr = 5803
-head_sha = "f4e2aaa0d913db8634ad8e35d06e34d428c6ae24"
+head_sha = "407d1ff1bfe034ad56abe6e3f1b2b4d9b8564cb8"
+merge_sha = "8e254f0d9b5812150a8daf782b8b7e9890dd9183"
 branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-002-validator"
 stackable = false
 review_mode = "codex_premerge"

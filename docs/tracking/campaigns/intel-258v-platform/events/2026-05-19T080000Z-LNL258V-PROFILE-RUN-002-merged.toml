@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T08:00:00Z"
+event = "merged"
+item = "LNL258V-PROFILE-RUN-002"
+pr = 5803
+head_sha = "407d1ff1bfe034ad56abe6e3f1b2b4d9b8564cb8"
+merge_sha = "8e254f0d9b5812150a8daf782b8b7e9890dd9183"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-002-validator"
+actor = "codex"
+summary = "Merged PR #5803 for Lunar Lake OpenVINO profile-run receipt validation."
+
+notes = [
+  "The merged PR teaches the Lunar Lake OpenVINO validator to accept the explicit dense Qwen OpenVINO profile-run receipt and validates the committed profile-run artifact under the shared route-boundary validator.",
+  "The closeout preserves the no-new-inference, no route-promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior-change boundary.",
+]
