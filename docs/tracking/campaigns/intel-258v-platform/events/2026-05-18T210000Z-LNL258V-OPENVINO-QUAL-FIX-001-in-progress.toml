@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T21:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-FIX-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-FIX-001-exact-answer-fixture"
+summary = "Started the exact-answer fixture-policy update for Lunar Lake corpus v2."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The fixture update is limited to the yes_no_clear_sky overgeneration-sensitive max_new_tokens budget identified by the accepted OpenVINO exact-answer policy.",
+  "The work leaves stop_token_one_word_done unchanged as a true instruction-miss blocker and does not run model inference, promote routes, or claim OpenVINO quality or speed.",
+]

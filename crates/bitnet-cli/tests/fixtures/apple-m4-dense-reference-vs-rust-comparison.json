@@ -1,0 +1,154 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_slm_reference_vs_rust_comparison_v1",
+  "work_item": "M4-DENSE-REF-000",
+  "machine_id": "apple-m4-mac-mini",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "model_id": "qwen2.5-0.5b-instruct-q8_0",
+  "prompt_template": "qwen2.5",
+  "model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "family": "qwen",
+    "architecture": "qwen2",
+    "quantization": "Q8_0"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "authority": "gguf_metadata",
+    "pretokenizer_authority": "qwen2",
+    "strict": true
+  },
+  "corpus": {
+    "name": "apple-m4-slm-quality-determinism-v2",
+    "path": "ci/quality/apple-m4-slm-quality-corpus.yaml",
+    "case_count": 7,
+    "selected_case_count": 2
+  },
+  "reference_runner": {
+    "name": "llama-cli",
+    "path": "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli",
+    "version": "llama.cpp-local-build",
+    "command_shape": "llama-cli -m <model.gguf> -p <qwen2.5-chatml-prompt> -n <max> -ngl 0 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 -r <|im_end|>",
+    "runtime_api": "cpu",
+    "generated_token_ids_available": false,
+    "generated_token_ids_status": "not_exposed_by_reference_runner",
+    "sampler": {
+      "temperature": 0.0,
+      "top_k": 1,
+      "top_p": 1.0,
+      "seed": 42
+    }
+  },
+  "rust_runner": {
+    "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T0000Z/slm-reference-vs-rust/qwen2.5-0.5b-instruct-q8_0/summary.json",
+    "prompt_template": "qwen2.5",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false
+  },
+  "summary": {
+    "total": 2,
+    "comparable_cases": 2,
+    "text_matches": 1,
+    "text_mismatches": 1,
+    "mechanical_scoring_matches": 1,
+    "mechanical_scoring_deltas": 1,
+    "generated_token_id_comparable": 0,
+    "generated_token_id_matches": 0,
+    "generated_token_id_mismatches": 0,
+    "generated_token_id_unavailable": 2
+  },
+  "claim_boundary": {
+    "dense_slm_only": true,
+    "bitnet_evidence_used": false,
+    "reference_only_output_proves_rust": false,
+    "broad_quality_claim": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "speedup_claim": false
+  },
+  "cases": [
+    {
+      "case_id": "dense-qwen25-arithmetic-001",
+      "task_family": "arithmetic_exact",
+      "prompt": {
+        "text": "What is 2+2? Answer briefly.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "7500e70a9b28111044bfcab7d487aa650465d410462f185ed9526ef82aba3415"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "prompt_template": "qwen2.5",
+        "text": "4",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "prompt_template": "qwen2.5",
+        "text": "4",
+        "generated_token_count": 2,
+        "generated_token_ids": [
+          19,
+          151645
+        ],
+        "scoring": {
+          "passed": true
+        }
+      },
+      "comparison": {
+        "text_match": true,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "dense-qwen25-rewrite-001",
+      "task_family": "rewrite_normalized",
+      "prompt": {
+        "text": "Rewrite 'BLUE' in lowercase.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "a4a27c8dfd02f3285e44a0bbedd55a37451d1b3513861fc30a035e2f7ed4725d"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "prompt_template": "qwen2.5",
+        "text": "blue",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "prompt_template": "qwen2.5",
+        "text": "Blue",
+        "generated_token_count": 1,
+        "generated_token_ids": [
+          13025
+        ],
+        "scoring": {
+          "passed": false
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": false,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    }
+  ]
+}

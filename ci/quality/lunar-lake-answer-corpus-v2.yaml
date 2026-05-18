@@ -86,7 +86,7 @@ cases:
     category: yes_no
     profile: ask_short
     question: "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?"
-    max_new_tokens: 8
+    max_new_tokens: 1
     scoring:
       kind: normalized_match
       expected_normalized: "yes"

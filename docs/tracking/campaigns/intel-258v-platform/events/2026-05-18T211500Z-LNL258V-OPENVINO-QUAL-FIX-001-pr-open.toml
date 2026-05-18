@@ -1,0 +1,21 @@
+timestamp = "2026-05-18T21:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-FIX-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-FIX-001-exact-answer-fixture"
+pr = 5644
+head_sha = "db98ce36977e0d3aa43f3f0f8eae082529cc1faa"
+summary = "Opened PR #5644 for the exact-answer fixture-policy update."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5644 tightens only yes_no_clear_sky to the tested passing one-token budget and leaves stop_token_one_word_done unchanged as a true exact-answer instruction-miss blocker.",
+  "The PR is fixture/tracker only and does not run model inference, rerun OpenVINO corpus evidence, promote routes, claim quality or speed, or change BitNet QK256/I2_S behavior.",
+]

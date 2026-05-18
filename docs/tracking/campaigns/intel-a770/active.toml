@@ -23,7 +23,10 @@ hard_constraints = [
 
 [[work_item]]
 id = "A770-000"
-status = "ready"
+status = "merged"
+pr = 5623
+head_sha = "bfb3641f72d85af126184711ed93ced8ba632e6b"
+merge_sha = "27f61f798913a795edc310b31905a2825e50b427"
 branch = "codex/intel-a770/A770-000-truth-reconciliation"
 stackable = false
 review_mode = "codex_premerge"

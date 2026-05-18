@@ -554,7 +554,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-REF-000"
-status = "proposed"
+status = "merged"
+pr = 5640
+head_sha = "7f3736afb8b435dfba7d124704fc505b6a0f4149"
+merge_sha = "8938b70f6e4a20c7164de7acbd2e21a46360021a"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
 stackable = false
 review_mode = "codex_premerge"
@@ -564,6 +567,7 @@ blocked_by = ["M4-CANARY-001", "M4-REPRO-003", "M4-REPRO-004"]
 acceptance = "Define and validate the dense SLM reference-runner vs Rust M4 comparison receipt contract before committing live comparison evidence: artifact kind, supported Qwen identity fields, reference-runner identity and command shape, prompt template and tokenizer authority, Rust generated token IDs, generated text, mechanical scores, summary totals, token-ID availability status, and claim-boundary flags."
 commands = [
   "cargo test --locked -p bitnet-cli dense_slm_reference_vs_rust -- --nocapture",
+  "cargo build --locked -p bitnet-cli --release",
   "target/release/bitnet mac receipts-check <dense-reference-vs-rust-fixture.json> --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

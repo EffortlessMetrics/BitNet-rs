@@ -57,6 +57,8 @@ const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpu
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
+const APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS: &[&str] =
+    &["qwen2.5-0.5b-instruct-q8_0", "qwen2.5-0.5b-instruct-q4_k_m", "qwen2.5-1.5b-instruct-q4_k_m"];
 const BITNET_M4_EXPECTED_MODEL_SHA256: &str =
     "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162";
 const BITNET_M4_EXPECTED_TOKENIZER_SHA256: &str =
@@ -14254,6 +14256,8 @@ fn validate_mac_receipt_value(
         )?
     } else if artifact_kind == "apple_m4_slm_eval_summary" {
         validate_slm_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_reference_vs_rust_comparison_v1" {
+        validate_dense_slm_reference_vs_rust_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
         validate_bitnet_eval_answer_corpus_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_golden_token_canaries" {
@@ -16148,6 +16152,378 @@ fn validate_slm_eval_summary_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
 
     Ok((Some(cases_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_dense_slm_reference_vs_rust_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_slm_reference_vs_rust_comparison_v1",
+    )?;
+    let work_item = require_non_empty_string_at(path, receipt, &["work_item"])?;
+    if !["M4-DENSE-REF-000", "M4-DENSE-REF-001"].contains(&work_item) {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt work_item must be M4-DENSE-REF-000 or M4-DENSE-REF-001",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["machine_id"], "apple-m4-mac-mini")?;
+    let model_id = require_non_empty_string_at(path, receipt, &["model_id"])?;
+    if !APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.contains(&model_id) {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt model_id {model_id:?} is not a supported M4 dense Qwen identity",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["prompt_template"], QWEN_PROMPT_TEMPLATE)?;
+
+    require_non_empty_string_at(path, receipt, &["model", "repo"])?;
+    require_non_empty_string_at(path, receipt, &["model", "file"])?;
+    let model_sha = require_non_empty_string_at(path, receipt, &["model", "sha256"])?;
+    if !is_sha256_hex(model_sha) {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt model.sha256 must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    let model_family = require_non_empty_string_at(path, receipt, &["model", "family"])?;
+    if model_family.eq_ignore_ascii_case("bitnet") {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt must not use BitNet model family evidence",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["model", "architecture"], "qwen2")?;
+    require_non_empty_string_at(path, receipt, &["model", "quantization"])?;
+
+    require_non_empty_string_at(path, receipt, &["tokenizer", "source"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "authority"])?;
+    require_exact_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"], "qwen2")?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    if receipt["tokenizer"]["sha256"].is_string() {
+        let tokenizer_sha = require_non_empty_string_at(path, receipt, &["tokenizer", "sha256"])?;
+        if !is_sha256_hex(tokenizer_sha) {
+            anyhow::bail!(
+                "{} dense SLM reference-vs-Rust receipt tokenizer.sha256 must be a SHA256 hex digest when present",
+                path.display()
+            );
+        }
+    }
+
+    require_non_empty_string_at(path, receipt, &["corpus", "name"])?;
+    require_non_empty_string_at(path, receipt, &["corpus", "path"])?;
+    let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
+    let selected_case_count =
+        require_u64_at(path, receipt, &["corpus", "selected_case_count"], true)?;
+    if selected_case_count > corpus_case_count {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt corpus.selected_case_count must not exceed corpus.case_count",
+            path.display()
+        );
+    }
+
+    require_non_empty_string_at(path, receipt, &["reference_runner", "name"])?;
+    require_non_empty_string_at(path, receipt, &["reference_runner", "path"])?;
+    require_non_empty_string_at(path, receipt, &["reference_runner", "version"])?;
+    require_non_empty_string_at(path, receipt, &["reference_runner", "command_shape"])?;
+    require_exact_string_at(path, receipt, &["reference_runner", "runtime_api"], "cpu")?;
+    require_u64_exact(path, receipt, &["reference_runner", "sampler", "top_k"], 1)?;
+    let reference_temperature =
+        require_number_at(path, receipt, &["reference_runner", "sampler", "temperature"], false)?;
+    if reference_temperature != 0.0 {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt reference runner temperature must be 0.0",
+            path.display()
+        );
+    }
+    let reference_token_ids_available = require_bool_value_at(
+        path,
+        receipt,
+        &["reference_runner", "generated_token_ids_available"],
+    )?;
+    let reference_token_ids_status = require_non_empty_string_at(
+        path,
+        receipt,
+        &["reference_runner", "generated_token_ids_status"],
+    )?;
+    if reference_token_ids_available {
+        if reference_token_ids_status != "available" {
+            anyhow::bail!(
+                "{} dense SLM reference-vs-Rust receipt token IDs are available but status is {reference_token_ids_status:?}",
+                path.display()
+            );
+        }
+    } else if reference_token_ids_status != "not_exposed_by_reference_runner" {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt unavailable reference token IDs must record not_exposed_by_reference_runner",
+            path.display()
+        );
+    }
+
+    require_non_empty_string_at(path, receipt, &["rust_runner", "source_receipt"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["rust_runner", "prompt_template"],
+        QWEN_PROMPT_TEMPLATE,
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["rust_runner", "selected_backend"],
+        APPLE_M4_CPU_NEON,
+    )?;
+    require_exact_string_at(path, receipt, &["rust_runner", "runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["rust_runner", "fallback_used"], false)?;
+
+    let summary_total = require_u64_at(path, receipt, &["summary", "total"], true)?;
+    let comparable_cases = require_u64_at(path, receipt, &["summary", "comparable_cases"], false)?;
+    if comparable_cases > summary_total {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt summary.comparable_cases must not exceed total",
+            path.display()
+        );
+    }
+    let text_matches = require_u64_at(path, receipt, &["summary", "text_matches"], false)?;
+    let text_mismatches = require_u64_at(path, receipt, &["summary", "text_mismatches"], false)?;
+    if text_matches + text_mismatches != comparable_cases {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt text match counts must sum to comparable_cases",
+            path.display()
+        );
+    }
+    let scoring_matches =
+        require_u64_at(path, receipt, &["summary", "mechanical_scoring_matches"], false)?;
+    let scoring_deltas =
+        require_u64_at(path, receipt, &["summary", "mechanical_scoring_deltas"], false)?;
+    if scoring_matches + scoring_deltas != comparable_cases {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt scoring counts must sum to comparable_cases",
+            path.display()
+        );
+    }
+    let token_comparable =
+        require_u64_at(path, receipt, &["summary", "generated_token_id_comparable"], false)?;
+    let token_matches =
+        require_u64_at(path, receipt, &["summary", "generated_token_id_matches"], false)?;
+    let token_mismatches =
+        require_u64_at(path, receipt, &["summary", "generated_token_id_mismatches"], false)?;
+    let token_unavailable =
+        require_u64_at(path, receipt, &["summary", "generated_token_id_unavailable"], false)?;
+    if token_comparable + token_unavailable != summary_total {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt token availability counts must sum to total",
+            path.display()
+        );
+    }
+    if token_matches + token_mismatches != token_comparable {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt token match counts must sum to generated_token_id_comparable",
+            path.display()
+        );
+    }
+    if !reference_token_ids_available
+        && (token_comparable != 0 || token_unavailable != summary_total)
+    {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt reference token IDs are unavailable but summary reports comparable token IDs",
+            path.display()
+        );
+    }
+
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_evidence_used"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "reference_only_output_proves_rust"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    let cases = receipt["cases"].as_array().ok_or_else(|| {
+        anyhow!("{} dense SLM reference-vs-Rust receipt cases must be an array", path.display())
+    })?;
+    if cases.len() as u64 != summary_total || summary_total != selected_case_count {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt cases length, summary.total, and corpus.selected_case_count must match",
+            path.display()
+        );
+    }
+
+    let mut observed_text_matches = 0_u64;
+    let mut observed_text_mismatches = 0_u64;
+    let mut observed_scoring_matches = 0_u64;
+    let mut observed_scoring_deltas = 0_u64;
+    let mut observed_token_comparable = 0_u64;
+    let mut observed_token_matches = 0_u64;
+    let mut observed_token_mismatches = 0_u64;
+    let mut observed_token_unavailable = 0_u64;
+    let mut rust_generated_tokens = 0_u64;
+    for (index, case) in cases.iter().enumerate() {
+        let case_id = require_non_empty_string_at(path, case, &["case_id"])?;
+        require_non_empty_string_at(path, case, &["task_family"])?;
+        require_non_empty_string_at(path, case, &["prompt", "text"])?;
+        require_exact_string_at(path, case, &["prompt", "template_family"], QWEN_PROMPT_TEMPLATE)?;
+        let rendered_sha = require_non_empty_string_at(path, case, &["prompt", "rendered_sha256"])?;
+        if !is_sha256_hex(rendered_sha) {
+            anyhow::bail!(
+                "{} dense SLM reference-vs-Rust case {index} ({case_id}) prompt.rendered_sha256 must be a SHA256 hex digest",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, case, &["reference", "text"])?;
+        require_non_empty_string_at(path, case, &["rust", "text"])?;
+        require_exact_string_at(path, case, &["reference", "model_id"], model_id)?;
+        require_exact_string_at(path, case, &["rust", "model_id"], model_id)?;
+        require_exact_string_at(
+            path,
+            case,
+            &["reference", "prompt_template"],
+            QWEN_PROMPT_TEMPLATE,
+        )?;
+        require_exact_string_at(path, case, &["rust", "prompt_template"], QWEN_PROMPT_TEMPLATE)?;
+
+        let reference_passed =
+            require_bool_value_at(path, case, &["reference", "scoring", "passed"])?;
+        let rust_passed = require_bool_value_at(path, case, &["rust", "scoring", "passed"])?;
+        let mechanical_match =
+            require_bool_value_at(path, case, &["comparison", "mechanical_scoring_match"])?;
+        if mechanical_match != (reference_passed == rust_passed) {
+            anyhow::bail!(
+                "{} dense SLM reference-vs-Rust case {index} ({case_id}) mechanical_scoring_match disagrees with reference/rust scoring",
+                path.display()
+            );
+        }
+        if mechanical_match {
+            observed_scoring_matches += 1;
+        } else {
+            observed_scoring_deltas += 1;
+        }
+
+        let rust_generated_count =
+            require_u64_at(path, case, &["rust", "generated_token_count"], true)?;
+        let rust_ids_len =
+            require_non_empty_u64_array_at(path, case, &["rust", "generated_token_ids"])? as u64;
+        if rust_generated_count != rust_ids_len {
+            anyhow::bail!(
+                "{} dense SLM reference-vs-Rust case {index} ({case_id}) Rust generated token count does not match generated_token_ids",
+                path.display()
+            );
+        }
+        rust_generated_tokens = rust_generated_tokens.saturating_add(rust_generated_count);
+
+        let text_match = require_bool_value_at(path, case, &["comparison", "text_match"])?;
+        if text_match {
+            observed_text_matches += 1;
+            if case["reference"]["text"].as_str() != case["rust"]["text"].as_str() {
+                anyhow::bail!(
+                    "{} dense SLM reference-vs-Rust case {index} ({case_id}) records text_match=true but texts differ",
+                    path.display()
+                );
+            }
+        } else {
+            observed_text_mismatches += 1;
+        }
+
+        let token_status =
+            require_non_empty_string_at(path, case, &["comparison", "generated_token_ids_status"])?;
+        match token_status {
+            "matched" | "mismatched" => {
+                if !reference_token_ids_available {
+                    anyhow::bail!(
+                        "{} dense SLM reference-vs-Rust case {index} ({case_id}) compares reference token IDs even though the runner reports them unavailable",
+                        path.display()
+                    );
+                }
+                let reference_count =
+                    require_u64_at(path, case, &["reference", "generated_token_count"], true)?;
+                let reference_ids_len = require_non_empty_u64_array_at(
+                    path,
+                    case,
+                    &["reference", "generated_token_ids"],
+                )? as u64;
+                if reference_count != reference_ids_len {
+                    anyhow::bail!(
+                        "{} dense SLM reference-vs-Rust case {index} ({case_id}) reference generated token count does not match generated_token_ids",
+                        path.display()
+                    );
+                }
+                let token_match = require_bool_value_at(
+                    path,
+                    case,
+                    &["comparison", "generated_token_ids_match"],
+                )?;
+                if (token_status == "matched") != token_match {
+                    anyhow::bail!(
+                        "{} dense SLM reference-vs-Rust case {index} ({case_id}) generated token ID status and match flag disagree",
+                        path.display()
+                    );
+                }
+                observed_token_comparable += 1;
+                if token_match {
+                    observed_token_matches += 1;
+                } else {
+                    observed_token_mismatches += 1;
+                }
+            }
+            "not_exposed_by_reference_runner" => {
+                if reference_token_ids_available {
+                    anyhow::bail!(
+                        "{} dense SLM reference-vs-Rust case {index} ({case_id}) omits reference token IDs even though the runner reports them available",
+                        path.display()
+                    );
+                }
+                if !case["reference"]["generated_token_ids"].is_null()
+                    && !case["reference"]["generated_token_ids"]
+                        .as_array()
+                        .is_some_and(|ids| ids.is_empty())
+                {
+                    anyhow::bail!(
+                        "{} dense SLM reference-vs-Rust case {index} ({case_id}) must leave reference generated_token_ids null or empty when unavailable",
+                        path.display()
+                    );
+                }
+                require_bool_at(path, case, &["comparison", "generated_token_ids_match"], false)?;
+                observed_token_unavailable += 1;
+            }
+            observed => {
+                anyhow::bail!(
+                    "{} dense SLM reference-vs-Rust case {index} ({case_id}) has unsupported generated_token_ids_status {observed:?}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    if observed_text_matches != text_matches
+        || observed_text_mismatches != text_mismatches
+        || observed_scoring_matches != scoring_matches
+        || observed_scoring_deltas != scoring_deltas
+        || observed_token_comparable != token_comparable
+        || observed_token_matches != token_matches
+        || observed_token_mismatches != token_mismatches
+        || observed_token_unavailable != token_unavailable
+    {
+        anyhow::bail!(
+            "{} dense SLM reference-vs-Rust receipt summary counts do not match case data",
+            path.display()
+        );
+    }
+
+    Ok((Some(summary_total as usize), Some(rust_generated_tokens as usize)))
 }
 
 fn validate_bitnet_eval_answer_corpus_receipt(
@@ -18726,6 +19102,87 @@ mod tests {
     }
 
     #[test]
+    fn dense_slm_reference_vs_rust_receipt_accepts_valid_contract()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_dense_slm_reference_vs_rust_receipt();
+
+        let summary =
+            validate_mac_receipt_value(Path::new("dense-reference-vs-rust.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_reference_vs_rust_comparison_v1");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(3));
+        Ok(())
+    }
+
+    #[test]
+    fn dense_slm_reference_vs_rust_receipt_rejects_bitnet_family()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_dense_slm_reference_vs_rust_receipt();
+        receipt["model"]["family"] = serde_json::json!("bitnet");
+
+        let err =
+            match validate_mac_receipt_value(Path::new("dense-reference-vs-rust.json"), &receipt) {
+                Ok(summary) => {
+                    return Err(format!(
+                        "dense reference-vs-Rust BitNet family should fail, got {summary:?}"
+                    )
+                    .into());
+                }
+                Err(err) => err.to_string(),
+            };
+
+        assert!(err.contains("BitNet model family"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn dense_slm_reference_vs_rust_receipt_rejects_missing_rust_token_ids()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_dense_slm_reference_vs_rust_receipt();
+        receipt["cases"][0]["rust"]["generated_token_ids"] = serde_json::json!([]);
+
+        let err = match validate_mac_receipt_value(
+            Path::new("dense-reference-vs-rust.json"),
+            &receipt,
+        ) {
+            Ok(summary) => {
+                let message = format!(
+                    "dense reference-vs-Rust without Rust token IDs should fail, got {summary:?}"
+                );
+                return Err(message.into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("generated_token_ids"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn dense_slm_reference_vs_rust_receipt_rejects_bitnet_evidence_claim()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_dense_slm_reference_vs_rust_receipt();
+        receipt["claim_boundary"]["bitnet_evidence_used"] = serde_json::json!(true);
+
+        let err =
+            match validate_mac_receipt_value(Path::new("dense-reference-vs-rust.json"), &receipt) {
+                Ok(summary) => {
+                    return Err(format!(
+                        "dense reference-vs-Rust BitNet evidence claim should fail, got {summary:?}"
+                    )
+                    .into());
+                }
+                Err(err) => err.to_string(),
+            };
+
+        assert!(err.contains("bitnet_evidence_used"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn prompt_generation_identity_accepts_template_aliases()
     -> Result<(), Box<dyn std::error::Error>> {
         let receipt = serde_json::json!({
@@ -18942,6 +19399,158 @@ mod tests {
                         "broad_performance_claim": false,
                         "speedup_claim": false,
                         "full_metal_inference_claimed": false
+                    }
+                }
+            ]
+        })
+    }
+
+    fn test_dense_slm_reference_vs_rust_receipt() -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_slm_reference_vs_rust_comparison_v1",
+            "work_item": "M4-DENSE-REF-000",
+            "machine_id": "apple-m4-mac-mini",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "model_id": "qwen2.5-0.5b-instruct-q8_0",
+            "prompt_template": QWEN_PROMPT_TEMPLATE,
+            "model": {
+                "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+                "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "family": "qwen",
+                "architecture": "qwen2",
+                "quantization": "Q8_0"
+            },
+            "tokenizer": {
+                "source": "gguf_metadata",
+                "authority": "gguf_metadata",
+                "pretokenizer_authority": "qwen2",
+                "strict": true
+            },
+            "corpus": {
+                "name": "apple-m4-slm-quality-determinism-v2",
+                "path": "ci/quality/apple-m4-slm-quality-corpus.yaml",
+                "case_count": 7,
+                "selected_case_count": 2
+            },
+            "reference_runner": {
+                "name": "llama-cli",
+                "path": "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli",
+                "version": "llama.cpp-local-build",
+                "command_shape": "llama-cli -m <model.gguf> -p <qwen2.5-chatml-prompt> -n <max> -ngl 0 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 -r <|im_end|>",
+                "runtime_api": "cpu",
+                "generated_token_ids_available": false,
+                "generated_token_ids_status": "not_exposed_by_reference_runner",
+                "sampler": {
+                    "temperature": 0.0,
+                    "top_k": 1,
+                    "top_p": 1.0,
+                    "seed": 42
+                }
+            },
+            "rust_runner": {
+                "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T0000Z/slm-reference-vs-rust/qwen2.5-0.5b-instruct-q8_0/summary.json",
+                "prompt_template": QWEN_PROMPT_TEMPLATE,
+                "selected_backend": APPLE_M4_CPU_NEON,
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "summary": {
+                "total": 2,
+                "comparable_cases": 2,
+                "text_matches": 1,
+                "text_mismatches": 1,
+                "mechanical_scoring_matches": 1,
+                "mechanical_scoring_deltas": 1,
+                "generated_token_id_comparable": 0,
+                "generated_token_id_matches": 0,
+                "generated_token_id_mismatches": 0,
+                "generated_token_id_unavailable": 2
+            },
+            "claim_boundary": {
+                "dense_slm_only": true,
+                "bitnet_evidence_used": false,
+                "reference_only_output_proves_rust": false,
+                "broad_quality_claim": false,
+                "broad_performance_claim": false,
+                "full_metal_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "neural_engine_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "macbook_evidence": false,
+                "speedup_claim": false
+            },
+            "cases": [
+                {
+                    "case_id": "dense-qwen25-arithmetic-001",
+                    "task_family": "arithmetic_exact",
+                    "prompt": {
+                        "text": "What is 2+2? Answer briefly.",
+                        "template_family": QWEN_PROMPT_TEMPLATE,
+                        "rendered_sha256": "7500e70a9b28111044bfcab7d487aa650465d410462f185ed9526ef82aba3415"
+                    },
+                    "reference": {
+                        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                        "prompt_template": QWEN_PROMPT_TEMPLATE,
+                        "text": "4",
+                        "generated_token_ids": null,
+                        "scoring": {
+                            "passed": true
+                        }
+                    },
+                    "rust": {
+                        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                        "prompt_template": QWEN_PROMPT_TEMPLATE,
+                        "text": "4",
+                        "generated_token_count": 2,
+                        "generated_token_ids": [19, 151645],
+                        "scoring": {
+                            "passed": true
+                        }
+                    },
+                    "comparison": {
+                        "text_match": true,
+                        "mechanical_scoring_match": true,
+                        "generated_token_ids_status": "not_exposed_by_reference_runner",
+                        "generated_token_ids_match": false
+                    }
+                },
+                {
+                    "case_id": "dense-qwen25-rewrite-001",
+                    "task_family": "rewrite_normalized",
+                    "prompt": {
+                        "text": "Rewrite 'BLUE' in lowercase.",
+                        "template_family": QWEN_PROMPT_TEMPLATE,
+                        "rendered_sha256": "a4a27c8dfd02f3285e44a0bbedd55a37451d1b3513861fc30a035e2f7ed4725d"
+                    },
+                    "reference": {
+                        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                        "prompt_template": QWEN_PROMPT_TEMPLATE,
+                        "text": "blue",
+                        "generated_token_ids": null,
+                        "scoring": {
+                            "passed": true
+                        }
+                    },
+                    "rust": {
+                        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                        "prompt_template": QWEN_PROMPT_TEMPLATE,
+                        "text": "Blue",
+                        "generated_token_count": 1,
+                        "generated_token_ids": [13025],
+                        "scoring": {
+                            "passed": false
+                        }
+                    },
+                    "comparison": {
+                        "text_match": false,
+                        "mechanical_scoring_match": false,
+                        "generated_token_ids_status": "not_exposed_by_reference_runner",
+                        "generated_token_ids_match": false
                     }
                 }
             ]

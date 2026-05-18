@@ -1,0 +1,21 @@
+timestamp = "2026-05-18T20:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-POLICY-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-POLICY-001-exact-answer"
+pr = 5639
+head_sha = "49bf440931942b7b7eae6a19aeb19fa9bedbc039"
+summary = "Opened PR #5639 for the OpenVINO exact-answer generation policy."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5639 codifies fixture-budget overgeneration versus true exact-answer instruction misses for OpenVINO corpus-v2 normalized-match cases.",
+  "The PR remains spec/tracker only and does not change corpus fixtures, OpenVINO generation behavior, route promotion, speedup/power claims, accelerator claims, or BitNet QK256/I2_S behavior.",
+]

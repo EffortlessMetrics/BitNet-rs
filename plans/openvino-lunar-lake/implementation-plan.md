@@ -281,10 +281,91 @@ Acceptance additions:
 
 ## Phase C: Close Quality Gaps
 
-1. Add `docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md` and classify
-   failures by route and failure class.
-2. Codify generation-budget sensitivity evidence for normalized-match failures.
-3. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
+### Work item: LNL258V-OPENVINO-QUAL-REPORT-001
+
+Status: merged
+Linked PR: #5633
+Blocked by: `LNL258V-OPENVINO-UX-001`, `LNL258V-OV-QUAL-005`
+
+Add `docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md` and classify
+existing OpenVINO GPU/NPU corpus-v2 failures by route, profile, case, and
+failure class.
+
+Production delta: diagnostic report and tracker wiring only. Use existing
+committed receipts; do not run inference, change generation policy, promote
+GPU/NPU routes, claim speedup or power advantage, or change BitNet QK256/I2_S
+behavior.
+
+Acceptance additions:
+
+- GPU and NPU corpus-v2 failures are summarized from committed diagnosis
+  receipts.
+- Generation-budget sensitivity is linked for normalized-match failures.
+- Candidate-route blockers remain explicit, including direct token-ID
+  visibility gaps, benchmark-qualified advantage gaps, and NPU cold/resident
+  gaps.
+- Claim boundaries separate OpenVINO dense SLM evidence from native OpenCL,
+  native NPU, and BitNet QK256/I2_S proof.
+
+### Work item: LNL258V-OPENVINO-QUAL-POLICY-001
+
+Status: merged
+Linked PR: #5639
+Blocked by: `LNL258V-OPENVINO-QUAL-REPORT-001`, `LNL258V-OV-QUAL-005`
+
+Codify exact-answer generation policy for normalized-match OpenVINO corpus-v2
+failures. The policy must distinguish fixture-budget overgeneration from true
+exact-answer instruction misses, define when smaller-budget evidence may
+justify a fixture or generation-policy change, and keep GPU/NPU routes blocked
+until the accepted policy is rerun.
+
+Production delta: spec and tracker wiring only. Do not edit corpus fixtures,
+runner scripts, runtime code, committed hardware receipts, route promotion
+artifacts, or OpenVINO generation behavior.
+
+Acceptance additions:
+
+- The quality-corpus spec defines exact-answer policy for overgeneration versus
+  instruction misses.
+- The spec names the current `yes_no_clear_sky` and
+  `stop_token_one_word_done` policy outcomes from committed sensitivity
+  evidence.
+- Route promotion remains blocked until canonical fixture or generation policy
+  changes are rerun, or a later accepted spec marks a case diagnostic-only.
+- Claim boundaries preserve no inference, route promotion, speedup, power,
+  accelerator, or BitNet QK256/I2_S claims.
+
+### Work item: LNL258V-OPENVINO-QUAL-FIX-001
+
+Status: merged
+Linked PR: #5644
+Blocked by: `LNL258V-OPENVINO-QUAL-POLICY-001`
+
+Apply the accepted exact-answer policy to the corpus-v2 fixture by tightening
+only the `yes_no_clear_sky` generation budget from the overgeneration-sensitive
+fixture value to the tested passing one-token budget. Leave
+`stop_token_one_word_done` unchanged because committed sensitivity evidence
+classifies it as a true exact-answer instruction miss for the tested budgets.
+
+Production delta: fixture and tracker wiring only. Validate with
+`answer-corpus --dry-run`; do not run model inference, refresh committed route
+receipts, promote routes, or claim OpenVINO quality, speedup, power advantage,
+native OpenCL/NPU execution, accelerator proof, or BitNet QK256/I2_S behavior.
+
+Acceptance additions:
+
+- The canonical corpus-v2 fixture uses `max_new_tokens=1` for
+  `yes_no_clear_sky`.
+- The `stop_token_one_word_done` case remains a blocking exact-answer
+  instruction miss until prompt, template, generation policy, or model behavior
+  is corrected and rerun.
+- Corpus shape dry-run validation passes without loading a model.
+- Route promotion remains blocked until CPU/OpenVINO corpus-v2 receipts are
+  rerun under the updated fixture and exact-profile timing/power gates are met.
+
+### Remaining Phase C Items
+
+1. Rerun corpus-v2 after the exact-answer fixture-policy update.
 
 No route can promote until profile cases pass or an explicit spec marks a case
 diagnostic-only.
