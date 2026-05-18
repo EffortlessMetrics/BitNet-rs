@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T23:03:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-014"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-014-bitnet-250-repaired-run"
+pr = 5795
+head_sha = "0700946d2e1a45a2435fe04e8acea3c62815eaf9"
+
+notes = [
+  "Opened PR #5795 with the repaired BitNet 250-case M4 CPU/NEON receipt set for accepted Microsoft I2_S GGUF and accepted external tokenizer identity.",
+  "The run completed 250 cases with zero timeouts, fallback_used=false, 205/250 quality passes, 210/250 mechanical scoring passes, validated aggregate plus child receipts, and a context-mismatch statement against the unrepaired 2.0.0 baseline.",
+  "No BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or dense-SLM-as-BitNet claim.",
+]

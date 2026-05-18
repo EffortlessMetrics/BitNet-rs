@@ -1531,13 +1531,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-014"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-014-bitnet-250-repaired-run"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-013"]
+pr = 5795
 acceptance = "Run the repaired BitNet 250-case corpus on the M4 Mac mini through the accepted Microsoft I2_S GGUF, accepted external tokenizer, and apple-m4-cpu-neon backend; publish aggregate and child receipts, generated token IDs, task-family pass rates, deterministic failure taxonomy, timing summary, reference-vs-Rust comparison where available, receipt validation, and an explicit new-baseline or context-mismatch statement."
 commands = [
   "target/release/bitnet answer-corpus --device apple-m4-cpu-neon --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250-repaired/answer-corpus.json --per-prompt-timeout-seconds 300",
