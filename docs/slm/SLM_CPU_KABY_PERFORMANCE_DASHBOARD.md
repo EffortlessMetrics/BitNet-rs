@@ -321,6 +321,30 @@ This is attribution only. It identifies whether the prefill hotspot is coming
 from token embedding or dense model forward execution before any Q8_0 GEMV,
 RMSNorm, RoPE, or attention-loop optimization is attempted.
 
+## Prefill Attribution Artifact
+
+SLM-CPU-035 records a real i5-8250U Qwen3 Q8_0 warm-session receipt after the
+prompt-prefill attribution slice:
+
+```text
+evidence = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prefill-attribution.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prefill-attribution-validation.json
+generated_outputs_match_baseline = true
+decoded_text_matches_baseline = true
+fallback_used = false
+tokenizer_source = gguf_metadata
+tokenizer_strict = true
+first_prompt_prefill_embed_alloc_bytes = 157108
+first_prompt_prefill_forward_alloc_bytes = 554666438
+```
+
+The receipt preserves the behavior oracle from the prompt-token cache baseline
+while adding `prompt_prefill_breakdown.embed`,
+`prompt_prefill_breakdown.forward`, and ranked prompt-prefill subcomponent
+hotspots. It is evidence for attribution only: it does not claim a runtime
+speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support,
+accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
