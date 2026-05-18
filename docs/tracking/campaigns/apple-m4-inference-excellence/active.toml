@@ -1432,8 +1432,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-UX-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-002-explain-open"
+pr = 5478
+head_sha = "4702b81ab5f29cb4607e33c20bb308f0dab2cf00"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
