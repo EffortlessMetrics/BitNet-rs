@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T20:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-POLICY-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-POLICY-001-exact-answer"
+summary = "Started the policy-only OpenVINO exact-answer generation contract work."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The policy distinguishes fixture-budget overgeneration from true exact-answer instruction misses using committed generation-budget sensitivity evidence.",
+  "The work does not edit corpus fixtures, runner scripts, runtime code, hardware receipts, route promotion artifacts, or OpenVINO generation behavior.",
+]
