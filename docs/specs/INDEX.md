@@ -1,6 +1,56 @@
 # Specs Index
 
 
+## Intel GPU productization
+
+Use these documents before implementing or claiming Intel GPU support:
+
+1. [Intel GPU source-of-truth map](../intel-gpu/README.md)
+   - Defines the A770 native OpenCL, A770 OpenVINO reference, Arc 140V
+     native OpenCL, Arc 140V OpenVINO GPU, NPU, and CPU proof-family
+     boundaries.
+2. [Intel GPU productization proposal](../proposals/BITNET-PROP-0006-intel-gpu-productization.md)
+   - Explains why Intel GPU exists as selected-device, selected-model,
+     receipt-backed local inference rather than generic GPU detection.
+3. [Intel GPU implementation plan](../../plans/intel-gpu/implementation-plan.md)
+   - Sequences documentation, specification, A770 native OpenCL, Lunar Lake
+     OpenVINO GPU, Arc 140V native OpenCL, and shared UX work.
+4. [Intel GPU Route Contract](BITNET-SPEC-INTEL-GPU-ROUTE-CONTRACT.md)
+   - Defines concrete route IDs, backend labels, fallback rules, and the common
+     claim ladder.
+5. [Intel GPU Device Identity](BITNET-SPEC-INTEL-GPU-DEVICE-IDENTITY.md)
+   - Normalizes OS, PCI, driver, OpenCL, Level Zero, OpenVINO GPU, memory,
+     ReBAR, PCIe, render-node, and telemetry identity fields.
+6. [Intel GPU BitNet QK256](BITNET-SPEC-INTEL-GPU-BITNET-QK256.md)
+   - Defines official BitNet QK256/I2_S semantics and rejects toy I2_S kernels
+     as official QK256 proof.
+7. [Intel GPU Dense SLM](BITNET-SPEC-INTEL-GPU-DENSE-SLM.md)
+   - Defines the Arc 140V OpenVINO GPU dense Qwen SLM candidate and profile
+     promotion ladder.
+8. [Intel GPU Quality](BITNET-SPEC-INTEL-GPU-QUALITY.md)
+   - Defines route-specific answer/behavior gates and failure taxonomy.
+9. [Intel GPU Performance](BITNET-SPEC-INTEL-GPU-PERFORMANCE.md)
+   - Defines exact profiles, timing fields, comparator requirements, and
+     history gates for performance claims.
+10. [Intel GPU Residency](BITNET-SPEC-INTEL-GPU-RESIDENCY.md)
+    - Defines residency classes and phase tables so partial acceleration does
+      not become full device residency.
+11. [Intel GPU Status Surface](BITNET-SPEC-INTEL-GPU-STATUS-SURFACE.md)
+    - Defines future model status, route, receipts explain, and gpu doctor
+      surfaces.
+12. [A770 BitNet Claim Boundary](a770-bitnet-claim-boundary.md)
+    - Defines the first A770 product claim as trusted partial BitNet I2_S
+      acceleration, not all Intel GPUs or full device residency.
+13. [Intel Arc A770 GPU Roadmap](intel-arc-a770-gpu-roadmap.md)
+    - Defines the A770 hardware/runtime lane and OpenCL-first proof path.
+
+Do not proceed from generic GPU detection, OpenCL availability, OpenVINO GPU
+execution, CPU fallback, or dense SLM evidence to an Intel GPU product claim.
+Intel GPU claims must name the selected device, runtime API, model family, proof
+family, fallback state, quality result, performance profile, and residency
+boundary.
+
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:

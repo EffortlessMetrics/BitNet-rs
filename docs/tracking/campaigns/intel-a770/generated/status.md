@@ -16,3 +16,4 @@
 - OpenCL-first for native A770 proof.
 - OpenVINO GPU is reference only.
 - CPU fallback cannot count as A770 execution.
+- A770 route promotion requires claim-grade committed receipts; documentation-only Intel GPU PRs do not promote routes or change kernels.

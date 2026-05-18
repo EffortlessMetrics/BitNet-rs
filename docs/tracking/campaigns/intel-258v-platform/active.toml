@@ -9,12 +9,14 @@ end_state = [
   "258V CPU strict real-GGUF validation, scalar/AVX2 answer parity, and phase receipts provide the CPU reference plate.",
   "Arc 140V OpenCL, OpenVINO GPU, and OpenVINO NPU evidence are not conflated.",
   "Receipts record OS, drivers, memory, power, thermal, and WSL/native visibility context.",
+  "Shared Intel GPU source-of-truth map keeps Arc 140V OpenVINO GPU, Arc 140V native OpenCL, A770 native OpenCL, NPU, CPU, dense SLM, and BitNet QK256 proof labels separate.",
 ]
 
 hard_constraints = [
   "258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.",
   "Arc 140V OpenCL proof is not NPU proof.",
   "OpenVINO GPU smoke is not packed BitNet kernel proof.",
+  "OpenVINO GPU dense SLM evidence remains candidate-only until profile-specific quality, timing-applicability, comparator, telemetry, and claim-boundary gates pass.",
   "WSL only counts for NPU validation if OpenVINO reports NPU inside WSL.",
 ]
 

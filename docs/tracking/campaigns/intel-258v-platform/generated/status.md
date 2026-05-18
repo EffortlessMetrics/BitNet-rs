@@ -127,4 +127,5 @@
 - 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.
 - Arc 140V OpenCL proof is not NPU proof.
 - OpenVINO GPU smoke is not packed BitNet kernel proof.
+- OpenVINO GPU dense SLM evidence remains candidate-only until profile-specific quality, timing-applicability, comparator, telemetry, and claim-boundary gates pass.
 - WSL only counts for NPU validation if OpenVINO reports NPU inside WSL.

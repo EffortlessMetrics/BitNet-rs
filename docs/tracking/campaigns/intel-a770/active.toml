@@ -10,12 +10,14 @@ end_state = [
   "Tiny OpenCL smoke executes with fallback_used=false.",
   "CPU/OpenCL parity exists for one kernel or subgraph.",
   "Receipts preserve selected device identity before performance claims.",
+  "Shared Intel GPU source-of-truth map keeps A770 native OpenCL proof separate from Arc 140V, OpenVINO GPU, NPU, CPU, CUDA, dense SLM, and full-residency claims.",
 ]
 
 hard_constraints = [
   "OpenCL-first for native A770 proof.",
   "OpenVINO GPU is reference only.",
   "CPU fallback cannot count as A770 execution.",
+  "A770 route promotion requires claim-grade committed receipts; documentation-only Intel GPU PRs do not promote routes or change kernels.",
 ]
 
 [[work_item]]
