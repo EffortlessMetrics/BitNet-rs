@@ -1625,6 +1625,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             );
         let selected_query_score_frontier = attention_selected_query_score_frontier(
             &selected_query_score_input_bucket_source,
+            &selected_query_rope_to_f16_head_conversion,
             &selected_query_score_input_f16_frontier,
             &selected_query_pre_score_rope_source,
             &selected_query_pre_rope_epsilon_materiality,
@@ -32505,6 +32506,7 @@ fn selected_report_classification(report: &Value) -> Option<&str> {
 
 fn attention_selected_query_score_frontier(
     score_input_source: &Value,
+    rope_to_f16_head_conversion: &Value,
     f16_frontier: &Value,
     pre_score_rope_source: &Value,
     pre_rope_projection_materiality: &Value,
@@ -32514,6 +32516,8 @@ fn attention_selected_query_score_frontier(
     attention_norm_replay_policy: &Value,
 ) -> Value {
     let source_classification = selected_report_classification(score_input_source);
+    let rope_to_f16_head_classification =
+        selected_report_classification(rope_to_f16_head_conversion);
     let f16_classification = selected_report_classification(f16_frontier);
     let pre_score_classification = selected_report_classification(pre_score_rope_source);
     let pre_rope_classification = selected_report_classification(pre_rope_projection_materiality);
@@ -32525,6 +32529,7 @@ fn attention_selected_query_score_frontier(
     let norm_replay_classification = selected_report_classification(attention_norm_replay_policy);
     let missing_context = [
         source_classification,
+        rope_to_f16_head_classification,
         f16_classification,
         pre_score_classification,
         pre_rope_classification,
@@ -32535,14 +32540,19 @@ fn attention_selected_query_score_frontier(
     ]
     .iter()
     .any(Option::is_none);
+    let source_directly_pinned =
+        source_classification == Some("selected_query_score_input_bucket_source_reference_to_rope");
+    let source_pinned_by_head_policy = source_classification
+        == Some("selected_query_score_input_bucket_source_head_boundary_unpinned")
+        && rope_to_f16_head_classification
+            == Some("selected_query_rope_to_f16_head_conversion_score_input_matches_f16");
 
     let classification = if missing_context {
         "selected_query_score_frontier_missing_context"
-    } else if source_classification
-        != Some("selected_query_score_input_bucket_source_reference_to_rope")
-    {
+    } else if !source_directly_pinned && !source_pinned_by_head_policy {
         "selected_query_score_frontier_score_input_source_unpinned"
-    } else if f16_classification != Some("selected_query_score_input_f16_frontier_not_f16_boundary")
+    } else if source_directly_pinned
+        && f16_classification != Some("selected_query_score_input_f16_frontier_not_f16_boundary")
     {
         "selected_query_score_frontier_f16_boundary_active"
     } else if pre_score_classification
@@ -32586,6 +32596,8 @@ fn attention_selected_query_score_frontier(
         "selected_token": value_u64(score_input_source, "/selected_token"),
         "key_slot": value_u64(score_input_source, "/selected_qk_bucket_row/key_slot"),
         "score_input_source_classification": source_classification,
+        "rope_to_f16_head_conversion_classification": rope_to_f16_head_classification,
+        "score_input_source_pinned_by_head_policy": source_pinned_by_head_policy,
         "f16_frontier_classification": f16_classification,
         "pre_score_rope_source_classification": pre_score_classification,
         "pre_rope_projection_materiality_classification": pre_rope_classification,
@@ -51967,6 +51979,9 @@ mod tests {
         let report = attention_selected_query_score_frontier(
             &selected_query_score_frontier_source_fixture(),
             &json!({
+                "classification": "selected_query_rope_to_f16_head_conversion_not_active"
+            }),
+            &json!({
                 "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
             }),
             &json!({
@@ -52014,9 +52029,60 @@ mod tests {
     }
 
     #[test]
+    fn selected_query_score_frontier_accepts_head_policy_match() {
+        let mut source = selected_query_score_frontier_source_fixture();
+        source["classification"] =
+            json!("selected_query_score_input_bucket_source_head_boundary_unpinned");
+        source["selected_dim"] = Value::Null;
+
+        let report = attention_selected_query_score_frontier(
+            &source,
+            &json!({
+                "classification": "selected_query_rope_to_f16_head_conversion_score_input_matches_f16"
+            }),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_clean"
+            }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_query_score_frontier_downstream_score_residual_after_clean_norm_replay"
+            ))
+        );
+        assert_eq!(report.pointer("/score_input_source_pinned_by_head_policy"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/rope_to_f16_head_conversion_classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_score_input_matches_f16"))
+        );
+    }
+
+    #[test]
     fn selected_query_score_frontier_reports_active_f16_boundary() {
         let report = attention_selected_query_score_frontier(
             &selected_query_score_frontier_source_fixture(),
+            &json!({
+                "classification": "selected_query_rope_to_f16_head_conversion_not_active"
+            }),
             &json!({
                 "classification": "selected_query_score_input_f16_frontier_score_input_matches_f16_conversion"
             }),
@@ -52057,6 +52123,9 @@ mod tests {
         let report = attention_selected_query_score_frontier(
             &selected_query_score_frontier_source_fixture(),
             &json!({
+                "classification": "selected_query_rope_to_f16_head_conversion_not_active"
+            }),
+            &json!({
                 "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
             }),
             &json!({
@@ -52094,6 +52163,7 @@ mod tests {
     #[test]
     fn selected_query_score_frontier_reports_missing_context() {
         let report = attention_selected_query_score_frontier(
+            &json!({}),
             &json!({}),
             &json!({
                 "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
