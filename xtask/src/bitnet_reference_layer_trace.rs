@@ -1562,6 +1562,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             );
         let f64_score_history_residual =
             attention_f64_score_history_residual(&selected_pre_rope_f64_residual, &f64_downstream);
+        let f64_qk_score_input_bucket_residual = attention_f64_qk_score_input_bucket_residual(
+            &f64_score_history_residual,
+            &f64_downstream,
+        );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1569,6 +1573,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_residual"] =
             selected_pre_rope_f64_residual;
         cpu_comparison["attention_f64_score_history_residual"] = f64_score_history_residual;
+        cpu_comparison["attention_f64_qk_score_input_bucket_residual"] =
+            f64_qk_score_input_bucket_residual;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -31411,6 +31417,158 @@ fn attention_f64_score_history_residual(
     })
 }
 
+fn f64_qk_score_input_bucket_residual_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "f64_qk_score_input_bucket_residual_selected_query_history" => {
+            "localize the selected query score-input history bucket before changing score accumulation, softmax, value-mix, or RMSNorm production math"
+        }
+        "f64_qk_score_input_bucket_residual_selected_key_history" => {
+            "localize the selected key score-input history bucket before changing score accumulation, softmax, value-mix, or RMSNorm production math"
+        }
+        "f64_qk_score_input_bucket_residual_selected_qk_history" => {
+            "split selected Q and K score-input history buckets before changing score accumulation, softmax, value-mix, or RMSNorm production math"
+        }
+        "f64_qk_score_input_bucket_residual_query_history" => {
+            "localize f64 query score-input history bucket drift before changing score accumulation or softmax"
+        }
+        "f64_qk_score_input_bucket_residual_key_history" => {
+            "localize f64 key score-input history bucket drift before changing score accumulation or softmax"
+        }
+        "f64_qk_score_input_bucket_residual_qk_history" => {
+            "separate f64 query and key score-input history bucket drift before changing score accumulation or softmax"
+        }
+        "f64_qk_score_input_bucket_residual_current_key" => {
+            "localize current key score-input drift before changing score accumulation or softmax"
+        }
+        "f64_qk_score_input_bucket_residual_numeric_no_bucket" => {
+            "pin f64 Q/K score-input numeric drift without bucket crossings before changing score accumulation"
+        }
+        "f64_qk_score_input_bucket_residual_clean" => {
+            "Q/K score-input bucket residual is clean; rerun raw score and probability residual attribution"
+        }
+        "f64_qk_score_input_bucket_residual_missing_context" => {
+            "capture selected score-position Q/K history buckets and score frontier context before changing runtime math"
+        }
+        _ => {
+            "keep f64 Q/K score-input bucket residual diagnostic-only until one operand side is pinned"
+        }
+    }
+}
+
+fn attention_f64_qk_score_input_bucket_residual(
+    f64_score_history_residual: &Value,
+    f64_downstream: &Value,
+) -> Value {
+    let probability_effect =
+        f64_downstream.pointer("/f64/probability_history_effect").unwrap_or(&Value::Null);
+    let score_history_frontier =
+        probability_effect.pointer("/score_history_residual_frontier").unwrap_or(&Value::Null);
+    let score_qk_bucket_frontier =
+        probability_effect.pointer("/score_qk_bucket_frontier").unwrap_or(&Value::Null);
+
+    let residual_classification =
+        f64_score_history_residual.pointer("/classification").and_then(Value::as_str);
+    let score_history_frontier_classification =
+        score_history_frontier.pointer("/classification").and_then(Value::as_str);
+    let qk_bucket_frontier_classification =
+        score_qk_bucket_frontier.pointer("/classification").and_then(Value::as_str);
+
+    let selected_key_bucket_hit_count =
+        value_u64(score_qk_bucket_frontier, "/selected_key_bucket_hit_count").unwrap_or(0);
+    let selected_query_bucket_hit_count =
+        value_u64(score_qk_bucket_frontier, "/selected_query_bucket_hit_count").unwrap_or(0);
+    let selected_position_count =
+        value_u64(score_qk_bucket_frontier, "/selected_position_count").unwrap_or(0);
+    let selected_missing_input_count =
+        value_u64(score_qk_bucket_frontier, "/missing_input_count").unwrap_or(0);
+    let key_history_total =
+        value_u64(score_qk_bucket_frontier, "/key_history_total_f16_bucket_mismatch_count")
+            .or_else(|| value_u64(score_history_frontier, "/key_history_f16_bucket_mismatch_count"))
+            .unwrap_or(0);
+    let query_history_total =
+        value_u64(score_qk_bucket_frontier, "/query_history_total_f16_bucket_mismatch_count")
+            .or_else(|| {
+                value_u64(score_history_frontier, "/query_history_f16_bucket_mismatch_count")
+            })
+            .unwrap_or(0);
+    let key_history_max_abs =
+        value_f64(score_history_frontier, "/key_history_max_abs_delta").unwrap_or(0.0);
+    let query_history_max_abs =
+        value_f64(score_history_frontier, "/query_history_max_abs_delta").unwrap_or(0.0);
+    let key_current_max_abs =
+        value_f64(score_history_frontier, "/key_current_max_abs_delta").unwrap_or(0.0);
+    let score_frontier_missing_inputs =
+        value_u64(score_history_frontier, "/missing_inputs").unwrap_or(0);
+    let residual_missing_context =
+        residual_classification == Some("f64_score_history_residual_missing_context");
+
+    let classification = if residual_missing_context
+        || residual_classification != Some("f64_score_history_residual_score_input")
+        || selected_missing_input_count > 0
+        || score_frontier_missing_inputs > 0
+        || score_history_frontier_classification
+            == Some("f64_score_history_frontier_missing_inputs")
+    {
+        "f64_qk_score_input_bucket_residual_missing_context"
+    } else if selected_query_bucket_hit_count > 0 && selected_key_bucket_hit_count > 0 {
+        "f64_qk_score_input_bucket_residual_selected_qk_history"
+    } else if selected_query_bucket_hit_count > 0 {
+        "f64_qk_score_input_bucket_residual_selected_query_history"
+    } else if selected_key_bucket_hit_count > 0 {
+        "f64_qk_score_input_bucket_residual_selected_key_history"
+    } else if query_history_total > 0 && key_history_total > 0 {
+        "f64_qk_score_input_bucket_residual_qk_history"
+    } else if query_history_total > 0 {
+        "f64_qk_score_input_bucket_residual_query_history"
+    } else if key_history_total > 0 {
+        "f64_qk_score_input_bucket_residual_key_history"
+    } else if score_history_frontier_classification
+        == Some("f64_score_history_frontier_current_key_score_input_drift")
+        || key_current_max_abs > 1.0e-6
+    {
+        "f64_qk_score_input_bucket_residual_current_key"
+    } else if score_history_frontier_classification
+        == Some("f64_score_history_frontier_qk_score_input_history_numeric_drift")
+        || key_history_max_abs > 1.0e-6
+        || query_history_max_abs > 1.0e-6
+    {
+        "f64_qk_score_input_bucket_residual_numeric_no_bucket"
+    } else if score_history_frontier_classification == Some("f64_score_history_frontier_clean") {
+        "f64_qk_score_input_bucket_residual_clean"
+    } else {
+        "f64_qk_score_input_bucket_residual_unpinned"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 Q/K score-input bucket residual is diagnostic-only evidence for separating the f64 raw score-history residual into selected query history, selected key history, broader Q/K history, current key, numeric-no-bucket, or missing-context cases; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "f64_score_history_residual_classification": residual_classification,
+        "score_history_frontier_classification": score_history_frontier_classification,
+        "qk_bucket_frontier_classification": qk_bucket_frontier_classification,
+        "selected_position_count": selected_position_count,
+        "selected_missing_input_count": selected_missing_input_count,
+        "selected_key_bucket_hit_count": selected_key_bucket_hit_count,
+        "selected_query_bucket_hit_count": selected_query_bucket_hit_count,
+        "key_history_total_f16_bucket_mismatch_count": key_history_total,
+        "query_history_total_f16_bucket_mismatch_count": query_history_total,
+        "key_history_max_abs_delta": key_history_max_abs,
+        "query_history_max_abs_delta": query_history_max_abs,
+        "key_current_max_abs_delta": key_current_max_abs,
+        "score_frontier_missing_inputs": score_frontier_missing_inputs,
+        "score_position_classification": score_qk_bucket_frontier.pointer("/score_position_classification").cloned().unwrap_or(Value::Null),
+        "score_position_first_material": compact_f64_score_history_context_row(score_qk_bucket_frontier.pointer("/score_position_first_material").unwrap_or(&Value::Null)),
+        "score_position_max_material": compact_f64_score_history_context_row(score_qk_bucket_frontier.pointer("/score_position_max_material").unwrap_or(&Value::Null)),
+        "candidate_delta_summary": compact_candidate_delta_summary(score_qk_bucket_frontier.pointer("/candidate_delta_summary").unwrap_or(&Value::Null)),
+        "first_selected_qk_bucket_row": compact_selected_qk_bucket_row(score_qk_bucket_frontier.pointer("/selected_rows/0").unwrap_or(&Value::Null)),
+        "first_material_key_history_head": compact_head_delta_row(score_history_frontier.pointer("/first_material_key_history_head").unwrap_or(&Value::Null)),
+        "first_material_query_history_head": compact_head_delta_row(score_history_frontier.pointer("/first_material_query_history_head").unwrap_or(&Value::Null)),
+        "first_material_score_head": compact_head_delta_row(score_history_frontier.pointer("/first_material_score_head").unwrap_or(&Value::Null)),
+        "next_diagnostic": f64_qk_score_input_bucket_residual_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -46812,6 +46970,241 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "capture selected pre-RoPE f64 residual, raw score history, probability history, and value-mix attribution before runtime changes"
+            ))
+        );
+    }
+
+    #[test]
+    fn f64_qk_score_input_bucket_residual_points_to_selected_query_history() {
+        let score_history_residual = json!({
+            "classification": "f64_score_history_residual_score_input"
+        });
+        let f64_downstream = json!({
+            "f64": {
+                "probability_history_effect": {
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_qk_score_input_history_bucket_drift",
+                        "missing_inputs": 0,
+                        "key_history_f16_bucket_mismatch_count": 0,
+                        "query_history_f16_bucket_mismatch_count": 2,
+                        "query_history_max_abs_delta": 0.003879547119140625_f64,
+                        "first_material_query_history_head": {
+                            "head": 0,
+                            "delta": {
+                                "first_f16_bucket_mismatch_layout": {
+                                    "dim": 6,
+                                    "token": 3
+                                }
+                            },
+                            "reference": {
+                                "first_values": [1.0, 2.0, 3.0]
+                            }
+                        }
+                    },
+                    "score_qk_bucket_frontier": {
+                        "classification": "f64_score_qk_bucket_frontier_selected_position_bucket_drift",
+                        "selected_position_count": 1,
+                        "missing_input_count": 0,
+                        "selected_key_bucket_hit_count": 0,
+                        "selected_query_bucket_hit_count": 1,
+                        "key_history_total_f16_bucket_mismatch_count": 0,
+                        "query_history_total_f16_bucket_mismatch_count": 2,
+                        "candidate_delta_summary": {
+                            "classification": "score_slot_drift_follows_side_specific_qk",
+                            "compared_row_count": 1,
+                            "max_actual_abs_delta": 0.001,
+                            "rows": [
+                                {
+                                    "reference": {
+                                        "first_values": [9.0]
+                                    }
+                                }
+                            ]
+                        },
+                        "selected_rows": [
+                            {
+                                "label": "max_material_position",
+                                "status": "recomputed",
+                                "head": 0,
+                                "kv_head": 0,
+                                "key_slot": 13,
+                                "query_token": 3,
+                                "query_history_f16_bucket_count_at_query_token": 1,
+                                "key_history_f16_bucket_count_at_key_slot": 0,
+                                "product_delta": {
+                                    "top_abs_product_delta_contributors": [
+                                        {
+                                            "dim": 6,
+                                            "query_delta": 0.003879547119140625_f64
+                                        }
+                                    ]
+                                },
+                                "reference": {
+                                    "first_values": [4.0]
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        });
+
+        let report =
+            attention_f64_qk_score_input_bucket_residual(&score_history_residual, &f64_downstream);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_qk_score_input_bucket_residual_selected_query_history"))
+        );
+        assert_eq!(report.pointer("/selected_query_bucket_hit_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/selected_key_bucket_hit_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/first_material_query_history_head/reference/first_values"),
+            None
+        );
+        assert_eq!(report.pointer("/first_selected_qk_bucket_row/reference/first_values"), None);
+        assert_eq!(report.pointer("/candidate_delta_summary/rows"), None);
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize the selected query score-input history bucket before changing score accumulation, softmax, value-mix, or RMSNorm production math"
+            ))
+        );
+    }
+
+    #[test]
+    fn f64_qk_score_input_bucket_residual_points_to_broader_key_history() {
+        let score_history_residual = json!({
+            "classification": "f64_score_history_residual_score_input"
+        });
+        let f64_downstream = json!({
+            "f64": {
+                "probability_history_effect": {
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_qk_score_input_history_bucket_drift",
+                        "missing_inputs": 0,
+                        "key_history_f16_bucket_mismatch_count": 4,
+                        "query_history_f16_bucket_mismatch_count": 0,
+                        "first_material_key_history_head": {
+                            "head": 2,
+                            "kv_head": 1,
+                            "delta": {
+                                "first_f16_bucket_mismatch_layout": {
+                                    "dim": 64,
+                                    "token": 10
+                                }
+                            }
+                        }
+                    },
+                    "score_qk_bucket_frontier": {
+                        "classification": "f64_score_qk_bucket_frontier_bucket_drift_outside_selected_positions",
+                        "selected_position_count": 1,
+                        "missing_input_count": 0,
+                        "selected_key_bucket_hit_count": 0,
+                        "selected_query_bucket_hit_count": 0,
+                        "key_history_total_f16_bucket_mismatch_count": 4,
+                        "query_history_total_f16_bucket_mismatch_count": 0,
+                        "selected_rows": []
+                    }
+                }
+            }
+        });
+
+        let report =
+            attention_f64_qk_score_input_bucket_residual(&score_history_residual, &f64_downstream);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_qk_score_input_bucket_residual_key_history"))
+        );
+        assert_eq!(
+            report.pointer(
+                "/first_material_key_history_head/delta/first_f16_bucket_mismatch_layout/token"
+            ),
+            Some(&json!(10))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize f64 key score-input history bucket drift before changing score accumulation or softmax"
+            ))
+        );
+    }
+
+    #[test]
+    fn f64_qk_score_input_bucket_residual_reports_numeric_no_bucket() {
+        let score_history_residual = json!({
+            "classification": "f64_score_history_residual_score_input"
+        });
+        let f64_downstream = json!({
+            "f64": {
+                "probability_history_effect": {
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_qk_score_input_history_numeric_drift",
+                        "missing_inputs": 0,
+                        "key_history_f16_bucket_mismatch_count": 0,
+                        "query_history_f16_bucket_mismatch_count": 0,
+                        "key_history_max_abs_delta": 0.0002,
+                        "query_history_max_abs_delta": 0.0
+                    },
+                    "score_qk_bucket_frontier": {
+                        "classification": "f64_score_qk_bucket_frontier_side_specific_qk_without_selected_bucket_hit",
+                        "selected_position_count": 1,
+                        "missing_input_count": 0,
+                        "selected_key_bucket_hit_count": 0,
+                        "selected_query_bucket_hit_count": 0,
+                        "key_history_total_f16_bucket_mismatch_count": 0,
+                        "query_history_total_f16_bucket_mismatch_count": 0
+                    }
+                }
+            }
+        });
+
+        let report =
+            attention_f64_qk_score_input_bucket_residual(&score_history_residual, &f64_downstream);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_qk_score_input_bucket_residual_numeric_no_bucket"))
+        );
+        assert_eq!(report.pointer("/key_history_max_abs_delta"), Some(&json!(0.0002)));
+    }
+
+    #[test]
+    fn f64_qk_score_input_bucket_residual_reports_missing_context() {
+        let score_history_residual = json!({
+            "classification": "f64_score_history_residual_missing_context"
+        });
+        let f64_downstream = json!({
+            "f64": {
+                "probability_history_effect": {
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_missing_inputs",
+                        "missing_inputs": 1
+                    },
+                    "score_qk_bucket_frontier": {
+                        "classification": "f64_score_qk_bucket_frontier_missing_inputs",
+                        "selected_position_count": 1,
+                        "missing_input_count": 1
+                    }
+                }
+            }
+        });
+
+        let report =
+            attention_f64_qk_score_input_bucket_residual(&score_history_residual, &f64_downstream);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_qk_score_input_bucket_residual_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture selected score-position Q/K history buckets and score frontier context before changing runtime math"
             ))
         );
     }
