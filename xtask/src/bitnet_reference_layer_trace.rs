@@ -24321,6 +24321,14 @@ fn query_boundary_compared(delta: &Value) -> bool {
     delta.pointer("/status").and_then(Value::as_str) == Some("compared")
 }
 
+fn query_boundary_sample_incomplete(delta: &Value) -> bool {
+    delta.pointer("/blocked_reasons").and_then(Value::as_array).is_some_and(|reasons| {
+        reasons.iter().any(|reason| {
+            reason.as_str().is_some_and(|reason| reason.ends_with("_sample_incomplete"))
+        })
+    })
+}
+
 fn attention_query_score_input_boundary(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
@@ -24381,6 +24389,8 @@ fn attention_query_score_input_boundary(
     let mut boundary_counts = BTreeMap::<&'static str, usize>::new();
     let mut max_abs_delta = 0.0f64;
     let mut max_rms_delta = 0.0f64;
+    let mut first_values_incomplete_delta_count = 0usize;
+    let mut recommended_first_values_limit = 0usize;
     let mut blocked_reasons = Vec::<String>::new();
 
     if reference_score_heads.is_empty() && reference_history_heads.is_empty() {
@@ -24476,6 +24486,12 @@ fn attention_query_score_input_boundary(
             if query_boundary_compared(delta) {
                 max_abs_delta = max_abs_delta.max(delta_metric(delta, "/delta/max_abs_delta"));
                 max_rms_delta = max_rms_delta.max(delta_metric(delta, "/delta/rms_abs_delta"));
+            } else if query_boundary_sample_incomplete(delta) {
+                first_values_incomplete_delta_count += 1;
+                recommended_first_values_limit = recommended_first_values_limit.max(
+                    delta.pointer("/required_sample_count").and_then(Value::as_u64).unwrap_or(0)
+                        as usize,
+                );
             }
         }
 
@@ -24554,12 +24570,19 @@ fn attention_query_score_input_boundary(
         "compared_head_count": compared_head_count,
         "fully_compared_head_count": fully_compared_head_count,
         "missing_head_count": missing_head_count,
+        "first_values_incomplete_delta_count": first_values_incomplete_delta_count,
+        "recommended_first_values_limit": if recommended_first_values_limit == 0 { Value::Null } else { json!(recommended_first_values_limit) },
         "first_material_head": first_material_head,
         "boundary_counts": boundary_counts,
         "max_abs_delta": max_abs_delta,
         "max_rms_delta": max_rms_delta,
         "all_compared": !head_ids.is_empty() && missing_head_count == 0,
         "blocked_reasons": blocked_reasons,
+        "next_diagnostic": if first_values_incomplete_delta_count > 0 {
+            "rerun reference and Rust trace capture with first_values_limit at least recommended_first_values_limit before changing query score-input policy"
+        } else {
+            "follow first_material_head and selected query score frontier before changing runtime math"
+        },
         "rows": rows,
     })
 }
@@ -49014,6 +49037,56 @@ mod tests {
                 "/first_material_head/rust_f16_to_score_input_delta/delta/first_f16_bucket_mismatch_layout/token"
             ),
             Some(&json!(1))
+        );
+    }
+
+    #[test]
+    fn compare_reports_query_score_input_boundary_first_values_limit() {
+        let mut reference_head0 = test_reference_trace_record(
+            "q_score_input_head0_history_ref_layout",
+            vec![0.0; 128 * 18],
+        );
+        reference_head0.shape = vec![128, 18];
+        reference_head0.nelements = 128 * 18;
+        reference_head0.layer = Some(0);
+        let reference_records = vec![reference_head0];
+
+        let mut rust_records = BTreeMap::new();
+        for stage in [
+            "attention_q_rope_head0_history_ref_layout",
+            "attention_q_rope_f16_roundtrip_head0_history_ref_layout",
+            "attention_q_score_input_head0_history_ref_layout",
+        ] {
+            rust_records.insert(
+                stage.to_string(),
+                RustTraceRecord {
+                    shape: vec![128, 18],
+                    num_elements: 128 * 18,
+                    layer: Some(0),
+                    name: format!("t17/blk0/{stage}"),
+                    first_values: vec![0.0; 16],
+                    ..test_rust_trace_record(stage, vec![0.0; 16])
+                },
+            );
+        }
+
+        let report = compare_reference_to_rust(&reference_records, &rust_records, &[]);
+        let boundary = report.pointer("/attention_query_score_input_boundary").unwrap();
+
+        assert_eq!(boundary.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(boundary.pointer("/compared_head_count"), Some(&json!(0)));
+        assert_eq!(boundary.pointer("/missing_head_count"), Some(&json!(1)));
+        assert_eq!(boundary.pointer("/first_values_incomplete_delta_count"), Some(&json!(4)));
+        assert_eq!(boundary.pointer("/recommended_first_values_limit"), Some(&json!(2304)));
+        assert_eq!(
+            boundary.pointer("/next_diagnostic"),
+            Some(&json!(
+                "rerun reference and Rust trace capture with first_values_limit at least recommended_first_values_limit before changing query score-input policy"
+            ))
+        );
+        assert_eq!(
+            boundary.pointer("/rows/0/reference_to_rust_rope_delta/blocked_reasons/0"),
+            Some(&json!("rust_attention_q_rope_sample_incomplete"))
         );
     }
 
