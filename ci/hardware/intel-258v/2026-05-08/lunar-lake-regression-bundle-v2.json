@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T01:10:00Z",
+  "created_utc": "2026-05-19T01:35:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -80,6 +80,7 @@
     "benchmark_qualified_advantage_claimed": false,
     "fallback_observed": false,
     "gpu_npu_promotion_blockers": [
+      "NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric",
       "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
       "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
       "benchmark_qualified_speedup_or_power_advantage",
@@ -99,6 +100,22 @@
       "timing evidence is not profile-specific for profile prefill_heavy"
     ],
     "gpu_npu_promotion_blocker_summary": [
+      {
+        "blocker": "NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric",
+        "occurrence_count": 6,
+        "route_ids": [
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "classify and clear this blocker in the relevant route-quality or route-performance lane"
+      },
       {
         "blocker": "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
         "occurrence_count": 6,
@@ -629,7 +646,7 @@
         "fallback_observed=false",
         "profile_specific_timing=14/20",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=17"
+        "promotion_blocker_summary_count=18"
       ]
     },
     {

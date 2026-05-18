@@ -8087,6 +8087,7 @@ fn is_lunar_lake_openvino_artifact_kind(artifact_kind: &str) -> bool {
             | "intel_258v_dense_slm_openvino_phase_runner"
             | "lunar_lake_openvino_corpus_v2_diagnosis"
             | "lunar_lake_openvino_npu_cold_start_diagnosis"
+            | "lunar_lake_openvino_npu_cache_experiment"
             | "lunar_lake_openvino_npu_resident_session"
             | "lunar_lake_openvino_operator_ask"
             | "lunar_lake_route_profile_comparison"
@@ -9528,6 +9529,49 @@ mod tests {
                 "generated_token_ids_available_from_pipeline": false,
                 "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
             }],
+            "claim_boundary": {
+                "route_promotion_changed": false,
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "native_npu_inference_claim": false,
+                "bitnet_qk256_i2s_behavior_changed": false
+            }
+        });
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_npu_cache_experiment_receipt() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
+            "machine_id": "intel-258v",
+            "requested_backend": "openvino-npu",
+            "selected_backend": "openvino-npu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "NPU",
+            "fallback_used": false,
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "cache": {
+                "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
+                "cache_enabled": true,
+                "cache_hit_runtime_metric_available": false,
+                "cache_effective_by_timing": false
+            },
+            "process_runs": [{
+                "child_receipt": {
+                    "generated_text": "2+2 equals 4.",
+                    "generated_token_ids": [17, 488, 17],
+                    "generated_token_ids_available_from_pipeline": false,
+                    "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+                }
+            }],
+            "generated_token_visibility": {
+                "direct_generated_token_ids_available": false,
+                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+            },
             "claim_boundary": {
                 "route_promotion_changed": false,
                 "speedup_claim": false,
