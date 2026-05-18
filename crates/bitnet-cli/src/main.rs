@@ -13742,6 +13742,14 @@ mod tests {
         assert_eq!(audit["prompt_prefill"]["alloc_bytes_total"], 400);
         assert_eq!(audit["prompt_prefill_breakdown"]["embed"]["alloc_bytes_total"], 80);
         assert_eq!(audit["prompt_prefill_breakdown"]["forward"]["alloc_bytes_total"], 320);
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["first_reusable_allocation_surface"],
+            "transformer_forward_workspace_and_owned_tensor_outputs"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["claim_scope"],
+            "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made"
+        );
         assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
             hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_prefill.forward")
         }));
@@ -13784,14 +13792,38 @@ mod tests {
 
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill");
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
-        assert_eq!(
-            audit["next_optimization_target"]["target"],
-            "prefill_model_forward_allocation_attribution"
-        );
+        assert_eq!(audit["next_optimization_target"]["target"], "prefill_forward_buffer_boundary");
         assert_eq!(
             audit["next_optimization_target"]["claim_scope"],
             "diagnostic prioritization only; no runtime optimization or sustained-throughput claim is made"
         );
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_aggregate_allocation_audit_targets_prefill_forward_boundary() {
+        let prompt_summaries = [serde_json::json!({
+            "allocation_audit": {
+                "ranked_hotspots": [
+                    {
+                        "component": "prompt_prefill.forward",
+                        "alloc_count": 20,
+                        "alloc_bytes": 2_000,
+                    },
+                    {
+                        "component": "prompt_prefill.embed",
+                        "alloc_count": 2,
+                        "alloc_bytes": 100,
+                    }
+                ]
+            }
+        })];
+
+        let audit = warm_session_aggregate_allocation_audit_json(true, "cpu", &prompt_summaries);
+
+        assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
+        assert_eq!(audit["next_optimization_target"]["target"], "prefill_forward_buffer_boundary");
+        assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
     }
 
     #[test]
