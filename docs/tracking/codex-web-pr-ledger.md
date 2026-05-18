@@ -65,6 +65,38 @@ Snapshot source:
   selected-key score-input bucket source evidence. It is lineage evidence for
   the next diagnostic slice, not mainline A770 execution, semantic quality,
   residency, performance, reference parity, or completion proof.
+- Queue recovery refresh: after the unsafe close/reopen repair pass, a live
+  `gh pr list --limit 300` refresh showed 157 open scoped PRs: 150 `a770/*`,
+  6 `codex/*`, and 1 `claude/*`. The increased open count is intentional until
+  each PR has a content-audited merge, rebase, port, duplicate, or historical
+  evidence disposition.
+- Follow-up cleanup on 2026-05-18: #5724 landed as the canonical
+  SLM-CPU-040/041 tracker sync and `xtask/src/ci/plan.rs` dead
+  `changed_count` fix; #5740 was closed as superseded by #5724; #5731 was
+  closed as a duplicate of #5730.
+
+## Post-Reopen Content Audit Addendum
+
+This addendum records read-only audit results after the reopen repair. It is
+not approval to close PRs; it is the minimum routing evidence for the next
+queue pass.
+
+| PRs | Content audit result | Required action |
+|---|---|---|
+| #5730, #5731 | Exact duplicate BitNet-large docs/specs/plans by stable patch-id `d3a8898c691015cdf8fcc5f7468d9beb0bd792c1`. | #5731 was closed with #5730 named as the survivor. Rebase/review #5730 before merge. |
+| #5732 | Unique Llama3-8B-1.58 candidate docs/specs/campaign lane. GitHub reports conflicts. | Rebase or port conflicts; do not close for non-mergeability. |
+| #5733 | Unique BitNet 3B TL candidate docs/specs/campaign lane. GitHub reports conflicts. | Rebase or port conflicts; do not close for non-mergeability. |
+| #5724, #5740 | Both touched `xtask/src/ci/plan.rs` dead `changed_count` cleanup; #5724 also carried SLM tracker updates. | #5724 merged after green CI and #5740 was closed as superseded. |
+| #5092 | Draft AVX2 QK256 performance branch with a speedup claim. | Keep draft/proof-gated until parity, benchmark context, CPU flags, samples, and receipts are current. |
+| #4774-#5131 | Reopened A770 diagnostic chain contains content-bearing trace, score, probability, value-mix, cache, layer, and reference tooling evidence. | Keep open by default. Port or merge useful reports; close only after exact successor, duplicate, or historical-only evidence is recorded. |
+
+Runtime/proof PRs in the old loader, tokenizer, QK256, embedding, attention,
+CLI, and proof clusters remain content-bearing until current `main` is checked
+for the exact invariant or a replacement PR lands. This includes PRs #4751
+through #4770 plus #4801, #4837, #4845, #4850, #4853, #4855, #4883, #4885,
+and #4892, #4959, #4961, #5010, #5012, and #5020. Some may be superseded by
+later work, but no closure disposition is valid without naming the successor PR
+or commit.
 
 ## Initial Queue Summary
 
