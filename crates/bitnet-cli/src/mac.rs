@@ -51,6 +51,8 @@ const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
 const MAC_BENCHMARK_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-eval-v2/mac-benchmark.json";
+const MAC_BENCHMARK_PREFLIGHT_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-slm-eval-v2/benchmark-preflight.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
@@ -942,6 +944,29 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Record benchmark environment preflight evidence without running model inference.
+    BenchmarkPreflight {
+        /// Supported dense SLM model id whose cache/disk context will be checked.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Operator note about background load, thermal state, attached displays, or other noise.
+        #[arg(long = "background-load-note", value_name = "NOTE")]
+        background_load_notes: Vec<String>,
+
+        /// Output the benchmark preflight receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_BENCHMARK_PREFLIGHT_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Print the preflight receipt as JSON.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
     /// Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing.
     BitnetProof {
         /// Accepted BitNet GGUF path. This command never downloads model artifacts.
@@ -1476,6 +1501,16 @@ impl MacCommand {
                     json_out,
                 })
                 .await
+            }
+            MacAction::BenchmarkPreflight {
+                model_id,
+                cache_dir,
+                background_load_notes,
+                json_out,
+                json,
+            } => {
+                ensure_supported_mac_benchmark_device(explicit_device_label)?;
+                run_benchmark_preflight(&model_id, cache_dir, background_load_notes, json_out, json)
             }
             MacAction::BitnetProof {
                 model,
@@ -9226,6 +9261,349 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
     Ok(())
 }
 
+fn run_benchmark_preflight(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    background_load_notes: Vec<String>,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    let metadata = model_cache::apple_m4_slm_model_receipt_metadata(model_id)?;
+    let cache_status = model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir, false)?;
+    let cache_root = PathBuf::from(
+        cache_status["cache_root"]
+            .as_str()
+            .ok_or_else(|| anyhow!("benchmark preflight cache status is missing cache_root"))?,
+    );
+    let disk = disk_health_json(&cache_root, metadata.bytes);
+    let os = apple_m4_benchmark_preflight_os_json();
+    let hardware = apple_m4_benchmark_preflight_hardware_json();
+    let memory_pressure = apple_m4_memory_pressure_json();
+    let thermal_pressure = apple_m4_thermal_pressure_json();
+    let power_state = apple_m4_power_state_json();
+    let background_load = apple_m4_background_load_json(background_load_notes);
+    let run_identity =
+        apple_m4_benchmark_preflight_run_identity_json(&metadata, "apple_m4_benchmark_preflight");
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    let invalid_reasons =
+        apple_m4_benchmark_preflight_invalid_reasons(&cache_status, &disk, &os, &run_identity);
+    let advisory_warnings = apple_m4_benchmark_preflight_advisory_warnings(
+        &memory_pressure,
+        &thermal_pressure,
+        &power_state,
+        &background_load,
+        &hardware,
+    );
+    let readiness_status =
+        if invalid_reasons.is_empty() { "comparable_preflight" } else { "invalid_for_comparison" };
+
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_benchmark_preflight",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac benchmark-preflight",
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "expected_soc": "apple-m4",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "model": {
+            "id": metadata.id,
+            "repo": metadata.repo,
+            "revision": metadata.revision,
+            "file": metadata.file,
+            "sha256": metadata.sha256,
+            "bytes": metadata.bytes,
+            "family": metadata.family,
+            "architecture": metadata.architecture,
+            "quantization": metadata.quantization,
+        },
+        "tokenizer": {
+            "authority": metadata.tokenizer_authority,
+            "sha256": serde_json::Value::Null,
+            "sha256_status": "not_applicable_gguf_metadata_authority",
+        },
+        "benchmark_preflight": {
+            "contract_version": "1.0.0",
+            "scope": "Apple M4 dense SLM benchmark environment preflight",
+            "live_model_run": false,
+            "timing_result_recorded": false,
+            "benchmark_profiles": M4_SLM_BENCHMARK_V2_PROFILES,
+            "macos_build_required_for_release_comparison": true,
+            "model_cache_required_for_live_benchmark": true,
+            "background_load_notes_required_for_release_comparison": true,
+            "preflight_must_match_before_interpreting_timing_drift": true,
+        },
+        "environment": {
+            "os": os,
+            "hardware": hardware,
+            "memory_pressure": memory_pressure,
+            "thermal_pressure": thermal_pressure,
+            "power_state": power_state,
+            "background_load": background_load,
+        },
+        "cache": cache_status,
+        "disk": disk,
+        "comparison_readiness": {
+            "status": readiness_status,
+            "can_compare_timing": invalid_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_reasons.clone(),
+            "skipped_or_invalid_comparison_reasons": invalid_reasons,
+            "advisory_warnings": advisory_warnings,
+            "next_step": if invalid_reasons.is_empty() {
+                "Run release benchmark profiles and attach this preflight identity to the benchmark receipt."
+            } else {
+                "Fix invalid_comparison_reasons before interpreting timing drift from this environment."
+            },
+        },
+        "claim_boundary": {
+            "benchmark_preflight_only": true,
+            "live_model_run": false,
+            "timing_result_recorded": false,
+            "dense_slm_only": true,
+            "bitnet_evidence": false,
+            "bitnet_quality_claimed": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    });
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        println!("Mac benchmark preflight written to {} ({readiness_status})", json_out.display());
+    }
+    Ok(())
+}
+
+fn apple_m4_benchmark_preflight_run_identity_json(
+    metadata: &model_cache::AppleM4SlmModelReceiptMetadata,
+    artifact_kind: &str,
+) -> serde_json::Value {
+    let prompt_template = "benchmark-preflight-no-prompt";
+    serde_json::json!({
+        "contract_version": bitnet_receipts_core::M4_RUN_IDENTITY_CONTRACT_VERSION,
+        "machine_id": "apple-m4-mac-mini",
+        "soc": "apple-m4",
+        "artifact_kind": artifact_kind,
+        "evidence_family": "dense_slm_benchmark_preflight",
+        "os": {
+            "name": std::env::consts::OS,
+            "version": apple_m4_host_os_version(),
+            "version_source": apple_m4_host_os_version_source(),
+        },
+        "git": {
+            "commit": apple_m4_git_commit(),
+            "commit_source": apple_m4_git_commit_source(),
+        },
+        "binary": {
+            "crate_version": env!("CARGO_PKG_VERSION"),
+            "build_profile": apple_m4_build_profile(),
+            "binary_sha256": serde_json::Value::Null,
+            "binary_sha256_status": "not_recorded_build_profile_used",
+        },
+        "command": {
+            "class": "mac benchmark-preflight",
+            "live_model_run": false,
+        },
+        "model": {
+            "id": metadata.id,
+            "sha256": metadata.sha256,
+            "family": metadata.family,
+            "quantization": metadata.quantization,
+            "loader_mode": "not_loaded_preflight_only",
+        },
+        "tokenizer": {
+            "authority": metadata.tokenizer_authority,
+            "sha256": "not_applicable",
+            "source": "gguf_metadata",
+            "pretokenizer_authority": metadata.tokenizer_authority,
+            "strict": true,
+        },
+        "prompt_template": {
+            "id": prompt_template,
+            "sha256": sha256_hex(prompt_template.as_bytes()),
+            "identity_scope": "preflight_no_prompt",
+        },
+        "backend": {
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+        },
+        "evidence_identity": {
+            "scope": "benchmark_environment_preflight",
+            "seed": "not_applicable",
+            "corpus_id": "not_applicable",
+            "profile_id": "slm-benchmark-v2",
+        },
+        "timing": {
+            "source": "preflight_snapshot_wall_clock_utc",
+        },
+    })
+}
+
+fn apple_m4_benchmark_preflight_os_json() -> serde_json::Value {
+    let product_version = command_output_trimmed("sw_vers", &["-productVersion"]);
+    let build_version = command_output_trimmed("sw_vers", &["-buildVersion"]);
+    serde_json::json!({
+        "name": std::env::consts::OS,
+        "product_version": product_version,
+        "build_version": build_version,
+        "build_available": build_version.is_some(),
+        "source": if build_version.is_some() { "sw_vers" } else { "unavailable" },
+        "fallback_version": apple_m4_host_os_version(),
+    })
+}
+
+fn apple_m4_benchmark_preflight_hardware_json() -> serde_json::Value {
+    let brand = command_output_trimmed("sysctl", &["-n", "machdep.cpu.brand_string"]);
+    let hw_model = command_output_trimmed("sysctl", &["-n", "hw.model"]);
+    let arm64 = command_output_trimmed("sysctl", &["-n", "hw.optional.arm64"]);
+    let observed_text = format!(
+        "{} {}",
+        brand.as_deref().unwrap_or_default(),
+        hw_model.as_deref().unwrap_or_default()
+    )
+    .to_ascii_lowercase();
+    serde_json::json!({
+        "expected_soc": "apple-m4",
+        "brand_string": brand,
+        "hw_model": hw_model,
+        "arm64": arm64,
+        "soc_observed": if observed_text.contains("m4") {
+            "apple-m4"
+        } else {
+            "unverified"
+        },
+        "source": "sysctl",
+    })
+}
+
+fn apple_m4_memory_pressure_json() -> serde_json::Value {
+    let level = command_output_trimmed("sysctl", &["-n", "kern.memorystatus_vm_pressure_level"]);
+    let vm_stat = command_output_trimmed("vm_stat", &[]);
+    serde_json::json!({
+        "available": level.is_some() || vm_stat.is_some(),
+        "pressure_level": level,
+        "vm_stat_sample": vm_stat,
+        "source": if level.is_some() {
+            "sysctl kern.memorystatus_vm_pressure_level"
+        } else if vm_stat.is_some() {
+            "vm_stat"
+        } else {
+            "unavailable"
+        },
+    })
+}
+
+fn apple_m4_thermal_pressure_json() -> serde_json::Value {
+    let therm = command_output_trimmed("pmset", &["-g", "therm"]);
+    serde_json::json!({
+        "available": therm.is_some(),
+        "raw": therm,
+        "source": if therm.is_some() { "pmset -g therm" } else { "unavailable" },
+    })
+}
+
+fn apple_m4_power_state_json() -> serde_json::Value {
+    let power = command_output_trimmed("pmset", &["-g", "batt"])
+        .or_else(|| command_output_trimmed("pmset", &["-g", "ps"]));
+    let lower = power.as_deref().unwrap_or_default().to_ascii_lowercase();
+    serde_json::json!({
+        "available": power.is_some(),
+        "raw": power,
+        "ac_power": if power.is_some() {
+            serde_json::Value::Bool(lower.contains("ac power"))
+        } else {
+            serde_json::Value::Null
+        },
+        "source": if power.is_some() { "pmset" } else { "unavailable" },
+    })
+}
+
+fn apple_m4_background_load_json(notes: Vec<String>) -> serde_json::Value {
+    let mut notes = notes
+        .into_iter()
+        .map(|note| note.trim().to_string())
+        .filter(|note| !note.is_empty())
+        .collect::<Vec<_>>();
+    let operator_recorded = !notes.is_empty();
+    if notes.is_empty() {
+        notes.push("not_recorded".to_string());
+    }
+    serde_json::json!({
+        "operator_recorded": operator_recorded,
+        "notes": notes,
+        "source": if operator_recorded { "operator" } else { "default_not_recorded" },
+    })
+}
+
+fn apple_m4_benchmark_preflight_invalid_reasons(
+    cache: &serde_json::Value,
+    disk: &serde_json::Value,
+    os: &serde_json::Value,
+    run_identity: &serde_json::Value,
+) -> Vec<&'static str> {
+    let mut reasons = Vec::new();
+    if cache["ready"].as_bool() != Some(true) {
+        reasons.push("model_cache_not_ready");
+    }
+    if disk["low_disk"].as_bool() == Some(true) {
+        reasons.push("low_disk_headroom");
+    }
+    if os["build_available"].as_bool() != Some(true) {
+        reasons.push("macos_build_unavailable");
+    }
+    if run_identity["git"]["commit"].as_str().is_none_or(|commit| commit == "unknown") {
+        reasons.push("git_commit_unavailable");
+    }
+    reasons
+}
+
+fn apple_m4_benchmark_preflight_advisory_warnings(
+    memory_pressure: &serde_json::Value,
+    thermal_pressure: &serde_json::Value,
+    power_state: &serde_json::Value,
+    background_load: &serde_json::Value,
+    hardware: &serde_json::Value,
+) -> Vec<&'static str> {
+    let mut warnings = Vec::new();
+    if memory_pressure["available"].as_bool() != Some(true) {
+        warnings.push("memory_pressure_unavailable");
+    }
+    if thermal_pressure["available"].as_bool() != Some(true) {
+        warnings.push("thermal_pressure_unavailable");
+    }
+    if power_state["available"].as_bool() != Some(true) {
+        warnings.push("power_state_unavailable");
+    }
+    if background_load["operator_recorded"].as_bool() != Some(true) {
+        warnings.push("background_load_not_recorded");
+    }
+    if hardware["soc_observed"].as_str() != Some("apple-m4") {
+        warnings.push("soc_unverified");
+    }
+    warnings
+}
+
 fn dedupe_benchmark_profiles(
     profiles: Vec<MacBenchmarkProfile>,
 ) -> Result<Vec<MacBenchmarkProfile>> {
@@ -13834,6 +14212,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_benchmark_preflight" {
+        validate_apple_m4_benchmark_preflight_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_benchmark_v1" {
         validate_bitnet_benchmark_v1_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_mac_ask_failure" {
@@ -16466,6 +16846,150 @@ fn validate_slm_benchmark_v2_receipt(
     }
 
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_apple_m4_benchmark_preflight_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_benchmark_preflight")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac benchmark-preflight")?;
+    bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+        .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_exact_string_at(path, receipt, &["machine", "expected_soc"], "apple-m4")?;
+
+    require_non_empty_string_at(path, receipt, &["model", "id"])?;
+    let model_sha = require_non_empty_string_at(path, receipt, &["model", "sha256"])?;
+    if !is_sha256_hex(model_sha) {
+        anyhow::bail!(
+            "{} benchmark preflight model.sha256 must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["model", "architecture"])?;
+    require_non_empty_string_at(path, receipt, &["model", "quantization"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "authority"])?;
+
+    require_exact_string_at(path, receipt, &["benchmark_preflight", "contract_version"], "1.0.0")?;
+    require_bool_at(path, receipt, &["benchmark_preflight", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["benchmark_preflight", "timing_result_recorded"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["benchmark_preflight", "preflight_must_match_before_interpreting_timing_drift"],
+        true,
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["benchmark_preflight", "benchmark_profiles"],
+        M4_SLM_BENCHMARK_V2_PROFILES,
+    )?;
+
+    require_non_empty_string_at(path, receipt, &["environment", "os", "name"])?;
+    require_bool_value_at(path, receipt, &["environment", "os", "build_available"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["environment", "hardware", "expected_soc"],
+        "apple-m4",
+    )?;
+    require_bool_value_at(path, receipt, &["environment", "memory_pressure", "available"])?;
+    require_non_empty_string_at(path, receipt, &["environment", "memory_pressure", "source"])?;
+    require_bool_value_at(path, receipt, &["environment", "thermal_pressure", "available"])?;
+    require_non_empty_string_at(path, receipt, &["environment", "thermal_pressure", "source"])?;
+    require_bool_value_at(path, receipt, &["environment", "power_state", "available"])?;
+    require_non_empty_string_at(path, receipt, &["environment", "power_state", "source"])?;
+    require_bool_value_at(path, receipt, &["environment", "background_load", "operator_recorded"])?;
+    require_non_empty_string_array_at(path, receipt, &["environment", "background_load", "notes"])?;
+
+    require_non_empty_string_at(path, receipt, &["cache", "cache_root"])?;
+    require_non_empty_string_at(path, receipt, &["cache", "cache_path"])?;
+    require_bool_value_at(path, receipt, &["cache", "ready"])?;
+    require_bool_value_at(path, receipt, &["cache", "present"])?;
+    require_bool_value_at(path, receipt, &["cache", "size_matches"])?;
+    require_bool_value_at(path, receipt, &["cache", "metadata_present"])?;
+
+    require_bool_at(path, receipt, &["disk", "checked"], true)?;
+    require_bool_value_at(path, receipt, &["disk", "low_disk"])?;
+    require_non_empty_string_at(path, receipt, &["disk", "guidance"])?;
+
+    let readiness =
+        require_non_empty_string_at(path, receipt, &["comparison_readiness", "status"])?;
+    if !matches!(readiness, "comparable_preflight" | "invalid_for_comparison") {
+        anyhow::bail!(
+            "{} benchmark preflight comparison_readiness.status must be comparable_preflight or invalid_for_comparison",
+            path.display()
+        );
+    }
+    let can_compare =
+        require_bool_value_at(path, receipt, &["comparison_readiness", "can_compare_timing"])?;
+    let invalid_reasons =
+        json_value_at(receipt, &["comparison_readiness", "invalid_comparison_reasons"])
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "{} benchmark preflight invalid_comparison_reasons must be an array",
+                    path.display()
+                )
+            })?;
+    let skipped_reasons =
+        json_value_at(receipt, &["comparison_readiness", "skipped_or_invalid_comparison_reasons"])
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "{} benchmark preflight skipped_or_invalid_comparison_reasons must be an array",
+                    path.display()
+                )
+            })?;
+    if invalid_reasons != skipped_reasons {
+        anyhow::bail!(
+            "{} benchmark preflight skipped_or_invalid_comparison_reasons must match invalid_comparison_reasons",
+            path.display()
+        );
+    }
+    if can_compare != invalid_reasons.is_empty() {
+        anyhow::bail!(
+            "{} benchmark preflight can_compare_timing must be true only when invalid_comparison_reasons is empty",
+            path.display()
+        );
+    }
+    if readiness == "comparable_preflight" && !invalid_reasons.is_empty() {
+        anyhow::bail!(
+            "{} comparable benchmark preflight must not record invalid reasons",
+            path.display()
+        );
+    }
+    if readiness == "invalid_for_comparison" && invalid_reasons.is_empty() {
+        anyhow::bail!(
+            "{} invalid benchmark preflight must record at least one invalid reason",
+            path.display()
+        );
+    }
+    if json_value_at(receipt, &["comparison_readiness", "advisory_warnings"]).as_array().is_none() {
+        anyhow::bail!("{} benchmark preflight advisory_warnings must be an array", path.display());
+    }
+
+    require_bool_at(path, receipt, &["claim_boundary", "benchmark_preflight_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "timing_result_recorded"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    Ok((Some(0), Some(0)))
 }
 
 fn validate_benchmark_percentiles(

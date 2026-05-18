@@ -100,7 +100,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-DENSE-CHAT-001 | proposed | Prove dense CLI ask/chat conformance with per-turn receipts. |
 | M4-ROBUSTNESS-001 | proposed | Add dense SLM and BitNet negative/robustness eval cases. |
 | M4-BENCH-001 | merged | Ensure benchmark receipts include the full timing and memory metric contract. |
-| M4-BENCH-004 | proposed | Add benchmark environment preflight fields and invalid-comparison reasons. |
+| M4-BENCH-004 | pr_open | Add benchmark environment preflight fields and invalid-comparison reasons. |
 | M4-BENCH-002 | proposed | Publish p50/p90/p99 and min/max summaries for the supported dense benchmark matrix. |
 | M4-BENCH-005 | proposed | Publish repeatability and variance envelopes for dense and BitNet timing families. |
 | M4-BENCH-006 | proposed | Publish explicit BitNet one-shot and warm variance receipts. |
