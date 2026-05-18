@@ -2,6 +2,42 @@
 
 <!-- Brief description of what this PR accomplishes -->
 
+## Source-of-truth links
+
+Proposal:
+Spec:
+ADR:
+Plan item:
+Active goal or campaign item:
+
+## Scope
+
+- [ ] Proposal / why
+- [ ] Spec / behavior contract
+- [ ] ADR / durable decision
+- [ ] Plan / sequencing
+- [ ] Active goal / current execution state
+- [ ] Runtime / implementation
+- [ ] Policy ledger
+- [ ] Support-tier update
+- [ ] Generated status / receipt
+
+## Non-goals
+
+<!-- What this PR explicitly does not do -->
+
+## Proof
+
+```bash
+# commands run
+```
+
+Results:
+
+Claim boundary:
+
+Rollback:
+
 ## CI Requirements (check all that apply)
 
 <!-- These are enforced by the Guards workflow - violations will block merge -->

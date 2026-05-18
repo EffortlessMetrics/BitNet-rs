@@ -5,6 +5,60 @@ repository. `CLAUDE.md` remains the broader repository guide; this file records
 the campaign authority model that Codex should apply while operating work-item
 branches.
 
+
+## Repo Source-of-Truth Stack
+
+BitNet-rs uses a linked source-of-truth stack:
+
+```text
+Roadmap → Proposal → Spec → ADR → Plan → Active goal → PR → Proof
+```
+
+Before changing files, read:
+
+1. `docs/reference/SPEC_SYSTEM.md`
+2. `.bitnet/goals/active.toml` when present, or the campaign-local
+   `docs/tracking/campaigns/<campaign>/active.toml` named by the task
+3. the linked implementation plan
+4. the linked spec for the selected work item
+5. linked ADRs
+
+### Scope rule
+
+Implement one work item per PR. Docs-only artifacts are separate semantic
+changes unless the plan explicitly says to bundle them:
+
+- proposal PRs explain why;
+- spec PRs define behavior;
+- ADR PRs record durable decisions;
+- plan PRs define sequencing;
+- active goal PRs define current execution state.
+
+Runtime/code PRs must link to the spec and plan item they implement.
+
+### Proof rule
+
+Run the proof commands listed in the plan item and `git diff --check`. If a
+proof command cannot run, record the command, why it is unavailable, substitute
+evidence if any, and whether that blocks merge.
+
+### Generated status rule
+
+Do not hand-edit generated status. Run the generator/checker named in the plan.
+
+### Policy rule
+
+If you add an exception, add or update the relevant `policy/*.toml` ledger with
+owner, reason, `covered_by`, `created`, `review_after`, and `expires` when the
+exception is temporary.
+
+### Stop conditions
+
+Stop and report instead of guessing when the active goal or campaign item is
+missing, linked specs/plans are missing, proof commands cannot run, generated
+status is dirty, unrelated staged changes exist, or requested behavior
+contradicts an ADR.
+
 ## Campaign Work Item Authority
 
 Campaign work items are the source of truth for review, PR, and merge flow.

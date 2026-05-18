@@ -9,6 +9,39 @@ Essential guidance for working with the bitnet-rs codebase.
 - **MSRV:** 1.93.0 (Rust 2024 edition, pinned in `rust-toolchain.toml`)
 - **Status:** CPU inference works with SIMD optimization. GPU backends are scaffolded but not validated. Do not use in production.
 
+
+## Repo Source-of-Truth Stack
+
+BitNet-rs uses a linked source-of-truth stack:
+
+```text
+Roadmap → Proposal → Spec → ADR → Plan → Active goal → PR → Proof
+```
+
+Before making changes, read:
+
+1. `docs/reference/SPEC_SYSTEM.md`
+2. `.bitnet/goals/active.toml` when present, or the campaign-local
+   `docs/tracking/campaigns/<campaign>/active.toml` named by the task
+3. the linked implementation plan
+4. the linked spec for the selected work item
+5. any linked ADRs
+
+Work on exactly one work item at a time. Do not create a new lane unless asked,
+do not mix proposal/spec/ADR/plan/runtime changes unless the selected work item
+says to, do not broaden support claims without support-tier proof, and do not
+hand-edit generated status unless the plan names that edit as the source of
+truth.
+
+A PR is ready only when the intended artifact or code change exists, linked docs
+are updated, proof commands have run or are explicitly marked unavailable,
+claim boundaries are respected, and `git diff --check` passes.
+
+Stop and report instead of guessing when the active goal or campaign item is
+missing or stale, linked specs are missing, proof commands cannot run, generated
+status differs from committed status, requested work conflicts with an ADR, or
+the branch contains unrelated staged changes.
+
 ## Rust 1.95 Rollout Rails
 
 The Rust 1.95 / next minor rollout is a continuation of the Rust 1.93 CI
