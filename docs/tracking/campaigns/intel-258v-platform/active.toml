@@ -7232,10 +7232,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-QUAL-RERUN-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-RERUN-002-stop-token-fixture"
 pr = 5669
 head_sha = "9809127c356c0a607a4a21dbf5e6b5fa97069a29"
+merge_sha = "7c7f71093c370339a7bfe67d991be91e59aabfb3"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
