@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-18T22:30:00Z",
+  "created_utc": "2026-05-18T23:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -108,7 +108,7 @@
       "stop_token_one_word_done has no passing tested generation budget",
       "timing evidence is not profile-specific for profile decode_heavy",
       "timing evidence is not profile-specific for profile prefill_heavy",
-      "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+      "yes_no_clear_sky has generation-budget sensitivity class fixture_budget_passes"
     ],
     "regression_ready": true,
     "gaps": []

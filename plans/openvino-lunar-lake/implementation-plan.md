@@ -365,7 +365,8 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-QUAL-RERUN-001
 
-Status: in progress
+Status: merged
+Linked PR: #5650
 Blocked by: `LNL258V-OPENVINO-QUAL-FIX-001`
 
 Rerun the dense Qwen2.5 CPU and OpenVINO CPU/GPU/NPU corpus-v2 evidence after
@@ -389,6 +390,28 @@ Acceptance additions:
 - Remaining OpenVINO candidate blockers are reclassified under the updated
   fixture, with GPU/NPU still unpromoted.
 - Regression v2 indexes the updated corpus and route-profile evidence.
+
+### Work item: LNL258V-OPENVINO-QUAL-RERUN-002
+
+Status: in progress
+Blocked by: `LNL258V-QUAL-008`
+
+Rerun OpenVINO CPU/GPU/NPU corpus-v2 candidate evidence after the canonical
+`stop_token_one_word_done` fixture changed to the tested exact-lowercase
+wording that passes on the dense GGUF CPU route.
+
+Production delta: receipt refresh only. Do not promote GPU/NPU routes, claim
+speedup or power advantage, claim native Arc/NPU acceleration, alter BitNet
+QK256/I2_S behavior, or treat dense SLM evidence as BitNet proof.
+
+Acceptance additions:
+
+- OpenVINO CPU/GPU/NPU corpus-v2 receipt reflects the current canonical corpus.
+- Generation-budget sensitivity for normalized-match cases is rerun against
+  the current canonical fixture.
+- OpenVINO CPU/GPU/NPU candidate blockers remain current and route-profile
+  evidence stays candidate-only unless a separate promotion item proves
+  exact-profile quality plus timing or power advantage.
 
 ### Remaining Phase C Items
 
