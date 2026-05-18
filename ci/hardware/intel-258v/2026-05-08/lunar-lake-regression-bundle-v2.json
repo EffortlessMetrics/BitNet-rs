@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-18T16:30:00Z",
+  "created_utc": "2026-05-18T16:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -98,6 +98,252 @@
       "timing coverage has missing profile fields",
       "timing evidence is not profile-specific for profile decode_heavy",
       "timing evidence is not profile-specific for profile prefill_heavy"
+    ],
+    "gpu_npu_promotion_blocker_summary": [
+      {
+        "blocker": "NPU cache or resident warm-route proof is missing",
+        "occurrence_count": 6,
+        "route_ids": [
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
+      },
+      {
+        "blocker": "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+        "occurrence_count": 6,
+        "route_ids": [
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
+      },
+      {
+        "blocker": "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+        "occurrence_count": 12,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "add direct OpenVINO generated-token visibility, or keep the route blocked with re-tokenized output identity"
+      },
+      {
+        "blocker": "benchmark_qualified_speedup_or_power_advantage",
+        "occurrence_count": 12,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
+      },
+      {
+        "blocker": "candidate route requires benchmark-qualified profile evidence",
+        "occurrence_count": 12,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
+      },
+      {
+        "blocker": "corpus_v2 profile quality evidence missing",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "low_power"
+        ],
+        "next_action": "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
+      },
+      {
+        "blocker": "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+        "occurrence_count": 12,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal",
+          "ask_short",
+          "decode_heavy",
+          "low_power",
+          "prefill_heavy",
+          "regression_tiny"
+        ],
+        "next_action": "add direct OpenVINO generated-token visibility, or keep the route blocked with re-tokenized output identity"
+      },
+      {
+        "blocker": "power advantage evidence missing for low_power promotion",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "low_power"
+        ],
+        "next_action": "collect profile-specific low-power telemetry and compare against the promoted CPU baseline"
+      },
+      {
+        "blocker": "profile_regression_bundle",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "low_power"
+        ],
+        "next_action": "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
+      },
+      {
+        "blocker": "route not promoted for profile ask_normal",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_normal"
+        ],
+        "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
+      },
+      {
+        "blocker": "route not promoted for profile ask_short",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "ask_short"
+        ],
+        "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
+      },
+      {
+        "blocker": "route not promoted for profile decode_heavy",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "decode_heavy"
+        ],
+        "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
+      },
+      {
+        "blocker": "route not promoted for profile low_power",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "low_power"
+        ],
+        "next_action": "collect profile-specific low-power telemetry and compare against the promoted CPU baseline"
+      },
+      {
+        "blocker": "route not promoted for profile prefill_heavy",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "prefill_heavy"
+        ],
+        "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
+      },
+      {
+        "blocker": "route not promoted for profile regression_tiny",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "regression_tiny"
+        ],
+        "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
+      },
+      {
+        "blocker": "timing coverage has missing profile fields",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "low_power"
+        ],
+        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
+      },
+      {
+        "blocker": "timing evidence is not profile-specific for profile decode_heavy",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "decode_heavy"
+        ],
+        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
+      },
+      {
+        "blocker": "timing evidence is not profile-specific for profile prefill_heavy",
+        "occurrence_count": 2,
+        "route_ids": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "prefill_heavy"
+        ],
+        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
+      }
     ],
     "regression_ready": true,
     "gaps": []
@@ -399,7 +645,8 @@
         "benchmark_qualified_advantage_claimed=false",
         "fallback_observed=false",
         "profile_specific_timing=14/20",
-        "proxy_or_missing_timing_routes_blocked=true"
+        "proxy_or_missing_timing_routes_blocked=true",
+        "promotion_blocker_summary_count=18"
       ]
     },
     {

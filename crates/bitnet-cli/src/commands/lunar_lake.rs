@@ -837,6 +837,8 @@ pub struct RouteProfileRegressionSummary {
     pub benchmark_qualified_advantage_claimed: bool,
     pub fallback_observed: bool,
     pub gpu_npu_promotion_blockers: Vec<String>,
+    #[serde(default)]
+    pub gpu_npu_promotion_blocker_summary: Vec<PromotionBlockerSummary>,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -2962,6 +2964,14 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     let mut benchmark_qualified_advantage_claimed = false;
     let mut candidate_promotion_eligible = false;
     let mut blockers = BTreeSet::new();
+    let gpu_npu_promotion_blocker_summary = comparison
+        .promotion_blocker_summary
+        .iter()
+        .filter(|summary| {
+            summary.route_ids.iter().any(|route_id| is_openvino_candidate_route(route_id))
+        })
+        .cloned()
+        .collect::<Vec<_>>();
     let timing_coverage = if comparison.timing_coverage.route_count > 0 {
         comparison.timing_coverage.clone()
     } else {
@@ -3020,6 +3030,7 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
         benchmark_qualified_advantage_claimed,
         fallback_observed,
         gpu_npu_promotion_blockers: blockers.into_iter().collect(),
+        gpu_npu_promotion_blocker_summary,
         regression_ready: gaps.is_empty(),
         gaps,
     })
@@ -3289,6 +3300,10 @@ fn route_profile_regression_notes(summary: &RouteProfileRegressionSummary) -> Ve
         format!(
             "proxy_or_missing_timing_routes_blocked={}",
             summary.timing_coverage.proxy_or_missing_timing_routes_blocked
+        ),
+        format!(
+            "promotion_blocker_summary_count={}",
+            summary.gpu_npu_promotion_blocker_summary.len()
         ),
     ];
     notes.extend(summary.gaps.iter().cloned());
@@ -12674,6 +12689,16 @@ mod tests {
             route_profiles.timing_coverage.promotion_eligible_routes_have_profile_specific_timing
         );
         assert!(route_profiles.timing_coverage.proxy_or_missing_timing_routes_blocked);
+        assert!(
+            route_profiles.gpu_npu_promotion_blocker_summary.iter().any(|summary| {
+                summary.blocker == "benchmark_qualified_speedup_or_power_advantage"
+                    && summary.route_ids.contains(&"dense_slm_openvino_gpu_candidate".to_string())
+                    && summary.route_ids.contains(&"dense_slm_openvino_npu_candidate".to_string())
+                    && summary.next_action.contains("benchmark-qualified latency")
+            }),
+            "{:?}",
+            route_profiles.gpu_npu_promotion_blocker_summary
+        );
         assert!(bundle.regression_surface.strict_default);
         assert!(bundle.regression_surface.strict_ready, "{:?}", bundle.regression_surface.gaps);
         assert!(
