@@ -258,7 +258,7 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-UX-001
 
-Status: in progress
+Status: merged
 Blocked by: `LNL258V-OPENVINO-STATUS-001`
 
 Teach `receipts explain` to summarize OpenVINO route ID, selected backend,
