@@ -112,6 +112,8 @@ fn critical_not_claims() -> Vec<&'static str> {
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
+use commands::dense_gguf_linear_parity::is_supported_dense_qwen_cuda_model_path;
+#[cfg(feature = "full-cli")]
 use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufAllLayerPlanCommand,
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
@@ -10632,15 +10634,11 @@ fn is_dense_qwen_cuda_ask_backend(requested_backend_label: &str) -> bool {
 fn resolve_dense_qwen_cuda_ask_model(
     model: &std::path::Path,
 ) -> Result<Option<std::path::PathBuf>> {
-    const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
-
     if let Some(cached) = model_cache::verified_dense_qwen_cuda_model_arg(model, None)? {
         return Ok(Some(cached.path));
     }
 
-    if model.file_name().and_then(|value| value.to_str())
-        == Some(QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)
-    {
+    if is_supported_dense_qwen_cuda_model_path(model) {
         return Ok(Some(model.to_path_buf()));
     }
 
@@ -12311,6 +12309,17 @@ mod tests {
         assert!(is_dense_qwen_cuda_ask_backend("nvidia-rtx-5070-ti-cuda"));
         assert!(!is_dense_qwen_cuda_ask_backend("cpu"));
         assert!(!is_dense_qwen_cuda_ask_backend("apple-m4-cpu-neon"));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn dense_qwen_ask_resolves_qwen3_explicit_model_file() -> Result<()> {
+        let model = std::path::PathBuf::from("C:/models/Qwen3-0.6B-Q8_0.gguf");
+        let resolved = resolve_dense_qwen_cuda_ask_model(&model)?
+            .context("Qwen3 explicit GGUF should resolve to dense Qwen CUDA ask path")?;
+
+        assert_eq!(resolved, model);
+        Ok(())
     }
 
     #[test]
