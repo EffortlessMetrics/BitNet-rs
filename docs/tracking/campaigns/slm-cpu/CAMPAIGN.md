@@ -90,7 +90,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-037 | merged | #5643 explicitly rules out caller-side transformer-forward buffer reuse at the current owned tensor-output boundary and points the next safe hook at a typed transformer forward workspace API. |
 | SLM-CPU-038 | merged | #5679 introduced the first typed transformer forward workspace API boundary while preserving the existing owned tensor-output behavior oracle. |
 | SLM-CPU-039 | merged | #5693 routed the feed-forward output through the typed workspace and recorded `feed_forward.output` as the first workspace-owned transformer output boundary while reusable Candle storage remains deferred. |
-| SLM-CPU-040 | pr_open | Use the SLM-CPU-039 boundary to explicitly reject reusable workspace-backed `FeedForward::down_proj` output storage at the current Candle linear API boundary while preserving behavior and making no speedup claim. |
+| SLM-CPU-040 | merged | #5715 classified the exact `FeedForward::down_proj` output boundary and recorded that reusable workspace-backed storage remains blocked by Candle's owned linear output path. |
+| SLM-CPU-041 | pr_open | Narrow the `FeedForward::down_proj` storage blocker to the exact Candle tensor API gap: linear weight/bias are readable, but matmul/bias-add still lack caller-provided output storage. |
 
 ## Review Policy
 

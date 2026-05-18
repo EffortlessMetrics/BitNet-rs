@@ -8272,8 +8272,8 @@ fn load_npu_cache_experiment(
         bool_at_any(&json, &["cache.cache_files_reused_or_stable"]) == Some(true);
     let runtime_metric_available =
         bool_at_any(&json, &["cache.cache_hit_runtime_metric_available"]) == Some(true);
-    if !runtime_metric_available
-        && !(cache_effective_by_timing && cache_files_created && cache_files_reused_or_stable)
+    if !(runtime_metric_available
+        || cache_effective_by_timing && cache_files_created && cache_files_reused_or_stable)
     {
         blockers.push(
             "NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric"

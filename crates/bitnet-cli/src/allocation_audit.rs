@@ -285,13 +285,16 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
             "forward": allocation_samples_json(audit.prompt_prefill_forward),
             "forward_boundary": {
                 "first_reusable_allocation_surface": "feed_forward.down_proj.output",
-                "classification": "FeedForward::forward_with_workspace reaches the exact FeedForward::down_proj output boundary, but Candle tensor storage is still produced by candle_nn::Linear::forward without a reusable output-storage hook",
-                "reuse_status": "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear",
+                "classification": "FeedForward::forward_with_workspace reaches the exact FeedForward::down_proj output boundary and the Candle Linear weight/bias tensors are readable, but Tensor::matmul plus optional broadcast_add still return owned tensors without caller-provided output storage",
+                "reuse_status": "dense_linear_output_storage_blocked_by_candle_tensor_ops",
                 "workspace_storage_owner": "TransformerForwardWorkspace",
                 "workspace_owned_output_surface": "feed_forward.down_proj.output",
-                "no_reuse_reason": "candle_nn::Linear::forward constructs and returns a new Tensor and does not expose an out-parameter or reusable output-storage hook for FeedForward::down_proj output construction",
-                "required_api_boundary": "typed_transformer_forward_workspace",
-                "next_safe_change": "add or adopt a behavior-preserving linear output-storage API before replacing FeedForward::down_proj output construction with reusable workspace-backed storage",
+                "no_reuse_reason": "candle_nn::Linear exposes weight and optional bias tensors, but its behavior-preserving compute path is Tensor::matmul plus optional broadcast_add, and those operations return owned Tensors without a caller-provided output-storage parameter",
+                "required_api_boundary": "dense_linear_output_storage_api_boundary",
+                "next_safe_change": "add or adopt a Candle Tensor matmul/bias-add output-storage API before replacing FeedForward::down_proj output construction with reusable workspace-backed storage",
+                "weight_accessible": true,
+                "bias_accessible": true,
+                "can_fill_caller_output_storage": false,
                 "behavior_gate": "generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false must match the Qwen3 Q8_0 baseline",
                 "claim_scope": "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made",
             },
@@ -374,7 +377,7 @@ pub(crate) fn warm_session_aggregate_allocation_audit_json(
         Some(
             "workspace_api_present_reuse_deferred"
                 | "workspace_owned_output_reuse_deferred"
-                | "down_proj_output_storage_reuse_blocked"
+                | "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         )
     );
 
@@ -399,14 +402,14 @@ fn warm_session_next_optimization_target(
         ranked_hotspots.first().and_then(|hotspot| hotspot["component"].as_str()).unwrap_or("none");
     let (target, rationale, status) = match component {
         "prompt_prefill" => (
-            "feed_forward_down_proj_output_storage_boundary",
-            "prompt prefill dominates aggregate allocation counters; prompt_prefill.forward is the measured subcomponent and the exact FeedForward::down_proj output boundary is blocked by Candle's owned Tensor return API",
-            "down_proj_output_storage_reuse_blocked",
+            "dense_linear_output_storage_api_boundary",
+            "prompt prefill dominates aggregate allocation counters; prompt_prefill.forward is the measured subcomponent and the exact FeedForward::down_proj output boundary is blocked by Candle Tensor matmul/bias-add owned return APIs",
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops",
         ),
         "prompt_prefill.forward" => (
-            "feed_forward_down_proj_output_storage_boundary",
-            "prompt_prefill.forward dominates aggregate allocation counters; the exact FeedForward::down_proj output boundary is reached, but Candle's linear API does not expose reusable output storage",
-            "down_proj_output_storage_reuse_blocked",
+            "dense_linear_output_storage_api_boundary",
+            "prompt_prefill.forward dominates aggregate allocation counters; the exact FeedForward::down_proj output boundary is reached, but Candle Tensor matmul/bias-add APIs do not expose caller-provided output storage",
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops",
         ),
         "prompt_prefill.embed" => (
             "prefill_embedding_allocation_attribution",
