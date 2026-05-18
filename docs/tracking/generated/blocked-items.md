@@ -347,6 +347,7 @@
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-006 | LNL258V-OPENVINO-DOCS-005 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-VALIDATE-001 | LNL258V-OPENVINO-DOCS-006 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-STATUS-001 | LNL258V-OPENVINO-VALIDATE-001 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-UX-001 | LNL258V-OPENVINO-STATUS-001 | pr_open |
 | intel-a770 | A770-003 | A770-000 | proposed |
 | intel-a770 | A770-004 | A770-003 | proposed |
 | intel-a770 | A770-005 | A770-004 | proposed |

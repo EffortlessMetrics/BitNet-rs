@@ -80,6 +80,7 @@ pub struct ReceiptExplanation {
     pub timing: TimingExplanation,
     pub residency: ResidencyExplanation,
     pub benchmark_qualification: BenchmarkQualificationExplanation,
+    pub openvino: OpenVinoExplanation,
     pub claim_limits: ClaimLimitsExplanation,
 }
 
@@ -193,6 +194,26 @@ pub struct BenchmarkProfileExplanation {
     pub device_to_host_ms: Option<f64>,
     pub device_to_host_ms_source: Option<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+pub struct OpenVinoExplanation {
+    pub route_id: Option<String>,
+    pub route_reason: Option<String>,
+    pub requested_backend: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+    pub resolved_device: Option<String>,
+    pub proof_family: Option<String>,
+    pub proof_stage: Option<String>,
+    pub backend_lane: Option<String>,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub quality_status: Option<String>,
+    pub timing_scope: Option<String>,
+    pub promotion_status: Option<String>,
+    pub blockers: Vec<String>,
+    pub does_not_prove: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -334,6 +355,7 @@ pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
         timing: timing_explanation(receipt),
         residency: residency_explanation(receipt),
         benchmark_qualification: benchmark_qualification_explanation(receipt),
+        openvino: openvino_explanation(receipt),
         claim_limits: claim_limits_explanation(receipt),
     };
     explanation.model_coverage = model_coverage_explanation(&explanation, receipt);
@@ -391,6 +413,8 @@ fn backend_explanation(receipt: &Value) -> BackendExplanation {
 fn execution_plan_explanation(receipt: &Value) -> ExecutionPlanExplanation {
     ExecutionPlanExplanation {
         selected_route: string_at(receipt, &["execution_plan", "selected_route"])
+            .or_else(|| string_at(receipt, &["route_id"]))
+            .or_else(|| string_at(receipt, &["route", "route_id"]))
             .or_else(|| string_at(receipt, &["selected_route"])),
         model_family: string_at(receipt, &["execution_plan", "model_family"]),
         quantization: string_at(receipt, &["execution_plan", "quantization"]),
@@ -408,6 +432,8 @@ fn quality_explanation(receipt: &Value) -> QualityExplanation {
         answer_quality_passed: bool_at(receipt, &["answer_quality", "passed"])
             .or_else(|| bool_at(receipt, &["quality", "passed"]))
             .or_else(|| bool_at(receipt, &["quality_gate", "passed"]))
+            .or_else(|| bool_at(receipt, &["answer_gate", "passed"]))
+            .or_else(|| bool_at(receipt, &["generation", "all_answer_gates_passed"]))
             .or_else(|| bool_at(receipt, &["quality", "garbage_filter_passed"]))
             .or_else(|| bool_at(receipt, &["benchmark", "quality_passed"])),
         benchmark_quality_passed: bool_at(receipt, &["benchmark", "quality_passed"]),
@@ -630,6 +656,220 @@ fn benchmark_profile_reviews(receipt: &Value) -> Vec<BenchmarkProfileExplanation
             })
         })
         .collect()
+}
+
+fn openvino_explanation(receipt: &Value) -> OpenVinoExplanation {
+    let requested_backend = string_at(receipt, &["requested_backend"])
+        .or_else(|| string_at(receipt, &["backend", "requested_backend"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "requested_backend"]));
+    let selected_backend = string_at(receipt, &["selected_backend"])
+        .or_else(|| string_at(receipt, &["backend", "selected_backend"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "selected_backend"]));
+    let runtime_api = string_at(receipt, &["runtime_api"])
+        .or_else(|| string_at(receipt, &["backend", "runtime_api"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "runtime_api"]));
+    let route_id = string_at(receipt, &["route_id"])
+        .or_else(|| string_at(receipt, &["route", "route_id"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "route_id"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "selected_route"]))
+        .or_else(|| string_at(receipt, &["selected_route"]));
+    let artifact_kind = string_at(receipt, &["artifact_kind"]);
+    let backend_lane = string_at(receipt, &["backend_lane"]);
+
+    if !is_openvino_receipt(
+        artifact_kind.as_deref(),
+        route_id.as_deref(),
+        requested_backend.as_deref(),
+        selected_backend.as_deref(),
+        runtime_api.as_deref(),
+        backend_lane.as_deref(),
+    ) {
+        return OpenVinoExplanation::default();
+    }
+
+    let runtime_device = string_at(receipt, &["runtime_device"])
+        .or_else(|| string_at(receipt, &["device"]))
+        .or_else(|| string_at(receipt, &["backend", "runtime_device"]));
+    let resolved_device = string_at(receipt, &["resolved_device"])
+        .or_else(|| string_at(receipt, &["device_name"]))
+        .or_else(|| string_at(receipt, &["backend", "resolved_device"]));
+    let proof_family = string_at(receipt, &["proof_family"])
+        .or_else(|| backend_lane.clone())
+        .or_else(|| route_id.clone());
+    let proof_stage = string_at(receipt, &["proof_stage"]);
+    let selected_kernel_or_runtime = string_at(receipt, &["selected_kernel_or_runtime"])
+        .or_else(|| string_at(receipt, &["selected_kernel"]))
+        .or_else(|| string_at(receipt, &["runtime", "selected_kernel_or_runtime"]));
+    let route_reason = string_at(receipt, &["route", "route_reason"])
+        .or_else(|| string_at(receipt, &["route_reason"]));
+    let timing_scope = string_at(receipt, &["timing", "timing_scope"])
+        .or_else(|| string_at(receipt, &["timing_scope"]))
+        .or_else(|| string_at(receipt, &["comparison_scope"]))
+        .or_else(|| infer_openvino_timing_scope(receipt));
+    let promotion_status = string_at(receipt, &["promotion_status"])
+        .or_else(|| string_at(receipt, &["route", "promotion_status"]))
+        .or_else(|| string_at(receipt, &["route_status"]))
+        .or_else(|| infer_openvino_promotion_status(route_id.as_deref()));
+    let quality_status = openvino_quality_status(receipt);
+    let blockers = openvino_blockers(receipt, route_id.as_deref(), selected_backend.as_deref());
+    let does_not_prove = openvino_does_not_prove(
+        route_id.as_deref(),
+        selected_backend.as_deref(),
+        promotion_status.as_deref(),
+        receipt,
+    );
+
+    OpenVinoExplanation {
+        route_id,
+        route_reason,
+        requested_backend,
+        selected_backend,
+        runtime_api,
+        runtime_device,
+        resolved_device,
+        proof_family,
+        proof_stage,
+        backend_lane,
+        selected_kernel_or_runtime,
+        quality_status,
+        timing_scope,
+        promotion_status,
+        blockers,
+        does_not_prove,
+    }
+}
+
+fn is_openvino_receipt(
+    artifact_kind: Option<&str>,
+    route_id: Option<&str>,
+    requested_backend: Option<&str>,
+    selected_backend: Option<&str>,
+    runtime_api: Option<&str>,
+    backend_lane: Option<&str>,
+) -> bool {
+    [artifact_kind, route_id, requested_backend, selected_backend, runtime_api, backend_lane]
+        .into_iter()
+        .flatten()
+        .any(|value| value.to_ascii_lowercase().contains("openvino"))
+}
+
+fn infer_openvino_timing_scope(receipt: &Value) -> Option<String> {
+    if value_at(receipt, &["timing", "openvino_perf_metrics"]).is_some()
+        || f64_at(receipt, &["timing", "pipeline_construct_wall_ms"]).is_some()
+        || f64_at(receipt, &["timing", "generation_wall_ms"]).is_some()
+    {
+        return Some("openvino_pipeline_construct_and_generation_wall_time".to_string());
+    }
+    if value_at(receipt, &["generation", "devices"]).is_some() {
+        return Some("openvino_multi_device_generation_summary".to_string());
+    }
+    None
+}
+
+fn infer_openvino_promotion_status(route_id: Option<&str>) -> Option<String> {
+    let route_id = route_id?;
+    if route_id.contains("candidate") {
+        Some("candidate".to_string())
+    } else if route_id.contains("promoted") || route_id == "dense_slm_default_cpu" {
+        Some("promoted".to_string())
+    } else {
+        None
+    }
+}
+
+fn openvino_quality_status(receipt: &Value) -> Option<String> {
+    if let Some(passed) = bool_at(receipt, &["answer_gate", "passed"]) {
+        return Some(if passed { "answer_gate_passed" } else { "answer_gate_failed" }.to_string());
+    }
+    if let Some(passed) = bool_at(receipt, &["quality_gate", "passed"]) {
+        return Some(
+            if passed { "quality_gate_passed" } else { "quality_gate_failed" }.to_string(),
+        );
+    }
+    if let Some(status) = string_at(receipt, &["profile_quality", "status"]) {
+        return Some(status);
+    }
+    if let Some(passed) = bool_at(receipt, &["generation", "all_answer_gates_passed"]) {
+        return Some(
+            if passed { "all_answer_gates_passed" } else { "answer_gate_failures_present" }
+                .to_string(),
+        );
+    }
+    None
+}
+
+fn openvino_blockers(
+    receipt: &Value,
+    route_id: Option<&str>,
+    selected_backend: Option<&str>,
+) -> Vec<String> {
+    let mut blockers = BTreeSet::new();
+    extend_string_set(&mut blockers, string_array_at(receipt, &["blockers"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["route", "blockers"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["known_gaps"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["timing", "known_gaps"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["profile_quality", "notes"]));
+
+    if route_id.is_some_and(|route| route.contains("candidate")) {
+        blockers.insert(
+            "route remains candidate until exact-profile promotion evidence exists".to_string(),
+        );
+    }
+    if bool_at(receipt, &["output", "generated_token_ids_available_from_pipeline"]) == Some(false)
+        || bool_at(
+            receipt,
+            &["environment", "transformers", "generated_token_ids_available_from_pipeline"],
+        ) == Some(false)
+    {
+        blockers
+            .insert("direct generated token IDs are unavailable from OpenVINO GenAI".to_string());
+    }
+    if selected_backend == Some("openvino-npu") {
+        blockers.insert("NPU promotion requires cache plus warm/resident evidence".to_string());
+    }
+    blockers.into_iter().collect()
+}
+
+fn openvino_does_not_prove(
+    route_id: Option<&str>,
+    selected_backend: Option<&str>,
+    promotion_status: Option<&str>,
+    receipt: &Value,
+) -> Vec<String> {
+    let mut limits = BTreeSet::new();
+    limits.insert("BitNet packed I2_S/QK256 proof".to_string());
+    limits.insert("full BitNet accelerator inference".to_string());
+    limits.insert("QK256 accelerator decode".to_string());
+
+    if selected_backend == Some("openvino-gpu") {
+        limits.insert("native OpenCL execution proof".to_string());
+    }
+    if selected_backend == Some("openvino-npu") {
+        limits.insert("native NPU kernel execution".to_string());
+        limits.insert("NPU cold one-off usability".to_string());
+        limits.insert("dynamic decode, beam search, or parallel sampling on NPU".to_string());
+    }
+    if promotion_status != Some("promoted")
+        || route_id.is_some_and(|route| route.contains("candidate"))
+    {
+        limits.insert("route promotion".to_string());
+    }
+    if bool_at(receipt, &["route", "acceleration_claim"]) == Some(false)
+        || bool_at(receipt, &["acceleration_claim"]) == Some(false)
+    {
+        limits.insert("acceleration claim".to_string());
+    }
+    if bool_at(receipt, &["speedup_claim"]) == Some(false)
+        || bool_at(receipt, &["route", "speedup_claim"]) == Some(false)
+        || bool_at(receipt, &["claim_boundary", "speedup_claim"]) == Some(false)
+    {
+        limits.insert("speedup claim".to_string());
+    }
+    limits.into_iter().collect()
+}
+
+fn extend_string_set(values: &mut BTreeSet<String>, entries: Vec<String>) {
+    values.extend(entries.into_iter().filter(|entry| !entry.trim().is_empty()));
 }
 
 fn model_coverage_explanation(
@@ -981,8 +1221,13 @@ pub fn compact_proof_lines(explanation: &ReceiptExplanation) -> Vec<String> {
     if let Some(runtime) = &explanation.backend.runtime_api {
         lines.push(format!("  runtime: {runtime}"));
     }
+    if let Some(device) = &explanation.openvino.runtime_device {
+        lines.push(format!("  device: {device}"));
+    }
     if !explanation.kernels.is_empty() {
         lines.push(format!("  kernel: {}", explanation.kernels.join(", ")));
+    } else if let Some(runtime) = &explanation.openvino.selected_kernel_or_runtime {
+        lines.push(format!("  runtime id: {runtime}"));
     }
     if let Some(fallback) = explanation.backend.fallback_used {
         lines.push(format!("  fallback: {fallback}"));
@@ -1025,6 +1270,12 @@ pub fn compact_proof_lines(explanation: &ReceiptExplanation) -> Vec<String> {
         explanation.claim_limits.speedup_claim.or(explanation.execution_plan.speedup_claim);
     if let Some(speedup_claim) = speedup_claim {
         lines.push(format!("  speed claim: {speedup_claim}"));
+    }
+    if let Some(status) = &explanation.openvino.promotion_status {
+        lines.push(format!("  OpenVINO promotion: {status}"));
+    }
+    if !explanation.openvino.does_not_prove.is_empty() {
+        lines.push(format!("  does not prove: {}", explanation.openvino.does_not_prove.join("; ")));
     }
     lines.push(format!("  receipt: {}", explanation.path));
 
@@ -1198,6 +1449,33 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
         }
     }
 
+    if has_openvino(&explanation.openvino) {
+        println!();
+        println!("OpenVINO:");
+        print_option_indented("route_id", explanation.openvino.route_id.as_deref());
+        print_option_indented("route_reason", explanation.openvino.route_reason.as_deref());
+        print_option_indented(
+            "requested_backend",
+            explanation.openvino.requested_backend.as_deref(),
+        );
+        print_option_indented("selected_backend", explanation.openvino.selected_backend.as_deref());
+        print_option_indented("runtime_api", explanation.openvino.runtime_api.as_deref());
+        print_option_indented("runtime_device", explanation.openvino.runtime_device.as_deref());
+        print_option_indented("resolved_device", explanation.openvino.resolved_device.as_deref());
+        print_option_indented("proof_family", explanation.openvino.proof_family.as_deref());
+        print_option_indented("proof_stage", explanation.openvino.proof_stage.as_deref());
+        print_option_indented("backend_lane", explanation.openvino.backend_lane.as_deref());
+        print_option_indented(
+            "selected_kernel_or_runtime",
+            explanation.openvino.selected_kernel_or_runtime.as_deref(),
+        );
+        print_option_indented("quality_status", explanation.openvino.quality_status.as_deref());
+        print_option_indented("timing_scope", explanation.openvino.timing_scope.as_deref());
+        print_option_indented("promotion_status", explanation.openvino.promotion_status.as_deref());
+        print_string_list_indented("blockers", &explanation.openvino.blockers);
+        print_string_list_indented("does_not_prove", &explanation.openvino.does_not_prove);
+    }
+
     println!();
     println!("Claim Limits:");
     print_bool_indented("speedup_claim", explanation.claim_limits.speedup_claim);
@@ -1352,6 +1630,25 @@ fn has_benchmark_qualification(qualification: &BenchmarkQualificationExplanation
         || qualification.pure_host_to_device_timing_recorded.is_some()
         || qualification.device_to_host_timing_recorded.is_some()
         || !qualification.profile_reviews.is_empty()
+}
+
+fn has_openvino(openvino: &OpenVinoExplanation) -> bool {
+    openvino.route_id.is_some()
+        || openvino.route_reason.is_some()
+        || openvino.requested_backend.is_some()
+        || openvino.selected_backend.is_some()
+        || openvino.runtime_api.is_some()
+        || openvino.runtime_device.is_some()
+        || openvino.resolved_device.is_some()
+        || openvino.proof_family.is_some()
+        || openvino.proof_stage.is_some()
+        || openvino.backend_lane.is_some()
+        || openvino.selected_kernel_or_runtime.is_some()
+        || openvino.quality_status.is_some()
+        || openvino.timing_scope.is_some()
+        || openvino.promotion_status.is_some()
+        || !openvino.blockers.is_empty()
+        || !openvino.does_not_prove.is_empty()
 }
 
 fn has_model_coverage(coverage: &ModelCoverageExplanation) -> bool {
@@ -1583,6 +1880,103 @@ mod tests {
         assert!(lines.contains(&"  quality: true".to_string()));
         assert!(lines.contains(&"  weights: uploaded once".to_string()));
         assert!(lines.contains(&"  speed claim: false".to_string()));
+    }
+
+    #[test]
+    fn receipts_explain_extracts_lunar_lake_openvino_route_summary() -> Result<()> {
+        let receipt = json!({
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "proof_stage": "operator_candidate_route_executed",
+            "requested_backend": "openvino-gpu",
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0",
+            "resolved_device": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+            "fallback_used": false,
+            "backend_lane": "dense_slm_openvino_gpu_arc140v",
+            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+            "model_family": "qwen",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "route": {
+                "route_id": "dense_slm_openvino_gpu_candidate",
+                "route_reason": "Candidate route because answer gates and phase metrics exist, but no benchmark-qualified speedup claim is recorded.",
+                "acceleration_claim": false
+            },
+            "model": {
+                "repo": "Qwen/Qwen2.5-0.5B-Instruct"
+            },
+            "output": {
+                "generated_token_ids_available_from_pipeline": false
+            },
+            "answer_gate": {
+                "passed": true
+            },
+            "timing": {
+                "pipeline_construct_wall_ms": 6089.31,
+                "generation_wall_ms": 2458.34,
+                "openvino_perf_metrics": {
+                    "time_to_first_token": {
+                        "mean_ms": 1455.4
+                    }
+                }
+            },
+            "claim_boundary": {
+                "speedup_claim": false,
+                "bitnet_packed_i2s_qk256_proof": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("openvino-gpu.json"), &receipt);
+
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_slm_openvino_gpu_candidate"));
+        assert_eq!(explanation.quality.answer_quality_passed, Some(true));
+        assert_eq!(
+            explanation.openvino.route_id.as_deref(),
+            Some("dense_slm_openvino_gpu_candidate")
+        );
+        assert_eq!(explanation.openvino.selected_backend.as_deref(), Some("openvino-gpu"));
+        assert_eq!(explanation.openvino.runtime_api.as_deref(), Some("openvino_genai"));
+        assert_eq!(explanation.openvino.runtime_device.as_deref(), Some("GPU.0"));
+        assert_eq!(
+            explanation.openvino.proof_family.as_deref(),
+            Some("dense_slm_openvino_gpu_arc140v")
+        );
+        assert_eq!(
+            explanation.openvino.selected_kernel_or_runtime.as_deref(),
+            Some("openvino-genai-llmpipeline-gpu0")
+        );
+        assert_eq!(explanation.openvino.quality_status.as_deref(), Some("answer_gate_passed"));
+        assert_eq!(
+            explanation.openvino.timing_scope.as_deref(),
+            Some("openvino_pipeline_construct_and_generation_wall_time")
+        );
+        assert_eq!(explanation.openvino.promotion_status.as_deref(), Some("candidate"));
+        assert!(
+            explanation
+                .openvino
+                .blockers
+                .iter()
+                .any(|blocker| blocker.contains("direct generated token IDs"))
+        );
+        assert!(
+            explanation
+                .openvino
+                .does_not_prove
+                .iter()
+                .any(|limit| limit == "native OpenCL execution proof")
+        );
+        assert!(explanation.openvino.does_not_prove.iter().any(|limit| limit == "route promotion"));
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["openvino"]["runtime_device"], "GPU.0");
+        assert_eq!(value["openvino"]["quality_status"], "answer_gate_passed");
+
+        let lines = compact_proof_lines(&explanation);
+        assert!(lines.contains(&"  route: dense_slm_openvino_gpu_candidate".to_string()));
+        assert!(lines.contains(&"  device: GPU.0".to_string()));
+        assert!(lines.contains(&"  OpenVINO promotion: candidate".to_string()));
+        assert!(lines.iter().any(|line| line.contains("does not prove")));
+        Ok(())
     }
 
     #[test]
