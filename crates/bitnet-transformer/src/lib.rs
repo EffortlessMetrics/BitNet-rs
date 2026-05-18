@@ -591,7 +591,7 @@ impl TransformerForwardWorkspace {
         self.last_output_shape = tensor.dims().to_vec();
     }
 
-    fn store_feed_forward_output(&mut self, tensor: Tensor) {
+    fn store_feed_forward_output(&mut self, tensor: Tensor) -> Result<Tensor> {
         let last_shape = tensor.dims().to_vec();
         self.last_output_shape = last_shape.clone();
         self.feed_forward_output_surface = Some(TransformerWorkspaceOutputSurface {
