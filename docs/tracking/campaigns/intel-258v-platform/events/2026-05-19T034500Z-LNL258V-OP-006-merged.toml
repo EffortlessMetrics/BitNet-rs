@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T03:45:00Z"
+event = "merged"
+item = "LNL258V-OP-006"
+branch = "codex/lunar-lake/LNL258V-OP-006-openvino-ask-runtime-blocker"
+pr = 5749
+head_sha = "8161f789443b1402da15f09f19f8ef89022e0ab3"
+merge_sha = "185fb868672d75e0b02ae98dacc80cd15c20786b"
+actor = "codex"
+summary = "Merged LNL258V-OP-006 after adding the OpenVINO ask-runtime blocker to Lunar Lake route evidence."
+
+notes = [
+  "Route-profile and benchmark artifacts now keep OpenVINO GPU/NPU promotion blocked until bitnet lunar-lake ask can execute OpenVINO routes.",
+  "Benchmark-qualified GPU latency evidence remains indexed for qualifying profiles, but GPU/NPU routes stay candidate-only and unpromoted.",
+  "The merge does not claim route promotion, speedup, power advantage, Arc/NPU acceleration, native OpenCL/NPU execution, or BitNet QK256/I2_S behavior change.",
+]
