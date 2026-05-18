@@ -643,7 +643,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-CHAT-001"
-status = "in_progress"
+status = "pr_open"
+pr = 5675
+head_sha = "8736f99161b711e96f5c8474b9590ed944a56524"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
 stackable = false
 review_mode = "codex_premerge"
