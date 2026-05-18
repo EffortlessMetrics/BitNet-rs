@@ -56,6 +56,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref || github.ref_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
@@ -78,8 +79,14 @@ jobs:
             selected=true
             reason="explicit macOS/Apple/Metal/full-ci label"
           else
-            git fetch --no-tags --depth=1 origin "$BASE_REF"
-            changed="$(git diff --name-only "origin/$BASE_REF"...HEAD)"
+            if [ -n "${BASE_SHA:-}" ] && changed="$(git diff --name-only "$BASE_SHA"...HEAD 2>/dev/null)"; then
+              :
+            elif changed="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null)"; then
+              :
+            else
+              git fetch --no-tags --depth=50 origin "$BASE_REF" >/dev/null 2>&1 || true
+              changed="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null || git diff --name-only HEAD~1..HEAD 2>/dev/null || true)"
+            fi
             if printf '%s\n' "$changed" | grep -E '^(\.github/workflows/macos-arm64\.yml|crates/bitnet-metal/|crates/bitnet-kernels/src/metal/|crates/bitnet-kernels/src/metal_compute\.rs|crates/bitnet-kernels/tests/metal|crates/bitnet-device-probe/src/apple_metal\.rs|crates/bitnet-gpu-hal/src/metal_backend\.rs|crates/bitnet-common/tests/metal_memory_patterns\.rs)' >/dev/null; then
               selected=true
               reason="Mac/Metal-specific paths changed"
