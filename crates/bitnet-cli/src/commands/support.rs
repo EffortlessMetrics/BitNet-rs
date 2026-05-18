@@ -186,9 +186,9 @@ fn quality_gate_status(receipt: &ReceiptExplanation) -> &'static str {
         receipt.quality.benchmark_quality_passed,
         receipt.quality.parity_passed,
     ];
-    if gates.iter().any(|gate| *gate == Some(false)) {
+    if gates.contains(&Some(false)) {
         "blocked"
-    } else if gates.iter().any(|gate| *gate == Some(true)) {
+    } else if gates.contains(&Some(true)) {
         "passed"
     } else {
         "not_available"

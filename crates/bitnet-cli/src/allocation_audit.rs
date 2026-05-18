@@ -286,7 +286,11 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
             "forward_boundary": {
                 "first_reusable_allocation_surface": "transformer_forward_workspace_and_owned_tensor_outputs",
                 "classification": "model.forward returns owned tensors and uses transformer-layer workspace/tensor outputs that are not yet caller-reusable from the warm-session loop",
-                "next_safe_change": "introduce or thread reusable transformer forward buffers only behind generated-ID and strict-receipt preservation gates",
+                "reuse_status": "not_reusable_without_transformer_api_change",
+                "no_reuse_reason": "TransformerModel::forward, TransformerBlock::forward, and FeedForward::forward return owned Candle tensors from per-op outputs; caller-side warm-session buffers cannot safely reuse those outputs without threading a typed transformer workspace through the model API",
+                "required_api_boundary": "typed_transformer_forward_workspace",
+                "next_safe_change": "add a transformer-owned workspace API with generated-ID and strict-receipt preservation tests before replacing owned tensor outputs",
+                "behavior_gate": "generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false must match the Qwen3 Q8_0 baseline",
                 "claim_scope": "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made",
             },
         },
@@ -363,6 +367,8 @@ pub(crate) fn warm_session_aggregate_allocation_audit_json(
     });
     let dominant_hotspot = ranked.first().cloned().unwrap_or(serde_json::Value::Null);
     let next_optimization_target = warm_session_next_optimization_target(&ranked);
+    let optimization_deferred =
+        next_optimization_target["status"].as_str() == Some("blocked_by_owned_tensor_outputs");
 
     serde_json::json!({
         "enabled": true,
@@ -373,7 +379,7 @@ pub(crate) fn warm_session_aggregate_allocation_audit_json(
         "ranked_hotspots": ranked,
         "dominant_hotspot": dominant_hotspot,
         "next_optimization_target": next_optimization_target,
-        "optimization_deferred": false,
+        "optimization_deferred": optimization_deferred,
     })
 }
 
@@ -383,30 +389,36 @@ fn warm_session_next_optimization_target(
 ) -> serde_json::Value {
     let component =
         ranked_hotspots.first().and_then(|hotspot| hotspot["component"].as_str()).unwrap_or("none");
-    let (target, rationale) = match component {
+    let (target, rationale, status) = match component {
         "prompt_prefill" => (
             "prefill_forward_buffer_boundary",
             "prompt prefill dominates aggregate allocation counters; prompt_prefill.forward is the measured subcomponent and the next safe target is reusable transformer forward buffers",
+            "blocked_by_owned_tensor_outputs",
         ),
         "prompt_prefill.forward" => (
-            "prefill_forward_buffer_boundary",
-            "prompt_prefill.forward dominates aggregate allocation counters; classify or reuse transformer forward workspace before changing dense math",
+            "typed_transformer_forward_workspace_api",
+            "prompt_prefill.forward dominates aggregate allocation counters, but caller-side reuse is blocked because transformer forward APIs return owned tensor outputs",
+            "blocked_by_owned_tensor_outputs",
         ),
         "prompt_prefill.embed" => (
             "prefill_embedding_allocation_attribution",
             "prompt embedding allocation dominates aggregate allocation counters; preserve prompt IDs before changing embedding layout",
+            "needs_attribution",
         ),
         "decode_total" | "model.forward" => (
             "decode_model_forward_allocation_attribution",
             "decode/model.forward dominates aggregate allocation counters; attribute dense tensor outputs before changing kernels",
+            "needs_attribution",
         ),
         "model.logits_and_extract" => (
             "logits_extraction_boundary",
             "logits extraction remains the dominant allocation counter source after sampler and logits scratch reuse",
+            "needs_attribution",
         ),
         "prompt_tokenize" => (
             "prompt_token_cache_or_tokenizer_boundary",
             "prompt tokenization dominates aggregate allocation counters; keep prompt-cache behavior receipt-visible",
+            "needs_attribution",
         ),
         "prompt_setup"
         | "prompt_setup.buffer_reset"
@@ -415,11 +427,15 @@ fn warm_session_next_optimization_target(
         | "prompt_setup.sampler_setup" => (
             "prompt_setup_boundary",
             "prompt setup dominates aggregate allocation counters; preserve prompt isolation while narrowing setup work",
+            "needs_attribution",
         ),
-        "none" => ("none", "no allocation hotspots were recorded by the aggregate audit"),
+        "none" => {
+            ("none", "no allocation hotspots were recorded by the aggregate audit", "not_available")
+        }
         _ => (
             "measured_hotspot_followup",
             "the next target follows the dominant measured allocation hotspot and must preserve generated IDs",
+            "needs_attribution",
         ),
     };
 
@@ -427,6 +443,7 @@ fn warm_session_next_optimization_target(
         "component": component,
         "target": target,
         "rationale": rationale,
+        "status": status,
         "claim_scope": "diagnostic prioritization only; no runtime optimization or sustained-throughput claim is made",
     })
 }
