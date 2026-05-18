@@ -801,3 +801,43 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-AVX512-000"
+status = "ready"
+branch = "codex/cpu-avx512-000-kernel-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-BITNET-008"]
+acceptance = "Document the AVX-512 CPU kernel contract, strict ISA selection rails, and PR queue so detection, receipt labels, execution, speed, and sustained performance remain separate proof states before runtime AVX-512 work begins."
+commands = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md",
+  "plans/cpu-avx512/implementation-plan.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "docs/specs/amd-9950x3d-cpu-roadmap.md",
+  "docs/tracking/campaigns/cpu-proof/active.toml",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The AVX-512 CPU kernel contract and strict ISA selection rails are documented after merge.",
+  "The AVX-512 runtime implementation queue is documented after merge.",
+]
+must_not_claim = [
+  "AVX-512 optimized kernels are implemented.",
+  "AVX-512 execution is proven.",
+  "AVX-512 is faster than AVX2.",
+  "AVX-512 sustained performance is proven.",
+  "GPU, NPU, CUDA, OpenCL, OpenVINO, Metal, server, or general chat-quality readiness is proven.",
+]
