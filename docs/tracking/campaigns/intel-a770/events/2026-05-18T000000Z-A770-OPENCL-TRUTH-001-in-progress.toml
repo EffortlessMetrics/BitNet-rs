@@ -1,0 +1,12 @@
+timestamp = "2026-05-18T00:00:00Z"
+campaign = "intel-a770"
+item = "A770-OPENCL-TRUTH-001"
+event = "in_progress"
+actor = "codex"
+branch = "work"
+
+notes = [
+  "Started the A770 OpenCL truth-reconciliation item before route or kernel promotion.",
+  "Scope is docs, tracker, route matrix, and capability matrix evidence alignment only; no kernel, dispatch, inference, or benchmark behavior changes are introduced.",
+  "The item keeps A770 QK256, embedding, and tied LM-head routes diagnostic unless committed claim-grade receipts prove the stronger transcript state.",
+]

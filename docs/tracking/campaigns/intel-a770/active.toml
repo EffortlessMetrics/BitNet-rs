@@ -10,12 +10,53 @@ end_state = [
   "Tiny OpenCL smoke executes with fallback_used=false.",
   "CPU/OpenCL parity exists for one kernel or subgraph.",
   "Receipts preserve selected device identity before performance claims.",
+  "Current tracker, route matrix, capability matrix, and committed receipt inventory agree before any A770 promotion.",
 ]
 
 hard_constraints = [
   "OpenCL-first for native A770 proof.",
   "OpenVINO GPU is reference only.",
   "CPU fallback cannot count as A770 execution.",
+  "No full-inference, trusted-partial, performance, or residency claim may appear without committed claim-grade receipts.",
+]
+
+[[work_item]]
+id = "A770-OPENCL-TRUTH-001"
+status = "in_progress"
+branch = "work"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Reconcile the A770 tracker, route matrix, kernel matrix, and committed proof inventory so no full-inference or trusted-partial OpenCL claim is implied without claim-grade receipts."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/device-kernel-routing.toml",
+  "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json",
+  "docs/reports/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/src/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A770 OpenCL proof state is reconciled as diagnostic-only unless committed claim-grade receipts are present.",
+]
+must_not_claim = [
+  "A770 OpenCL execution works.",
+  "BitNet inference works on A770 OpenCL.",
+  "Trusted partial A770 acceleration is claim-ready.",
+  "Full A770 inference or full device residency is proved.",
+  "Dense SLM, Gemma, or small LLM support inherits BitNet A770 proof.",
 ]
 
 [[work_item]]
@@ -26,8 +67,8 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = []
-acceptance = "Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims."
+blocked_by = ["A770-OPENCL-TRUTH-001"]
+acceptance = "Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims after truth reconciliation confirms the committed A770 OpenCL proof level."
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu",

@@ -18,7 +18,7 @@
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
-      "reason": "Trusted-path A770 QK256 receipts are local/target evidence until a clean claim-grade rerun lands."
+      "reason": "No committed claim-grade A770 QK256 receipts prove the stronger transcript/full-inference state; a clean rerun must land before promotion."
     },
     {
       "kernel": "embedding_lookup",
@@ -26,7 +26,7 @@
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
-      "reason": "A770 embedding route is explicit, but claim-grade receipts are not committed yet."
+      "reason": "A770 embedding route is explicit, but no committed claim-grade receipts prove A770 embedding execution yet."
     },
     {
       "kernel": "lm_head_tied_logits",
@@ -34,7 +34,7 @@
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
-      "reason": "A770 lm_head/tied-logits route is explicit, but claim-grade receipts are not committed yet."
+      "reason": "A770 lm_head/tied-logits route is explicit, but no committed claim-grade receipts prove A770 tied-logits execution yet."
     },
     {
       "kernel": "dense_f16_gemv",
