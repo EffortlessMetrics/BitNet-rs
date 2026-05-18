@@ -1,0 +1,20 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:12:13Z"
+event = "merged"
+item = "SLM-CPU-034"
+pr = 5612
+branch = "codex/slm-cpu-034-prefill-forward-attribution"
+head_sha = "d939ba3e4"
+merge_sha = "8418b2ca505a23b0ba7a23edbd3f67fbe9e651ea"
+actor = "codex"
+summary = "Merged Qwen3 Q8_0 Kaby prompt prefill embed/forward allocation attribution and advanced SLM-CPU-035."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5612",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+]
+notes = [
+  "SLM-CPU-034 keeps the prompt_prefill allocation total and adds prompt_prefill_breakdown.embed and prompt_prefill_breakdown.forward fields.",
+  "SLM-CPU-035 is ready to regenerate the real i5-8250U Qwen3 Q8_0 warm-session artifact with those receipt fields.",
+  "No sustained-throughput, runtime speedup, broad answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
