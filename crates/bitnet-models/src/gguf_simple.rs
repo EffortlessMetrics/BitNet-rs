@@ -712,6 +712,11 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
 fn extract_config_from_gguf(reader: &GgufReader) -> Result<bitnet_common::BitNetConfig> {
     let mut config = bitnet_common::BitNetConfig::default();
 
+    if let Some(architecture) = reader.get_string_metadata("general.architecture") {
+        config.model.apply_architecture_defaults(&architecture);
+        tracing::debug!("Applied architecture defaults from general.architecture={architecture}");
+    }
+
     tracing::trace!(
         "Extracting config from GGUF (defaults: hidden={}, n_heads={}, n_kv_heads={})",
         config.model.hidden_size,
@@ -1912,11 +1917,68 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
 
 #[cfg(test)]
 mod tests {
-    use super::{GGUFLoaderConfig, load_gguf_full};
-    use bitnet_common::Device;
+    use super::{GGUFLoaderConfig, extract_config_from_gguf, load_gguf_full};
+    use crate::formats::gguf::{GgufReader, GgufValue};
+    use bitnet_common::{
+        Device,
+        config::{ActivationType, NormType},
+    };
     use serial_test::serial;
     use std::collections::HashMap;
     use tempfile::TempDir;
+
+    fn build_metadata_only_gguf(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
+        const GGUF_VERSION: u32 = 2;
+        const ALIGN: usize = 32;
+
+        let mut data = Vec::new();
+        data.extend_from_slice(b"GGUF");
+        data.extend_from_slice(&GGUF_VERSION.to_le_bytes());
+        data.extend_from_slice(&0u64.to_le_bytes());
+        data.extend_from_slice(&(metadata.len() as u64).to_le_bytes());
+
+        for (key, value) in metadata {
+            let key_bytes = key.as_bytes();
+            data.extend_from_slice(&(key_bytes.len() as u64).to_le_bytes());
+            data.extend_from_slice(key_bytes);
+            write_gguf_value(&mut data, value);
+        }
+
+        let pad = (ALIGN - (data.len() % ALIGN)) % ALIGN;
+        data.resize(data.len() + pad, 0);
+        data
+    }
+
+    fn write_gguf_value(data: &mut Vec<u8>, value: GgufValue) {
+        match value {
+            GgufValue::U32(value) => {
+                data.extend_from_slice(&4u32.to_le_bytes());
+                data.extend_from_slice(&value.to_le_bytes());
+            }
+            GgufValue::F32(value) => {
+                data.extend_from_slice(&6u32.to_le_bytes());
+                data.extend_from_slice(&value.to_le_bytes());
+            }
+            GgufValue::String(value) => {
+                data.extend_from_slice(&8u32.to_le_bytes());
+                data.extend_from_slice(&(value.len() as u64).to_le_bytes());
+                data.extend_from_slice(value.as_bytes());
+            }
+            GgufValue::Array(values) => {
+                data.extend_from_slice(&9u32.to_le_bytes());
+                data.extend_from_slice(&8u32.to_le_bytes());
+                data.extend_from_slice(&(values.len() as u64).to_le_bytes());
+                for value in values {
+                    let GgufValue::String(value) = value else {
+                        panic!("test helper only writes string arrays");
+                    };
+                    data.extend_from_slice(&(value.len() as u64).to_le_bytes());
+                    data.extend_from_slice(value.as_bytes());
+                }
+            }
+            other => panic!("test helper does not write {other:?}"),
+        }
+    }
 
     #[test]
     fn normalize_embed_preserves_ggml_hidden_vocab_token_rows() -> super::Result<()> {
@@ -2007,5 +2069,38 @@ mod tests {
         assert_eq!(super::GgufLoaderMode::RealGguf.as_str(), "real_gguf");
         assert_eq!(super::GgufLoaderMode::MinimalCompatibility.as_str(), "minimal_compatibility");
         assert_eq!(super::GgufLoaderMode::MockCompatibility.as_str(), "mock_compatibility");
+    }
+
+    #[test]
+    fn simple_config_applies_bitnet_architecture_defaults() {
+        let data = build_metadata_only_gguf(vec![
+            ("general.architecture", GgufValue::String("bitnet".to_string())),
+            (
+                "tokenizer.ggml.tokens",
+                GgufValue::Array(vec![
+                    GgufValue::String("<s>".to_string()),
+                    GgufValue::String("</s>".to_string()),
+                ]),
+            ),
+            ("bitnet-b1.58.embedding_length", GgufValue::U32(8)),
+            ("bitnet-b1.58.block_count", GgufValue::U32(1)),
+            ("bitnet-b1.58.attention.head_count", GgufValue::U32(2)),
+            ("bitnet-b1.58.attention.head_count_kv", GgufValue::U32(1)),
+            ("bitnet-b1.58.feed_forward_length", GgufValue::U32(16)),
+            ("bitnet-b1.58.rope.freq_base", GgufValue::F32(500_000.0)),
+            ("bitnet-b1.58.attention.layer_norm_rms_epsilon", GgufValue::F32(1.0e-5)),
+        ]);
+        let reader = GgufReader::new(&data).expect("metadata-only gguf reader");
+
+        let config = extract_config_from_gguf(&reader).expect("extract config");
+
+        assert_eq!(config.model.norm_type, NormType::RmsNorm);
+        assert_eq!(config.model.activation_type, ActivationType::Relu2);
+        assert_eq!(config.model.vocab_size, 2);
+        assert_eq!(config.model.hidden_size, 8);
+        assert_eq!(config.model.num_layers, 1);
+        assert_eq!(config.model.num_heads, 2);
+        assert_eq!(config.model.num_key_value_heads, 1);
+        assert_eq!(config.model.intermediate_size, 16);
     }
 }

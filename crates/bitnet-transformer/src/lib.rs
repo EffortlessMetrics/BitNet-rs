@@ -25,6 +25,9 @@ use layer_builders::{
     linear_with_optional_bias, norm_with_optional_bias, optional_layer_norm_with_optional_bias,
 };
 use qk256::{TIED_EMBED_QK256_KEY, qk256_inline_scale};
+fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
+}
 
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
@@ -229,6 +232,8 @@ impl MultiHeadAttention {
     // RoPE/cache, GQA, score, softmax, and output-projection responsibilities
     // stay isolated from QK256 linear dispatch helpers below.
 
+    /// Apply linear transformation with QK256 dispatch
+    /// Apply linear transformation with QK256 dispatch
     /// Apply linear transformation with QK256 dispatch
     fn apply_linear(
         &self,
@@ -1765,6 +1770,50 @@ mod tests {
     }
 
     #[test]
+    fn attention_f16_dot_input_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_f16_dot_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_qk_both_use_f16_roundtrip_precision() -> Result<()> {
+        let device = Device::Cpu;
+        let query =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+        let key = Tensor::from_slice(&[5.0003f32, 6.0007, -7.1259, 8.2509], (1, 1, 1, 4), &device)?;
+
+        let q_values = attention_f16_dot_input(&query)?.flatten_all()?.to_vec1::<f32>()?;
+        let k_values = attention_f16_dot_input(&key)?.flatten_all()?.to_vec1::<f32>()?;
+        let score = q_values.iter().zip(k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
+
+        assert_eq!(q_values, vec![1.0, -2.0, 3.125, -4.25]);
+        assert_eq!(k_values, vec![5.0, 6.0, -7.125, 8.25]);
+        assert!(score.is_finite(), "attention score should be finite, got {score}");
+    }
+
+    #[test]
+    fn attention_value_mix_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let weights = Tensor::from_slice(&[0.25f32, 0.25, 0.25, 0.25], (1, 1, 1, 4), &device)?;
+        let values =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 4, 1), &device)?;
+
+        let rounded_values = attention_f16_dot_input(&values)?;
+        let mixed = weights.matmul(&rounded_values)?;
+        let mixed = mixed.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(mixed, vec![-0.53125]);
+        Ok(())
+    }
+
+    #[test]
     fn test_layer_norm_with_small_gamma() -> candle_core::Result<()> {
         // Test RMSNorm with gamma RMS ≈ 0.018 (our model's case)
         let device = Device::Cpu;
@@ -1881,7 +1930,176 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    fn test_rms_norm_type_does_not_remove_mean() -> candle_core::Result<()> {
+        let device = Device::Cpu;
+        let hidden_size = 3;
+        let eps = 1e-5;
+
+        use std::collections::HashMap;
+
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let norm = layer_norm_with_optional_bias(hidden_size, eps, NormType::RmsNorm, vb)?;
+
+        let input = Tensor::from_slice(&[1.0f32, 2.0, 3.0], (1, hidden_size), &device)?;
+        let output = norm.forward(&input)?;
+        let values = output.to_vec2::<f32>()?;
+
+        assert!(
+            values[0].iter().all(|value| *value > 0.0),
+            "RMSNorm should preserve positive sign instead of mean-centering: {values:?}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn transposed_lm_head_uses_dedicated_output_weight() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let vocab_size = 4;
+        let hidden_size = 2;
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config.model.num_layers = 0;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::zeros((vocab_size, hidden_size), DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.weight".to_string(),
+            Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.bias".to_string(),
+            Tensor::zeros(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "lm_head.weight".to_string(),
+            Tensor::from_slice(
+                &[
+                    1.0f32, 0.0, 0.0, 0.0, // hidden dim 0 -> token 0
+                    0.0, 1.0, 0.0, 0.0, // hidden dim 1 -> token 1
+                ],
+                (hidden_size, vocab_size),
+                &device,
+            )?,
+        );
+        tensors.insert(
+            "lm_head.transposed".to_string(),
+            Tensor::from_slice(&[1.0f32], (1,), &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors_and_qk256_backend(
+            config,
+            vb,
+            HashMap::new(),
+            Qk256DispatchBackend::Cpu,
+        )?;
+
+        assert!(
+            model.lm_head_transposed,
+            "transposed lm_head flag must survive model construction"
+        );
+        assert!(
+            model.lm_head_weight.is_some(),
+            "transposed lm_head must keep its dedicated output weight"
+        );
+        assert!(
+            model.embed_tied_weight.is_none(),
+            "dedicated transposed lm_head must not fall back to tied embeddings"
+        );
+
+        let hidden = Tensor::from_slice(&[2.0f32, 3.0], (1, hidden_size), &device)?;
+        let logits = model.logits(&hidden)?;
+        let values = logits.to_vec2::<f32>()?;
+        assert_eq!(values, vec![vec![2.0, 3.0, 0.0, 0.0]]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn tied_embedding_logits_use_cached_embedding_transpose() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let vocab_size = 4;
+        let hidden_size = 3;
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config.model.num_layers = 0;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_slice(
+                &[
+                    1.0f32, 0.0, 0.0, // token 0
+                    0.0, 1.0, 0.0, // token 1
+                    0.0, 0.0, 1.0, // token 2
+                    1.0, 1.0, 1.0, // token 3
+                ],
+                (vocab_size, hidden_size),
+                &device,
+            )?,
+        );
+        tensors.insert(
+            "final_norm.weight".to_string(),
+            Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.bias".to_string(),
+            Tensor::zeros(hidden_size, DType::F32, &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors_and_qk256_backend(
+            config,
+            vb,
+            HashMap::new(),
+            Qk256DispatchBackend::Cpu,
+        )?;
+
+        assert!(
+            model.lm_head.is_none() && model.lm_head_weight.is_none(),
+            "missing lm_head must use tied embeddings"
+        );
+        assert!(
+            model.embed_tied_weight.is_some(),
+            "tied embedding logits should cache [hidden, vocab] weight"
+        );
+
+        let hidden_2d = Tensor::from_slice(&[2.0f32, 3.0, 5.0], (1, hidden_size), &device)?;
+        let logits_2d = model.logits(&hidden_2d)?;
+        assert_eq!(logits_2d.to_vec2::<f32>()?, vec![vec![2.0, 3.0, 5.0, 10.0]]);
+
+        let hidden_3d = Tensor::from_slice(
+            &[
+                2.0f32, 3.0, 5.0, // step 0
+                7.0, 11.0, 13.0, // step 1
+            ],
+            (1, 2, hidden_size),
+            &device,
+        )?;
+        let logits_3d = model.logits(&hidden_3d)?;
+        assert_eq!(
+            logits_3d.to_vec3::<f32>()?,
+            vec![vec![vec![2.0, 3.0, 5.0, 10.0], vec![7.0, 11.0, 13.0, 31.0]]]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial(bitnet_env)]
     fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {
         let device = Device::Cpu;
         let hidden_size = 64;
