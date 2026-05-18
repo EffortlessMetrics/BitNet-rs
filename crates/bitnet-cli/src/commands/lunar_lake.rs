@@ -62,6 +62,7 @@ const OPENVINO_NPU_RESIDENT_SESSION: &str = "lunar-lake-openvino-npu-resident-se
 const OPENVINO_NPU_CACHE_EXPERIMENT: &str = "lunar-lake-openvino-npu-cache-experiment.json";
 const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
     "lunar-lake-openvino-generation-budget-sensitivity.json";
+const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["ask_short", "ask_normal"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -207,6 +208,11 @@ pub enum LunarLakeAction {
         /// Operator comparison receipt to evaluate. Relative paths are resolved under artifact-root.
         #[arg(long, default_value = OPERATOR_COMPARISON)]
         comparison_receipt: PathBuf,
+
+        /// Optional route-profile comparison receipt proving benchmark-qualified exact-profile promotions.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long)]
+        route_profile_comparison: Option<PathBuf>,
 
         /// Output JSON promotion ledger to file.
         #[arg(long)]
@@ -1944,6 +1950,7 @@ impl LunarLakeCommand {
                 artifact_root,
                 operator_receipt,
                 comparison_receipt,
+                route_profile_comparison,
                 json_out,
                 created_utc,
                 strict,
@@ -1952,10 +1959,11 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_route_promotion_ledger_with_created_utc(
+                let receipt = build_route_promotion_ledger_with_created_utc_and_profile_evidence(
                     artifact_root,
                     operator_receipt,
                     comparison_receipt,
+                    route_profile_comparison.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_route_promotion_ledger(&receipt, json_out.as_deref())?;
@@ -2973,7 +2981,7 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
 
     let mut fallback_observed = false;
     let mut benchmark_qualified_advantage_claimed = false;
-    let mut candidate_promotion_eligible = false;
+    let mut unexpected_candidate_promotion_eligible = false;
     let mut blockers = BTreeSet::new();
     let gpu_npu_promotion_blocker_summary = comparison
         .promotion_blocker_summary
@@ -2997,8 +3005,15 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
                 benchmark_qualified_advantage_claimed = true;
             }
             if is_openvino_candidate_route(&route.route_id) {
-                if route.promotion_eligible_for_profile {
-                    candidate_promotion_eligible = true;
+                if route.promotion_eligible_for_profile
+                    && !allowed_openvino_profile_promotion(
+                        &profile.profile_id,
+                        &route.route_id,
+                        &route.route_status,
+                        profile.promoted_route.as_deref(),
+                    )
+                {
+                    unexpected_candidate_promotion_eligible = true;
                 }
                 for blocker in &route.blockers {
                     blockers.insert(blocker.clone());
@@ -3009,8 +3024,10 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     if fallback_observed {
         gaps.push("route profile comparison observed fallback_used=true".to_string());
     }
-    if candidate_promotion_eligible {
-        gaps.push("OpenVINO GPU/NPU candidate route became promotion-eligible".to_string());
+    if unexpected_candidate_promotion_eligible {
+        gaps.push(
+            "unexpected OpenVINO GPU/NPU candidate route became promotion-eligible".to_string(),
+        );
     }
     if blockers.is_empty() {
         gaps.push("OpenVINO GPU/NPU candidate blockers are missing".to_string());
@@ -3034,7 +3051,7 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
         default_route_id: comparison.default_route_id,
         profiles,
         timing_coverage,
-        candidate_routes_remain_unpromoted: !candidate_promotion_eligible,
+        candidate_routes_remain_unpromoted: !unexpected_candidate_promotion_eligible,
         benchmark_qualified_advantage_claimed,
         fallback_observed,
         gpu_npu_promotion_blockers: blockers.into_iter().collect(),
@@ -3074,7 +3091,7 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
     let mut fallback_observed = false;
     let mut benchmark_qualified_advantage_claimed = false;
     let mut promoted_routes_have_critical_timing = true;
-    let mut candidate_routes_remain_unpromoted = true;
+    let mut unexpected_candidate_routes_remain_unpromoted = true;
     let mut telemetry_gaps = BTreeSet::new();
     let timing_coverage = benchmark.timing_coverage.clone();
     for profile in &benchmark.profiles {
@@ -3088,8 +3105,16 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
             if route.route_status == "promoted" && !route.critical_timing_present {
                 promoted_routes_have_critical_timing = false;
             }
-            if is_openvino_candidate_route(&route.route_id) && route.route_status == "promoted" {
-                candidate_routes_remain_unpromoted = false;
+            if is_openvino_candidate_route(&route.route_id)
+                && !route.promotion_blocked
+                && !allowed_openvino_profile_promotion(
+                    &profile.profile_id,
+                    &route.route_id,
+                    &route.route_status,
+                    profile.promoted_route.as_deref(),
+                )
+            {
+                unexpected_candidate_routes_remain_unpromoted = false;
             }
             for value in [
                 &route.telemetry.memory_context,
@@ -3116,9 +3141,10 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
     if !promoted_routes_have_critical_timing {
         gaps.push("promoted routes are missing critical cold/warm timing".to_string());
     }
-    if !candidate_routes_remain_unpromoted {
+    if !unexpected_candidate_routes_remain_unpromoted {
         gaps.push(
-            "OpenVINO GPU/NPU candidate route was promoted in cold/warm benchmark".to_string(),
+            "unexpected OpenVINO GPU/NPU candidate route was promoted in cold/warm benchmark"
+                .to_string(),
         );
     }
     if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
@@ -3140,7 +3166,7 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
         profiles,
         timing_coverage,
         promoted_routes_have_critical_timing,
-        candidate_routes_remain_unpromoted,
+        candidate_routes_remain_unpromoted: unexpected_candidate_routes_remain_unpromoted,
         fallback_observed,
         benchmark_qualified_advantage_claimed,
         telemetry_gaps: telemetry_gaps.into_iter().collect(),
@@ -3428,10 +3454,27 @@ pub fn build_comparison_receipt_with_created_utc(
     })
 }
 
+#[cfg(test)]
 pub fn build_route_promotion_ledger_with_created_utc(
     root: &Path,
     operator_receipt: &Path,
     comparison_receipt: &Path,
+    created_utc: String,
+) -> Result<LunarLakeRoutePromotionLedger> {
+    build_route_promotion_ledger_with_created_utc_and_profile_evidence(
+        root,
+        operator_receipt,
+        comparison_receipt,
+        None,
+        created_utc,
+    )
+}
+
+pub fn build_route_promotion_ledger_with_created_utc_and_profile_evidence(
+    root: &Path,
+    operator_receipt: &Path,
+    comparison_receipt: &Path,
+    route_profile_comparison: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRoutePromotionLedger> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -3461,11 +3504,31 @@ pub fn build_route_promotion_ledger_with_created_utc(
     if operator.claim_boundary.hidden_fallback_allowed {
         gaps.push("operator claim boundary allows hidden fallback".to_string());
     }
+    let profile_promotion_evidence = route_profile_comparison
+        .map(|path| {
+            openvino_gpu_profile_promotions_from_comparison(
+                root,
+                path,
+                &operator.machine_id,
+                &mut gaps,
+            )
+        })
+        .transpose()?;
+    let (openvino_gpu_promoted_profiles, profile_promotion_evidence_path) =
+        profile_promotion_evidence.unwrap_or_default();
 
     let routes = operator
         .routes
         .iter()
-        .map(|route| promote_route(route, &operator, &comparison))
+        .map(|route| {
+            promote_route(
+                route,
+                &operator,
+                &comparison,
+                &openvino_gpu_promoted_profiles,
+                profile_promotion_evidence_path.as_deref(),
+            )
+        })
         .collect::<Vec<_>>();
 
     let default_promoted = routes
@@ -3504,12 +3567,21 @@ pub fn build_route_promotion_ledger_with_created_utc(
             route_reason_required: true,
             notes: vec![
                 "ledger-driven auto routing may select only routes promoted for the requested profile".to_string(),
-                "dense Qwen CPU remains the user-facing auto/default route for ask profiles".to_string(),
+                if openvino_gpu_promoted_profiles.is_empty() {
+                    "dense Qwen CPU remains the user-facing auto/default route for ask profiles".to_string()
+                } else {
+                    format!(
+                        "OpenVINO GPU is promoted for benchmark-qualified profiles [{}]; dense Qwen CPU remains the default route id and regression baseline",
+                        openvino_gpu_promoted_profiles.iter().cloned().collect::<Vec<_>>().join(",")
+                    )
+                },
                 "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion".to_string(),
                 "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists".to_string(),
             ],
         },
-        workload_profiles: workload_profiles(),
+        workload_profiles: workload_profiles_with_openvino_gpu_promotions(
+            &openvino_gpu_promoted_profiles,
+        ),
         routes,
         gaps,
         claim_boundary: operator.claim_boundary,
@@ -6091,13 +6163,13 @@ fn cold_warm_route_benchmark(
             profile.profile_id, route.route_id
         ));
     }
-    if route.route_status == "promoted" && !critical_timing_present {
+    if route.promotion_eligible_for_profile && !critical_timing_present {
         global_gaps.push(format!(
             "{} promoted route {} is missing critical cold/warm timing",
             profile.profile_id, route.route_id
         ));
     }
-    if route.route_status != "promoted" && !blockers.is_empty() {
+    if !route.promotion_eligible_for_profile && !blockers.is_empty() {
         profile_gaps.push(format!(
             "{} route {} remains blocked: {}",
             profile.profile_id,
@@ -6108,7 +6180,7 @@ fn cold_warm_route_benchmark(
 
     let benchmark_qualified_advantage =
         route.benchmark_qualified_advantage && critical_timing_present;
-    let promotion_blocked = route.route_status != "promoted";
+    let promotion_blocked = !route.promotion_eligible_for_profile;
     ColdWarmRouteBenchmark {
         route_id: route.route_id.clone(),
         route_status: route.route_status.clone(),
@@ -7274,10 +7346,22 @@ fn route_selection_explanations(
     } else {
         route_not_selected_reasons(ledger, DEFAULT_ASK_ROUTE, &profile.profile_id)
     };
-    let why_not_gpu =
-        route_not_selected_reasons(ledger, "dense_slm_openvino_gpu_candidate", &profile.profile_id);
-    let why_not_npu =
-        route_not_selected_reasons(ledger, "dense_slm_openvino_npu_candidate", &profile.profile_id);
+    let why_not_gpu = if selected_route_id == "dense_slm_openvino_gpu_candidate" {
+        vec![format!(
+            "dense_slm_openvino_gpu_candidate is promoted for profile {} by benchmark-qualified route evidence",
+            profile.profile_id
+        )]
+    } else {
+        route_not_selected_reasons(ledger, "dense_slm_openvino_gpu_candidate", &profile.profile_id)
+    };
+    let why_not_npu = if selected_route_id == "dense_slm_openvino_npu_candidate" {
+        vec![format!(
+            "dense_slm_openvino_npu_candidate is promoted for profile {} by route evidence",
+            profile.profile_id
+        )]
+    } else {
+        route_not_selected_reasons(ledger, "dense_slm_openvino_npu_candidate", &profile.profile_id)
+    };
     (why_not_cpu, why_not_gpu, why_not_npu)
 }
 
@@ -9047,10 +9131,120 @@ fn corpus_v2_recommended_actions(
     actions
 }
 
+fn openvino_gpu_profile_promotions_from_comparison(
+    root: &Path,
+    route_profile_comparison: &Path,
+    expected_machine_id: &str,
+    gaps: &mut Vec<String>,
+) -> Result<(BTreeSet<String>, Option<String>)> {
+    let comparison_path = resolve_receipt_path(root, route_profile_comparison);
+    let comparison: Value = read_json_receipt(&comparison_path)?;
+    let comparison_path_string = path_string(&comparison_path);
+    let mut promoted_profiles = BTreeSet::new();
+    if string_at(&comparison, "artifact_kind").as_deref()
+        != Some("lunar_lake_route_profile_comparison")
+    {
+        gaps.push(format!(
+            "{} is not a Lunar Lake route-profile comparison receipt",
+            comparison_path_string
+        ));
+        return Ok((promoted_profiles, Some(comparison_path_string)));
+    }
+    if string_at(&comparison, "machine_id").as_deref() != Some(expected_machine_id) {
+        gaps.push(format!(
+            "{} machine_id does not match operator machine_id {}",
+            comparison_path_string, expected_machine_id
+        ));
+        return Ok((promoted_profiles, Some(comparison_path_string)));
+    }
+    if bool_at_any(&comparison, &["profile_comparison_ready"]) != Some(true) {
+        gaps.push(format!("{} is not ready for profile promotion", comparison_path_string));
+        return Ok((promoted_profiles, Some(comparison_path_string)));
+    }
+
+    let profiles =
+        comparison.get("profiles").and_then(Value::as_array).cloned().unwrap_or_default();
+    for profile_id in OPENVINO_GPU_PROFILE_PROMOTION_TARGETS {
+        let profile = profiles
+            .iter()
+            .find(|profile| string_at(profile, "profile_id").as_deref() == Some(*profile_id));
+        let Some(profile) = profile else {
+            gaps.push(format!(
+                "{} is missing route-profile evidence for {}",
+                comparison_path_string, profile_id
+            ));
+            continue;
+        };
+        let route = profile.get("route_evidence").and_then(Value::as_array).and_then(|routes| {
+            routes.iter().find(|route| {
+                string_at(route, "route_id").as_deref() == Some("dense_slm_openvino_gpu_candidate")
+            })
+        });
+        let Some(route) = route else {
+            gaps.push(format!(
+                "{} is missing OpenVINO GPU route evidence for {}",
+                comparison_path_string, profile_id
+            ));
+            continue;
+        };
+        if openvino_gpu_route_profile_is_benchmark_qualified(route, profile_id)
+            || openvino_gpu_route_profile_is_already_promoted(profile, route, profile_id)
+        {
+            promoted_profiles.insert((*profile_id).to_string());
+        } else {
+            gaps.push(format!(
+                "OpenVINO GPU route evidence for {} is not benchmark-qualified in {}",
+                profile_id, comparison_path_string
+            ));
+        }
+    }
+
+    Ok((promoted_profiles, Some(comparison_path_string)))
+}
+
+fn openvino_gpu_route_profile_is_benchmark_qualified(route: &Value, profile_id: &str) -> bool {
+    if bool_at_any(route, &["benchmark_qualified_advantage"]) != Some(true)
+        || bool_at_any(route, &["fallback_used"]) != Some(false)
+        || bool_at_any(route, &["answer_gate_passed"]) != Some(true)
+        || bool_at_any(route, &["phase_timing_present"]) != Some(true)
+        || bool_at_any(route, &["timing_applicability.timing_matches_profile"]) != Some(true)
+        || bool_at_any(route, &["profile_quality.profile_present"]) != Some(true)
+        || bool_at_any(route, &["profile_quality.fallback_used"]) != Some(false)
+        || u64_at(route, "profile_quality.failed") != Some(0)
+        || bool_at_any(route, &["route_advantage_context.benchmark_qualified"]) != Some(true)
+    {
+        return false;
+    }
+    let blockers = string_array_at(route, "blockers");
+    blockers.iter().all(|blocker| blocker_is_route_promotion_only(blocker, profile_id))
+}
+
+fn openvino_gpu_route_profile_is_already_promoted(
+    profile: &Value,
+    route: &Value,
+    profile_id: &str,
+) -> bool {
+    string_at(profile, "promoted_route").as_deref() == Some("dense_slm_openvino_gpu_candidate")
+        && string_at(profile, "profile_status").as_deref() == Some("promoted_route_ready")
+        && string_at(route, "route_status").as_deref() == Some("promoted")
+        && bool_at_any(route, &["promotion_eligible_for_profile"]) == Some(true)
+        && bool_at_any(route, &["fallback_used"]) == Some(false)
+        && bool_at_any(route, &["answer_gate_passed"]) == Some(true)
+        && bool_at_any(route, &["phase_timing_present"]) == Some(true)
+        && bool_at_any(route, &["timing_applicability.timing_matches_profile"]) == Some(true)
+        && bool_at_any(route, &["profile_quality.profile_present"]) == Some(true)
+        && bool_at_any(route, &["profile_quality.fallback_used"]) == Some(false)
+        && string_at(route, "profile_quality.profile_id").as_deref() == Some(profile_id)
+        && u64_at(route, "profile_quality.failed") == Some(0)
+        && string_array_at(route, "blockers").is_empty()
+}
+
 fn promote_route(
     route: &OperatorRoute,
     operator: &LunarLakeOperatorReceipt,
     comparison: &LunarLakeComparisonReceipt,
+    openvino_gpu_promoted_profiles: &BTreeSet<String>,
+    profile_promotion_evidence_path: Option<&str>,
 ) -> RoutePromotion {
     let attached = attached_route_evidence(route, &operator.evidence);
     let comparison_route = comparison.routes.iter().find(|item| item.route_id == route.route_id);
@@ -9093,15 +9287,35 @@ fn promote_route(
                 && !route.acceleration_claim
                 && !speedup_claim
             {
+                let mut promoted_for = vec![
+                    "regression_tiny".to_string(),
+                    "ask_short".to_string(),
+                    "ask_normal".to_string(),
+                ];
+                promoted_for.retain(|profile| !openvino_gpu_promoted_profiles.contains(profile));
+                let mut blocked_for =
+                    vec!["accelerator_required".to_string(), "bitnet_strict_reference".to_string()];
+                blocked_for.extend(
+                    openvino_gpu_promoted_profiles
+                        .iter()
+                        .map(|profile| format!("openvino_gpu_promoted_for_{profile}")),
+                );
                 (
                     "promoted".to_string(),
-                    vec![
-                        "regression_tiny".to_string(),
-                        "ask_short".to_string(),
-                        "ask_normal".to_string(),
-                    ],
-                    vec!["accelerator_required".to_string(), "bitnet_strict_reference".to_string()],
-                    "Dense Qwen CPU is promoted as the default route because answer gates, phase evidence, strict no-fallback identity, and comparison readiness are present.".to_string(),
+                    promoted_for,
+                    blocked_for,
+                    if openvino_gpu_promoted_profiles.is_empty() {
+                        "Dense Qwen CPU is promoted as the default route because answer gates, phase evidence, strict no-fallback identity, and comparison readiness are present.".to_string()
+                    } else {
+                        format!(
+                            "Dense Qwen CPU remains the default route id and regression baseline, but OpenVINO GPU supersedes it for benchmark-qualified profiles [{}].",
+                            openvino_gpu_promoted_profiles
+                                .iter()
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        )
+                    },
                 )
             } else {
                 (
@@ -9151,14 +9365,43 @@ fn promote_route(
                 && !route.acceleration_claim
                 && !speedup_claim
             {
-                missing_evidence.push("benchmark_qualified_speedup_or_power_advantage".to_string());
-                missing_evidence.push("profile_regression_bundle".to_string());
-                (
-                    "candidate".to_string(),
-                    vec![],
-                    vec!["auto_default".to_string(), "cold_start".to_string()],
-                    "OpenVINO GPU has bounded answer and phase evidence with fallback=false, but remains a candidate until a workload-profile speedup or power advantage is recorded.".to_string(),
-                )
+                if openvino_gpu_promoted_profiles.is_empty() {
+                    missing_evidence
+                        .push("benchmark_qualified_speedup_or_power_advantage".to_string());
+                    missing_evidence.push("profile_regression_bundle".to_string());
+                    (
+                        "candidate".to_string(),
+                        vec![],
+                        vec!["auto_default".to_string(), "cold_start".to_string()],
+                        "OpenVINO GPU has bounded answer and phase evidence with fallback=false, but remains a candidate until a workload-profile speedup or power advantage is recorded.".to_string(),
+                    )
+                } else {
+                    if let Some(path) = profile_promotion_evidence_path
+                        && !present_evidence.iter().any(|item| item == path)
+                    {
+                        present_evidence.push(path.to_string());
+                    }
+                    (
+                        "promoted".to_string(),
+                        openvino_gpu_promoted_profiles.iter().cloned().collect(),
+                        vec![
+                            "regression_tiny_cpu_baseline".to_string(),
+                            "low_power_power_advantage_unproven".to_string(),
+                            "prefill_heavy_profile_unqualified".to_string(),
+                            "decode_heavy_profile_unqualified".to_string(),
+                            "structured_profile_unqualified".to_string(),
+                            "bitnet_strict_reference".to_string(),
+                        ],
+                        format!(
+                            "OpenVINO GPU is promoted only for benchmark-qualified dense Qwen profiles [{}] with fallback=false, passing corpus-v2 evidence, direct token visibility, profile-matched timing, and lower total response than the CPU baseline.",
+                            openvino_gpu_promoted_profiles
+                                .iter()
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        ),
+                    )
+                }
             } else {
                 (
                     "blocked".to_string(),
@@ -9546,7 +9789,7 @@ fn attach_route_advantage_context(
     profile: &WorkloadProfile,
     route_evidence: &mut [ProfileRouteEvidence],
 ) {
-    let baseline_route_id = profile
+    let promoted_baseline_route_id = profile
         .promoted_route
         .as_deref()
         .filter(|route_id| route_evidence.iter().any(|route| route.route_id == **route_id))
@@ -9556,16 +9799,24 @@ fn attach_route_advantage_context(
                 .any(|route| route.route_id == DEFAULT_ASK_ROUTE)
                 .then_some(DEFAULT_ASK_ROUTE)
         });
-    let Some(baseline_route_id) = baseline_route_id else {
+    let promoted_baseline = promoted_baseline_route_id
+        .and_then(|route_id| route_evidence.iter().find(|route| route.route_id == route_id))
+        .cloned();
+    let cpu_baseline =
+        route_evidence.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE).cloned();
+    if promoted_baseline.is_none() && cpu_baseline.is_none() {
         return;
-    };
-    let Some(baseline) =
-        route_evidence.iter().find(|route| route.route_id == baseline_route_id).cloned()
-    else {
-        return;
-    };
+    }
 
     for route in route_evidence.iter_mut() {
+        let baseline = if is_openvino_candidate_route(&route.route_id) {
+            cpu_baseline.as_ref().or(promoted_baseline.as_ref())
+        } else {
+            promoted_baseline.as_ref().or(cpu_baseline.as_ref())
+        };
+        let Some(baseline) = baseline else {
+            continue;
+        };
         if route.route_id == baseline.route_id {
             continue;
         }
@@ -9586,6 +9837,24 @@ fn attach_route_advantage_context(
     }
 }
 
+fn route_is_benchmark_reference(profile: &WorkloadProfile, route: &ProfileRouteEvidence) -> bool {
+    if route.promotion_eligible_for_profile {
+        return true;
+    }
+    route.route_id == DEFAULT_ASK_ROUTE
+        && route.fallback_used == Some(false)
+        && route.answer_gate_passed == Some(true)
+        && route.phase_timing_present == Some(true)
+        && route.timing_applicability.timing_matches_profile
+        && route.timing.total_response_ms.is_some()
+        && route.profile_quality.as_ref().is_some_and(|quality| {
+            quality.profile_present
+                && quality.failed == 0
+                && quality.fallback_used == Some(false)
+                && quality.profile_id == profile.profile_id
+        })
+}
+
 fn route_has_benchmark_qualified_latency_advantage(
     profile: &WorkloadProfile,
     baseline: &ProfileRouteEvidence,
@@ -9594,7 +9863,7 @@ fn route_has_benchmark_qualified_latency_advantage(
     if !is_openvino_candidate_route(&route.route_id) || profile.profile_id == "low_power" {
         return false;
     }
-    if !baseline.promotion_eligible_for_profile {
+    if !route_is_benchmark_reference(profile, baseline) {
         return false;
     }
     if route.fallback_used != Some(false)
@@ -9668,9 +9937,9 @@ fn profile_route_advantage_context(
         qualification_blockers
             .push(format!("baseline route {} has no total response timing", baseline.route_id));
     }
-    if !baseline.promotion_eligible_for_profile {
+    if !route_is_benchmark_reference(profile, baseline) {
         qualification_blockers.push(format!(
-            "baseline route {} is not promotion-eligible for profile {}",
+            "baseline route {} is not benchmark-reference-ready for profile {}",
             baseline.route_id, profile.profile_id
         ));
     }
@@ -10322,7 +10591,11 @@ fn attached_route_evidence<'a>(
         .collect()
 }
 
-fn workload_profiles() -> Vec<WorkloadProfile> {
+fn workload_profiles_with_openvino_gpu_promotions(
+    openvino_gpu_promoted_profiles: &BTreeSet<String>,
+) -> Vec<WorkloadProfile> {
+    let ask_short_gpu_promoted = openvino_gpu_promoted_profiles.contains("ask_short");
+    let ask_normal_gpu_promoted = openvino_gpu_promoted_profiles.contains("ask_normal");
     vec![
         WorkloadProfile {
             profile_id: "regression_tiny".to_string(),
@@ -10340,22 +10613,38 @@ fn workload_profiles() -> Vec<WorkloadProfile> {
             prompt_tokens: "<=64".to_string(),
             output_tokens: "<=32".to_string(),
             purpose: "one-off short prompt and short answer".to_string(),
-            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
-            candidate_routes: vec![
-                "dense_slm_openvino_gpu_candidate".to_string(),
-                "dense_slm_openvino_npu_candidate".to_string(),
-            ],
+            promoted_route: Some(if ask_short_gpu_promoted {
+                "dense_slm_openvino_gpu_candidate".to_string()
+            } else {
+                DEFAULT_ASK_ROUTE.to_string()
+            }),
+            candidate_routes: if ask_short_gpu_promoted {
+                vec![DEFAULT_ASK_ROUTE.to_string(), "dense_slm_openvino_npu_candidate".to_string()]
+            } else {
+                vec![
+                    "dense_slm_openvino_gpu_candidate".to_string(),
+                    "dense_slm_openvino_npu_candidate".to_string(),
+                ]
+            },
         },
         WorkloadProfile {
             profile_id: "ask_normal".to_string(),
             prompt_tokens: "<=512".to_string(),
             output_tokens: "<=128".to_string(),
             purpose: "default local assistant question profile".to_string(),
-            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
-            candidate_routes: vec![
-                "dense_slm_openvino_gpu_candidate".to_string(),
-                "dense_slm_openvino_npu_candidate".to_string(),
-            ],
+            promoted_route: Some(if ask_normal_gpu_promoted {
+                "dense_slm_openvino_gpu_candidate".to_string()
+            } else {
+                DEFAULT_ASK_ROUTE.to_string()
+            }),
+            candidate_routes: if ask_normal_gpu_promoted {
+                vec![DEFAULT_ASK_ROUTE.to_string(), "dense_slm_openvino_npu_candidate".to_string()]
+            } else {
+                vec![
+                    "dense_slm_openvino_gpu_candidate".to_string(),
+                    "dense_slm_openvino_npu_candidate".to_string(),
+                ]
+            },
         },
         WorkloadProfile {
             profile_id: "prefill_heavy".to_string(),
@@ -10476,6 +10765,18 @@ fn first_missing<'a>(actual: &[String], required: &'a [&str]) -> Option<&'a str>
 
 fn is_openvino_candidate_route(route_id: &str) -> bool {
     matches!(route_id, "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate")
+}
+
+fn allowed_openvino_profile_promotion(
+    profile_id: &str,
+    route_id: &str,
+    route_status: &str,
+    promoted_route: Option<&str>,
+) -> bool {
+    route_id == "dense_slm_openvino_gpu_candidate"
+        && route_status == "promoted"
+        && promoted_route == Some(route_id)
+        && OPENVINO_GPU_PROFILE_PROMOTION_TARGETS.contains(&profile_id)
 }
 
 fn route_ok(operator: &LunarLakeOperatorReceipt, route_id: &str) -> bool {
@@ -10937,6 +11238,88 @@ mod tests {
         );
         assert_eq!(ledger.auto_route_policy.default_route, DEFAULT_ASK_ROUTE);
         assert!(ledger.auto_route_policy.candidate_routes_require_profile_promotion);
+        Ok(())
+    }
+
+    #[test]
+    fn route_promotion_promotes_openvino_gpu_for_benchmark_qualified_profiles() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-19T04:30:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-19T04:35:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-19T04:40:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        write_json(
+            temp.path(),
+            "gpu-route-profile-ready.json",
+            json!({
+                "artifact_kind": "lunar_lake_route_profile_comparison",
+                "machine_id": "intel-258v",
+                "profile_comparison_ready": true,
+                "profiles": [
+                    benchmark_qualified_gpu_profile("ask_short"),
+                    benchmark_qualified_gpu_profile("ask_normal")
+                ]
+            }),
+        )?;
+
+        let ledger = build_route_promotion_ledger_with_created_utc_and_profile_evidence(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            Some(Path::new("gpu-route-profile-ready.json")),
+            "2026-05-19T04:45:00Z".to_string(),
+        )?;
+
+        assert!(ledger.promotion_ready, "{:?}", ledger.gaps);
+        let cpu = ledger
+            .routes
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing CPU route")?;
+        assert_eq!(cpu.status, "promoted");
+        assert!(cpu.promoted_for.contains(&"regression_tiny".to_string()));
+        assert!(!cpu.promoted_for.contains(&"ask_short".to_string()));
+        assert!(!cpu.promoted_for.contains(&"ask_normal".to_string()));
+        let gpu = ledger
+            .routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing GPU route")?;
+        assert_eq!(gpu.status, "promoted");
+        assert_eq!(gpu.promoted_for, vec!["ask_normal".to_string(), "ask_short".to_string()]);
+        assert!(gpu.missing_evidence.is_empty(), "{:?}", gpu.missing_evidence);
+        assert!(
+            gpu.present_evidence.iter().any(|item| item.ends_with("gpu-route-profile-ready.json"))
+        );
+        let ask_short = ledger
+            .workload_profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short profile")?;
+        assert_eq!(ask_short.promoted_route.as_deref(), Some("dense_slm_openvino_gpu_candidate"));
+        assert!(ask_short.candidate_routes.contains(&DEFAULT_ASK_ROUTE.to_string()));
+        assert!(
+            ledger
+                .auto_route_policy
+                .notes
+                .iter()
+                .any(|note| note.contains("OpenVINO GPU is promoted"))
+        );
         Ok(())
     }
 
@@ -14118,6 +14501,35 @@ mod tests {
         fs::create_dir_all(root)?;
         fs::write(root.join(file), serde_json::to_vec_pretty(&value)?)?;
         Ok(())
+    }
+
+    fn benchmark_qualified_gpu_profile(profile_id: &str) -> Value {
+        json!({
+            "profile_id": profile_id,
+            "route_evidence": [
+                {
+                    "route_id": "dense_slm_openvino_gpu_candidate",
+                    "benchmark_qualified_advantage": true,
+                    "fallback_used": false,
+                    "answer_gate_passed": true,
+                    "phase_timing_present": true,
+                    "timing_applicability": {
+                        "timing_matches_profile": true
+                    },
+                    "profile_quality": {
+                        "profile_present": true,
+                        "fallback_used": false,
+                        "failed": 0
+                    },
+                    "route_advantage_context": {
+                        "benchmark_qualified": true
+                    },
+                    "blockers": [
+                        format!("route not promoted for profile {profile_id}")
+                    ]
+                }
+            ]
+        })
     }
 
     fn stable_durability_profile(profile_id: &str, total: u64, passed: u64) -> Value {

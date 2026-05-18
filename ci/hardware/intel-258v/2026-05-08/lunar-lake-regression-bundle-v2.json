@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T04:00:00Z",
+  "created_utc": "2026-05-19T04:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -115,9 +115,8 @@
       },
       {
         "blocker": "benchmark_qualified_speedup_or_power_advantage",
-        "occurrence_count": 9,
+        "occurrence_count": 6,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -132,9 +131,8 @@
       },
       {
         "blocker": "candidate route requires benchmark-qualified profile evidence",
-        "occurrence_count": 9,
+        "occurrence_count": 6,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -149,9 +147,8 @@
       },
       {
         "blocker": "corpus_v2 profile quality evidence missing",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -161,9 +158,8 @@
       },
       {
         "blocker": "power advantage evidence missing for low_power promotion",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -173,9 +169,8 @@
       },
       {
         "blocker": "profile_regression_bundle",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -185,9 +180,8 @@
       },
       {
         "blocker": "route not promoted for profile ask_normal",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -197,9 +191,8 @@
       },
       {
         "blocker": "route not promoted for profile ask_short",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -209,9 +202,8 @@
       },
       {
         "blocker": "route not promoted for profile decode_heavy",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -221,9 +213,8 @@
       },
       {
         "blocker": "route not promoted for profile low_power",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -233,9 +224,8 @@
       },
       {
         "blocker": "route not promoted for profile prefill_heavy",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -245,9 +235,8 @@
       },
       {
         "blocker": "route not promoted for profile regression_tiny",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -257,9 +246,8 @@
       },
       {
         "blocker": "timing coverage has missing profile fields",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -269,9 +257,8 @@
       },
       {
         "blocker": "timing evidence is not profile-specific for profile decode_heavy",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -281,9 +268,8 @@
       },
       {
         "blocker": "timing evidence is not profile-specific for profile prefill_heavy",
-        "occurrence_count": 2,
+        "occurrence_count": 1,
         "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
