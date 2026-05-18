@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T04:30:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-016"
+branch = "codex/lunar-lake/LNL258V-ROUTE-016-openvino-gpu-profile-promotion"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-016 to promote dense Qwen OpenVINO GPU only for benchmark-qualified ask_short and ask_normal profiles."
+
+notes = [
+  "The promotion requires profile-specific passing answer gates, fallback_used=false, direct-token visibility, profile-matched timing, and benchmark-qualified latency advantage evidence.",
+  "regression_tiny remains on the CPU baseline, NPU remains candidate, and the work preserves no power-advantage, native OpenCL/NPU, broad accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]
