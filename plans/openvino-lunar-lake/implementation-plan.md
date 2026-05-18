@@ -416,7 +416,8 @@ Acceptance additions:
 
 ### Work item: LNL258V-QUAL-009
 
-Status: in progress
+Status: merged
+Linked PR: #5674
 Blocked by: `LNL258V-OPENVINO-QUAL-RERUN-002`
 
 Tighten `stop_token_one_word_done` to a tested cross-runtime exact-text
@@ -440,13 +441,43 @@ Acceptance additions:
   routes remain candidate-only unless a separate promotion item proves exact
   profile quality plus timing or power advantage.
 
+### Work item: LNL258V-QUAL-010
+
+Status: in progress
+Blocked by: `LNL258V-QUAL-009`
+
+Tighten the remaining `prefill_heavy` and `decode_heavy` corpus-v2 fixtures to
+tested cross-runtime wording. Local probes showed the previous prompts were too
+brittle for OpenVINO candidate routes: CPU/GPU omitted required terms in the
+long/decode cases, and NPU omitted a required term in the long case. The
+replacement prompts explicitly carry the required terms while preserving the
+profile roles.
+
+Production delta: corpus fixture and receipt refresh only. Do not promote
+GPU/NPU routes, claim speedup or power advantage, claim native Arc/NPU
+acceleration, alter BitNet QK256/I2_S behavior, or treat dense SLM evidence as
+BitNet proof.
+
+Acceptance additions:
+
+- The canonical prefill-heavy case includes explicit `Lunar`, `CPU`, and
+  `route` term requirements in the prompt and scoring contract.
+- The canonical decode-heavy case uses a stable route-check phrase bank that
+  includes `fallback` and `model`.
+- Dense GGUF CPU and OpenVINO CPU/GPU/NPU corpus-v2 receipts are rerun.
+- Route-profile/regression/comparison artifacts are refreshed and GPU/NPU
+  routes remain candidate-only unless a separate promotion item proves exact
+  profile quality plus timing or power advantage.
+
 ### Remaining Phase C Items
 
-1. Close the remaining exact-answer and long/decode answer-content blockers, or
-   explicitly re-gate them by spec before any route promotion.
+1. Keep the corpus-v2 quality fixture current as route implementations change.
+2. Preserve direct-versus-retokenized token visibility until OpenVINO GenAI can
+   expose direct generated-token IDs.
 
-No route can promote until profile cases pass or an explicit spec marks a case
-diagnostic-only.
+The current quality blockers are closed, but no route can promote until
+exact-profile timing, direct token visibility, fallback-free execution, and
+benchmark-qualified latency/power evidence satisfy the promotion spec.
 
 ## Phase D: Close Performance Evidence Gaps
 
