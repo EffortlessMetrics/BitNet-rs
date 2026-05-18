@@ -50,7 +50,7 @@ use std::fs;
 use std::path::PathBuf;
 
 const DEFAULT_FIRST_VALUES_LIMIT: usize = 16;
-const MAX_FIRST_VALUES_LIMIT: usize = 65_536;
+const MAX_FIRST_VALUES_LIMIT: usize = 262_144;
 
 /// Trace record containing tensor metadata and hash.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -401,7 +401,8 @@ mod tests {
     #[test]
     fn trace_first_values_limit_clamps_invalid_or_excessive_values() {
         assert_eq!(trace_first_values_limit_from_env(Some("not-a-number"), 4096), 16);
-        assert_eq!(trace_first_values_limit_from_env(Some("999999"), 100_000), 65_536);
+        assert_eq!(trace_first_values_limit_from_env(Some("999999"), 100_000), 100_000);
+        assert_eq!(trace_first_values_limit_from_env(Some("999999"), 300_000), 262_144);
         assert_eq!(trace_first_values_limit_from_env(Some("999999"), 1024), 1024);
     }
 }
