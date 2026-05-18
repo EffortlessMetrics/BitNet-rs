@@ -1612,6 +1612,16 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             attention_selected_query_attention_norm_replay_policy(
                 &selected_query_attention_norm_input_history_epsilon,
             );
+        let selected_query_score_frontier = attention_selected_query_score_frontier(
+            &selected_query_score_input_bucket_source,
+            &selected_query_score_input_f16_frontier,
+            &selected_query_pre_score_rope_source,
+            &selected_query_pre_rope_epsilon_materiality,
+            &selected_query_rope_expression_policy,
+            &selected_query_projection_epsilon_source,
+            &selected_query_attention_norm_input_history_epsilon,
+            &selected_query_attention_norm_replay_policy,
+        );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1637,6 +1647,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_attention_norm_input_history_epsilon;
         cpu_comparison["attention_selected_query_attention_norm_replay_policy"] =
             selected_query_attention_norm_replay_policy;
+        cpu_comparison["attention_selected_query_score_frontier"] = selected_query_score_frontier;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -32007,6 +32018,146 @@ fn attention_selected_query_score_input_f16_frontier(
     })
 }
 
+fn selected_query_score_frontier_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_query_score_frontier_downstream_score_residual_after_clean_norm_replay" => {
+            "inspect mixed Q/K score residual, score accumulation, or score-history serialization before changing RMSNorm, RoPE, QK256, or F16 score-input runtime math"
+        }
+        "selected_query_score_frontier_score_input_source_unpinned" => {
+            "pin selected query score-input source before following projection or norm replay"
+        }
+        "selected_query_score_frontier_f16_boundary_active" => {
+            "pin selected query F16 score-input conversion before changing score accumulation or softmax"
+        }
+        "selected_query_score_frontier_pre_score_rope_unpinned" => {
+            "pin selected query pre-score RoPE source before changing query projection or RoPE math"
+        }
+        "selected_query_score_frontier_pre_rope_projection_unpinned" => {
+            "pin selected query pre-RoPE projection epsilon materiality before changing query projection math"
+        }
+        "selected_query_score_frontier_rope_expression_unpinned" => {
+            "pin selected query RoPE expression policy before changing query RoPE runtime math"
+        }
+        "selected_query_score_frontier_projection_source_unpinned" => {
+            "pin selected query projection epsilon source before changing QK256 or attention-norm math"
+        }
+        "selected_query_score_frontier_attention_norm_input_unpinned" => {
+            "pin selected query attention-norm input-history epsilon before replay-policy attribution"
+        }
+        "selected_query_score_frontier_attention_norm_replay_unpinned" => {
+            "pin selected query attention RMSNorm replay policy before changing RMSNorm runtime math"
+        }
+        "selected_query_score_frontier_missing_context" => {
+            "capture complete selected-query source reports before changing runtime math"
+        }
+        _ => "keep selected query score frontier diagnostic-only",
+    }
+}
+
+fn selected_report_classification(report: &Value) -> Option<&str> {
+    report.pointer("/classification").and_then(Value::as_str)
+}
+
+fn attention_selected_query_score_frontier(
+    score_input_source: &Value,
+    f16_frontier: &Value,
+    pre_score_rope_source: &Value,
+    pre_rope_projection_materiality: &Value,
+    rope_expression_policy: &Value,
+    projection_epsilon_source: &Value,
+    attention_norm_input_history_epsilon: &Value,
+    attention_norm_replay_policy: &Value,
+) -> Value {
+    let source_classification = selected_report_classification(score_input_source);
+    let f16_classification = selected_report_classification(f16_frontier);
+    let pre_score_classification = selected_report_classification(pre_score_rope_source);
+    let pre_rope_classification = selected_report_classification(pre_rope_projection_materiality);
+    let rope_expression_classification = selected_report_classification(rope_expression_policy);
+    let projection_source_classification =
+        selected_report_classification(projection_epsilon_source);
+    let norm_input_classification =
+        selected_report_classification(attention_norm_input_history_epsilon);
+    let norm_replay_classification = selected_report_classification(attention_norm_replay_policy);
+    let missing_context = [
+        source_classification,
+        f16_classification,
+        pre_score_classification,
+        pre_rope_classification,
+        rope_expression_classification,
+        projection_source_classification,
+        norm_input_classification,
+        norm_replay_classification,
+    ]
+    .iter()
+    .any(Option::is_none);
+
+    let classification = if missing_context {
+        "selected_query_score_frontier_missing_context"
+    } else if source_classification
+        != Some("selected_query_score_input_bucket_source_reference_to_rope")
+    {
+        "selected_query_score_frontier_score_input_source_unpinned"
+    } else if f16_classification != Some("selected_query_score_input_f16_frontier_not_f16_boundary")
+    {
+        "selected_query_score_frontier_f16_boundary_active"
+    } else if pre_score_classification
+        != Some("selected_query_pre_score_rope_source_pre_rope_projection_epsilon")
+    {
+        "selected_query_score_frontier_pre_score_rope_unpinned"
+    } else if pre_rope_classification
+        != Some("selected_query_pre_rope_projection_epsilon_explains_rope_bucket")
+    {
+        "selected_query_score_frontier_pre_rope_projection_unpinned"
+    } else if rope_expression_classification
+        != Some("selected_query_rope_expression_policy_same_expression_input_epsilon_bucket")
+    {
+        "selected_query_score_frontier_rope_expression_unpinned"
+    } else if projection_source_classification
+        != Some("selected_query_projection_epsilon_source_attention_norm_input_history")
+    {
+        "selected_query_score_frontier_projection_source_unpinned"
+    } else if norm_input_classification
+        != Some(
+            "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output",
+        )
+    {
+        "selected_query_score_frontier_attention_norm_input_unpinned"
+    } else if norm_replay_classification
+        != Some("selected_query_attention_norm_replay_policy_clean")
+    {
+        "selected_query_score_frontier_attention_norm_replay_unpinned"
+    } else {
+        "selected_query_score_frontier_downstream_score_residual_after_clean_norm_replay"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query score frontier is diagnostic-only evidence for summarizing the selected query score-input source chain after attention-norm replay policy attribution; it does not change RMSNorm, QK256, RoPE, score accumulation, softmax, value-mix, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "source_report": "attention_selected_f64_query_score_input_bucket_source",
+        "head": value_u64(score_input_source, "/head"),
+        "selected_dim": value_u64(score_input_source, "/selected_dim"),
+        "selected_token": value_u64(score_input_source, "/selected_token"),
+        "key_slot": value_u64(score_input_source, "/selected_qk_bucket_row/key_slot"),
+        "score_input_source_classification": source_classification,
+        "f16_frontier_classification": f16_classification,
+        "pre_score_rope_source_classification": pre_score_classification,
+        "pre_rope_projection_materiality_classification": pre_rope_classification,
+        "rope_expression_policy_classification": rope_expression_classification,
+        "projection_epsilon_source_classification": projection_source_classification,
+        "attention_norm_input_history_epsilon_classification": norm_input_classification,
+        "attention_norm_replay_policy_classification": norm_replay_classification,
+        "selected_qk_bucket_row": compact_selected_qk_bucket_row(score_input_source.pointer("/selected_qk_bucket_row").unwrap_or(&Value::Null)),
+        "blocked_reasons": if missing_context {
+            json!(["selected_query_score_frontier_missing_chain_classification"])
+        } else {
+            json!([])
+        },
+        "next_diagnostic": selected_query_score_frontier_next_diagnostic(classification),
+    })
+}
+
 fn selected_query_pre_score_rope_source_next_diagnostic(classification: &str) -> &'static str {
     match classification {
         "selected_query_pre_score_rope_source_reference_pre_rope_missing" => {
@@ -49963,6 +50114,197 @@ mod tests {
                 "capture selected query score-input F16 policy rows before runtime changes"
             ))
         );
+    }
+
+    fn selected_query_score_frontier_source_fixture() -> Value {
+        json!({
+            "classification": "selected_query_score_input_bucket_source_reference_to_rope",
+            "head": 5,
+            "selected_dim": 69,
+            "selected_token": 17,
+            "selected_qk_bucket_row": {
+                "head": 5,
+                "key_slot": 17,
+                "query_token": 17,
+                "product_delta": {
+                    "top_contributors": [
+                        {
+                            "dim": 69,
+                            "query_delta": 0.000244140625,
+                            "key_delta": 0.0,
+                            "abs_product_delta": 0.0011529922485351562
+                        }
+                    ]
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn selected_query_score_frontier_reports_downstream_residual_after_clean_norm_replay() {
+        let report = attention_selected_query_score_frontier(
+            &selected_query_score_frontier_source_fixture(),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_clean"
+            }),
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_query_score_frontier_downstream_score_residual_after_clean_norm_replay"
+            ))
+        );
+        assert_eq!(report.pointer("/head"), Some(&json!(5)));
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(69)));
+        assert_eq!(report.pointer("/selected_token"), Some(&json!(17)));
+        assert_eq!(report.pointer("/key_slot"), Some(&json!(17)));
+        assert_eq!(
+            report.pointer("/selected_qk_bucket_row/product_delta/top_contributors/0/dim"),
+            Some(&json!(69))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "inspect mixed Q/K score residual, score accumulation, or score-history serialization before changing RMSNorm, RoPE, QK256, or F16 score-input runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_score_frontier_reports_active_f16_boundary() {
+        let report = attention_selected_query_score_frontier(
+            &selected_query_score_frontier_source_fixture(),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_score_input_matches_f16_conversion"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_clean"
+            }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_frontier_f16_boundary_active"))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected query F16 score-input conversion before changing score accumulation or softmax"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_score_frontier_reports_unclean_attention_norm_replay() {
+        let report = attention_selected_query_score_frontier(
+            &selected_query_score_frontier_source_fixture(),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_output_rounding_split"
+            }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_frontier_attention_norm_replay_unpinned"))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected query attention RMSNorm replay policy before changing RMSNorm runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_score_frontier_reports_missing_context() {
+        let report = attention_selected_query_score_frontier(
+            &json!({}),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_clean"
+            }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_frontier_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_score_frontier_missing_chain_classification"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     fn selected_query_source_fixture() -> Value {
