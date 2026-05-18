@@ -5937,6 +5937,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-ROUTE-007"
 status = "in_progress"
+pr = 5531
+head_sha = "314cab8e7f7f0f6db4347d72be85357b90d52161"
 branch = "codex/lunar-lake/LNL258V-ROUTE-007-budget-sensitivity-index"
 stackable = false
 review_mode = "codex_premerge"
