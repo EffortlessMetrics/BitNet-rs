@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T13:10:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-001"
+event = "merged"
+from = "ready"
+to = "merged"
+pr = 5577
+head_sha = "33c5b6a97a8a0a4ece57e1cf4b85864bf3e07015"
+merge_sha = "a7c3f494806fe15e8a02c3df10fc0bd4fd5f0aa8"
+actor = "codex"
+branch = "codex/add-openvino-productization-proposal-and-route-contract-yme0mw"
+summary = "Marked LNL258V-OPENVINO-DOCS-001 merged after the OpenVINO Lunar Lake productization proposal, route contract, and implementation plan landed in #5577."
+
+artifacts = [
+  "docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md",
+  "plans/openvino-lunar-lake/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The merged docs define OpenVINO as a governed Intel-runtime lane and keep OpenVINO CPU, Arc GPU, NPU, BitNet subgraph, and exact-profile server proof families separate.",
+  "This closeout is tracker-only and adds no runtime promotion, speedup, broad dense SLM quality, BitNet QK256, native OpenCL, cold one-off NPU, model-binary, or server-readiness claim.",
+]
