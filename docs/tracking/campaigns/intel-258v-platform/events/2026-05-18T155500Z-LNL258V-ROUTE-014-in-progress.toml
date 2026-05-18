@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-18T15:55:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-014"
+branch = "codex/lunar-lake/LNL258V-ROUTE-014-blocker-summary"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-014 to group remaining OpenVINO candidate promotion blockers by route/profile coverage and next action."
+
+notes = [
+  "This item makes remaining candidate-route blockers easier to inspect without promoting GPU/NPU routes.",
+  "No new inference, route promotion, speedup, power-advantage, accelerator, native OpenCL/NPU, or BitNet QK256/I2_S claim is made.",
+]
