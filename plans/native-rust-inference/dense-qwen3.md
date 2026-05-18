@@ -5,7 +5,7 @@ product CLI-ready, server-ready, speed-qualified, or full-residency-proven.
 
 ## Work item: CUDA-MODEL-009
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0013-model-onboarding-proof-ladder.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -44,7 +44,7 @@ Revert the audit report.
 
 ## Work item: CUDA-MODEL-010
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0013-model-onboarding-proof-ladder.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -84,7 +84,7 @@ Revert user-path changes and keep existing proof receipts unchanged.
 
 ## Work item: CUDA-MODEL-011
 
-Status: ready
+Status: pr_open
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0013-model-onboarding-proof-ladder.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`

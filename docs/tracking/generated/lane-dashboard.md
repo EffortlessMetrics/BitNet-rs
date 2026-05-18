@@ -32,11 +32,11 @@
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | Intel 258V platform validation | LNL258V-OPENVINO-UX-001 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
-| intel-a770 | Intel Arc A770 validation | A770-000 | OpenCL-first for native A770 proof. |
+| intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-011 | Device-node detection is not inference. |
 | model-artifacts | Model artifact answer authority | MODEL-ARTIFACT-002 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-014 | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-MODEL-011 | CUDA visibility is not kernel execution. |
 | server-real-inference | Server real inference | SERVER-005 | Do not reintroduce simulated inference. |
-| slm-cpu | Small dense model CPU proof | SLM-CPU-037 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | Small dense model CPU proof | SLM-CPU-038 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM inference proof lane | WASM-002 | WASM detection is not inference. |

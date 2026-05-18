@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T10:28:35Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-011"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "codex/cuda-model-011-qwen3-chat-user-path"
+pr = 5645
+head_sha = "e1458ca18e78d966bd653c30e677fb7922ed40d0"
+summary = "Opened PR #5645 for the Qwen3 0.6B chat user-path receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5645",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-prompts.txt",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.source-warm-session.json",
+  "docs/reports/CUDA_MODEL_011_QWEN3_CHAT_USER_PATH_RECEIPT.md",
+]
+
+notes = [
+  "The PR adds a committed receipt-validation test for the Qwen3 chat user-path receipt and source warm-session receipt.",
+  "The receipt records selected_backend=nvidia-rtx-5070-ti-cuda, selected_route=dense_regular_llm_cuda, fallback_used=false, model/tokenizer/CUDA context/weights loaded once, and multiple prompts.",
+  "Product CLI readiness, server readiness, speedup, full CUDA residency, broad dense GGUF readiness, Qwen2.5 proof inheritance, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
+]

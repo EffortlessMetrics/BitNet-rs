@@ -9495,8 +9495,9 @@ mod tests {
 
     #[test]
     fn lunar_lake_openvino_validator_accepts_candidate_gpu_receipt() {
-        validate_lunar_lake_openvino_receipt_json(&minimal_lunar_lake_openvino_gpu_receipt())
-            .unwrap();
+        let result =
+            validate_lunar_lake_openvino_receipt_json(&minimal_lunar_lake_openvino_gpu_receipt());
+        assert!(result.is_ok(), "got: {result:?}");
     }
 
     #[test]
@@ -9535,7 +9536,11 @@ mod tests {
     #[test]
     fn lunar_lake_openvino_validator_requires_retokenized_id_marking() {
         let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
-        receipt["generation"].as_object_mut().unwrap().remove("generated_token_ids_source");
+        let generation = receipt.get_mut("generation").and_then(serde_json::Value::as_object_mut);
+        assert!(generation.is_some(), "test receipt must include generation object");
+        if let Some(generation) = generation {
+            generation.remove("generated_token_ids_source");
+        }
         let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
         assert!(err.contains("generated_token_ids require source marking"), "got: {err}");
     }
@@ -9584,7 +9589,8 @@ mod tests {
                 "warm_session": {"mode": "resident", "attempts": 10}
             }]
         });
-        validate_lunar_lake_openvino_receipt_json(&receipt).unwrap();
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
     }
 
     #[test]
