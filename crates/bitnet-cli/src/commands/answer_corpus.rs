@@ -683,7 +683,11 @@ impl AnswerCorpusCommand {
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
                 "family": run_receipt["kernel"]["family"].clone(),
+                "requested_scaled_hot_path_kernel": run_receipt["kernel"]["requested_scaled_hot_path_kernel"].clone(),
+                "selected_scaled_hot_path_kernel": run_receipt["kernel"]["selected_scaled_hot_path_kernel"].clone(),
             },
+            "execution_coverage": run_receipt.get("execution_coverage").cloned().unwrap_or(Value::Null),
+            "kernel_stats": run_receipt.get("kernel_stats").cloned().unwrap_or(Value::Null),
             "loader": {
                 "mode": run_receipt["loader"]["mode"].clone(),
             },
