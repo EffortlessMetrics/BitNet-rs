@@ -6229,3 +6229,48 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "BitNet QK256/I2_S behavior changed.",
 ]
+
+[[work_item]]
+id = "LNL258V-OV-DOCS-001"
+status = "ready"
+branch = "codex/intel-258v-platform/openvino-productization-route-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the OpenVINO Lunar Lake productization proposal, route identity contract, and implementation plan; keep OpenVINO CPU/GPU/NPU proof families separate; do not promote runtime, speed, quality, server, BitNet QK256, native OpenCL, or NPU cold-route claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md",
+  "plans/openvino-lunar-lake/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO is a proposed governed Intel-runtime lane for dense SLMs and selected small LLMs on Lunar Lake CPU/GPU/NPU, with a separate BitNet-shaped subgraph reference lane.",
+  "OpenVINO route receipts must distinguish requested backend, selected backend, runtime API, runtime device, resolved device, fallback status, route ID, proof family, model family, and explicit false BitNet QK256/native OpenCL claim booleans.",
+]
+must_not_claim = [
+  "OpenVINO GPU/NPU routes are promoted.",
+  "OpenVINO has benchmark-qualified speedup or low-power advantage.",
+  "OpenVINO dense SLM receipts prove broad dense SLM quality.",
+  "OpenVINO dense SLM receipts prove BitNet QK256.",
+  "OpenVINO GPU receipts prove native OpenCL.",
+  "OpenVINO NPU hot-path numbers prove cold one-off usability.",
+  "Retokenized generated text is direct pipeline-internal generated token IDs.",
+]
