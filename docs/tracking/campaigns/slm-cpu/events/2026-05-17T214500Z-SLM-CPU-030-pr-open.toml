@@ -6,7 +6,7 @@ timestamp = "2026-05-17T21:45:00Z"
 actor = "codex"
 pr = 5457
 branch = "codex/slm-cpu-030-prompt-setup-attribution"
-head_sha = "PENDING"
+head_sha = "ea532c57aea04aa772cbc2a9bd1c9070d57a84f0"
 summary = "Opened the bounded Qwen3 Q8_0 warm-session prompt setup allocation attribution slice."
 artifacts = [
   "https://github.com/EffortlessMetrics/BitNet-rs/pull/5457",
