@@ -2360,7 +2360,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-039"
-status = "ready"
+status = "pr_open"
+pr = 5693
+head_sha = "db12089189783365d76ac495c855ac44d1c3c0da"
 branch = "codex/slm-cpu-039-workspace-owned-tensor-output"
 stackable = false
 review_mode = "codex_premerge"
