@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T14:30:00Z",
+  "created_utc": "2026-05-18T15:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -186,6 +186,31 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 4924.946300002048,
+            "route_to_baseline_total_response_ratio": 0.17597553952641473,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile regression_tiny"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile regression_tiny",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
@@ -274,6 +299,32 @@
             "telemetry_gaps": [
               "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 31479.36039999174,
+            "route_to_baseline_total_response_ratio": 1.1248036207689611,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "NPU cache or resident warm-route proof is missing",
+              "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile regression_tiny"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile regression_tiny"
             ]
           },
           "evidence": [
@@ -466,6 +517,31 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 4476.136899975827,
+            "route_to_baseline_total_response_ratio": 0.1599389227791199,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile ask_short"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_short",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
@@ -554,6 +630,32 @@
             "telemetry_gaps": [
               "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 31135.125800027046,
+            "route_to_baseline_total_response_ratio": 1.1125036146851544,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "NPU cache or resident warm-route proof is missing",
+              "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile ask_short"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_short"
             ]
           },
           "evidence": [
@@ -746,6 +848,31 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 4773.066700014751,
+            "route_to_baseline_total_response_ratio": 0.1705486591255443,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile ask_normal"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_normal",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
@@ -834,6 +961,32 @@
             "telemetry_gaps": [
               "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 31857.895899991738,
+            "route_to_baseline_total_response_ratio": 1.1383292482143554,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "NPU cache or resident warm-route proof is missing",
+              "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile ask_normal"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_normal"
             ]
           },
           "evidence": [
@@ -1030,6 +1183,33 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 5089.861900007818,
+            "route_to_baseline_total_response_ratio": 0.1818682152876359,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile prefill_heavy",
+              "route timing is not profile-specific for profile prefill_heavy",
+              "timing evidence is not profile-specific for profile prefill_heavy"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
@@ -1119,6 +1299,34 @@
             "telemetry_gaps": [
               "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 31905.57819999801,
+            "route_to_baseline_total_response_ratio": 1.140033006582129,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "NPU cache or resident warm-route proof is missing",
+              "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile prefill_heavy",
+              "route timing is not profile-specific for profile prefill_heavy",
+              "timing evidence is not profile-specific for profile prefill_heavy"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy"
             ]
           },
           "evidence": [
@@ -1316,6 +1524,33 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 4759.730400008848,
+            "route_to_baseline_total_response_ratio": 0.17007213360711904,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile decode_heavy",
+              "route timing is not profile-specific for profile decode_heavy",
+              "timing evidence is not profile-specific for profile decode_heavy"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
@@ -1405,6 +1640,34 @@
             "telemetry_gaps": [
               "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 31704.193900010316,
+            "route_to_baseline_total_response_ratio": 1.132837250794402,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "NPU cache or resident warm-route proof is missing",
+              "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile decode_heavy",
+              "route timing is not profile-specific for profile decode_heavy",
+              "timing evidence is not profile-specific for profile decode_heavy"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy"
             ]
           },
           "evidence": [
@@ -1678,6 +1941,35 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 31479.36039999174,
+            "route_to_baseline_total_response_ratio": 1.1248036207689611,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "NPU cache or resident warm-route proof is missing",
+              "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "corpus_v2 profile quality evidence missing",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "power advantage evidence missing for low_power promotion",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile low_power",
+              "timing coverage has missing profile fields"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile low_power"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
@@ -1761,6 +2053,34 @@
             "telemetry_gaps": [
               "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 4924.946300002048,
+            "route_to_baseline_total_response_ratio": 0.17597553952641473,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "benchmark_qualified_speedup_or_power_advantage",
+              "candidate route requires benchmark-qualified profile evidence",
+              "corpus_v2 profile quality evidence missing",
+              "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+              "power advantage evidence missing for low_power promotion",
+              "profile_regression_bundle",
+              "route is not promoted; candidate evidence remains blocked",
+              "route not promoted for profile low_power",
+              "timing coverage has missing profile fields"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile low_power",
+              "lower observed total response still requires route-promotion evidence before use"
             ]
           },
           "evidence": [
