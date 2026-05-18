@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T01:06:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-012"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5456
+head_sha = "28edc7140530a8af0e01afd6bd9031a330430032"
+merge_sha = "0f7b63aabe19bcb29168a89d3039cc35bf5d8333"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-012-bitnet-500-decision"
+
+notes = [
+  "Closed M4-BITNET-EX-012 after PR #5456 merged the validated larger-corpus decision receipt.",
+  "The recorded decision is repair-first before any 500-case BitNet runtime campaign.",
+  "No broad BitNet quality/performance, dense SLM evidence reuse, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claim is added by this closeout.",
+]
