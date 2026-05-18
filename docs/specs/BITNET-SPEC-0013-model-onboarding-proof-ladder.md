@@ -24,6 +24,7 @@ This spec relies on existing authorities instead of replacing them:
 - [Native Rust inference product proposal](../proposals/BITNET-PROP-0003-native-rust-inference-product.md)
 - [Source-of-truth and claim boundaries](BITNET-SPEC-0001-source-of-truth-and-claim-boundaries.md)
 - [9950X3D + RTX 5070 Ti CUDA product contract](BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
+- [CUDA route contract](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - [Server readiness proof boundary](BITNET-SPEC-0010-server-readiness-proof-boundary.md)
 - [Answer Artifact Gate](../model-artifacts/ANSWER_ARTIFACT_GATE.md)
 - [Model Coverage Matrix](../model-artifacts/MODEL_COVERAGE_MATRIX.md)
@@ -139,7 +140,8 @@ route without fallback and with an accepted answer or diagnostic quality gate.
 Required evidence:
 
 - selected backend identity;
-- selected route identity;
+- selected route identity from the governed CUDA route vocabulary when the
+  accelerator is CUDA;
 - CPU/reference evidence from an earlier tier;
 - fallback rejection;
 - route-specific kernel or execution-plan evidence;
@@ -223,6 +225,9 @@ Must not claim:
 - A model must not skip `reference_good` or `cpu_answer_ready` before
   accelerator answer claims unless a later accepted spec defines a narrower
   substitute and updates the model coverage row.
+- CUDA route receipts must use the route IDs and proof-family booleans defined
+  by [BITNET-SPEC-CUDA-ROUTE-CONTRACT](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
+  before promoting CUDA execution claims.
 - Dense CUDA evidence cannot satisfy BitNet I2_S/QK256 proof.
 - BitNet I2_S/QK256 evidence cannot satisfy dense SLM or small dense LLM proof.
 - Qwen2.5 evidence cannot satisfy Qwen3, SmolLM2, Llama, Gemma, or Phi rows.
@@ -255,9 +260,9 @@ machine-readable before user-facing status surfaces summarize them.
 
 | Family | Route examples | Separate proof required |
 | --- | --- | --- |
-| Official BitNet I2_S/QK256 | `bitnet_qk256_cuda`, CPU BitNet route | BitNet artifact, tokenizer, QK256 kernels, fallback rejection |
+| Official BitNet I2_S/QK256 | `bitnet_qk256_cuda`, CPU BitNet route | BitNet artifact, tokenizer, QK256 kernels, fallback rejection, route/proof-family receipt fields |
 | BitNet TL1/TL2/GPU-int2 | TL or int2 diagnostic routes | Own artifact and kernel proof; no inherited I2_S/QK256 proof |
-| Dense SLM | `dense_regular_llm_cuda` for Qwen/SmolLM rows | Own tokenizer, prompt, CPU, CUDA, benchmark, and server receipts |
+| Dense SLM | `dense_regular_llm_cuda` for Qwen/SmolLM rows | Own tokenizer, prompt, CPU, CUDA, benchmark, server receipts, and `bitnet_packed_i2s_qk256_proof=false` |
 | Small dense LLM | Llama, Gemma, Phi candidates | Own architecture, tokenizer, prompt, memory, and route proof |
 | Server readiness | `/v1/chat/completions` or later endpoints | Own endpoint/profile/readiness proof |
 
