@@ -1927,7 +1927,7 @@ mod tests {
     use std::collections::HashMap;
     use tempfile::TempDir;
 
-    fn build_metadata_only_gguf(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
+    fn build_metadata_only_gguf(metadata: Vec<(&str, GgufValue)>) -> super::Result<Vec<u8>> {
         const GGUF_VERSION: u32 = 2;
         const ALIGN: usize = 32;
 
@@ -1941,15 +1941,15 @@ mod tests {
             let key_bytes = key.as_bytes();
             data.extend_from_slice(&(key_bytes.len() as u64).to_le_bytes());
             data.extend_from_slice(key_bytes);
-            write_gguf_value(&mut data, value);
+            write_gguf_value(&mut data, value)?;
         }
 
         let pad = (ALIGN - (data.len() % ALIGN)) % ALIGN;
         data.resize(data.len() + pad, 0);
-        data
+        Ok(data)
     }
 
-    fn write_gguf_value(data: &mut Vec<u8>, value: GgufValue) {
+    fn write_gguf_value(data: &mut Vec<u8>, value: GgufValue) -> super::Result<()> {
         match value {
             GgufValue::U32(value) => {
                 data.extend_from_slice(&4u32.to_le_bytes());
@@ -1970,14 +1970,21 @@ mod tests {
                 data.extend_from_slice(&(values.len() as u64).to_le_bytes());
                 for value in values {
                     let GgufValue::String(value) = value else {
-                        panic!("test helper only writes string arrays");
+                        return Err(bitnet_common::BitNetError::Validation(
+                            "test helper only writes string arrays".to_string(),
+                        ));
                     };
                     data.extend_from_slice(&(value.len() as u64).to_le_bytes());
                     data.extend_from_slice(value.as_bytes());
                 }
             }
-            other => panic!("test helper does not write {other:?}"),
+            other => {
+                return Err(bitnet_common::BitNetError::Validation(format!(
+                    "test helper does not write {other:?}"
+                )));
+            }
         }
+        Ok(())
     }
 
     #[test]
@@ -2072,7 +2079,7 @@ mod tests {
     }
 
     #[test]
-    fn simple_config_applies_bitnet_architecture_defaults() {
+    fn simple_config_applies_bitnet_architecture_defaults() -> super::Result<()> {
         let data = build_metadata_only_gguf(vec![
             ("general.architecture", GgufValue::String("bitnet".to_string())),
             (
@@ -2089,10 +2096,10 @@ mod tests {
             ("bitnet-b1.58.feed_forward_length", GgufValue::U32(16)),
             ("bitnet-b1.58.rope.freq_base", GgufValue::F32(500_000.0)),
             ("bitnet-b1.58.attention.layer_norm_rms_epsilon", GgufValue::F32(1.0e-5)),
-        ]);
-        let reader = GgufReader::new(&data).expect("metadata-only gguf reader");
+        ])?;
+        let reader = GgufReader::new(&data)?;
 
-        let config = extract_config_from_gguf(&reader).expect("extract config");
+        let config = extract_config_from_gguf(&reader)?;
 
         assert_eq!(config.model.norm_type, NormType::RmsNorm);
         assert_eq!(config.model.activation_type, ActivationType::Relu2);
@@ -2102,5 +2109,6 @@ mod tests {
         assert_eq!(config.model.num_heads, 2);
         assert_eq!(config.model.num_key_value_heads, 1);
         assert_eq!(config.model.intermediate_size, 16);
+        Ok(())
     }
 }

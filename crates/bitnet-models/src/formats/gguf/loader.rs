@@ -2342,11 +2342,12 @@ mod tests {
     }
 
     #[test]
-    fn strict_tensor_authority_allows_tied_lm_head_from_embeddings() {
+    fn strict_tensor_authority_allows_tied_lm_head_from_embeddings() -> Result<()> {
         let names = one_layer_names_with_embedding();
 
-        GgufLoader::validate_strict_tensor_authority_names(&names, &one_layer_config())
-            .expect("tied lm_head should be valid when token embeddings are present");
+        GgufLoader::validate_strict_tensor_authority_names(&names, &one_layer_config())?;
+
+        Ok(())
     }
 
     #[test]

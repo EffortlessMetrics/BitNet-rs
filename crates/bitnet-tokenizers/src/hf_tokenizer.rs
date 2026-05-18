@@ -178,29 +178,31 @@ mod tests {
     use super::*;
     use crate::Tokenizer;
 
-    fn fixture_tokenizer() -> HfTokenizer {
+    fn fixture_tokenizer() -> AnyhowResult<HfTokenizer> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/tokenizers/valid_tokenizer_a.json");
-        HfTokenizer::from_file(&path).expect("fixture tokenizer should load")
+        HfTokenizer::from_file(&path)
     }
 
     #[test]
-    fn embedded_special_prompt_does_not_get_post_processor_bos() {
-        let tokenizer = fixture_tokenizer();
+    fn embedded_special_prompt_does_not_get_post_processor_bos() -> AnyhowResult<()> {
+        let tokenizer = fixture_tokenizer()?;
 
-        let ids = tokenizer.encode("<s>▁t", false, true).expect("encode should succeed");
+        let ids = tokenizer.encode("<s>▁t", false, true)?;
 
         assert_eq!(ids.first().copied(), Some(1), "embedded BOS should be parsed");
         assert_ne!(ids.get(1).copied(), Some(1), "post-processor BOS must not be injected");
+        Ok(())
     }
 
     #[test]
-    fn explicit_bos_policy_still_prepends_single_bos() {
-        let tokenizer = fixture_tokenizer();
+    fn explicit_bos_policy_still_prepends_single_bos() -> AnyhowResult<()> {
+        let tokenizer = fixture_tokenizer()?;
 
-        let ids = tokenizer.encode("▁t", true, true).expect("encode should succeed");
+        let ids = tokenizer.encode("▁t", true, true)?;
 
         assert_eq!(ids.first().copied(), Some(1), "explicit BOS should be prepended");
         assert_ne!(ids.get(1).copied(), Some(1), "explicit BOS should not duplicate");
+        Ok(())
     }
 }
