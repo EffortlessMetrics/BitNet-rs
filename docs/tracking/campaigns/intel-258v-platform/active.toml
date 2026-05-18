@@ -6848,9 +6848,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-005"
-status = "in_progress"
+status = "merged"
 pr = 5662
-head_sha = "aa9c8a2443d4e0cbd6684d7a9bf9f25c8d83906e"
+head_sha = "86892791b42fa8366cbf0ec4530b3f3e982efec2"
+merge_sha = "7de0f0a0f11261e524e4e4fad88a061cb1baa073"
 branch = "codex/lunar-lake/LNL258V-OP-005-auto-route-profile-guard"
 stackable = false
 review_mode = "codex_premerge"
