@@ -9,36 +9,47 @@
     "no_model_family_claim_without_required_kernels": true,
     "no_benchmark_claim_without_quality_passed": true,
     "no_fallback_for_claimed_kernels": true,
-    "device_route_must_be_concrete": true
+    "device_route_must_be_concrete": true,
+    "no_transcript_or_local_claim_without_committed_receipt": true
   },
   "kernels": [
     {
       "kernel": "qk256_i2s_gemv",
-      "model_families": ["bitnet"],
+      "model_families": [
+        "bitnet"
+      ],
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
-      "reason": "Trusted-path A770 QK256 receipts are local/target evidence until a clean claim-grade rerun lands."
+      "reason": "A770 QK256 remains diagnostic: no committed claim-grade strict selected-device OpenCL QK256 receipt exists."
     },
     {
       "kernel": "embedding_lookup",
-      "model_families": ["bitnet"],
+      "model_families": [
+        "bitnet"
+      ],
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
-      "reason": "A770 embedding route is explicit, but claim-grade receipts are not committed yet."
+      "reason": "A770 embedding remains diagnostic: no committed claim-grade strict selected-device OpenCL embedding receipt exists."
     },
     {
       "kernel": "lm_head_tied_logits",
-      "model_families": ["bitnet"],
+      "model_families": [
+        "bitnet"
+      ],
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
-      "reason": "A770 lm_head/tied-logits route is explicit, but claim-grade receipts are not committed yet."
+      "reason": "A770 LM-head/tied-logits remains diagnostic: no committed claim-grade strict selected-device OpenCL receipt exists."
     },
     {
       "kernel": "dense_f16_gemv",
-      "model_families": ["gemma", "llama", "qwen"],
+      "model_families": [
+        "gemma",
+        "llama",
+        "qwen"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -46,7 +57,12 @@
     },
     {
       "kernel": "q4_q5_q8_dequant_gemv",
-      "model_families": ["slm", "llama", "qwen", "gemma"],
+      "model_families": [
+        "slm",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -54,7 +70,12 @@
     },
     {
       "kernel": "rmsnorm",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -62,7 +83,12 @@
     },
     {
       "kernel": "rope",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -70,7 +96,9 @@
     },
     {
       "kernel": "selected_attention_scores",
-      "model_families": ["bitnet"],
+      "model_families": [
+        "bitnet"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -78,7 +106,12 @@
     },
     {
       "kernel": "softmax",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -86,7 +119,12 @@
     },
     {
       "kernel": "attention_value_mix",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -94,7 +132,12 @@
     },
     {
       "kernel": "resident_kv_cache",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -102,7 +145,12 @@
     },
     {
       "kernel": "full_support_residency",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],
@@ -110,7 +158,12 @@
     },
     {
       "kernel": "full_device_residency",
-      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "model_families": [
+        "bitnet",
+        "llama",
+        "qwen",
+        "gemma"
+      ],
       "status": "missing",
       "fallback_allowed_when_claimed": false,
       "proof_receipts": [],

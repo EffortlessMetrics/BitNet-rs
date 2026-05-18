@@ -19,14 +19,57 @@ hard_constraints = [
 ]
 
 [[work_item]]
-id = "A770-003"
+id = "A770-OPENCL-TRUTH-000"
 status = "ready"
-branch = "codex/intel-a770/A770-003-backend-identity"
+branch = "codex/intel-a770/opencl-truth-reconciliation"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+acceptance = [
+  "Inspect committed A770 proof artifacts and record whether claim-grade OpenCL inference receipts exist.",
+  "Keep A770 BitNet routes diagnostic unless committed receipts prove strict selected-device OpenCL execution.",
+  "Make active.toml, CAMPAIGN.md, route matrix, kernel matrix, model contract, and reconciliation report agree on the same claim level.",
+  "Do not change OpenCL kernels or QK256 dispatch in this reconciliation PR.",
+]
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/claims/claim-ledger.json",
+  "ci/hardware/device-kernel-routing.toml",
+  "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json",
+  "docs/hardware/HARDWARE_MATRIX.md",
+  "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+  "docs/reports/**",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/amd-5700x-intel-a770/*/*.json",
+]
+may_claim = [
+  "A770 OpenCL BitNet route state is reconciled as diagnostic pending committed claim-grade receipts.",
+]
+must_not_claim = [
+  "A770 OpenCL execution works.",
+  "OpenVINO GPU proves native OpenCL kernels.",
+  "BitNet inference works on A770.",
+  "Full A770 inference or full device residency is proven.",
+]
+
+[[work_item]]
+id = "A770-003"
+status = "proposed"
+branch = "codex/intel-a770/A770-003-backend-identity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-OPENCL-TRUTH-000"]
 acceptance = "Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims."
 commands = [
   "cargo fmt --all -- --check",
@@ -45,11 +88,5 @@ forbidden_paths = [
   "crates/bitnet-qk256-dispatch/**",
   "crates/bitnet-server/**",
 ]
-may_claim = [
-  "A770 backend identity is preserved through config and logging surfaces.",
-]
-must_not_claim = [
-  "A770 OpenCL execution works.",
-  "OpenVINO GPU proves native OpenCL kernels.",
-  "BitNet inference works on A770.",
-]
+may_claim = []
+must_not_claim = []
