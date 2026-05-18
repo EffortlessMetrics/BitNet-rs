@@ -7242,15 +7242,17 @@ async fn run_cuda_warm_session(
         total_session_ms,
         "strict RTX 5070 Ti CUDA warm answer session",
         "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
-        false,
-        "recreated_per_prompt_for_rng_state_independence",
-        0,
-        prompts.len(),
-        true,
-        false,
-        "recreated_per_turn_for_prompt_isolation",
-        0,
-        prompts.len(),
+        WarmSessionReuseReceiptContext {
+            sampler_reuse_enabled: false,
+            sampler_reuse_policy: "recreated_per_prompt_for_rng_state_independence",
+            sampler_reused_prompt_count: 0,
+            sampler_recreated_prompt_count: prompts.len(),
+            kv_cache_recreated_per_prompt: true,
+            kv_cache_reused_across_prompts: false,
+            kv_cache_reuse_policy: "recreated_per_turn_for_prompt_isolation",
+            kv_cache_reused_prompt_count: 0,
+            kv_cache_recreated_prompt_count: prompts.len(),
+        },
     );
     let cuda_execution_residency =
         cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
@@ -8059,6 +8061,7 @@ async fn run_slm_warm_session(
     let mut aggregate_direct_greedy_logits_steps = 0usize;
     let mut aggregate_logits_vec_extraction_steps = 0usize;
     let mut aggregate_logits_scratch_reuse_steps = 0usize;
+    let mut prompt_token_cache = WarmSessionPromptTokenCache::default();
     let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
     let sampling_config =
         SamplingConfig { temperature, top_k: top_k as u32, top_p, repetition_penalty, seed };
@@ -8096,8 +8099,10 @@ async fn run_slm_warm_session(
         let parse_special = template_type.parse_special();
         let prompt_tokenize_start = std::time::Instant::now();
         let prompt_tokenize_alloc_start = AllocationAuditSnapshot::current();
-        let encoded_prompt_tokens =
-            tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+        let (encoded_prompt_tokens, prompt_token_cache_hit) = prompt_token_cache
+            .get_or_insert_with(&formatted_prompt, bos_policy, parse_special, || {
+                Ok(tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?)
+            })?;
         let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
         let prompt_tokenize_alloc =
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
@@ -8501,6 +8506,10 @@ async fn run_slm_warm_session(
                 "direct_greedy_logits_steps": direct_greedy_logits_steps,
                 "logits_scratch_reuse_steps": logits_scratch_reuse_steps,
                 "logits_vec_extraction_steps": logits_vec_extraction_steps,
+                "prompt_token_cache_policy": WarmSessionPromptTokenCache::POLICY,
+                "prompt_token_cache_enabled": true,
+                "prompt_token_cache_hit": prompt_token_cache_hit,
+                "prompt_token_cache_entry_count": prompt_token_cache.entry_count(),
                 "stop_policy_precomputed_once": true,
                 "stop_sequence_count": all_stop_sequences.len(),
                 "stop_token_id_count": all_stop_ids.len(),
@@ -8630,15 +8639,17 @@ async fn run_slm_warm_session(
         total_session_ms,
         &format!("validated SLM warm session on {}", backend_identity.selected_backend.as_str()),
         "warm-answer timing is measured for this model, corpus, backend, and machine context only",
-        sampler_reuse_enabled,
-        sampler_reuse_policy,
-        sampler_reused_prompt_count,
-        sampler_recreated_prompt_count,
-        false,
-        kv_cache_reused_across_prompts,
-        kv_cache_reuse_policy,
-        kv_cache_reused_prompt_count,
-        0,
+        WarmSessionReuseReceiptContext {
+            sampler_reuse_enabled,
+            sampler_reuse_policy,
+            sampler_reused_prompt_count,
+            sampler_recreated_prompt_count,
+            kv_cache_recreated_per_prompt: false,
+            kv_cache_reused_across_prompts,
+            kv_cache_reuse_policy,
+            kv_cache_reused_prompt_count,
+            kv_cache_recreated_prompt_count: 0,
+        },
     );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
@@ -8702,6 +8713,12 @@ async fn run_slm_warm_session(
             "direct_greedy_logits_steps": aggregate_direct_greedy_logits_steps,
             "logits_scratch_reuse_steps": aggregate_logits_scratch_reuse_steps,
             "logits_vec_extraction_steps": aggregate_logits_vec_extraction_steps,
+            "prompt_token_cache_policy": WarmSessionPromptTokenCache::POLICY,
+            "prompt_token_cache_enabled": true,
+            "prompt_token_cache_hits": prompt_token_cache.hits,
+            "prompt_token_cache_misses": prompt_token_cache.misses,
+            "prompt_token_cache_entry_count": prompt_token_cache.entry_count(),
+            "prompt_token_cache_reused_rendered_prompts": prompt_token_cache.hits > 0,
             "stop_policy_precomputed_once": true,
             "stop_sequence_count": all_stop_sequences.len(),
             "stop_token_id_count": all_stop_ids.len(),
@@ -9096,6 +9113,60 @@ struct WarmSessionPromptInput {
 
 #[derive(Debug, Default)]
 #[cfg(feature = "full-cli")]
+struct WarmSessionPromptTokenCache {
+    entries: std::collections::BTreeMap<WarmSessionPromptTokenCacheKey, Vec<u32>>,
+    hits: usize,
+    misses: usize,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptTokenCacheKey {
+    rendered_prompt: String,
+    bos_policy: bool,
+    parse_special: bool,
+}
+
+#[cfg(feature = "full-cli")]
+impl WarmSessionPromptTokenCache {
+    const POLICY: &'static str =
+        "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts";
+
+    fn get_or_insert_with<F>(
+        &mut self,
+        rendered_prompt: &str,
+        bos_policy: bool,
+        parse_special: bool,
+        encode: F,
+    ) -> Result<(&[u32], bool)>
+    where
+        F: FnOnce() -> Result<Vec<u32>>,
+    {
+        let lookup_key = WarmSessionPromptTokenCacheKey {
+            rendered_prompt: rendered_prompt.to_string(),
+            bos_policy,
+            parse_special,
+        };
+        match self.entries.entry(lookup_key) {
+            std::collections::btree_map::Entry::Occupied(entry) => {
+                self.hits += 1;
+                Ok((entry.into_mut().as_slice(), true))
+            }
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                let encoded = encode()?;
+                self.misses += 1;
+                Ok((entry.insert(encoded).as_slice(), false))
+            }
+        }
+    }
+
+    fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+#[derive(Debug, Default)]
+#[cfg(feature = "full-cli")]
 struct WarmSessionPromptBuffers {
     tokens: Vec<u32>,
     generated_tokens: Vec<u32>,
@@ -9325,6 +9396,20 @@ struct WarmSessionSpeedAccumulator {
     steady_decode_tok_s: Vec<f64>,
 }
 
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionReuseReceiptContext<'a> {
+    sampler_reuse_enabled: bool,
+    sampler_reuse_policy: &'a str,
+    sampler_reused_prompt_count: usize,
+    sampler_recreated_prompt_count: usize,
+    kv_cache_recreated_per_prompt: bool,
+    kv_cache_reused_across_prompts: bool,
+    kv_cache_reuse_policy: &'a str,
+    kv_cache_reused_prompt_count: usize,
+    kv_cache_recreated_prompt_count: usize,
+}
+
 #[cfg(feature = "full-cli")]
 impl WarmSessionSpeedAccumulator {
     fn record(&mut self, prompt: WarmSessionPromptSpeed) {
@@ -9351,15 +9436,7 @@ impl WarmSessionSpeedAccumulator {
         total_session_ms: f64,
         measurement_scope: &str,
         claim: &str,
-        sampler_reuse_enabled: bool,
-        sampler_reuse_policy: &str,
-        sampler_reused_prompt_count: usize,
-        sampler_recreated_prompt_count: usize,
-        kv_cache_recreated_per_prompt: bool,
-        kv_cache_reused_across_prompts: bool,
-        kv_cache_reuse_policy: &str,
-        kv_cache_reused_prompt_count: usize,
-        kv_cache_recreated_prompt_count: usize,
+        reuse: WarmSessionReuseReceiptContext<'_>,
     ) -> serde_json::Value {
         serde_json::json!({
             "measurement_scope": measurement_scope,
@@ -9378,17 +9455,17 @@ impl WarmSessionSpeedAccumulator {
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": true,
-                "kv_cache_recreated_per_prompt": kv_cache_recreated_per_prompt,
-                "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
-                "kv_cache_cleared_per_prompt": kv_cache_reused_across_prompts,
-                "kv_cache_reuse_policy": kv_cache_reuse_policy,
-                "kv_cache_reused_prompt_count": kv_cache_reused_prompt_count,
-                "kv_cache_recreated_prompt_count": kv_cache_recreated_prompt_count,
-                "sampler_recreated_per_prompt": !sampler_reuse_enabled,
-                "sampler_reused_across_prompts": sampler_reuse_enabled,
-                "sampler_reuse_policy": sampler_reuse_policy,
-                "sampler_reused_prompt_count": sampler_reused_prompt_count,
-                "sampler_recreated_prompt_count": sampler_recreated_prompt_count,
+                "kv_cache_recreated_per_prompt": reuse.kv_cache_recreated_per_prompt,
+                "kv_cache_reused_across_prompts": reuse.kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": reuse.kv_cache_reused_across_prompts,
+                "kv_cache_reuse_policy": reuse.kv_cache_reuse_policy,
+                "kv_cache_reused_prompt_count": reuse.kv_cache_reused_prompt_count,
+                "kv_cache_recreated_prompt_count": reuse.kv_cache_recreated_prompt_count,
+                "sampler_recreated_per_prompt": !reuse.sampler_reuse_enabled,
+                "sampler_reused_across_prompts": reuse.sampler_reuse_enabled,
+                "sampler_reuse_policy": reuse.sampler_reuse_policy,
+                "sampler_reused_prompt_count": reuse.sampler_reused_prompt_count,
+                "sampler_recreated_prompt_count": reuse.sampler_recreated_prompt_count,
                 "logits_buffer_reuse_claimed": false,
                 "logits_buffer_reuse_policy": "full logits Vec extraction is reported by the session receipt; model.logits tensor allocation remains measured",
             },
@@ -13246,15 +13323,17 @@ mod tests {
             1600.0,
             "strict RTX 5070 Ti CUDA warm answer session",
             "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
-            true,
-            "single_sampler_reused_for_temperature_zero_prompt_independence",
-            2,
-            0,
-            false,
-            true,
-            "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
-            2,
-            0,
+            WarmSessionReuseReceiptContext {
+                sampler_reuse_enabled: true,
+                sampler_reuse_policy: "single_sampler_reused_for_temperature_zero_prompt_independence",
+                sampler_reused_prompt_count: 2,
+                sampler_recreated_prompt_count: 0,
+                kv_cache_recreated_per_prompt: false,
+                kv_cache_reused_across_prompts: true,
+                kv_cache_reuse_policy: "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+                kv_cache_reused_prompt_count: 2,
+                kv_cache_recreated_prompt_count: 0,
+            },
         );
 
         assert_eq!(receipt["counts"]["prompt_count"], 2);
@@ -13563,6 +13642,39 @@ mod tests {
         assert_eq!(second["generated_token_capacity_grew"], false);
         assert_eq!(second["stop_tail_capacity_grew"], false);
         assert_eq!(second["logits_capacity_grew"], false);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_prompt_token_cache_reuses_rendered_prompt_ids() -> Result<()> {
+        let mut cache = WarmSessionPromptTokenCache::default();
+        let mut encode_calls = 0usize;
+
+        let (first, first_hit) = cache.get_or_insert_with("prompt", false, true, || {
+            encode_calls += 1;
+            Ok(vec![1, 2, 3])
+        })?;
+        assert_eq!(first, &[1, 2, 3]);
+        assert!(!first_hit);
+
+        let (second, second_hit) = cache.get_or_insert_with("prompt", false, true, || {
+            encode_calls += 1;
+            Ok(vec![9])
+        })?;
+        assert_eq!(second, &[1, 2, 3]);
+        assert!(second_hit);
+
+        let (_third, third_hit) = cache.get_or_insert_with("prompt", true, true, || {
+            encode_calls += 1;
+            Ok(vec![0, 1, 2, 3])
+        })?;
+        assert!(!third_hit);
+
+        assert_eq!(encode_calls, 2);
+        assert_eq!(cache.hits, 1);
+        assert_eq!(cache.misses, 2);
+        assert_eq!(cache.entry_count(), 2);
+        Ok(())
     }
 
     #[test]

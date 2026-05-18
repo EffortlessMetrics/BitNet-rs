@@ -2189,10 +2189,10 @@ fn apple_m4_default_report_root() -> PathBuf {
         .parent()
         .and_then(Path::parent)
         .map(|workspace| workspace.join(APPLE_M4_REPORT_ROOT));
-    if let Some(candidate) = workspace_relative {
-        if candidate.exists() {
-            return candidate;
-        }
+    if let Some(candidate) = workspace_relative
+        && candidate.exists()
+    {
+        return candidate;
     }
     cwd_relative
 }
@@ -16030,13 +16030,13 @@ fn validate_bitnet_eval_answer_corpus_receipt(
             BITNET_M4_EVAL_CORPUS_NAMES
         );
     }
-    if let Some(corpus_id) = receipt["corpus"]["id"].as_str() {
-        if corpus_id != corpus_name {
-            anyhow::bail!(
-                "{} BitNet eval receipt corpus.id must match corpus.name when present",
-                path.display()
-            );
-        }
+    if let Some(corpus_id) = receipt["corpus"]["id"].as_str()
+        && corpus_id != corpus_name
+    {
+        anyhow::bail!(
+            "{} BitNet eval receipt corpus.id must match corpus.name when present",
+            path.display()
+        );
     }
     let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
     let quality_total = require_u64_at(path, receipt, &["quality_summary", "total"], true)?;

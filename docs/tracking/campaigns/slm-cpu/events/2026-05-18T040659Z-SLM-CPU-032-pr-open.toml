@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T04:06:59Z"
+event = "pr_open"
+item = "SLM-CPU-032"
+pr = 5514
+branch = "codex/slm-cpu-032-prompt-token-cache"
+head_sha = "da6630419a055cac9f8c7d6ddcc499e07617b95a"
+actor = "codex"
+summary = "Opened the bounded Qwen3 Q8_0 Kaby warm-session prompt token cache slice."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5514",
+]
+notes = [
+  "The slice reuses rendered prompt token IDs for repeated warm-session prompts and records prompt token cache hit, miss, and entry counts.",
+  "No generation behavior, sustained-throughput claim, broad answer-quality claim, Q4/Q5 runtime support, accelerator path, Qwen3.5 support, or BitNet QK256 path is changed.",
+]
