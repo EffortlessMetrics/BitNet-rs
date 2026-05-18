@@ -24,6 +24,7 @@ DEVICE_BACKENDS = {
 }
 
 SPECIAL_TOKEN_RE = re.compile(r"<\|[^|]+?\|>")
+KNOWN_STOP_MARKERS = ("<|im_end|>", "<|end_of_text|>", "<|endoftext|>", "<|eot_id|>", "<|im_start|>")
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,12 +93,74 @@ def load_corpus(path: Path) -> dict[str, Any]:
     return data
 
 
+def strip_leading_chatml_assistant(text: str) -> str:
+    rest = text
+    while rest.startswith("<|im_start|>assistant"):
+        rest = rest[len("<|im_start|>assistant") :]
+        if rest.startswith("\r\n"):
+            rest = rest[2:]
+        elif rest.startswith("\n") or rest.startswith(" "):
+            rest = rest[1:]
+        rest = rest.lstrip()
+    return rest
+
+
+def strip_special_markers(text: str) -> str:
+    cleaned = strip_leading_chatml_assistant(text.lstrip()).replace("<|begin_of_text|>", "")
+    marker_indexes = [cleaned.find(marker) for marker in KNOWN_STOP_MARKERS if cleaned.find(marker) >= 0]
+    if marker_indexes:
+        cleaned = cleaned[: min(marker_indexes)]
+    return cleaned
+
+
+def strip_leading_assistant_separator(text: str) -> str:
+    if text.startswith(":") and len(text) > 1 and text[1].isspace():
+        return text[1:].lstrip()
+    return text
+
+
+def normalize_scoring_text(text: str) -> str:
+    stripped = strip_special_markers(text)
+    collapsed = " ".join(stripped.split())
+    return strip_leading_assistant_separator(collapsed)
+
+
+def normalize_match_text(text: str) -> str:
+    return normalize_scoring_text(text).strip(" \t\r\n.!?").lower()
+
+
 def normalize_text(text: str) -> str:
-    text = SPECIAL_TOKEN_RE.sub("", text)
-    text = text.strip()
-    text = re.sub(r"\s+", " ", text)
-    text = text.strip(" \t\r\n.,;:!?\"'`")
-    return text.lower()
+    return normalize_match_text(text).strip(" \t\r\n.,;:!?\"'`")
+
+
+def contains_keyword_boundary(answer: str, keyword: str) -> bool:
+    haystack = answer.lower()
+    needle = keyword.strip().lower()
+    if not needle:
+        return False
+    needle_starts_alnum = needle[0].isalnum()
+    needle_ends_alnum = needle[-1].isalnum()
+    search_from = 0
+    while True:
+        start = haystack.find(needle, search_from)
+        if start < 0:
+            return False
+        end = start + len(needle)
+        before = haystack[start - 1] if start > 0 else None
+        after = haystack[end] if end < len(haystack) else None
+        left_ok = not needle_starts_alnum or before is None or not before.isalnum()
+        right_ok = not needle_ends_alnum or after is None or not after.isalnum()
+        if left_ok and right_ok:
+            return True
+        search_from = start + 1
+
+
+def missing_keywords(answer: str, keywords: list[str]) -> list[str]:
+    return [keyword for keyword in keywords if not contains_keyword_boundary(answer, keyword)]
+
+
+def observed_forbidden_tokens(answer: str, tokens: list[str]) -> list[str]:
+    return [token for token in tokens if contains_keyword_boundary(answer, token)]
 
 
 def readable_words(text: str) -> list[str]:
@@ -176,13 +239,14 @@ def evaluate_scoring(scoring: dict[str, Any] | None, generated_text: str) -> dic
     kind = scoring.get("kind")
     failed_rules: list[str] = []
     failure_taxonomy: list[str] = []
-    details: dict[str, Any] = {"kind": kind}
+    normalized_answer = normalize_scoring_text(generated_text)
+    details: dict[str, Any] = {"kind": kind, "normalized_answer": normalized_answer}
 
     if kind == "required_forbidden_tokens":
         required = list(scoring.get("required_keywords") or [])
         forbidden = list(scoring.get("forbidden_tokens") or [])
-        missing = [needle for needle in required if needle not in generated_text]
-        observed_forbidden = [needle for needle in forbidden if needle in generated_text]
+        missing = missing_keywords(normalized_answer, required)
+        observed_forbidden = observed_forbidden_tokens(normalized_answer, forbidden)
         if missing:
             failed_rules.append("required_keywords_missing")
             failure_taxonomy.append("required_keyword_missing")
@@ -198,8 +262,8 @@ def evaluate_scoring(scoring: dict[str, Any] | None, generated_text: str) -> dic
     elif kind == "required_keywords":
         required = list(scoring.get("required_keywords") or [])
         forbidden = list(scoring.get("forbidden_tokens") or [])
-        missing = [needle for needle in required if needle not in generated_text]
-        observed_forbidden = [needle for needle in forbidden if needle in generated_text]
+        missing = missing_keywords(normalized_answer, required)
+        observed_forbidden = observed_forbidden_tokens(normalized_answer, forbidden)
         if missing:
             failed_rules.append("required_keywords_missing")
             failure_taxonomy.append("required_keyword_missing")
@@ -213,8 +277,8 @@ def evaluate_scoring(scoring: dict[str, Any] | None, generated_text: str) -> dic
             }
         )
     elif kind == "normalized_match":
-        expected = normalize_text(str(scoring.get("expected_normalized") or ""))
-        observed = normalize_text(generated_text)
+        expected = normalize_match_text(str(scoring.get("expected_normalized") or ""))
+        observed = normalize_match_text(generated_text)
         if observed != expected:
             failed_rules.append("normalized_match_failed")
             failure_taxonomy.append("normalized_match_failed")
@@ -470,7 +534,7 @@ def main() -> int:
         "schema_version": "1.0.0",
         "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
         "campaign": "intel-258v-platform",
-        "item": "LNL258V-QUAL-003",
+        "item": "LNL258V-OV-QUAL-004",
         "created_utc": created,
         "machine_id": args.machine_id,
         "proof_stage": "candidate_route_corpus_v2_executed_no_promotion_change",
@@ -485,6 +549,13 @@ def main() -> int:
         "quantization": "INT4_SYM",
         "prompt_template": "qwen2.5",
         "tokenizer_source": "hf_tokenizer_export",
+        "scoring_policy": {
+            "name": "openvino_corpus_v2_scoring_aligned_with_rust_answer_corpus_v2",
+            "normalized_match": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, trim terminal punctuation, lowercase",
+            "required_keywords": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
+            "forbidden_tokens": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
+            "generated_token_ids": "retokenized_generated_text_not_pipeline_internal_ids",
+        },
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": False,
         "paths": {

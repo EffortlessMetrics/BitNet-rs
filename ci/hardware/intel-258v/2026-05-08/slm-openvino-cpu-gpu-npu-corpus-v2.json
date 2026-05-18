@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
   "campaign": "intel-258v-platform",
-  "item": "LNL258V-QUAL-003",
-  "created_utc": "2026-05-18T03:47:46Z",
+  "item": "LNL258V-OV-QUAL-004",
+  "created_utc": "2026-05-18T06:00:00Z",
   "machine_id": "intel-258v",
   "proof_stage": "candidate_route_corpus_v2_executed_no_promotion_change",
   "comparison_scope": "same_machine_qwen2_5_openvino_genai_candidate_routes_against_lunar_lake_answer_corpus_v2",
@@ -17,6 +17,13 @@
   "quantization": "INT4_SYM",
   "prompt_template": "qwen2.5",
   "tokenizer_source": "hf_tokenizer_export",
+  "scoring_policy": {
+    "name": "openvino_corpus_v2_scoring_aligned_with_rust_answer_corpus_v2",
+    "normalized_match": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, trim terminal punctuation, lowercase",
+    "required_keywords": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
+    "forbidden_tokens": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
+    "generated_token_ids": "retokenized_generated_text_not_pipeline_internal_ids"
+  },
   "promotion_status": "candidate_only_not_promoted",
   "route_promotion_changed": false,
   "paths": {
@@ -232,19 +239,19 @@
         "fallback_used": false,
         "fallback_status": "no_fallback_used_cpu_device_requested_and_llmpipeline_constructed",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
-        "pipeline_construct_wall_ms": 2667.059800005518,
+        "pipeline_construct_wall_ms": 2698.3689999906346,
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": false,
         "quality_summary": {
           "cases_total": 12,
-          "passed": 7,
-          "failed": 5,
+          "passed": 8,
+          "failed": 4,
           "fallback_used": false,
           "profile_summary": {
             "ask_normal": {
               "total": 3,
-              "passed": 2,
-              "failed": 1
+              "passed": 3,
+              "failed": 0
             },
             "ask_short": {
               "total": 2,
@@ -310,8 +317,8 @@
             },
             "short_reasoning": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "stop_and_eos": {
               "total": 1,
@@ -446,6 +453,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_forbidden_tokens",
+                  "normalized_answer": "2 + 2 equals 4.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -469,47 +477,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_forbidden_tokens",
+                "normalized_answer": "2 + 2 equals 4.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 1078.2117000198923,
-              "first_streamed_text_chunk_ms": 1031.1860000074375,
+              "generation_wall_ms": 1093.958500016015,
+              "first_streamed_text_chunk_ms": 1046.5598000155296,
               "first_streamed_text_chunk": "2",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 17.270999908447266,
+                  "mean_ms": 20.06599998474121,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 1076.333984375,
+                  "mean_ms": 1090.7469482421875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 1049.802001953125,
+                  "mean_ms": 1064.613037109375,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 1003.8977661132812,
+                  "mean_ms": 1010.2366943359375,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.103828430175781,
-                  "std_ms": 2.943997383117676
+                  "mean_ms": 11.296828269958496,
+                  "std_ms": 4.1362457275390625
                 },
                 "inter_token_latency": {
-                  "mean_ms": 132.0362548828125,
-                  "std_ms": 322.7745361328125
+                  "mean_ms": 133.51100158691406,
+                  "std_ms": 323.3992919921875
                 },
                 "throughput": {
-                  "mean_ms": 98.97238159179688,
-                  "std_ms": 28.838022232055664
+                  "mean_ms": 88.52042388916016,
+                  "std_ms": 32.41106033325195
                 },
                 "detokenization": {
-                  "mean_ms": 0.1542000025510788,
+                  "mean_ms": 0.13769999146461487,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 39,
@@ -636,6 +645,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_forbidden_tokens",
+                  "normalized_answer": "15",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -659,47 +669,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_forbidden_tokens",
+                "normalized_answer": "15",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 115.64669999643229,
-              "first_streamed_text_chunk_ms": 114.67769998125732,
+              "generation_wall_ms": 125.89769999613054,
+              "first_streamed_text_chunk_ms": 124.9105999886524,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 2,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 13.364999771118164,
+                  "mean_ms": 13.833999633789062,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 115.54199981689453,
+                  "mean_ms": 125.77200317382812,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 99.85900115966797,
+                  "mean_ms": 109.41799926757812,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 93.25569152832031,
+                  "mean_ms": 103.54740142822266,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.49899959564209,
-                  "std_ms": 2.4787001609802246
+                  "mean_ms": 10.451849937438965,
+                  "std_ms": 2.1749496459960938
                 },
                 "inter_token_latency": {
-                  "mean_ms": 33.56566619873047,
-                  "std_ms": 32.69585037231445
+                  "mean_ms": 36.77766799926758,
+                  "std_ms": 37.285728454589844
                 },
                 "throughput": {
-                  "mean_ms": 95.2471694946289,
-                  "std_ms": 22.486825942993164
+                  "mean_ms": 95.67684173583984,
+                  "std_ms": 19.909616470336914
                 },
                 "detokenization": {
-                  "mean_ms": 0.1459999978542328,
+                  "mean_ms": 0.14079999923706055,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -831,6 +842,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "red, blue, green",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -856,47 +868,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "red, blue, green",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 170.63899998902343,
-              "first_streamed_text_chunk_ms": 115.33869997947477,
+              "generation_wall_ms": 115.58909999439493,
+              "first_streamed_text_chunk_ms": 90.45649998006411,
               "first_streamed_text_chunk": "red",
               "streamed_chunks_count": 5,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 13.36299991607666,
+                  "mean_ms": 12.994000434875488,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 170.5659942626953,
+                  "mean_ms": 115.51499938964844,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 154.07400512695312,
+                  "mean_ms": 99.1510009765625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 89.71409606933594,
+                  "mean_ms": 67.97380065917969,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.907600402832031,
-                  "std_ms": 10.011876106262207
+                  "mean_ms": 9.241479873657227,
+                  "std_ms": 2.158144235610962
                 },
                 "inter_token_latency": {
-                  "mean_ms": 25.937334060668945,
-                  "std_ms": 24.249284744262695
+                  "mean_ms": 16.80066680908203,
+                  "std_ms": 17.109378814697266
                 },
                 "throughput": {
-                  "mean_ms": 62.863033294677734,
-                  "std_ms": 39.564537048339844
+                  "mean_ms": 108.20777893066406,
+                  "std_ms": 25.26954460144043
                 },
                 "detokenization": {
-                  "mean_ms": 0.1413000077009201,
+                  "mean_ms": 0.15539999306201935,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -1045,6 +1058,7 @@
                 ],
                 "details": {
                   "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's usually clear and blue",
                   "expected_normalized": "yes",
                   "observed_normalized": "yes, it's usually clear and blue"
                 }
@@ -1072,47 +1086,48 @@
               ],
               "details": {
                 "kind": "normalized_match",
+                "normalized_answer": "Yes, it's usually clear and blue",
                 "expected_normalized": "yes",
                 "observed_normalized": "yes, it's usually clear and blue"
               }
             },
             "timing": {
-              "generation_wall_ms": 165.66289999173023,
-              "first_streamed_text_chunk_ms": 117.86629998823628,
+              "generation_wall_ms": 156.96150000439957,
+              "first_streamed_text_chunk_ms": 103.40659998473711,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 15.053999900817871,
+                  "mean_ms": 12.78499984741211,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 165.5850067138672,
+                  "mean_ms": 156.88699340820312,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 146.52000427246094,
+                  "mean_ms": 140.16700744628906,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 93.056396484375,
+                  "mean_ms": 82.08799743652344,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.168985366821289,
-                  "std_ms": 2.0586745738983154
+                  "mean_ms": 10.48270034790039,
+                  "std_ms": 1.5987452268600464
                 },
                 "inter_token_latency": {
-                  "mean_ms": 18.587499618530273,
-                  "std_ms": 22.379653930664062
+                  "mean_ms": 17.802249908447266,
+                  "std_ms": 19.446765899658203
                 },
                 "throughput": {
-                  "mean_ms": 98.33822631835938,
-                  "std_ms": 19.908220291137695
+                  "mean_ms": 95.395263671875,
+                  "std_ms": 14.548992156982422
                 },
                 "detokenization": {
-                  "mean_ms": 0.15780000388622284,
+                  "mean_ms": 0.1623999923467636,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -1238,6 +1253,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "The capital of France is Paris.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -1261,47 +1277,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "The capital of France is Paris.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 154.48050000122748,
-              "first_streamed_text_chunk_ms": 104.56790000898764,
+              "generation_wall_ms": 186.81859999196604,
+              "first_streamed_text_chunk_ms": 137.88929997826926,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 12.102999687194824,
+                  "mean_ms": 14.883999824523926,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 154.406005859375,
+                  "mean_ms": 186.7429962158203,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 138.86900329589844,
+                  "mean_ms": 167.94900512695312,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 82.5707015991211,
+                  "mean_ms": 109.31449127197266,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.104371070861816,
-                  "std_ms": 1.8393422365188599
+                  "mean_ms": 10.870171546936035,
+                  "std_ms": 2.711204767227173
                 },
                 "inter_token_latency": {
-                  "mean_ms": 17.617124557495117,
-                  "std_ms": 19.99724578857422
+                  "mean_ms": 21.267375946044922,
+                  "std_ms": 27.670557022094727
                 },
                 "throughput": {
-                  "mean_ms": 98.96707153320312,
-                  "std_ms": 18.015403747558594
+                  "mean_ms": 91.99486541748047,
+                  "std_ms": 22.945077896118164
                 },
                 "detokenization": {
-                  "mean_ms": 0.1428000032901764,
+                  "mean_ms": 0.14650000631809235,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 35,
@@ -1449,6 +1466,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "Rust is an open-source programming language that emphasizes safety and reliability through static type checking, making it suitable for systems with",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -1476,47 +1494,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "Rust is an open-source programming language that emphasizes safety and reliability through static type checking, making it suitable for systems with",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 312.39190002088435,
-              "first_streamed_text_chunk_ms": 113.38930000783876,
+              "generation_wall_ms": 316.9773999834433,
+              "first_streamed_text_chunk_ms": 116.45839997800067,
               "first_streamed_text_chunk": "R",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 12.663999557495117,
+                  "mean_ms": 12.916000366210938,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 312.3169860839844,
+                  "mean_ms": 316.90301513671875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 289.2650146484375,
+                  "mean_ms": 295.1090087890625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 89.09390258789062,
+                  "mean_ms": 93.07609558105469,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 9.64840030670166,
-                  "std_ms": 1.7176270484924316
+                  "mean_ms": 9.671065330505371,
+                  "std_ms": 1.6368153095245361
                 },
                 "inter_token_latency": {
-                  "mean_ms": 12.403666496276855,
-                  "std_ms": 13.404892921447754
+                  "mean_ms": 12.586542129516602,
+                  "std_ms": 14.137834548950195
                 },
                 "throughput": {
-                  "mean_ms": 103.64412689208984,
-                  "std_ms": 18.450929641723633
+                  "mean_ms": 103.4012222290039,
+                  "std_ms": 17.500524520874023
                 },
                 "detokenization": {
-                  "mean_ms": 0.13619999587535858,
+                  "mean_ms": 0.17010000348091125,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -1648,6 +1667,7 @@
                 ],
                 "details": {
                   "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
                   "expected_normalized": "done",
                   "observed_normalized": "okay, understood"
                 }
@@ -1673,47 +1693,48 @@
               ],
               "details": {
                 "kind": "normalized_match",
+                "normalized_answer": "Okay, understood.",
                 "expected_normalized": "done",
                 "observed_normalized": "okay, understood"
               }
             },
             "timing": {
-              "generation_wall_ms": 140.4972999880556,
-              "first_streamed_text_chunk_ms": 122.84699999145232,
+              "generation_wall_ms": 149.29339999798685,
+              "first_streamed_text_chunk_ms": 131.66680000722408,
               "first_streamed_text_chunk": "Okay",
               "streamed_chunks_count": 4,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 18.961999893188477,
+                  "mean_ms": 14.128999710083008,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 140.41900634765625,
+                  "mean_ms": 149.2169952392578,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 116.875,
+                  "mean_ms": 131.99200439453125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 99.60790252685547,
+                  "mean_ms": 107.45020294189453,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 9.869924545288086,
-                  "std_ms": 2.7732913494110107
+                  "mean_ms": 10.109399795532227,
+                  "std_ms": 3.216341972351074
                 },
                 "inter_token_latency": {
-                  "mean_ms": 23.95560073852539,
-                  "std_ms": 28.32132911682129
+                  "mean_ms": 26.678199768066406,
+                  "std_ms": 33.31505584716797
                 },
                 "throughput": {
-                  "mean_ms": 101.3178939819336,
-                  "std_ms": 28.468711853027344
+                  "mean_ms": 98.91783905029297,
+                  "std_ms": 31.471067428588867
                 },
                 "detokenization": {
-                  "mean_ms": 0.14710000157356262,
+                  "mean_ms": 0.14949999749660492,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -1856,6 +1877,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "amber",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -1879,47 +1901,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "amber",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 104.44540000753477,
-              "first_streamed_text_chunk_ms": 104.15009999996983,
+              "generation_wall_ms": 103.21359999943525,
+              "first_streamed_text_chunk_ms": 102.92669999762438,
               "first_streamed_text_chunk": "amber",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 12.727999687194824,
+                  "mean_ms": 12.83899974822998,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 104.36699676513672,
+                  "mean_ms": 103.13800048828125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 89.5780029296875,
+                  "mean_ms": 88.29299926757812,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 89.97100067138672,
+                  "mean_ms": 88.89039611816406,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 13.148099899291992,
+                  "mean_ms": 13.025500297546387,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 45.09049987792969,
-                  "std_ms": 31.953500747680664
+                  "mean_ms": 44.448001861572266,
+                  "std_ms": 31.433000564575195
                 },
                 "throughput": {
-                  "mean_ms": 76.0566177368164,
+                  "mean_ms": 76.7724838256836,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.14800000190734863,
+                  "mean_ms": 0.14480000734329224,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 58,
@@ -2064,6 +2087,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "{ \"city\": \"Paris\", \"country\": \"France\" }",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -2088,47 +2112,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "{ \"city\": \"Paris\", \"country\": \"France\" }",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 290.75889999512583,
-              "first_streamed_text_chunk_ms": 131.85109998448752,
+              "generation_wall_ms": 216.96310001425445,
+              "first_streamed_text_chunk_ms": 77.1015000063926,
               "first_streamed_text_chunk": "{\n",
               "streamed_chunks_count": 12,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 15.04800033569336,
+                  "mean_ms": 12.975000381469727,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 290.6820068359375,
+                  "mean_ms": 216.8800048828125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 269.1889953613281,
+                  "mean_ms": 195.72999572753906,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 130.95030212402344,
+                  "mean_ms": 76.49129486083984,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 9.904475212097168,
-                  "std_ms": 1.7596063613891602
+                  "mean_ms": 8.6847562789917,
+                  "std_ms": 1.3042418956756592
                 },
                 "inter_token_latency": {
-                  "mean_ms": 16.1037654876709,
-                  "std_ms": 24.93462562561035
+                  "mean_ms": 11.880000114440918,
+                  "std_ms": 12.922737121582031
                 },
                 "throughput": {
-                  "mean_ms": 100.96446228027344,
-                  "std_ms": 17.93711280822754
+                  "mean_ms": 115.14427947998047,
+                  "std_ms": 17.291906356811523
                 },
                 "detokenization": {
-                  "mean_ms": 0.16369999945163727,
+                  "mean_ms": 0.16589999198913574,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 44,
@@ -2343,6 +2368,7 @@
                 ],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "The use of Dense Qwen CPU as the default route is being evaluated to determine if it offers any advantages over other options such as OpenVINO GPU and NPU.",
                   "required_keywords_missing": [
                     "Lunar"
                   ],
@@ -2374,6 +2400,7 @@
               ],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "The use of Dense Qwen CPU as the default route is being evaluated to determine if it offers any advantages over other options such as OpenVINO GPU and NPU.",
                 "required_keywords_missing": [
                   "Lunar"
                 ],
@@ -2381,42 +2408,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 539.4834000035189,
-              "first_streamed_text_chunk_ms": 214.2683000129182,
+              "generation_wall_ms": 533.6805999977514,
+              "first_streamed_text_chunk_ms": 217.47989999130368,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 34,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 13.835000038146973,
+                  "mean_ms": 14.678999900817871,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 539.406005859375,
+                  "mean_ms": 533.6019897460938,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 508.239990234375,
+                  "mean_ms": 503.43798828125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 186.00440979003906,
+                  "mean_ms": 189.89041137695312,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.355023384094238,
-                  "std_ms": 1.6738134622573853
+                  "mean_ms": 10.071444511413574,
+                  "std_ms": 1.7273625135421753
                 },
                 "inter_token_latency": {
-                  "mean_ms": 14.961342811584473,
-                  "std_ms": 26.97197914123535
+                  "mean_ms": 14.761056900024414,
+                  "std_ms": 27.521472930908203
                 },
                 "throughput": {
-                  "mean_ms": 96.57148742675781,
-                  "std_ms": 15.610071182250977
+                  "mean_ms": 99.2906265258789,
+                  "std_ms": 17.0294246673584
                 },
                 "detokenization": {
-                  "mean_ms": 0.1446000039577484,
+                  "mean_ms": 0.1378999948501587,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 87,
@@ -2540,13 +2567,9 @@
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -2566,18 +2589,13 @@
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "required_keywords_missing": [
-                    "yes"
-                  ],
+                  "normalized_answer": "Yes, Tom will have one apple left after he gives away one of his apples",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -2595,58 +2613,53 @@
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "required_keywords_missing": [
-                  "yes"
-                ],
+                "normalized_answer": "Yes, Tom will have one apple left after he gives away one of his apples",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 262.3295999947004,
-              "first_streamed_text_chunk_ms": 132.2400000062771,
+              "generation_wall_ms": 234.3369000009261,
+              "first_streamed_text_chunk_ms": 111.94189998786896,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 15,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 12.479999542236328,
+                  "mean_ms": 12.659000396728516,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 262.2510070800781,
+                  "mean_ms": 234.26300048828125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 243.4080047607422,
+                  "mean_ms": 215.56500244140625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 107.33169555664062,
+                  "mean_ms": 83.08639526367188,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.23996639251709,
-                  "std_ms": 1.3871822357177734
+                  "mean_ms": 9.993973731994629,
+                  "std_ms": 2.316197633743286
                 },
                 "inter_token_latency": {
-                  "mean_ms": 15.506375312805176,
-                  "std_ms": 20.49910545349121
+                  "mean_ms": 13.738875389099121,
+                  "std_ms": 14.771607398986816
                 },
                 "throughput": {
-                  "mean_ms": 97.65657043457031,
-                  "std_ms": 13.229288101196289
+                  "mean_ms": 100.060302734375,
+                  "std_ms": 23.189918518066406
                 },
                 "detokenization": {
-                  "mean_ms": 0.1591000109910965,
+                  "mean_ms": 0.1508999913930893,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 51,
@@ -2660,7 +2673,7 @@
             "runtime_device": "CPU",
             "backend_lane": "dense_slm_openvino_cpu",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
-            "status": "quality_failed"
+            "status": "passed"
           },
           {
             "id": "decode_heavy_short_list",
@@ -2819,8 +2832,8 @@
                 ],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "1. **Fallback Route Check** 2. **Route Validation** 3. **Route Optimization** 4. **Route Monitoring** 5. **Route Analysis** 6. **Route Evaluation**",
                   "required_keywords_missing": [
-                    "fallback",
                     "model"
                   ],
                   "forbidden_tokens_observed": []
@@ -2844,50 +2857,50 @@
               ],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "1. **Fallback Route Check** 2. **Route Validation** 3. **Route Optimization** 4. **Route Monitoring** 5. **Route Analysis** 6. **Route Evaluation**",
                 "required_keywords_missing": [
-                  "fallback",
                   "model"
                 ],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 473.4131000004709,
-              "first_streamed_text_chunk_ms": 128.61059998976998,
+              "generation_wall_ms": 419.20000000391155,
+              "first_streamed_text_chunk_ms": 99.61249999469146,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 27,
               "openvino_perf_metrics": {
-                "load_time_ms": 2620.0,
+                "load_time_ms": 2647.0,
                 "tokenization": {
-                  "mean_ms": 13.32800006866455,
+                  "mean_ms": 13.050000190734863,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 473.3320007324219,
+                  "mean_ms": 419.125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 447.6390075683594,
+                  "mean_ms": 392.0889892578125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 101.23579406738281,
+                  "mean_ms": 77.28600311279297,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.021408081054688,
-                  "std_ms": 1.7001738548278809
+                  "mean_ms": 9.200664520263672,
+                  "std_ms": 1.3519538640975952
                 },
                 "inter_token_latency": {
-                  "mean_ms": 12.055395126342773,
-                  "std_ms": 12.543964385986328
+                  "mean_ms": 10.620473861694336,
+                  "std_ms": 8.884838104248047
                 },
                 "throughput": {
-                  "mean_ms": 99.786376953125,
-                  "std_ms": 16.929176330566406
+                  "mean_ms": 108.68780517578125,
+                  "std_ms": 15.970682144165039
                 },
                 "detokenization": {
-                  "mean_ms": 0.17399999499320984,
+                  "mean_ms": 0.17159999907016754,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -2927,19 +2940,19 @@
         "fallback_used": false,
         "fallback_status": "no_fallback_used_gpu0_device_requested_and_llmpipeline_constructed",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
-        "pipeline_construct_wall_ms": 4352.806800015969,
+        "pipeline_construct_wall_ms": 4070.375999988755,
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": false,
         "quality_summary": {
           "cases_total": 12,
-          "passed": 7,
-          "failed": 5,
+          "passed": 8,
+          "failed": 4,
           "fallback_used": false,
           "profile_summary": {
             "ask_normal": {
               "total": 3,
-              "passed": 2,
-              "failed": 1
+              "passed": 3,
+              "failed": 0
             },
             "ask_short": {
               "total": 2,
@@ -3005,8 +3018,8 @@
             },
             "short_reasoning": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "stop_and_eos": {
               "total": 1,
@@ -3141,6 +3154,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_forbidden_tokens",
+                  "normalized_answer": "2 + 2 equals 4.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -3164,47 +3178,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_forbidden_tokens",
+                "normalized_answer": "2 + 2 equals 4.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 637.3082000063732,
-              "first_streamed_text_chunk_ms": 575.4995000024792,
+              "generation_wall_ms": 534.0880999865476,
+              "first_streamed_text_chunk_ms": 463.1305999937467,
               "first_streamed_text_chunk": "2",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 12.36299991607666,
+                  "mean_ms": 15.291000366210938,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 637.1610107421875,
+                  "mean_ms": 533.9550170898438,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 618.0430297851562,
+                  "mean_ms": 512.9760131835938,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 392.2474060058594,
+                  "mean_ms": 327.6302185058594,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 34.773929595947266,
-                  "std_ms": 53.54288101196289
+                  "mean_ms": 29.24008560180664,
+                  "std_ms": 37.26618957519531
                 },
                 "inter_token_latency": {
-                  "mean_ms": 77.81287384033203,
-                  "std_ms": 124.59227752685547
+                  "mean_ms": 64.52749633789062,
+                  "std_ms": 99.88505554199219
                 },
                 "throughput": {
-                  "mean_ms": 28.75717544555664,
-                  "std_ms": 44.27863311767578
+                  "mean_ms": 34.19962692260742,
+                  "std_ms": 43.587074279785156
                 },
                 "detokenization": {
-                  "mean_ms": 0.08789999783039093,
+                  "mean_ms": 0.17229999601840973,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 39,
@@ -3331,6 +3346,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_forbidden_tokens",
+                  "normalized_answer": "15",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -3354,47 +3370,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_forbidden_tokens",
+                "normalized_answer": "15",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 477.36520000034943,
-              "first_streamed_text_chunk_ms": 475.88879999239,
+              "generation_wall_ms": 440.1190999778919,
+              "first_streamed_text_chunk_ms": 438.8782999885734,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 2,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 15.694000244140625,
+                  "mean_ms": 13.755000114440918,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 477.2560119628906,
+                  "mean_ms": 440.0260009765625,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 458.0270080566406,
+                  "mean_ms": 423.1889953613281,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 416.05413818359375,
+                  "mean_ms": 363.5749206542969,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 29.550050735473633,
-                  "std_ms": 16.16714859008789
+                  "mean_ms": 37.3046989440918,
+                  "std_ms": 23.681100845336914
                 },
                 "inter_token_latency": {
-                  "mean_ms": 152.93167114257812,
-                  "std_ms": 175.1748504638672
+                  "mean_ms": 141.32000732421875,
+                  "std_ms": 148.54122924804688
                 },
                 "throughput": {
-                  "mean_ms": 33.84088897705078,
-                  "std_ms": 18.514711380004883
+                  "mean_ms": 26.8062744140625,
+                  "std_ms": 17.016679763793945
                 },
                 "detokenization": {
-                  "mean_ms": 0.3392999768257141,
+                  "mean_ms": 0.1876000016927719,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -3526,6 +3543,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "red, blue, green",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -3551,47 +3569,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "red, blue, green",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 182.51459999009967,
-              "first_streamed_text_chunk_ms": 141.3870999822393,
+              "generation_wall_ms": 185.26500000734814,
+              "first_streamed_text_chunk_ms": 142.79280000482686,
               "first_streamed_text_chunk": "red",
               "streamed_chunks_count": 5,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 14.102999687194824,
+                  "mean_ms": 17.934999465942383,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 182.41700744628906,
+                  "mean_ms": 185.16600036621094,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 164.58700561523438,
+                  "mean_ms": 163.96600341796875,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 78.29100036621094,
+                  "mean_ms": 79.93289947509766,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 20.58302116394043,
-                  "std_ms": 14.870140075683594
+                  "mean_ms": 20.82830047607422,
+                  "std_ms": 13.807063102722168
                 },
                 "inter_token_latency": {
-                  "mean_ms": 27.731000900268555,
-                  "std_ms": 21.140748977661133
+                  "mean_ms": 27.572834014892578,
+                  "std_ms": 19.845508575439453
                 },
                 "throughput": {
-                  "mean_ms": 48.58373260498047,
-                  "std_ms": 35.09916687011719
+                  "mean_ms": 48.0115966796875,
+                  "std_ms": 31.82684898376465
                 },
                 "detokenization": {
-                  "mean_ms": 0.12640000879764557,
+                  "mean_ms": 0.12430000305175781,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -3740,6 +3759,7 @@
                 ],
                 "details": {
                   "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's usually clear and blue",
                   "expected_normalized": "yes",
                   "observed_normalized": "yes, it's usually clear and blue"
                 }
@@ -3767,47 +3787,48 @@
               ],
               "details": {
                 "kind": "normalized_match",
+                "normalized_answer": "Yes, it's usually clear and blue",
                 "expected_normalized": "yes",
                 "observed_normalized": "yes, it's usually clear and blue"
               }
             },
             "timing": {
-              "generation_wall_ms": 237.36050000297837,
-              "first_streamed_text_chunk_ms": 168.44059998402372,
+              "generation_wall_ms": 193.2602000015322,
+              "first_streamed_text_chunk_ms": 128.5894000029657,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 11.045000076293945,
+                  "mean_ms": 13.324999809265137,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 237.25,
+                  "mean_ms": 193.1529998779297,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 189.66900634765625,
+                  "mean_ms": 169.2790069580078,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 105.8823013305664,
+                  "mean_ms": 69.9083023071289,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 18.56075668334961,
-                  "std_ms": 11.746871948242188
+                  "mean_ms": 17.443742752075195,
+                  "std_ms": 11.272765159606934
                 },
                 "inter_token_latency": {
-                  "mean_ms": 27.96037483215332,
-                  "std_ms": 27.45238494873047
+                  "mean_ms": 22.232624053955078,
+                  "std_ms": 16.669696807861328
                 },
                 "throughput": {
-                  "mean_ms": 53.877113342285156,
-                  "std_ms": 34.0981559753418
+                  "mean_ms": 57.3271484375,
+                  "std_ms": 37.046836853027344
                 },
                 "detokenization": {
-                  "mean_ms": 0.226500004529953,
+                  "mean_ms": 0.08060000091791153,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -3933,6 +3954,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "The capital of France is Paris.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -3956,47 +3978,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "The capital of France is Paris.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 368.40820001089014,
-              "first_streamed_text_chunk_ms": 297.55829999339767,
+              "generation_wall_ms": 374.1386000183411,
+              "first_streamed_text_chunk_ms": 308.67970001418144,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 15.241999626159668,
+                  "mean_ms": 15.70199966430664,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 368.3110046386719,
+                  "mean_ms": 374.06500244140625,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 348.28900146484375,
+                  "mean_ms": 354.3810119628906,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 232.03599548339844,
+                  "mean_ms": 244.8406982421875,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 19.25615692138672,
-                  "std_ms": 13.114642143249512
+                  "mean_ms": 18.313814163208008,
+                  "std_ms": 12.156573295593262
                 },
                 "inter_token_latency": {
-                  "mean_ms": 43.792625427246094,
-                  "std_ms": 66.31816864013672
+                  "mean_ms": 44.54100036621094,
+                  "std_ms": 70.60438537597656
                 },
                 "throughput": {
-                  "mean_ms": 51.93144226074219,
-                  "std_ms": 35.36854553222656
+                  "mean_ms": 54.60358810424805,
+                  "std_ms": 36.24545669555664
                 },
                 "detokenization": {
-                  "mean_ms": 0.18400000035762787,
+                  "mean_ms": 0.07319999486207962,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 35,
@@ -4143,6 +4166,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "Rust is an open-source programming language designed to be safe and efficient while maintaining tight integration with the operating system.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -4170,47 +4194,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "Rust is an open-source programming language designed to be safe and efficient while maintaining tight integration with the operating system.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 423.7988000095356,
-              "first_streamed_text_chunk_ms": 129.53070001094602,
+              "generation_wall_ms": 426.40600001323037,
+              "first_streamed_text_chunk_ms": 146.06900000944734,
               "first_streamed_text_chunk": "R",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 14.86299991607666,
+                  "mean_ms": 16.569000244140625,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 423.6990051269531,
+                  "mean_ms": 426.2909851074219,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 399.24700927734375,
+                  "mean_ms": 400.0090026855469,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 67.95040130615234,
+                  "mean_ms": 83.12390899658203,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.405917167663574,
-                  "std_ms": 7.355863094329834
+                  "mean_ms": 14.853708267211914,
+                  "std_ms": 7.648889064788818
                 },
                 "inter_token_latency": {
-                  "mean_ms": 16.87737464904785,
-                  "std_ms": 10.38459300994873
+                  "mean_ms": 16.930500030517578,
+                  "std_ms": 12.737405776977539
                 },
                 "throughput": {
-                  "mean_ms": 64.91012573242188,
-                  "std_ms": 30.992637634277344
+                  "mean_ms": 67.32325744628906,
+                  "std_ms": 34.66798400878906
                 },
                 "detokenization": {
-                  "mean_ms": 0.23910000920295715,
+                  "mean_ms": 0.16680000722408295,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -4342,6 +4367,7 @@
                 ],
                 "details": {
                   "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
                   "expected_normalized": "done",
                   "observed_normalized": "okay, understood"
                 }
@@ -4367,47 +4393,48 @@
               ],
               "details": {
                 "kind": "normalized_match",
+                "normalized_answer": "Okay, understood.",
                 "expected_normalized": "done",
                 "observed_normalized": "okay, understood"
               }
             },
             "timing": {
-              "generation_wall_ms": 157.1484000014607,
-              "first_streamed_text_chunk_ms": 130.69150000228547,
+              "generation_wall_ms": 180.82819998380728,
+              "first_streamed_text_chunk_ms": 150.9821999934502,
               "first_streamed_text_chunk": "Okay",
               "streamed_chunks_count": 4,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 13.515999794006348,
+                  "mean_ms": 16.677000045776367,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 157.052001953125,
+                  "mean_ms": 180.7310028076172,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 140.5330047607422,
+                  "mean_ms": 159.9770050048828,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 68.81620025634766,
+                  "mean_ms": 79.59880065917969,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 21.79207420349121,
-                  "std_ms": 15.632111549377441
+                  "mean_ms": 24.766149520874023,
+                  "std_ms": 16.83333969116211
                 },
                 "inter_token_latency": {
-                  "mean_ms": 28.345399856567383,
-                  "std_ms": 19.337093353271484
+                  "mean_ms": 32.28219985961914,
+                  "std_ms": 21.34923553466797
                 },
                 "throughput": {
-                  "mean_ms": 45.88824462890625,
-                  "std_ms": 32.91701889038086
+                  "mean_ms": 40.37769317626953,
+                  "std_ms": 27.444372177124023
                 },
                 "detokenization": {
-                  "mean_ms": 0.11710000038146973,
+                  "mean_ms": 0.250900000333786,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -4550,6 +4577,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "amber",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -4573,47 +4601,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "amber",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 123.33159998524934,
-              "first_streamed_text_chunk_ms": 123.10019999858923,
+              "generation_wall_ms": 124.07689998508431,
+              "first_streamed_text_chunk_ms": 123.72889998368919,
               "first_streamed_text_chunk": "amber",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 13.211000442504883,
+                  "mean_ms": 14.911999702453613,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 123.25800323486328,
+                  "mean_ms": 123.85900115966797,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 107.7969970703125,
+                  "mean_ms": 106.60800170898438,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 73.67689514160156,
+                  "mean_ms": 73.01769256591797,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 48.04330062866211,
+                  "mean_ms": 49.47160339355469,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 54.13949966430664,
-                  "std_ms": 6.105500221252441
+                  "mean_ms": 53.57600021362305,
+                  "std_ms": 4.261000156402588
                 },
                 "throughput": {
-                  "mean_ms": 20.814556121826172,
+                  "mean_ms": 20.21361541748047,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.10530000180006027,
+                  "mean_ms": 0.20340000092983246,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 58,
@@ -4758,6 +4787,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "{ \"city\": \"Paris\", \"country\": \"France\" }",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -4782,47 +4812,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "{ \"city\": \"Paris\", \"country\": \"France\" }",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 318.1963999813888,
-              "first_streamed_text_chunk_ms": 65.02069998532534,
+              "generation_wall_ms": 338.1389999995008,
+              "first_streamed_text_chunk_ms": 72.99529999727383,
               "first_streamed_text_chunk": "{\n",
               "streamed_chunks_count": 12,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 13.380999565124512,
+                  "mean_ms": 13.989999771118164,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 318.0769958496094,
+                  "mean_ms": 338.0270080566406,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 297.34600830078125,
+                  "mean_ms": 315.989013671875,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 64.36009979248047,
+                  "mean_ms": 72.2938003540039,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.756612777709961,
-                  "std_ms": 9.273032188415527
+                  "mean_ms": 16.489255905151367,
+                  "std_ms": 9.542547225952148
                 },
                 "inter_token_latency": {
-                  "mean_ms": 17.742176055908203,
-                  "std_ms": 12.215381622314453
+                  "mean_ms": 18.84923553466797,
+                  "std_ms": 13.459707260131836
                 },
                 "throughput": {
-                  "mean_ms": 63.465415954589844,
-                  "std_ms": 37.350467681884766
+                  "mean_ms": 60.64554977416992,
+                  "std_ms": 35.09636688232422
                 },
                 "detokenization": {
-                  "mean_ms": 0.23339998722076416,
+                  "mean_ms": 0.25280001759529114,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 44,
@@ -5043,6 +5074,7 @@
                 ],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
                   "required_keywords_missing": [
                     "Lunar"
                   ],
@@ -5074,6 +5106,7 @@
               ],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
                 "required_keywords_missing": [
                   "Lunar"
                 ],
@@ -5081,42 +5114,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 1042.2805999987759,
-              "first_streamed_text_chunk_ms": 521.5994999743998,
+              "generation_wall_ms": 961.0508999903686,
+              "first_streamed_text_chunk_ms": 473.25670000282116,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 39,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 17.843000411987305,
+                  "mean_ms": 15.27299976348877,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 1042.1800537109375,
+                  "mean_ms": 960.9400024414062,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 1009.1539916992188,
+                  "mean_ms": 928.822021484375,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 459.3966064453125,
+                  "mean_ms": 408.1368103027344,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 14.911389350891113,
-                  "std_ms": 6.1048903465271
+                  "mean_ms": 14.126214981079102,
+                  "std_ms": 5.699908256530762
                 },
                 "inter_token_latency": {
-                  "mean_ms": 25.494525909423828,
-                  "std_ms": 66.86177062988281
+                  "mean_ms": 23.489625930786133,
+                  "std_ms": 59.27364730834961
                 },
                 "throughput": {
-                  "mean_ms": 67.06283569335938,
-                  "std_ms": 27.456275939941406
+                  "mean_ms": 70.79037475585938,
+                  "std_ms": 28.56381607055664
                 },
                 "detokenization": {
-                  "mean_ms": 0.14160001277923584,
+                  "mean_ms": 0.10580000281333923,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 87,
@@ -5240,13 +5273,9 @@
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -5266,18 +5295,13 @@
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "required_keywords_missing": [
-                    "yes"
-                  ],
+                  "normalized_answer": "Yes, Tom will have one apple left after he gives away one of his apples",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -5295,58 +5319,53 @@
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "required_keywords_missing": [
-                  "yes"
-                ],
+                "normalized_answer": "Yes, Tom will have one apple left after he gives away one of his apples",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 291.67569999117404,
-              "first_streamed_text_chunk_ms": 122.3619999946095,
+              "generation_wall_ms": 328.3547000028193,
+              "first_streamed_text_chunk_ms": 150.55299998493865,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 15,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 7.388000011444092,
+                  "mean_ms": 15.206999778747559,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 291.59100341796875,
+                  "mean_ms": 328.2619934082031,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 277.1830139160156,
+                  "mean_ms": 306.44500732421875,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 62.3380012512207,
+                  "mean_ms": 81.52120208740234,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.177820205688477,
-                  "std_ms": 7.619863510131836
+                  "mean_ms": 16.367633819580078,
+                  "std_ms": 10.288188934326172
                 },
                 "inter_token_latency": {
-                  "mean_ms": 17.573875427246094,
-                  "std_ms": 12.1112060546875
+                  "mean_ms": 19.410062789916992,
+                  "std_ms": 15.657931327819824
                 },
                 "throughput": {
-                  "mean_ms": 65.88561248779297,
-                  "std_ms": 33.077171325683594
+                  "mean_ms": 61.096187591552734,
+                  "std_ms": 38.40317153930664
                 },
                 "detokenization": {
-                  "mean_ms": 0.17499999701976776,
+                  "mean_ms": 0.14959999918937683,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 51,
@@ -5360,7 +5379,7 @@
             "runtime_device": "GPU.0",
             "backend_lane": "dense_slm_openvino_gpu_arc140v",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
-            "status": "quality_failed"
+            "status": "passed"
           },
           {
             "id": "decode_heavy_short_list",
@@ -5525,8 +5544,8 @@
                 ],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "1. **Fallback Route Check** 2. **Route Selection Criteria** 3. **Route Validation Process** 4. **Route Optimization Strategy** 5. **Route Monitoring System** 6. **Route Adaptation Algorithm**",
                   "required_keywords_missing": [
-                    "fallback",
                     "model"
                   ],
                   "forbidden_tokens_observed": []
@@ -5550,50 +5569,50 @@
               ],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "1. **Fallback Route Check** 2. **Route Selection Criteria** 3. **Route Validation Process** 4. **Route Optimization Strategy** 5. **Route Monitoring System** 6. **Route Adaptation Algorithm**",
                 "required_keywords_missing": [
-                  "fallback",
                   "model"
                 ],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 678.2364000100642,
-              "first_streamed_text_chunk_ms": 134.21700001345016,
+              "generation_wall_ms": 651.5938999946229,
+              "first_streamed_text_chunk_ms": 126.46529998164624,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 33,
               "openvino_perf_metrics": {
-                "load_time_ms": 4352.0,
+                "load_time_ms": 4070.0,
                 "tokenization": {
-                  "mean_ms": 17.440000534057617,
+                  "mean_ms": 10.689000129699707,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 677.8300170898438,
+                  "mean_ms": 651.4940185546875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 644.10498046875,
+                  "mean_ms": 624.4180297851562,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 69.3091049194336,
+                  "mean_ms": 62.0198974609375,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 14.10865306854248,
-                  "std_ms": 6.034084320068359
+                  "mean_ms": 13.673213958740234,
+                  "std_ms": 5.731398105621338
                 },
                 "inter_token_latency": {
-                  "mean_ms": 14.890976905822754,
-                  "std_ms": 8.173494338989258
+                  "mean_ms": 14.44161319732666,
+                  "std_ms": 7.962635517120361
                 },
                 "throughput": {
-                  "mean_ms": 70.87848663330078,
-                  "std_ms": 30.313793182373047
+                  "mean_ms": 73.13569641113281,
+                  "std_ms": 30.65627098083496
                 },
                 "detokenization": {
-                  "mean_ms": 0.14650000631809235,
+                  "mean_ms": 0.24950000643730164,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -5633,19 +5652,19 @@
         "fallback_used": false,
         "fallback_status": "no_fallback_used_npu_device_requested_and_llmpipeline_constructed",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
-        "pipeline_construct_wall_ms": 33782.657900010236,
+        "pipeline_construct_wall_ms": 31878.11380001949,
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": false,
         "quality_summary": {
           "cases_total": 12,
-          "passed": 8,
-          "failed": 4,
+          "passed": 9,
+          "failed": 3,
           "fallback_used": false,
           "profile_summary": {
             "ask_normal": {
               "total": 3,
-              "passed": 2,
-              "failed": 1
+              "passed": 3,
+              "failed": 0
             },
             "ask_short": {
               "total": 2,
@@ -5711,8 +5730,8 @@
             },
             "short_reasoning": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "stop_and_eos": {
               "total": 1,
@@ -5847,6 +5866,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_forbidden_tokens",
+                  "normalized_answer": "2 + 2 equals 4.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -5870,47 +5890,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_forbidden_tokens",
+                "normalized_answer": "2 + 2 equals 4.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 787.3646999942139,
-              "first_streamed_text_chunk_ms": 554.0197000082117,
+              "generation_wall_ms": 629.7006999957375,
+              "first_streamed_text_chunk_ms": 389.8499999777414,
               "first_streamed_text_chunk": "2",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 18.582000732421875,
+                  "mean_ms": 11.312000274658203,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 785.7050170898438,
+                  "mean_ms": 629.5570068359375,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 764.43798828125,
+                  "mean_ms": 609.052001953125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 323.0085144042969,
+                  "mean_ms": 266.6875,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 65.97805786132812,
-                  "std_ms": 45.69468688964844
+                  "mean_ms": 51.68468475341797,
+                  "std_ms": 22.145097732543945
                 },
                 "inter_token_latency": {
-                  "mean_ms": 95.55474853515625,
-                  "std_ms": 89.53135681152344
+                  "mean_ms": 76.13150024414062,
+                  "std_ms": 70.6855239868164
                 },
                 "throughput": {
-                  "mean_ms": 15.156554222106934,
-                  "std_ms": 10.49703598022461
+                  "mean_ms": 19.34809112548828,
+                  "std_ms": 8.289987564086914
                 },
                 "detokenization": {
-                  "mean_ms": 0.16699999570846558,
+                  "mean_ms": 0.11999999731779099,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 39,
@@ -6037,6 +6058,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_forbidden_tokens",
+                  "normalized_answer": "15",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -6060,47 +6082,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_forbidden_tokens",
+                "normalized_answer": "15",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 285.17779998946935,
-              "first_streamed_text_chunk_ms": 284.84489998663776,
+              "generation_wall_ms": 242.40729998564348,
+              "first_streamed_text_chunk_ms": 242.0634999871254,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 2,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 23.218000411987305,
+                  "mean_ms": 13.045000076293945,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 285.05499267578125,
+                  "mean_ms": 242.33399963378906,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 260.3840026855469,
+                  "mean_ms": 227.84100341796875,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 187.82559204101562,
+                  "mean_ms": 174.38479614257812,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 48.32365036010742,
-                  "std_ms": 1.1156504154205322
+                  "mean_ms": 33.66550064086914,
+                  "std_ms": 0.24039843678474426
                 },
                 "inter_token_latency": {
-                  "mean_ms": 86.79467010498047,
-                  "std_ms": 54.5987434387207
+                  "mean_ms": 75.9469985961914,
+                  "std_ms": 60.16233825683594
                 },
                 "throughput": {
-                  "mean_ms": 20.69379997253418,
-                  "std_ms": 0.4777587354183197
+                  "mean_ms": 29.703998565673828,
+                  "std_ms": 0.21211016178131104
                 },
                 "detokenization": {
-                  "mean_ms": 0.10199999809265137,
+                  "mean_ms": 0.08699999749660492,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -6232,6 +6255,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "red, blue, green",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -6257,47 +6281,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "red, blue, green",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 424.00670002098195,
-              "first_streamed_text_chunk_ms": 270.58100001886487,
+              "generation_wall_ms": 357.49689998920076,
+              "first_streamed_text_chunk_ms": 245.51510001765564,
               "first_streamed_text_chunk": "red",
               "streamed_chunks_count": 5,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 8.170999526977539,
+                  "mean_ms": 12.406000137329102,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 423.9230041503906,
+                  "mean_ms": 357.4230041503906,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 412.62799072265625,
+                  "mean_ms": 342.6189880371094,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 165.4652099609375,
+                  "mean_ms": 172.3140869140625,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 51.46664047241211,
-                  "std_ms": 1.0801061391830444
+                  "mean_ms": 36.89883804321289,
+                  "std_ms": 1.318022608757019
                 },
                 "inter_token_latency": {
-                  "mean_ms": 68.77133178710938,
-                  "std_ms": 39.41107177734375
+                  "mean_ms": 57.10316848754883,
+                  "std_ms": 45.770137786865234
                 },
                 "throughput": {
-                  "mean_ms": 19.43006134033203,
-                  "std_ms": 0.40776950120925903
+                  "mean_ms": 27.101123809814453,
+                  "std_ms": 0.9680492877960205
                 },
                 "detokenization": {
-                  "mean_ms": 0.19200000166893005,
+                  "mean_ms": 0.07199999690055847,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -6446,6 +6471,7 @@
                 ],
                 "details": {
                   "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's usually clear and blue",
                   "expected_normalized": "yes",
                   "observed_normalized": "yes, it's usually clear and blue"
                 }
@@ -6473,47 +6499,48 @@
               ],
               "details": {
                 "kind": "normalized_match",
+                "normalized_answer": "Yes, it's usually clear and blue",
                 "expected_normalized": "yes",
                 "observed_normalized": "yes, it's usually clear and blue"
               }
             },
             "timing": {
-              "generation_wall_ms": 508.55610001599416,
-              "first_streamed_text_chunk_ms": 271.9476000056602,
+              "generation_wall_ms": 437.19379999674857,
+              "first_streamed_text_chunk_ms": 242.30010001338087,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 13.107999801635742,
+                  "mean_ms": 13.46399974822998,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 508.4440002441406,
+                  "mean_ms": 437.09600830078125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 493.32000732421875,
+                  "mean_ms": 419.4779968261719,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 173.63009643554688,
+                  "mean_ms": 172.54910278320312,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 47.73898696899414,
-                  "std_ms": 0.8081997632980347
+                  "mean_ms": 37.630985260009766,
+                  "std_ms": 2.6335389614105225
                 },
                 "inter_token_latency": {
-                  "mean_ms": 61.665000915527344,
-                  "std_ms": 37.24028015136719
+                  "mean_ms": 52.434749603271484,
+                  "std_ms": 39.9815559387207
                 },
                 "throughput": {
-                  "mean_ms": 20.94723892211914,
-                  "std_ms": 0.354627400636673
+                  "mean_ms": 26.57384490966797,
+                  "std_ms": 1.8597244024276733
                 },
                 "detokenization": {
-                  "mean_ms": 0.15800000727176666,
+                  "mean_ms": 0.20200000703334808,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -6639,6 +6666,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "The capital of France is Paris.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -6662,47 +6690,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "The capital of France is Paris.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 506.12220002221875,
-              "first_streamed_text_chunk_ms": 263.38859999668784,
+              "generation_wall_ms": 407.26900001754984,
+              "first_streamed_text_chunk_ms": 237.01500002061948,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 8.57699966430664,
+                  "mean_ms": 13.012999534606934,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 506.0220031738281,
+                  "mean_ms": 407.15899658203125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 495.57501220703125,
+                  "mean_ms": 391.08599853515625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 166.0540008544922,
+                  "mean_ms": 165.50070190429688,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 48.48400115966797,
-                  "std_ms": 0.4009453356266022
+                  "mean_ms": 34.40948486328125,
+                  "std_ms": 1.527930736541748
                 },
                 "inter_token_latency": {
-                  "mean_ms": 61.946876525878906,
-                  "std_ms": 36.02201461791992
+                  "mean_ms": 48.88574981689453,
+                  "std_ms": 39.03224182128906
                 },
                 "throughput": {
-                  "mean_ms": 20.6253604888916,
-                  "std_ms": 0.17056433856487274
+                  "mean_ms": 29.06175422668457,
+                  "std_ms": 1.2904682159423828
                 },
                 "detokenization": {
-                  "mean_ms": 0.1340000033378601,
+                  "mean_ms": 0.09200000017881393,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 35,
@@ -6849,6 +6878,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "Rust is an open-source programming language designed to be safe and efficient while maintaining tight integration with the operating system.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -6876,47 +6906,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "Rust is an open-source programming language designed to be safe and efficient while maintaining tight integration with the operating system.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 1280.542799999239,
-              "first_streamed_text_chunk_ms": 260.4649999993853,
+              "generation_wall_ms": 941.915200004587,
+              "first_streamed_text_chunk_ms": 242.02529998729005,
               "first_streamed_text_chunk": "R",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 7.591000080108643,
+                  "mean_ms": 12.631999969482422,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 1280.4429931640625,
+                  "mean_ms": 941.8309936523438,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 1267.136962890625,
+                  "mean_ms": 924.0120239257812,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 169.1966094970703,
+                  "mean_ms": 174.80288696289062,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 48.28866958618164,
-                  "std_ms": 1.969488263130188
+                  "mean_ms": 33.30533981323242,
+                  "std_ms": 1.9331045150756836
                 },
                 "inter_token_latency": {
-                  "mean_ms": 52.7973747253418,
-                  "std_ms": 22.714792251586914
+                  "mean_ms": 38.5004997253418,
+                  "std_ms": 25.787029266357422
                 },
                 "throughput": {
-                  "mean_ms": 20.708791732788086,
-                  "std_ms": 0.8446230292320251
+                  "mean_ms": 30.02521514892578,
+                  "std_ms": 1.7427200078964233
                 },
                 "detokenization": {
-                  "mean_ms": 0.10199999809265137,
+                  "mean_ms": 0.19699999690055847,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -7048,6 +7079,7 @@
                 ],
                 "details": {
                   "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
                   "expected_normalized": "done",
                   "observed_normalized": "okay, understood"
                 }
@@ -7073,47 +7105,48 @@
               ],
               "details": {
                 "kind": "normalized_match",
+                "normalized_answer": "Okay, understood.",
                 "expected_normalized": "done",
                 "observed_normalized": "okay, understood"
               }
             },
             "timing": {
-              "generation_wall_ms": 357.3780999868177,
-              "first_streamed_text_chunk_ms": 261.3081999879796,
+              "generation_wall_ms": 330.19209999474697,
+              "first_streamed_text_chunk_ms": 250.5020999815315,
               "first_streamed_text_chunk": "Okay",
               "streamed_chunks_count": 4,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 7.203000068664551,
+                  "mean_ms": 12.15999984741211,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 357.2969970703125,
+                  "mean_ms": 330.0799865722656,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 348.6239929199219,
+                  "mean_ms": 314.9859924316406,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 166.8936004638672,
+                  "mean_ms": 172.6719970703125,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 47.403724670410156,
-                  "std_ms": 0.4512384533882141
+                  "mean_ms": 39.04502487182617,
+                  "std_ms": 0.9624159336090088
                 },
                 "inter_token_latency": {
-                  "mean_ms": 69.72480010986328,
-                  "std_ms": 44.882911682128906
+                  "mean_ms": 62.99720001220703,
+                  "std_ms": 48.521942138671875
                 },
                 "throughput": {
-                  "mean_ms": 21.095388412475586,
-                  "std_ms": 0.2008080780506134
+                  "mean_ms": 25.61145782470703,
+                  "std_ms": 0.6312936544418335
                 },
                 "detokenization": {
-                  "mean_ms": 0.17000000178813934,
+                  "mean_ms": 0.19099999964237213,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -7256,6 +7289,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "amber",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -7279,47 +7313,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "amber",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 216.7831999831833,
-              "first_streamed_text_chunk_ms": 216.5709999972023,
+              "generation_wall_ms": 211.17639998556115,
+              "first_streamed_text_chunk_ms": 210.7998999999836,
               "first_streamed_text_chunk": "amber",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 10.324999809265137,
+                  "mean_ms": 17.72599983215332,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 216.6909942626953,
+                  "mean_ms": 211.0959930419922,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 205.05999755859375,
+                  "mean_ms": 192.1540069580078,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 165.75502014160156,
+                  "mean_ms": 174.86070251464844,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 50.03950119018555,
+                  "mean_ms": 35.52810287475586,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 102.52999877929688,
-                  "std_ms": 52.67599868774414
+                  "mean_ms": 96.0770034790039,
+                  "std_ms": 60.65999984741211
                 },
                 "throughput": {
-                  "mean_ms": 19.98421287536621,
+                  "mean_ms": 28.146732330322266,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.07800000160932541,
+                  "mean_ms": 0.18400000035762787,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 58,
@@ -7464,6 +7499,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "{ \"city\": \"Paris\", \"country\": \"France\" }",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -7488,47 +7524,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "{ \"city\": \"Paris\", \"country\": \"France\" }",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 943.3745999995153,
-              "first_streamed_text_chunk_ms": 179.51309998170473,
+              "generation_wall_ms": 757.8218999842647,
+              "first_streamed_text_chunk_ms": 170.3675999888219,
               "first_streamed_text_chunk": "{\n",
               "streamed_chunks_count": 12,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 17.944000244140625,
+                  "mean_ms": 12.210000038146973,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 943.239990234375,
+                  "mean_ms": 757.6329956054688,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 921.843994140625,
+                  "mean_ms": 740.6859741210938,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 178.8975067138672,
+                  "mean_ms": 168.8834991455078,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 47.741268157958984,
-                  "std_ms": 1.7670921087265015
+                  "mean_ms": 36.743961334228516,
+                  "std_ms": 2.236973762512207
                 },
                 "inter_token_latency": {
-                  "mean_ms": 54.22611618041992,
-                  "std_ms": 26.59261131286621
+                  "mean_ms": 43.56976318359375,
+                  "std_ms": 28.242494583129883
                 },
                 "throughput": {
-                  "mean_ms": 20.946239471435547,
-                  "std_ms": 0.7753027081489563
+                  "mean_ms": 27.215356826782227,
+                  "std_ms": 1.656872034072876
                 },
                 "detokenization": {
-                  "mean_ms": 0.08399999886751175,
+                  "mean_ms": 0.2329999953508377,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 44,
@@ -7731,6 +7768,7 @@
                 ],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
                   "required_keywords_missing": [
                     "CPU"
                   ],
@@ -7761,6 +7799,7 @@
               ],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
                 "required_keywords_missing": [
                   "CPU"
                 ],
@@ -7768,42 +7807,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 1294.3484999996144,
-              "first_streamed_text_chunk_ms": 281.258600007277,
+              "generation_wall_ms": 1035.0417000008747,
+              "first_streamed_text_chunk_ms": 242.48079999233596,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 13.855999946594238,
+                  "mean_ms": 15.977999687194824,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 1294.258056640625,
+                  "mean_ms": 1034.9139404296875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 1273.7509765625,
+                  "mean_ms": 1012.573974609375,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 176.61380004882812,
+                  "mean_ms": 172.81910705566406,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 48.55081558227539,
-                  "std_ms": 2.2089269161224365
+                  "mean_ms": 37.431907653808594,
+                  "std_ms": 1.9409029483795166
                 },
                 "inter_token_latency": {
-                  "mean_ms": 53.072959899902344,
-                  "std_ms": 22.802364349365234
+                  "mean_ms": 42.190582275390625,
+                  "std_ms": 23.919240951538086
                 },
                 "throughput": {
-                  "mean_ms": 20.59697723388672,
-                  "std_ms": 0.937105119228363
+                  "mean_ms": 26.71517562866211,
+                  "std_ms": 1.385223627090454
                 },
                 "detokenization": {
-                  "mean_ms": 0.28200000524520874,
+                  "mean_ms": 0.22200000286102295,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 87,
@@ -7927,13 +7966,9 @@
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -7953,18 +7988,13 @@
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "required_keywords_missing": [
-                    "yes"
-                  ],
+                  "normalized_answer": "Yes, Tom will have one apple left after he gives away one of his apples",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -7982,58 +8012,53 @@
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "required_keywords_missing": [
-                  "yes"
-                ],
+                "normalized_answer": "Yes, Tom will have one apple left after he gives away one of his apples",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 909.2535999952815,
-              "first_streamed_text_chunk_ms": 264.9395999906119,
+              "generation_wall_ms": 726.2434999865945,
+              "first_streamed_text_chunk_ms": 255.91789997997694,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 15,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 11.019000053405762,
+                  "mean_ms": 14.309000015258789,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 909.1400146484375,
+                  "mean_ms": 726.1199951171875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 893.3980102539062,
+                  "mean_ms": 707.801025390625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 167.79920959472656,
+                  "mean_ms": 179.25479125976562,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 49.34402084350586,
-                  "std_ms": 1.1115167140960693
+                  "mean_ms": 36.414344787597656,
+                  "std_ms": 2.1280810832977295
                 },
                 "inter_token_latency": {
-                  "mean_ms": 55.83737564086914,
-                  "std_ms": 26.02480125427246
+                  "mean_ms": 44.23756408691406,
+                  "std_ms": 31.118133544921875
                 },
                 "throughput": {
-                  "mean_ms": 20.265880584716797,
-                  "std_ms": 0.45650649070739746
+                  "mean_ms": 27.46170425415039,
+                  "std_ms": 1.6048822402954102
                 },
                 "detokenization": {
-                  "mean_ms": 0.2240000069141388,
+                  "mean_ms": 0.19499999284744263,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 51,
@@ -8047,7 +8072,7 @@
             "runtime_device": "NPU",
             "backend_lane": "dense_slm_openvino_npu",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
-            "status": "quality_failed"
+            "status": "passed"
           },
           {
             "id": "decode_heavy_short_list",
@@ -8225,6 +8250,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
+                  "normalized_answer": "Local inference route checks include: 1. Fallback Route Check - This is an automated system that automatically routes traffic through its network of fallback routers. 2. Model-Based Route Selection - The use of machine learning models to determine the best path for data packets based on routing tables. 3. Traffic Balancing - This technique involves",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -8243,47 +8269,48 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
+                "normalized_answer": "Local inference route checks include: 1. Fallback Route Check - This is an automated system that automatically routes traffic through its network of fallback routers. 2. Model-Based Route Selection - The use of machine learning models to determine the best path for data packets based on routing tables. 3. Traffic Balancing - This technique involves",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 3302.4755000078585,
-              "first_streamed_text_chunk_ms": 285.48160000354983,
+              "generation_wall_ms": 2510.5884000076912,
+              "first_streamed_text_chunk_ms": 244.34239999391139,
               "first_streamed_text_chunk": "Local",
               "streamed_chunks_count": 57,
               "openvino_perf_metrics": {
-                "load_time_ms": 33782.0,
+                "load_time_ms": 31877.0,
                 "tokenization": {
-                  "mean_ms": 16.18000030517578,
+                  "mean_ms": 10.130000114440918,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 3302.343994140625,
+                  "mean_ms": 2510.43603515625,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 3270.72900390625,
+                  "mean_ms": 2486.43310546875,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 180.32000732421875,
+                  "mean_ms": 169.68310546875,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 49.53681564331055,
-                  "std_ms": 2.5159237384796143
+                  "mean_ms": 37.144081115722656,
+                  "std_ms": 1.859914779663086
                 },
                 "inter_token_latency": {
-                  "mean_ms": 51.105140686035156,
-                  "std_ms": 14.394050598144531
+                  "mean_ms": 38.85051727294922,
+                  "std_ms": 15.260865211486816
                 },
                 "throughput": {
-                  "mean_ms": 20.1870059967041,
-                  "std_ms": 1.0252772569656372
+                  "mean_ms": 26.922189712524414,
+                  "std_ms": 1.3480743169784546
                 },
                 "detokenization": {
-                  "mean_ms": 0.26899999380111694,
+                  "mean_ms": 0.0949999988079071,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -8316,14 +8343,14 @@
     ],
     "quality_summary": {
       "cases_total": 36,
-      "passed": 22,
-      "failed": 14,
+      "passed": 25,
+      "failed": 11,
       "fallback_used": false,
       "profile_summary": {
         "ask_normal": {
           "total": 9,
-          "passed": 6,
-          "failed": 3
+          "passed": 9,
+          "failed": 0
         },
         "ask_short": {
           "total": 6,
@@ -8389,8 +8416,8 @@
         },
         "short_reasoning": {
           "total": 3,
-          "passed": 0,
-          "failed": 3
+          "passed": 3,
+          "failed": 0
         },
         "stop_and_eos": {
           "total": 3,
