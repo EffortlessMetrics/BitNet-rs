@@ -5936,7 +5936,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-009"
-status = "in_progress"
+status = "pr_open"
+pr = 5674
+head_sha = "54e75c01ddc315499f6da99002f6bb885f368a7a"
 branch = "codex/lunar-lake/LNL258V-QUAL-009-cross-runtime-stop-token"
 stackable = false
 review_mode = "codex_premerge"
