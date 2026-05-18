@@ -710,7 +710,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-004-environment-preflight"
 stackable = false
 review_mode = "codex_premerge"

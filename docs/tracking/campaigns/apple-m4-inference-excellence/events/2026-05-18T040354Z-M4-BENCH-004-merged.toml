@@ -1,0 +1,15 @@
+timestamp = "2026-05-18T04:03:54Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5511
+merge_sha = "45788aec43feb17c28dff5020ca05746b3bbfe68"
+
+notes = [
+  "Merged PR #5511, adding `bitnet mac benchmark-preflight` and an `apple_m4_benchmark_preflight` receipt validator for comparable dense SLM benchmark environments.",
+  "The preflight records git/build identity, macOS product/build version, M4 hardware probe, memory pressure, thermal pressure, power state, supported model cache state, disk headroom, model cache root, operator background-load notes, and invalid-comparison reasons before timing drift is interpreted.",
+  "M4-BENCH-004 is tracker-closed as preflight-only work: no live model inference, benchmark timing result, model download, speedup, broad performance or quality claim, BitNet evidence, BitNet chat or serve enablement, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, or MacBook evidence was made.",
+]
