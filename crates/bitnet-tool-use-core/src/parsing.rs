@@ -54,12 +54,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_tool_call_valid() {
+    fn parse_tool_call_valid() -> Result<(), &'static str> {
         let text =
             r#"<tool_call>{"name":"get_weather","arguments":{"location":"London"}}</tool_call>"#;
-        let call = parse_tool_call(text, &ToolUseFormat::ChatMLTools).expect("valid tool call");
+        let call = parse_tool_call(text, &ToolUseFormat::ChatMLTools).ok_or("valid tool call")?;
         assert_eq!(call.name, "get_weather");
         assert!(call.arguments.contains("London"));
+        Ok(())
     }
 
     #[test]
