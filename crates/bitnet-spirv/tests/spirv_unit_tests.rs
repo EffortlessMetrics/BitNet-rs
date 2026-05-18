@@ -4,6 +4,7 @@ use bitnet_spirv::{
     CompileOptions, CompilerBackend, OptimizationLevel, SPIRV_MAGIC, SpirVCache, SpirVCompiler,
     SpirVError, SpirVModule, SpirVValidator, build_test_spirv, source_hash,
 };
+use std::error::Error;
 
 fn words_to_bytes(words: &[u32]) -> Vec<u8> {
     words.iter().flat_map(|word| word.to_le_bytes()).collect()
@@ -72,11 +73,13 @@ fn source_hash_changes_when_compile_inputs_change() {
 }
 
 #[test]
-fn build_test_spirv_creates_minimal_valid_header_for_supported_versions() {
+fn build_test_spirv_creates_minimal_valid_header_for_supported_versions()
+-> Result<(), Box<dyn Error>> {
     let bytes = build_test_spirv(1, 6);
 
     assert_eq!(bytes.len(), 20);
-    SpirVValidator::validate_bytes(&bytes).expect("SPIR-V 1.6 header should validate");
+    SpirVValidator::validate_bytes(&bytes)?;
+    Ok(())
 }
 
 #[test]
@@ -123,7 +126,7 @@ fn has_capability_returns_false_for_truncated_or_malformed_instruction_streams()
 }
 
 #[test]
-fn cache_starts_empty_round_trips_modules_and_can_be_cleared() {
+fn cache_starts_empty_round_trips_modules_and_can_be_cleared() -> Result<(), Box<dyn Error>> {
     let cache = SpirVCache::new();
     assert!(cache.is_empty());
     assert_eq!(cache.len(), 0);
@@ -138,7 +141,7 @@ fn cache_starts_empty_round_trips_modules_and_can_be_cleared() {
 
     assert!(!cache.is_empty());
     assert_eq!(cache.len(), 1);
-    let cached = cache.get("abc123").expect("cached module");
+    let cached = cache.get("abc123").ok_or("cached module missing")?;
     assert_eq!(cached.bytecode, module.bytecode);
     assert_eq!(cached.source_hash, module.source_hash);
     assert_eq!(cached.compiler, module.compiler);
@@ -146,10 +149,11 @@ fn cache_starts_empty_round_trips_modules_and_can_be_cleared() {
     cache.clear();
     assert!(cache.is_empty());
     assert!(cache.get("abc123").is_none());
+    Ok(())
 }
 
 #[test]
-fn cache_replaces_existing_module_with_same_source_hash() {
+fn cache_replaces_existing_module_with_same_source_hash() -> Result<(), Box<dyn Error>> {
     let cache = SpirVCache::default();
     let first = SpirVModule {
         bytecode: build_test_spirv(1, 0),
@@ -166,8 +170,9 @@ fn cache_replaces_existing_module_with_same_source_hash() {
     cache.insert(second.clone());
 
     assert_eq!(cache.len(), 1);
-    let cached = cache.get("same").expect("replacement module");
+    let cached = cache.get("same").ok_or("replacement module missing")?;
     assert_eq!(cached.bytecode, second.bytecode);
     assert_eq!(cached.source_hash, second.source_hash);
     assert_eq!(cached.compiler, second.compiler);
+    Ok(())
 }
