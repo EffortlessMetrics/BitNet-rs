@@ -6016,8 +6016,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-010"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/lunar-lake/LNL258V-QUAL-010-long-decode-fixtures"
+pr = 5681
+head_sha = "4b8d26ae4e661275a15cc5d367f737b672a1d9a2"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

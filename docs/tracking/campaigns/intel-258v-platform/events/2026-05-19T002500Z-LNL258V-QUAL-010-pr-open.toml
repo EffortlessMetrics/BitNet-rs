@@ -1,0 +1,10 @@
+timestamp = "2026-05-19T00:25:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-010"
+event = "pr_open"
+pr = 5681
+head_sha = "4b8d26ae4e661275a15cc5d367f737b672a1d9a2"
+actor = "codex"
+notes = [
+  "Opened PR #5681 after stabilizing the prefill-heavy and decode-heavy corpus-v2 fixtures, rerunning dense GGUF CPU and OpenVINO CPU/GPU/NPU evidence, and refreshing route/regression/comparison artifacts without promotion or acceleration claims.",
+]
