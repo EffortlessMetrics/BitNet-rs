@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T14:46:49Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-011"
+event = "merged"
+actor = "codex"
+pr = 5690
+head_sha = "41715889bab7daa914e2aa43b864a352f0a415fa"
+merge_sha = "4d72feac7e601f7067e6bd759f48d5ea94525b05"
+branch = "codex/lunar-lake/LNL258V-ROUTE-011-profile-corpus-timing"
+summary = "Merged LNL258V-ROUTE-011 after making OpenVINO candidate route timing prefer corpus-v2 profile-matched timing/token context while preserving borrowed-profile and token-bound blockers."
+notes = [
+  "PR #5690 preserved no new inference, route promotion, speedup, power advantage, acceleration, native OpenCL/NPU, or BitNet QK256/I2_S claim.",
+]
