@@ -2563,9 +2563,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-032"
-status = "pr_open"
+status = "merged"
 pr = 5514
 head_sha = "da6630419a055cac9f8c7d6ddcc499e07617b95a"
+merge_sha = "f3cce75aef2948d42174086f164061da7b4ff65a"
 branch = "codex/slm-cpu-032-prompt-token-cache"
 stackable = false
 review_mode = "codex_premerge"
