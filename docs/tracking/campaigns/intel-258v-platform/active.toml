@@ -6696,6 +6696,58 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-OPENVINO-QUAL-REPORT-001"
+status = "pr_open"
+pr = 5633
+head_sha = "63b4340e7888bc08ab6833ce131090060768c77c"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-001-corpus-v2-failures"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-UX-001", "LNL258V-OV-QUAL-005"]
+acceptance = "Add a no-new-inference OpenVINO Lunar Lake corpus-v2 failure report that classifies existing GPU/NPU candidate failures by route, profile, case, failure class, budget sensitivity, and promotion blocker while preserving candidate-only routing and no speedup, power, acceleration, native OpenCL/NPU, or BitNet QK256/I2_S claims."
+commands = [
+  "npx --yes markdownlint-cli2@0.18.1 --config .markdownlint.jsonc docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md plans/openvino-lunar-lake/implementation-plan.md",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "README.md",
+]
+may_claim = [
+  "Existing Lunar Lake OpenVINO GPU/NPU corpus-v2 candidate failures are classified by route, profile, case, failure class, budget sensitivity, and promotion blocker.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "OpenVINO GPU or NPU answer quality is newly proven.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Native OpenCL execution is proven.",
+  "Native NPU execution is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-OPENVINO-STATUS-001"
 status = "merged"
 pr = 5620

@@ -281,10 +281,35 @@ Acceptance additions:
 
 ## Phase C: Close Quality Gaps
 
-1. Add `docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md` and classify
-   failures by route and failure class.
-2. Codify generation-budget sensitivity evidence for normalized-match failures.
-3. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
+### Work item: LNL258V-OPENVINO-QUAL-REPORT-001
+
+Status: in_progress
+Blocked by: `LNL258V-OPENVINO-UX-001`, `LNL258V-OV-QUAL-005`
+
+Add `docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md` and classify
+existing OpenVINO GPU/NPU corpus-v2 failures by route, profile, case, and
+failure class.
+
+Production delta: diagnostic report and tracker wiring only. Use existing
+committed receipts; do not run inference, change generation policy, promote
+GPU/NPU routes, claim speedup or power advantage, or change BitNet QK256/I2_S
+behavior.
+
+Acceptance additions:
+
+- GPU and NPU corpus-v2 failures are summarized from committed diagnosis
+  receipts.
+- Generation-budget sensitivity is linked for normalized-match failures.
+- Candidate-route blockers remain explicit, including direct token-ID
+  visibility gaps, benchmark-qualified advantage gaps, and NPU cold/resident
+  gaps.
+- Claim boundaries separate OpenVINO dense SLM evidence from native OpenCL,
+  native NPU, and BitNet QK256/I2_S proof.
+
+### Remaining Phase C Items
+
+1. Codify generation-budget sensitivity evidence for normalized-match failures.
+2. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
 
 No route can promote until profile cases pass or an explicit spec marks a case
 diagnostic-only.
