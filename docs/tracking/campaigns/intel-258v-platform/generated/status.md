@@ -124,6 +124,7 @@
 
 ## Hard Constraints
 
+- Follow docs/intel-gpu/README.md before any Arc 140V GPU route claim promotion.
 - 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.
 - Arc 140V OpenCL proof is not NPU proof.
 - OpenVINO GPU smoke is not packed BitNet kernel proof.

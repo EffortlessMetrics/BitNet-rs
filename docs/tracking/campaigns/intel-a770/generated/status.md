@@ -13,6 +13,7 @@
 
 ## Hard Constraints
 
+- Follow docs/intel-gpu/README.md before any A770 route claim promotion.
 - OpenCL-first for native A770 proof.
 - OpenVINO GPU is reference only.
 - CPU fallback cannot count as A770 execution.

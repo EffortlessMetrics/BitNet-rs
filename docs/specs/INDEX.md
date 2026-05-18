@@ -1,6 +1,31 @@
 # Specs Index
 
 
+
+## Intel GPU Source-of-Truth Map
+
+Use this map before implementing or claiming Intel GPU support across A770,
+Arc 140V, OpenVINO GPU, Intel NPU, CPU, CUDA, BitNet QK256, and dense SLM
+routes:
+
+1. [Intel GPU Source-of-Truth Map](../intel-gpu/README.md)
+   - Defines shared route-family boundaries, non-conflation rules, claim-level
+     ladder, and receipt identity baseline for Intel GPU routes.
+2. [Intel GPU Implementation Plan](../../plans/intel-gpu/implementation-plan.md)
+   - Defines the documentation-first rollout from source-of-truth alignment to
+     shared specs, A770 proof synchronization, Arc 140V OpenVINO GPU profiles,
+     and user-facing status surfaces.
+3. [Intel Arc A770 GPU Roadmap](intel-arc-a770-gpu-roadmap.md)
+   - Defines the A770 discrete GPU hardware/runtime lane and native OpenCL proof
+     path.
+4. [A770 BitNet Claim Boundary](a770-bitnet-claim-boundary.md)
+   - Defines the first trusted partial A770 BitNet claim boundary and the
+     not-claims that block full-residency or generic-GPU overclaims.
+
+Do not proceed from generic Intel GPU detection, generic OpenCL execution,
+OpenVINO GPU graph execution, or CPU fallback to a route claim. Intel GPU claims
+require selected-device, selected-runtime, model-family-specific receipts.
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:
