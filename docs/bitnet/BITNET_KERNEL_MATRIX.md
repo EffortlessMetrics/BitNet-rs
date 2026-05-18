@@ -43,12 +43,14 @@ Kernel family and kernel implementation are different fields. For example:
 
 | Kernel family | Example requested kernel | Meaning |
 |---|---|---|
-| `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
-| `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
+| `qk256` | `qk256-scalar-f32-gemv` | F32/no-scale scalar diagnostic decode GEMV. Legacy `qk256-scalar-gemv` is compatibility-only. |
+| `qk256` | `qk256-scalar-f32-gemm` | F32/no-scale scalar diagnostic prefill GEMM. Legacy `qk256-scalar-gemm` is compatibility-only. |
+| `qk256` | `qk256-scalar-i8s-scaled-gemv` | Production scalar BitNet decode GEMV using scaled I2_S x I8_S math. |
+| `qk256` | `qk256-scalar-i8s-scaled-gemm` | Production scalar BitNet prefill GEMM using scaled I2_S x I8_S math. |
 | `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
 | `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
 
-Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
+Strict receipts must record both `kernel_family` and requested/selected kernel IDs. Real BitNet I2_S runs with inline scales must not report the legacy scalar IDs as production proof; they must name the scaled scalar IDs or the selected optimized equivalent.
 
 ### ARM / M4 Lane
 
@@ -146,3 +148,8 @@ Every kernel proof must record:
 
 - `docs/bitnet/BITNET_CPU_PATH_PLAN.md`
 - `docs/bitnet/BITNET_RECEIPT_FIELDS.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md`
+- `plans/cpu-scalar/implementation-plan.md`

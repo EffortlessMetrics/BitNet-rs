@@ -801,3 +801,52 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-SCALAR-000"
+status = "ready"
+branch = "codex/cpu-scalar-000-docs-rails"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Docs-only scalar CPU oracle and hot-path rails define precise scalar kernel IDs, strict fallback rules, parity levels, scalar-only performance profiles, follow-on PR order, and claim boundaries."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md",
+  "plans/cpu-scalar/implementation-plan.md",
+  "docs/bitnet/BITNET_CPU_PATH_PLAN.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "docs/tracking/campaigns/cpu-proof/active.toml",
+  "docs/tracking/campaigns/cpu-proof/generated/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/**",
+  "tests/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Scalar CPU oracle and hot-path contract docs are defined after merge.",
+  "Follow-on scalar work has precise kernel identity, strict fallback, parity, performance, and tracker rails after merge.",
+]
+must_not_claim = [
+  "Runtime scalar kernel IDs are implemented.",
+  "Scaled scalar selection metadata is implemented.",
+  "Strict scalar answer-corpus quality is newly proven by this PR.",
+  "Long decode stability is proven.",
+  "Scalar performance is measured.",
+  "A speedup or throughput claim is proven.",
+  "GPU, NPU, or server inference is involved.",
+]

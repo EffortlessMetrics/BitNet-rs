@@ -15,7 +15,7 @@ The CPU path is considered production-ready only when a strict run can prove all
 - the GGUF loader path is canonical and rejects unsupported real-model layouts early;
 - tokenizer resolution follows a deterministic policy and never uses compatibility-era fallback in strict mode;
 - QK256/I2_S packed layout metadata has one authority and is consumed directly by kernels;
-- scalar packed kernels provide the correctness oracle;
+- scalar packed kernels provide the correctness oracle, with precise IDs that distinguish F32/no-scale diagnostic kernels from production scaled I2_S x I8_S kernels;
 - AVX2 decode kernels are selected only when runtime CPU feature detection supports them;
 - transformer decode-critical ops are present for CPU execution;
 - receipts record requested versus selected backend, kernel, tokenizer source, and fallback status.
@@ -219,6 +219,29 @@ pub fn apply_rope_inplace(q: &mut [f32], k: &mut [f32], pos: usize, cfg: &RopeCf
 pub fn kv_append(cache: &mut KvCache, layer: usize, token: usize, k: &[f32], v: &[f32]) -> Result<()>;
 ```
 
+## Scalar CPU Oracle Extension
+
+The scalar lane is being productized as its own CPU oracle/fallback plan rather
+than an accidental slow fallback. Follow-on scalar work is governed by:
+
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md` for exact scalar kernel identity and strict selection rules;
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md` for forbidden steady-state allocation/copy behavior and hot-path counters;
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md` for scalar-as-oracle parity direction and proof levels;
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md` for scalar-only benchmark profiles and no-speedup claim boundaries;
+- `plans/cpu-scalar/implementation-plan.md` for PR order from docs rails through kernel identity, selected scaled dispatch, counters, fixtures, receipts, hot-path cleanup, workspace reuse, scalar prefill, support-op timing, thread policy, and user-facing status.
+
+The important scalar distinction is:
+
+| Scalar path | Kernel IDs | Meaning |
+|---|---|---|
+| F32/no-scale QK256 scalar | `qk256-scalar-f32-gemv`, `qk256-scalar-f32-gemm` | Diagnostic/dequant-style scalar path for layout, unpack, and reference checks. |
+| Scaled I2_S x I8_S scalar | `qk256-scalar-i8s-scaled-gemv`, `qk256-scalar-i8s-scaled-gemm` | Production scalar BitNet matmul semantics and the oracle path for real I2_S inline-scale runs. |
+
+Legacy IDs `qk256-scalar-gemv` and `qk256-scalar-gemm` are compatibility aliases
+only. New production receipts must report the precise scalar kernel that actually
+ran, must keep `fallback_used=false` for strict scalar, and must fail strict
+accelerated requests rather than silently selecting scalar.
+
 ## Optimization Rules
 
 Use these rules to keep performance work aligned with correctness and receipts.
@@ -347,7 +370,7 @@ A CPU receipt must make fallback impossible to hide:
     "latency_ms_p95": null
   },
   "parity": {
-    "reference_kernel": "qk256-scalar-gemv",
+    "reference_kernel": "qk256-scalar-i8s-scaled-gemv",
     "max_abs_error": 0.0,
     "mean_abs_error": 0.0
   }
@@ -362,6 +385,7 @@ A CPU receipt must make fallback impossible to hide:
 | CPU-BITNET-002 | Tokenizer authority | `crates/bitnet-tokenizers/src/gguf_loader.rs`, `crates/bitnet-tokenizers/src/gguf_tokenizer.rs`, `crates/bitnet-tokenizers/src/auto.rs`, `crates/bitnet-tokenizers/src/universal.rs`, `crates/bitnet-cli/src/tokenizer_discovery.rs` | Deterministic precedence; strict mode fails rather than guessing; tokenizer source reaches receipts. |
 | CPU-BITNET-003 | Canonical packed layout | `crates/bitnet-qk256-layout-core/src/lib.rs`, `crates/bitnet-quantization/src/i2s_qk256.rs`, `crates/bitnet-quantization/src/qk256_dispatch.rs`, `crates/bitnet-models/src/quant/**`, `crates/bitnet-models/src/qk256_utils.rs` | Loader and kernels share one QK256/I2_S layout authority; byte-exact layout fixtures pass. |
 | CPU-BITNET-004 | Scalar packed truth kernels | `crates/bitnet-quantization/src/i2s_qk256.rs`, `crates/bitnet-kernels/src/matmul_dispatch.rs`, `crates/bitnet-kernels/src/ffi.rs`, `crates/bitnet-kernels/src/ffi/bridge.rs`, `crates/bitnet-kernels/tests/**` | Scalar packed GEMV/GEMM are deterministic; SIMD kernels can compare against scalar packed output. |
+| CPU-SCALAR-000 | Scalar oracle/hot-path rails | `docs/specs/BITNET-SPEC-CPU-SCALAR-*.md`, `plans/cpu-scalar/implementation-plan.md`, `docs/bitnet/**`, `docs/tracking/campaigns/cpu-proof/**` | Docs-only scalar contract distinguishes F32/no-scale from scaled I2_S x I8_S kernels, defines strict fallback and hot-path rails, and sequences follow-on scalar PRs. |
 | CPU-BITNET-005 | AVX2 decode-first GEMV | `crates/bitnet-quantization/src/i2s_qk256_avx2.rs`, `crates/bitnet-kernels/src/matmul_dispatch.rs`, `crates/bitnet-kernels/src/dispatch_planner.rs`, `crates/bitnet-kernels/src/dispatch_table.rs`, `crates/bitnet-receipts/**`, `benches/**` | CPUID-gated AVX2 GEMV has scalar parity, records requested/selected kernel, and fails strict mode on fallback. |
 | CPU-BITNET-006 | CPU transformer decode ops | `crates/bitnet-kernels/src/cpu/**`, `crates/bitnet-transformer/**`, `crates/bitnet-inference/src/backends.rs`, `crates/bitnet-inference/**`, `tests/**` | One real-model decode step can run with real tensors; missing ops fail explicitly; KV-cache append/read is deterministic. |
 | CPU-BITNET-007 | Strict receipts and fallback enforcement | `crates/bitnet-common/src/backend_selection.rs`, `crates/bitnet-inference/src/backends.rs`, `crates/bitnet-receipts/**`, `crates/bitnet-receipts-core/**`, `crates/bitnet-bench-receipts/**`, `crates/bitnet-cli/**` | Strict proof fails on hidden fallback and emits machine-readable loader/tokenizer/kernel/backend receipt fields. |
@@ -374,6 +398,7 @@ A CPU receipt must make fallback impossible to hide:
 2. Tokenizer authority.
 3. Canonical packed layout.
 4. Scalar packed reference kernels.
+4a. Scalar oracle/hot-path productization rails.
 5. AVX2 decode GEMV.
 6. CPU transformer decode ops.
 7. Strict receipts and fallback enforcement.
