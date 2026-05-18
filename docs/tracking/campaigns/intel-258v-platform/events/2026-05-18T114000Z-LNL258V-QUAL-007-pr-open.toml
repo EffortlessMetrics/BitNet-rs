@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T11:40:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-007"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-007-keyword-term-normalization"
+pr = 5656
+head_sha = "de5de3ea6ff1f205b2921d237baac76b761c6da8"
+summary = "Opened PR #5656 for LNL258V-QUAL-007 to normalize bounded dense Qwen corpus-v2 keyword term checks for regular plural forms."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5656 refreshes the dense Qwen CPU corpus-v2 receipt to 11/12 bounded passes with decode_heavy_short_list passing and stop_token_one_word_done remaining the only CPU failure.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted; the PR does not claim speedup, power advantage, native Arc/NPU acceleration, full BitNet accelerator inference, QK256 accelerator decode, or BitNet QK256/I2_S behavior.",
+]

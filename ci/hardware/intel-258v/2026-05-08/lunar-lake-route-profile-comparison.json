@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T11:05:59Z",
+  "created_utc": "2026-05-18T12:55:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -1248,13 +1248,11 @@
             "profile_id": "decode_heavy",
             "profile_present": true,
             "cases_total": 1,
-            "passed": 0,
-            "failed": 1,
+            "passed": 1,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile decode_heavy"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
@@ -1273,7 +1271,6 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "corpus_v2 profile decode_heavy has 1 quality failures",
             "route not promoted for profile decode_heavy",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
