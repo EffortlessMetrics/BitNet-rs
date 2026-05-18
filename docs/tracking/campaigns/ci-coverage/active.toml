@@ -49,7 +49,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CI-COVERAGE-002"
-status = "pr_open"
+status = "merged"
+pr = 5775
+head_sha = "3646ec9157320ab0ef0295b47541a158012be9f3"
+merge_sha = "6f44b58f721cb373b4de7afa88bb34d34055264b"
 branch = "codex/coverage-container-cleanup-3394"
 stackable = false
 review_mode = "codex_premerge"
