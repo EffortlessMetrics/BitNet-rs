@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_qwen_cpu_corpus_v2_diagnosis",
   "proof_stage": "corpus_v2_failures_classified_no_inference",
-  "created_utc": "2026-05-18T22:30:00Z",
+  "created_utc": "2026-05-18T23:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",

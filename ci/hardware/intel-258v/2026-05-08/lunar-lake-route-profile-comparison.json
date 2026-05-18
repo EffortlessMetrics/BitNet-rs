@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T23:00:00Z",
+  "created_utc": "2026-05-18T23:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -12,7 +12,6 @@
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
   "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
   "route_diagnosis_receipts": [
-    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json"
@@ -171,13 +170,11 @@
             "profile_id": "regression_tiny",
             "profile_present": true,
             "cases_total": 4,
-            "passed": 3,
-            "failed": 1,
+            "passed": 4,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile regression_tiny"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
@@ -194,20 +191,14 @@
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
-            "OpenVINO candidate profile has 1 answer-gate failure(s)",
-            "OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
-            "corpus_v2 profile regression_tiny has 1 quality failures",
             "profile_regression_bundle",
-            "route not promoted for profile regression_tiny",
-            "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
-            "stop_token_one_word_done has no passing tested generation budget"
+            "route not promoted for profile regression_tiny"
           ]
         },
         {
@@ -268,13 +259,11 @@
             "profile_id": "regression_tiny",
             "profile_present": true,
             "cases_total": 4,
-            "passed": 3,
-            "failed": 1,
+            "passed": 4,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile regression_tiny"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
@@ -292,23 +281,17 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-            "NPU corpus-v2 context has 5 failed cases",
-            "OpenVINO candidate profile has 1 answer-gate failure(s)",
-            "OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s)",
+            "NPU corpus-v2 context has 1 failed cases",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
-            "corpus_v2 profile regression_tiny has 1 quality failures",
             "profile_regression_bundle",
-            "route not promoted for profile regression_tiny",
-            "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
-            "stop_token_one_word_done has no passing tested generation budget"
+            "route not promoted for profile regression_tiny"
           ]
         }
       ],
@@ -487,16 +470,14 @@
             "slm-openvino-cpu-gpu-npu-phase-runner.json",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
-            "route not promoted for profile ask_short",
-            "yes_no_clear_sky has generation-budget sensitivity class fixture_budget_passes"
+            "route not promoted for profile ask_short"
           ]
         },
         {
@@ -579,19 +560,17 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-            "NPU corpus-v2 context has 5 failed cases",
+            "NPU corpus-v2 context has 1 failed cases",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
-            "route not promoted for profile ask_short",
-            "yes_no_clear_sky has generation-budget sensitivity class fixture_budget_passes"
+            "route not promoted for profile ask_short"
           ]
         }
       ],
@@ -865,7 +844,7 @@
           "blockers": [
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-            "NPU corpus-v2 context has 5 failed cases",
+            "NPU corpus-v2 context has 1 failed cases",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
@@ -1157,7 +1136,7 @@
           "blockers": [
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-            "NPU corpus-v2 context has 5 failed cases",
+            "NPU corpus-v2 context has 1 failed cases",
             "OpenVINO candidate profile has 1 answer-gate failure(s)",
             "OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
@@ -1452,7 +1431,7 @@
           "blockers": [
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-            "NPU corpus-v2 context has 5 failed cases",
+            "NPU corpus-v2 context has 1 failed cases",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
@@ -1722,7 +1701,7 @@
           "blockers": [
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-            "NPU corpus-v2 context has 5 failed cases",
+            "NPU corpus-v2 context has 1 failed cases",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",

@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 8278,
-    "decode_first_ms": 8278,
-    "total_ms": 10561
+    "cmd_to_first_ms": 8352,
+    "decode_first_ms": 8352,
+    "total_ms": 10699
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 8,
-        "max_ms": 0.044,
-        "mean_ms": 0.031,
-        "min_ms": 0.02,
-        "p50_ms": 0.028,
-        "p95_ms": 0.044,
-        "total_ms": 0.247
+        "max_ms": 0.036,
+        "mean_ms": 0.024,
+        "min_ms": 0.019,
+        "p50_ms": 0.021,
+        "p95_ms": 0.036,
+        "total_ms": 0.189
       },
-      "first_token_decode_ms": 336.969,
+      "first_token_decode_ms": 364.561,
       "forward_ms": {
         "count": 8,
-        "max_ms": 241.45,
-        "mean_ms": 231.698,
-        "min_ms": 226.21,
-        "p50_ms": 228.484,
-        "p95_ms": 241.45,
-        "total_ms": 1853.584
+        "max_ms": 254.253,
+        "mean_ms": 238.677,
+        "min_ms": 228.703,
+        "p50_ms": 236.511,
+        "p95_ms": 254.253,
+        "total_ms": 1909.42
       },
       "generated_tokens": 8,
       "logits_ms": {
         "count": 8,
-        "max_ms": 94.512,
-        "mean_ms": 86.263,
-        "min_ms": 82.582,
-        "p50_ms": 85.543,
-        "p95_ms": 94.512,
-        "total_ms": 690.103
+        "max_ms": 104.817,
+        "mean_ms": 90.624,
+        "min_ms": 84.953,
+        "p50_ms": 87.295,
+        "p95_ms": 104.817,
+        "total_ms": 724.99
       },
       "per_token_ms": {
         "count": 8,
-        "max_ms": 340.53,
-        "mean_ms": 327.103,
-        "min_ms": 320.793,
-        "p50_ms": 323.054,
-        "p95_ms": 340.53,
-        "total_ms": 2616.828
+        "max_ms": 364.561,
+        "mean_ms": 338.748,
+        "min_ms": 324.061,
+        "p50_ms": 335.318,
+        "p95_ms": 364.561,
+        "total_ms": 2709.984
       },
       "sample_ms": {
         "count": 8,
-        "max_ms": 2.415,
+        "max_ms": 2.479,
         "mean_ms": 2.181,
-        "min_ms": 2.048,
-        "p50_ms": 2.147,
-        "p95_ms": 2.415,
-        "total_ms": 17.45
+        "min_ms": 1.823,
+        "p50_ms": 2.182,
+        "p95_ms": 2.479,
+        "total_ms": 17.445
       },
       "steady_per_token_ms": {
         "count": 7,
-        "max_ms": 340.53,
-        "mean_ms": 325.694,
-        "min_ms": 320.793,
-        "p50_ms": 323.054,
-        "p95_ms": 340.53,
-        "total_ms": 2279.859
+        "max_ms": 350.32,
+        "mean_ms": 335.061,
+        "min_ms": 324.061,
+        "p50_ms": 335.318,
+        "p95_ms": 350.32,
+        "total_ms": 2345.424
       },
-      "steady_state_tok_s": 3.07,
+      "steady_state_tok_s": 2.985,
       "steady_state_tokens": 7,
       "token_decode_ms": {
         "count": 8,
-        "max_ms": 0.126,
-        "mean_ms": 0.048,
-        "min_ms": 0.022,
-        "p50_ms": 0.04,
-        "p95_ms": 0.126,
-        "total_ms": 0.386
+        "max_ms": 0.312,
+        "mean_ms": 0.063,
+        "min_ms": 0.021,
+        "p50_ms": 0.023,
+        "p95_ms": 0.312,
+        "total_ms": 0.506
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13315.956,
+    "model_load_ms": 13379.17,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 7941.87,
+      "ms": 7986.772,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -357,9 +357,9 @@
       },
       "tokens": 34
     },
-    "prompt_tokenize_ms": 477.411,
+    "prompt_tokenize_ms": 525.929,
     "requested": false,
-    "tokenizer_load_ms": 580.647
+    "tokenizer_load_ms": 615.448
   },
   "prompt": "Name the capital of France.",
   "prompt_generation_identity": {
@@ -480,7 +480,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 8,
-    "decode_tps": 0.7575040242401287,
+    "decode_tps": 0.7477334330311244,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -500,22 +500,22 @@
   "text": "The capital of France is Paris.<|im_end|>",
   "throughput": {
     "decoded_tokens": 8,
-    "tokens_per_second": 0.7575040242401287
+    "tokens_per_second": 0.7477334330311244
   },
-  "timestamp": "2026-05-18T12:16:08.194732400+00:00",
+  "timestamp": "2026-05-18T12:55:34.363272500+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.07,
-    "decode_total_ms": 2616.828,
+    "decode_steady_state_tok_s": 2.985,
+    "decode_total_ms": 2709.984,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 336.969,
-    "first_token_ms": 8278,
+    "first_token_decode_ms": 364.561,
+    "first_token_ms": 8352,
     "host_to_device_bytes": null,
-    "model_load_ms": 13315.956,
-    "prefill_ms": 7941.87,
+    "model_load_ms": 13379.17,
+    "prefill_ms": 7986.772,
     "sampling_ms_per_token": 2.181,
-    "tokenize_ms": 477.411,
-    "tokenizer_load_ms": 580.647
+    "tokenize_ms": 525.929,
+    "tokenizer_load_ms": 615.448
   },
   "tokenizer": {
     "bos": 151643,

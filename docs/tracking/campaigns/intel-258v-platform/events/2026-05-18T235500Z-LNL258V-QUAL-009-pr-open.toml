@@ -1,0 +1,26 @@
+timestamp = "2026-05-18T23:55:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-009"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5674
+head_sha = "54e75c01ddc315499f6da99002f6bb885f368a7a"
+branch = "codex/lunar-lake/LNL258V-QUAL-009-cross-runtime-stop-token"
+summary = "Opened PR #5674 for LNL258V-QUAL-009 cross-runtime stop-token fixture alignment and dependent Lunar Lake corpus-v2 evidence refresh."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5674",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The stop_token_one_word_done fixture now uses the tested `Return exactly this text and nothing else: done` prompt.",
+  "Dense GGUF CPU corpus-v2 and OpenVINO CPU/GPU/NPU corpus-v2 evidence were refreshed after the fixture update.",
+  "OpenVINO GPU/NPU routes remain candidate-only with no route promotion, speedup, power advantage, native accelerator, or BitNet QK256/I2_S claim.",
+]

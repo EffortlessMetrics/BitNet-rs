@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 20662,
-    "decode_first_ms": 20662,
-    "total_ms": 30804
+    "cmd_to_first_ms": 20612,
+    "decode_first_ms": 20612,
+    "total_ms": 30832
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 32,
-        "max_ms": 0.052,
-        "mean_ms": 0.03,
-        "min_ms": 0.016,
-        "p50_ms": 0.026,
-        "p95_ms": 0.047,
-        "total_ms": 0.948
+        "max_ms": 0.281,
+        "mean_ms": 0.034,
+        "min_ms": 0.018,
+        "p50_ms": 0.023,
+        "p95_ms": 0.049,
+        "total_ms": 1.089
       },
-      "first_token_decode_ms": 331.085,
+      "first_token_decode_ms": 348.76,
       "forward_ms": {
         "count": 32,
-        "max_ms": 260.33,
-        "mean_ms": 234.659,
-        "min_ms": 222.287,
-        "p50_ms": 233.029,
-        "p95_ms": 255.538,
-        "total_ms": 7509.09
+        "max_ms": 254.13,
+        "mean_ms": 235.355,
+        "min_ms": 225.63,
+        "p50_ms": 234.044,
+        "p95_ms": 251.994,
+        "total_ms": 7531.355
       },
       "generated_tokens": 32,
       "logits_ms": {
         "count": 32,
-        "max_ms": 86.935,
-        "mean_ms": 83.632,
-        "min_ms": 80.657,
-        "p50_ms": 83.381,
-        "p95_ms": 86.735,
-        "total_ms": 2676.222
+        "max_ms": 114.803,
+        "mean_ms": 85.951,
+        "min_ms": 82.584,
+        "p50_ms": 84.649,
+        "p95_ms": 88.2,
+        "total_ms": 2750.444
       },
       "per_token_ms": {
         "count": 32,
-        "max_ms": 356.058,
-        "mean_ms": 327.142,
-        "min_ms": 311.939,
-        "p50_ms": 325.273,
-        "p95_ms": 348.946,
-        "total_ms": 10468.546
+        "max_ms": 357.743,
+        "mean_ms": 330.228,
+        "min_ms": 317.935,
+        "p50_ms": 328.282,
+        "p95_ms": 350.897,
+        "total_ms": 10567.311
       },
       "sample_ms": {
         "count": 32,
-        "max_ms": 3.869,
-        "mean_ms": 2.234,
-        "min_ms": 1.923,
-        "p50_ms": 2.121,
-        "p95_ms": 3.055,
-        "total_ms": 71.486
+        "max_ms": 2.585,
+        "mean_ms": 2.199,
+        "min_ms": 1.901,
+        "p50_ms": 2.137,
+        "p95_ms": 2.572,
+        "total_ms": 70.378
       },
       "steady_per_token_ms": {
         "count": 31,
-        "max_ms": 356.058,
-        "mean_ms": 327.015,
-        "min_ms": 311.939,
-        "p50_ms": 325.273,
-        "p95_ms": 348.946,
-        "total_ms": 10137.461
+        "max_ms": 357.743,
+        "mean_ms": 329.631,
+        "min_ms": 317.935,
+        "p50_ms": 328.282,
+        "p95_ms": 350.897,
+        "total_ms": 10218.551
       },
-      "steady_state_tok_s": 3.058,
+      "steady_state_tok_s": 3.034,
       "steady_state_tokens": 31,
       "token_decode_ms": {
         "count": 32,
-        "max_ms": 0.074,
-        "mean_ms": 0.034,
-        "min_ms": 0.018,
-        "p50_ms": 0.03,
-        "p95_ms": 0.055,
-        "total_ms": 1.081
+        "max_ms": 0.069,
+        "mean_ms": 0.032,
+        "min_ms": 0.02,
+        "p50_ms": 0.029,
+        "p95_ms": 0.052,
+        "total_ms": 1.012
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13400.99,
+    "model_load_ms": 13189.486,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 20330.992,
+      "ms": 20261.86,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -357,9 +357,9 @@
       },
       "tokens": 87
     },
-    "prompt_tokenize_ms": 432.152,
+    "prompt_tokenize_ms": 581.777,
     "requested": false,
-    "tokenizer_load_ms": 630.543
+    "tokenizer_load_ms": 629.14
   },
   "prompt": "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
   "prompt_generation_identity": {
@@ -480,7 +480,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 32,
-    "decode_tps": 1.038826126477081,
+    "decode_tps": 1.0378827192527245,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -500,22 +500,22 @@
   "text": "Lunar Lake prioritizes OpenVINO GPU and NPU over Qwen CPU for efficient inference tasks, while BitNet CPU remains the standard reference path.<|im_end|>",
   "throughput": {
     "decoded_tokens": 32,
-    "tokens_per_second": 1.038826126477081
+    "tokens_per_second": 1.0378827192527245
   },
-  "timestamp": "2026-05-18T12:18:55.211343800+00:00",
+  "timestamp": "2026-05-18T12:58:21.055712600+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.058,
-    "decode_total_ms": 10468.546,
+    "decode_steady_state_tok_s": 3.034,
+    "decode_total_ms": 10567.311,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 331.085,
-    "first_token_ms": 20662,
+    "first_token_decode_ms": 348.76,
+    "first_token_ms": 20612,
     "host_to_device_bytes": null,
-    "model_load_ms": 13400.99,
-    "prefill_ms": 20330.992,
-    "sampling_ms_per_token": 2.234,
-    "tokenize_ms": 432.152,
-    "tokenizer_load_ms": 630.543
+    "model_load_ms": 13189.486,
+    "prefill_ms": 20261.86,
+    "sampling_ms_per_token": 2.199,
+    "tokenize_ms": 581.777,
+    "tokenizer_load_ms": 629.14
   },
   "tokenizer": {
     "bos": 151643,
