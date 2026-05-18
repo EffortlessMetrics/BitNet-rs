@@ -2174,7 +2174,7 @@ fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
         if model_path.is_file() { read_gguf_block_count(&model_path).ok().flatten() } else { None };
     let expected_final_layer = model_block_count.and_then(|layers| layers.checked_sub(1));
 
-    let rust_records = read_rust_trace_dir(&cpu_trace_dir).ok();
+    let rust_record_list = read_rust_trace_records(&cpu_trace_dir).ok();
     let reference_input = match expected_final_layer {
         Some(layer) => reference_records.iter().find(|record| {
             record.stage == "l_out"
@@ -2187,19 +2187,12 @@ fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
         .iter()
         .find(|record| record.stage == "result_norm")
         .filter(|record| record.values_available && !record.first_values.is_empty());
-    let rust_input = rust_records
+    let rust_input = rust_record_list
         .as_ref()
-        .and_then(|records| records.get("post_layer"))
-        .filter(|record| {
-            expected_final_layer.is_none()
-                || record.layer.and_then(|value| usize::try_from(value).ok())
-                    == expected_final_layer
-        })
-        .filter(|record| !record.first_values.is_empty());
-    let rust_target = rust_records
+        .and_then(|records| select_rust_trace_record(records, "post_layer", expected_final_layer));
+    let rust_target = rust_record_list
         .as_ref()
-        .and_then(|records| records.get("final_norm"))
-        .filter(|record| !record.first_values.is_empty());
+        .and_then(|records| select_rust_trace_record(records, "final_norm", None));
 
     let mut blocked_reasons = Vec::<String>::new();
     if !reference_path.is_file() {
@@ -2217,7 +2210,7 @@ fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
     if reference_target.is_none() {
         blocked_reasons.push("reference_result_norm_missing".to_string());
     }
-    if rust_records.is_none() {
+    if rust_record_list.is_none() {
         blocked_reasons.push("rust_cpu_trace_dir_unavailable".to_string());
     }
     if rust_input.is_none() {
@@ -2320,7 +2313,7 @@ fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
             "result_norm": reference_target.map(reference_record_summary).unwrap_or(Value::Null),
         },
         "rust_trace": {
-            "present": rust_records.is_some(),
+            "present": rust_record_list.is_some(),
             "post_layer": rust_input.map(rust_record_summary).unwrap_or(Value::Null),
             "final_norm": rust_target.map(rust_record_summary).unwrap_or(Value::Null),
         },
@@ -4152,13 +4145,18 @@ fn compare_vectors(left: &[f32], right: &[f32]) -> Value {
 }
 
 fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
+    let records = read_rust_trace_records(dir)?;
+    Ok(collapse_rust_trace_records(&records))
+}
+
+fn read_rust_trace_records(dir: &Path) -> Result<Vec<RustTraceRecord>> {
     if !dir.exists() {
         bail!("rust trace directory missing: {}", dir.display());
     }
     if !dir.is_dir() {
         bail!("rust trace path is not a directory: {}", dir.display());
     }
-    let mut records = BTreeMap::new();
+    let mut records = Vec::new();
     for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
         let entry = entry.with_context(|| format!("reading entry in {}", dir.display()))?;
         let path = entry.path();
@@ -4169,21 +4167,49 @@ fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> 
             fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         let record: RustTraceRecord =
             serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
-        let stage = record
-            .stage
-            .clone()
-            .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string());
-        let should_insert = records.get(&stage).is_none_or(|existing| {
-            rust_trace_preference(&record) < rust_trace_preference(existing)
-        });
-        if should_insert {
-            records.insert(stage, record);
-        }
+        records.push(record);
     }
     if records.is_empty() {
         bail!("rust trace directory has no .trace files: {}", dir.display());
     }
     Ok(records)
+}
+
+fn collapse_rust_trace_records(records: &[RustTraceRecord]) -> BTreeMap<String, RustTraceRecord> {
+    let mut by_stage = BTreeMap::new();
+    for record in records {
+        let stage = record
+            .stage
+            .clone()
+            .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string());
+        let should_insert = by_stage.get(&stage).is_none_or(|existing| {
+            rust_trace_preference(&record) < rust_trace_preference(existing)
+        });
+        if should_insert {
+            by_stage.insert(stage, record.clone());
+        }
+    }
+    by_stage
+}
+
+fn select_rust_trace_record<'a>(
+    records: &'a [RustTraceRecord],
+    stage: &str,
+    expected_layer: Option<usize>,
+) -> Option<&'a RustTraceRecord> {
+    records
+        .iter()
+        .filter(|record| {
+            record.stage.as_deref().unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(""))
+                == stage
+        })
+        .filter(|record| !record.first_values.is_empty())
+        .filter(|record| {
+            expected_layer.is_none_or(|layer| {
+                record.layer.and_then(|value| usize::try_from(value).ok()) == Some(layer)
+            })
+        })
+        .min_by_key(|record| rust_trace_preference(record))
 }
 
 fn rust_trace_preference(record: &RustTraceRecord) -> i64 {
@@ -15381,6 +15407,40 @@ mod tests {
             ))
         );
         assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn final_norm_replay_selects_post_layer_by_expected_final_layer() {
+        let layer0 = RustTraceRecord {
+            name: "layer0/post_layer".to_string(),
+            shape: vec![2],
+            dtype: "f32".to_string(),
+            blake3: "layer0".to_string(),
+            rms: 1.0,
+            num_elements: 2,
+            first_values: vec![1.0, 2.0],
+            seq: Some(0),
+            layer: Some(0),
+            stage: Some("post_layer".to_string()),
+        };
+        let final_layer = RustTraceRecord {
+            name: "layer29/post_layer".to_string(),
+            shape: vec![2],
+            dtype: "f32".to_string(),
+            blake3: "layer29".to_string(),
+            rms: 2.0,
+            num_elements: 2,
+            first_values: vec![3.0, 4.0],
+            seq: Some(0),
+            layer: Some(29),
+            stage: Some("post_layer".to_string()),
+        };
+        let records = vec![layer0, final_layer];
+
+        let selected = select_rust_trace_record(&records, "post_layer", Some(29)).unwrap();
+
+        assert_eq!(selected.layer, Some(29));
+        assert_eq!(selected.first_values, vec![3.0, 4.0]);
     }
 
     #[test]
