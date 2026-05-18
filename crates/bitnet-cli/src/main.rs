@@ -14185,13 +14185,11 @@ mod tests {
             "dense_linear_output_storage_api_boundary"
         );
         assert_eq!(
-            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]
-                ["target"],
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]["target"],
             "q8_dense_linear_locality_boundary"
         );
         assert_eq!(
-            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]
-                ["current_path"],
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]["current_path"],
             "eager_dense_standard_quant_dequant_to_f32_before_candle_tensor"
         );
         assert_eq!(
