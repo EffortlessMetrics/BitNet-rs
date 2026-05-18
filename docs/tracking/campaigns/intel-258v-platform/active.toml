@@ -5936,8 +5936,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OV-QUAL-005"
-status = "in_progress"
+status = "pr_open"
+pr = 5526
 branch = "codex/lunar-lake/LNL258V-OV-QUAL-005-generation-budget-sensitivity"
+head_sha = "c883b871f3829289404fe1c8a3741a3b860f17d9"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
