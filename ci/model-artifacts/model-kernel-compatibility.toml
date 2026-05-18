@@ -157,3 +157,51 @@ notes = [
   arch = "arm"
   kernel = "tl2"
   status = "unsupported_upstream"
+
+[[model_kernel_support]]
+model = "tiiuae/Falcon-E-Family"
+model_aliases = [
+  "tiiuae/Falcon-E-1B-Instruct-GGUF",
+  "tiiuae/Falcon-E-3B-Instruct-GGUF",
+  "falcon_e_1b_instruct_i2s_gguf",
+  "falcon_e_3b_instruct_i2s_gguf",
+]
+family = "falcon_e_158bit"
+role = "supported_secondary_family"
+answer_authority = false
+reference_artifact_id = "pending_falcon_e_artifact_inventory"
+notes = [
+  "Falcon-E Family is a compact direct-GGUF 1.58-bit validation lane, not Microsoft BitNet 2B, 1bitLLM, Falcon3, dense Falcon, or generic Falcon support.",
+  "Direct I2_S GGUF artifacts exist externally for 1B and 3B, but BitNet-rs claims remain registered-only until artifact identity, tokenizer/prompt authority, reference quality, I2_S layout, and backend receipts pass.",
+  "TL1/TL2 routes are separate future lanes and must not use I2_S/QK256 proof.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
