@@ -1,0 +1,25 @@
+timestamp = "2026-05-17T14:50:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-006"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5344
+merge_sha = "6e2318f7ec7e56d741ddbb3edebd8a66bed7e4ff"
+head_sha = "ffca9e3f1abbc330d25368e86f84de130ef35f56"
+summary = "Merged LNL258V-ROUTE-006 route-profile corpus-v2 receipt alignment."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "Route-profile comparison blocks stale OpenVINO corpus-v2 receipts when case IDs drift from the active fixture.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted.",
+  "No new inference, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim was added.",
+]

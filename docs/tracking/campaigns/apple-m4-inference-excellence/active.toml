@@ -34,19 +34,22 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-001-dense-eval-refresh"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5057
+merge_sha = "ec739821b35df5b00ddd24477502fa7bce5a3711"
 acceptance = "Run and commit a second dense SLM eval-v2 refresh for every supported M4 dense model identity so dense_slm_eval_v2 dashboard groups can move from insufficient_history to comparable matching history without changing the corpus or broadening quality claims."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac validate --model-id <model-id> --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model <verified-cache-path>/<model-file>.gguf --model-id <model-id> --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json --per-prompt-timeout-seconds 240",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --json",
   "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/slm-eval-v2/<model-id>/summary.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
@@ -74,23 +77,28 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-002"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-002-bitnet-warm-refresh"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5066
+merge_sha = "290abbc1e2dc78c02f2b041b3a7e8825a13b7b10"
 acceptance = "Run and commit a second BitNet variable warm-session refresh for the accepted artifact/tokenizer identity so the BitNet warm dashboard group can move from insufficient_history to comparable matching history while chat and serve remain disabled."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json",
-  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json --json",
+  "target/release/bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --prompt 'Answer with a single digit: 2+2=' --prompt 'Name the capital of France. Answer with one word.' --prompt 'Return exactly: ready' --prompt 'Answer with a single digit: 3+1=' --prompt 'Answer with a single digit: 2+2=' --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json --progress",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization --json",
+  "target/release/bitnet mac report-refresh --json-out target/apple-m4-inference-excellence/M4-EXCELLENCE-002-report-refresh.json --json",
+  "target/release/bitnet mac regression-dashboard --json-out target/apple-m4-inference-excellence/M4-EXCELLENCE-002-regression-dashboard.json --markdown-out target/apple-m4-inference-excellence/M4-EXCELLENCE-002-regression-dashboard.md --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
-  "ci/hardware/apple-m4-mac-mini/**/bitnet-warm/**",
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-productization/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",
   "docs/tracking/generated/**",
@@ -113,13 +121,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-003"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-003-dashboard-trends"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-001", "M4-EXCELLENCE-002"]
+pr = 5078
+merge_sha = "56c54df2ed3a0637f94b62e4d33044e91b8f5d19"
 acceptance = "Regenerate report-refresh and regression-dashboard outputs so all important dense SLM and BitNet M4 report families have explicit comparable or insufficient-history status, with no dense/BitNet evidence mixing."
 commands = [
   "bitnet mac report-refresh --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json --json",
@@ -151,13 +161,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EXCELLENCE-004"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-004-drift-thresholds"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-003"]
+pr = 5089
+merge_sha = "38706c2f8ca57d2b0fb332ee1bca2bb4bc1e2ec4"
 acceptance = "Publish model-family drift thresholds for M4 dense SLM and BitNet reports, separating identity mismatches, quality failures, timing warnings, memory drift warnings, timeout failures, and unsupported claim boundaries."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
@@ -186,13 +198,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-000"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-000-corpus-scorer-contract"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5099
+merge_sha = "eee9866d94a53c336971689c74d1126042619655"
 acceptance = "Freeze the dense SLM and BitNet corpus/scorer version contract before large-corpus expansion: corpus IDs, seed generation rules, expected-output provenance, normalization rules, scoring schema, scorer self-tests, and version fields in receipts."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
@@ -223,13 +237,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-001-dense-100"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-000"]
+pr = 5112
+merge_sha = "5514215c2f317d232d82f8483633e436eb3b8ba5"
 acceptance = "Expand the seeded dense SLM mechanical eval corpus to 100 deterministic cases across arithmetic, table QA, JSON/schema, extraction, sorting, rewrite, classification, summary-keyword, and instruction-following families without required LLM judging."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
@@ -260,13 +276,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-002"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-002-dense-500"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-001"]
+pr = 5119
+merge_sha = "23eca8792e12946a0bdb99c9aa4d4be42436617c"
 acceptance = "Expand the seeded dense SLM corpus to 500 deterministic cases after 100-case scoring is stable, keeping all scoring mechanical and reproducible."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
@@ -297,13 +315,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-003"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-003-stop-template-scoring"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-001"]
+pr = 5128
+merge_sha = "39d81c8062b8cb0e33a256768363fddd2a70489e"
 acceptance = "Fix dense SLM stop-token, prompt-template, normalization, and scoring misses found by the expanded corpus while preserving deterministic scoring and receipt schema."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_validate -- --nocapture",
@@ -335,7 +355,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-004"
-status = "proposed"
+status = "merged"
+pr = 5141
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-004-task-family-report"
 stackable = false
 review_mode = "codex_premerge"
@@ -370,7 +391,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ACCURACY-005"
-status = "proposed"
+status = "merged"
+pr = 5154
 branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-005-failure-taxonomy"
 stackable = false
 review_mode = "codex_premerge"
@@ -403,6 +425,88 @@ may_claim = [
 must_not_claim = [
   "Failure taxonomy is a broad semantic quality judge.",
   "Dense taxonomy proves BitNet behavior.",
+]
+
+[[work_item]]
+id = "M4-ACCURACY-006"
+status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-006-dense-500-live"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-ACCURACY-005"]
+pr = 5243
+merge_sha = "7246c7be632c321eabbd440f925776a441f0a177"
+acceptance = "Run and publish full 500-case dense SLM eval-v2 answer-corpus receipts for every supported M4 dense model identity, preserving exact model/tokenizer/backend/fallback context, task-family pass rates, failure taxonomy, generated text, and token IDs."
+commands = [
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model <verified-cache-path>/<model-file>.gguf --model-id <model-id> --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json --per-prompt-timeout-seconds 240",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Supported dense M4 models have full 500-case deterministic eval-v2 receipts for the recorded identities.",
+]
+must_not_claim = [
+  "500-case dense receipts are broad model benchmarks.",
+  "500-case dense receipts prove BitNet behavior.",
+]
+
+[[work_item]]
+id = "M4-ACCURACY-007"
+status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-ACCURACY-007-dense-500-history"
+pr = 5285
+merge_sha = "cd36bfb3c4d18be23a1e0e0f38a624f13407f518"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-ACCURACY-006"]
+acceptance = "Run a second matching full 500-case dense SLM eval-v2 refresh for every supported M4 dense model identity and update dashboards so the 500-case dense eval groups have comparable repeat-history before trend or envelope claims use them."
+commands = [
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model <verified-cache-path>/<model-file>.gguf --model-id <model-id> --corpus ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/answer-corpus.json --per-prompt-timeout-seconds 240",
+  "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/slm-eval-v2/<model-id>/summary.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**",
+  "ci/hardware/apple-m4-mac-mini/**/report-refresh/**",
+  "ci/hardware/apple-m4-mac-mini/**/regression-dashboard/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Full 500-case dense M4 eval-v2 groups have comparable matching-history receipts for the recorded identities.",
+]
+must_not_claim = [
+  "Repeat-history receipts are broad model benchmarks.",
+  "Dense repeat-history receipts prove BitNet behavior.",
 ]
 
 [[work_item]]
@@ -487,14 +591,96 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "M4-BENCH-001"
+id = "M4-DENSE-CHAT-001"
 status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CANARY-001", "M4-REPRO-003"]
+acceptance = "Prove dense SLM CLI ask/chat conformance on M4 for supported model identities: prompt template and stop behavior, bounded multi-turn history, timeout/cancel behavior, per-turn receipts, generated text, token IDs, backend, fallback state, and model/tokenizer identity."
+commands = [
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_chat -- --nocapture",
+  "target/release/bitnet --device apple-m4-cpu-neon mac chat-smoke --model-id <model-id> --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-chat/<model-id>/chat-smoke.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/slm-chat/<model-id>/chat-smoke.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/slm-chat/**",
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Supported dense M4 ask/chat routes have bounded CLI conformance receipts.",
+]
+must_not_claim = [
+  "Dense chat conformance proves BitNet chat behavior.",
+  "CLI conformance is broad model quality proof.",
+]
+
+[[work_item]]
+id = "M4-ROBUSTNESS-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-ROBUSTNESS-001-negative-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-ACCURACY-007", "M4-BITNET-EX-012", "M4-CANARY-001", "M4-REPRO-003"]
+acceptance = "Add a dense SLM and BitNet negative/robustness eval lane with false-premise, ambiguous, instruction-conflict, prompt-injection-style, format-trap, and unsupported-request cases, mechanically scored and reported separately by model family without required LLM judging."
+commands = [
+  "target/release/bitnet mac eval --suite m4-robustness --dry-run --json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/robustness/summary.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/quality/**",
+  "ci/hardware/apple-m4-mac-mini/**/robustness/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "M4 dense SLM and BitNet robustness/negative cases are tracked with mechanical scoring and separate receipt families.",
+]
+must_not_claim = [
+  "Robustness cases prove broad safety, alignment, or factuality.",
+  "Dense SLM robustness evidence proves BitNet robustness.",
+]
+
+[[work_item]]
+id = "M4-BENCH-001"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-001-profile-contract"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5288
+merge_sha = "cc0400a3fddb5af5bbca18b6bf8abdae131ffe89"
 acceptance = "Ensure the M4 benchmark profile contract records cold load, tokenizer load, prompt tokenization, prefill/input tokens per second, TTFT, output/decode tokens per second, sampling overhead, total wall time, peak memory, and memory drift for the supported profile set."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_benchmark -- --nocapture",
@@ -524,7 +710,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-004"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-004-environment-preflight"
 stackable = false
 review_mode = "codex_premerge"
@@ -567,7 +753,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-BENCH-001", "M4-BENCH-004"]
+blocked_by = ["M4-BENCH-001", "M4-BENCH-004", "M4-BENCH-007"]
 acceptance = "Publish p50/p90/p99 and min/max benchmark summaries for all supported dense M4 profiles and model identities, with exact matching identity context."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon mac benchmark --model-id <model-id> --profile short_prompt_16_out --profile short_prompt_64_out --profile long_prompt_16_out --profile long_prompt_128_out --profile context_1k --profile context_4k --profile resident_25 --profile resident_50 --profile resident_100 --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-benchmark-v2/<model-id>/summary.json",
@@ -635,6 +821,45 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-BENCH-006"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-006-bitnet-variance"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BENCH-005", "M4-BITNET-EX-003", "M4-BITNET-EX-004"]
+acceptance = "Publish explicit BitNet one-shot and warm-session repeatability/variance receipts for the accepted artifact/tokenizer identity, including run count, sample count, timeout-stage accounting, variance band, outlier handling, and advisory-vs-failure thresholds."
+commands = [
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark --model-id microsoft-bitnet-b1.58-2B-4T-i2s --repeat <n> --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark-variance/one-shot.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --repeat <n> --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark-variance/warm.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark-variance/summary.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-benchmark-variance/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The accepted BitNet M4 one-shot and warm routes have bounded repeatability and variance receipts.",
+]
+must_not_claim = [
+  "BitNet variance receipts are broad Apple Silicon benchmarks.",
+  "BitNet variance receipts prove dense SLM behavior.",
+]
+
+[[work_item]]
 id = "M4-BENCH-003"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-003-regression-refresh"
@@ -642,7 +867,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-BENCH-005", "M4-EXCELLENCE-003"]
+blocked_by = ["M4-BENCH-005", "M4-BENCH-006", "M4-EXCELLENCE-003"]
 acceptance = "Wire benchmark summaries into matching-identity regression comparisons so timing and memory drift are reported separately from quality and identity failures."
 commands = [
   "bitnet mac regression <current.json> --baseline <matching-baseline.json>",
@@ -671,14 +896,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-BITNET-REG-001"
+status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-REG-001-warm-regression"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-EXCELLENCE-002", "M4-EXCELLENCE-004"]
+pr = 5299
+merge_sha = "173a59055f11a5677712942abc2a79358d1cf307"
+acceptance = "Add direct `bitnet mac regression --baseline` support for `bitnet_apple_m4_warm_session` receipts, matching accepted artifact/tokenizer identity, backend, fallback state, prompt set, warm profile, timeout policy, and receipt schema before reporting drift."
+commands = [
+  "bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-productization/variable-warm-session.json",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "BitNet M4 warm-session receipts can be compared directly by matching identity through mac regression.",
+]
+must_not_claim = [
+  "Warm regression support enables BitNet chat or serve.",
+  "Warm regression support makes mismatched receipts comparable.",
+]
+
+[[work_item]]
 id = "M4-BITNET-EX-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-001-bitnet-100"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+merge_sha = "17c25469420d92bc0fee8e10b1fdafc407ffa4fb"
 acceptance = "Add a BitNet-specific 100-case deterministic corpus for the accepted artifact/tokenizer identity, mechanically scored and separate from dense SLM Qwen evidence."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/<bitnet-corpus>.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json",
@@ -711,17 +977,20 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-002"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-002-reference-vs-rust"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-001"]
+pr = 5306
+merge_sha = "058ae7fa08a3537f454f467d4ae5f5e6f0bce895"
 acceptance = "Compare reference-runner and Rust M4 BitNet answers for the accepted artifact/tokenizer identity, recording prompt template, token IDs where available, generated text, and mechanical scoring deltas."
 commands = [
-  "Reference runner prompt-suite command for the accepted artifact/tokenizer identity",
-  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/<bitnet-corpus>.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json",
+  "$HOME/.cache/bitnet_cpp/build/bin/llama-cli -m models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -n <case.max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p 'User: <case.question><|eot_id|>Assistant:'",
+  "cargo run --locked -p bitnet-cli -- mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/answer-corpus-reference-comparison.json --json",
+  "cargo test --locked -p bitnet-cli bitnet_reference_comparison_records_matched_text_and_tokens",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
@@ -750,16 +1019,18 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-003"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-003-one-shot-benchmark"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-001"]
+pr = 5309
+merge_sha = "1d1e98c890dd18ee328b4258de055d590692a50c"
 acceptance = "Publish a BitNet one-shot ask benchmark envelope for the accepted artifact/tokenizer identity, including load, tokenize, prefill, TTFT, decode, total wall, memory, generated text, token IDs, and fallback=false."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -788,16 +1059,18 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-004"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-004-warm-25-50-100"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-002"]
+pr = 5316
+merge_sha = "1a6a438357fd70dfe251982c742eafeaf460d6b8"
 acceptance = "Add BitNet variable warm-session 25/50/100 prompt soaks with per-turn receipts, aggregate timing/memory, determinism checks, timeout evidence, and chat/serve-disabled boundaries."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --profile resident_25 --profile resident_50 --profile resident_100 --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --profile resident_25 --profile resident_50 --profile resident_100 --timeout-seconds 1200 --progress --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -827,13 +1100,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-005"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-005-progress-timeout"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-004"]
+pr = 5323
+merge_sha = "64ba64379f05c022c047cc348086bcc770660cd1"
 acceptance = "Harden BitNet operator progress, timeout, partial-failure, and repair UX for one-shot and warm-session routes, with failure receipts preserving backend, fallback, model, tokenizer, timeout stage, and partial generation."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet -- --nocapture",
@@ -864,17 +1139,19 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-006"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-006-chat-gate"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-004", "M4-BITNET-EX-005"]
+pr = 5330
+merge_sha = "7f4d2adfdd8f668f121ecc9ab56008e8d10fdeef"
 acceptance = "Enable BitNet chat only after variable warm receipts, determinism, timeout/failure receipts, streaming semantics, strict backend/fallback fields, and chat claim boundaries pass the gate."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_chat -- --nocapture",
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-chat-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/gate.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-chat-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --warm-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-warm/variable-warm-session.json --failure-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/failure.json --streaming-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/streaming-semantics.json --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat-gate/gate.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
@@ -903,17 +1180,19 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-007"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-007-serve-gate"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-006"]
+pr = 5339
+merge_sha = "8590563daaeb00decd6fe8fdc3570e141c69933c"
 acceptance = "Enable BitNet serve only after BitNet chat, streaming request/response semantics, health/ready endpoints, per-request receipts, timeout behavior, and failure-mode receipts pass on M4."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_bitnet_serve -- --nocapture",
-  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-serve-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/gate.json",
+  "target/release/bitnet --device apple-m4-cpu-neon mac bitnet-serve-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --chat-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat/chat-session.json --streaming-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/streaming.json --failure-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/failure.json --serve-check-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/serve-check.json --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/gate.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
@@ -942,9 +1221,223 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-BITNET-EX-008"
+status = "merged"
+pr = 5371
+merge_sha = "850ad7073f5318ccc4d28188c9082fb1fa3e527a"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-008-task-family-taxonomy"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-EX-001", "M4-BITNET-EX-002", "M4-BITNET-EX-005"]
+acceptance = "Publish BitNet-specific task-family pass-rate and mechanical failure-taxonomy reports for the accepted artifact/tokenizer identity, separate from dense Qwen evidence and preserving reference-vs-Rust deltas where available."
+commands = [
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/<bitnet-corpus>.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json --json",
+  "jq -e '.artifact_kind == \"apple_m4_bitnet_eval_task_family_pass_rates\" and .work_item == \"M4-BITNET-EX-008\" and .report_scope.bitnet_only == true and .claim_boundary.dense_slm_evidence_used == false and .accuracy.cases_total == 100 and .accuracy.cases_passed == 75 and (.task_families | length) == 10 and .reference_vs_rust.summary.mechanical_scoring_matches == 77' ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-eval/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The accepted BitNet M4 artifact has task-family and failure-taxonomy reports for its deterministic corpus.",
+]
+must_not_claim = [
+  "BitNet task-family reports are dense SLM evidence.",
+  "BitNet task-family reports enable chat or serve.",
+]
+
+[[work_item]]
+id = "M4-BITNET-EX-009"
+status = "merged"
+pr = 5386
+merge_sha = "86dc319569946cd3896b5e8eacfbc5b155e9ed28"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-009-eval-history"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-EX-008", "M4-BITNET-REG-001"]
+acceptance = "Run a second matching BitNet deterministic eval refresh for the accepted artifact/tokenizer identity and decide, with recorded evidence, whether to stage a larger 250/500-case BitNet corpus before any broader BitNet quality envelope claim."
+commands = [
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json --per-prompt-timeout-seconds 300",
+  "bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-eval/answer-corpus.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-eval/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The accepted BitNet M4 eval path has matching-history receipts and a recorded larger-corpus decision.",
+]
+must_not_claim = [
+  "BitNet repeat-history receipts enable chat or serve.",
+  "The larger-corpus decision is itself a broad BitNet quality claim.",
+]
+
+[[work_item]]
+id = "M4-BITNET-EX-010"
+status = "merged"
+pr = 5395
+merge_sha = "e323fbc6a5838fe540c130c61821b0bf4fc9fbd0"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-EX-009"]
+acceptance = "Define the deterministic 250-case BitNet corpus expansion staged by M4-BITNET-EX-009, focused on weak or variable families from the 100-case history, with accepted artifact/tokenizer identity metadata, corpus/scorer contract, mechanical scoring only, and no runtime quality claim."
+commands = [
+  "target/release/bitnet answer-corpus --dry-run --device apple-m4-cpu-neon --model missing.gguf --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out target/apple-m4-inference-excellence/bitnet-250-dry-run.json",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The BitNet 250-case deterministic corpus and scorer contract are tracked and mechanically dry-run checked.",
+]
+must_not_claim = [
+  "The 250-case corpus definition is a fresh runtime proof.",
+  "The 250-case corpus definition is a broad BitNet quality envelope.",
+  "BitNet 250-case planning enables chat or serve.",
+]
+
+[[work_item]]
+id = "M4-BITNET-EX-011"
+status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-011-bitnet-250-run"
+pr = 5452
+head_sha = "17462920105f0b1e8aa738356bab0205da47089e"
+merge_sha = "0c4691bd906b66a1057f61803c50837bd3c14e52"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-EX-010"]
+acceptance = "Run the accepted Microsoft I2_S BitNet GGUF and accepted external tokenizer on the 250-case BitNet corpus through apple-m4-cpu-neon, publishing aggregate and child receipts, task-family rollup, timing, token IDs, fallback=false evidence, receipt validation, and either a compatible regression comparison or an explicit context-mismatch reason for the 100-case baseline."
+commands = [
+  "target/release/bitnet answer-corpus --device apple-m4-cpu-neon --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --json",
+  "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-eval/answer-corpus.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "ci/quality/**",
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-eval-250/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The accepted BitNet M4 path has bounded 250-case receipts for the recorded artifact/tokenizer/backend identity.",
+]
+must_not_claim = [
+  "250-case BitNet receipts are a broad BitNet quality benchmark.",
+  "250-case BitNet receipts prove dense SLM behavior.",
+  "250-case BitNet receipts enable chat, serve, or Metal.",
+]
+
+[[work_item]]
+id = "M4-BITNET-EX-012"
+status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-012-bitnet-500-decision"
+pr = 5456
+head_sha = "28edc7140530a8af0e01afd6bd9031a330430032"
+merge_sha = "0f7b63aabe19bcb29168a89d3039cc35bf5d8333"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-EX-011"]
+acceptance = "Compare the 100-case BitNet matching history and 250-case BitNet evidence, including task-family variance, reference-vs-Rust deltas where available, timing, timeout behavior, fallback status, and failure taxonomy, then record whether to expand to 500 cases or repair corpus/scorer/template issues first."
+commands = [
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/larger-corpus-decision.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "ci/hardware/apple-m4-mac-mini/**/bitnet-eval-250/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The BitNet 500-case expansion or repair decision is recorded from bounded 100-case and 250-case evidence.",
+]
+must_not_claim = [
+  "A 500-case BitNet expansion is approved before M4-BITNET-EX-012 records it.",
+  "The 250-case decision is a broad BitNet quality envelope.",
+  "BitNet decision evidence enables chat, serve, or Metal.",
+]
+
+[[work_item]]
 id = "M4-OPS-UX-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-001-evidence-command"
+pr = 5460
+head_sha = "3311bdd0d6e12c0fb1fa1567f14eeb7b53da1268"
+merge_sha = "a08566cb34db58cad82ee26e160b686dacf32830"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -979,8 +1472,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-UX-002"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-002-explain-open"
+pr = 5478
+head_sha = "3ce6f87063d344e89c74bb17dccb6f827c104a4e"
+merge_sha = "594cf82b8936f40d90e7f740a5132967a753b135"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -1015,8 +1511,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-UX-003"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-003-doctor-bitnet"
+pr = 5491
+head_sha = "d1d8f9b9239a882ff0c83f35da0622bdb5a75a41"
+merge_sha = "6cbc0a8ce08cdbc181e3d10be65ed166cf7e8917"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -1057,7 +1556,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-ACCURACY-004", "M4-BENCH-005", "M4-BITNET-EX-003", "M4-OPS-UX-003"]
+blocked_by = ["M4-ACCURACY-007", "M4-BENCH-005", "M4-BENCH-006", "M4-BITNET-EX-003", "M4-OPS-UX-003"]
 acceptance = "Translate M4 receipts into operator-facing envelope classes per model family and route: interactive, advisory, batch, disabled, or unsupported, with max context/profile guidance, timing expectations, memory/disk expectations, and exact evidence date/identity."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
@@ -1085,14 +1584,94 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "M4-REPRO-001"
+id = "M4-CONTEXT-001"
 status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-001-long-context-guardrails"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BENCH-002", "M4-OPS-SLO-001"]
+acceptance = "Add long-context envelope guardrails for M4 CLI and server routes so requests beyond recorded dense SLM or BitNet context/profile evidence produce clear advisory, batch, disabled, or unsupported states with receipt fields instead of silent overclaiming."
+commands = [
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_context -- --nocapture",
+  "cargo test --locked -p bitnet-server -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 CLI and server routes enforce or explain long-context limits against recorded evidence envelopes.",
+]
+must_not_claim = [
+  "Long-context guardrails prove new context-length quality.",
+  "Guardrails make unsupported contexts supported.",
+]
+
+[[work_item]]
+id = "M4-CONTEXT-002"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-002-long-context-proof"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CONTEXT-001", "M4-BENCH-007", "M4-REPRO-003"]
+acceptance = "Run and publish long-context M4 quality and timing receipts for supported dense SLMs and the accepted BitNet artifact where supported, covering retrieval/copy, table extraction, late-context instruction following, truncation behavior, input throughput, TTFT, decode throughput, memory, fallback state, and explicit unsupported-context boundaries."
+commands = [
+  "target/release/bitnet mac eval --suite m4-long-context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/answer-corpus.json",
+  "target/release/bitnet mac benchmark --profile context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/benchmark.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/context/answer-corpus.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/quality/**",
+  "ci/hardware/apple-m4-mac-mini/**/context/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 long-context behavior has explicit quality, timing, memory, and unsupported-boundary receipts for the tested identities.",
+]
+must_not_claim = [
+  "Long-context proof applies to untested context lengths or model identities.",
+  "Dense SLM long-context evidence proves BitNet long-context behavior.",
+]
+
+[[work_item]]
+id = "M4-REPRO-001"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-REPRO-001-run-identity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5502
+merge_sha = "19dc1f11c8f85792d156ab7f466517540c347ccc"
 acceptance = "Define and enforce a reusable M4 run-identity contract for eval, benchmark, warm-session, chat-gate, serve-gate, and dashboard receipts: machine_id, SoC, OS version, git commit, binary hash or build profile, command class, model ID, model SHA, tokenizer authority/SHA, prompt template hash, backend, fallback state, seed/corpus/profile identity, and timing source."
 commands = [
   "cargo test --locked -p bitnet-receipts -- --nocapture",
@@ -1104,6 +1683,7 @@ commands = [
 allowed_paths = [
   "crates/bitnet-cli/**",
   "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",
   "docs/tracking/generated/**",
@@ -1124,7 +1704,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-REPRO-002"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-REPRO-002-artifact-provenance"
 stackable = false
 review_mode = "codex_premerge"
@@ -1387,6 +1967,46 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-OBS-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-RECEIPT-001", "M4-RELIABILITY-001", "M4-SERVE-EX-002"]
+acceptance = "Add M4 observability correlation for CLI and server routes: trace IDs linking progress events, logs, per-run or per-request receipts, failure receipts, cancellation/timeout stages, and operator-facing diagnostics without leaking prompts or cache paths beyond the documented redaction policy."
+commands = [
+  "bitnet mac ask --trace --json-out ci/hardware/apple-m4-mac-mini/<date>/observability/ask.json <prompt>",
+  "bitnet mac serve --trace --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/observability/serve",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/observability/ask.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "ci/hardware/apple-m4-mac-mini/**/observability/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 CLI and server diagnostics can correlate progress, logs, receipts, and failure stages for tested routes.",
+]
+must_not_claim = [
+  "Trace correlation proves model quality or performance.",
+  "Trace output may expose unredacted prompt, secret, or cache-path data.",
+]
+
+[[work_item]]
 id = "M4-SERVE-EX-001"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
@@ -1506,6 +2126,46 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-SERVE-EX-004"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SERVE-EX-001", "M4-SERVE-EX-003", "M4-CONTEXT-001"]
+acceptance = "Add bounded local-server queue, backpressure, and resident-state evidence for the M4 appliance: concurrent local requests, queue limits, busy/timeout responses, resident model reuse, per-request receipts, and failure receipts without production-hosting or full OpenAI-compatibility claims."
+commands = [
+  "cargo test --locked -p bitnet-server -- --nocapture",
+  "target/release/bitnet --device apple-m4-cpu-neon mac serve-backpressure-smoke --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/summary.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/summary.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/serve-backpressure/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 local-server queue, backpressure, and resident-state behavior have bounded local-appliance receipts.",
+]
+must_not_claim = [
+  "The local server is production hosting.",
+  "Queue/backpressure evidence proves full OpenAI compatibility.",
+]
+
+[[work_item]]
 id = "M4-CI-001"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
@@ -1542,6 +2202,313 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-SETUP-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-SETUP-001-first-run"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-REPRO-002", "M4-STABILITY-002", "M4-OPS-UX-003"]
+acceptance = "Prove the first-run M4 setup path for supported dense SLMs and the accepted BitNet artifact: discover model state, fetch or repair cache entries, verify SHA/tokenizer authority, report disk pressure, then run the documented smoke command with receipts or a clear non-runtime dry-run boundary."
+commands = [
+  "bitnet mac models",
+  "bitnet model verify <model-id>",
+  "bitnet mac doctor --include-bitnet",
+  "bitnet mac smoke --model-id <supported-model-id>",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/apple-m4-mac-mini/**/setup/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "The M4 first-run setup path is receipt-backed for supported model identities and accepted BitNet artifacts.",
+]
+must_not_claim = [
+  "First-run setup evidence proves broad answer quality.",
+  "A dry-run setup receipt proves live inference completed.",
+]
+
+[[work_item]]
+id = "M4-BENCH-007"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-007-harness-calibration"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BENCH-004", "M4-REPRO-001"]
+acceptance = "Calibrate the M4 benchmark harness before using timing envelopes: record clock source and resolution, runner overhead, warm-up policy, sample discard policy, synthetic timing fixtures, profile timeout rules, and invalid-comparison reasons."
+commands = [
+  "bitnet mac benchmark --calibrate --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark/calibration.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/benchmark/calibration.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/apple-m4-mac-mini/**/benchmark/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "M4 benchmark harness overhead, timing source, warm-up, timeout, and invalid-comparison rules are calibrated before envelope refreshes.",
+]
+must_not_claim = [
+  "Harness calibration proves model speed.",
+  "Synthetic timing fixtures are real inference benchmarks.",
+]
+
+[[work_item]]
+id = "M4-ROUTE-MATRIX-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-DENSE-CHAT-001", "M4-BITNET-EX-006", "M4-BITNET-EX-007", "M4-SERVE-EX-002", "M4-OPS-SLO-001"]
+acceptance = "Publish a route-state matrix for M4 dense SLM and BitNet paths covering ask, chat, warm session, serve, streaming, disabled, batch-only, and unsupported states, with the exact evidence item and receipt family required for each enabled state."
+commands = [
+  "bitnet mac status --json",
+  "bitnet mac evidence --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 route availability is explicit by model family, command surface, evidence source, and disabled or unsupported state.",
+]
+must_not_claim = [
+  "A route-state matrix enables a route without runtime receipts.",
+  "Disabled BitNet chat or serve states are supported.",
+]
+
+[[work_item]]
+id = "M4-WORKLOAD-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-DENSE-CHAT-001", "M4-BITNET-EX-006", "M4-SERVE-EX-002", "M4-ROUTE-MATRIX-001", "M4-REPRO-003"]
+acceptance = "Add an end-to-end M4 operator workload suite across ask, chat, warm-session, and serve routes for supported dense SLMs and enabled BitNet routes, covering summarize, extract, classify, JSON, rewrite, and table-QA workflows with receipts, mechanical checks where possible, route-state boundaries, and no broad quality claim."
+commands = [
+  "target/release/bitnet mac workload --suite m4-operator --json-out ci/hardware/apple-m4-mac-mini/<date>/workload/summary.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/workload/summary.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "ci/quality/**",
+  "ci/hardware/apple-m4-mac-mini/**/workload/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 operator workflows have route-level receipts and mechanical checks for the tested dense SLM and BitNet identities.",
+]
+must_not_claim = [
+  "The operator workload suite proves broad assistant quality.",
+  "A route is enabled for BitNet unless its route-state evidence permits it.",
+]
+
+[[work_item]]
+id = "M4-EVIDENCE-REPLAY-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-RECEIPT-001", "M4-CI-001", "M4-REPRO-001"]
+acceptance = "Add replayable M4 evidence bundles that list the exact commands, git/binary identity, model/tokenizer identity, receipt inputs, dashboard outputs, expected regression result, and claim boundary so an operator can reproduce or audit a dense SLM or BitNet evidence refresh."
+commands = [
+  "bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/<date>/<bundle>/manifest.json --dry-run --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 evidence refreshes are replayable or auditable from committed bundle manifests and receipt inputs.",
+]
+must_not_claim = [
+  "Dry-run replay proves live model inference.",
+  "Replay bundles validate uncommitted local artifacts.",
+]
+
+[[work_item]]
+id = "M4-TREND-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CI-001", "M4-BENCH-003", "M4-BITNET-REG-001", "M4-ACCURACY-007", "M4-BITNET-EX-012"]
+acceptance = "Publish a seven-day M4 trend history for dense SLM and BitNet receipt families with matching identity, skipped-day reasons, dashboard status, threshold outcomes, and operator-envelope impact separated from any one-off benchmark or quality claim."
+commands = [
+  "bitnet mac report-refresh --since 7d --json",
+  "bitnet mac regression-dashboard --since 7d --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/trend/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "M4 dense SLM and BitNet evidence has multi-day trend history for matching identities and recorded skipped-day reasons.",
+]
+must_not_claim = [
+  "Seven-day trend history proves future performance.",
+  "Trend summaries replace per-run receipts.",
+]
+
+[[work_item]]
+id = "M4-MODEL-LIFECYCLE-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-MODEL-LIFECYCLE-001-supported-model-policy"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-REPRO-002", "M4-OPS-SLO-001", "M4-CI-001"]
+acceptance = "Define the supported-model lifecycle for M4: candidate, diagnostic-only, supported non-default, default, deprecated, rejected, and retired states, including required evidence, cache migration behavior, operator warnings, downgrade/rollback guidance, and claim-boundary updates."
+commands = [
+  "bitnet mac models --json",
+  "bitnet model verify <model-id>",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 supported-model state changes have explicit evidence, operator warning, cache, rollback, and claim-boundary requirements.",
+]
+must_not_claim = [
+  "A model lifecycle policy supports a new model.",
+  "A deprecated or diagnostic-only model is user-ready.",
+]
+
+[[work_item]]
+id = "M4-COMPAT-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-COMPAT-001-update-compat"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SETUP-001", "M4-MODEL-LIFECYCLE-001", "M4-CI-001", "M4-REPRO-001"]
+acceptance = "Define and run M4 compatibility-refresh receipts after macOS, Rust toolchain, binary build-profile, or supported-model manifest changes, including smoke/regression commands, expected invalidation of timing baselines, cache repair behavior, rollback guidance, and claim-boundary updates."
+commands = [
+  "bitnet mac doctor --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/doctor.json",
+  "bitnet mac smoke --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/smoke.json",
+  "bitnet mac regression-dashboard --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/apple-m4-mac-mini/**/compat/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "M4 OS, toolchain, binary-profile, and model-manifest changes have explicit compatibility refresh and rollback evidence.",
+]
+must_not_claim = [
+  "Compatibility refresh proves unchanged performance unless matching benchmark identities also pass.",
+  "Compatibility evidence applies to MacBook or broad Apple Silicon targets.",
+]
+
+[[work_item]]
 id = "M4-RELEASE-001"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go"
@@ -1549,7 +2516,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-ACCURACY-004", "M4-BENCH-003", "M4-BITNET-EX-005", "M4-CANARY-001", "M4-DENSE-REF-001", "M4-OPS-SLO-001", "M4-OPS-UX-003", "M4-RELIABILITY-001", "M4-SERVE-EX-001", "M4-CI-001"]
+blocked_by = ["M4-ACCURACY-007", "M4-BENCH-003", "M4-BENCH-007", "M4-BITNET-EX-005", "M4-BITNET-EX-012", "M4-BITNET-REG-001", "M4-CANARY-001", "M4-COMPAT-001", "M4-CONTEXT-001", "M4-CONTEXT-002", "M4-DENSE-CHAT-001", "M4-DENSE-REF-001", "M4-EVIDENCE-REPLAY-001", "M4-MODEL-LIFECYCLE-001", "M4-OBS-001", "M4-OPS-SLO-001", "M4-OPS-UX-003", "M4-RELIABILITY-001", "M4-ROBUSTNESS-001", "M4-ROUTE-MATRIX-001", "M4-SERVE-EX-004", "M4-SETUP-001", "M4-TREND-001", "M4-WORKLOAD-001", "M4-CI-001"]
 acceptance = "Publish the M4 inference release go/no-go matrix that states which dense SLM, BitNet, benchmark, stability, service, operator, and claim-boundary gates must pass before updating the public M4 expectation envelope or marking a model family route excellent."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",

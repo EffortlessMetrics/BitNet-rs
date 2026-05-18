@@ -1,0 +1,19 @@
+timestamp = "2026-05-17T09:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-CPU-SLM-PERF-003"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-CPU-SLM-PERF-003-openvino-cpu-compare"
+summary = "Started dense Qwen Rust GGUF CPU versus OpenVINO CPU runtime comparison."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-slm-runtime-comparison.json",
+]
+
+notes = [
+  "The item reads existing resident Rust GGUF CPU, OpenVINO CPU corpus-v2, and OpenVINO phase-runner receipts without running new inference.",
+  "The runtime-comparison receipt records OpenVINO CPU profile quality blockers and timing context without promoting OpenVINO CPU.",
+  "The item preserves no speedup, route-promotion, power-advantage, Arc/NPU acceleration, and BitNet QK256/I2_S behavior-change boundaries.",
+]

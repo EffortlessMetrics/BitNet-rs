@@ -62,17 +62,24 @@ bitnet mac ask \
   "What is 2+2? Answer with only the number."
 ```
 
-BitNet is still not enabled for `bitnet mac chat` or `bitnet mac serve`. If a
-diagnostic-only, candidate, rejected, or unknown model ID is passed to the dense
-Mac commands, the wrapper fails before cache repair guidance and points back to
-`bitnet mac models`.
+BitNet serve is explicit and gate-required. `bitnet mac serve --model-family
+bitnet` fails before cache lookup or bind unless
+`--bitnet-serve-gate-receipt` points at a ready
+`bitnet_apple_m4_serve_gate` receipt. The gate records consumed BitNet chat
+evidence, streaming-semantics evidence, timeout/failure evidence, and a
+`mac serve-check --completion` receipt proving health/ready and per-request
+receipt export on the gated local route. If a diagnostic-only, candidate,
+rejected, or unknown model ID is passed to the dense Mac commands, the wrapper
+fails before cache repair guidance and points back to `bitnet mac models`.
 
-BitNet chat has an explicit disabled gate. `bitnet mac chat --model-family
-bitnet` fails before prompt collection until `bitnet mac bitnet-chat-gate`
-records variable warm-session determinism, timeout/failure evidence,
+BitNet chat is explicit and gate-required. `bitnet mac chat --model-family
+bitnet` fails before prompt collection unless `--bitnet-chat-gate-receipt`
+points at a ready `bitnet_apple_m4_chat_gate` receipt. The gate records
+variable warm-session determinism, timeout/failure evidence,
 streaming-semantics evidence, strict backend/fallback fields, and unchanged
-chat/serve-disabled claim boundaries. A gate receipt does not itself enable
-chat; enabling BitNet chat still requires a separate route PR with receipts.
+serve-disabled claim boundaries. The chat route consumes that ready receipt and
+writes `bitnet_apple_m4_chat_session`; BitNet serve remains a separate gated
+route.
 
 The first BitNet one-shot ask runtime receipt is:
 
@@ -313,10 +320,27 @@ and the unchanged chat/serve/Metal-disabled claim boundary.
 The operator-prompt route is still a warm-session proof surface, not BitNet
 chat, BitNet serve, broad BitNet quality, or broad performance evidence.
 
+Use the serve gate command after BitNet chat and service checks are available:
+
+```bash
+bitnet mac bitnet-serve-gate \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --chat-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-chat/chat-session.json \
+  --streaming-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/streaming.json \
+  --failure-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/failure.json \
+  --serve-check-receipt ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/serve-check.json \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-serve-gate/gate.json
+```
+
+Only a ready gate can be consumed by `bitnet mac serve --model-family bitnet`.
+That route is a local service wrapper only; it is not production hosting and
+does not prove broad OpenAI compatibility.
+
 Use the chat gate command to make missing BitNet chat evidence concrete:
 
 ```bash
 bitnet mac bitnet-chat-gate \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
   --warm-receipt ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json \
   --failure-receipt <bitnet_apple_m4_warm_session_failure.json> \
   --streaming-receipt <bitnet_apple_m4_chat_streaming_semantics.json>
@@ -324,7 +348,8 @@ bitnet mac bitnet-chat-gate \
 
 The receipt kind is `bitnet_apple_m4_chat_gate`. Missing timeout/failure or
 streaming evidence leaves it `status=blocked` with `chat_enabled=false` and
-`serve_enabled=false`.
+`serve_enabled=false`; only `status=ready_to_enable` can be consumed by
+`bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json>`.
 
 The committed aggregate warm receipt is:
 

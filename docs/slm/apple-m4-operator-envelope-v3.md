@@ -18,8 +18,8 @@ The durable envelope is based on these committed evidence surfaces:
 | Dense SLM benchmark v2 refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/<model-id>/summary.json` | Supported Qwen dense models, nine benchmark profiles, including `resident_100` | comparable matching history exists |
 | BitNet eval refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json` | Accepted Microsoft I2_S GGUF plus external tokenizer, 100 deterministic cases | comparable matching history exists |
 | BitNet benchmark refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json` | Accepted BitNet one-shot benchmark profile | comparable matching history exists |
-| BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-warm/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | receipt-valid, still insufficient history |
-| Report dashboard | `target/apple-m4-durable-inference-evidence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | five comparable groups, four insufficient-history groups |
+| BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
+| Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
 
 All durable refresh receipts used by this envelope keep the supported local M4
 route bounded to:
@@ -52,15 +52,34 @@ The model-free refresh sequence is:
 ```bash
 bitnet mac models
 bitnet mac status
+bitnet mac evidence \
+  --json-out target/apple-m4-inference-excellence/evidence-summary.json \
+  --json
 bitnet mac report-refresh \
-  --json-out target/apple-m4-durable-inference-evidence/report-refresh-manifest.json \
+  --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
+  --explain \
+  --open-targets \
   --json
 bitnet mac regression-dashboard \
-  --json-out target/apple-m4-durable-inference-evidence/regression-dashboard.json \
-  --markdown-out target/apple-m4-durable-inference-evidence/regression-dashboard.md \
+  --json-out target/apple-m4-inference-excellence/regression-dashboard.json \
+  --markdown-out target/apple-m4-inference-excellence/regression-dashboard.md \
+  --explain \
+  --open-targets \
   --json
-bitnet mac receipts-check target/apple-m4-durable-inference-evidence/regression-dashboard.json --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
 ```
+
+The `--explain` and `--open-targets` flags are operator affordances only. They
+print status meanings, per-family or per-group reasons, and openable receipt,
+Markdown, latest-report, and baseline-report targets without launching live
+inference or downloading models.
+
+`bitnet mac status` and `bitnet mac doctor` expose dense SLM and BitNet
+readiness as separate operator states. Dense readiness is tied to supported
+Qwen cache repair and the latest dense receipts. BitNet readiness is tied to
+the accepted artifact/tokenizer, one-shot ask, warm-session evidence, and
+explicit chat/serve-disabled boundaries.
 
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:
 
@@ -82,8 +101,21 @@ target/release/bitnet --device apple-m4-cpu-neon mac bitnet-benchmark \
   --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
   --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-benchmark/summary.json
 
+target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --prompt 'Answer with a single digit: 2+2=' \
+  --prompt 'Name the capital of France. Answer with one word.' \
+  --prompt 'Return exactly: ready' \
+  --prompt 'Answer with a single digit: 3+1=' \
+  --prompt 'Answer with a single digit: 2+2=' \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json
+
 target/release/bitnet mac receipts-check <new-receipt.json> --json
-target/release/bitnet mac regression <new-receipt.json> --baseline <matching-baseline.json>
+target/release/bitnet mac regression <new-eval-or-benchmark.json> --baseline <matching-baseline.json>
+target/release/bitnet mac report-refresh --json
+target/release/bitnet mac regression-dashboard --json
 ```
 
 ## Regression Thresholds
@@ -116,6 +148,23 @@ Dashboard states mean:
 | warning | Context matched, but an advisory metric drifted. | Inspect the metric and receipt, then decide whether to refresh or file a follow-up. |
 | failure | Context matched and a required quality, fallback, identity, or receipt invariant failed. | Block the claim and fix before publishing the envelope. |
 
+The `M4-EXCELLENCE-003` model-free dashboard refresh reports all important
+committed M4 evidence groups as comparable:
+
+| Family | Evidence | Reports | Comparable groups |
+|---|---|---:|---:|
+| `dense_slm_eval_v2` | dense SLM | 6 | 3 |
+| `dense_slm_benchmark_v2` | dense SLM | 6 | 3 |
+| `bitnet_eval` | BitNet | 2 | 1 |
+| `bitnet_benchmark` | BitNet | 2 | 1 |
+| `bitnet_variable_warm` | BitNet | 2 | 1 |
+
+This dashboard state removes the prior important `insufficient_history` gap for
+dense SLM eval v2 and BitNet variable warm. It remains dashboard-only evidence:
+no live model run, model download, BitNet chat/serve enablement, Metal, QK256,
+Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup
+claim is made by the refresh.
+
 Quality gates must fail the release claim when any of these change in a matching
 context:
 
@@ -138,6 +187,7 @@ tokenizer_load_ms
 prompt_tokenize_ms
 prefill_ms
 time_to_first_token_ms
+sampling_ms_per_token
 input_tok_s
 output_tok_s
 decode_tok_s
@@ -145,6 +195,72 @@ total_wall_ms
 peak_memory_mb
 memory_drift_mb
 ```
+
+### Published Drift Thresholds
+
+`bitnet mac regression` is advisory by default. Use `--fail-on-drift` when a
+scheduled or release lane needs any warning to fail the gate. These thresholds
+only apply after the dashboard reports `ready` for a matching identity; an
+identity mismatch starts a new baseline and must not be called a trend.
+
+Hard comparison blockers:
+
+| Class | Blocker | Operator action |
+|---|---|---|
+| Identity | artifact kind, evidence family, model ID/SHA, tokenizer authority/SHA, prompt template or profile set, backend, runtime API, fallback state, or machine mismatch | Start a new baseline or rerun with the intended identity. |
+| Claim boundary | a receipt claims BitNet chat/serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup outside its proven lane | Block the public claim and file a follow-up. |
+| Required fields | missing generated text, token IDs, timing, memory, fallback, tokenizer, or quality fields required by the receipt validator | Fix the receipt producer before comparing drift. |
+
+Quality and timeout thresholds:
+
+| Family | Fields | Threshold | Severity |
+|---|---|---:|---|
+| Dense SLM eval v2 | `cases_passed`, exact/normalized/schema/numeric/keyword/token pass counts, scoring summary, task-family pass counts | 0% lower allowed | warning by default; blocks release quality claims until explained |
+| Dense SLM eval v2 | timeouts, `not_run`, scoring failures, `quality_passed=false` | 0% higher allowed or boolean mismatch | block release quality claims |
+| BitNet eval | quality/scoring passed counts, task-family passed counts, reference matched/text/token-ID match counts | 0% lower allowed | warning by default; blocks BitNet quality claims until explained |
+| BitNet eval | failed, timeout, `not_run`, reference mismatch/not-run/partial counts | 0% higher allowed | block BitNet quality claims |
+| BitNet benchmark paths | prompt count, generated token count, model/tokenizer-loaded-once flags, timeout-boundary flags, quality flags | exact match required | comparison blocker if mismatched |
+| BitNet variable warm | accepted artifact/tokenizer, backend, fallback state, repeated-prompt quality, per-turn receipts, and aggregate receipt validity | exact match before drift is reported | direct `bitnet mac regression --baseline` support for matching `bitnet_apple_m4_warm_session` receipts |
+
+Timing drift thresholds:
+
+| Family | Metric class | Direction | Advisory threshold |
+|---|---|---|---:|
+| Dense SLM eval v2 | `cold_load_ms_p50`, `tokenizer_load_ms_p50` | higher is worse | 20% |
+| Dense SLM eval v2 | prompt tokenization, prefill, TTFT p50/p90, total wall p50 | higher is worse | 15% |
+| Dense SLM eval v2 | sampling ms/token p50 | higher is worse | 20% |
+| Dense SLM eval v2 | input/output throughput p50 | lower is worse | 15% |
+| Dense SLM eval v2 | decode throughput p50 | lower is worse | 12.5% |
+| Dense SLM benchmark v2 | load metrics p50/p90/p99 | higher is worse | 20% |
+| Dense SLM benchmark v2 | prompt tokenization, prefill, TTFT, decode total, total wall p50/p90/p99 | higher is worse | 15% |
+| Dense SLM benchmark v2 | sampling ms/token p50/p90/p99 | higher is worse | 20% |
+| Dense SLM benchmark v2 | input/output throughput p50/p90/p99 | lower is worse | 15% |
+| Dense SLM benchmark v2 | decode throughput p50/p90/p99 | lower is worse | 12.5% |
+| Dense SLM warm/performance sessions | TTFT and total session | higher is worse | 15% |
+| Dense SLM warm/performance sessions | warm-prompt throughput | lower is worse | 15% |
+| Dense SLM warm/performance sessions | decode throughput | lower is worse | 12.5% |
+| BitNet benchmark | cold/model/tokenizer load p50/p90/p99 | higher is worse | 20% |
+| BitNet benchmark | prompt tokenization, prefill, TTFT, decode total, total wall p50/p90/p99 | higher is worse | 15% |
+| BitNet benchmark | sampling ms/token p50/p90/p99 | higher is worse | 20% |
+| BitNet benchmark | input/output throughput p50/p90/p99 | lower is worse | 15% |
+| BitNet benchmark | decode throughput p50/p90/p99 | lower is worse | 12.5% |
+
+Memory drift thresholds:
+
+| Family | Metric | Direction | Advisory threshold |
+|---|---|---|---:|
+| Dense SLM eval v2 | peak memory | higher is worse | 10% |
+| Dense SLM benchmark v2 | peak memory p50/p90/p99 | higher is worse | 10% |
+| Dense SLM benchmark v2 | memory drift p50/p90/p99 | higher is worse | 15% |
+| Dense SLM warm/performance sessions | peak memory | higher is worse | 10% |
+| BitNet benchmark | peak memory p50/p90/p99 | higher is worse | 10% |
+| BitNet benchmark | memory drift p50/p90/p99 and process peak drift | higher is worse | 15% |
+
+BitNet variable warm has matching-history dashboard status, receipt validation,
+and direct `bitnet mac regression --baseline` support for
+`bitnet_apple_m4_warm_session`. The direct command rejects mismatched
+artifact/tokenizer identity, backend, fallback state, prompt set, warm profile,
+timeout policy, or receipt schema before it reports timing or memory drift.
 
 The current BitNet benchmark comparison reports five advisory warnings, all on
 sub-ms prompt-tokenize timing fields. Identity, fallback, prompt count, and
@@ -192,7 +308,7 @@ Current matching-history status:
 |---|---|---|
 | BitNet eval | 100 cases, 75 passed, 25 failed, 0 timeout, 0 not_run | comparable |
 | BitNet benchmark | 4 prompts, 8 generated tokens, TTFT p50 7910.0 ms, decode p50 2.065 tok/s, peak memory p50 4246.359 MiB | comparable with advisory prompt-tokenize warnings |
-| BitNet variable warm | 5 prompts, 10 generated tokens, repeated prompt stable, total session 43955.621 ms | receipt-valid, insufficient history |
+| BitNet variable warm | 5 prompts, 10 generated tokens, repeated prompt stable, total session 43809.341 ms | comparable |
 
 BitNet chat and BitNet serve remain disabled. Variable warm receipts are
 required evidence for future chat work, but they are not chat enablement by

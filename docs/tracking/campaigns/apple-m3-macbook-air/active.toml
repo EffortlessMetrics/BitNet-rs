@@ -331,8 +331,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-016"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-016-backend-visibility-preflight"
+pr = 5043
+head_sha = "c8001743decb744739d830efe754e00e0abdc6f6"
+merge_sha = "d3566a240b8ab761049fa8aab332985ec7dde26e"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -372,6 +375,95 @@ must_not_claim = [
   "Neural Engine execution works.",
   "Any model artifact was downloaded or loaded.",
   "Any speedup or performance result was measured.",
+]
+
+[[work_item]]
+id = "M3MBA-017"
+status = "merged"
+branch = "codex/apple-m3-macbook-air/M3MBA-017-device-help-alignment"
+pr = 5148
+head_sha = "8e058b725bacbf3d09e23a20175f86a157d68dd8"
+merge_sha = "cd03ab9aba7bc57c4f5d155fd5c696a8993bcf97"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-016"]
+acceptance = "Align M3 Air device identity help and rejection surfaces so apple-m3-air-metal, apple-m3-air-mpsgraph, and apple-m3-air-cpu-neon are consistently discoverable as distinct proof-lane labels while mac validate still rejects unsupported Metal/MPSGraph model inference and hidden CPU fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli-config-core --no-default-features validates_apple_m3_air_label_without_aliasing",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli mac_validate_rejects_m3_metal_identity_without_cpu_fallback_claim",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli cli_snapshot_tests__mac_validate_help",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli-config-core/**",
+  "crates/bitnet-cli/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "M3 Air device identity help and rejection text consistently expose all three M3 Air labels.",
+]
+must_not_claim = [
+  "M3 Air Metal model inference works.",
+  "M3 Air MPSGraph model inference works.",
+  "M3 Air CPU fallback can count as Metal or MPSGraph execution.",
+  "Any live M3 model run occurred.",
+]
+
+[[work_item]]
+id = "M3MBA-018"
+status = "merged"
+branch = "codex/apple-m3-macbook-air/M3MBA-018-roadmap-state-refresh"
+pr = 5225
+head_sha = "3cb6ac1aee7cf41404de3054726c03adcfd08b63"
+merge_sha = "fd6bd1fd7c606a21d8a25d5432597c2eb8015b07"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-017"]
+acceptance = "Refresh the M3 Air roadmap and campaign prose after M3MBA-017 so the current stack no longer points at merged work, the remaining M3MBA-007/M3MBA-008 sequence is explicit, and the selected-long-job CI completion rule remains encoded through comparison-profile workflow inputs and phase evidence uploads before expensive M3 runs."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/apple-m3-air-dense-slm.yml",
+  "docs/apple-silicon/**",
+  "docs/ci/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air roadmap and campaign state reflect the post-M3MBA-017 stack.",
+  "The selected M3 long-job CI completion rule remains a lane design constraint.",
+]
+must_not_claim = [
+  "Any new M3 Air model inference was run.",
+  "Any new BitNet artifact was downloaded or accepted.",
+  "M3 Air evidence proves M4 Mac mini performance.",
 ]
 
 [[work_item]]
@@ -695,7 +787,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-007"
-status = "proposed"
+status = "blocked"
+pr = 5235
+merge_sha = "a987d7c5607cd9026da006e292a617b287a49ac0"
+head_sha = "13c783bcec22406f42b8306e4042fbdd87683b12"
 branch = "codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic"
 stackable = false
 review_mode = "codex_premerge"
@@ -730,16 +825,22 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "The 3B candidate has recorded TL diagnostic evidence for the M3 Air context.",
+  "The 3B candidate is blocked for M3 Air TL diagnostic evidence until an official GGUF, reproducible conversion path, or explicitly approved third-party TL diagnostic artifact exists and local storage can absorb the large-candidate work safely.",
 ]
 must_not_claim = [
+  "The official 1bitLLM 3B repository contains a GGUF artifact.",
+  "A third-party 1bitLLM 3B GGUF is accepted for M3 Air evidence.",
+  "3B TL1/TL2 diagnostic inference was run.",
   "3B I2_S is supported.",
   "The 3B diagnostic route proves Apple local-answer quality.",
 ]
 
 [[work_item]]
 id = "M3MBA-008"
-status = "proposed"
+status = "merged"
+pr = 5372
+head_sha = "f274700750fda9d413880feb7e3df2bb773428d9"
+merge_sha = "843da973eb609ddcb5943be6b99b93d6afec0669"
 branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
 stackable = false
 review_mode = "codex_premerge"
@@ -766,11 +867,14 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "Accepted M3 Air artifact evidence is ready for a separate M4 strict-proof item.",
+  "The official Microsoft 2B I2_S artifact is ready for a separate M4 strict-proof item because M3 Air BitNet.cpp reference-runner evidence accepted it for the recorded M3 context.",
+  "The 0.7B and 3B secondary candidates remain blocked and are not proof handoff targets.",
 ]
 must_not_claim = [
   "The M4 strict proof already passed.",
   "M3 Air evidence is M4 Mac mini evidence.",
+  "The repository Rust Apple backend accepted the artifact.",
+  "The blocked secondary candidates are accepted artifacts.",
 ]
 
 [[work_item]]
@@ -853,4 +957,43 @@ must_not_claim = [
   "Deleted artifacts remain available locally.",
   "Cache retention proves model quality.",
   "Large model binaries were committed.",
+]
+
+[[work_item]]
+id = "M3MBA-019"
+status = "merged"
+pr = 5388
+head_sha = "0d19e3ada5c95a8cdf0451a662c4b7c48fed871a"
+merge_sha = "2592ba36eac3dafb18d4f84e4116e95e6f1c2da0"
+branch = "codex/apple-m3-macbook-air/M3MBA-019-post-handoff-roadmap"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-008"]
+acceptance = "Refresh the M3 Air roadmap after the Microsoft 2B handoff stack closes so the next lane work is not a vague backlog: define post-handoff tracks for device-model hardening, M3 accuracy comparison profiles, bounded performance evidence from completed runs, secondary artifact unblock preflights, and M4 strict-proof handoff alignment while preserving M3/M4 claim boundaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air lane has a post-handoff roadmap for device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment work.",
+]
+must_not_claim = [
+  "Any new M3 Air model inference was run.",
+  "Any new BitNet artifact was downloaded or accepted.",
+  "M3 Air evidence proves M4 Mac mini performance or local-answer quality.",
 ]

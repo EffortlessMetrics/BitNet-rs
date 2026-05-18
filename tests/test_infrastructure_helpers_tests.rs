@@ -1572,7 +1572,7 @@ fn test_join_loader_path() {
     assert_eq!(split, components, "Split-then-join round trip should be identity");
 
     // Joining a single component should produce no separator
-    let single = vec!["/usr/lib"];
+    let single = ["/usr/lib"];
     let joined_single = single.join(separator);
     assert_eq!(joined_single, "/usr/lib");
     assert!(!joined_single.contains(separator), "Single path should have no separator");

@@ -1,0 +1,27 @@
+timestamp = "2026-05-18T06:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OV-QUAL-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-004-align-openvino-scoring"
+pr = 5522
+head_sha = "4a7fed9e0c5d438e7934fcc7a9848f209c2705bd"
+merge_sha = "8d6a29274ae6c15d14ec629b271eb0a8586b65b9"
+summary = "Merged LNL258V-OV-QUAL-004 OpenVINO corpus-v2 scoring alignment."
+
+artifacts = [
+  "scripts/openvino_genai_corpus_v2.py",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "PR #5522 aligned the OpenVINO GenAI corpus-v2 scoring policy with Rust answer-corpus-v2 normalized exact, keyword, and forbidden-token matching.",
+  "The merged evidence records GPU corpus-v2 8/12 pass and NPU corpus-v2 9/12 pass after removing the stale case-sensitive keyword mismatch.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]

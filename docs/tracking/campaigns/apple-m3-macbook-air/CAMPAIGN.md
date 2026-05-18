@@ -69,19 +69,26 @@ artifacts to separate strict proof items.
 | M3MBA-005B | merged | Record Microsoft 2B tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence. |
 | M3MBA-005C | merged | Decide Microsoft 2B reference output acceptance, rejection, or blocker state. |
 | M3MBA-006 | blocked | Evaluate the smaller 0.7B 1bitLLM control candidate after Microsoft 2B is accepted, rejected, or blocked; blocked because the official repo has no GGUF artifact at the recorded revision. |
-| M3MBA-007 | proposed | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim. |
-| M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
+| M3MBA-007 | blocked | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim; blocked because the official repo has no TL1/TL2 GGUF and local free space is below the safe large-candidate floor for the available safetensors shards. |
+| M3MBA-008 | merged | Hand the accepted Microsoft 2B I2_S M3 reference-runner artifact to separate M4 strict-proof work without claiming proof in this lane; merged in #5372. |
 | M3MBA-009 | merged | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists; merged in #4902. |
 | M3MBA-010 | merged | Audit MacBook model-cache retention and cleanup after the first large BitNet download; merged in #4839. |
 | M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
+| M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
+| M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
+| M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
+| M3MBA-019 | pr_open | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks. |
 
-Current focus: `M3MBA-007` is now the next bounded M3 Air work surface, with
-`M3MBA-008` reserved for any accepted-artifact handoff. `M3MBA-006` is blocked
-until an official GGUF, reproducible conversion path, or explicitly approved
-third-party artifact path exists for the 0.7B candidate.
-`M3MBA-010` permits another large candidate only as serialized work with fresh
-disk preflight, before/after free-space evidence, hash evidence, and no
-committed model binaries.
+Current focus: no M3 Air BitNet handoff item is active after `M3MBA-008`
+merged. The Microsoft 2B I2_S artifact is accepted only for the recorded M3 Air
+BitNet.cpp reference-runner context and is ready to seed separate M4
+strict-proof work with fresh M4 receipts. `M3MBA-006` and `M3MBA-007` remain
+blocked because the official 1bitLLM repositories do not expose the GGUF
+artifacts required by their command shapes, and they are not handoff targets
+until a future unblocking item records artifact authority and storage-safe
+preflight evidence. `M3MBA-019` owns the post-handoff roadmap reset so the lane
+can continue improving M3 device modeling, accuracy, and performance without
+turning blocked artifact candidates into hidden runtime claims.
 
 ## Phase Roadmap
 
@@ -93,6 +100,7 @@ committed model binaries.
 | Storage hygiene | M3MBA-010 | Keep the MacBook lane usable for large artifacts without hiding local cache state. | Artifact ledger audit with retained/deleted state and free-space floor. |
 | Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
+| Post-handoff execution | M3MBA-019 and successors | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks. | Updated roadmap and follow-on item boundaries; no new runtime claim. |
 
 ## Operating Tracks
 
@@ -204,6 +212,8 @@ Local cache state, terminal output, and downloaded model files are not enough.
 | M3MBA-003 | Receipt validator/test fixture or documented schema evidence proving `apple-m3-air-cpu-neon` support without weakening `apple-m4-cpu-neon`. |
 | M3MBA-012 | Dense harness contract report section in `docs/apple-silicon/m3-macbook-air-roadmap.md`, with synthetic no-model CI receipt expectation. |
 | M3MBA-013 | CI completion policy section in `docs/apple-silicon/m3-macbook-air-roadmap.md` and shared CI policy alignment in `docs/ci/cost-and-verification-policy.md`. |
+| M3MBA-017 | CLI help/error surfaces and roadmap state proving all three M3 Air labels remain distinct while unsupported Metal/MPSGraph model inference is rejected. |
+| M3MBA-018 | Roadmap, campaign, MacBook lane, and staged workflow refresh showing the post-device-model stack, the remaining M3MBA-007/M3MBA-008 sequence, comparison-profile inputs, and selected-long-job phase evidence uploads. |
 | M3MBA-004A | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-smoke.md` |
 | M3MBA-004B | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-operator.md` |
 | M3MBA-005A | `docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md` identity/hash section |

@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T04:57:19Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5042
+head_sha = "e3a38021613bf53677ff727be562aaf0293cc346"
+merge_sha = "436986c90c9f511dfc2bcb28f759dd10b5b24b15"
+branch = "codex/lunar-lake/LNL258V-QUAL-002-qwen-cpu-corpus-v2"
+summary = "Merged LNL258V-QUAL-002 after CI passed to record bounded dense Qwen CPU corpus-v2 execution evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5042",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/",
+]
+
+notes = [
+  "The merged receipt records 12 total cases, 6 passed, 6 failed, 0 timed out, and fallback_used=false on selected_backend=cpu-rust.",
+  "The evidence is bounded corpus-v2 CPU execution only; it does not claim broad quality, route promotion, speedup, Arc/NPU execution, or BitNet QK256/I2_S proof.",
+]

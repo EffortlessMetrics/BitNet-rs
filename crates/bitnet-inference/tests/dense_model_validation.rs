@@ -143,6 +143,46 @@ fn rmsnorm_with_learned_weights() {
     assert!((output[1] - 0.5).abs() < 0.01);
 }
 
+/// Dense forward RMSNorm should accumulate squares in enough precision to avoid
+/// overflowing on large-but-finite f32 activations.
+#[test]
+fn dense_rms_norm_handles_large_finite_activations() {
+    use bitnet_inference::rms_norm;
+
+    let input = vec![1.0e20f32, -1.0e20f32];
+    let weight = vec![1.0f32, 1.0f32];
+    let output = rms_norm(&input, &weight, 0.0);
+
+    assert!(output.iter().all(|v| v.is_finite()), "RMSNorm output must stay finite: {output:?}");
+    assert!(
+        (output[0] - 1.0).abs() < 1e-6,
+        "positive activation should normalize to 1, got {}",
+        output[0]
+    );
+    assert!(
+        (output[1] + 1.0).abs() < 1e-6,
+        "negative activation should normalize to -1, got {}",
+        output[1]
+    );
+}
+
+/// DenseLinear should not lose small residual terms during cancellation-heavy
+/// dot products, which can change downstream logits and greedy token choices.
+#[test]
+fn dense_linear_preserves_cancellation_residual() {
+    use bitnet_inference::DenseLinear;
+
+    let layer = DenseLinear::new(vec![1.0, 1.0, 1.0], None, 3, 1);
+    let output = layer.forward(&[1.0e8, 1.0, -1.0e8]);
+
+    assert_eq!(output.len(), 1);
+    assert!(
+        (output[0] - 1.0).abs() < 1e-6,
+        "cancellation residual should be preserved, got {}",
+        output[0]
+    );
+}
+
 // ---------------------------------------------------------------------------
 // SiLU + RMSNorm pipeline test
 // ---------------------------------------------------------------------------

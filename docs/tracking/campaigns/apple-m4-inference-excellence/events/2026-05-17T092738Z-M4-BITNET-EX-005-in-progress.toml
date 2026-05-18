@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T09:27:38Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-005-progress-timeout"
+
+notes = [
+  "Started M4-BITNET-EX-005 to harden BitNet one-shot ask and warm-session progress, timeout, partial-failure, and repair UX.",
+  "Scope is CLI and receipt behavior only: one-shot ask timeout/progress taxonomy, failure receipt validation, repair guidance, and tests; BitNet chat and serve remain disabled.",
+  "No model, runtime proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon performance claim changes are in scope.",
+]

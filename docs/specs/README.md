@@ -16,6 +16,7 @@ how that authority is used.
 | What must be true? | `docs/specs/` |
 | What decision did we make? | `docs/adr/` |
 | What PRs execute it? | `plans/` and campaign `active.toml` |
+| What changed and what remains? | `docs/handoffs/`, campaign events, and closeouts |
 | What is currently supported? | `docs/status/` plus proof artifacts |
 | What does CI enforce? | `policy/*.toml` and workflow gates |
 | What happened? | Receipts, artifacts, campaign events, closeouts |

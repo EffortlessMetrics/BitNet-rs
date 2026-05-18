@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T16:14:20Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-009"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-009-eval-history"
+pr = 5386
+head_sha = "e1430f705479d503728ab34ef5a6ecd809e35e01"
+
+notes = [
+  "Opened PR #5386 for the M4-BITNET-EX-009 matching BitNet eval history refresh.",
+  "The PR records a fresh 100-case Rust M4 BitNet answer-corpus receipt at ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json with 79/100 mechanical passes, zero timeouts, and fallback_used=false.",
+  "It records matched-context regression evidence against 2026-05-15T2214Z, four advisory warnings isolated to constrained_summary, a current reference-vs-Rust comparison, task-family pass rates, and a larger-corpus decision to stage 250 cases before any 500-case or broad BitNet quality envelope.",
+  "No dense Qwen evidence reuse, BitNet chat or serve expansion, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]

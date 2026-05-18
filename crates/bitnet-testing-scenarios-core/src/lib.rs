@@ -239,7 +239,9 @@ impl ScenarioConfigManager {
         &[
             TestingScenario::Unit,
             TestingScenario::Integration,
+            TestingScenario::EndToEnd,
             TestingScenario::Performance,
+            TestingScenario::Smoke,
             TestingScenario::CrossValidation,
             TestingScenario::Debug,
             TestingScenario::Development,
@@ -402,7 +404,54 @@ mod tests {
         let manager = ScenarioConfigManager::default();
         let config = manager.resolve(&TestingScenario::Unit, &EnvironmentType::Ci);
 
-        assert!(config.reporting.formats.contains(&ReportFormat::Junit));
+        assert_eq!(config.reporting.formats, vec![ReportFormat::Junit, ReportFormat::Html]);
         assert_eq!(config.max_parallel_tests, 8);
+        assert_eq!(config.log_level, "debug");
+        assert!(config.reporting.generate_coverage);
+        assert!(config.reporting.upload_reports);
+    }
+
+    #[test]
+    fn available_scenarios_lists_every_configured_scenario() {
+        let scenarios = ScenarioConfigManager::available_scenarios();
+
+        assert_eq!(scenarios.len(), 9);
+        assert_eq!(
+            scenarios,
+            &[
+                TestingScenario::Unit,
+                TestingScenario::Integration,
+                TestingScenario::EndToEnd,
+                TestingScenario::Performance,
+                TestingScenario::Smoke,
+                TestingScenario::CrossValidation,
+                TestingScenario::Debug,
+                TestingScenario::Development,
+                TestingScenario::Minimal,
+            ]
+        );
+
+        let manager = ScenarioConfigManager::default();
+        for scenario in scenarios {
+            let config = manager.get_scenario_config(scenario);
+            assert!(!ScenarioConfigManager::scenario_description(scenario).is_empty());
+            assert!(
+                config.test_timeout > Duration::ZERO,
+                "{scenario:?} should expose a usable timeout"
+            );
+            assert!(
+                !config.reporting.formats.is_empty(),
+                "{scenario:?} should expose at least one report format"
+            );
+        }
+
+        assert_eq!(
+            manager.get_scenario_config(&TestingScenario::EndToEnd).test_timeout,
+            Duration::from_secs(300)
+        );
+        assert_eq!(
+            manager.get_scenario_config(&TestingScenario::Smoke).test_timeout,
+            Duration::from_secs(10)
+        );
     }
 }

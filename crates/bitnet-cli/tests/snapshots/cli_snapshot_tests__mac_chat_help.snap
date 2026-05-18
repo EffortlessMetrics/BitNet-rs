@@ -10,51 +10,110 @@ Usage: bitnet mac chat [OPTIONS]
 Options:
   -c, --config <PATH>
           Configuration file path
+
+      --model-family <MODEL_FAMILY>
+          Model family for the resident chat route. BitNet requires --bitnet-chat-gate-receipt
+
+          Possible values:
+          - dense-slm: Run the supported dense Qwen SLM resident chat path
+          - bitnet:    Run the gate-required accepted BitNet M4 CPU/NEON chat route
+
+          [default: dense-slm]
+
+  -d, --device <DEVICE>
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+
       --prompt <TEXT>
           Prompt to answer. Repeat for each turn in the resident Mac session
-  -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
-      --stdin
-          Read additional prompts from stdin, one non-empty line per turn
-      --interactive
-          Collect prompts from an interactive line loop until /exit, /quit, or EOF
+
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)
-      --model-id <MODEL_ID>
-          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
+
+      --stdin
+          Read additional prompts from stdin, one non-empty line per turn
+
+      --interactive
+          Collect prompts from an interactive line loop until /exit, /quit, or EOF
+
       --batch-size <SIZE>
           Batch size for processing
+
+      --model-id <MODEL_ID>
+          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact
+
+          [default: qwen2.5-0.5b-instruct-q8_0]
+
+      --model-path <PATH>
+          Explicit accepted BitNet GGUF path. Only used with --model-family bitnet
+
+      --tokenizer <PATH>
+          Explicit accepted external BitNet tokenizer path. Only used with --model-family bitnet
+
+      --bitnet-chat-gate-receipt <PATH>
+          Ready BitNet chat gate receipt required before --model-family bitnet can run
+
       --cache-dir <PATH>
           Override model cache root. Defaults to ~/.cache/bitnet-rs/models
+
       --system <TEXT>
           Optional system prompt
+
       --max-new-tokens <MAX_NEW_TOKENS>
-          Maximum new tokens to generate per prompt [default: 64] [aliases: --max-tokens, --n-predict]
+          Maximum new tokens to generate per prompt
+
+          [default: 64]
+          [aliases: --max-tokens, --n-predict]
+
       --temperature <TEMPERATURE>
-          Temperature for sampling. The Mac wrapper defaults to deterministic greedy [default: 0]
+          Temperature for sampling. The Mac wrapper defaults to deterministic greedy
+
+          [default: 0]
+
       --top-k <TOP_K>
-          Top-k sampling. The Mac wrapper defaults to greedy top-1 behavior [default: 1]
+          Top-k sampling. The Mac wrapper defaults to greedy top-1 behavior
+
+          [default: 1]
+
       --top-p <TOP_P>
-          Top-p sampling [default: 1]
+          Top-p sampling
+
+          [default: 1]
+
       --repetition-penalty <REPETITION_PENALTY>
-          Repetition penalty [default: 1.1]
+          Repetition penalty
+
+          [default: 1.1]
+
       --seed <SEED>
           Random seed for reproducibility
+
       --threads <THREADS>
-          Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+          Number of CPU threads to use (0 = all cores; deterministic mode may override)
+
+          [default: 0]
+
       --no-stream
           Do not stream generated token text to stdout
+
       --progress
           Emit operator progress lines to stderr while keeping token text on stdout
+
       --quiet
           Suppress warm-session status/progress lines; token streaming still uses stdout
+
       --no-turn-receipts
           Disable per-turn receipt files; the aggregate session receipt still records each turn
+
       --allocation-audit
           Include scoped hot-loop allocation counter deltas in session receipts
+
       --metal-prefill-qkv-phase
           Route the validated Q/K/V prefill Metal phase as an opt-in contribution; answers remain CPU/NEON
+
       --json-out <PATH>
-          Output aggregate Mac chat session receipt [default: target/apple-m4-continuity/mac-chat.json]
+          Output aggregate Mac chat session receipt
+
+          [default: target/apple-m4-continuity/mac-chat.json]
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')

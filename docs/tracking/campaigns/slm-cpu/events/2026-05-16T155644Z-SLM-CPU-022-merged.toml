@@ -1,0 +1,40 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-022"
+event = "merged"
+timestamp = "2026-05-16T15:56:44Z"
+actor = "codex"
+pr = 5140
+head_sha = "acee14ad135a88878a7c4af1440c1d0dc19d8b88"
+merge_sha = "f4bf3fd38c3d0e4f49d0f39999eabc9bd2a834d6"
+branch = "model/slm-cpu-022-smollm2-reference-comparator"
+
+summary = "Merged #5140 with the SmolLM2 reference-comparator contract and CLI fixture coverage."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5140",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
+  "docs/slm/SLM_CPU_SMOLLM2_360M_SANITY.md",
+]
+
+notes = [
+  "SLM-CPU-022 is support-only: it defines the comparator contract and validates the SmolLM2 first-token/top-k artifact shape.",
+  "No fresh external reference comparator was captured in this item.",
+  "SmolLM2 CPU answer readiness, CUDA planning, CUDA execution, speedup, server readiness, broad dense GGUF support, and BitNet QK256 proof remain false.",
+  "The next SmolLM2 proof remains a same-prompt external reference comparator capture before CPU answer readiness or CUDA planning.",
+]
+
+validation = [
+  "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json",
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_validates_smollm2_first_token_topk_artifact",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare_require_match_fails_smollm2_topk_divergence",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+  "GitHub PR checks for #5140: 12 success, 18 skipped",
+]

@@ -1,0 +1,25 @@
+timestamp = "2026-05-17T19:38:51Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-005"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "docs/dense-qwen-exact-server-readiness"
+pr = 5410
+head_sha = "c09f28423d1d9310c96c6222245f5519095714bf"
+summary = "Opened PR #5410 for the exact-profile dense Qwen server readiness promotion."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5410",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json",
+  "docs/reports/CUDA_SERVER_005_DENSE_QWEN_EXACT_PROFILE_SERVER_READY.md",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The PR promotes server_ready=true only for the exact refreshed dense Qwen non-streaming shared-engine chat-completions profile.",
+  "The refreshed receipt passes the server_shared_engine_chat_completion validator and records strict RTX 5070 Ti CUDA backend, dense route, quality gate, and artifact SHA-256.",
+  "Speedup, full CUDA residency, global dense server readiness, production deployment readiness, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
+]
+

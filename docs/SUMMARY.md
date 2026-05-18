@@ -5,6 +5,7 @@
 - [Quickstart](quickstart.md)
 - [Architecture Overview](architecture-overview.md)
 - [Configuration Guide](configuration.md)
+- [Roadmap](../ROADMAP.md)
 
 ## Development
 - [Development](development.md)
@@ -31,6 +32,9 @@
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
 - [CUDA Configuration Guide](cuda-configuration-guide.md)
+- [RTX 5070 Ti BitNet CUDA Guide](tutorials/rtx5070ti-bitnet-cuda.md)
+- [RTX 5070 Ti Dense Qwen CUDA Guide](tutorials/rtx5070ti-dense-qwen-cuda.md)
+- [CUDA Receipt Triage](tutorials/cuda-receipt-triage.md)
 - [Intel Arc GPU Setup](INTEL_GPU_SETUP.md)
 
 ## Miscellaneous

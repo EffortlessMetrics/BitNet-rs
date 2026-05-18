@@ -1,0 +1,20 @@
+timestamp = "2026-05-16T03:36:14Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-002-qwen-cpu-corpus-v2"
+summary = "Started LNL258V-QUAL-002 to run the bounded Lunar Lake answer corpus v2 on the promoted dense Qwen CPU route."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/",
+]
+
+notes = [
+  "This item records real Qwen2.5 CPU corpus-v2 evidence with fallback_used=false and selected_backend=cpu-rust.",
+  "Failures are classified by profile/category for later route-policy work; this item does not promote, narrow, or accelerate any route.",
+  "No broad quality, speedup, Arc/NPU execution, route-promotion, or BitNet QK256/I2_S claim is made.",
+]

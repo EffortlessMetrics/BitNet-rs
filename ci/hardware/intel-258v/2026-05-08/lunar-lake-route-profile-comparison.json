@@ -2,11 +2,21 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-14T21:45:00Z",
+  "created_utc": "2026-05-18T10:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
   "phase_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+  "answer_corpus_v2_fixture": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "route_diagnosis_receipts": [
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json"
+  ],
   "profile_comparison_ready": true,
   "default_route_id": "dense_slm_default_cpu",
   "profiles": [
@@ -16,7 +26,10 @@
       "output_tokens": "<=32",
       "purpose": "cheap strict regression smoke for local runs",
       "promoted_route": "dense_slm_default_cpu",
-      "candidate_routes": [],
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
       "profile_status": "promoted_route_ready",
       "route_evidence": [
         {
@@ -34,33 +47,269 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": true,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "route_id": "dense_slm_default_cpu",
+            "profile_id": "regression_tiny",
+            "profile_present": true,
+            "cases_total": 4,
+            "passed": 4,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": []
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "prompt_tokens": null,
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
+            ]
+          },
+          "benchmark_qualified_advantage": false,
+          "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "regression_tiny",
+            "profile_present": true,
+            "cases_total": 4,
+            "passed": 3,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile regression_tiny"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "evidence": [
+            "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
+          ],
+          "blockers": [
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile regression_tiny has 1 quality failures",
+            "profile_regression_bundle",
+            "route not promoted for profile regression_tiny",
+            "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
+            "stop_token_one_word_done has no passing tested generation budget",
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile regression_tiny"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "prompt_tokens": null,
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646185,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
+            ]
+          },
+          "benchmark_qualified_advantage": false,
+          "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "profile_id": "regression_tiny",
+            "profile_present": true,
+            "cases_total": 4,
+            "passed": 3,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile regression_tiny"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "evidence": [
+            "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
+          ],
+          "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile regression_tiny has 1 quality failures",
+            "profile_regression_bundle",
+            "route not promoted for profile regression_tiny",
+            "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
+            "stop_token_one_word_done has no passing tested generation budget",
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile regression_tiny"
+          ]
         }
       ],
       "promotion_decision": "dense_slm_default_cpu remains promoted for regression_tiny",
@@ -93,31 +342,69 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": true,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "route_id": "dense_slm_default_cpu",
+            "profile_id": "ask_short",
+            "profile_present": true,
+            "cases_total": 2,
+            "passed": 2,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": []
         },
@@ -135,6 +422,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -156,18 +444,65 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "ask_short",
+            "profile_present": true,
+            "cases_total": 2,
+            "passed": 1,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile ask_short"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
           ],
           "blockers": [
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile ask_short has 1 quality failures",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_short",
+            "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
+            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
         },
         {
@@ -184,6 +519,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -205,18 +541,69 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "profile_id": "ask_short",
+            "profile_present": true,
+            "cases_total": 2,
+            "passed": 1,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile ask_short"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json"
           ],
           "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile ask_short has 1 quality failures",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_short",
+            "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
+            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
         }
       ],
@@ -250,31 +637,69 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": true,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "route_id": "dense_slm_default_cpu",
+            "profile_id": "ask_normal",
+            "profile_present": true,
+            "cases_total": 3,
+            "passed": 3,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": []
         },
@@ -292,6 +717,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -313,18 +739,57 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "ask_normal",
+            "profile_present": true,
+            "cases_total": 3,
+            "passed": 3,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_normal"
           ]
         },
         {
@@ -341,6 +806,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -362,18 +828,61 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "profile_id": "ask_normal",
+            "profile_present": true,
+            "cases_total": 3,
+            "passed": 3,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_normal"
           ]
         }
       ],
@@ -408,34 +917,73 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt timing count 38 does not satisfy `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "route_id": "dense_slm_default_cpu",
+            "profile_id": "prefill_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 1,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "route not promoted for profile prefill_heavy"
+            "route not promoted for profile prefill_heavy",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
         {
@@ -452,6 +1000,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -473,18 +1022,63 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `>=2048`",
+              "output timing count 9 satisfies `<=64`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "prefill_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 0,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile prefill_heavy"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile prefill_heavy has 1 quality failures",
+            "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
         {
@@ -501,6 +1095,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -522,18 +1117,67 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `>=2048`",
+              "output timing count 9 satisfies `<=64`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "profile_id": "prefill_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 0,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile prefill_heavy"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile prefill_heavy has 1 quality failures",
+            "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         }
       ],
@@ -568,34 +1212,73 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt timing count 38 satisfies `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "route_id": "dense_slm_default_cpu",
+            "profile_id": "decode_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 1,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "route not promoted for profile decode_heavy"
+            "route not promoted for profile decode_heavy",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
         {
@@ -612,6 +1295,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -633,18 +1317,63 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "decode_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 0,
+            "failed": 1,
+            "fallback_used": false,
+            "status": "quality_failed",
+            "notes": [
+              "1 corpus-v2 cases failed for profile decode_heavy"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile decode_heavy has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile decode_heavy has 1 quality failures",
+            "decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
         {
@@ -661,6 +1390,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -682,18 +1412,61 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "profile_id": "decode_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 1,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         }
       ],
@@ -726,31 +1499,69 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "structured",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=256",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=256`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "route_id": "dense_slm_default_cpu",
+            "profile_id": "structured",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 1,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
             "route not promoted for profile structured"
@@ -788,34 +1599,61 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
             "first_token_ms": 9726.0,
             "decode_total_ms": 3242.064,
             "generation_total_ms": 3242.064,
-            "total_response_ms": null,
+            "total_response_ms": 27986.539,
             "output_tokens": 9,
             "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
-              "warm_decode_128"
+              "warm_decode_128",
+              "telemetry_context_indexed"
             ],
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
-              "power and thermal context not normalized in this comparison"
+              "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json"
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json"
           ],
           "blockers": [
-            "power telemetry receipt missing for low_power promotion",
+            "corpus_v2 profile quality evidence missing",
+            "power advantage evidence missing for low_power promotion",
             "route not promoted for profile low_power"
           ]
         },
@@ -833,6 +1671,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -854,19 +1693,51 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
-            "power telemetry receipt missing for low_power promotion",
+            "corpus_v2 profile quality evidence missing",
+            "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile low_power"
           ]
         },
         {
@@ -883,6 +1754,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -904,19 +1776,47 @@
               "generated token IDs are not available directly from OpenVINO GenAI internals"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": false,
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
-            "power telemetry receipt missing for low_power promotion",
+            "corpus_v2 profile quality evidence missing",
+            "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile low_power"
           ]
         }
       ],
@@ -946,6 +1846,7 @@
               "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
               "cpu-reference-bundle-after-semantic-fix.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": null,
             "tokenize_ms": null,
             "prefill_ms": null,
@@ -963,8 +1864,31 @@
               "BitNet route remains a strict reference route, not a general dense SLM ask route"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "bitnet_strict_reference",
+            "required_prompt_tokens": "fixed BitNet corpus",
+            "required_output_tokens": "bounded",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": null,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt requirement `fixed BitNet corpus` is not a numeric promotion gate",
+              "output requirement `bounded` is not a numeric promotion gate",
+              "profile token requirement is descriptive, not mechanically checked"
+            ]
+          },
           "benchmark_qualified_advantage": false,
           "promotion_eligible_for_profile": true,
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
           "evidence": [
             "cpu-reference-bundle-after-semantic-fix.json",
             "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json"

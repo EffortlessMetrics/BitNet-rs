@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T09:55:25Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-006"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-006-chat-gate"
+pr = 5330
+head_sha = "f6ed776b3b7be1792852815cf0b5237b421907fe"
+
+notes = [
+  "Opened PR #5330 for M4-BITNET-EX-006 BitNet chat gate route enablement.",
+  "The PR makes BitNet mac chat require a ready chat-gate receipt, adds the bitnet_apple_m4_chat_session receipt contract, and keeps BitNet serve disabled.",
+  "No full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]

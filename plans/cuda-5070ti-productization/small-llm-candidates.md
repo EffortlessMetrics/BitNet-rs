@@ -27,7 +27,7 @@ Each model uses the same sequence:
 | F. Short decode / warm session | decode and session receipts | scoped answer proof |
 | G. Benchmark qualification | profile-specific decision | exact accepted profiles only |
 
-## Work items: CUDA-MODEL-001 through CUDA-MODEL-005
+## Work items: CUDA-MODEL-001 through CUDA-MODEL-008
 
 Qwen3 0.6B was the first candidate because it is closest to the existing
 Qwen2.5 dense infrastructure. It has now advanced through artifact contract,
@@ -110,23 +110,73 @@ Acceptance:
 
 Rollback: remove the one-token receipt and keep CUDA answer readiness false.
 
-### CUDA-MODEL-005: Short Decode And Warm Session
+### CUDA-MODEL-005: Short Decode
 
 Acceptance:
 
 - deterministic short-decode receipt;
-- warm-session receipt when model/session reuse is claimed;
+- valid UTF-8 decoded text;
+- CPU/CUDA generated-token equality or explicit first-divergence evidence;
 - quality gate result present;
 - speedup false unless benchmark-qualified.
 
-Rollback: remove the decode/session receipt and demote status rows.
+Rollback: remove the short-decode receipt and keep warm-session/product status
+unpromoted.
+
+### CUDA-MODEL-006: Warm Session
+
+Acceptance:
+
+- model, tokenizer, and CUDA context loaded once when claimed;
+- runtime buffers and weights reused where intended;
+- per-turn receipt evidence or a session summary;
+- speedup, server readiness, and full residency remain false unless later
+  receipts prove those exact claims.
+
+Rollback: remove the warm-session receipt and demote status rows that depended
+on it.
+
+### CUDA-MODEL-007: Benchmark Review
+
+Acceptance:
+
+- one-token, short-decode, and warm-session receipts are reviewed together;
+- each reviewed profile accepts or rejects speedup explicitly;
+- global speedup, server readiness, full residency, and BitNet QK256 proof stay
+  false.
+
+Rollback: remove the benchmark review receipt or demote the benchmark status
+row; do not edit execution receipts by hand.
+
+### CUDA-MODEL-008: Earned Status Sync
+
+Acceptance:
+
+- the Qwen3 model coverage and model-status row reflect the exact earned tier;
+- product CLI, speedup, server, full-residency, broad dense GGUF, and BitNet
+  QK256 claims remain false.
+
+Rollback: restore the previous Qwen3 candidate wording and claim booleans.
 
 ## Next Candidate
 
-The next candidate is SmolLM2 360M. Start at step A with an exact artifact
-contract before any CPU answer, CUDA route, product CLI, benchmark, speed,
-server, full-residency, broad dense GGUF, or BitNet QK256 claim.
+The next candidate is SmolLM2 360M. Step A has landed as an exact artifact
+contract. Step B has advanced through strict CPU preflight, governed
+normalization policy, exact metadata-scoped normalization validation, and a
+strict CPU retry that reaches tokenizer loading, prompt rendering, and
+one-token generation with `fallback_used=false`.
 
-After SmolLM2 360M starts the next ladder, repeat the same A through G sequence
-for Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine
+Do not start SmolLM2 CUDA planning yet. The strict CPU retry selected `The`
+for the math prompt, and SLM-CPU-021 records this as a wrong-first-token
+blocker rather than CPU answer readiness. The next SmolLM2 proof must be a
+reference-compatible first-token/top-k or checkpoint comparator. SLM-CPU-022
+defines that comparator contract and protects the `reference-compare` fixture
+shape, but it is not the missing reference run. The current SmolLM2 state can
+only claim structurally valid artifact metadata plus the committed strict CPU
+blocker/diagnosis/contract chain; it cannot claim CPU answer readiness, CUDA
+route, product CLI, benchmark, speed, server, full-residency, broad dense GGUF,
+or BitNet QK256 proof.
+
+After SmolLM2 360M clears step B, repeat the same A through G sequence for
+Llama 3.2 1B, SmolLM2 1.7B, Llama 3.2 3B, Gemma, and Phi. Do not combine
 candidate families in one PR.

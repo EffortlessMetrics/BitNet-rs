@@ -1,0 +1,13 @@
+timestamp = "2026-05-16T17:01:43Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Starting the full 500-case dense SLM eval-v2 receipt run on the Apple M4 Mac mini for the supported dense model identities.",
+  "The run uses the seeded 500-case mechanical corpus and cached supported GGUF artifacts under ~/Library/Caches/bitnet-rs/models without fetching or copying model files.",
+  "This item is scoped to dense SLM eval receipts only; it does not make BitNet, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claims.",
+]

@@ -64,3 +64,126 @@ impl StartupContractReport {
 fn join_features(features: &[String]) -> String {
     if features.is_empty() { "none".to_string() } else { features.join("+") }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const COMPONENTS: [RuntimeComponent; 4] = [
+        RuntimeComponent::Cli,
+        RuntimeComponent::Server,
+        RuntimeComponent::Test,
+        RuntimeComponent::Custom,
+    ];
+
+    #[test]
+    fn join_features_returns_none_for_empty_slice() {
+        let features: Vec<String> = Vec::new();
+
+        assert_eq!(join_features(&features), "none");
+    }
+
+    #[test]
+    fn join_features_preserves_order_with_plus_delimiters() {
+        let features = vec!["cpu".to_string(), "tokenizers".to_string(), "cli".to_string()];
+
+        assert_eq!(join_features(&features), "cpu+tokenizers+cli");
+    }
+
+    #[test]
+    fn evaluate_observe_builds_report_for_each_component() -> Result<()> {
+        for component in COMPONENTS {
+            let report = StartupContractReport::evaluate(component, ContractPolicy::Observe)?;
+
+            assert_eq!(report.contract.component().label(), component.label());
+            assert!(!report.info.is_empty(), "report must include informational diagnostics");
+            assert!(
+                report.info.iter().any(|line| line.contains(component.label())),
+                "diagnostics should mention component label {}",
+                component.label()
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn profile_summary_includes_context_and_feature_sections() -> Result<()> {
+        let report =
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
+        let summary = report.profile_summary();
+
+        assert!(summary.contains("scenario="));
+        assert!(summary.contains("/environment="));
+        assert!(summary.contains(",required="));
+        assert!(summary.contains(",optional="));
+        assert!(summary.contains(",forbidden="));
+        Ok(())
+    }
+
+    #[test]
+    fn populate_lines_always_adds_summary_and_profile_summary() -> Result<()> {
+        let report =
+            StartupContractReport::evaluate(RuntimeComponent::Test, ContractPolicy::Observe)?;
+
+        assert_eq!(report.info.len(), 2);
+        assert_eq!(report.info[0], report.contract.summary());
+        assert_eq!(report.info[1], format!("Profile summary: {}", report.profile_summary()));
+        Ok(())
+    }
+
+    #[test]
+    fn warnings_reflect_contract_compatibility() -> Result<()> {
+        let report =
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
+
+        if report.contract.is_compatible() {
+            assert!(report.warnings.is_empty());
+        } else {
+            assert!(
+                report
+                    .warnings
+                    .iter()
+                    .any(|line| line.contains("Startup contract is non-compliant"))
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn violation_warning_is_present_only_when_violation_lists_are_non_empty() -> Result<()> {
+        let report =
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
+        let has_violations = !report.contract.missing_required().is_empty()
+            || !report.contract.forbidden_active().is_empty();
+        let has_violation_warning =
+            report.warnings.iter().any(|line| line.contains("Profile violations for active build"));
+
+        assert_eq!(has_violation_warning, has_violations);
+        Ok(())
+    }
+
+    #[test]
+    fn report_keeps_contract_feature_lists_in_profile_summary() -> Result<()> {
+        let report =
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
+        let summary = report.profile_summary();
+
+        assert!(
+            summary.contains(&format!(
+                "required={}",
+                join_features(report.contract.required_features())
+            ))
+        );
+        assert!(
+            summary.contains(&format!(
+                "optional={}",
+                join_features(report.contract.optional_features())
+            ))
+        );
+        assert!(summary.contains(&format!(
+            "forbidden={}",
+            join_features(report.contract.forbidden_features())
+        )));
+        Ok(())
+    }
+}

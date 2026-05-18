@@ -14,12 +14,8 @@ use std::cmp::Ordering;
 /// Returns the number of non-`NEG_INFINITY` entries remaining.
 /// If `top_k == 0` or `top_k >= logits.len()`, the slice is unchanged.
 pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
-    if top_k == 0 || top_k >= logits.len() {
-        return logits.len();
-    }
-
     let unmasked = logits.iter().filter(|&&x| x > f32::NEG_INFINITY).count();
-    if unmasked <= top_k {
+    if top_k == 0 || top_k >= logits.len() || unmasked <= top_k {
         return unmasked;
     }
 
@@ -68,11 +64,11 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
 
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
 
-    let mut cumsum = 0.0f32;
+    let mut cumsum = 0.0f64;
     let mut cutoff = indexed.len();
     for (rank, (_, p)) in indexed.iter().enumerate() {
-        cumsum += p;
-        if cumsum >= top_p {
+        cumsum += f64::from(*p);
+        if cumsum >= f64::from(top_p) {
             cutoff = rank + 1;
             break;
         }
@@ -117,12 +113,12 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
 
     // First pass: collect non-zero probabilities, accumulate entropy, and
     // cache surprise (-p.ln()) so we don't re-evaluate ln() per element.
-    let mut entropy = 0.0f32;
+    let mut entropy = 0.0f64;
     let mut deviations: Vec<(usize, f32, f32)> = Vec::with_capacity(probs.len());
     for (i, &p) in probs.iter().enumerate() {
         if p > 0.0 {
             let surprise = -p.ln();
-            entropy += p * surprise;
+            entropy += f64::from(p * surprise);
             deviations.push((i, p, surprise));
         }
     }
@@ -133,16 +129,16 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
 
     // Second pass: turn the cached surprise into the deviation from entropy.
     for entry in &mut deviations {
-        entry.2 = (entry.2 - entropy).abs();
+        entry.2 = (f64::from(entry.2) - entropy).abs() as f32;
     }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
-    let mut cumsum = 0.0f32;
+    let mut cumsum = 0.0f64;
     let mut cutoff = deviations.len();
     for (rank, &(_, p, _)) in deviations.iter().enumerate() {
-        cumsum += p;
-        if cumsum >= typical_p {
+        cumsum += f64::from(p);
+        if cumsum >= f64::from(typical_p) {
             cutoff = rank + 1;
             break;
         }
@@ -166,6 +162,15 @@ fn f32_ascending(a: f32, b: f32) -> Ordering {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn top_p_uses_accurate_cumulative_sum_for_large_vocab() {
+        let mut probs = vec![1.0e-5f32; 100_000];
+        apply_top_p(&mut probs, 0.5);
+
+        let kept = probs.iter().filter(|&&p| p > 0.0).count();
+        assert_eq!(kept, 50_001);
+    }
 
     #[test]
     fn top_k_keeps_k_largest() {
@@ -197,6 +202,33 @@ mod tests {
         let kept = apply_top_k(&mut logits, 2);
         assert_eq!(kept, 0);
         assert!(logits.iter().all(|value| *value == f32::NEG_INFINITY));
+    }
+
+    #[test]
+    fn top_k_zero_returns_unmasked_count_not_slice_len() {
+        // top_k == 0 is a no-op for the slice, but the return value must still
+        // reflect the contract: "number of non-NEG_INFINITY entries remaining".
+        let original = vec![f32::NEG_INFINITY, 5.0, f32::NEG_INFINITY, 2.0, 4.0];
+        let mut logits = original.clone();
+        let kept = apply_top_k(&mut logits, 0);
+        assert_eq!(kept, 3, "kept must count unmasked entries, not slice length");
+        assert_eq!(logits, original, "slice must be unchanged when top_k == 0");
+    }
+
+    #[test]
+    fn top_k_at_or_above_len_returns_unmasked_count_not_slice_len() {
+        // top_k >= len is a no-op for the slice, but the return value must
+        // still equal the unmasked-entry count.
+        let original = vec![f32::NEG_INFINITY, 5.0, f32::NEG_INFINITY, 2.0, 4.0];
+        let mut logits = original.clone();
+        let kept = apply_top_k(&mut logits, original.len());
+        assert_eq!(kept, 3, "kept must count unmasked entries when top_k == len");
+        assert_eq!(logits, original);
+
+        let mut logits = original.clone();
+        let kept = apply_top_k(&mut logits, original.len() + 10);
+        assert_eq!(kept, 3, "kept must count unmasked entries when top_k > len");
+        assert_eq!(logits, original);
     }
 
     #[test]

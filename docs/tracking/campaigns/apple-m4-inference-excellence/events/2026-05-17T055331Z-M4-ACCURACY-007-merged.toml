@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T05:53:31Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-007"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5285
+merge_sha = "cd36bfb3c4d18be23a1e0e0f38a624f13407f518"
+
+notes = [
+  "Merged PR #5285, adding the second matching full 500-case dense SLM eval-v2 answer-corpus receipts, summaries, task-family rollup, report-refresh manifest, and regression dashboard for every supported dense M4 model identity.",
+  "The committed dashboard reports dense SLM eval-v2 groups as ready for the recorded matching identities, with the 2026-05-17T0045Z reports compared against the 2026-05-16T1711Z 500-case baselines.",
+  "M4-ACCURACY-007 is tracker-closed as dense SLM eval-v2 matching-history evidence only; no BitNet proof, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim was made.",
+]

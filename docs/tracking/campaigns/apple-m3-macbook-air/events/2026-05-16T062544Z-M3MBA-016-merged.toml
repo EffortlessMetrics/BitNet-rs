@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T06:25:44Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-016"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-016-backend-visibility-preflight"
+pr = 5043
+head_sha = "c8001743decb744739d830efe754e00e0abdc6f6"
+merge_sha = "d3566a240b8ab761049fa8aab332985ec7dde26e"
+summary = "Merged PR #5043 for the M3 Air backend visibility preflight contract."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5043",
+  "crates/bitnet-device-probe/src/apple_receipts.rs",
+  "crates/bitnet-device-probe/src/lib.rs",
+  "crates/bitnet-device-probe/tests/apple_backend_receipts.rs",
+  "docs/reports/apple-silicon-macbook-m3-air-backend-preflight.md",
+]
+notes = [
+  "The merged preflight records explicit M3 Air Metal and MPSGraph host/runtime visibility without model loads, downloads, inference, Neural Engine claims, or performance claims.",
+  "The M3 Air campaign focus moves to M3MBA-007 for the next bounded artifact diagnostic surface.",
+]

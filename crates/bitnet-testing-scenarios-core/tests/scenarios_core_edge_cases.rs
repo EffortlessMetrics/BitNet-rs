@@ -150,18 +150,18 @@ fn resolve_unit_ci_uses_ci_parallel_count() {
 }
 
 #[test]
-fn resolve_unit_ci_has_junit_format() {
+fn resolve_unit_ci_uses_exact_ci_report_formats() {
     let mgr = ScenarioConfigManager::default();
     let cfg = mgr.resolve(&TestingScenario::Unit, &EnvironmentType::Ci);
-    assert!(cfg.reporting.formats.contains(&ReportFormat::Junit));
+    assert_eq!(cfg.reporting.formats, vec![ReportFormat::Junit, ReportFormat::Html]);
 }
 
 #[test]
-fn resolve_unit_local_uses_scenario_formats() {
+fn resolve_unit_local_uses_exact_local_report_formats() {
     let mgr = ScenarioConfigManager::default();
     let cfg = mgr.resolve(&TestingScenario::Unit, &EnvironmentType::Local);
-    // Local environment has Html format, which overrides scenario's Json
-    assert!(cfg.reporting.formats.contains(&ReportFormat::Html));
+    // Local environment has Html format, which overrides scenario's Json.
+    assert_eq!(cfg.reporting.formats, vec![ReportFormat::Html]);
 }
 
 #[test]
@@ -173,19 +173,19 @@ fn resolve_perf_ci_keeps_sequential() {
 }
 
 #[test]
-fn resolve_timeout_takes_max() {
+fn resolve_timeout_takes_exact_max() {
     let mgr = ScenarioConfigManager::default();
     let cfg = mgr.resolve(&TestingScenario::Performance, &EnvironmentType::Ci);
-    // Performance has 1800s timeout, CI has default (0s), max should be 1800s
-    assert!(cfg.test_timeout >= Duration::from_secs(1800));
+    // Performance has 1800s timeout; CI inherits the 300s default, so max is 1800s.
+    assert_eq!(cfg.test_timeout, Duration::from_secs(1800));
 }
 
 #[test]
-fn resolve_coverage_threshold_takes_max() {
+fn resolve_coverage_threshold_takes_exact_max() {
     let mgr = ScenarioConfigManager::default();
     let cfg = mgr.resolve(&TestingScenario::EndToEnd, &EnvironmentType::PreProduction);
-    // E2E has 0.9, PreProd has 0.7 → max is 0.9
-    assert!(cfg.coverage_threshold >= 0.9);
+    // E2E has 0.9, PreProd has 0.7, so max is 0.9.
+    assert_eq!(cfg.coverage_threshold, 0.9);
 }
 
 // ---------------------------------------------------------------------------
@@ -283,11 +283,21 @@ fn scenario_descriptions_are_unique() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn available_scenarios_has_unit_integration_perf() {
-    let scenarios = ScenarioConfigManager::available_scenarios();
-    assert!(scenarios.contains(&TestingScenario::Unit));
-    assert!(scenarios.contains(&TestingScenario::Integration));
-    assert!(scenarios.contains(&TestingScenario::Performance));
+fn available_scenarios_has_every_registered_variant_in_order() {
+    assert_eq!(
+        ScenarioConfigManager::available_scenarios(),
+        &[
+            TestingScenario::Unit,
+            TestingScenario::Integration,
+            TestingScenario::EndToEnd,
+            TestingScenario::Performance,
+            TestingScenario::Smoke,
+            TestingScenario::CrossValidation,
+            TestingScenario::Debug,
+            TestingScenario::Development,
+            TestingScenario::Minimal,
+        ]
+    );
 }
 
 // ---------------------------------------------------------------------------

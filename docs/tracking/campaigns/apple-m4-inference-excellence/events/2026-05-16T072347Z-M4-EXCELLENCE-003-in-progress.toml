@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T07:23:47Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-003"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-003-dashboard-trends"
+summary = "Started the model-free M4 report-refresh and regression-dashboard trend validation."
+
+notes = [
+  "Started the model-free M4 regression dashboard trend validation after M4-EXCELLENCE-001 and M4-EXCELLENCE-002 landed.",
+  "`target/release/bitnet mac report-refresh` reported status ok, five report families, and 18 committed reports.",
+  "`target/release/bitnet mac regression-dashboard` reported status ok, nine comparable groups, and no insufficient-history group for the important dense SLM or BitNet families.",
+  "This item does not run live models, download models, enable BitNet chat/serve, or claim Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup.",
+]

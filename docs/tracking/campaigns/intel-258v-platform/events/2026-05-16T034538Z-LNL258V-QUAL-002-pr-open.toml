@@ -1,0 +1,22 @@
+timestamp = "2026-05-16T03:45:38Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5042
+head_sha = "f9fd7401a396f1d60f40be7d53ed2d5d08098d79"
+branch = "codex/lunar-lake/LNL258V-QUAL-002-qwen-cpu-corpus-v2"
+summary = "Opened LNL258V-QUAL-002 to commit the dense Qwen CPU corpus-v2 execution receipt and profile-aware answer-corpus receipt fields."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5042",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/",
+]
+
+notes = [
+  "The committed receipt records 12 total cases, 6 passed, 6 failed, 0 timed out, and fallback_used=false on selected_backend=cpu-rust.",
+  "The PR records evidence only; it does not claim broad dense SLM quality, route promotion, speedup, Arc/NPU execution, or BitNet QK256/I2_S proof.",
+]

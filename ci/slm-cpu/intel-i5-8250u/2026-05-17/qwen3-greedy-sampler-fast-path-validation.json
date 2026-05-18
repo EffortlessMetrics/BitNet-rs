@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_sampler_fast_path_validation",
+  "claim": "greedy_no_penalty_sampler_fast_path_preserves_qwen3_warm_session_outputs",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "baseline_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-15/qwen3-warm-session-threads-4.json",
+  "after_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-greedy-sampler-fast-path.json",
+  "selected_backend": "cpu-rust",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  },
+  "generation": {
+    "deterministic": true,
+    "max_new_tokens": 8,
+    "mode": "greedy",
+    "prompt_template": "qwen",
+    "qwen_no_think": true,
+    "repetition_penalty": 1.100000023841858,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "quality_passed": true,
+  "determinism_passed": true,
+  "generated_outputs_match_baseline": true,
+  "sampler_decode_allocations_zero": true,
+  "comparison_count": 6,
+  "comparisons": [
+    {
+      "prompt_key": "bounded_capital_france#0",
+      "generated_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        3070,
+        59604,
+        334
+      ],
+      "decoded_text": "The capital of France is **Paris**",
+      "sample_alloc_count_total": 0,
+      "sample_alloc_bytes_total": 0
+    },
+    {
+      "prompt_key": "bounded_capital_france#1",
+      "generated_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        3070,
+        59604,
+        334
+      ],
+      "decoded_text": "The capital of France is **Paris**",
+      "sample_alloc_count_total": 0,
+      "sample_alloc_bytes_total": 0
+    },
+    {
+      "prompt_key": "bounded_repeat_colors#0",
+      "generated_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "generated_token_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "decoded_text": "Red, blue, green.<|im_end|>",
+      "sample_alloc_count_total": 0,
+      "sample_alloc_bytes_total": 0
+    },
+    {
+      "prompt_key": "bounded_repeat_colors#1",
+      "generated_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "generated_token_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "decoded_text": "Red, blue, green.<|im_end|>",
+      "sample_alloc_count_total": 0,
+      "sample_alloc_bytes_total": 0
+    },
+    {
+      "prompt_key": "bounded_yes_no_water#0",
+      "generated_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "generated_token_ids": [
+        9454,
+        11,
+        3015,
+        374,
+        6509,
+        14401,
+        13,
+        151645
+      ],
+      "decoded_text": "Yes, water is considered wet.<|im_end|>",
+      "sample_alloc_count_total": 0,
+      "sample_alloc_bytes_total": 0
+    },
+    {
+      "prompt_key": "bounded_yes_no_water#1",
+      "generated_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "generated_token_ids": [
+        9454,
+        11,
+        3015,
+        374,
+        6509,
+        14401,
+        13,
+        151645
+      ],
+      "decoded_text": "Yes, water is considered wet.<|im_end|>",
+      "sample_alloc_count_total": 0,
+      "sample_alloc_bytes_total": 0
+    }
+  ],
+  "claim_boundary": {
+    "may_claim": [
+      "temperature=0.0 sampling without active repetition penalty bypasses sampler logits scratch copying",
+      "the recorded i5-8250U Qwen3 Q8_0 warm-session after artifact preserves generated IDs and strict provenance against the 4-thread baseline"
+    ],
+    "must_not_claim": [
+      "sustained 8250U throughput",
+      "broad Qwen answer quality",
+      "Q4/Q5 quant expansion",
+      "server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 support"
+    ]
+  }
+}

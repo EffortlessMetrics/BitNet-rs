@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T09:56:43Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-006"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-006-chat-gate"
+pr = 5330
+head_sha = "e793add2b68da3c7be1eb42668e191a1411033ab"
+merge_sha = "7f4d2adfdd8f668f121ecc9ab56008e8d10fdeef"
+
+notes = [
+  "Merged PR #5330 for M4-BITNET-EX-006 BitNet chat gate route enablement.",
+  "The merge makes BitNet mac chat require a ready chat-gate receipt, adds the bitnet_apple_m4_chat_session receipt contract, and keeps BitNet serve disabled.",
+  "No full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim changes.",
+]

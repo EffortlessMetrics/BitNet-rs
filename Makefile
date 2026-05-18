@@ -16,7 +16,7 @@ NC := $(shell tput sgr0 2>/dev/null || echo "")
 .PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup \
         build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
         watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
-        guards preflight docs-check \
+        guards preflight docs-check doctor \
         b t r c f l d g bt bf cf cb ct fr ft q a i
 
 # Detect OS and features
@@ -51,13 +51,17 @@ help:
 	@echo "$(BLUE)BitNet-rs One-Click Commands$(NC)"
 	@echo ""
 	@echo "$(GREEN)Primary Commands:$(NC)"
-	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z0-9_ -]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
+	@awk '/^## / { line = $$0; sub(/^## /, "", line); target = line; sub(/:.*/, "", target); desc = line; sub(/^[^:]*: */, "", desc); printf "  %-20s %s\n", target, desc }' $(MAKEFILE_LIST) | sort
 	@echo ""
 	@echo "$(YELLOW)Quick Examples:$(NC)"
 	@echo "  make              # Quick start (builds and tests)"
 	@echo "  make run          # Run the CLI"
 	@echo "  make test         # Run all tests"
 	@echo "  make bench        # Run benchmarks"
+	@echo "  make doctor       # Diagnose local toolchain and optional dev tools"
+	@echo ""
+	@echo "$(YELLOW)Detected Defaults:$(NC)"
+	@echo "  FEATURES=$(FEATURES) OS=$(OS) ARCH=$(ARCH) JOBS=$(JOBS)"
 	@echo ""
 
 ## quick: One-click quick start (default)
@@ -184,6 +188,10 @@ docs-check:
 	@echo "$(GREEN)Running documentation automation checks...$(NC)"
 	@scripts/docs_automation.sh
 
+## doctor: Diagnose local toolchain and optional developer tools
+doctor:
+	@./scripts/doctor.sh
+
 #############################################################################
 # GPU TARGETS
 #############################################################################
@@ -257,27 +265,34 @@ guards:
 	@echo "$(GREEN)✅ All actions pinned to 40-hex SHAs$(NC)"
 	@echo ""
 	@# Check for stale MSRV references in workflow config
-	@echo "$(BLUE)Checking for stale MSRV versions (should be 1.93.0 or dynamic)...$(NC)"
-	@wrong_msrv=$$(rg --color=never --glob '!guards.yml' \
+	@echo "$(BLUE)Checking for stale MSRV versions (should match rust-toolchain.toml or be dynamic)...$(NC)"
+	@expected_msrv=$$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml | head -n 1); \
+	wrong_msrv=$$(rg --color=never --glob '!guards.yml' \
 	      -e 'toolchain:\s*"?1\.89\.0"?' \
 	      -e 'toolchain:\s*"?1\.90\.0"?' \
 	      -e 'toolchain:\s*"?1\.91\.0"?' \
 	      -e 'toolchain:\s*"?1\.92\.0"?' \
+	      -e 'toolchain:\s*"?1\.93\.0"?' \
+	      -e 'toolchain:\s*"?1\.94\.0"?' \
 	      -e 'rust-version\s*=\s*"1\.89\.0"' \
 	      -e 'rust-version\s*=\s*"1\.90\.0"' \
 	      -e 'rust-version\s*=\s*"1\.91\.0"' \
 	      -e 'rust-version\s*=\s*"1\.92\.0"' \
+	      -e 'rust-version\s*=\s*"1\.93\.0"' \
+	      -e 'rust-version\s*=\s*"1\.94\.0"' \
 	      -e '"RUST_VERSION"\s*:\s*"1\.89\.0"' \
 	      -e '"RUST_VERSION"\s*:\s*"1\.90\.0"' \
 	      -e '"RUST_VERSION"\s*:\s*"1\.91\.0"' \
 	      -e '"RUST_VERSION"\s*:\s*"1\.92\.0"' \
+	      -e '"RUST_VERSION"\s*:\s*"1\.93\.0"' \
+	      -e '"RUST_VERSION"\s*:\s*"1\.94\.0"' \
 	      .github/workflows 2>/dev/null || true); \
 	if [ -n "$$wrong_msrv" ]; then \
-	   echo "$(RED)❌ Found stale MSRV in workflows (expected 1.93.0 or dynamic):$(NC)"; \
+	   echo "$(RED)❌ Found stale MSRV in workflows (expected $$expected_msrv or dynamic):$(NC)"; \
 	   echo "$$wrong_msrv"; \
 	   exit 1; \
 	fi
-	@echo "$(GREEN)✅ No stale MSRV versions found (1.93.0 or dynamic from rust-toolchain.toml)$(NC)"
+	@echo "$(GREEN)✅ No stale MSRV versions found (matches rust-toolchain.toml or dynamic)$(NC)"
 	@echo ""
 	@# Check cargo/cross --locked flags
 	@echo "$(BLUE)Checking cargo/cross --locked flags...$(NC)"

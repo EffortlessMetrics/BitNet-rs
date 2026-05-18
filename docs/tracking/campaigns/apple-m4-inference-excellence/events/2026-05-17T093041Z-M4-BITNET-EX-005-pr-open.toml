@@ -1,0 +1,16 @@
+timestamp = "2026-05-17T09:30:41Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-005"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-005-progress-timeout"
+pr = 5323
+head_sha = "cef4e38654bae2d1613253629cebcd4a71315c85"
+
+notes = [
+  "Opened PR #5323 for M4-BITNET-EX-005 BitNet progress and timeout UX hardening.",
+  "The PR adds BitNet one-shot ask timeout handling, progress taxonomy, timeout boundary fields, repair guidance, and explicit partial-generation fields to failure receipts, and aligns warm failure receipts with the same partial-generation availability field.",
+  "BitNet chat and serve remain disabled; no model, runtime proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon performance claim changes.",
+]

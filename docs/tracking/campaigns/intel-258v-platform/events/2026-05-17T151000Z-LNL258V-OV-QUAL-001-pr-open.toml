@@ -1,0 +1,24 @@
+timestamp = "2026-05-17T15:10:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OV-QUAL-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-001-fixture-aware-diagnosis"
+pr = 5347
+head_sha = "75bb8bdb10af0e7f16e249b422c241089ceff6d6"
+summary = "Opened LNL258V-OV-QUAL-001 to verify OpenVINO GPU/NPU corpus-v2 diagnosis receipts against the active fixture."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "PR #5347 keeps OpenVINO GPU/NPU routes candidate-only and unpromoted.",
+  "The diagnosis artifacts now record active fixture source plus stale and missing corpus-v2 case IDs.",
+  "The PR preserves no new inference, no speedup, no power-advantage, no acceleration, and no BitNet QK256/I2_S behavior-change boundaries.",
+]

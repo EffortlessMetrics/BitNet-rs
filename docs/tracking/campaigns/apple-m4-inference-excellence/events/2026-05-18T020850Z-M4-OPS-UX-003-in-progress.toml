@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T02:08:50Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-003-doctor-bitnet"
+
+notes = [
+  "Started M4-OPS-UX-003 to extend Mac status and doctor readiness UX across dense SLM and BitNet states.",
+  "Scope is model-free readiness and failed-doctor repair guidance: no new live inference proof, model download, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]

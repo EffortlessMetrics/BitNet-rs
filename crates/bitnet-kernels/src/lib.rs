@@ -1,4 +1,32 @@
 #![recursion_limit = "256"]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::absurd_extreme_comparisons,
+        clippy::approx_constant,
+        clippy::assertions_on_constants,
+        clippy::collapsible_if,
+        clippy::drop_non_drop,
+        clippy::field_reassign_with_default,
+        clippy::len_zero,
+        clippy::manual_div_ceil,
+        clippy::manual_slice_fill,
+        clippy::needless_borrows_for_generic_args,
+        clippy::needless_update,
+        clippy::unnecessary_cast,
+        clippy::erasing_op,
+        clippy::excessive_precision,
+        clippy::identity_op,
+        clippy::manual_is_multiple_of,
+        clippy::manual_range_contains,
+        clippy::min_max,
+        clippy::needless_range_loop,
+        clippy::overly_complex_bool_expr,
+        clippy::redundant_closure,
+        clippy::too_many_arguments,
+        clippy::useless_vec
+    )
+)]
 
 //! High-performance compute kernels for BitNet inference.
 //!

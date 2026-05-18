@@ -18,6 +18,7 @@ mod hooks;
 mod locking;
 mod models;
 mod testing;
+mod unsafe_analysis;
 mod validation;
 
 use self::{
@@ -40,10 +41,11 @@ use self::{
         cmd_test_optimizations, cmd_test_policy, cmd_test_quant_support, cmd_test_quick,
         cmd_test_real_tokenizer, cmd_test_simple, cmd_test_token_generation, cmd_xtask_smoke,
     },
+    unsafe_analysis::cmd_analyze_unsafe,
     validation::{
         cmd_check_codeowners_teams, cmd_check_coverage, cmd_check_envlock, cmd_check_feature_gates,
-        cmd_check_ignore_annotations, cmd_check_serial_annotations, cmd_check_units,
-        cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
+        cmd_check_ignore_annotations, cmd_check_patch_policy, cmd_check_serial_annotations,
+        cmd_check_units, cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
         cmd_validate_iq2s_build, cmd_validate_strict,
     },
 };
@@ -75,6 +77,8 @@ enum Task {
         #[arg(default_value = "models/llama3-tokenizer/tokenizer.json")]
         tokenizer: String,
     },
+    /// Equivalent of scripts/analyze_unsafe.py
+    AnalyzeUnsafe,
     /// Equivalent of scripts/build_cpp_static.sh
     BuildCppStatic {
         /// Optional override for the BitNet.cpp checkout path.
@@ -85,6 +89,15 @@ enum Task {
     CheckIgnoreAnnotations,
     /// Equivalent of scripts/check-envlock.sh
     CheckEnvlock,
+    /// Equivalent of scripts/check-patch-policy.sh
+    CheckPatchPolicy {
+        /// Fail with a critical policy exit when any patch violation is present.
+        #[arg(long)]
+        strict: bool,
+        /// Prepare patch-tracking issue text when patches are present.
+        #[arg(long)]
+        create_issue: bool,
+    },
     /// Equivalent of scripts/check-units-imports.sh
     CheckUnitsImports,
     /// Equivalent of scripts/check-units.sh
@@ -276,9 +289,13 @@ fn main() -> Result<()> {
     match cli.command {
         Task::Preflight { emit_env } => cmd_preflight(emit_env),
         Task::BitnetAccept { model, tokenizer } => cmd_bitnet_accept(&root, &model, &tokenizer),
+        Task::AnalyzeUnsafe => cmd_analyze_unsafe(&root),
         Task::BuildCppStatic { cpp_dir } => cmd_build_cpp_static(&root, cpp_dir.as_deref()),
         Task::CheckIgnoreAnnotations => cmd_check_ignore_annotations(&root),
         Task::CheckEnvlock => cmd_check_envlock(&root),
+        Task::CheckPatchPolicy { strict, create_issue } => {
+            cmd_check_patch_policy(&root, strict, create_issue)
+        }
         Task::CheckUnitsImports => cmd_check_units_imports(&root),
         Task::CheckUnits => cmd_check_units(&root),
         Task::ResolveModelPath { model } => cmd_resolve_model_path(&root, &model),

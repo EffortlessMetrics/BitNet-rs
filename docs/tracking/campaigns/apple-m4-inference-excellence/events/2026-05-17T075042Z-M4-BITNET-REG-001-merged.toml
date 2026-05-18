@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T07:50:42Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-REG-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5299
+merge_sha = "173a59055f11a5677712942abc2a79358d1cf307"
+
+notes = [
+  "Merged PR #5299, adding direct `bitnet mac regression --baseline` comparison support for `bitnet_apple_m4_warm_session` receipts.",
+  "The comparator gates on accepted BitNet artifact/tokenizer identity, backend, fallback state, prompt set, warm profile, timeout policy, receipt schema, and claim boundaries before reporting timing, throughput, memory, quality, or determinism drift.",
+  "M4-BITNET-REG-001 is tracker-closed as BitNet warm-session regression support only; no fresh runtime proof, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim was made.",
+]

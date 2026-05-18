@@ -15,6 +15,7 @@ diagnostic, advisory, or planned.
 | Capability matrix | Product claim tier, proof command, proof artifact, claim boundary |
 | Claim boundaries | What a proof does and does not allow the README or CLI docs to say |
 | README summary | Short user entry point, not the final proof map |
+| Handoff | Operator transfer context and validation gaps, not claim authority |
 | Receipt/artifact | Evidence for one run, model, backend, or lane |
 
 ## Required Claim Boundary
@@ -29,16 +30,22 @@ Status documents must preserve BitNet-specific distinctions:
 - Diagnostic receipts are useful evidence but must remain diagnostic until the
   relevant artifact and answer gates pass.
 
-## Planned Status Surfaces
+## Status Surfaces
 
-The proof-convergence lane will add maintained status surfaces such as:
+Current maintained status surfaces:
+
+```text
+docs/status/CUDA_CAPABILITY_MATRIX.md
+```
+
+Planned status surfaces include:
 
 ```text
 docs/status/CAPABILITY_MATRIX.md
 docs/status/CLAIM_BOUNDARIES.md
 ```
 
-Until those exist, prefer the existing operational authorities:
+These pages summarize proof. They do not replace the operational authorities:
 
 - `README.md` for high-level user positioning.
 - `ROADMAP.md` for release direction and current limitations.
@@ -47,3 +54,4 @@ Until those exist, prefer the existing operational authorities:
 - `docs/hardware/HARDWARE_MATRIX.md` for hardware lane identity.
 - `docs/ci/cost-and-verification-policy.md` for CI economics.
 - `docs/tracking/TRACKER_MODEL.md` for campaign execution state.
+- `docs/handoffs/` for operator transfer notes and closeout summaries.

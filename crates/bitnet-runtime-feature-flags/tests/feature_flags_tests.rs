@@ -1,3 +1,5 @@
+#![allow(clippy::clone_on_copy)]
+
 //! Comprehensive tests for `bitnet-runtime-feature-flags`.
 //!
 //! Covers `FeatureActivation` construction, feature-lattice implications,

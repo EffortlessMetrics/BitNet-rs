@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T09:40:32Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-006-chat-gate"
+
+notes = [
+  "Started the BitNet chat gate route-enablement item after M4-BITNET-EX-005 merged and campaign next advanced to M4-BITNET-EX-006.",
+  "Scope is explicit ready-gate BitNet chat routing and receipt validation for the accepted Apple M4 CPU/NEON artifact/tokenizer only.",
+  "BitNet serve remains disabled; no full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon performance claim changes.",
+]

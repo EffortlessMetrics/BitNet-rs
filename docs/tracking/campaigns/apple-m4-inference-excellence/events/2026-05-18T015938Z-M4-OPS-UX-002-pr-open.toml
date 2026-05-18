@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T01:59:38Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5478
+head_sha = "4702b81ab5f29cb4607e33c20bb308f0dab2cf00"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-002-explain-open"
+
+notes = [
+  "Opened PR #5478 for model-free report-refresh and regression-dashboard explanation/open-target affordances.",
+  "New receipts use schema 1.1.0 for operator affordance fields while committed schema 1.0.0 dashboard and manifest receipts remain receipts-check compatible.",
+  "Scope remains operator UX only: no live inference, model download, new runtime proof, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]

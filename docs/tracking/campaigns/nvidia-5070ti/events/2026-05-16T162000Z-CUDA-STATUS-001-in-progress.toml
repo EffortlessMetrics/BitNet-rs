@@ -1,0 +1,12 @@
+timestamp = "2026-05-16T16:20:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-STATUS-001"
+event = "in_progress"
+branch = "docs/cuda-capability-matrix"
+actor = "codex"
+
+notes = [
+  "Started a docs/status CUDA capability matrix page for the 9950X3D + RTX 5070 Ti product lane.",
+  "The page is sourced from the model coverage matrix and NVIDIA campaign proof ledger.",
+  "This is a status-summary slice only: no model coverage row, receipt, runtime, CUDA, speed, server, full-residency, README badge, crates.io, or docs.rs claim is promoted.",
+]

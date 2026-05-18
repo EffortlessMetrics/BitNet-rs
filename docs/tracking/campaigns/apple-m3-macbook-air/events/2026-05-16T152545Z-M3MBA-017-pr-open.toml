@@ -1,0 +1,17 @@
+timestamp = "2026-05-16T15:25:45Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-017"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-017-device-help-alignment"
+pr = 5148
+head_sha = "288f48bdf250abf7925ec3b641de61fbb48e7b8b"
+summary = "Opened PR #5148 for M3 Air device help and rejection alignment."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5148",
+]
+notes = [
+  "The PR aligns CLI help and rejection text for apple-m3-air-metal, apple-m3-air-mpsgraph, and apple-m3-air-cpu-neon without enabling model inference or broad performance claims.",
+]

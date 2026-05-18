@@ -9,9 +9,11 @@ use clap::{Args, Subcommand};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
+use std::process::Command;
 
 const DEFAULT_ARTIFACT_ROOT: &str = "ci/hardware/intel-258v/2026-05-08";
 
@@ -23,6 +25,8 @@ const DENSE_OV_GPU: &str = "slm-openvino-gpu-arc140v-llmpipeline-smoke.json";
 const DENSE_OV_NPU: &str = "slm-openvino-npu-llmpipeline-smoke.json";
 const DENSE_OV_GPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-gpu-math-brief.json";
 const DENSE_OV_NPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-npu-math-brief.json";
+const DENSE_CPU_CORPUS_V2: &str = "slm-answer-corpus-qwen25-cpu-corpus-v2.json";
+const DENSE_OV_CORPUS_V2: &str = "slm-openvino-cpu-gpu-npu-corpus-v2.json";
 const BITNET_CPU_BUNDLE: &str = "cpu-reference-bundle-after-semantic-fix.json";
 const BITNET_REFERENCE: &str = "cpu-bitnet-ref-001-external-boundary.json";
 const BITNET_REFERENCE_DIRECT: &str = "external-first-token-reference-direct.json";
@@ -36,10 +40,26 @@ const NPU_RMSNORM: &str = "npu-bitnet-rmsnorm-subgraph-parity.json";
 const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
 const NPU_FFN: &str = "npu-bitnet-ffn-subgraph-parity.json";
 const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
+#[cfg(test)]
 const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
 const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
 const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
+const REGRESSION_BUNDLE_V2: &str = "lunar-lake-regression-bundle-v2.json";
+const COLD_WARM_PROFILE_BENCHMARK: &str =
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
+const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
+const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
+const DURABILITY_BUNDLE: &str =
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
+const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
+const CPU_SLM_PHASE_ATTRIBUTION: &str = "lunar-lake-cpu-slm-phase-attribution.json";
+const CPU_SLM_RESIDENT_SESSION: &str = "lunar-lake-cpu-slm-resident-session.json";
+const CPU_SLM_RUNTIME_COMPARISON: &str = "lunar-lake-cpu-slm-runtime-comparison.json";
+const OPENVINO_GPU_CORPUS_V2_DIAGNOSIS: &str = "lunar-lake-openvino-gpu-corpus-v2-diagnosis.json";
+const OPENVINO_NPU_COLD_START_DIAGNOSIS: &str = "lunar-lake-openvino-npu-cold-start-diagnosis.json";
+const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
+    "lunar-lake-openvino-generation-budget-sensitivity.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -71,6 +91,7 @@ const REQUIRED_ROUTE_PROFILES: &[&str] = &[
     "low_power",
     "bitnet_strict_reference",
 ];
+const DURABILITY_REQUIRED_PROFILES: &[&str] = &["regression_tiny", "ask_short", "ask_normal"];
 
 /// Lunar Lake operator commands.
 #[derive(Args, Debug, Clone)]
@@ -120,6 +141,16 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
         route_profile_comparison: Option<PathBuf>,
 
+        /// Optional cold/warm profile benchmark qualification receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
+        cold_warm_benchmark: Option<PathBuf>,
+
+        /// Optional durability bundle to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = DURABILITY_BUNDLE)]
+        durability_bundle: Option<PathBuf>,
+
         /// Output JSON regression bundle to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -143,8 +174,8 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = OPERATOR_READINESS)]
         operator_receipt: PathBuf,
 
-        /// Regression bundle to compare. Relative paths are resolved under artifact-root.
-        #[arg(long, default_value = REGRESSION_BUNDLE)]
+        /// Strict regression-v2 bundle to compare. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = REGRESSION_BUNDLE_V2)]
         regression_bundle: PathBuf,
 
         /// Output JSON comparison receipt to file.
@@ -201,6 +232,46 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
         phase_comparison: PathBuf,
 
+        /// Active answer corpus v2 fixture used to verify corpus receipt case alignment.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ANSWER_CORPUS_V2)]
+        answer_corpus_v2: Option<PathBuf>,
+
+        /// Dense Qwen CPU corpus-v2 execution receipt to classify promoted CPU profile quality.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
+        cpu_corpus_v2: Option<PathBuf>,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 execution receipt to classify candidate profile quality.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: Option<PathBuf>,
+
+        /// Optional power/thermal context receipt to normalize profile telemetry evidence.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long)]
+        telemetry_context: Option<PathBuf>,
+
+        /// Optional OpenVINO GPU corpus-v2 diagnosis receipt to attach candidate-route blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)]
+        gpu_quality_diagnosis: Option<PathBuf>,
+
+        /// Optional OpenVINO NPU corpus-v2 diagnosis receipt to attach candidate-route blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = "lunar-lake-openvino-npu-corpus-v2-diagnosis.json")]
+        npu_quality_diagnosis: Option<PathBuf>,
+
+        /// Optional OpenVINO NPU cold-start diagnosis receipt to attach cold-route blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_NPU_COLD_START_DIAGNOSIS)]
+        npu_cold_start_diagnosis: Option<PathBuf>,
+
+        /// Optional OpenVINO generation-budget sensitivity receipt to attach exact-answer blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_GENERATION_BUDGET_SENSITIVITY)]
+        openvino_budget_sensitivity: Option<PathBuf>,
+
         /// Output JSON profile comparison to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -210,6 +281,308 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the profile comparison cannot safely preserve CPU as default.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Diagnose bounded dense Qwen CPU corpus-v2 profile blockers without running inference.
+    QualityDiagnose {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Dense Qwen CPU corpus-v2 execution receipt to diagnose.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
+        cpu_corpus_v2: PathBuf,
+
+        /// Optional route-profile comparison receipt to attach route blockers.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: Option<PathBuf>,
+
+        /// Output JSON diagnosis receipt to file.
+        #[arg(
+            long,
+            default_value = "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json"
+        )]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the diagnosis cannot safely classify the committed corpus receipt.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Qualify cold/warm profile timing evidence without running inference or changing routes.
+    #[command(alias = "bench")]
+    Benchmark {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Route profile comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: PathBuf,
+
+        /// Dense SLM phase comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
+        phase_comparison: PathBuf,
+
+        /// Optional power/thermal context receipt to attach to route timing evidence.
+        #[arg(long)]
+        telemetry_context: Option<PathBuf>,
+
+        /// Output JSON cold/warm benchmark qualification receipt to file.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the benchmark qualification surface cannot safely gate route promotion.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Attribute the promoted dense Qwen CPU route timing from existing receipts.
+    CpuSlmPhaseAttribution {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Dense Qwen CPU warm-session phase receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_PHASE)]
+        cpu_phase: PathBuf,
+
+        /// Cold/warm profile benchmark qualification receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
+        cold_warm_benchmark: PathBuf,
+
+        /// Dense SLM phase comparison receipt to inspect for OpenVINO CPU context.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
+        phase_comparison: PathBuf,
+
+        /// Output JSON CPU dense-SLM attribution receipt to file.
+        #[arg(long, default_value = CPU_SLM_PHASE_ATTRIBUTION)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the attribution cannot classify the CPU timing evidence.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Summarize resident dense Qwen CPU no-reload timing from repeated warm-session receipts.
+    CpuSlmResidentSession {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// CPU dense-SLM phase attribution receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = CPU_SLM_PHASE_ATTRIBUTION)]
+        phase_attribution: PathBuf,
+
+        /// Repeated dense Qwen CPU warm-session receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DURABLE_QWEN_CPU_WARM_SESSION)]
+        repeated_warm_session: PathBuf,
+
+        /// Repeated executions required before the resident session can be treated as covered.
+        #[arg(long, default_value_t = 10)]
+        required_repeats: u64,
+
+        /// Output JSON resident-session receipt to file.
+        #[arg(long, default_value = CPU_SLM_RESIDENT_SESSION)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the resident-session artifact cannot classify the no-reload evidence.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Compare Rust GGUF CPU and OpenVINO CPU evidence for dense Qwen without changing routes.
+    CpuSlmRuntimeComparison {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// CPU dense-SLM resident-session receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = CPU_SLM_RESIDENT_SESSION)]
+        resident_session: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 receipt to inspect for OpenVINO CPU profile quality.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU phase-runner receipt to inspect for OpenVINO CPU PerfMetrics.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_PHASE)]
+        openvino_phase_runner: PathBuf,
+
+        /// Output JSON runtime-comparison receipt to file.
+        #[arg(long, default_value = CPU_SLM_RUNTIME_COMPARISON)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the runtime comparison cannot classify Rust CPU vs OpenVINO CPU evidence.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Diagnose OpenVINO dense-SLM corpus-v2 failures for one candidate route.
+    OpenVinoQualityDiagnose {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 receipt to diagnose.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: PathBuf,
+
+        /// Active answer corpus v2 fixture used to verify corpus receipt case alignment.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ANSWER_CORPUS_V2)]
+        answer_corpus_v2: Option<PathBuf>,
+
+        /// Runtime device to diagnose from the corpus receipt.
+        #[arg(long, default_value = "GPU.0")]
+        runtime_device: String,
+
+        /// Output JSON diagnosis receipt to file.
+        #[arg(long, default_value = OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the diagnosis cannot classify the requested OpenVINO route.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Decompose OpenVINO NPU cold-start evidence from committed receipts.
+    NpuColdStartDiagnosis {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU phase-runner receipt to inspect for NPU load and hot-path metrics.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_PHASE)]
+        openvino_phase_runner: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU phase-comparison receipt to inspect for indexed NPU timing.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
+        phase_comparison: PathBuf,
+
+        /// OpenVINO NPU operator-ask receipt to inspect.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_NPU_OPERATOR_ASK)]
+        operator_ask: PathBuf,
+
+        /// OpenVINO CPU/GPU/NPU corpus-v2 receipt to inspect for NPU quality/profile context.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_OV_CORPUS_V2)]
+        openvino_corpus_v2: PathBuf,
+
+        /// Output JSON cold-start diagnosis receipt to file.
+        #[arg(long, default_value = OPENVINO_NPU_COLD_START_DIAGNOSIS)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the NPU cold-start evidence cannot be classified.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Capture current machine memory/power/thermal context for route benchmark receipts.
+    #[command(alias = "telemetry")]
+    TelemetryContext {
+        /// Artifact root for relative output paths.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Output JSON telemetry context receipt to file.
+        #[arg(long, default_value = POWER_THERMAL_CONTEXT_FILE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when memory and power context cannot be captured.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Index repeated-run durability requirements without running inference or changing routes.
+    #[command(alias = "durable")]
+    Durability {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Route profile comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: PathBuf,
+
+        /// Cold/warm benchmark qualification receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
+        cold_warm_benchmark: PathBuf,
+
+        /// Dense Qwen CPU corpus-v2 receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_CPU_CORPUS_V2)]
+        cpu_corpus_v2: PathBuf,
+
+        /// Strict regression-v2 bundle to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = REGRESSION_BUNDLE_V2)]
+        regression_bundle: PathBuf,
+
+        /// Optional repeated dense Qwen CPU warm-session receipt to index.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DURABLE_QWEN_CPU_WARM_SESSION)]
+        repeated_warm_session: Option<PathBuf>,
+
+        /// Repeated executions required before a profile can be called durable.
+        #[arg(long, default_value_t = 10)]
+        required_repeats: u64,
+
+        /// Output JSON durability bundle to file.
+        #[arg(long, default_value = DURABILITY_BUNDLE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the durability index violates routing or claim boundaries.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -225,7 +598,17 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = OPERATOR_READINESS)]
         operator_receipt: PathBuf,
 
-        /// Operator route to execute. Only dense_slm_default_cpu is supported initially.
+        /// Route promotion ledger to use when --route auto or --device auto is requested.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROMOTION_LEDGER)]
+        promotion_ledger: PathBuf,
+
+        /// Workload profile to resolve when auto-routing is requested.
+        #[arg(long, default_value = "ask_normal")]
+        profile: String,
+
+        /// Operator route to execute, or auto to select from the promotion ledger.
+        /// Only ledger-promoted dense_slm_default_cpu can execute today.
         #[arg(long, default_value = DEFAULT_ASK_ROUTE)]
         route: String,
 
@@ -330,6 +713,10 @@ pub struct LunarLakeRegressionBundle {
     pub answer_corpus_v2: Option<AnswerCorpusV2Summary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub route_profile_comparison: Option<RouteProfileRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cold_warm_benchmark: Option<ColdWarmRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub durability_bundle: Option<DurabilityRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -344,12 +731,20 @@ pub struct RegressionSurfaceSummary {
     pub strict_default: bool,
     pub answer_corpus_v2_indexed: bool,
     pub route_profile_comparison_indexed: bool,
+    pub cold_warm_benchmark_indexed: bool,
+    #[serde(default)]
+    pub durability_bundle_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
+    #[serde(default = "default_durability_required_profiles")]
+    pub required_durability_profiles: Vec<String>,
     pub fallback_observed: bool,
     pub candidate_routes_remain_unpromoted: bool,
     pub benchmark_qualified_advantage_claimed: bool,
+    pub cold_warm_benchmark_ready: bool,
+    #[serde(default)]
+    pub durability_stability_proven: bool,
     pub strict_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -361,6 +756,8 @@ impl Default for RegressionSurfaceSummary {
             strict_default: true,
             answer_corpus_v2_indexed: false,
             route_profile_comparison_indexed: false,
+            cold_warm_benchmark_indexed: false,
+            durability_bundle_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -373,16 +770,25 @@ impl Default for RegressionSurfaceSummary {
                 .iter()
                 .map(|profile| (*profile).to_string())
                 .collect(),
+            required_durability_profiles: default_durability_required_profiles(),
             fallback_observed: false,
             candidate_routes_remain_unpromoted: false,
             benchmark_qualified_advantage_claimed: false,
+            cold_warm_benchmark_ready: false,
+            durability_stability_proven: false,
             strict_ready: false,
             gaps: vec![
                 "answer corpus v2 is not indexed".to_string(),
                 "route profile comparison is not indexed".to_string(),
+                "cold/warm benchmark qualification is not indexed".to_string(),
+                "durability bundle is not indexed".to_string(),
             ],
         }
     }
+}
+
+fn default_durability_required_profiles() -> Vec<String> {
+    DURABILITY_REQUIRED_PROFILES.iter().map(|profile| (*profile).to_string()).collect()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -426,6 +832,36 @@ pub struct RouteProfileRegressionSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ColdWarmRegressionSummary {
+    pub path: String,
+    pub benchmark_gate_ready: bool,
+    pub profiles: Vec<String>,
+    pub promoted_routes_have_critical_timing: bool,
+    pub candidate_routes_remain_unpromoted: bool,
+    pub fallback_observed: bool,
+    pub benchmark_qualified_advantage_claimed: bool,
+    pub telemetry_gaps: Vec<String>,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DurabilityRegressionSummary {
+    pub path: String,
+    pub durability_index_ready: bool,
+    pub stability_proven: bool,
+    pub profiles: Vec<String>,
+    pub required_repeat_count: u64,
+    pub stable_profile_count: usize,
+    pub fallback_observed: bool,
+    pub answer_drift_detected: bool,
+    pub route_drift_detected: bool,
+    pub repeated_run_stability_claim: bool,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeComparisonReceipt {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -438,6 +874,8 @@ pub struct LunarLakeComparisonReceipt {
     pub comparison_ready: bool,
     pub operator_ready: bool,
     pub regression_passed: bool,
+    #[serde(default)]
+    pub regression_surface: RegressionSurfaceSummary,
     pub default_route_id: String,
     pub routes: Vec<RouteComparison>,
     pub evidence: Vec<EvidenceStatus>,
@@ -537,6 +975,16 @@ pub struct LunarLakeRouteProfileComparison {
     pub artifact_root: String,
     pub promotion_ledger: String,
     pub phase_comparison_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_corpus_v2_fixture: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_corpus_v2_receipt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub openvino_corpus_v2_receipt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry_context_receipt: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub route_diagnosis_receipts: Vec<String>,
     pub profile_comparison_ready: bool,
     pub default_route_id: String,
     pub profiles: Vec<WorkloadProfileEvaluation>,
@@ -568,16 +1016,139 @@ pub struct ProfileRouteEvidence {
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
     pub timing: ProfileTimingSummary,
+    pub timing_applicability: ProfileTimingApplicability,
     pub benchmark_qualified_advantage: bool,
     pub promotion_eligible_for_profile: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_quality: Option<ProfileQualityEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<BenchmarkTelemetry>,
     pub evidence: Vec<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileTimingApplicability {
+    pub profile_id: String,
+    pub required_prompt_tokens: String,
+    pub required_output_tokens: String,
+    pub measured_prompt_tokens: Option<u64>,
+    pub measured_output_tokens: Option<u64>,
+    pub timing_matches_profile: bool,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileQualityEvidence {
+    pub source_receipt: String,
+    pub route_id: String,
+    pub profile_id: String,
+    pub profile_present: bool,
+    pub cases_total: u64,
+    pub passed: u64,
+    pub failed: u64,
+    pub fallback_used: Option<bool>,
+    pub status: String,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct QwenCpuCorpusV2Diagnosis {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub cpu_corpus_v2_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_profile_comparison_receipt: Option<String>,
+    pub route_id: String,
+    pub model_family: Option<String>,
+    pub model_architecture: Option<String>,
+    pub quantization: Option<String>,
+    pub requested_backend: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub quality_summary: CorpusV2QualitySummary,
+    pub profile_diagnoses: Vec<CorpusV2ProfileDiagnosis>,
+    pub failed_cases: Vec<CorpusV2FailedCaseDiagnosis>,
+    pub route_blocked: bool,
+    pub blocker_summary: Vec<String>,
+    pub recommended_next_actions: Vec<String>,
+    pub diagnosis_ready: bool,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CorpusV2DiagnosisClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2QualitySummary {
+    pub total: u64,
+    pub passed: u64,
+    pub failed: u64,
+    pub timeout: u64,
+    pub not_run: u64,
+    pub failed_profiles: Vec<String>,
+    pub failed_categories: Vec<String>,
+    pub failure_classes: BTreeMap<String, u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2ProfileDiagnosis {
+    pub profile_id: String,
+    pub total: u64,
+    pub passed: u64,
+    pub failed: u64,
+    pub blocked: bool,
+    pub failed_case_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_profile_status: Option<String>,
+    pub route_blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2FailedCaseDiagnosis {
+    pub id: String,
+    pub profile: String,
+    pub category: String,
+    pub task_family: Option<String>,
+    pub status: String,
+    pub gate_kind: Option<String>,
+    pub scoring_kind: Option<String>,
+    pub failed_rules: Vec<String>,
+    pub failure_taxonomy: Vec<String>,
+    pub missing_required_keywords: Vec<String>,
+    pub forbidden_tokens_observed: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_normalized: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_normalized: Option<String>,
+    pub answer_preview: String,
+    pub generated_tokens: Option<u64>,
+    pub prompt_tokens: Option<u64>,
+    pub run_receipt_path: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub classification: String,
+    pub recommended_fix: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CorpusV2DiagnosisClaimBoundary {
+    pub diagnostic_only: bool,
+    pub new_inference_executed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub route_promotion_changed: bool,
+    pub arc_or_npu_execution_claim: bool,
+    pub bitnet_qk256_i2s_behavior_changed: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProfileTimingSummary {
     pub timing_scope: String,
     pub source_receipts: Vec<String>,
+    pub prompt_tokens: Option<u64>,
     pub cold_load_ms: Option<f64>,
     pub tokenize_ms: Option<f64>,
     pub prefill_ms: Option<f64>,
@@ -589,6 +1160,627 @@ pub struct ProfileTimingSummary {
     pub throughput_tokens_per_s: Option<f64>,
     pub phase_coverage: Vec<String>,
     pub known_gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeColdWarmBenchmark {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub route_profile_comparison_receipt: String,
+    pub phase_comparison_receipt: String,
+    pub benchmark_gate_ready: bool,
+    pub profiles: Vec<ColdWarmProfileBenchmark>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: BenchmarkClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ColdWarmProfileBenchmark {
+    pub profile_id: String,
+    pub promoted_route: Option<String>,
+    pub candidate_routes: Vec<String>,
+    pub routes: Vec<ColdWarmRouteBenchmark>,
+    pub profile_gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ColdWarmRouteBenchmark {
+    pub route_id: String,
+    pub route_status: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub phase_timing_present: Option<bool>,
+    pub timing: ProfileTimingSummary,
+    pub telemetry: BenchmarkTelemetry,
+    pub critical_timing_present: bool,
+    pub benchmark_qualified_advantage: bool,
+    pub promotion_blocked: bool,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BenchmarkTelemetry {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry_receipt: Option<String>,
+    pub memory_context: String,
+    pub power_context: String,
+    pub thermal_context: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telemetry_gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BenchmarkClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub acceleration_claim: bool,
+    pub hidden_fallback_allowed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeCpuSlmPhaseAttribution {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: CpuSlmAttributionSources,
+    pub model: CpuSlmAttributionModel,
+    pub backend: CpuSlmAttributionBackend,
+    pub cold_one_off: CpuSlmColdAttribution,
+    pub warm_session: CpuSlmWarmAttribution,
+    pub openvino_cpu_context: Option<CpuSlmOpenVinoCpuContext>,
+    pub attribution_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CpuSlmPerfClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmAttributionSources {
+    pub cpu_phase_receipt: String,
+    pub cold_warm_benchmark_receipt: String,
+    pub phase_comparison_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmAttributionModel {
+    pub model_family: Option<String>,
+    pub model_architecture: Option<String>,
+    pub quantization: Option<String>,
+    pub tokenizer_source: Option<String>,
+    pub prompt_template: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmAttributionBackend {
+    pub route_id: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmColdAttribution {
+    pub profile_id: String,
+    pub timing: ProfileTimingSummary,
+    pub model_load_share_of_total: Option<f64>,
+    pub tokenize_share_of_total: Option<f64>,
+    pub first_token_share_of_total: Option<f64>,
+    pub decode_share_of_total: Option<f64>,
+    pub reported_prefill_share_of_total: Option<f64>,
+    pub non_decode_ms: Option<f64>,
+    pub timing_notes: Vec<String>,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmWarmAttribution {
+    pub model_loaded_once: Option<bool>,
+    pub tokenizer_loaded_once: Option<bool>,
+    pub model_load_ms: Option<f64>,
+    pub tokenizer_load_ms: Option<f64>,
+    pub total_session_ms: Option<f64>,
+    pub profiles: Vec<CpuSlmWarmProfileAttribution>,
+    pub timing_notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmWarmProfileAttribution {
+    pub profile: String,
+    pub prompt_tokens: Option<u64>,
+    pub generated_tokens: Option<u64>,
+    pub prefill_ms: Option<f64>,
+    pub first_token_decode_ms: Option<f64>,
+    pub decode_total_ms: Option<f64>,
+    pub prefill_ms_per_prompt_token: Option<f64>,
+    pub decode_tokens_per_s: Option<f64>,
+    pub fallback_used: Option<bool>,
+    pub receipt_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmOpenVinoCpuContext {
+    pub source_receipt: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub pipeline_load_ms: Option<f64>,
+    pub case_elapsed_ms_sum: Option<f64>,
+    pub timing_scope: String,
+    pub comparison_notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmPerfClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub arc_npu_execution_claim: bool,
+    pub bitnet_qk256_i2s_claim: bool,
+    pub hidden_fallback_allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeCpuSlmResidentSession {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: CpuSlmResidentSessionSources,
+    pub model: CpuSlmAttributionModel,
+    pub backend: CpuSlmAttributionBackend,
+    pub resident_session: CpuSlmResidentSessionEvidence,
+    pub cold_reference: CpuSlmResidentColdReference,
+    pub profiles: Vec<CpuSlmResidentProfileSummary>,
+    pub resident_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CpuSlmPerfClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmResidentSessionSources {
+    pub phase_attribution_receipt: String,
+    pub repeated_warm_session_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentSessionEvidence {
+    pub reuse_scope: Option<String>,
+    pub model_loaded_once: Option<bool>,
+    pub tokenizer_loaded_once: Option<bool>,
+    pub model_load_ms: Option<f64>,
+    pub model_sha256_ms: Option<f64>,
+    pub tokenizer_load_ms: Option<f64>,
+    pub total_session_ms: Option<f64>,
+    pub prompt_count: Option<u64>,
+    pub per_prompt_receipts_enabled: Option<bool>,
+    pub session_owned_buffers: Option<bool>,
+    pub prompt_token_buffer_reused: Option<bool>,
+    pub generated_token_buffer_reused: Option<bool>,
+    pub timing_buffers_reused: Option<bool>,
+    pub stop_policy_precomputed_once: Option<bool>,
+    pub resident_memory_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentColdReference {
+    pub profile_id: Option<String>,
+    pub total_response_ms: Option<f64>,
+    pub cold_load_ms: Option<f64>,
+    pub tokenize_ms: Option<f64>,
+    pub prefill_ms: Option<f64>,
+    pub first_token_ms: Option<f64>,
+    pub decode_total_ms: Option<f64>,
+    pub timing_scope: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentProfileSummary {
+    pub profile_id: String,
+    pub case_ids: Vec<String>,
+    pub observed_execution_count: u64,
+    pub required_execution_count: u64,
+    pub model_reload_observed: bool,
+    pub tokenizer_reload_observed: bool,
+    pub fallback_observed: bool,
+    pub answer_gate_passed: bool,
+    pub deterministic_generated_ids: Option<bool>,
+    pub deterministic_text: Option<bool>,
+    pub total_ms: CpuSlmResidentMetricSummary,
+    pub time_to_first_token_ms: CpuSlmResidentMetricSummary,
+    pub prefill_ms: CpuSlmResidentMetricSummary,
+    pub decode_total_ms: CpuSlmResidentMetricSummary,
+    pub tokenize_ms: CpuSlmResidentMetricSummary,
+    pub generated_tokens: CpuSlmResidentMetricSummary,
+    pub decode_tokens_per_s_mean: Option<f64>,
+    pub cold_to_resident_total_ratio: Option<f64>,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmResidentMetricSummary {
+    pub sample_count: u64,
+    pub min: Option<f64>,
+    pub mean: Option<f64>,
+    pub max: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeCpuSlmRuntimeComparison {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: CpuSlmRuntimeComparisonSources,
+    pub model: CpuSlmAttributionModel,
+    pub rust_gguf_cpu: CpuSlmRuntimeRouteSummary,
+    pub openvino_cpu: CpuSlmRuntimeRouteSummary,
+    pub profiles: Vec<CpuSlmRuntimeProfileComparison>,
+    pub comparison_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CpuSlmPerfClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CpuSlmRuntimeComparisonSources {
+    pub resident_session_receipt: String,
+    pub openvino_corpus_v2_receipt: String,
+    pub openvino_phase_runner_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmRuntimeRouteSummary {
+    pub route_id: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub quality_scope: String,
+    pub timing_scope: String,
+    pub load_or_construct_ms: Option<f64>,
+    pub known_gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmRuntimeProfileComparison {
+    pub profile_id: String,
+    pub rust_cpu: CpuSlmRuntimeProfileEvidence,
+    pub openvino_cpu: CpuSlmRuntimeProfileEvidence,
+    pub openvino_to_rust_total_ratio: Option<f64>,
+    pub status: String,
+    pub blockers: Vec<String>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CpuSlmRuntimeProfileEvidence {
+    pub route_id: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub cases_total: Option<u64>,
+    pub cases_passed: Option<u64>,
+    pub cases_failed: Option<u64>,
+    pub timing_ms: CpuSlmResidentMetricSummary,
+    pub time_to_first_token_ms: CpuSlmResidentMetricSummary,
+    pub tokenize_ms: CpuSlmResidentMetricSummary,
+    pub generated_tokens: CpuSlmResidentMetricSummary,
+    pub throughput_tokens_per_s_mean: Option<f64>,
+    pub timing_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeOpenVinoCorpusV2Diagnosis {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub openvino_corpus_v2_receipt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_corpus_v2_fixture: Option<String>,
+    pub requested_runtime_device: String,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+    pub backend_lane: Option<String>,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub promotion_status: Option<String>,
+    pub quality_summary: CorpusV2QualitySummary,
+    pub profile_diagnoses: Vec<CorpusV2ProfileDiagnosis>,
+    pub failed_cases: Vec<CorpusV2FailedCaseDiagnosis>,
+    pub case_alignment: CorpusV2CaseAlignmentDiagnosis,
+    pub generated_token_visibility: OpenVinoGeneratedTokenVisibility,
+    pub route_blocked: bool,
+    pub blocker_summary: Vec<String>,
+    pub recommended_next_actions: Vec<String>,
+    pub diagnosis_ready: bool,
+    pub gaps: Vec<String>,
+    pub claim_boundary: CorpusV2DiagnosisClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CorpusV2CaseAlignmentDiagnosis {
+    pub fixture_verified: bool,
+    pub expected_case_count: Option<u64>,
+    pub observed_case_count: u64,
+    pub missing_case_ids: Vec<String>,
+    pub stale_or_unexpected_case_ids: Vec<String>,
+    pub aligned_with_active_fixture: Option<bool>,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OpenVinoGeneratedTokenVisibility {
+    pub direct_generated_token_ids_available: bool,
+    pub retokenized_generated_ids_used: bool,
+    pub sources: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeNpuColdStartDiagnosis {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_receipts: NpuColdStartSources,
+    pub route: NpuColdStartRouteIdentity,
+    pub cold_start: NpuColdStartEvidence,
+    pub hot_path: NpuHotPathEvidence,
+    pub corpus_v2_context: NpuCorpusV2Context,
+    pub diagnosis_ready: bool,
+    pub findings: Vec<String>,
+    pub recommended_next_items: Vec<String>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: NpuColdStartClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuColdStartSources {
+    pub openvino_phase_runner_receipt: String,
+    pub phase_comparison_receipt: String,
+    pub operator_ask_receipt: String,
+    pub openvino_corpus_v2_receipt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuColdStartRouteIdentity {
+    pub route_id: String,
+    pub requested_backend: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+    pub resolved_device: Option<String>,
+    pub backend_lane: Option<String>,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub promotion_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NpuColdStartEvidence {
+    pub classification: String,
+    pub cold_load_dominant: bool,
+    pub samples: Vec<NpuTimingSample>,
+    pub pipeline_or_load_ms: CpuSlmResidentMetricSummary,
+    pub generation_wall_ms: CpuSlmResidentMetricSummary,
+    pub first_token_or_text_chunk_ms: CpuSlmResidentMetricSummary,
+    pub throughput_tokens_per_s: CpuSlmResidentMetricSummary,
+    pub operator_load_to_generation_ratio: Option<f64>,
+    pub phase_runner_load_to_generation_ratio: Option<f64>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NpuTimingSample {
+    pub source: String,
+    pub evidence_scope: String,
+    pub pipeline_construct_wall_ms: Option<f64>,
+    pub openvino_load_time_ms: Option<f64>,
+    pub generation_wall_ms: Option<f64>,
+    pub case_elapsed_ms_sum: Option<f64>,
+    pub first_streamed_text_chunk_ms: Option<f64>,
+    pub openvino_time_to_first_token_ms: Option<f64>,
+    pub openvino_generate_ms: Option<f64>,
+    pub openvino_inference_ms: Option<f64>,
+    pub openvino_tokenization_ms: Option<f64>,
+    pub throughput_tokens_per_s: Option<f64>,
+    pub generated_tokens: Option<u64>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NpuHotPathEvidence {
+    pub bounded_answer_gate_passed: Option<bool>,
+    pub fallback_used: Option<bool>,
+    pub generation_wall_ms: CpuSlmResidentMetricSummary,
+    pub first_text_chunk_ms: CpuSlmResidentMetricSummary,
+    pub openvino_time_to_first_token_ms: CpuSlmResidentMetricSummary,
+    pub throughput_tokens_per_s: CpuSlmResidentMetricSummary,
+    pub generated_tokens: CpuSlmResidentMetricSummary,
+    pub hot_path_interesting: bool,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuCorpusV2Context {
+    pub cases_total: Option<u64>,
+    pub passed: Option<u64>,
+    pub failed: Option<u64>,
+    pub route_blocked_by_quality: bool,
+    pub failed_profiles: Vec<String>,
+    pub failed_categories: Vec<String>,
+    pub direct_generated_token_ids_available: bool,
+    pub generated_token_id_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NpuColdStartClaimBoundary {
+    pub diagnostic_only: bool,
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub native_npu_inference_claim: bool,
+    pub npu_dynamic_decode_claim: bool,
+    pub beam_or_parallel_sampling_claim: bool,
+    pub bitnet_qk256_i2s_behavior_changed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeTelemetryContext {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub telemetry_scope: String,
+    pub memory_context: String,
+    pub power_context: String,
+    pub thermal_context: String,
+    pub availability: TelemetryAvailability,
+    pub memory: TelemetryMemoryContext,
+    pub power: TelemetryPowerContext,
+    pub thermal: TelemetryThermalContext,
+    pub sources: Vec<TelemetrySourceStatus>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: TelemetryClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryAvailability {
+    pub memory_context_recorded: bool,
+    pub power_context_recorded: bool,
+    pub thermal_context_recorded: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryMemoryContext {
+    pub source: String,
+    pub total_bytes: Option<u64>,
+    pub available_bytes: Option<u64>,
+    pub used_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryPowerContext {
+    pub source: String,
+    pub active_scheme: Option<String>,
+    pub battery_status: Option<String>,
+    pub ac_power_inferred: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TelemetryThermalContext {
+    pub source: String,
+    pub thermal_zones_visible: Option<u64>,
+    pub temperatures_celsius: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetrySourceStatus {
+    pub source: String,
+    pub available: bool,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryClaimBoundary {
+    pub new_inference_executed: bool,
+    pub telemetry_measurement_executed: bool,
+    pub route_promotion_changed: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub hidden_fallback_allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeDurabilityBundle {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub route_profile_comparison_receipt: String,
+    pub cold_warm_benchmark_receipt: String,
+    pub cpu_corpus_v2_receipt: String,
+    pub regression_bundle_receipt: String,
+    pub repeated_warm_session_receipt: Option<String>,
+    pub required_repeat_count: u64,
+    pub durability_index_ready: bool,
+    pub stability_proven: bool,
+    pub profiles: Vec<DurabilityProfileSummary>,
+    pub gaps: Vec<String>,
+    pub next_required_evidence: Vec<String>,
+    pub claim_boundary: DurabilityClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DurabilityProfileSummary {
+    pub profile_id: String,
+    pub route_id: String,
+    pub route_status: String,
+    pub promoted_route: Option<String>,
+    pub baseline_case_count: u64,
+    pub baseline_cases_passed: u64,
+    pub baseline_cases_failed: u64,
+    pub observed_execution_count: u64,
+    pub required_execution_count: u64,
+    pub answer_drift_detected: Option<bool>,
+    pub route_drift_detected: bool,
+    pub fallback_drift_detected: Option<bool>,
+    pub latency_variance_status: String,
+    pub stability_status: String,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DurabilityClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub broad_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub acceleration_claim: bool,
+    pub hidden_fallback_allowed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+    pub repeated_run_stability_claim: bool,
 }
 
 impl LunarLakeCommand {
@@ -616,6 +1808,8 @@ impl LunarLakeCommand {
                 operator_receipt,
                 answer_corpus_v2,
                 route_profile_comparison,
+                cold_warm_benchmark,
+                durability_bundle,
                 json_out,
                 created_utc,
                 strict,
@@ -629,6 +1823,8 @@ impl LunarLakeCommand {
                     operator_receipt,
                     answer_corpus_v2.as_deref(),
                     route_profile_comparison.as_deref(),
+                    cold_warm_benchmark.as_deref(),
+                    durability_bundle.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -692,6 +1888,14 @@ impl LunarLakeCommand {
                 artifact_root,
                 promotion_ledger,
                 phase_comparison,
+                answer_corpus_v2,
+                cpu_corpus_v2,
+                openvino_corpus_v2,
+                telemetry_context,
+                gpu_quality_diagnosis,
+                npu_quality_diagnosis,
+                npu_cold_start_diagnosis,
+                openvino_budget_sensitivity,
                 json_out,
                 created_utc,
                 strict,
@@ -700,18 +1904,286 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_route_profile_comparison_with_created_utc(
-                    artifact_root,
-                    promotion_ledger,
-                    phase_comparison,
-                    created_utc,
-                )?;
+                let receipt =
+                    build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+                        artifact_root,
+                        promotion_ledger,
+                        phase_comparison,
+                        answer_corpus_v2.as_deref(),
+                        cpu_corpus_v2.as_deref(),
+                        openvino_corpus_v2.as_deref(),
+                        telemetry_context.as_deref(),
+                        gpu_quality_diagnosis.as_deref(),
+                        npu_quality_diagnosis.as_deref(),
+                        npu_cold_start_diagnosis.as_deref(),
+                        openvino_budget_sensitivity.as_deref(),
+                        created_utc,
+                    )?;
                 write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.profile_comparison_ready {
                     bail!(
                         "Lunar Lake route profile comparison failed: {}",
                         receipt.gaps.join("; ")
                     );
+                }
+                Ok(())
+            }
+            LunarLakeAction::QualityDiagnose {
+                artifact_root,
+                cpu_corpus_v2,
+                route_profile_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
+                    artifact_root,
+                    cpu_corpus_v2,
+                    route_profile_comparison.as_deref(),
+                    created_utc,
+                )?;
+                write_or_print_qwen_cpu_corpus_v2_diagnosis(&receipt, Some(json_out))?;
+                if *strict && !receipt.diagnosis_ready {
+                    bail!(
+                        "Lunar Lake dense Qwen CPU corpus-v2 diagnosis failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::Benchmark {
+                artifact_root,
+                route_profile_comparison,
+                phase_comparison,
+                telemetry_context,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cold_warm_benchmark_with_created_utc(
+                    artifact_root,
+                    route_profile_comparison,
+                    phase_comparison,
+                    telemetry_context.as_deref(),
+                    created_utc,
+                )?;
+                write_or_print_cold_warm_benchmark(&receipt, Some(json_out))?;
+                if *strict && !receipt.benchmark_gate_ready {
+                    bail!(
+                        "Lunar Lake cold/warm benchmark qualification failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::CpuSlmPhaseAttribution {
+                artifact_root,
+                cpu_phase,
+                cold_warm_benchmark,
+                phase_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cpu_slm_phase_attribution_with_created_utc(
+                    artifact_root,
+                    cpu_phase,
+                    cold_warm_benchmark,
+                    phase_comparison,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_cpu_slm_phase_attribution(&receipt, Some(&json_out))?;
+                if *strict && !receipt.attribution_ready {
+                    bail!(
+                        "Lunar Lake CPU dense SLM phase attribution failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::CpuSlmResidentSession {
+                artifact_root,
+                phase_attribution,
+                repeated_warm_session,
+                required_repeats,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cpu_slm_resident_session_with_created_utc(
+                    artifact_root,
+                    phase_attribution,
+                    repeated_warm_session,
+                    *required_repeats,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_cpu_slm_resident_session(&receipt, Some(&json_out))?;
+                if *strict && !receipt.resident_ready {
+                    bail!(
+                        "Lunar Lake CPU dense SLM resident-session check failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::CpuSlmRuntimeComparison {
+                artifact_root,
+                resident_session,
+                openvino_corpus_v2,
+                openvino_phase_runner,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_cpu_slm_runtime_comparison_with_created_utc(
+                    artifact_root,
+                    resident_session,
+                    openvino_corpus_v2,
+                    openvino_phase_runner,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_cpu_slm_runtime_comparison(&receipt, Some(&json_out))?;
+                if *strict && !receipt.comparison_ready {
+                    bail!(
+                        "Lunar Lake CPU dense SLM runtime comparison failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::OpenVinoQualityDiagnose {
+                artifact_root,
+                openvino_corpus_v2,
+                answer_corpus_v2,
+                runtime_device,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_openvino_corpus_v2_diagnosis_with_created_utc(
+                    artifact_root,
+                    openvino_corpus_v2,
+                    answer_corpus_v2.as_deref(),
+                    runtime_device,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_openvino_corpus_v2_diagnosis(&receipt, Some(&json_out))?;
+                if *strict && !receipt.diagnosis_ready {
+                    bail!(
+                        "Lunar Lake OpenVINO corpus-v2 diagnosis failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::NpuColdStartDiagnosis {
+                artifact_root,
+                openvino_phase_runner,
+                phase_comparison,
+                operator_ask,
+                openvino_corpus_v2,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_npu_cold_start_diagnosis_with_created_utc(
+                    artifact_root,
+                    openvino_phase_runner,
+                    phase_comparison,
+                    operator_ask,
+                    openvino_corpus_v2,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_npu_cold_start_diagnosis(&receipt, Some(&json_out))?;
+                if *strict && !receipt.diagnosis_ready {
+                    bail!(
+                        "Lunar Lake OpenVINO NPU cold-start diagnosis failed: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::TelemetryContext { artifact_root, json_out, created_utc, strict } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_telemetry_context_with_created_utc(artifact_root, created_utc);
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_telemetry_context(&receipt, Some(&json_out))?;
+                if *strict
+                    && (!receipt.availability.memory_context_recorded
+                        || !receipt.availability.power_context_recorded)
+                {
+                    bail!(
+                        "Lunar Lake telemetry context capture failed required memory/power context: {}",
+                        receipt.gaps.join("; ")
+                    );
+                }
+                Ok(())
+            }
+            LunarLakeAction::Durability {
+                artifact_root,
+                route_profile_comparison,
+                cold_warm_benchmark,
+                cpu_corpus_v2,
+                regression_bundle,
+                repeated_warm_session,
+                required_repeats,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_durability_bundle_with_created_utc(
+                    artifact_root,
+                    route_profile_comparison,
+                    cold_warm_benchmark,
+                    cpu_corpus_v2,
+                    regression_bundle,
+                    repeated_warm_session.as_deref(),
+                    *required_repeats,
+                    created_utc,
+                )?;
+                write_or_print_durability_bundle(&receipt, Some(json_out))?;
+                if *strict && !receipt.durability_index_ready {
+                    bail!("Lunar Lake durability index failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -919,6 +2391,8 @@ pub fn build_regression_bundle_with_created_utc(
         operator_receipt,
         None,
         None,
+        None,
+        None,
         created_utc,
     )
 }
@@ -928,6 +2402,8 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     operator_receipt: &Path,
     answer_corpus_v2: Option<&Path>,
     route_profile_comparison: Option<&Path>,
+    cold_warm_benchmark: Option<&Path>,
+    durability_bundle: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -1053,6 +2529,32 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     } else {
         None
     };
+    let cold_warm_benchmark = if let Some(path) = cold_warm_benchmark {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_cold_warm_regression(&path)?;
+        checks.push(regression_check_owned(
+            "cold_warm_benchmark_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            cold_warm_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
+    let durability_bundle = if let Some(path) = durability_bundle {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_durability_regression(&path)?;
+        checks.push(regression_check_owned(
+            "durability_bundle_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            durability_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -1061,6 +2563,8 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     let regression_surface = build_regression_surface_summary(
         answer_corpus_v2.as_ref(),
         route_profile_comparison.as_ref(),
+        cold_warm_benchmark.as_ref(),
+        durability_bundle.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -1073,6 +2577,8 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         operator_receipt: path_string(&operator_receipt_path),
         answer_corpus_v2,
         route_profile_comparison,
+        cold_warm_benchmark,
+        durability_bundle,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -1084,18 +2590,32 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
 fn build_regression_surface_summary(
     answer_corpus_v2: Option<&AnswerCorpusV2Summary>,
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
+    cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
+    durability_bundle: Option<&DurabilityRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
+        cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
+        durability_bundle_indexed: durability_bundle.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
         benchmark_qualified_advantage_claimed: route_profile_comparison
             .map(|summary| summary.benchmark_qualified_advantage_claimed)
-            .unwrap_or(false),
+            .unwrap_or(false)
+            || cold_warm_benchmark
+                .map(|summary| summary.benchmark_qualified_advantage_claimed)
+                .unwrap_or(false),
         fallback_observed: route_profile_comparison
             .map(|summary| summary.fallback_observed)
+            .unwrap_or(false)
+            || cold_warm_benchmark.map(|summary| summary.fallback_observed).unwrap_or(false),
+        cold_warm_benchmark_ready: cold_warm_benchmark
+            .map(|summary| summary.regression_ready)
+            .unwrap_or(false),
+        durability_stability_proven: durability_bundle
+            .map(|summary| summary.stability_proven)
             .unwrap_or(false),
         gaps: Vec::new(),
         ..RegressionSurfaceSummary::default()
@@ -1131,6 +2651,58 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("route profile comparison is not indexed".to_string());
+    }
+
+    if let Some(benchmark) = cold_warm_benchmark {
+        if !benchmark.regression_ready {
+            summary.gaps.push(format!(
+                "cold/warm benchmark qualification is not regression-ready: {}",
+                benchmark.gaps.join("; ")
+            ));
+        }
+        if benchmark.fallback_observed {
+            summary.gaps.push("cold/warm benchmark observed fallback_used=true".to_string());
+        }
+        if benchmark.benchmark_qualified_advantage_claimed {
+            summary.gaps.push(
+                "cold/warm benchmark recorded benchmark-qualified route advantage".to_string(),
+            );
+        }
+        if !benchmark.candidate_routes_remain_unpromoted {
+            summary
+                .gaps
+                .push("cold/warm benchmark shows OpenVINO candidate route promotion".to_string());
+        }
+        if !benchmark.promoted_routes_have_critical_timing {
+            summary.gaps.push("promoted routes are missing critical cold/warm timing".to_string());
+        }
+    } else {
+        summary.gaps.push("cold/warm benchmark qualification is not indexed".to_string());
+    }
+
+    if let Some(durability) = durability_bundle {
+        if !durability.regression_ready {
+            summary.gaps.push(format!(
+                "durability bundle is not regression-ready: {}",
+                durability.gaps.join("; ")
+            ));
+        }
+        if !durability.stability_proven {
+            summary
+                .gaps
+                .push("durability bundle has not proven repeated-run stability".to_string());
+        }
+        if durability.fallback_observed {
+            summary.gaps.push("durability bundle observed fallback_used=true".to_string());
+        }
+        if durability.answer_drift_detected {
+            summary.gaps.push("durability bundle observed answer drift".to_string());
+        }
+        if durability.route_drift_detected {
+            summary.gaps.push("durability bundle observed route drift".to_string());
+        }
+    } else {
+        summary.gaps.push("durability bundle is not indexed".to_string());
     }
 
     summary.gaps.sort();
@@ -1344,6 +2916,225 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     })
 }
 
+fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary> {
+    let benchmark: LunarLakeColdWarmBenchmark = read_json_receipt(path)?;
+    let profiles =
+        benchmark.profiles.iter().map(|profile| profile.profile_id.clone()).collect::<Vec<_>>();
+    let mut gaps = Vec::new();
+    if !benchmark.benchmark_gate_ready {
+        gaps.push(format!("cold/warm benchmark gate not ready: {}", benchmark.gaps.join("; ")));
+    }
+    if let Some(missing) = first_missing(&profiles, REQUIRED_ROUTE_PROFILES) {
+        gaps.push(format!("cold/warm benchmark missing profile {missing}"));
+    }
+    if benchmark.claim_boundary.new_inference_executed {
+        gaps.push("cold/warm benchmark executed new inference".to_string());
+    }
+    if benchmark.claim_boundary.route_promotion_changed {
+        gaps.push("cold/warm benchmark changed route promotion".to_string());
+    }
+    if benchmark.claim_boundary.speedup_claim || benchmark.claim_boundary.acceleration_claim {
+        gaps.push("cold/warm benchmark claimed speedup or acceleration".to_string());
+    }
+    if benchmark.claim_boundary.hidden_fallback_allowed {
+        gaps.push("cold/warm benchmark allows hidden fallback".to_string());
+    }
+    if benchmark.claim_boundary.dense_slm_as_bitnet_proof {
+        gaps.push("cold/warm benchmark treats dense SLM evidence as BitNet proof".to_string());
+    }
+
+    let mut fallback_observed = false;
+    let mut benchmark_qualified_advantage_claimed = false;
+    let mut promoted_routes_have_critical_timing = true;
+    let mut candidate_routes_remain_unpromoted = true;
+    let mut telemetry_gaps = BTreeSet::new();
+    for profile in &benchmark.profiles {
+        for route in &profile.routes {
+            if route.fallback_used == Some(true) {
+                fallback_observed = true;
+            }
+            if route.benchmark_qualified_advantage {
+                benchmark_qualified_advantage_claimed = true;
+            }
+            if route.route_status == "promoted" && !route.critical_timing_present {
+                promoted_routes_have_critical_timing = false;
+            }
+            if is_openvino_candidate_route(&route.route_id) && route.route_status == "promoted" {
+                candidate_routes_remain_unpromoted = false;
+            }
+            for value in [
+                &route.telemetry.memory_context,
+                &route.telemetry.power_context,
+                &route.telemetry.thermal_context,
+            ] {
+                if value.contains("not_normalized")
+                    || value.contains("not_recorded")
+                    || value.contains("missing")
+                    || value.contains("unavailable")
+                {
+                    telemetry_gaps
+                        .insert(format!("{}:{}={}", profile.profile_id, route.route_id, value));
+                }
+            }
+            for gap in &route.telemetry.telemetry_gaps {
+                telemetry_gaps.insert(format!("{}:{}={}", profile.profile_id, route.route_id, gap));
+            }
+        }
+    }
+    if fallback_observed {
+        gaps.push("cold/warm benchmark observed fallback_used=true".to_string());
+    }
+    if benchmark_qualified_advantage_claimed {
+        gaps.push("cold/warm benchmark recorded benchmark-qualified route advantage".to_string());
+    }
+    if !promoted_routes_have_critical_timing {
+        gaps.push("promoted routes are missing critical cold/warm timing".to_string());
+    }
+    if !candidate_routes_remain_unpromoted {
+        gaps.push(
+            "OpenVINO GPU/NPU candidate route was promoted in cold/warm benchmark".to_string(),
+        );
+    }
+
+    Ok(ColdWarmRegressionSummary {
+        path: path_string(path),
+        benchmark_gate_ready: benchmark.benchmark_gate_ready,
+        profiles,
+        promoted_routes_have_critical_timing,
+        candidate_routes_remain_unpromoted,
+        fallback_observed,
+        benchmark_qualified_advantage_claimed,
+        telemetry_gaps: telemetry_gaps.into_iter().collect(),
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
+fn inspect_durability_regression(path: &Path) -> Result<DurabilityRegressionSummary> {
+    let bundle: LunarLakeDurabilityBundle = read_json_receipt(path)?;
+    let profiles =
+        bundle.profiles.iter().map(|profile| profile.profile_id.clone()).collect::<Vec<_>>();
+    let mut gaps = Vec::new();
+    if !bundle.durability_index_ready {
+        gaps.push(format!("durability bundle is not ready: {}", bundle.gaps.join("; ")));
+    }
+    if !bundle.stability_proven {
+        gaps.push("durability bundle has stability_proven=false".to_string());
+    }
+    if let Some(missing) = first_missing(&profiles, DURABILITY_REQUIRED_PROFILES) {
+        gaps.push(format!("durability bundle missing profile {missing}"));
+    }
+    if !bundle.next_required_evidence.is_empty() {
+        gaps.push(format!(
+            "durability bundle still requires evidence: {}",
+            bundle.next_required_evidence.join("; ")
+        ));
+    }
+    if bundle.claim_boundary.new_inference_executed {
+        gaps.push("durability bundle executed new inference".to_string());
+    }
+    if bundle.claim_boundary.route_promotion_changed {
+        gaps.push("durability bundle changed route promotion".to_string());
+    }
+    if bundle.claim_boundary.broad_quality_claim {
+        gaps.push("durability bundle made a broad quality claim".to_string());
+    }
+    if bundle.claim_boundary.speedup_claim || bundle.claim_boundary.acceleration_claim {
+        gaps.push("durability bundle claimed speedup or acceleration".to_string());
+    }
+    if bundle.claim_boundary.hidden_fallback_allowed {
+        gaps.push("durability bundle allows hidden fallback".to_string());
+    }
+    if bundle.claim_boundary.dense_slm_as_bitnet_proof {
+        gaps.push("durability bundle treats dense SLM evidence as BitNet proof".to_string());
+    }
+    if !bundle.claim_boundary.repeated_run_stability_claim {
+        gaps.push(
+            "durability bundle must carry the bounded repeated-run stability claim".to_string(),
+        );
+    }
+
+    let mut fallback_observed = false;
+    let mut answer_drift_detected = false;
+    let mut route_drift_detected = false;
+    let mut stable_profile_count = 0usize;
+    for profile_id in DURABILITY_REQUIRED_PROFILES {
+        let Some(profile) =
+            bundle.profiles.iter().find(|profile| profile.profile_id == *profile_id)
+        else {
+            continue;
+        };
+        if profile.route_id != DEFAULT_ASK_ROUTE {
+            gaps.push(format!(
+                "durability profile {profile_id} route changed to {}",
+                profile.route_id
+            ));
+        }
+        if profile.observed_execution_count < profile.required_execution_count {
+            gaps.push(format!(
+                "durability profile {profile_id} observed {}/{} executions",
+                profile.observed_execution_count, profile.required_execution_count
+            ));
+        }
+        if profile.observed_execution_count < bundle.required_repeat_count {
+            gaps.push(format!(
+                "durability profile {profile_id} is below bundle required_repeat_count {}",
+                bundle.required_repeat_count
+            ));
+        }
+        if profile.answer_drift_detected != Some(false) {
+            answer_drift_detected = true;
+        }
+        if profile.route_drift_detected {
+            route_drift_detected = true;
+        }
+        if profile.fallback_drift_detected != Some(false) {
+            fallback_observed = true;
+        }
+        if profile.stability_status != "stable" {
+            gaps.push(format!(
+                "durability profile {profile_id} stability_status={}",
+                profile.stability_status
+            ));
+        }
+        if !profile.blockers.is_empty() {
+            gaps.push(format!(
+                "durability profile {profile_id} blockers: {}",
+                profile.blockers.join("; ")
+            ));
+        }
+        if profile.stability_status == "stable" && profile.blockers.is_empty() {
+            stable_profile_count += 1;
+        }
+    }
+    if fallback_observed {
+        gaps.push("durability bundle observed fallback drift".to_string());
+    }
+    if answer_drift_detected {
+        gaps.push("durability bundle observed answer drift".to_string());
+    }
+    if route_drift_detected {
+        gaps.push("durability bundle observed route drift".to_string());
+    }
+
+    gaps.sort();
+    gaps.dedup();
+    Ok(DurabilityRegressionSummary {
+        path: path_string(path),
+        durability_index_ready: bundle.durability_index_ready,
+        stability_proven: bundle.stability_proven,
+        profiles,
+        required_repeat_count: bundle.required_repeat_count,
+        stable_profile_count,
+        fallback_observed,
+        answer_drift_detected,
+        route_drift_detected,
+        repeated_run_stability_claim: bundle.claim_boundary.repeated_run_stability_claim,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -1367,6 +3158,45 @@ fn route_profile_regression_notes(summary: &RouteProfileRegressionSummary) -> Ve
             summary.benchmark_qualified_advantage_claimed
         ),
         format!("fallback_observed={}", summary.fallback_observed),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn cold_warm_regression_notes(summary: &ColdWarmRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profiles={}", summary.profiles.join(",")),
+        format!("benchmark_gate_ready={}", summary.benchmark_gate_ready),
+        format!(
+            "promoted_routes_have_critical_timing={}",
+            summary.promoted_routes_have_critical_timing
+        ),
+        format!(
+            "candidate_routes_remain_unpromoted={}",
+            summary.candidate_routes_remain_unpromoted
+        ),
+        format!(
+            "benchmark_qualified_advantage_claimed={}",
+            summary.benchmark_qualified_advantage_claimed
+        ),
+        format!("fallback_observed={}", summary.fallback_observed),
+        format!("telemetry_gap_count={}", summary.telemetry_gaps.len()),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn durability_regression_notes(summary: &DurabilityRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profiles={}", summary.profiles.join(",")),
+        format!("durability_index_ready={}", summary.durability_index_ready),
+        format!("stability_proven={}", summary.stability_proven),
+        format!("required_repeat_count={}", summary.required_repeat_count),
+        format!("stable_profile_count={}", summary.stable_profile_count),
+        format!("fallback_observed={}", summary.fallback_observed),
+        format!("answer_drift_detected={}", summary.answer_drift_detected),
+        format!("route_drift_detected={}", summary.route_drift_detected),
+        format!("repeated_run_stability_claim={}", summary.repeated_run_stability_claim),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -1427,6 +3257,7 @@ pub fn build_comparison_receipt_with_created_utc(
         comparison_ready,
         operator_ready: operator.operator_ready,
         regression_passed: regression.regression_passed,
+        regression_surface: regression.regression_surface,
         default_route_id: operator.default_route.route_id.clone(),
         routes,
         evidence: operator.evidence,
@@ -1504,14 +3335,15 @@ pub fn build_route_promotion_ledger_with_created_utc(
         promotion_ready,
         default_route_id: operator.default_route.route_id.clone(),
         auto_route_policy: AutoRoutePolicy {
-            policy_stage: "policy_only_no_auto_dispatch_change".to_string(),
+            policy_stage: "ledger_driven_auto_route_enabled".to_string(),
             default_route: DEFAULT_ASK_ROUTE.to_string(),
             hidden_fallback_allowed: false,
             cpu_default_until_profile_promoted: true,
             candidate_routes_require_profile_promotion: true,
             route_reason_required: true,
             notes: vec![
-                "dense Qwen CPU remains the user-facing auto/default route".to_string(),
+                "ledger-driven auto routing may select only routes promoted for the requested profile".to_string(),
+                "dense Qwen CPU remains the user-facing auto/default route for ask profiles".to_string(),
                 "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion".to_string(),
                 "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists".to_string(),
             ],
@@ -1523,18 +3355,115 @@ pub fn build_route_promotion_ledger_with_created_utc(
     })
 }
 
+#[cfg(test)]
 pub fn build_route_profile_comparison_with_created_utc(
     root: &Path,
     promotion_ledger: &Path,
     phase_comparison: &Path,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
+    build_route_profile_comparison_with_created_utc_and_inputs(
+        root,
+        promotion_ledger,
+        phase_comparison,
+        None,
+        None,
+        None,
+        None,
+        created_utc,
+    )
+}
+
+#[cfg(test)]
+pub fn build_route_profile_comparison_with_created_utc_and_inputs(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    answer_corpus_v2: Option<&Path>,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+    telemetry_context: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
+    build_route_profile_comparison_with_created_utc_and_diagnostics(
+        root,
+        promotion_ledger,
+        phase_comparison,
+        answer_corpus_v2,
+        cpu_corpus_v2,
+        openvino_corpus_v2,
+        telemetry_context,
+        None,
+        None,
+        None,
+        created_utc,
+    )
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    answer_corpus_v2: Option<&Path>,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+    telemetry_context: Option<&Path>,
+    gpu_quality_diagnosis: Option<&Path>,
+    npu_quality_diagnosis: Option<&Path>,
+    npu_cold_start_diagnosis: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
+    build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+        root,
+        promotion_ledger,
+        phase_comparison,
+        answer_corpus_v2,
+        cpu_corpus_v2,
+        openvino_corpus_v2,
+        telemetry_context,
+        gpu_quality_diagnosis,
+        npu_quality_diagnosis,
+        npu_cold_start_diagnosis,
+        None,
+        created_utc,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    answer_corpus_v2: Option<&Path>,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+    telemetry_context: Option<&Path>,
+    gpu_quality_diagnosis: Option<&Path>,
+    npu_quality_diagnosis: Option<&Path>,
+    npu_cold_start_diagnosis: Option<&Path>,
+    openvino_budget_sensitivity: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
     let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
     let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
     let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&promotion_ledger_path)?;
     let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
+    let quality_index = load_profile_quality_index(root, cpu_corpus_v2, openvino_corpus_v2)?;
 
     let mut gaps = Vec::new();
+    let corpus_alignment =
+        load_corpus_case_alignment_index(root, answer_corpus_v2, &quality_index, &mut gaps)?;
+    let telemetry_context = load_benchmark_telemetry_context(root, telemetry_context, &mut gaps)?;
+    let route_diagnostics = load_route_diagnostics_index(
+        root,
+        gpu_quality_diagnosis,
+        npu_quality_diagnosis,
+        npu_cold_start_diagnosis,
+        openvino_budget_sensitivity,
+        &mut gaps,
+    )?;
     if !ledger.promotion_ready {
         gaps.push(format!("promotion ledger not ready: {}", ledger.gaps.join("; ")));
     }
@@ -1554,17 +3483,26 @@ pub fn build_route_profile_comparison_with_created_utc(
     let profiles = ledger
         .workload_profiles
         .iter()
-        .map(|profile| evaluate_workload_profile(root, profile, &ledger, &phase_comparison_json))
+        .map(|profile| {
+            evaluate_workload_profile(
+                root,
+                profile,
+                &ledger,
+                &phase_comparison_json,
+                &quality_index,
+                &corpus_alignment,
+                telemetry_context.as_ref(),
+                &route_diagnostics,
+            )
+        })
         .collect::<Result<Vec<_>>>()?;
 
-    let default_profile_ready = profiles.iter().any(|profile| {
+    let default_profile_indexed = profiles.iter().any(|profile| {
         profile.promoted_route.as_deref() == Some(DEFAULT_ASK_ROUTE)
-            && profile.route_evidence.iter().any(|route| {
-                route.route_id == DEFAULT_ASK_ROUTE && route.promotion_eligible_for_profile
-            })
+            && profile.route_evidence.iter().any(|route| route.route_id == DEFAULT_ASK_ROUTE)
     });
-    if !default_profile_ready {
-        gaps.push("dense Qwen CPU default route is not profile-eligible".to_string());
+    if !default_profile_indexed {
+        gaps.push("dense Qwen CPU default route is not indexed in route profiles".to_string());
     }
     for profile in &profiles {
         for route in &profile.route_evidence {
@@ -1593,11 +3531,3108 @@ pub fn build_route_profile_comparison_with_created_utc(
         artifact_root: path_string(root),
         promotion_ledger: path_string(&promotion_ledger_path),
         phase_comparison_receipt: path_string(&phase_comparison_path),
+        answer_corpus_v2_fixture: corpus_alignment.fixture_source.clone(),
+        cpu_corpus_v2_receipt: quality_index.cpu_source.clone(),
+        openvino_corpus_v2_receipt: quality_index.openvino_source.clone(),
+        telemetry_context_receipt: telemetry_context
+            .as_ref()
+            .map(|context| context.receipt.clone()),
+        route_diagnosis_receipts: route_diagnostics.source_receipts(),
         profile_comparison_ready,
         default_route_id: ledger.default_route_id,
         profiles,
         gaps,
         claim_boundary: ledger.claim_boundary,
+    })
+}
+
+pub fn build_cold_warm_benchmark_with_created_utc(
+    root: &Path,
+    route_profile_comparison: &Path,
+    phase_comparison: &Path,
+    telemetry_context: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeColdWarmBenchmark> {
+    let route_profile_comparison_path = resolve_receipt_path(root, route_profile_comparison);
+    let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
+    let comparison: LunarLakeRouteProfileComparison =
+        read_json_receipt(&route_profile_comparison_path)?;
+    let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
+
+    let mut gaps = Vec::new();
+    let telemetry_context = load_benchmark_telemetry_context(root, telemetry_context, &mut gaps)?;
+    if !comparison.profile_comparison_ready {
+        gaps.push(format!("route profile comparison is not ready: {}", comparison.gaps.join("; ")));
+    }
+    if comparison.claim_boundary.hidden_fallback_allowed {
+        gaps.push("benchmark qualification refuses hidden fallback".to_string());
+    }
+    if comparison.claim_boundary.arc_bitnet_full_inference_claimed
+        || comparison.claim_boundary.npu_bitnet_full_inference_claimed
+        || comparison.claim_boundary.qk256_accelerator_decode_claimed
+    {
+        gaps.push("benchmark qualification refuses accelerator BitNet/QK256 claims".to_string());
+    }
+    if string_at(&phase_comparison_json, "artifact_kind").is_none() {
+        gaps.push("phase comparison receipt is missing artifact_kind".to_string());
+    }
+    if fallback_used(&phase_comparison_json) == Some(true) {
+        gaps.push("phase comparison receipt observed fallback_used=true".to_string());
+    }
+
+    let profiles = comparison
+        .profiles
+        .iter()
+        .map(|profile| cold_warm_profile_benchmark(profile, telemetry_context.as_ref(), &mut gaps))
+        .collect::<Vec<_>>();
+
+    let benchmark_gate_ready = gaps.is_empty();
+    Ok(LunarLakeColdWarmBenchmark {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cold_warm_profile_benchmark".to_string(),
+        proof_stage: "profile_timing_qualification_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: comparison.machine_id,
+        artifact_root: path_string(root),
+        route_profile_comparison_receipt: path_string(&route_profile_comparison_path),
+        phase_comparison_receipt: path_string(&phase_comparison_path),
+        benchmark_gate_ready,
+        profiles,
+        gaps,
+        claim_boundary: BenchmarkClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            acceleration_claim: false,
+            hidden_fallback_allowed: false,
+            dense_slm_as_bitnet_proof: false,
+        },
+    })
+}
+
+pub fn build_cpu_slm_phase_attribution_with_created_utc(
+    root: &Path,
+    cpu_phase: &Path,
+    cold_warm_benchmark: &Path,
+    phase_comparison: &Path,
+    created_utc: String,
+) -> Result<LunarLakeCpuSlmPhaseAttribution> {
+    let cpu_phase_path = resolve_receipt_path(root, cpu_phase);
+    let cold_warm_path = resolve_receipt_path(root, cold_warm_benchmark);
+    let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
+    let cpu_phase_json: Value = read_json_receipt(&cpu_phase_path)?;
+    let cold_warm: LunarLakeColdWarmBenchmark = read_json_receipt(&cold_warm_path)?;
+    let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
+
+    let mut gaps = Vec::new();
+    let mut findings = Vec::new();
+    if fallback_used(&cpu_phase_json) == Some(true) {
+        gaps.push("dense Qwen CPU phase receipt observed fallback_used=true".to_string());
+    }
+    if !cold_warm.benchmark_gate_ready {
+        gaps.push(format!("cold/warm benchmark is not ready: {}", cold_warm.gaps.join("; ")));
+    }
+    if cold_warm.claim_boundary.new_inference_executed {
+        gaps.push("cold/warm benchmark executed new inference".to_string());
+    }
+    if cold_warm.claim_boundary.route_promotion_changed {
+        gaps.push("cold/warm benchmark changed route promotion".to_string());
+    }
+    if cold_warm.claim_boundary.speedup_claim || cold_warm.claim_boundary.acceleration_claim {
+        gaps.push("cold/warm benchmark made speedup or acceleration claim".to_string());
+    }
+    if cold_warm.claim_boundary.hidden_fallback_allowed {
+        gaps.push("cold/warm benchmark allows hidden fallback".to_string());
+    }
+    if string_at(&phase_comparison_json, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_comparison")
+    {
+        gaps.push("phase comparison receipt is not the dense SLM OpenVINO comparison".to_string());
+    }
+    if fallback_used(&phase_comparison_json) == Some(true) {
+        gaps.push("phase comparison observed fallback_used=true".to_string());
+    }
+
+    let cold_route = find_cpu_cold_route(&cold_warm).with_context(|| {
+        format!("{} does not contain dense_slm_default_cpu timing", cold_warm_path.display())
+    })?;
+    let cold_one_off = cpu_slm_cold_attribution(cold_route.profile_id, cold_route.route)?;
+    let warm_session = cpu_slm_warm_attribution(&cpu_phase_json, &mut gaps);
+    let openvino_cpu_context = cpu_slm_openvino_cpu_context(&phase_comparison_json);
+
+    if let Some(total) = cold_one_off.timing.total_response_ms {
+        findings.push(format!("cpu_one_off_total_response_ms={total:.3}"));
+    }
+    if let Some(load_share) = cold_one_off.model_load_share_of_total {
+        findings.push(format!("cpu_one_off_model_load_share={load_share:.3}"));
+    }
+    if let Some(prefill_share) = cold_one_off.reported_prefill_share_of_total {
+        findings.push(format!("cpu_one_off_prefill_share={prefill_share:.3}"));
+    }
+    if let Some(profile) =
+        warm_session.profiles.iter().find(|profile| profile.profile == "decode_128")
+        && let Some(tokens_per_s) = profile.decode_tokens_per_s
+    {
+        findings.push(format!("warm_decode_128_tokens_per_s={tokens_per_s:.3}"));
+    }
+    if let Some(context) = &openvino_cpu_context {
+        if context.pipeline_load_ms.is_some() || context.case_elapsed_ms_sum.is_some() {
+            findings.push("openvino_cpu_smoke_context_indexed_without_speedup_claim".to_string());
+        }
+    } else {
+        gaps.push("OpenVINO CPU comparison context is missing".to_string());
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-CPU-SLM-PERF-002: add resident CPU session/no-reload timing".to_string(),
+        "LNL258V-CPU-SLM-PERF-003: compare Rust GGUF CPU against OpenVINO CPU for the same Qwen profiles".to_string(),
+        "LNL258V-GPU-QUAL-001: keep GPU promotion blocked until corpus-v2 quality failures are classified".to_string(),
+        "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode".to_string(),
+    ];
+    let attribution_ready = gaps.is_empty();
+
+    Ok(LunarLakeCpuSlmPhaseAttribution {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cpu_slm_phase_attribution".to_string(),
+        proof_stage: "cpu_dense_slm_phase_attribution_no_new_inference".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: CpuSlmAttributionSources {
+            cpu_phase_receipt: path_string(&cpu_phase_path),
+            cold_warm_benchmark_receipt: path_string(&cold_warm_path),
+            phase_comparison_receipt: path_string(&phase_comparison_path),
+        },
+        model: CpuSlmAttributionModel {
+            model_family: string_at_any(&cpu_phase_json, &["model_family", "model.family"]),
+            model_architecture: string_at_any(
+                &cpu_phase_json,
+                &["model_architecture", "model.architecture"],
+            ),
+            quantization: string_at_any(&cpu_phase_json, &["quantization", "model.quant_format"]),
+            tokenizer_source: string_at_any(
+                &cpu_phase_json,
+                &["tokenizer_source", "tokenizer.source"],
+            ),
+            prompt_template: string_at(&cpu_phase_json, "prompt_template"),
+        },
+        backend: CpuSlmAttributionBackend {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: cold_route.route.selected_backend.clone(),
+            runtime_api: cold_route.route.runtime_api.clone(),
+            selected_kernel_or_runtime: string_at(&cpu_phase_json, "selected_kernel_or_runtime"),
+            fallback_used: cold_route.route.fallback_used,
+            answer_gate_passed: cold_route.route.answer_gate_passed,
+        },
+        cold_one_off,
+        warm_session,
+        openvino_cpu_context,
+        attribution_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: CpuSlmPerfClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            arc_npu_execution_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+struct CpuColdRouteRef<'a> {
+    profile_id: &'a str,
+    route: &'a ColdWarmRouteBenchmark,
+}
+
+fn find_cpu_cold_route(benchmark: &LunarLakeColdWarmBenchmark) -> Option<CpuColdRouteRef<'_>> {
+    for wanted in ["ask_short", "ask_normal", "regression_tiny"] {
+        if let Some(found) = benchmark.profiles.iter().find_map(|profile| {
+            (profile.profile_id == wanted)
+                .then(|| {
+                    profile.routes.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE).map(
+                        |route| CpuColdRouteRef { profile_id: profile.profile_id.as_str(), route },
+                    )
+                })
+                .flatten()
+        }) {
+            return Some(found);
+        }
+    }
+    benchmark.profiles.iter().find_map(|profile| {
+        profile
+            .routes
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .map(|route| CpuColdRouteRef { profile_id: profile.profile_id.as_str(), route })
+    })
+}
+
+fn cpu_slm_cold_attribution(
+    profile_id: &str,
+    route: &ColdWarmRouteBenchmark,
+) -> Result<CpuSlmColdAttribution> {
+    let timing = route.timing.clone();
+    let total = timing.total_response_ms;
+    let share = |value: Option<f64>| -> Option<f64> {
+        let total = total?;
+        let value = value?;
+        (total > 0.0).then(|| value / total)
+    };
+    let non_decode_ms = match (timing.total_response_ms, timing.decode_total_ms) {
+        (Some(total), Some(decode)) => Some((total - decode).max(0.0)),
+        _ => None,
+    };
+    let mut timing_notes = Vec::new();
+    if timing.prefill_ms.is_some() && timing.first_token_ms.is_some() {
+        timing_notes.push(
+            "cold one-off receipt reports both prefill_ms and first_token_ms; treat shares as diagnostic attribution, not additive benchmark accounting".to_string(),
+        );
+    }
+    if timing.known_gaps.iter().any(|gap| gap.contains("bounded math ask only")) {
+        timing_notes.push("cold one-off attribution is from bounded math ask, not expanded corpus-v2 profile execution".to_string());
+    }
+    if route.benchmark_qualified_advantage {
+        bail!("CPU attribution refuses benchmark-qualified advantage claims");
+    }
+    Ok(CpuSlmColdAttribution {
+        profile_id: profile_id.to_string(),
+        timing,
+        model_load_share_of_total: share(route.timing.cold_load_ms),
+        tokenize_share_of_total: share(route.timing.tokenize_ms),
+        first_token_share_of_total: share(route.timing.first_token_ms),
+        decode_share_of_total: share(route.timing.decode_total_ms),
+        reported_prefill_share_of_total: share(route.timing.prefill_ms),
+        non_decode_ms,
+        timing_notes,
+        blockers: route.blockers.clone(),
+    })
+}
+
+fn cpu_slm_warm_attribution(json: &Value, gaps: &mut Vec<String>) -> CpuSlmWarmAttribution {
+    let profiles = json
+        .get("profiles")
+        .and_then(Value::as_array)
+        .map(|profiles| profiles.iter().map(cpu_slm_warm_profile_attribution).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if profiles.is_empty() {
+        gaps.push("dense Qwen CPU warm phase receipt has no profiles".to_string());
+    }
+    let mut timing_notes = Vec::new();
+    if bool_at_any(json, &["session.model_loaded_once"]) == Some(true) {
+        timing_notes
+            .push("warm-session receipt loaded the model once across phase profiles".to_string());
+    }
+    if bool_at_any(json, &["session.tokenizer_loaded_once"]) == Some(true) {
+        timing_notes.push(
+            "warm-session receipt loaded the tokenizer once across phase profiles".to_string(),
+        );
+    }
+    CpuSlmWarmAttribution {
+        model_loaded_once: bool_at_any(json, &["session.model_loaded_once"]),
+        tokenizer_loaded_once: bool_at_any(json, &["session.tokenizer_loaded_once"]),
+        model_load_ms: number_at_any(json, &["timing.model_load_ms"]),
+        tokenizer_load_ms: number_at_any(json, &["timing.tokenizer_load_ms"]),
+        total_session_ms: number_at_any(json, &["timing.total_session_ms"]),
+        profiles,
+        timing_notes,
+    }
+}
+
+fn cpu_slm_warm_profile_attribution(profile: &Value) -> CpuSlmWarmProfileAttribution {
+    let prompt_tokens = u64_at(profile, "prompt_tokens");
+    let generated_tokens = u64_at(profile, "generated_tokens");
+    let prefill_ms = number_at_any(profile, &["prefill_ms"]);
+    let decode_total_ms = number_at_any(profile, &["decode_total_ms"]);
+    let prefill_ms_per_prompt_token = match (prefill_ms, prompt_tokens) {
+        (Some(ms), Some(tokens)) if tokens > 0 => Some(ms / tokens as f64),
+        _ => None,
+    };
+    let decode_tokens_per_s = match (decode_total_ms, generated_tokens) {
+        (Some(ms), Some(tokens)) if ms > 0.0 => Some(tokens as f64 / (ms / 1000.0)),
+        _ => None,
+    };
+    CpuSlmWarmProfileAttribution {
+        profile: string_at(profile, "profile").unwrap_or_else(|| "unknown".to_string()),
+        prompt_tokens,
+        generated_tokens,
+        prefill_ms,
+        first_token_decode_ms: number_at_any(profile, &["first_token_decode_ms"]),
+        decode_total_ms,
+        prefill_ms_per_prompt_token,
+        decode_tokens_per_s,
+        fallback_used: bool_at_any(profile, &["fallback_used"]),
+        receipt_path: string_at(profile, "receipt_path"),
+    }
+}
+
+fn cpu_slm_openvino_cpu_context(json: &Value) -> Option<CpuSlmOpenVinoCpuContext> {
+    let cpu = value_at(json, "openvino_paths.cpu")?;
+    Some(CpuSlmOpenVinoCpuContext {
+        source_receipt: string_at(cpu, "source_receipt"),
+        selected_backend: string_at(cpu, "selected_backend"),
+        runtime_api: string_at(cpu, "runtime_api"),
+        fallback_used: bool_at_any(cpu, &["fallback_used"]),
+        answer_gate_passed: bool_at_any(cpu, &["answer_gate.passed"]).or_else(|| {
+            let passed = u64_at(cpu, "answer_gate.passed")?;
+            let failed = u64_at(cpu, "answer_gate.failed").unwrap_or(0);
+            Some(passed > 0 && failed == 0)
+        }),
+        pipeline_load_ms: number_at_any(cpu, &["timing.pipeline_load_ms"]),
+        case_elapsed_ms_sum: number_at_any(cpu, &["timing.case_elapsed_ms_sum"]),
+        timing_scope: "openvino_cpu_smoke_level_context_only".to_string(),
+        comparison_notes: vec![
+            "OpenVINO CPU timing is smoke-level context from existing receipts, not a speedup claim".to_string(),
+            "OpenVINO GenAI receipt does not expose tokenize/prefill/first-token/decode splits for this comparison".to_string(),
+        ],
+    })
+}
+
+pub fn build_cpu_slm_resident_session_with_created_utc(
+    root: &Path,
+    phase_attribution: &Path,
+    repeated_warm_session: &Path,
+    required_repeats: u64,
+    created_utc: String,
+) -> Result<LunarLakeCpuSlmResidentSession> {
+    let phase_attribution_path = resolve_receipt_path(root, phase_attribution);
+    let repeated_warm_session_path = resolve_receipt_path(root, repeated_warm_session);
+    let phase_attribution_json: Value = read_json_receipt(&phase_attribution_path)?;
+    let repeated_json: Value = read_json_receipt(&repeated_warm_session_path)?;
+
+    let mut gaps = Vec::new();
+    if string_at(&phase_attribution_json, "artifact_kind").as_deref()
+        != Some("lunar_lake_cpu_slm_phase_attribution")
+    {
+        gaps.push(
+            "phase attribution receipt must have artifact_kind=lunar_lake_cpu_slm_phase_attribution"
+                .to_string(),
+        );
+    }
+    if bool_at_any(&phase_attribution_json, &["attribution_ready"]) != Some(true) {
+        gaps.push("phase attribution receipt is not attribution_ready=true".to_string());
+    }
+    if string_at(&repeated_json, "artifact_kind").as_deref() != Some("slm_cpu_warm_session") {
+        gaps.push(
+            "repeated warm-session receipt must have artifact_kind=slm_cpu_warm_session"
+                .to_string(),
+        );
+    }
+    if string_at_any(&repeated_json, &["selected_backend", "backend.selected_backend"]).as_deref()
+        != Some("cpu-rust")
+    {
+        gaps.push("resident session must select backend cpu-rust".to_string());
+    }
+    if string_at_any(&repeated_json, &["runtime_api", "backend.runtime_api"]).as_deref()
+        != Some("cpu")
+    {
+        gaps.push("resident session must record runtime_api=cpu".to_string());
+    }
+    if fallback_used(&repeated_json) != Some(false) {
+        gaps.push("resident session must record fallback_used=false".to_string());
+    }
+    if bool_at_any(&repeated_json, &["quality_summary.passed"]) != Some(true) {
+        gaps.push("resident session must record passing answer gates".to_string());
+    }
+    if bool_at_any(&repeated_json, &["determinism.passed"]) != Some(true) {
+        gaps.push("resident session must record determinism.passed=true".to_string());
+    }
+    if bool_at_any(
+        &repeated_json,
+        &[
+            "speedup_claim",
+            "claim_boundary.speedup_claim",
+            "claim_boundary.broad_performance_claim",
+            "claim_boundary.full_metal_inference_claimed",
+            "claim_boundary.bitnet_quality_claimed",
+        ],
+    ) == Some(true)
+    {
+        gaps.push("resident session refuses speedup, accelerator, or BitNet claims".to_string());
+    }
+
+    let resident_session = cpu_slm_resident_session_evidence(&repeated_json);
+    if resident_session.model_loaded_once != Some(true) {
+        gaps.push("resident session did not prove model_loaded_once=true".to_string());
+    }
+    if resident_session.tokenizer_loaded_once != Some(true) {
+        gaps.push("resident session did not prove tokenizer_loaded_once=true".to_string());
+    }
+
+    let cold_reference = cpu_slm_resident_cold_reference(&phase_attribution_json);
+    let profiles = cpu_slm_resident_profiles(
+        &repeated_json,
+        required_repeats,
+        cold_reference.total_response_ms,
+        &mut gaps,
+    );
+    if profiles.is_empty() {
+        gaps.push("resident session has no repeated profile timing summaries".to_string());
+    }
+
+    let mut findings = Vec::new();
+    if let Some(total) = cold_reference.total_response_ms {
+        findings.push(format!("cold_reference_total_response_ms={total:.3}"));
+    }
+    if let Some(load) = resident_session.model_load_ms {
+        findings.push(format!("resident_session_model_load_ms={load:.3}"));
+    }
+    for profile in &profiles {
+        if let Some(mean) = profile.total_ms.mean {
+            findings.push(format!("resident_{}_mean_total_ms={mean:.3}", profile.profile_id));
+        }
+        if let Some(ratio) = profile.cold_to_resident_total_ratio {
+            findings
+                .push(format!("cold_to_resident_total_ratio_{}={ratio:.3}", profile.profile_id));
+        }
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-CPU-SLM-PERF-003: compare Rust GGUF CPU against OpenVINO CPU for the same Qwen profiles".to_string(),
+        "LNL258V-GPU-QUAL-001: classify OpenVINO GPU corpus-v2 quality failures before promotion".to_string(),
+        "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode".to_string(),
+    ];
+    let resident_ready = gaps.is_empty()
+        && !profiles.is_empty()
+        && profiles.iter().all(|profile| profile.blockers.is_empty());
+
+    Ok(LunarLakeCpuSlmResidentSession {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cpu_slm_resident_session".to_string(),
+        proof_stage: "resident_cpu_no_reload_timing_no_new_inference".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: CpuSlmResidentSessionSources {
+            phase_attribution_receipt: path_string(&phase_attribution_path),
+            repeated_warm_session_receipt: path_string(&repeated_warm_session_path),
+        },
+        model: CpuSlmAttributionModel {
+            model_family: string_at_any(&repeated_json, &["model.family", "corpus.model.family"]),
+            model_architecture: string_at_any(
+                &repeated_json,
+                &["model.architecture", "corpus.model.architecture"],
+            ),
+            quantization: string_at_any(
+                &repeated_json,
+                &["model.quant_format", "corpus.model.quant_format"],
+            ),
+            tokenizer_source: string_at_any(&repeated_json, &["model.tokenizer"]),
+            prompt_template: string_at_any(
+                &repeated_json,
+                &["generation.prompt_template", "corpus.defaults.prompt_template"],
+            ),
+        },
+        backend: CpuSlmAttributionBackend {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: string_at_any(
+                &repeated_json,
+                &["selected_backend", "backend.selected_backend"],
+            )
+            .unwrap_or_else(|| "unknown".to_string()),
+            runtime_api: string_at_any(&repeated_json, &["runtime_api", "backend.runtime_api"])
+                .unwrap_or_else(|| "unknown".to_string()),
+            selected_kernel_or_runtime: Some("resident_cpu_rust_gguf".to_string()),
+            fallback_used: fallback_used(&repeated_json),
+            answer_gate_passed: bool_at_any(&repeated_json, &["quality_summary.passed"]),
+        },
+        resident_session,
+        cold_reference,
+        profiles,
+        resident_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: CpuSlmPerfClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            arc_npu_execution_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn cpu_slm_resident_session_evidence(json: &Value) -> CpuSlmResidentSessionEvidence {
+    CpuSlmResidentSessionEvidence {
+        reuse_scope: string_at(json, "session.reuse_scope"),
+        model_loaded_once: bool_at_any(json, &["session.model_loaded_once"]),
+        tokenizer_loaded_once: bool_at_any(json, &["session.tokenizer_loaded_once"]),
+        model_load_ms: number_at_any(json, &["timing.model_load_ms"]),
+        model_sha256_ms: number_at_any(json, &["timing.model_sha256_ms"]),
+        tokenizer_load_ms: number_at_any(json, &["timing.tokenizer_load_ms"]),
+        total_session_ms: number_at_any(json, &["timing.total_session_ms"]),
+        prompt_count: u64_at(json, "session.prompt_count"),
+        per_prompt_receipts_enabled: bool_at_any(json, &["session.per_prompt_receipts_enabled"]),
+        session_owned_buffers: bool_at_any(json, &["session.session_owned_buffers"]),
+        prompt_token_buffer_reused: bool_at_any(json, &["session.prompt_token_buffer_reused"]),
+        generated_token_buffer_reused: bool_at_any(
+            json,
+            &["session.generated_token_buffer_reused"],
+        ),
+        timing_buffers_reused: bool_at_any(json, &["session.timing_buffers_reused"]),
+        stop_policy_precomputed_once: bool_at_any(json, &["session.stop_policy_precomputed_once"]),
+        resident_memory_bytes: u64_at(json, "memory.resident_memory_bytes"),
+    }
+}
+
+fn cpu_slm_resident_cold_reference(json: &Value) -> CpuSlmResidentColdReference {
+    CpuSlmResidentColdReference {
+        profile_id: string_at(json, "cold_one_off.profile_id"),
+        total_response_ms: number_at_any(json, &["cold_one_off.timing.total_response_ms"]),
+        cold_load_ms: number_at_any(json, &["cold_one_off.timing.cold_load_ms"]),
+        tokenize_ms: number_at_any(json, &["cold_one_off.timing.tokenize_ms"]),
+        prefill_ms: number_at_any(json, &["cold_one_off.timing.prefill_ms"]),
+        first_token_ms: number_at_any(json, &["cold_one_off.timing.first_token_ms"]),
+        decode_total_ms: number_at_any(json, &["cold_one_off.timing.decode_total_ms"]),
+        timing_scope: "cold_one_off_reference_from_cpu_phase_attribution".to_string(),
+    }
+}
+
+#[derive(Default)]
+struct ResidentProfileAccumulator {
+    case_ids: BTreeSet<String>,
+    observed_execution_count: u64,
+    model_reload_observed: bool,
+    tokenizer_reload_observed: bool,
+    fallback_observed: bool,
+    answer_gate_seen: bool,
+    answer_gate_passed: bool,
+    deterministic_generated_ids: Option<bool>,
+    deterministic_text: Option<bool>,
+    total_ms: Vec<f64>,
+    time_to_first_token_ms: Vec<f64>,
+    prefill_ms: Vec<f64>,
+    decode_total_ms: Vec<f64>,
+    tokenize_ms: Vec<f64>,
+    generated_tokens: Vec<f64>,
+}
+
+fn cpu_slm_resident_profiles(
+    json: &Value,
+    required_repeats: u64,
+    cold_reference_total_ms: Option<f64>,
+    gaps: &mut Vec<String>,
+) -> Vec<CpuSlmResidentProfileSummary> {
+    let mut by_index = BTreeMap::<u64, &Value>::new();
+    for prompt in json.get("prompts").and_then(Value::as_array).into_iter().flatten() {
+        if let Some(index) = u64_at(prompt, "prompt_index") {
+            by_index.insert(index, prompt);
+        }
+    }
+    if by_index.is_empty() {
+        gaps.push("resident warm-session receipt has no prompt receipts".to_string());
+    }
+
+    let mut profiles = BTreeMap::<String, ResidentProfileAccumulator>::new();
+    for group in json.pointer("/determinism/groups").and_then(Value::as_array).into_iter().flatten()
+    {
+        let Some(case_id) = group.get("case_id").and_then(Value::as_str) else {
+            gaps.push("resident determinism group is missing case_id".to_string());
+            continue;
+        };
+        let Some(profile_id) = durability_profile_for_case_id(case_id) else {
+            continue;
+        };
+        let prompt_indices = group
+            .get("prompt_indices")
+            .and_then(Value::as_array)
+            .map(|indices| indices.iter().filter_map(Value::as_u64).collect::<Vec<_>>())
+            .unwrap_or_default();
+        let entry = profiles.entry(profile_id.to_string()).or_default();
+        entry.case_ids.insert(case_id.to_string());
+        entry.observed_execution_count =
+            entry.observed_execution_count.max(u64_at(group, "attempt_count").unwrap_or(0));
+        if !entry.answer_gate_seen {
+            entry.answer_gate_passed = true;
+            entry.answer_gate_seen = true;
+        }
+        entry.deterministic_generated_ids = Some(
+            entry.deterministic_generated_ids.unwrap_or(true)
+                && bool_at_any(group, &["stable_generated_token_ids"]) == Some(true),
+        );
+        entry.deterministic_text = Some(
+            entry.deterministic_text.unwrap_or(true)
+                && bool_at_any(group, &["stable_text"]) == Some(true),
+        );
+        for index in prompt_indices {
+            let Some(prompt) = by_index.get(&index) else {
+                gaps.push(format!(
+                    "resident determinism group {case_id} references missing prompt_index {index}"
+                ));
+                continue;
+            };
+            entry.fallback_observed |= fallback_used(prompt) != Some(false);
+            entry.answer_gate_passed &= answer_gate_passed(prompt) == Some(true);
+            entry.model_reload_observed |=
+                number_at_any(prompt, &["timing.model_load_ms"]).is_some_and(|value| value > 0.0);
+            entry.tokenizer_reload_observed |= number_at_any(prompt, &["timing.tokenizer_load_ms"])
+                .is_some_and(|value| value > 0.0);
+            push_number(prompt, "timing.total_ms", &mut entry.total_ms);
+            push_first_number(
+                prompt,
+                &["timing.time_to_first_token_ms", "timing.first_token_ms"],
+                &mut entry.time_to_first_token_ms,
+            );
+            push_number(prompt, "timing.prefill_ms", &mut entry.prefill_ms);
+            push_number(prompt, "timing.decode_total_ms", &mut entry.decode_total_ms);
+            push_number(prompt, "timing.tokenize_ms", &mut entry.tokenize_ms);
+            if let Some(tokens) = u64_at(prompt, "generated_tokens") {
+                entry.generated_tokens.push(tokens as f64);
+            }
+        }
+    }
+
+    profiles
+        .into_iter()
+        .map(|(profile_id, entry)| {
+            let mut blockers = Vec::new();
+            if entry.observed_execution_count < required_repeats {
+                blockers.push(format!(
+                    "resident profile observed {}/{} required executions",
+                    entry.observed_execution_count, required_repeats
+                ));
+            }
+            if entry.model_reload_observed {
+                blockers.push("model reload observed inside resident prompt loop".to_string());
+            }
+            if entry.tokenizer_reload_observed {
+                blockers.push("tokenizer reload observed inside resident prompt loop".to_string());
+            }
+            if entry.fallback_observed {
+                blockers.push("fallback observed inside resident prompt loop".to_string());
+            }
+            if !entry.answer_gate_passed {
+                blockers
+                    .push("answer gate failure observed inside resident prompt loop".to_string());
+            }
+            if entry.deterministic_generated_ids != Some(true) {
+                blockers.push("generated token IDs drifted in resident prompt loop".to_string());
+            }
+            if entry.deterministic_text != Some(true) {
+                blockers.push("decoded text drifted in resident prompt loop".to_string());
+            }
+            if entry.total_ms.is_empty() {
+                blockers.push("resident profile has no total_ms timing samples".to_string());
+            }
+            blockers.sort();
+            blockers.dedup();
+
+            let total_ms = resident_metric_summary(&entry.total_ms);
+            let decode_total_ms = resident_metric_summary(&entry.decode_total_ms);
+            let generated_tokens = resident_metric_summary(&entry.generated_tokens);
+            let decode_tokens_per_s_mean =
+                match (sum_f64(&entry.generated_tokens), sum_f64(&entry.decode_total_ms)) {
+                    (Some(tokens), Some(ms)) if ms > 0.0 => Some(tokens / (ms / 1000.0)),
+                    _ => None,
+                };
+            let cold_to_resident_total_ratio = match (cold_reference_total_ms, total_ms.mean) {
+                (Some(cold), Some(warm)) if warm > 0.0 => Some(cold / warm),
+                _ => None,
+            };
+
+            CpuSlmResidentProfileSummary {
+                profile_id,
+                case_ids: entry.case_ids.into_iter().collect(),
+                observed_execution_count: entry.observed_execution_count,
+                required_execution_count: required_repeats,
+                model_reload_observed: entry.model_reload_observed,
+                tokenizer_reload_observed: entry.tokenizer_reload_observed,
+                fallback_observed: entry.fallback_observed,
+                answer_gate_passed: entry.answer_gate_passed,
+                deterministic_generated_ids: entry.deterministic_generated_ids,
+                deterministic_text: entry.deterministic_text,
+                total_ms,
+                time_to_first_token_ms: resident_metric_summary(&entry.time_to_first_token_ms),
+                prefill_ms: resident_metric_summary(&entry.prefill_ms),
+                decode_total_ms,
+                tokenize_ms: resident_metric_summary(&entry.tokenize_ms),
+                generated_tokens,
+                decode_tokens_per_s_mean,
+                cold_to_resident_total_ratio,
+                blockers,
+            }
+        })
+        .collect()
+}
+
+fn push_number(json: &Value, path: &str, out: &mut Vec<f64>) {
+    if let Some(value) = number_at_any(json, &[path]) {
+        out.push(value);
+    }
+}
+
+fn push_first_number(json: &Value, paths: &[&str], out: &mut Vec<f64>) {
+    if let Some(value) = number_at_any(json, paths) {
+        out.push(value);
+    }
+}
+
+fn resident_metric_summary(values: &[f64]) -> CpuSlmResidentMetricSummary {
+    let sample_count = values.len() as u64;
+    if values.is_empty() {
+        return CpuSlmResidentMetricSummary { sample_count, min: None, mean: None, max: None };
+    }
+    let mut min = f64::INFINITY;
+    let mut max = f64::NEG_INFINITY;
+    let mut sum = 0.0;
+    for value in values {
+        min = min.min(*value);
+        max = max.max(*value);
+        sum += value;
+    }
+    CpuSlmResidentMetricSummary {
+        sample_count,
+        min: Some(min),
+        mean: Some(sum / values.len() as f64),
+        max: Some(max),
+    }
+}
+
+fn sum_f64(values: &[f64]) -> Option<f64> {
+    (!values.is_empty()).then(|| values.iter().sum())
+}
+
+pub fn build_cpu_slm_runtime_comparison_with_created_utc(
+    root: &Path,
+    resident_session: &Path,
+    openvino_corpus_v2: &Path,
+    openvino_phase_runner: &Path,
+    created_utc: String,
+) -> Result<LunarLakeCpuSlmRuntimeComparison> {
+    let resident_path = resolve_receipt_path(root, resident_session);
+    let openvino_corpus_path = resolve_receipt_path(root, openvino_corpus_v2);
+    let openvino_phase_path = resolve_receipt_path(root, openvino_phase_runner);
+    let resident: LunarLakeCpuSlmResidentSession = read_json_receipt(&resident_path)?;
+    let openvino_corpus: Value = read_json_receipt(&openvino_corpus_path)?;
+    let openvino_phase: Value = read_json_receipt(&openvino_phase_path)?;
+
+    let mut gaps = Vec::new();
+    if resident.artifact_kind != "lunar_lake_cpu_slm_resident_session" {
+        gaps.push(
+            "resident receipt must have artifact_kind=lunar_lake_cpu_slm_resident_session"
+                .to_string(),
+        );
+    }
+    if !resident.resident_ready {
+        gaps.push("resident CPU receipt is not resident_ready=true".to_string());
+    }
+    if resident.claim_boundary.new_inference_executed
+        || resident.claim_boundary.speedup_claim
+        || resident.claim_boundary.route_promotion_changed
+    {
+        gaps.push("runtime comparison refuses resident receipts with inference, speedup, or route-promotion claims".to_string());
+    }
+    if string_at(&openvino_corpus, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_corpus_v2")
+    {
+        gaps.push("OpenVINO corpus receipt must be corpus-v2".to_string());
+    }
+    if fallback_used(&openvino_corpus) != Some(false) {
+        gaps.push("OpenVINO corpus-v2 receipt must record fallback_used=false".to_string());
+    }
+    if string_at(&openvino_phase, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_runner")
+    {
+        gaps.push(
+            "OpenVINO phase-runner receipt is missing or has wrong artifact kind".to_string(),
+        );
+    }
+    if fallback_used(&openvino_phase) != Some(false) {
+        gaps.push("OpenVINO phase-runner receipt must record fallback_used=false".to_string());
+    }
+
+    let openvino_corpus_cpu = openvino_cpu_device(&openvino_corpus)
+        .context("OpenVINO corpus-v2 receipt does not contain CPU device evidence")?;
+    let openvino_phase_cpu = openvino_cpu_device(&openvino_phase)
+        .context("OpenVINO phase-runner receipt does not contain CPU device evidence")?;
+
+    let rust_gguf_cpu = CpuSlmRuntimeRouteSummary {
+        route_id: DEFAULT_ASK_ROUTE.to_string(),
+        selected_backend: resident.backend.selected_backend.clone(),
+        runtime_api: resident.backend.runtime_api.clone(),
+        selected_kernel_or_runtime: resident.backend.selected_kernel_or_runtime.clone(),
+        fallback_used: resident.backend.fallback_used,
+        answer_gate_passed: resident.backend.answer_gate_passed,
+        quality_scope: "resident repeated warm-session and CPU corpus-v2 route evidence"
+            .to_string(),
+        timing_scope: "resident Rust GGUF CPU prompt-loop timing".to_string(),
+        load_or_construct_ms: resident.resident_session.model_load_ms,
+        known_gaps: vec![
+            "Rust GGUF CPU timing is from resident prompt-loop evidence, not OpenVINO PerfMetrics"
+                .to_string(),
+        ],
+    };
+    let openvino_cpu = CpuSlmRuntimeRouteSummary {
+        route_id: "dense_slm_openvino_cpu_candidate".to_string(),
+        selected_backend: string_at(openvino_corpus_cpu, "selected_backend")
+            .unwrap_or_else(|| "openvino-cpu".to_string()),
+        runtime_api: string_at(openvino_corpus_cpu, "runtime_api")
+            .unwrap_or_else(|| "openvino_genai".to_string()),
+        selected_kernel_or_runtime: string_at(openvino_corpus_cpu, "selected_kernel_or_runtime"),
+        fallback_used: fallback_used(openvino_corpus_cpu),
+        answer_gate_passed: openvino_device_answer_gate_passed(openvino_corpus_cpu),
+        quality_scope: "OpenVINO CPU corpus-v2 candidate evidence".to_string(),
+        timing_scope: "OpenVINO GenAI generation wall time and PerfMetrics context".to_string(),
+        load_or_construct_ms: number_at_any(
+            openvino_corpus_cpu,
+            &["pipeline_construct_wall_ms", "timing.pipeline_load_ms"],
+        )
+        .or_else(|| number_at_any(openvino_phase_cpu, &["pipeline_construct_wall_ms"])),
+        known_gaps: vec![
+            "OpenVINO GenAI generated token IDs are retokenized from text when direct IDs are unavailable".to_string(),
+            "OpenVINO CPU prefill/decode_128 splits are not equivalent to GGUF CPU phase receipts".to_string(),
+        ],
+    };
+
+    let mut profile_ids = BTreeSet::new();
+    profile_ids.extend(resident.profiles.iter().map(|profile| profile.profile_id.clone()));
+    if let Some(summary) =
+        openvino_corpus_cpu.pointer("/quality_summary/profile_summary").and_then(Value::as_object)
+    {
+        profile_ids.extend(summary.keys().cloned());
+    }
+
+    let mut profiles = Vec::new();
+    for profile_id in profile_ids {
+        let rust_profile =
+            resident.profiles.iter().find(|profile| profile.profile_id == profile_id);
+        let rust_evidence = rust_runtime_profile_evidence(rust_profile, &resident.backend);
+        let openvino_evidence = openvino_runtime_profile_evidence(openvino_corpus_cpu, &profile_id);
+        let openvino_to_rust_total_ratio =
+            match (openvino_evidence.timing_ms.mean, rust_evidence.timing_ms.mean) {
+                (Some(openvino), Some(rust)) if rust > 0.0 => Some(openvino / rust),
+                _ => None,
+            };
+        let mut blockers = Vec::new();
+        if rust_profile.is_none() {
+            blockers.push("Rust GGUF CPU resident profile evidence missing".to_string());
+        }
+        if openvino_evidence.cases_total.unwrap_or(0) == 0 {
+            blockers.push("OpenVINO CPU corpus-v2 profile evidence missing".to_string());
+        }
+        if openvino_evidence.fallback_used != Some(false) {
+            blockers.push("OpenVINO CPU fallback status is not fallback_used=false".to_string());
+        }
+        if openvino_evidence.cases_failed.unwrap_or(0) > 0 {
+            blockers.push(format!(
+                "OpenVINO CPU corpus-v2 profile has {} answer-gate failure(s)",
+                openvino_evidence.cases_failed.unwrap_or(0)
+            ));
+        }
+        if openvino_evidence.timing_ms.sample_count == 0 {
+            blockers.push("OpenVINO CPU profile has no generation wall timing samples".to_string());
+        }
+        blockers.sort();
+        blockers.dedup();
+
+        let status = if blockers.is_empty() {
+            "candidate_timing_context_only_no_promotion".to_string()
+        } else {
+            "blocked_candidate_context_only".to_string()
+        };
+        let mut notes = vec![
+            "Runtime comparison records diagnostic timing context only; it does not promote OpenVINO CPU or claim speedup".to_string(),
+        ];
+        if let Some(ratio) = openvino_to_rust_total_ratio {
+            notes.push(format!(
+                "openvino_to_rust_total_ratio={ratio:.3}; ratio is not benchmark-qualified speedup"
+            ));
+        }
+
+        profiles.push(CpuSlmRuntimeProfileComparison {
+            profile_id,
+            rust_cpu: rust_evidence,
+            openvino_cpu: openvino_evidence,
+            openvino_to_rust_total_ratio,
+            status,
+            blockers,
+            notes,
+        });
+    }
+
+    let mut findings = Vec::new();
+    if let Some(load) = rust_gguf_cpu.load_or_construct_ms {
+        findings.push(format!("rust_gguf_cpu_model_load_ms={load:.3}"));
+    }
+    if let Some(load) = openvino_cpu.load_or_construct_ms {
+        findings.push(format!("openvino_cpu_pipeline_construct_ms={load:.3}"));
+    }
+    for profile in &profiles {
+        if let Some(ratio) = profile.openvino_to_rust_total_ratio {
+            findings.push(format!(
+                "profile_{}_openvino_to_rust_total_ratio={ratio:.3}",
+                profile.profile_id
+            ));
+        }
+        if !profile.blockers.is_empty() {
+            findings.push(format!(
+                "profile_{}_openvino_candidate_blocked_by={}",
+                profile.profile_id,
+                profile.blockers.join("|")
+            ));
+        }
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-GPU-QUAL-001: classify OpenVINO GPU corpus-v2 quality failures before promotion".to_string(),
+        "LNL258V-NPU-COLD-001: decompose NPU cold load separately from hot decode".to_string(),
+        "LNL258V-ROUTE-005: keep route promotion blocked until profile quality and timing evidence are benchmark-qualified".to_string(),
+    ];
+    let comparison_ready = gaps.is_empty();
+
+    Ok(LunarLakeCpuSlmRuntimeComparison {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_cpu_slm_runtime_comparison".to_string(),
+        proof_stage: "rust_gguf_cpu_vs_openvino_cpu_context_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: CpuSlmRuntimeComparisonSources {
+            resident_session_receipt: path_string(&resident_path),
+            openvino_corpus_v2_receipt: path_string(&openvino_corpus_path),
+            openvino_phase_runner_receipt: path_string(&openvino_phase_path),
+        },
+        model: resident.model.clone(),
+        rust_gguf_cpu,
+        openvino_cpu,
+        profiles,
+        comparison_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: CpuSlmPerfClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            arc_npu_execution_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn openvino_cpu_device(json: &Value) -> Option<&Value> {
+    json.pointer("/generation/devices").and_then(Value::as_array)?.iter().find(|device| {
+        string_at(device, "runtime_device").as_deref() == Some("CPU")
+            || string_at(device, "selected_backend").as_deref() == Some("openvino-cpu")
+    })
+}
+
+fn openvino_device_answer_gate_passed(device: &Value) -> Option<bool> {
+    if let Some(failed) = u64_at(device, "quality_summary.failed") {
+        let passed = u64_at(device, "quality_summary.passed").unwrap_or(0);
+        return Some(failed == 0 && passed > 0);
+    }
+    let failed = u64_at(device, "failed")?;
+    let passed = u64_at(device, "passed").unwrap_or(0);
+    Some(failed == 0 && passed > 0)
+}
+
+fn rust_runtime_profile_evidence(
+    profile: Option<&CpuSlmResidentProfileSummary>,
+    backend: &CpuSlmAttributionBackend,
+) -> CpuSlmRuntimeProfileEvidence {
+    if let Some(profile) = profile {
+        CpuSlmRuntimeProfileEvidence {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: backend.selected_backend.clone(),
+            runtime_api: backend.runtime_api.clone(),
+            fallback_used: Some(profile.fallback_observed),
+            answer_gate_passed: Some(profile.answer_gate_passed),
+            cases_total: Some(profile.case_ids.len() as u64),
+            cases_passed: Some(if profile.answer_gate_passed {
+                profile.case_ids.len() as u64
+            } else {
+                0
+            }),
+            cases_failed: Some(if profile.answer_gate_passed {
+                0
+            } else {
+                profile.case_ids.len() as u64
+            }),
+            timing_ms: profile.total_ms.clone(),
+            time_to_first_token_ms: profile.time_to_first_token_ms.clone(),
+            tokenize_ms: profile.tokenize_ms.clone(),
+            generated_tokens: profile.generated_tokens.clone(),
+            throughput_tokens_per_s_mean: profile.decode_tokens_per_s_mean,
+            timing_source: "rust_gguf_cpu_resident_prompt_loop".to_string(),
+        }
+    } else {
+        CpuSlmRuntimeProfileEvidence {
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: backend.selected_backend.clone(),
+            runtime_api: backend.runtime_api.clone(),
+            fallback_used: None,
+            answer_gate_passed: None,
+            cases_total: None,
+            cases_passed: None,
+            cases_failed: None,
+            timing_ms: resident_metric_summary(&[]),
+            time_to_first_token_ms: resident_metric_summary(&[]),
+            tokenize_ms: resident_metric_summary(&[]),
+            generated_tokens: resident_metric_summary(&[]),
+            throughput_tokens_per_s_mean: None,
+            timing_source: "missing_rust_gguf_cpu_profile".to_string(),
+        }
+    }
+}
+
+fn openvino_runtime_profile_evidence(
+    device: &Value,
+    profile_id: &str,
+) -> CpuSlmRuntimeProfileEvidence {
+    let summary = device
+        .pointer("/quality_summary/profile_summary")
+        .and_then(|summary| summary.as_object()?.get(profile_id));
+    let cases = device
+        .get("cases")
+        .and_then(Value::as_array)
+        .map(|cases| {
+            cases
+                .iter()
+                .filter(|case| case.get("profile").and_then(Value::as_str) == Some(profile_id))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut timing = Vec::new();
+    let mut ttft = Vec::new();
+    let mut tokenize = Vec::new();
+    let mut generated_tokens = Vec::new();
+    let mut throughput = Vec::new();
+    for case in &cases {
+        push_number(case, "timing.generation_wall_ms", &mut timing);
+        push_first_number(
+            case,
+            &[
+                "timing.first_streamed_text_chunk_ms",
+                "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+            ],
+            &mut ttft,
+        );
+        push_number(case, "timing.openvino_perf_metrics.tokenization.mean_ms", &mut tokenize);
+        push_number(
+            case,
+            "timing.openvino_perf_metrics.num_generated_tokens",
+            &mut generated_tokens,
+        );
+        push_number(case, "timing.openvino_perf_metrics.throughput.mean_ms", &mut throughput);
+    }
+
+    CpuSlmRuntimeProfileEvidence {
+        route_id: "dense_slm_openvino_cpu_candidate".to_string(),
+        selected_backend: string_at(device, "selected_backend")
+            .unwrap_or_else(|| "openvino-cpu".to_string()),
+        runtime_api: string_at(device, "runtime_api")
+            .unwrap_or_else(|| "openvino_genai".to_string()),
+        fallback_used: fallback_used(device),
+        answer_gate_passed: summary
+            .and_then(|summary| u64_at(summary, "failed").map(|failed| failed == 0))
+            .or_else(|| {
+                if cases.is_empty() {
+                    None
+                } else {
+                    Some(cases.iter().all(|case| case_passed(case)))
+                }
+            }),
+        cases_total: summary
+            .and_then(|summary| u64_at(summary, "total"))
+            .or_else(|| (!cases.is_empty()).then_some(cases.len() as u64)),
+        cases_passed: summary.and_then(|summary| u64_at(summary, "passed")).or_else(|| {
+            (!cases.is_empty())
+                .then_some(cases.iter().filter(|case| case_passed(case)).count() as u64)
+        }),
+        cases_failed: summary.and_then(|summary| u64_at(summary, "failed")).or_else(|| {
+            (!cases.is_empty())
+                .then_some(cases.iter().filter(|case| !case_passed(case)).count() as u64)
+        }),
+        timing_ms: resident_metric_summary(&timing),
+        time_to_first_token_ms: resident_metric_summary(&ttft),
+        tokenize_ms: resident_metric_summary(&tokenize),
+        generated_tokens: resident_metric_summary(&generated_tokens),
+        throughput_tokens_per_s_mean: mean_f64(&throughput),
+        timing_source: "openvino_cpu_corpus_v2_generation_wall_and_perfmetrics".to_string(),
+    }
+}
+
+fn mean_f64(values: &[f64]) -> Option<f64> {
+    let sum = sum_f64(values)?;
+    Some(sum / values.len() as f64)
+}
+
+pub fn build_openvino_corpus_v2_diagnosis_with_created_utc(
+    root: &Path,
+    openvino_corpus_v2: &Path,
+    answer_corpus_v2: Option<&Path>,
+    runtime_device: &str,
+    created_utc: String,
+) -> Result<LunarLakeOpenVinoCorpusV2Diagnosis> {
+    let openvino_corpus_path = resolve_receipt_path(root, openvino_corpus_v2);
+    let corpus: Value = read_json_receipt(&openvino_corpus_path)?;
+    let mut gaps = Vec::new();
+    if string_at(&corpus, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_corpus_v2")
+    {
+        gaps.push(
+            "OpenVINO diagnosis requires the dense SLM OpenVINO corpus-v2 receipt".to_string(),
+        );
+    }
+    if fallback_used(&corpus) != Some(false) {
+        gaps.push("OpenVINO corpus-v2 top-level fallback_used must be false".to_string());
+    }
+    let device = openvino_device_by_runtime(&corpus, runtime_device)
+        .with_context(|| format!("OpenVINO corpus-v2 device `{runtime_device}` is missing"))?;
+    if fallback_used(device) != Some(false) {
+        gaps.push(format!("OpenVINO device `{runtime_device}` did not record fallback_used=false"));
+    }
+    if bool_at_any(device, &["route_promotion_changed"]) == Some(true) {
+        gaps.push(format!("OpenVINO device `{runtime_device}` changed route promotion"));
+    }
+
+    let answer_corpus_v2_fixture =
+        answer_corpus_v2.map(|path| path_string(&resolve_receipt_path(root, path)));
+    let route_id = openvino_device_route_id(device).unwrap_or("dense_slm_openvino_candidate");
+    let case_alignment = diagnose_openvino_corpus_case_alignment(
+        root,
+        answer_corpus_v2,
+        route_id,
+        device,
+        &mut gaps,
+    )?;
+
+    let failed_cases = device
+        .get("cases")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|case| !case_passed(case))
+        .map(diagnose_corpus_v2_failed_case)
+        .collect::<Vec<_>>();
+    let quality_summary = summarize_openvino_device_quality(device, &failed_cases);
+    let profile_diagnoses = diagnose_openvino_device_profiles(device, &failed_cases);
+    let generated_token_visibility = openvino_generated_token_visibility(device);
+    let route_blocked = quality_summary.failed > 0
+        || fallback_used(device) != Some(false)
+        || !case_alignment.blockers.is_empty();
+    let mut blocker_summary = corpus_v2_blocker_summary(&quality_summary, fallback_used(device));
+    blocker_summary.extend(case_alignment.blockers.iter().cloned());
+    if !generated_token_visibility.direct_generated_token_ids_available {
+        blocker_summary.push(
+            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
+                .to_string(),
+        );
+    }
+    blocker_summary.sort();
+    blocker_summary.dedup();
+    let recommended_next_actions = vec![
+        "Keep OpenVINO GPU/NPU routes unpromoted until failed corpus-v2 cases are cleanly rerun or intentionally re-gated".to_string(),
+        "Classify yes/no, stop/EOS, long-prefill, short-reasoning, and decode-heavy failures separately before profile promotion".to_string(),
+        "Preserve direct-vs-retokenized generated-token visibility in every OpenVINO candidate receipt".to_string(),
+    ];
+    let diagnosis_ready = gaps.is_empty();
+
+    Ok(LunarLakeOpenVinoCorpusV2Diagnosis {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_openvino_corpus_v2_diagnosis".to_string(),
+        proof_stage: "openvino_candidate_quality_diagnosis_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        openvino_corpus_v2_receipt: path_string(&openvino_corpus_path),
+        answer_corpus_v2_fixture,
+        requested_runtime_device: runtime_device.to_string(),
+        selected_backend: string_at(device, "selected_backend"),
+        runtime_api: string_at(device, "runtime_api"),
+        runtime_device: string_at(device, "runtime_device"),
+        backend_lane: string_at(device, "backend_lane"),
+        selected_kernel_or_runtime: string_at(device, "selected_kernel_or_runtime"),
+        fallback_used: fallback_used(device),
+        promotion_status: string_at(device, "promotion_status"),
+        quality_summary,
+        profile_diagnoses,
+        failed_cases,
+        case_alignment,
+        generated_token_visibility,
+        route_blocked,
+        blocker_summary,
+        recommended_next_actions,
+        diagnosis_ready,
+        gaps,
+        claim_boundary: CorpusV2DiagnosisClaimBoundary {
+            diagnostic_only: true,
+            new_inference_executed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            route_promotion_changed: false,
+            arc_or_npu_execution_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+        },
+    })
+}
+
+fn diagnose_openvino_corpus_case_alignment(
+    root: &Path,
+    answer_corpus_v2: Option<&Path>,
+    route_id: &str,
+    device: &Value,
+    gaps: &mut Vec<String>,
+) -> Result<CorpusV2CaseAlignmentDiagnosis> {
+    let observed = case_ids_from_json_cases(device.get("cases"));
+    let observed_case_count = observed.len() as u64;
+    let Some(fixture_path) = answer_corpus_v2 else {
+        return Ok(CorpusV2CaseAlignmentDiagnosis {
+            fixture_verified: false,
+            expected_case_count: None,
+            observed_case_count,
+            missing_case_ids: Vec::new(),
+            stale_or_unexpected_case_ids: Vec::new(),
+            aligned_with_active_fixture: None,
+            blockers: vec![
+                "active answer corpus v2 fixture was not provided; case alignment was not verified"
+                    .to_string(),
+            ],
+        });
+    };
+
+    let fixture_path = resolve_receipt_path(root, fixture_path);
+    if !fixture_path.exists() {
+        let message = format!("answer corpus v2 fixture missing: {}", path_string(&fixture_path));
+        gaps.push(message.clone());
+        return Ok(CorpusV2CaseAlignmentDiagnosis {
+            fixture_verified: false,
+            expected_case_count: None,
+            observed_case_count,
+            missing_case_ids: Vec::new(),
+            stale_or_unexpected_case_ids: Vec::new(),
+            aligned_with_active_fixture: None,
+            blockers: vec![message],
+        });
+    }
+
+    let (_, expected) = load_answer_corpus_v2_case_ids(&fixture_path)?;
+    let missing_case_ids = expected.difference(&observed).cloned().collect::<Vec<_>>();
+    let stale_or_unexpected_case_ids = observed.difference(&expected).cloned().collect::<Vec<_>>();
+    let blockers = corpus_case_alignment_blockers(route_id, &expected, &observed);
+
+    Ok(CorpusV2CaseAlignmentDiagnosis {
+        fixture_verified: true,
+        expected_case_count: Some(expected.len() as u64),
+        observed_case_count,
+        missing_case_ids,
+        stale_or_unexpected_case_ids,
+        aligned_with_active_fixture: Some(blockers.is_empty()),
+        blockers,
+    })
+}
+
+fn openvino_device_by_runtime<'a>(json: &'a Value, runtime_device: &str) -> Option<&'a Value> {
+    json.pointer("/generation/devices").and_then(Value::as_array)?.iter().find(|device| {
+        string_at(device, "runtime_device").as_deref() == Some(runtime_device)
+            || string_at(device, "selected_backend").as_deref() == Some(runtime_device)
+    })
+}
+
+pub fn build_npu_cold_start_diagnosis_with_created_utc(
+    root: &Path,
+    openvino_phase_runner: &Path,
+    phase_comparison: &Path,
+    operator_ask: &Path,
+    openvino_corpus_v2: &Path,
+    created_utc: String,
+) -> Result<LunarLakeNpuColdStartDiagnosis> {
+    let phase_runner_path = resolve_receipt_path(root, openvino_phase_runner);
+    let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
+    let operator_ask_path = resolve_receipt_path(root, operator_ask);
+    let corpus_v2_path = resolve_receipt_path(root, openvino_corpus_v2);
+    let phase_runner: Value = read_json_receipt(&phase_runner_path)?;
+    let phase_comparison: Value = read_json_receipt(&phase_comparison_path)?;
+    let operator_ask: Value = read_json_receipt(&operator_ask_path)?;
+    let corpus_v2: Value = read_json_receipt(&corpus_v2_path)?;
+
+    let mut gaps = Vec::new();
+    if string_at(&phase_runner, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_runner")
+    {
+        gaps.push("OpenVINO phase-runner receipt has unexpected artifact_kind".to_string());
+    }
+    if string_at(&phase_comparison, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_phase_comparison")
+    {
+        gaps.push("OpenVINO phase-comparison receipt has unexpected artifact_kind".to_string());
+    }
+    if string_at(&operator_ask, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_operator_ask")
+    {
+        gaps.push("OpenVINO NPU operator-ask receipt has unexpected artifact_kind".to_string());
+    }
+    if string_at(&corpus_v2, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_corpus_v2")
+    {
+        gaps.push("OpenVINO corpus-v2 receipt has unexpected artifact_kind".to_string());
+    }
+
+    let phase_npu = openvino_device_by_runtime(&phase_runner, "NPU")
+        .context("OpenVINO phase-runner receipt is missing NPU device evidence")?;
+    let corpus_npu = openvino_device_by_runtime(&corpus_v2, "NPU")
+        .context("OpenVINO corpus-v2 receipt is missing NPU device evidence")?;
+    if fallback_used(&phase_runner) != Some(false) || fallback_used(phase_npu) != Some(false) {
+        gaps.push("OpenVINO phase-runner NPU evidence must record fallback_used=false".to_string());
+    }
+    if fallback_used(&operator_ask) != Some(false) {
+        gaps.push("OpenVINO NPU operator ask must record fallback_used=false".to_string());
+    }
+    if fallback_used(&corpus_v2) != Some(false) || fallback_used(corpus_npu) != Some(false) {
+        gaps.push("OpenVINO corpus-v2 NPU evidence must record fallback_used=false".to_string());
+    }
+    if bool_at_any(corpus_npu, &["route_promotion_changed"]) == Some(true) {
+        gaps.push("OpenVINO NPU corpus-v2 evidence changed route promotion".to_string());
+    }
+    if bool_at_any(&operator_ask, &["route.acceleration_claim", "acceleration_claim"]) == Some(true)
+    {
+        gaps.push("OpenVINO NPU operator ask must not claim acceleration".to_string());
+    }
+
+    let route = NpuColdStartRouteIdentity {
+        route_id: string_at(&operator_ask, "route_id")
+            .unwrap_or_else(|| "dense_slm_openvino_npu_candidate".to_string()),
+        requested_backend: string_at(&operator_ask, "requested_backend"),
+        selected_backend: string_at(&operator_ask, "selected_backend"),
+        runtime_api: string_at(&operator_ask, "runtime_api"),
+        runtime_device: string_at(&operator_ask, "runtime_device"),
+        resolved_device: string_at(&operator_ask, "resolved_device"),
+        backend_lane: string_at(&operator_ask, "backend_lane"),
+        selected_kernel_or_runtime: string_at(&operator_ask, "selected_kernel_or_runtime"),
+        fallback_used: fallback_used(&operator_ask),
+        promotion_status: string_at(corpus_npu, "promotion_status"),
+    };
+
+    let samples = vec![
+        npu_operator_timing_sample(&operator_ask, path_string(&operator_ask_path)),
+        npu_phase_runner_timing_sample(phase_npu, path_string(&phase_runner_path)),
+        npu_phase_comparison_timing_sample(&phase_comparison, path_string(&phase_comparison_path)),
+        npu_corpus_v2_timing_sample(corpus_npu, path_string(&corpus_v2_path)),
+    ];
+    let cold_loads = samples
+        .iter()
+        .filter_map(|sample| sample.openvino_load_time_ms.or(sample.pipeline_construct_wall_ms))
+        .collect::<Vec<_>>();
+    let generations = samples
+        .iter()
+        .filter_map(|sample| sample.generation_wall_ms.or(sample.case_elapsed_ms_sum))
+        .collect::<Vec<_>>();
+    let first_tokens = samples
+        .iter()
+        .filter_map(|sample| {
+            sample.first_streamed_text_chunk_ms.or(sample.openvino_time_to_first_token_ms)
+        })
+        .collect::<Vec<_>>();
+    let throughputs =
+        samples.iter().filter_map(|sample| sample.throughput_tokens_per_s).collect::<Vec<_>>();
+    let operator_ratio = npu_load_to_generation_ratio(&samples[0]);
+    let phase_runner_ratio = npu_load_to_generation_ratio(&samples[1]);
+    if cold_loads.is_empty() {
+        gaps.push(
+            "NPU cold-start diagnosis requires at least one load or pipeline construct timing"
+                .to_string(),
+        );
+    }
+    if generations.is_empty() {
+        gaps.push(
+            "NPU cold-start diagnosis requires at least one generation/hot-path timing".to_string(),
+        );
+    }
+    let cold_load_dominant =
+        [operator_ratio, phase_runner_ratio].into_iter().flatten().any(|ratio| ratio >= 10.0)
+            || cold_loads.iter().any(|value| *value >= 30_000.0);
+    let classification = if cold_load_dominant {
+        "openvino_pipeline_load_or_device_compile_dominated".to_string()
+    } else if cold_loads.is_empty() || generations.is_empty() {
+        "insufficient_cold_hot_timing_evidence".to_string()
+    } else {
+        "not_load_dominated_from_current_receipts".to_string()
+    };
+    let cold_notes = vec![
+        "Diagnosis is derived from committed receipts only; it does not run OpenVINO or inference"
+            .to_string(),
+        "OpenVINO NPU load_time_ms/pipeline_construct_wall_ms is treated as pipeline load, device compile, model transfer, or cache-miss time until cache/resident experiments split it further"
+            .to_string(),
+        "Hot-path timings remain candidate-route evidence and do not promote NPU".to_string(),
+    ];
+    let cold_start = NpuColdStartEvidence {
+        classification,
+        cold_load_dominant,
+        samples,
+        pipeline_or_load_ms: resident_metric_summary(&cold_loads),
+        generation_wall_ms: resident_metric_summary(&generations),
+        first_token_or_text_chunk_ms: resident_metric_summary(&first_tokens),
+        throughput_tokens_per_s: resident_metric_summary(&throughputs),
+        operator_load_to_generation_ratio: operator_ratio,
+        phase_runner_load_to_generation_ratio: phase_runner_ratio,
+        notes: cold_notes,
+    };
+
+    let hot_path = npu_hot_path_evidence(&cold_start.samples, phase_npu, &operator_ask);
+    let corpus_v2_context = npu_corpus_v2_context(corpus_npu);
+    let mut findings = Vec::new();
+    if let Some(mean) = cold_start.pipeline_or_load_ms.mean {
+        findings.push(format!("npu_pipeline_or_load_mean_ms={mean:.3}"));
+    }
+    if let Some(max) = cold_start.pipeline_or_load_ms.max {
+        findings.push(format!("npu_pipeline_or_load_max_ms={max:.3}"));
+    }
+    if let Some(mean) = cold_start.generation_wall_ms.mean {
+        findings.push(format!("npu_generation_wall_mean_ms={mean:.3}"));
+    }
+    if let Some(mean) = hot_path.throughput_tokens_per_s.mean {
+        findings.push(format!("npu_hot_path_throughput_mean_tokens_per_s={mean:.3}"));
+    }
+    if let Some(ratio) = cold_start.operator_load_to_generation_ratio {
+        findings.push(format!("operator_load_to_generation_ratio={ratio:.3}"));
+    }
+    if corpus_v2_context.route_blocked_by_quality {
+        findings.push(format!(
+            "npu_corpus_v2_blocked_by_{}_failed_cases",
+            corpus_v2_context.failed.unwrap_or(0)
+        ));
+    }
+
+    let recommended_next_items = vec![
+        "LNL258V-NPU-CACHE-001: run OpenVINO cache hit/miss experiment with a stable cache directory".to_string(),
+        "LNL258V-NPU-RESIDENT-001: measure same-process resident NPU warm asks and drift".to_string(),
+        "LNL258V-NPU-QUAL-001: classify NPU corpus-v2 failures before any profile promotion".to_string(),
+        "LNL258V-POWER-001: collect AC/battery or energy-proxy evidence before low-power promotion".to_string(),
+    ];
+    let diagnosis_ready = gaps.is_empty();
+
+    Ok(LunarLakeNpuColdStartDiagnosis {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_openvino_npu_cold_start_diagnosis".to_string(),
+        proof_stage: "candidate_route_cold_start_diagnosis_no_inference_no_promotion".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        source_receipts: NpuColdStartSources {
+            openvino_phase_runner_receipt: path_string(&phase_runner_path),
+            phase_comparison_receipt: path_string(&phase_comparison_path),
+            operator_ask_receipt: path_string(&operator_ask_path),
+            openvino_corpus_v2_receipt: path_string(&corpus_v2_path),
+        },
+        route,
+        cold_start,
+        hot_path,
+        corpus_v2_context,
+        diagnosis_ready,
+        findings,
+        recommended_next_items,
+        gaps,
+        claim_boundary: NpuColdStartClaimBoundary {
+            diagnostic_only: true,
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            native_npu_inference_claim: false,
+            npu_dynamic_decode_claim: false,
+            beam_or_parallel_sampling_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+            dense_slm_as_bitnet_proof: false,
+        },
+    })
+}
+
+fn npu_operator_timing_sample(json: &Value, source: String) -> NpuTimingSample {
+    let timing = value_at(json, "timing").unwrap_or(json);
+    NpuTimingSample {
+        source,
+        evidence_scope: "single_operator_ask".to_string(),
+        pipeline_construct_wall_ms: number_at_any(timing, &["pipeline_construct_wall_ms"]),
+        openvino_load_time_ms: number_at_any(timing, &["openvino_perf_metrics.load_time_ms"]),
+        generation_wall_ms: number_at_any(timing, &["generation_wall_ms"]),
+        case_elapsed_ms_sum: None,
+        first_streamed_text_chunk_ms: number_at_any(
+            timing,
+            &["first_streamed_text_chunk_ms", "streaming.first_text_chunk_ms"],
+        ),
+        openvino_time_to_first_token_ms: number_at_any(
+            timing,
+            &["openvino_perf_metrics.time_to_first_token.mean_ms"],
+        ),
+        openvino_generate_ms: number_at_any(timing, &["openvino_perf_metrics.generate.mean_ms"]),
+        openvino_inference_ms: number_at_any(timing, &["openvino_perf_metrics.inference.mean_ms"]),
+        openvino_tokenization_ms: number_at_any(
+            timing,
+            &["openvino_perf_metrics.tokenization.mean_ms"],
+        ),
+        throughput_tokens_per_s: number_at_any(
+            timing,
+            &["openvino_perf_metrics.throughput.mean_ms"],
+        ),
+        generated_tokens: u64_at(timing, "openvino_perf_metrics.num_generated_tokens"),
+        notes: vec![
+            "Operator ask includes OpenVINO PerfMetrics and wall timings for one bounded prompt"
+                .to_string(),
+        ],
+    }
+}
+
+fn npu_phase_runner_timing_sample(device: &Value, source: String) -> NpuTimingSample {
+    let cases = device.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    let load_times = collect_case_numbers(
+        &cases,
+        &["openvino_perf_metrics.load_time_ms", "timing.openvino_perf_metrics.load_time_ms"],
+    );
+    let generation =
+        collect_case_numbers(&cases, &["generation_wall_ms", "timing.generation_wall_ms"]);
+    let first_chunks = collect_case_numbers(
+        &cases,
+        &["first_streamed_text_chunk_ms", "timing.first_streamed_text_chunk_ms"],
+    );
+    let ttft = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.time_to_first_token.mean_ms",
+            "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+        ],
+    );
+    let generate = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.generate.mean_ms",
+            "timing.openvino_perf_metrics.generate.mean_ms",
+        ],
+    );
+    let inference = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.inference.mean_ms",
+            "timing.openvino_perf_metrics.inference.mean_ms",
+        ],
+    );
+    let tokenization = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.tokenization.mean_ms",
+            "timing.openvino_perf_metrics.tokenization.mean_ms",
+        ],
+    );
+    let throughput = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.throughput.mean_ms",
+            "timing.openvino_perf_metrics.throughput.mean_ms",
+        ],
+    );
+    let generated_tokens = collect_case_numbers(
+        &cases,
+        &[
+            "openvino_perf_metrics.num_generated_tokens",
+            "timing.openvino_perf_metrics.num_generated_tokens",
+        ],
+    );
+    NpuTimingSample {
+        source,
+        evidence_scope: "three_case_phase_runner".to_string(),
+        pipeline_construct_wall_ms: number_at_any(device, &["pipeline_construct_wall_ms"]),
+        openvino_load_time_ms: mean_f64(&load_times),
+        generation_wall_ms: mean_f64(&generation),
+        case_elapsed_ms_sum: sum_f64(&generation),
+        first_streamed_text_chunk_ms: mean_f64(&first_chunks),
+        openvino_time_to_first_token_ms: mean_f64(&ttft),
+        openvino_generate_ms: mean_f64(&generate),
+        openvino_inference_ms: mean_f64(&inference),
+        openvino_tokenization_ms: mean_f64(&tokenization),
+        throughput_tokens_per_s: mean_f64(&throughput),
+        generated_tokens: sum_f64(&generated_tokens).map(|value| value as u64),
+        notes: vec![
+            "Phase runner averages per-case OpenVINO PerfMetrics for the NPU device".to_string(),
+        ],
+    }
+}
+
+fn npu_phase_comparison_timing_sample(json: &Value, source: String) -> NpuTimingSample {
+    let npu = value_at(json, "openvino_paths.npu").unwrap_or(json);
+    let timing = value_at(npu, "timing").unwrap_or(npu);
+    NpuTimingSample {
+        source,
+        evidence_scope: "indexed_phase_comparison".to_string(),
+        pipeline_construct_wall_ms: number_at_any(timing, &["pipeline_load_ms"]),
+        openvino_load_time_ms: number_at_any(timing, &["pipeline_load_ms"]),
+        generation_wall_ms: None,
+        case_elapsed_ms_sum: number_at_any(timing, &["case_elapsed_ms_sum"]),
+        first_streamed_text_chunk_ms: None,
+        openvino_time_to_first_token_ms: None,
+        openvino_generate_ms: None,
+        openvino_inference_ms: None,
+        openvino_tokenization_ms: None,
+        throughput_tokens_per_s: None,
+        generated_tokens: None,
+        notes: vec![
+            "Phase comparison indexes smoke-level pipeline load and per-case elapsed sums only"
+                .to_string(),
+        ],
+    }
+}
+
+fn npu_corpus_v2_timing_sample(device: &Value, source: String) -> NpuTimingSample {
+    let cases = device.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    let generation = collect_case_numbers(&cases, &["timing.generation_wall_ms"]);
+    let first_chunks = collect_case_numbers(&cases, &["timing.first_streamed_text_chunk_ms"]);
+    let load_times = collect_case_numbers(&cases, &["timing.openvino_perf_metrics.load_time_ms"]);
+    let ttft =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.time_to_first_token.mean_ms"]);
+    let generate = collect_case_numbers(&cases, &["timing.openvino_perf_metrics.generate.mean_ms"]);
+    let inference =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.inference.mean_ms"]);
+    let tokenization =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.tokenization.mean_ms"]);
+    let throughput =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.throughput.mean_ms"]);
+    let generated_tokens =
+        collect_case_numbers(&cases, &["timing.openvino_perf_metrics.num_generated_tokens"]);
+    NpuTimingSample {
+        source,
+        evidence_scope: "corpus_v2_profile_quality_receipt".to_string(),
+        pipeline_construct_wall_ms: number_at_any(device, &["pipeline_construct_wall_ms"]),
+        openvino_load_time_ms: mean_f64(&load_times),
+        generation_wall_ms: mean_f64(&generation),
+        case_elapsed_ms_sum: sum_f64(&generation),
+        first_streamed_text_chunk_ms: mean_f64(&first_chunks),
+        openvino_time_to_first_token_ms: mean_f64(&ttft),
+        openvino_generate_ms: mean_f64(&generate),
+        openvino_inference_ms: mean_f64(&inference),
+        openvino_tokenization_ms: mean_f64(&tokenization),
+        throughput_tokens_per_s: mean_f64(&throughput),
+        generated_tokens: sum_f64(&generated_tokens).map(|value| value as u64),
+        notes: vec![
+            "Corpus-v2 timing is profile-quality context; failed cases still block promotion"
+                .to_string(),
+        ],
+    }
+}
+
+fn collect_case_numbers(cases: &[Value], paths: &[&str]) -> Vec<f64> {
+    cases.iter().filter_map(|case| number_at_any(case, paths)).collect()
+}
+
+fn npu_load_to_generation_ratio(sample: &NpuTimingSample) -> Option<f64> {
+    let load = sample.openvino_load_time_ms.or(sample.pipeline_construct_wall_ms)?;
+    let generation = sample.generation_wall_ms.or(sample.case_elapsed_ms_sum)?;
+    (generation > 0.0).then_some(load / generation)
+}
+
+fn npu_hot_path_evidence(
+    samples: &[NpuTimingSample],
+    phase_npu: &Value,
+    operator_ask: &Value,
+) -> NpuHotPathEvidence {
+    let generation =
+        samples.iter().filter_map(|sample| sample.generation_wall_ms).collect::<Vec<_>>();
+    let first_chunks =
+        samples.iter().filter_map(|sample| sample.first_streamed_text_chunk_ms).collect::<Vec<_>>();
+    let ttft = samples
+        .iter()
+        .filter_map(|sample| sample.openvino_time_to_first_token_ms)
+        .collect::<Vec<_>>();
+    let throughput =
+        samples.iter().filter_map(|sample| sample.throughput_tokens_per_s).collect::<Vec<_>>();
+    let generated_tokens = samples
+        .iter()
+        .filter_map(|sample| sample.generated_tokens.map(|value| value as f64))
+        .collect::<Vec<_>>();
+    let hot_path_interesting = throughput.iter().any(|value| *value >= 8.0)
+        || generation.iter().any(|value| *value <= 1500.0);
+    NpuHotPathEvidence {
+        bounded_answer_gate_passed: answer_gate_passed(phase_npu)
+            .or_else(|| answer_gate_passed(operator_ask)),
+        fallback_used: fallback_used(phase_npu).or_else(|| fallback_used(operator_ask)),
+        generation_wall_ms: resident_metric_summary(&generation),
+        first_text_chunk_ms: resident_metric_summary(&first_chunks),
+        openvino_time_to_first_token_ms: resident_metric_summary(&ttft),
+        throughput_tokens_per_s: resident_metric_summary(&throughput),
+        generated_tokens: resident_metric_summary(&generated_tokens),
+        hot_path_interesting,
+        notes: vec![
+            "Hot-path evidence is bounded and candidate-only until resident/corpus/power gates pass"
+                .to_string(),
+            "Cold-start policy remains unresolved for one-off interactive asks".to_string(),
+        ],
+    }
+}
+
+fn npu_corpus_v2_context(device: &Value) -> NpuCorpusV2Context {
+    let quality = value_at(device, "quality_summary");
+    let cases_total = quality.and_then(|value| u64_at(value, "cases_total"));
+    let passed = quality.and_then(|value| u64_at(value, "passed"));
+    let failed = quality.and_then(|value| u64_at(value, "failed"));
+    let mut failed_profiles = Vec::new();
+    if let Some(summary) =
+        value_at(device, "quality_summary.profile_summary").and_then(Value::as_object)
+    {
+        for (profile, value) in summary {
+            if u64_at(value, "failed").unwrap_or(0) > 0 {
+                failed_profiles.push(profile.clone());
+            }
+        }
+    }
+    let mut failed_categories = Vec::new();
+    if let Some(summary) =
+        value_at(device, "quality_summary.category_summary").and_then(Value::as_object)
+    {
+        for (category, value) in summary {
+            if u64_at(value, "failed").unwrap_or(0) > 0 {
+                failed_categories.push(category.clone());
+            }
+        }
+    }
+    let cases = device.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    let direct_generated_token_ids_available = cases.iter().any(|case| {
+        bool_at_any(case, &["generated_token_ids_available_from_pipeline"]) == Some(true)
+    });
+    let generated_token_id_source = cases
+        .iter()
+        .filter_map(|case| string_at(case, "generated_token_ids_source"))
+        .next()
+        .unwrap_or_else(|| "not_reported".to_string());
+    NpuCorpusV2Context {
+        cases_total,
+        passed,
+        failed,
+        route_blocked_by_quality: failed.unwrap_or(0) > 0,
+        failed_profiles,
+        failed_categories,
+        direct_generated_token_ids_available,
+        generated_token_id_source,
+    }
+}
+
+fn summarize_openvino_device_quality(
+    device: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+) -> CorpusV2QualitySummary {
+    let quality = value_at(device, "quality_summary");
+    let failed_profiles = failed_cases
+        .iter()
+        .map(|case| case.profile.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let failed_categories = failed_cases
+        .iter()
+        .map(|case| case.category.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let mut failure_classes = BTreeMap::<String, u64>::new();
+    for case in failed_cases {
+        *failure_classes.entry(case.classification.clone()).or_default() += 1;
+    }
+    CorpusV2QualitySummary {
+        total: quality.and_then(|value| u64_at(value, "cases_total")).unwrap_or(0),
+        passed: quality.and_then(|value| u64_at(value, "passed")).unwrap_or(0),
+        failed: quality
+            .and_then(|value| u64_at(value, "failed"))
+            .unwrap_or(failed_cases.len() as u64),
+        timeout: 0,
+        not_run: 0,
+        failed_profiles,
+        failed_categories,
+        failure_classes,
+    }
+}
+
+fn diagnose_openvino_device_profiles(
+    device: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+) -> Vec<CorpusV2ProfileDiagnosis> {
+    let mut profile_ids = BTreeSet::<String>::new();
+    if let Some(summary) =
+        value_at(device, "quality_summary.profile_summary").and_then(Value::as_object)
+    {
+        profile_ids.extend(summary.keys().cloned());
+    }
+    profile_ids.extend(failed_cases.iter().map(|case| case.profile.clone()));
+    profile_ids
+        .into_iter()
+        .map(|profile_id| {
+            let summary = value_at(device, "quality_summary.profile_summary")
+                .and_then(|value| value.get(&profile_id))
+                .unwrap_or(&Value::Null);
+            let failed_case_ids = failed_cases
+                .iter()
+                .filter(|case| case.profile == profile_id)
+                .map(|case| case.id.clone())
+                .collect::<Vec<_>>();
+            let failed = u64_at(summary, "failed").unwrap_or(failed_case_ids.len() as u64);
+            let mut route_blockers = Vec::new();
+            if failed > 0 {
+                route_blockers.push(format!(
+                    "OpenVINO candidate profile has {failed} answer-gate failure(s)"
+                ));
+            }
+            CorpusV2ProfileDiagnosis {
+                profile_id,
+                total: u64_at(summary, "total").unwrap_or(0),
+                passed: u64_at(summary, "passed").unwrap_or(0),
+                failed,
+                blocked: failed > 0,
+                failed_case_ids,
+                route_profile_status: Some("candidate_blocked_by_quality".to_string()),
+                route_blockers,
+            }
+        })
+        .collect()
+}
+
+fn openvino_generated_token_visibility(device: &Value) -> OpenVinoGeneratedTokenVisibility {
+    let mut direct = false;
+    let mut retokenized = false;
+    let mut sources = BTreeSet::<String>::new();
+    for case in device.get("cases").and_then(Value::as_array).into_iter().flatten() {
+        direct |= bool_at_any(case, &["generated_token_ids_available_from_pipeline"]) == Some(true);
+        if let Some(source) = string_at(case, "generated_token_ids_source") {
+            retokenized |= source.contains("retokenized");
+            sources.insert(source);
+        }
+    }
+    OpenVinoGeneratedTokenVisibility {
+        direct_generated_token_ids_available: direct,
+        retokenized_generated_ids_used: retokenized,
+        sources: sources.into_iter().collect(),
+    }
+}
+
+pub fn build_telemetry_context_with_created_utc(
+    _root: &Path,
+    created_utc: String,
+) -> LunarLakeTelemetryContext {
+    let memory = collect_telemetry_memory_context();
+    let power = collect_telemetry_power_context();
+    let thermal = collect_telemetry_thermal_context();
+
+    let memory_context_recorded = memory.total_bytes.is_some() || memory.available_bytes.is_some();
+    let power_context_recorded =
+        power.active_scheme.as_ref().is_some_and(|value| !value.is_empty())
+            || power.battery_status.as_ref().is_some_and(|value| !value.is_empty())
+            || power.ac_power_inferred.is_some();
+    let thermal_context_recorded =
+        thermal.thermal_zones_visible.unwrap_or(0) > 0 || !thermal.temperatures_celsius.is_empty();
+
+    let mut gaps = Vec::new();
+    if !memory_context_recorded {
+        gaps.push(
+            "memory context is not available from the current OS telemetry probe".to_string(),
+        );
+    }
+    if !power_context_recorded {
+        gaps.push("power context is not available from the current OS telemetry probe".to_string());
+    }
+    if !thermal_context_recorded {
+        gaps.push(
+            "thermal sensor context is not available from the current OS telemetry probe"
+                .to_string(),
+        );
+    }
+    gaps.push(
+        "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            .to_string(),
+    );
+
+    let availability = TelemetryAvailability {
+        memory_context_recorded,
+        power_context_recorded,
+        thermal_context_recorded,
+    };
+    let memory_context = format_memory_context(&memory);
+    let power_context = format_power_context(&power);
+    let thermal_context = format_thermal_context(&thermal);
+    let sources = vec![
+        TelemetrySourceStatus {
+            source: memory.source.clone(),
+            available: memory_context_recorded,
+            status: if memory_context_recorded {
+                "captured".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+        },
+        TelemetrySourceStatus {
+            source: power.source.clone(),
+            available: power_context_recorded,
+            status: if power_context_recorded {
+                "captured".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+        },
+        TelemetrySourceStatus {
+            source: thermal.source.clone(),
+            available: thermal_context_recorded,
+            status: if thermal_context_recorded {
+                "captured".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+        },
+    ];
+
+    LunarLakeTelemetryContext {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_power_thermal_context".to_string(),
+        proof_stage: "live_telemetry_context_captured_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        telemetry_scope: "current_machine_runtime_telemetry".to_string(),
+        memory_context,
+        power_context,
+        thermal_context,
+        availability,
+        memory,
+        power,
+        thermal,
+        sources,
+        gaps,
+        claim_boundary: TelemetryClaimBoundary {
+            new_inference_executed: false,
+            telemetry_measurement_executed: true,
+            route_promotion_changed: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            hidden_fallback_allowed: false,
+        },
+    }
+}
+
+fn collect_telemetry_memory_context() -> TelemetryMemoryContext {
+    let mut system = sysinfo::System::new();
+    system.refresh_memory();
+    let total_bytes = nonzero_u64(system.total_memory());
+    let available_bytes = nonzero_u64(system.available_memory());
+    let used_bytes = match (total_bytes, available_bytes) {
+        (Some(total), Some(available)) => Some(total.saturating_sub(available)),
+        _ => nonzero_u64(system.used_memory()),
+    };
+    TelemetryMemoryContext {
+        source: "sysinfo".to_string(),
+        total_bytes,
+        available_bytes,
+        used_bytes,
+    }
+}
+
+fn collect_telemetry_power_context() -> TelemetryPowerContext {
+    let active_scheme = platform_power_mode();
+    let battery_status = platform_battery_status();
+    let ac_power_inferred = battery_status.as_deref().and_then(infer_ac_power_from_battery_status);
+    TelemetryPowerContext {
+        source: "os_power_probe".to_string(),
+        active_scheme,
+        battery_status,
+        ac_power_inferred,
+    }
+}
+
+fn collect_telemetry_thermal_context() -> TelemetryThermalContext {
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(temperatures_celsius) = windows_thermal_temperatures_celsius()
+            && !temperatures_celsius.is_empty()
+        {
+            return TelemetryThermalContext {
+                source: "windows_msa_cpi_thermal_zone".to_string(),
+                thermal_zones_visible: Some(temperatures_celsius.len() as u64),
+                temperatures_celsius,
+            };
+        }
+        TelemetryThermalContext {
+            source: "windows_msa_cpi_thermal_zone".to_string(),
+            thermal_zones_visible: None,
+            temperatures_celsius: Vec::new(),
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let temperatures = linux_thermal_temperatures_celsius();
+        if !temperatures.is_empty() {
+            return TelemetryThermalContext {
+                source: "linux_sysfs_thermal".to_string(),
+                thermal_zones_visible: Some(temperatures.len() as u64),
+                temperatures_celsius: temperatures,
+            };
+        }
+        let visible = fs::read_dir("/sys/class/thermal").ok().map(|entries| {
+            entries
+                .flatten()
+                .filter(|entry| entry.file_name().to_string_lossy().starts_with("thermal_zone"))
+                .count() as u64
+        });
+        return TelemetryThermalContext {
+            source: "linux_sysfs_thermal".to_string(),
+            thermal_zones_visible: visible,
+            temperatures_celsius: Vec::new(),
+        };
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        TelemetryThermalContext {
+            source: "thermal_probe_unavailable".to_string(),
+            thermal_zones_visible: None,
+            temperatures_celsius: Vec::new(),
+        }
+    }
+}
+
+fn format_memory_context(memory: &TelemetryMemoryContext) -> String {
+    match (memory.total_bytes, memory.available_bytes) {
+        (Some(total), Some(available)) => {
+            let used = memory.used_bytes.unwrap_or_else(|| total.saturating_sub(available));
+            format!(
+                "source={};total_bytes={total};available_bytes={available};used_bytes={used}",
+                memory.source
+            )
+        }
+        (Some(total), None) => {
+            format!("source={};total_bytes={total};available_bytes=unavailable", memory.source)
+        }
+        _ => "memory_context_unavailable".to_string(),
+    }
+}
+
+fn format_power_context(power: &TelemetryPowerContext) -> String {
+    if power.active_scheme.is_none()
+        && power.battery_status.is_none()
+        && power.ac_power_inferred.is_none()
+    {
+        return "power_context_unavailable".to_string();
+    }
+    let active_scheme = power.active_scheme.as_deref().unwrap_or("unavailable");
+    let battery_status = power.battery_status.as_deref().unwrap_or("unavailable");
+    let ac_power = power
+        .ac_power_inferred
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "unavailable".to_string());
+    format!(
+        "source={};active_scheme={active_scheme};battery_status={battery_status};ac_power_inferred={ac_power}",
+        power.source
+    )
+}
+
+fn format_thermal_context(thermal: &TelemetryThermalContext) -> String {
+    if !thermal.temperatures_celsius.is_empty() {
+        let values = thermal
+            .temperatures_celsius
+            .iter()
+            .map(|value| format!("{value:.1}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        return format!("source={};temperatures_celsius={values}", thermal.source);
+    }
+    match thermal.thermal_zones_visible {
+        Some(count) if count > 0 => {
+            format!(
+                "source={};thermal_zones_visible={count};temperatures_celsius=unavailable",
+                thermal.source
+            )
+        }
+        _ => "thermal_context_unavailable".to_string(),
+    }
+}
+
+fn nonzero_u64(value: u64) -> Option<u64> {
+    (value > 0).then_some(value)
+}
+
+#[cfg(target_os = "windows")]
+fn command_stdout(command: &str, args: &[&str]) -> Option<String> {
+    Command::new(command)
+        .args(args)
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+#[cfg(target_os = "windows")]
+fn platform_power_mode() -> Option<String> {
+    command_stdout("powercfg", &["/GETACTIVESCHEME"])
+}
+
+#[cfg(target_os = "linux")]
+fn platform_power_mode() -> Option<String> {
+    let governors = fs::read_dir("/sys/devices/system/cpu")
+        .ok()?
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path().join("cpufreq/scaling_governor");
+            fs::read_to_string(path).ok().map(|value| value.trim().to_string())
+        })
+        .filter(|value| !value.is_empty())
+        .collect::<BTreeSet<_>>();
+    (!governors.is_empty()).then(|| governors.into_iter().collect::<Vec<_>>().join(","))
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn platform_power_mode() -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn platform_battery_status() -> Option<String> {
+    command_stdout(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-Command",
+            "$b = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1; if ($null -eq $b) { '' } else { \"BatteryStatus=$($b.BatteryStatus);EstimatedChargeRemaining=$($b.EstimatedChargeRemaining)\" }",
+        ],
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn platform_battery_status() -> Option<String> {
+    let supplies = fs::read_dir("/sys/class/power_supply").ok()?;
+    for entry in supplies.flatten() {
+        let status_path = entry.path().join("status");
+        if let Ok(value) = fs::read_to_string(status_path) {
+            let value = value.trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn platform_battery_status() -> Option<String> {
+    None
+}
+
+fn infer_ac_power_from_battery_status(status: &str) -> Option<bool> {
+    let lower = status.to_ascii_lowercase();
+    if lower.contains("charging")
+        || lower.contains("full")
+        || lower.contains("ac")
+        || lower.contains("batterystatus=2")
+        || lower.contains("batterystatus=6")
+        || lower.contains("batterystatus=7")
+        || lower.contains("batterystatus=8")
+        || lower.contains("batterystatus=9")
+        || lower.contains("batterystatus=11")
+    {
+        return Some(true);
+    }
+    if lower.contains("discharging")
+        || lower.contains("batterystatus=1")
+        || lower.contains("batterystatus=4")
+        || lower.contains("batterystatus=5")
+    {
+        return Some(false);
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn windows_thermal_temperatures_celsius() -> Option<Vec<f64>> {
+    let json = command_stdout(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CurrentTemperature | ConvertTo-Json -Compress",
+        ],
+    )?;
+    let value: Value = serde_json::from_str(&json).ok()?;
+    let raw_values = match value {
+        Value::Number(number) => number.as_f64().into_iter().collect::<Vec<_>>(),
+        Value::Array(values) => values.into_iter().filter_map(|value| value.as_f64()).collect(),
+        _ => Vec::new(),
+    };
+    let temperatures = raw_values
+        .into_iter()
+        .filter_map(|value| {
+            let celsius = (value / 10.0) - 273.15;
+            celsius.is_finite().then_some(celsius)
+        })
+        .filter(|value| *value > -50.0 && *value < 150.0)
+        .collect::<Vec<_>>();
+    (!temperatures.is_empty()).then_some(temperatures)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_thermal_temperatures_celsius() -> Vec<f64> {
+    fs::read_dir("/sys/class/thermal")
+        .ok()
+        .into_iter()
+        .flat_map(|entries| entries.flatten())
+        .filter_map(|entry| fs::read_to_string(entry.path().join("temp")).ok())
+        .filter_map(|value| value.trim().parse::<f64>().ok())
+        .map(|value| value / 1000.0)
+        .filter(|value| value.is_finite() && *value > -50.0 && *value < 150.0)
+        .collect()
+}
+
+fn cold_warm_profile_benchmark(
+    profile: &WorkloadProfileEvaluation,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+    global_gaps: &mut Vec<String>,
+) -> ColdWarmProfileBenchmark {
+    let mut profile_gaps = Vec::new();
+    let routes = profile
+        .route_evidence
+        .iter()
+        .map(|route| {
+            cold_warm_route_benchmark(
+                profile,
+                route,
+                telemetry_context,
+                global_gaps,
+                &mut profile_gaps,
+            )
+        })
+        .collect::<Vec<_>>();
+    if profile.promoted_route.is_none() && routes.iter().all(|route| route.promotion_blocked) {
+        profile_gaps.push(format!(
+            "{} has no benchmark-qualified promoted route; candidate evidence remains indexed only",
+            profile.profile_id
+        ));
+    }
+    ColdWarmProfileBenchmark {
+        profile_id: profile.profile_id.clone(),
+        promoted_route: profile.promoted_route.clone(),
+        candidate_routes: profile.candidate_routes.clone(),
+        routes,
+        profile_gaps,
+    }
+}
+
+fn cold_warm_route_benchmark(
+    profile: &WorkloadProfileEvaluation,
+    route: &ProfileRouteEvidence,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+    global_gaps: &mut Vec<String>,
+    profile_gaps: &mut Vec<String>,
+) -> ColdWarmRouteBenchmark {
+    let mut blockers = route
+        .blockers
+        .iter()
+        .filter_map(|blocker| {
+            if telemetry_context.is_some()
+                && blocker == "power telemetry receipt missing for low_power promotion"
+            {
+                None
+            } else {
+                Some(blocker.clone())
+            }
+        })
+        .collect::<Vec<_>>();
+    blockers.extend(route.timing.known_gaps.iter().filter_map(|gap| {
+        if telemetry_context.is_some()
+            && gap == "power and thermal context not normalized in this comparison"
+        {
+            None
+        } else {
+            Some(gap.clone())
+        }
+    }));
+
+    let timing_required = route.route_id != "bitnet_reference_cpu";
+    let critical_timing_present = !timing_required
+        || (route.timing.cold_load_ms.is_some()
+            && route.timing.first_token_ms.is_some()
+            && route.timing.decode_total_ms.is_some()
+            && route.timing.throughput_tokens_per_s.is_some());
+    if !critical_timing_present {
+        blockers.push("cold/warm critical timing is incomplete".to_string());
+    }
+    if timing_required && route.timing.total_response_ms.is_none() {
+        blockers.push("total response latency is missing".to_string());
+    }
+    if !timing_required {
+        blockers.push(
+            "BitNet route uses separate CPU reference and I2_S performance receipts".to_string(),
+        );
+    }
+    let telemetry = benchmark_telemetry_for_route(profile, telemetry_context);
+    if profile.profile_id == "low_power" && !power_context_is_promotion_evidence(&telemetry) {
+        blockers.push(if telemetry.telemetry_receipt.is_some() {
+            "power telemetry receipt does not provide low_power promotion evidence".to_string()
+        } else {
+            "power telemetry receipt missing for low_power promotion".to_string()
+        });
+    }
+    blockers.sort();
+    blockers.dedup();
+
+    if route.fallback_used == Some(true) {
+        global_gaps.push(format!(
+            "{} route {} observed fallback_used=true",
+            profile.profile_id, route.route_id
+        ));
+    }
+    if route.route_status == "promoted" && !critical_timing_present {
+        global_gaps.push(format!(
+            "{} promoted route {} is missing critical cold/warm timing",
+            profile.profile_id, route.route_id
+        ));
+    }
+    if route.route_status != "promoted" && route.benchmark_qualified_advantage {
+        global_gaps.push(format!(
+            "{} candidate route {} claims benchmark-qualified advantage outside route promotion",
+            profile.profile_id, route.route_id
+        ));
+    }
+    if route.route_status != "promoted" && !blockers.is_empty() {
+        profile_gaps.push(format!(
+            "{} route {} remains blocked: {}",
+            profile.profile_id,
+            route.route_id,
+            blockers.join("; ")
+        ));
+    }
+
+    let benchmark_qualified_advantage =
+        route.benchmark_qualified_advantage && critical_timing_present && blockers.is_empty();
+    let promotion_blocked = route.route_status != "promoted" && !benchmark_qualified_advantage;
+    ColdWarmRouteBenchmark {
+        route_id: route.route_id.clone(),
+        route_status: route.route_status.clone(),
+        selected_backend: route.selected_backend.clone(),
+        runtime_api: route.runtime_api.clone(),
+        fallback_used: route.fallback_used,
+        answer_gate_passed: route.answer_gate_passed,
+        phase_timing_present: route.phase_timing_present,
+        timing: route.timing.clone(),
+        telemetry,
+        critical_timing_present,
+        benchmark_qualified_advantage,
+        promotion_blocked,
+        blockers,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct BenchmarkTelemetryContext {
+    receipt: String,
+    memory_context: String,
+    power_context: String,
+    thermal_context: String,
+    telemetry_gaps: Vec<String>,
+}
+
+fn load_benchmark_telemetry_context(
+    root: &Path,
+    telemetry_context: Option<&Path>,
+    global_gaps: &mut Vec<String>,
+) -> Result<Option<BenchmarkTelemetryContext>> {
+    let Some(path) = telemetry_context else {
+        return Ok(None);
+    };
+    let telemetry_path = resolve_receipt_path(root, path);
+    let telemetry: Value = read_json_receipt(&telemetry_path)?;
+    match string_at(&telemetry, "artifact_kind").as_deref() {
+        Some("lunar_lake_power_thermal_context") => {}
+        Some(other) => global_gaps
+            .push(format!("power/thermal context receipt has unexpected artifact_kind `{other}`")),
+        None => {
+            global_gaps.push("power/thermal context receipt is missing artifact_kind".to_string())
+        }
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.route_promotion_changed"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt changed route promotion".to_string());
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.speedup_claim"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt claims speedup".to_string());
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.power_advantage_claim"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt claims power advantage".to_string());
+    }
+    if bool_at_any(&telemetry, &["claim_boundary.acceleration_claim"]).unwrap_or(false) {
+        global_gaps.push("power/thermal context receipt claims acceleration".to_string());
+    }
+    Ok(Some(BenchmarkTelemetryContext {
+        receipt: path_string(&telemetry_path),
+        memory_context: string_at(&telemetry, "memory_context")
+            .unwrap_or_else(|| "memory_context_not_recorded".to_string()),
+        power_context: string_at(&telemetry, "power_context")
+            .unwrap_or_else(|| "power_context_not_recorded".to_string()),
+        thermal_context: string_at(&telemetry, "thermal_context")
+            .unwrap_or_else(|| "thermal_context_not_recorded".to_string()),
+        telemetry_gaps: string_array_at(&telemetry, "gaps"),
+    }))
+}
+
+fn benchmark_telemetry_for_route(
+    profile: &WorkloadProfileEvaluation,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+) -> BenchmarkTelemetry {
+    if let Some(context) = telemetry_context {
+        return BenchmarkTelemetry {
+            telemetry_receipt: Some(context.receipt.clone()),
+            memory_context: context.memory_context.clone(),
+            power_context: context.power_context.clone(),
+            thermal_context: context.thermal_context.clone(),
+            telemetry_gaps: context.telemetry_gaps.clone(),
+        };
+    }
+    BenchmarkTelemetry {
+        telemetry_receipt: None,
+        memory_context: "not_normalized_in_current_profile_benchmark".to_string(),
+        power_context: if profile.profile_id == "low_power" {
+            "required_for_promotion_but_not_recorded".to_string()
+        } else {
+            "not_normalized_in_current_profile_benchmark".to_string()
+        },
+        thermal_context: "not_normalized_in_current_profile_benchmark".to_string(),
+        telemetry_gaps: Vec::new(),
+    }
+}
+
+fn telemetry_for_profile_route(context: &BenchmarkTelemetryContext) -> BenchmarkTelemetry {
+    BenchmarkTelemetry {
+        telemetry_receipt: Some(context.receipt.clone()),
+        memory_context: context.memory_context.clone(),
+        power_context: context.power_context.clone(),
+        thermal_context: context.thermal_context.clone(),
+        telemetry_gaps: context.telemetry_gaps.clone(),
+    }
+}
+
+fn power_context_is_recorded(context: &BenchmarkTelemetryContext) -> bool {
+    let value = context.power_context.to_ascii_lowercase();
+    !(value.contains("not_recorded")
+        || value.contains("not_normalized")
+        || value.contains("missing")
+        || value.contains("unavailable")
+        || value.contains("required_for_promotion_but_not_recorded"))
+}
+
+fn power_context_is_promotion_evidence(telemetry: &BenchmarkTelemetry) -> bool {
+    let value = telemetry.power_context.to_ascii_lowercase();
+    !(value.contains("not_recorded")
+        || value.contains("not_normalized")
+        || value.contains("missing")
+        || value.contains("unavailable")
+        || value.contains("required_for_promotion_but_not_recorded"))
+}
+
+pub fn build_durability_bundle_with_created_utc(
+    root: &Path,
+    route_profile_comparison: &Path,
+    cold_warm_benchmark: &Path,
+    cpu_corpus_v2: &Path,
+    regression_bundle: &Path,
+    repeated_warm_session: Option<&Path>,
+    required_repeat_count: u64,
+    created_utc: String,
+) -> Result<LunarLakeDurabilityBundle> {
+    let route_profile_comparison_path = resolve_receipt_path(root, route_profile_comparison);
+    let cold_warm_benchmark_path = resolve_receipt_path(root, cold_warm_benchmark);
+    let cpu_corpus_v2_path = resolve_receipt_path(root, cpu_corpus_v2);
+    let regression_bundle_path = resolve_receipt_path(root, regression_bundle);
+    let repeated_warm_session_path =
+        repeated_warm_session.map(|path| resolve_receipt_path(root, path));
+
+    let comparison: LunarLakeRouteProfileComparison =
+        read_json_receipt(&route_profile_comparison_path)?;
+    let benchmark: LunarLakeColdWarmBenchmark = read_json_receipt(&cold_warm_benchmark_path)?;
+    let corpus: Value = read_json_receipt(&cpu_corpus_v2_path)?;
+    let regression: LunarLakeRegressionBundle = read_json_receipt(&regression_bundle_path)?;
+    let repeated_warm_session_json = repeated_warm_session_path
+        .as_ref()
+        .map(|path| read_json_receipt::<Value>(path))
+        .transpose()?;
+
+    let mut gaps = Vec::new();
+    if !comparison.profile_comparison_ready {
+        gaps.push(format!("route profile comparison is not ready: {}", comparison.gaps.join("; ")));
+    }
+    if !benchmark.benchmark_gate_ready {
+        gaps.push(format!("cold/warm benchmark is not ready: {}", benchmark.gaps.join("; ")));
+    }
+    if !regression.regression_passed || !regression.regression_surface.strict_ready {
+        gaps.push("strict regression-v2 bundle is not ready".to_string());
+    }
+    if comparison.claim_boundary.hidden_fallback_allowed
+        || benchmark.claim_boundary.hidden_fallback_allowed
+        || regression.claim_boundary.hidden_fallback_allowed
+    {
+        gaps.push("durability index refuses hidden fallback".to_string());
+    }
+    if benchmark.claim_boundary.new_inference_executed {
+        gaps.push(
+            "durability index refuses benchmark receipts that executed new inference".to_string(),
+        );
+    }
+    if benchmark.claim_boundary.route_promotion_changed {
+        gaps.push("durability index refuses route-promotion changes".to_string());
+    }
+    if benchmark.claim_boundary.speedup_claim || benchmark.claim_boundary.acceleration_claim {
+        gaps.push("durability index refuses speedup or acceleration claims".to_string());
+    }
+    if benchmark.claim_boundary.dense_slm_as_bitnet_proof {
+        gaps.push("durability index refuses dense SLM evidence as BitNet proof".to_string());
+    }
+    if fallback_used(&corpus) == Some(true) {
+        gaps.push("CPU corpus-v2 receipt observed fallback_used=true".to_string());
+    }
+    let repeated_profile_evidence = repeated_warm_session_json
+        .as_ref()
+        .map(|receipt| repeated_warm_session_profile_evidence(receipt, &mut gaps))
+        .unwrap_or_default();
+
+    let corpus_profiles = corpus_profile_counts(&corpus);
+    let benchmark_profiles = benchmark
+        .profiles
+        .iter()
+        .map(|profile| (profile.profile_id.as_str(), profile))
+        .collect::<BTreeMap<_, _>>();
+    let mut next_required_evidence = Vec::new();
+    let mut profiles = Vec::new();
+
+    for profile_id in DURABILITY_REQUIRED_PROFILES {
+        let Some(profile) =
+            comparison.profiles.iter().find(|profile| profile.profile_id == *profile_id)
+        else {
+            gaps.push(format!("durability profile {profile_id} is missing from route comparison"));
+            continue;
+        };
+        let counts = corpus_profiles.get(*profile_id).cloned().unwrap_or_default();
+        let route = profile.route_evidence.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE);
+        let benchmark_route = benchmark_profiles.get(profile_id).and_then(|profile| {
+            profile.routes.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        });
+        let Some(route) = route else {
+            gaps.push(format!(
+                "durability profile {profile_id} is missing dense Qwen CPU route evidence"
+            ));
+            continue;
+        };
+
+        let repeated_evidence = repeated_profile_evidence.get(*profile_id);
+        let observed_execution_count = repeated_evidence
+            .map(|evidence| evidence.observed_execution_count)
+            .unwrap_or(if counts.total > 0 { 1 } else { 0 });
+        let mut blockers = route.blockers.clone();
+        if counts.total == 0 {
+            blockers.push("no CPU corpus-v2 baseline cases for profile".to_string());
+        }
+        if counts.failed > 0 {
+            blockers.push(format!("CPU corpus-v2 profile has {} quality failures", counts.failed));
+        }
+        let repeated_fallback_observed =
+            repeated_evidence.map(|evidence| evidence.fallback_drift_detected).unwrap_or(false);
+        let fallback_observed = route.fallback_used == Some(true)
+            || counts.fallback_observed
+            || repeated_fallback_observed;
+        if fallback_observed {
+            blockers.push("fallback_used=true observed in indexed profile evidence".to_string());
+        }
+        if let Some(evidence) = repeated_evidence {
+            blockers.extend(evidence.blockers.iter().cloned());
+            if evidence.answer_drift_detected {
+                blockers
+                    .push("answer drift detected in repeated warm-session evidence".to_string());
+            }
+            if !evidence.quality_passed {
+                blockers.push(
+                    "answer gate failure detected in repeated warm-session evidence".to_string(),
+                );
+            }
+        }
+        if observed_execution_count < required_repeat_count {
+            blockers.push(format!(
+                "repeated-run evidence missing: observed {observed_execution_count}/{required_repeat_count} executions"
+            ));
+            next_required_evidence.push(format!(
+                "run {profile_id} on {DEFAULT_ASK_ROUTE} {required_repeat_count} times and record answer, route, fallback, and latency variance"
+            ));
+        }
+        if benchmark_route.map(|route| !route.critical_timing_present).unwrap_or(true) {
+            blockers.push("critical cold/warm timing missing for durability profile".to_string());
+        }
+        blockers.sort();
+        blockers.dedup();
+
+        let stability_status = if blockers.iter().any(|blocker| blocker.contains("repeated-run")) {
+            "awaiting_repeated_run_evidence"
+        } else if blockers.is_empty() {
+            "stable"
+        } else {
+            "blocked"
+        };
+
+        profiles.push(DurabilityProfileSummary {
+            profile_id: (*profile_id).to_string(),
+            route_id: DEFAULT_ASK_ROUTE.to_string(),
+            route_status: route.route_status.clone(),
+            promoted_route: profile.promoted_route.clone(),
+            baseline_case_count: counts.total,
+            baseline_cases_passed: counts.passed,
+            baseline_cases_failed: counts.failed,
+            observed_execution_count,
+            required_execution_count: required_repeat_count,
+            answer_drift_detected: repeated_evidence
+                .map(|evidence| evidence.answer_drift_detected)
+                .or(if observed_execution_count >= 2 { Some(false) } else { None }),
+            route_drift_detected: profile.promoted_route.as_deref() != Some(DEFAULT_ASK_ROUTE),
+            fallback_drift_detected: Some(fallback_observed),
+            latency_variance_status: repeated_evidence
+                .map(RepeatedWarmSessionProfileEvidence::latency_variance_status)
+                .unwrap_or_else(|| {
+                    if observed_execution_count >= 2 {
+                        "variance_window_available".to_string()
+                    } else {
+                        "not_evaluated_single_execution".to_string()
+                    }
+                }),
+            stability_status: stability_status.to_string(),
+            blockers,
+        });
+    }
+
+    next_required_evidence.sort();
+    next_required_evidence.dedup();
+
+    let stability_proven = !profiles.is_empty()
+        && profiles.iter().all(|profile| {
+            profile.observed_execution_count >= profile.required_execution_count
+                && profile.baseline_cases_failed == 0
+                && profile.answer_drift_detected == Some(false)
+                && !profile.route_drift_detected
+                && profile.fallback_drift_detected == Some(false)
+                && profile.blockers.is_empty()
+        });
+    if !stability_proven {
+        next_required_evidence.push(
+            "collect repeated-run receipts before promoting durability or latency-variance claims"
+                .to_string(),
+        );
+        next_required_evidence.sort();
+        next_required_evidence.dedup();
+    }
+
+    let durability_index_ready = gaps.is_empty();
+    Ok(LunarLakeDurabilityBundle {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_durability_bundle".to_string(),
+        proof_stage: "repeated_run_requirements_indexed_no_new_inference".to_string(),
+        created_utc,
+        machine_id: comparison.machine_id,
+        artifact_root: path_string(root),
+        route_profile_comparison_receipt: path_string(&route_profile_comparison_path),
+        cold_warm_benchmark_receipt: path_string(&cold_warm_benchmark_path),
+        cpu_corpus_v2_receipt: path_string(&cpu_corpus_v2_path),
+        regression_bundle_receipt: path_string(&regression_bundle_path),
+        repeated_warm_session_receipt: repeated_warm_session_path
+            .as_ref()
+            .map(|path| path_string(path)),
+        required_repeat_count,
+        durability_index_ready,
+        stability_proven,
+        profiles,
+        gaps,
+        next_required_evidence,
+        claim_boundary: DurabilityClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            acceleration_claim: false,
+            hidden_fallback_allowed: false,
+            dense_slm_as_bitnet_proof: false,
+            repeated_run_stability_claim: stability_proven,
+        },
+    })
+}
+
+#[derive(Default, Clone)]
+struct CorpusProfileCounts {
+    total: u64,
+    passed: u64,
+    failed: u64,
+    fallback_observed: bool,
+}
+
+fn corpus_profile_counts(corpus: &Value) -> BTreeMap<String, CorpusProfileCounts> {
+    let mut counts = BTreeMap::<String, CorpusProfileCounts>::new();
+    let top_level_fallback = fallback_used(corpus) == Some(true);
+    for case in corpus.get("cases").and_then(Value::as_array).into_iter().flatten() {
+        let Some(profile) = case.get("profile").and_then(Value::as_str) else {
+            continue;
+        };
+        let entry = counts.entry(profile.to_string()).or_default();
+        entry.total += 1;
+        if case.get("status").and_then(Value::as_str) == Some("passed") {
+            entry.passed += 1;
+        } else {
+            entry.failed += 1;
+        }
+        entry.fallback_observed |= top_level_fallback || fallback_used(case) == Some(true);
+    }
+    counts
+}
+
+#[derive(Default, Clone)]
+struct RepeatedWarmSessionProfileEvidence {
+    observed_execution_count: u64,
+    groups_seen: u64,
+    answer_drift_detected: bool,
+    fallback_drift_detected: bool,
+    quality_passed: bool,
+    timing_sample_count: usize,
+    blockers: Vec<String>,
+}
+
+impl RepeatedWarmSessionProfileEvidence {
+    fn merge_group(&mut self, group: RepeatedWarmSessionGroupEvidence) {
+        if self.groups_seen == 0 {
+            self.observed_execution_count = group.attempt_count;
+            self.quality_passed = group.quality_passed;
+        } else {
+            self.observed_execution_count = self.observed_execution_count.min(group.attempt_count);
+            self.quality_passed &= group.quality_passed;
+        }
+        self.groups_seen += 1;
+        self.answer_drift_detected |= group.answer_drift_detected;
+        self.fallback_drift_detected |= group.fallback_drift_detected;
+        self.timing_sample_count += group.timing_sample_count;
+        self.blockers.extend(group.blockers);
+        self.blockers.sort();
+        self.blockers.dedup();
+    }
+
+    fn latency_variance_status(&self) -> String {
+        if self.timing_sample_count >= 2 {
+            "variance_window_available".to_string()
+        } else {
+            "not_evaluated_missing_timing_samples".to_string()
+        }
+    }
+}
+
+struct RepeatedWarmSessionGroupEvidence {
+    attempt_count: u64,
+    answer_drift_detected: bool,
+    fallback_drift_detected: bool,
+    quality_passed: bool,
+    timing_sample_count: usize,
+    blockers: Vec<String>,
+}
+
+fn repeated_warm_session_profile_evidence(
+    receipt: &Value,
+    gaps: &mut Vec<String>,
+) -> BTreeMap<String, RepeatedWarmSessionProfileEvidence> {
+    if string_at(receipt, "artifact_kind").as_deref() != Some("slm_cpu_warm_session") {
+        gaps.push(
+            "repeated warm-session receipt must have artifact_kind=slm_cpu_warm_session"
+                .to_string(),
+        );
+    }
+    if string_at_any(receipt, &["selected_backend", "backend.selected_backend"]).as_deref()
+        != Some("cpu-rust")
+    {
+        gaps.push("repeated warm-session receipt must select backend cpu-rust".to_string());
+    }
+    if string_at_any(receipt, &["runtime_api", "backend.runtime_api"]).as_deref() != Some("cpu") {
+        gaps.push("repeated warm-session receipt must record runtime_api=cpu".to_string());
+    }
+    if fallback_used(receipt) != Some(false) {
+        gaps.push("repeated warm-session receipt must record fallback_used=false".to_string());
+    }
+    if bool_at_any(receipt, &["quality_summary.passed"]) != Some(true) {
+        gaps.push("repeated warm-session receipt must record passing quality gates".to_string());
+    }
+    if bool_at_any(receipt, &["determinism.passed"]) != Some(true) {
+        gaps.push("repeated warm-session receipt must record determinism.passed=true".to_string());
+    }
+    if bool_at_any(
+        receipt,
+        &[
+            "speedup_claim",
+            "claim_boundary.speedup_claim",
+            "claim_boundary.broad_performance_claim",
+            "claim_boundary.full_metal_inference_claimed",
+            "claim_boundary.bitnet_quality_claimed",
+        ],
+    ) == Some(true)
+    {
+        gaps.push(
+            "durability index refuses speedup, accelerator, or BitNet claims from repeated receipt"
+                .to_string(),
+        );
+    }
+
+    let prompt_by_index = receipt
+        .get("prompts")
+        .and_then(Value::as_array)
+        .map(|prompts| {
+            prompts
+                .iter()
+                .filter_map(|prompt| {
+                    let index = u64_at(prompt, "prompt_index")?;
+                    Some((index, prompt))
+                })
+                .collect::<BTreeMap<_, _>>()
+        })
+        .unwrap_or_default();
+
+    let mut profiles = BTreeMap::<String, RepeatedWarmSessionProfileEvidence>::new();
+    let groups = receipt.pointer("/determinism/groups").and_then(Value::as_array);
+    let Some(groups) = groups else {
+        gaps.push("repeated warm-session receipt has no determinism.groups".to_string());
+        return profiles;
+    };
+
+    for group in groups {
+        let Some(case_id) = group.get("case_id").and_then(Value::as_str) else {
+            gaps.push("repeated warm-session determinism group is missing case_id".to_string());
+            continue;
+        };
+        let Some(profile_id) = durability_profile_for_case_id(case_id) else {
+            continue;
+        };
+        let evidence = repeated_warm_session_group_evidence(group, &prompt_by_index);
+        profiles.entry(profile_id.to_string()).or_default().merge_group(evidence);
+    }
+
+    profiles
+}
+
+fn repeated_warm_session_group_evidence(
+    group: &Value,
+    prompt_by_index: &BTreeMap<u64, &Value>,
+) -> RepeatedWarmSessionGroupEvidence {
+    let case_id = group.get("case_id").and_then(Value::as_str).unwrap_or("unknown_case");
+    let attempt_count = u64_at(group, "attempt_count").unwrap_or(0);
+    let stable_ids = bool_at_any(group, &["stable_generated_token_ids"]) == Some(true);
+    let stable_text = bool_at_any(group, &["stable_text"]) == Some(true);
+    let mut blockers = Vec::new();
+    if attempt_count == 0 {
+        blockers.push(format!("repeated warm-session group {case_id} is missing attempt_count"));
+    }
+    if !stable_ids {
+        blockers.push(format!("repeated warm-session group {case_id} generated token IDs drifted"));
+    }
+    if !stable_text {
+        blockers.push(format!("repeated warm-session group {case_id} decoded text drifted"));
+    }
+
+    let prompt_indices = group
+        .get("prompt_indices")
+        .and_then(Value::as_array)
+        .map(|indices| indices.iter().filter_map(Value::as_u64).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if prompt_indices.len() < attempt_count as usize {
+        blockers.push(format!(
+            "repeated warm-session group {case_id} has {}/{} prompt receipts",
+            prompt_indices.len(),
+            attempt_count
+        ));
+    }
+
+    let mut quality_passed = true;
+    let mut fallback_drift_detected = false;
+    let mut timing_sample_count = 0usize;
+    for index in prompt_indices {
+        let Some(prompt) = prompt_by_index.get(&index) else {
+            blockers.push(format!(
+                "repeated warm-session group {case_id} references missing prompt_index {index}"
+            ));
+            quality_passed = false;
+            continue;
+        };
+        if fallback_used(prompt) != Some(false) {
+            fallback_drift_detected = true;
+        }
+        if answer_gate_passed(prompt) != Some(true) {
+            quality_passed = false;
+        }
+        if durability_prompt_has_timing(prompt) {
+            timing_sample_count += 1;
+        }
+    }
+    if !quality_passed {
+        blockers.push(format!("repeated warm-session group {case_id} has answer-gate failures"));
+    }
+    if fallback_drift_detected {
+        blockers.push(format!("repeated warm-session group {case_id} observed fallback"));
+    }
+    if timing_sample_count < 2 {
+        blockers.push(format!("repeated warm-session group {case_id} lacks enough timing samples"));
+    }
+
+    RepeatedWarmSessionGroupEvidence {
+        attempt_count,
+        answer_drift_detected: !stable_ids || !stable_text || !quality_passed,
+        fallback_drift_detected,
+        quality_passed,
+        timing_sample_count,
+        blockers,
+    }
+}
+
+fn durability_profile_for_case_id(case_id: &str) -> Option<&'static str> {
+    if case_id.starts_with("regression_tiny") {
+        Some("regression_tiny")
+    } else if case_id.starts_with("ask_short") {
+        Some("ask_short")
+    } else if case_id.starts_with("ask_normal") {
+        Some("ask_normal")
+    } else {
+        None
+    }
+}
+
+fn durability_prompt_has_timing(prompt: &Value) -> bool {
+    number_at_any(
+        prompt,
+        &[
+            "timing.total_ms",
+            "timing.first_token_ms",
+            "timing.first_token_decode_ms",
+            "timing.time_to_first_token_ms",
+            "timing.decode_total_ms",
+        ],
+    )
+    .is_some()
+}
+
+pub fn build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
+    root: &Path,
+    cpu_corpus_v2: &Path,
+    route_profile_comparison: Option<&Path>,
+    created_utc: String,
+) -> Result<QwenCpuCorpusV2Diagnosis> {
+    let cpu_corpus_v2_path = resolve_receipt_path(root, cpu_corpus_v2);
+    let corpus: Value = read_json_receipt(&cpu_corpus_v2_path)?;
+    let route_profile_comparison_path =
+        route_profile_comparison.map(|path| resolve_receipt_path(root, path));
+    let route_profile_comparison_json = route_profile_comparison_path
+        .as_ref()
+        .filter(|path| path.exists())
+        .map(|path| read_json_receipt::<Value>(path))
+        .transpose()?;
+    let route_profile_statuses = cpu_route_profile_statuses(route_profile_comparison_json.as_ref());
+
+    let mut gaps = Vec::new();
+    if string_at(&corpus, "artifact_kind").as_deref() != Some("slm_cpu_answer_corpus") {
+        gaps.push(
+            "CPU corpus-v2 receipt must have artifact_kind=slm_cpu_answer_corpus".to_string(),
+        );
+    }
+    if string_at(&corpus, "selected_backend").as_deref() != Some("cpu-rust") {
+        gaps.push("CPU corpus-v2 receipt must select backend cpu-rust".to_string());
+    }
+    if string_at(&corpus, "runtime_api").as_deref() != Some("cpu") {
+        gaps.push("CPU corpus-v2 receipt must record runtime_api=cpu".to_string());
+    }
+    let fallback_used = fallback_used(&corpus);
+    if fallback_used != Some(false) {
+        gaps.push("CPU corpus-v2 receipt must record fallback_used=false".to_string());
+    }
+    if bool_at_any(&corpus, &["speedup_claim", "claim_boundary.broad_performance_claimed"])
+        == Some(true)
+    {
+        gaps.push(
+            "CPU corpus-v2 diagnosis refuses speedup or broad performance claims".to_string(),
+        );
+    }
+    if bool_at_any(
+        &corpus,
+        &[
+            "claim_boundary.neural_engine_claimed",
+            "claim_boundary.full_metal_inference_claimed",
+            "claim_boundary.qk256_apple_claimed",
+        ],
+    ) == Some(true)
+    {
+        gaps.push("CPU corpus-v2 diagnosis refuses accelerator or BitNet QK256 claims".to_string());
+    }
+
+    let cases = corpus.get("cases").and_then(Value::as_array).cloned().unwrap_or_default();
+    if cases.is_empty() {
+        gaps.push("CPU corpus-v2 receipt has no cases".to_string());
+    }
+
+    let failed_cases = cases
+        .iter()
+        .filter(|case| !case_passed(case))
+        .map(diagnose_corpus_v2_failed_case)
+        .collect::<Vec<_>>();
+
+    let profile_diagnoses =
+        diagnose_corpus_v2_profiles(&corpus, &failed_cases, &route_profile_statuses);
+    let quality_summary = summarize_corpus_v2_quality(&corpus, &failed_cases);
+    let route_blocked = quality_summary.failed > 0 || fallback_used != Some(false);
+    let blocker_summary = corpus_v2_blocker_summary(&quality_summary, fallback_used);
+    let recommended_next_actions = corpus_v2_recommended_actions(&failed_cases, route_blocked);
+    let diagnosis_ready = gaps.is_empty();
+
+    Ok(QwenCpuCorpusV2Diagnosis {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_qwen_cpu_corpus_v2_diagnosis".to_string(),
+        proof_stage: "corpus_v2_failures_classified_no_inference".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        cpu_corpus_v2_receipt: path_string(&cpu_corpus_v2_path),
+        route_profile_comparison_receipt: route_profile_comparison_path
+            .as_ref()
+            .map(|path| path_string(path)),
+        route_id: DEFAULT_ASK_ROUTE.to_string(),
+        model_family: string_at(&corpus, "model_family")
+            .or_else(|| string_at(&corpus, "model.family")),
+        model_architecture: string_at(&corpus, "model_architecture")
+            .or_else(|| string_at(&corpus, "model.architecture")),
+        quantization: string_at(&corpus, "quantization")
+            .or_else(|| string_at(&corpus, "model.quant_format")),
+        requested_backend: string_at(&corpus, "requested_backend")
+            .or_else(|| string_at(&corpus, "backend.requested_backend")),
+        selected_backend: string_at(&corpus, "selected_backend")
+            .or_else(|| string_at(&corpus, "backend.selected_backend")),
+        runtime_api: string_at(&corpus, "runtime_api")
+            .or_else(|| string_at(&corpus, "backend.runtime_api")),
+        fallback_used,
+        quality_summary,
+        profile_diagnoses,
+        failed_cases,
+        route_blocked,
+        blocker_summary,
+        recommended_next_actions,
+        diagnosis_ready,
+        gaps,
+        claim_boundary: CorpusV2DiagnosisClaimBoundary {
+            diagnostic_only: true,
+            new_inference_executed: false,
+            broad_quality_claim: false,
+            speedup_claim: false,
+            route_promotion_changed: false,
+            arc_or_npu_execution_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+        },
     })
 }
 
@@ -1673,6 +6708,254 @@ pub fn load_operator_ask_route(
     }
 
     Ok(route.clone())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OperatorAskRouteSelection {
+    pub requested_device: String,
+    pub requested_route: String,
+    pub profile_id: String,
+    pub selected_route: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub promotion_status: String,
+    pub selection_source: String,
+    pub route_reason: String,
+    pub why_not_cpu: Vec<String>,
+    pub why_not_gpu: Vec<String>,
+    pub why_not_npu: Vec<String>,
+    pub candidate_routes: Vec<String>,
+    pub promotion_ledger: Option<String>,
+    pub route: OperatorRoute,
+}
+
+pub fn resolve_operator_ask_route_selection(
+    root: &Path,
+    operator_receipt: &Path,
+    promotion_ledger: &Path,
+    requested_route: &str,
+    requested_device: &str,
+    profile_id: &str,
+) -> Result<OperatorAskRouteSelection> {
+    let requested_route = normalize_auto_selector(requested_route, DEFAULT_ASK_ROUTE);
+    let requested_device = normalize_auto_selector(requested_device, "auto");
+    let route_auto = requested_route.eq_ignore_ascii_case("auto");
+    let device_auto = requested_device.eq_ignore_ascii_case("auto");
+
+    if !route_auto && !device_auto {
+        let route = load_operator_ask_route(root, operator_receipt, &requested_route)?;
+        validate_operator_ask_requested_device(&requested_device, &route)?;
+        return Ok(OperatorAskRouteSelection {
+            requested_device,
+            requested_route,
+            profile_id: profile_id.to_string(),
+            selected_route: route.route_id.clone(),
+            selected_backend: route.selected_backend.clone(),
+            runtime_api: route.runtime_api.clone(),
+            promotion_status: "direct_route_validated".to_string(),
+            selection_source: "operator_receipt_direct".to_string(),
+            route_reason: route.route_reason.clone(),
+            why_not_cpu: if route.route_id == DEFAULT_ASK_ROUTE {
+                vec!["CPU route was explicitly requested and validated".to_string()]
+            } else {
+                vec!["CPU route was not requested".to_string()]
+            },
+            why_not_gpu: vec!["auto routing was not requested".to_string()],
+            why_not_npu: vec!["auto routing was not requested".to_string()],
+            candidate_routes: vec![],
+            promotion_ledger: None,
+            route,
+        });
+    }
+
+    let ledger_path = resolve_receipt_path(root, promotion_ledger);
+    let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&ledger_path)?;
+    validate_auto_route_ledger(&ledger)?;
+    let profile = ledger
+        .workload_profiles
+        .iter()
+        .find(|profile| profile.profile_id == profile_id)
+        .with_context(|| format!("auto route profile `{profile_id}` not found in ledger"))?;
+    let selected_route_id =
+        profile.promoted_route.as_deref().unwrap_or(ledger.default_route_id.as_str());
+    let promotion = route_promotion(&ledger, selected_route_id)?;
+    validate_auto_selected_promotion(promotion, profile_id)?;
+    let route = load_operator_ask_route(root, operator_receipt, selected_route_id)?;
+    validate_operator_ask_requested_device(&requested_device, &route)?;
+    let (why_not_cpu, why_not_gpu, why_not_npu) =
+        route_selection_explanations(&ledger, profile, selected_route_id);
+
+    Ok(OperatorAskRouteSelection {
+        requested_device,
+        requested_route,
+        profile_id: profile.profile_id.clone(),
+        selected_route: route.route_id.clone(),
+        selected_backend: route.selected_backend.clone(),
+        runtime_api: route.runtime_api.clone(),
+        promotion_status: promotion.status.clone(),
+        selection_source: "promotion_ledger_auto".to_string(),
+        route_reason: promotion.reason.clone(),
+        why_not_cpu,
+        why_not_gpu,
+        why_not_npu,
+        candidate_routes: profile.candidate_routes.clone(),
+        promotion_ledger: Some(path_string(&ledger_path)),
+        route,
+    })
+}
+
+fn normalize_auto_selector(value: &str, default_value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() { default_value.to_string() } else { trimmed.to_string() }
+}
+
+fn validate_operator_ask_requested_device(
+    requested_device: &str,
+    route: &OperatorRoute,
+) -> Result<()> {
+    if requested_device.eq_ignore_ascii_case("auto") {
+        return Ok(());
+    }
+
+    let normalized = requested_device.to_ascii_lowercase();
+    let route_is_cpu = route.selected_backend == "cpu-rust" && route.runtime_api == "cpu";
+    if route_is_cpu && matches!(normalized.as_str(), "cpu" | "cpu-rust" | DEFAULT_ASK_ROUTE) {
+        return Ok(());
+    }
+
+    bail!(
+        "Lunar Lake ask route `{}` selects {}/{} but requested --device `{requested_device}`; explicit accelerator devices are not auto-routed until their routes are promoted",
+        route.route_id,
+        route.selected_backend,
+        route.runtime_api
+    )
+}
+
+fn validate_auto_route_ledger(ledger: &LunarLakeRoutePromotionLedger) -> Result<()> {
+    if !ledger.promotion_ready {
+        bail!("Lunar Lake route promotion ledger is not ready: {}", ledger.gaps.join("; "));
+    }
+    if ledger.machine_id != "intel-258v" {
+        bail!("Lunar Lake auto route requires machine_id=intel-258v; got {}", ledger.machine_id);
+    }
+    if ledger.default_route_id != DEFAULT_ASK_ROUTE
+        || ledger.auto_route_policy.default_route != DEFAULT_ASK_ROUTE
+    {
+        bail!(
+            "Lunar Lake auto route requires default route {DEFAULT_ASK_ROUTE}; got ledger default {} policy default {}",
+            ledger.default_route_id,
+            ledger.auto_route_policy.default_route
+        );
+    }
+    if ledger.auto_route_policy.hidden_fallback_allowed
+        || ledger.claim_boundary.hidden_fallback_allowed
+    {
+        bail!("Lunar Lake auto route refuses ledgers that allow hidden fallback");
+    }
+    if !ledger.auto_route_policy.cpu_default_until_profile_promoted
+        || !ledger.auto_route_policy.candidate_routes_require_profile_promotion
+        || !ledger.auto_route_policy.route_reason_required
+    {
+        bail!("Lunar Lake auto route requires fail-closed route promotion policy flags");
+    }
+    if ledger.claim_boundary.arc_bitnet_full_inference_claimed
+        || ledger.claim_boundary.npu_bitnet_full_inference_claimed
+        || ledger.claim_boundary.qk256_accelerator_decode_claimed
+    {
+        bail!("Lunar Lake auto route refuses ledgers with accelerator BitNet/QK256 claims");
+    }
+    Ok(())
+}
+
+fn route_promotion<'a>(
+    ledger: &'a LunarLakeRoutePromotionLedger,
+    route_id: &str,
+) -> Result<&'a RoutePromotion> {
+    ledger
+        .routes
+        .iter()
+        .find(|route| route.route_id == route_id)
+        .with_context(|| format!("route `{route_id}` not found in promotion ledger"))
+}
+
+fn validate_auto_selected_promotion(route: &RoutePromotion, profile_id: &str) -> Result<()> {
+    if route.status != "promoted" || !route.promoted_for.iter().any(|profile| profile == profile_id)
+    {
+        bail!(
+            "route `{}` is not promoted for profile `{profile_id}`; status={} promoted_for={}",
+            route.route_id,
+            route.status,
+            route.promoted_for.join(",")
+        );
+    }
+    if route.fallback_used != Some(false) {
+        bail!("route `{}` does not prove fallback_used=false", route.route_id);
+    }
+    if route.speedup_claim || route.acceleration_claim {
+        bail!(
+            "route `{}` cannot be auto-selected with speedup or acceleration claims",
+            route.route_id
+        );
+    }
+    if route.reason.trim().is_empty() {
+        bail!("route `{}` is missing a route reason", route.route_id);
+    }
+    Ok(())
+}
+
+fn route_selection_explanations(
+    ledger: &LunarLakeRoutePromotionLedger,
+    profile: &WorkloadProfile,
+    selected_route_id: &str,
+) -> (Vec<String>, Vec<String>, Vec<String>) {
+    let why_not_cpu = if selected_route_id == DEFAULT_ASK_ROUTE {
+        vec![format!(
+            "{DEFAULT_ASK_ROUTE} is promoted for profile {} and remains the safe no-fallback default",
+            profile.profile_id
+        )]
+    } else {
+        route_not_selected_reasons(ledger, DEFAULT_ASK_ROUTE, &profile.profile_id)
+    };
+    let why_not_gpu =
+        route_not_selected_reasons(ledger, "dense_slm_openvino_gpu_candidate", &profile.profile_id);
+    let why_not_npu =
+        route_not_selected_reasons(ledger, "dense_slm_openvino_npu_candidate", &profile.profile_id);
+    (why_not_cpu, why_not_gpu, why_not_npu)
+}
+
+fn route_not_selected_reasons(
+    ledger: &LunarLakeRoutePromotionLedger,
+    route_id: &str,
+    profile_id: &str,
+) -> Vec<String> {
+    let Some(route) = ledger.routes.iter().find(|route| route.route_id == route_id) else {
+        return vec![format!("route `{route_id}` is not present in the promotion ledger")];
+    };
+    let mut reasons = Vec::new();
+    if route.status != "promoted" {
+        reasons.push(format!("route status is `{}`", route.status));
+    }
+    if !route.promoted_for.iter().any(|profile| profile == profile_id) {
+        reasons.push(format!("route is not promoted for profile `{profile_id}`"));
+    }
+    if route.fallback_used != Some(false) {
+        reasons.push("route does not prove fallback_used=false".to_string());
+    }
+    if route.speedup_claim {
+        reasons.push("route source claims speedup before profile promotion".to_string());
+    }
+    if route.acceleration_claim {
+        reasons.push("route source claims acceleration before profile promotion".to_string());
+    }
+    for item in &route.missing_evidence {
+        reasons.push(format!("missing evidence: {item}"));
+    }
+    if reasons.is_empty() {
+        reasons.push(format!("route was not selected for profile `{profile_id}`"));
+    }
+    reasons.sort();
+    reasons.dedup();
+    reasons
 }
 
 fn normalize_created_utc(created_utc: &str) -> Result<String> {
@@ -1938,6 +7221,177 @@ fn write_or_print_route_profile_comparison(
     Ok(())
 }
 
+fn write_or_print_qwen_cpu_corpus_v2_diagnosis(
+    receipt: &QwenCpuCorpusV2Diagnosis,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake Qwen CPU corpus-v2 diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cold_warm_benchmark(
+    receipt: &LunarLakeColdWarmBenchmark,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake cold/warm profile benchmark written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cpu_slm_phase_attribution(
+    receipt: &LunarLakeCpuSlmPhaseAttribution,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake CPU dense SLM phase attribution written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cpu_slm_resident_session(
+    receipt: &LunarLakeCpuSlmResidentSession,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake CPU dense SLM resident-session receipt written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_cpu_slm_runtime_comparison(
+    receipt: &LunarLakeCpuSlmRuntimeComparison,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake CPU dense SLM runtime comparison written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_openvino_corpus_v2_diagnosis(
+    receipt: &LunarLakeOpenVinoCorpusV2Diagnosis,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake OpenVINO corpus-v2 diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_npu_cold_start_diagnosis(
+    receipt: &LunarLakeNpuColdStartDiagnosis,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake OpenVINO NPU cold-start diagnosis written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_telemetry_context(
+    receipt: &LunarLakeTelemetryContext,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake telemetry context receipt written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_durability_bundle(
+    receipt: &LunarLakeDurabilityBundle,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake durability bundle written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
 fn read_json_receipt<T: DeserializeOwned>(path: &Path) -> Result<T> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("failed to parse {}", path.display()))
@@ -1996,6 +7450,1065 @@ fn compare_route(route: &OperatorRoute, evidence: &[EvidenceStatus]) -> RouteCom
         route_reason: route.route_reason.clone(),
         notes,
     }
+}
+
+#[derive(Debug, Clone, Default)]
+struct ProfileQualityIndex {
+    by_route: BTreeMap<String, BTreeMap<String, ProfileQualityEvidence>>,
+    cpu_source: Option<String>,
+    openvino_source: Option<String>,
+}
+
+impl ProfileQualityIndex {
+    fn insert(&mut self, quality: ProfileQualityEvidence) {
+        self.by_route
+            .entry(quality.route_id.clone())
+            .or_default()
+            .insert(quality.profile_id.clone(), quality);
+    }
+
+    fn get(&self, route_id: &str, profile_id: &str) -> Option<&ProfileQualityEvidence> {
+        self.by_route.get(route_id)?.get(profile_id)
+    }
+
+    fn has_route(&self, route_id: &str) -> bool {
+        self.by_route.contains_key(route_id)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct CorpusCaseAlignmentIndex {
+    fixture_source: Option<String>,
+    by_route: BTreeMap<String, CorpusCaseAlignmentEvidence>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct CorpusCaseAlignmentEvidence {
+    source_receipts: Vec<String>,
+    blockers: Vec<String>,
+}
+
+impl CorpusCaseAlignmentIndex {
+    fn add(
+        &mut self,
+        route_id: &str,
+        fixture_source: String,
+        receipt_source: String,
+        blockers: Vec<String>,
+    ) {
+        let entry = self.by_route.entry(route_id.to_string()).or_default();
+        for source in [fixture_source, receipt_source] {
+            if !entry.source_receipts.contains(&source) {
+                entry.source_receipts.push(source);
+            }
+        }
+        entry.blockers.extend(blockers);
+        entry.blockers.sort();
+        entry.blockers.dedup();
+    }
+
+    fn get(&self, route_id: &str) -> Option<&CorpusCaseAlignmentEvidence> {
+        self.by_route.get(route_id)
+    }
+}
+
+fn load_corpus_case_alignment_index(
+    root: &Path,
+    answer_corpus_v2: Option<&Path>,
+    quality_index: &ProfileQualityIndex,
+    gaps: &mut Vec<String>,
+) -> Result<CorpusCaseAlignmentIndex> {
+    let mut index = CorpusCaseAlignmentIndex::default();
+    let Some(fixture_path) = answer_corpus_v2 else {
+        return Ok(index);
+    };
+    let fixture_path = resolve_receipt_path(root, fixture_path);
+    if !fixture_path.exists() {
+        gaps.push(format!("answer corpus v2 fixture missing: {}", path_string(&fixture_path)));
+        return Ok(index);
+    }
+    let (fixture_source, expected_case_ids) = load_answer_corpus_v2_case_ids(&fixture_path)?;
+    index.fixture_source = Some(fixture_source.clone());
+
+    if let Some(source) = &quality_index.cpu_source {
+        let path = PathBuf::from(source);
+        let json: Value = read_json_receipt(&path)?;
+        let observed = case_ids_from_json_cases(value_at(&json, "cases"));
+        let blockers =
+            corpus_case_alignment_blockers(DEFAULT_ASK_ROUTE, &expected_case_ids, &observed);
+        index.add(DEFAULT_ASK_ROUTE, fixture_source.clone(), source.clone(), blockers);
+    }
+
+    if let Some(source) = &quality_index.openvino_source {
+        let path = PathBuf::from(source);
+        let json: Value = read_json_receipt(&path)?;
+        if let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) {
+            for device in devices {
+                let Some(route_id) = openvino_device_route_id(device) else {
+                    continue;
+                };
+                let observed = case_ids_from_json_cases(device.get("cases"));
+                let blockers =
+                    corpus_case_alignment_blockers(route_id, &expected_case_ids, &observed);
+                index.add(route_id, fixture_source.clone(), source.clone(), blockers);
+            }
+        }
+    }
+
+    Ok(index)
+}
+
+fn load_answer_corpus_v2_case_ids(path: &Path) -> Result<(String, BTreeSet<String>)> {
+    let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let corpus: AnswerCorpusV2Fixture = serde_yaml::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    let case_ids = corpus.cases.into_iter().map(|case| case.id).collect::<BTreeSet<_>>();
+    Ok((path_string(path), case_ids))
+}
+
+fn case_ids_from_json_cases(cases: Option<&Value>) -> BTreeSet<String> {
+    cases
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|case| string_at(case, "id").or_else(|| string_at(case, "case_id")))
+        .collect()
+}
+
+fn corpus_case_alignment_blockers(
+    route_id: &str,
+    expected: &BTreeSet<String>,
+    observed: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut blockers = Vec::new();
+    if observed.is_empty() {
+        blockers.push(format!("{route_id} corpus-v2 receipt has no case IDs to align"));
+        return blockers;
+    }
+    let missing = expected.difference(observed).cloned().collect::<Vec<_>>();
+    if !missing.is_empty() {
+        blockers.push(format!(
+            "{route_id} corpus-v2 receipt is missing active fixture cases [{}]",
+            missing.join(", ")
+        ));
+    }
+    let unexpected = observed.difference(expected).cloned().collect::<Vec<_>>();
+    if !unexpected.is_empty() {
+        blockers.push(format!(
+            "{route_id} corpus-v2 receipt has stale or unexpected cases [{}]",
+            unexpected.join(", ")
+        ));
+    }
+    blockers
+}
+
+#[derive(Debug, Clone, Default)]
+struct RouteDiagnosticsIndex {
+    by_route: BTreeMap<String, RouteDiagnosticEvidence>,
+    by_route_profile: BTreeMap<(String, String), RouteDiagnosticEvidence>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct RouteDiagnosticEvidence {
+    source_receipts: Vec<String>,
+    blockers: Vec<String>,
+}
+
+impl RouteDiagnosticsIndex {
+    fn add(&mut self, route_id: &str, source_receipt: String, blockers: Vec<String>) {
+        let entry = self.by_route.entry(route_id.to_string()).or_default();
+        add_route_diagnostic_evidence(entry, source_receipt, blockers);
+    }
+
+    fn add_for_profile(
+        &mut self,
+        route_id: &str,
+        profile_id: &str,
+        source_receipt: String,
+        blockers: Vec<String>,
+    ) {
+        let entry = self
+            .by_route_profile
+            .entry((route_id.to_string(), profile_id.to_string()))
+            .or_default();
+        add_route_diagnostic_evidence(entry, source_receipt, blockers);
+    }
+
+    fn get(&self, route_id: &str, profile_id: &str) -> RouteDiagnosticEvidence {
+        let mut evidence = self.by_route.get(route_id).cloned().unwrap_or_default();
+        if let Some(profile_evidence) =
+            self.by_route_profile.get(&(route_id.to_string(), profile_id.to_string()))
+        {
+            for source in &profile_evidence.source_receipts {
+                if !evidence.source_receipts.contains(source) {
+                    evidence.source_receipts.push(source.clone());
+                }
+            }
+            evidence.blockers.extend(profile_evidence.blockers.iter().cloned());
+            evidence.blockers.sort();
+            evidence.blockers.dedup();
+        }
+        evidence
+    }
+
+    fn source_receipts(&self) -> Vec<String> {
+        self.by_route
+            .values()
+            .chain(self.by_route_profile.values())
+            .flat_map(|evidence| evidence.source_receipts.iter().cloned())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+fn add_route_diagnostic_evidence(
+    entry: &mut RouteDiagnosticEvidence,
+    source_receipt: String,
+    blockers: Vec<String>,
+) {
+    if !entry.source_receipts.contains(&source_receipt) {
+        entry.source_receipts.push(source_receipt);
+    }
+    entry.blockers.extend(blockers);
+    entry.blockers.sort();
+    entry.blockers.dedup();
+}
+
+impl RouteDiagnosticsIndex {
+    fn add_case_blocker(
+        &mut self,
+        route_id: &str,
+        profile_id: Option<String>,
+        source_receipt: &str,
+        blocker: String,
+    ) {
+        if let Some(profile_id) = profile_id.filter(|profile| !profile.trim().is_empty()) {
+            self.add_for_profile(route_id, &profile_id, source_receipt.to_string(), vec![blocker]);
+        } else {
+            self.add(route_id, source_receipt.to_string(), vec![blocker]);
+        }
+    }
+}
+
+fn load_route_diagnostics_index(
+    root: &Path,
+    gpu_quality_diagnosis: Option<&Path>,
+    npu_quality_diagnosis: Option<&Path>,
+    npu_cold_start_diagnosis: Option<&Path>,
+    openvino_budget_sensitivity: Option<&Path>,
+    gaps: &mut Vec<String>,
+) -> Result<RouteDiagnosticsIndex> {
+    let mut index = RouteDiagnosticsIndex::default();
+    if let Some(path) = gpu_quality_diagnosis {
+        load_openvino_quality_diagnostic(
+            root,
+            path,
+            "dense_slm_openvino_gpu_candidate",
+            &mut index,
+            gaps,
+        )?;
+    }
+    if let Some(path) = npu_quality_diagnosis {
+        load_openvino_quality_diagnostic(
+            root,
+            path,
+            "dense_slm_openvino_npu_candidate",
+            &mut index,
+            gaps,
+        )?;
+    }
+    if let Some(path) = npu_cold_start_diagnosis {
+        load_npu_cold_start_diagnostic(root, path, &mut index, gaps)?;
+    }
+    if let Some(path) = openvino_budget_sensitivity {
+        load_openvino_generation_budget_sensitivity(root, path, &mut index, gaps)?;
+    }
+    Ok(index)
+}
+
+fn load_openvino_quality_diagnostic(
+    root: &Path,
+    path: &Path,
+    route_id: &str,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!("route diagnosis receipt missing: {}", path_string(&path)));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_corpus_v2_diagnosis")
+    {
+        gaps.push(format!(
+            "route diagnosis receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+    let source_receipt = path_string(&path);
+    let mut global_blockers = Vec::new();
+    let mut profile_blockers_indexed = false;
+    if let Some(profile_diagnoses) = value_at(&json, "profile_diagnoses").and_then(Value::as_array)
+    {
+        for profile_diagnosis in profile_diagnoses {
+            let Some(profile_id) = string_at(profile_diagnosis, "profile_id") else {
+                continue;
+            };
+            let mut blockers = string_array_at(profile_diagnosis, "route_blockers");
+            if let Some(failed) = u64_at(profile_diagnosis, "failed")
+                && failed > 0
+            {
+                blockers.push(format!(
+                    "OpenVINO diagnosis profile {profile_id} has {failed} corpus-v2 quality failure(s)"
+                ));
+            }
+            blockers.sort();
+            blockers.dedup();
+            if !blockers.is_empty() {
+                index.add_for_profile(route_id, &profile_id, source_receipt.clone(), blockers);
+                profile_blockers_indexed = true;
+            }
+        }
+    }
+    if let Some(failed_cases) = value_at(&json, "failed_cases").and_then(Value::as_array) {
+        for failed_case in failed_cases {
+            let case_id =
+                string_at(failed_case, "id").unwrap_or_else(|| "unknown_case".to_string());
+            let classification = string_at(failed_case, "classification")
+                .unwrap_or_else(|| "quality_failed".to_string());
+            let profile_id = string_at(failed_case, "profile");
+            index.add_case_blocker(
+                route_id,
+                profile_id,
+                &source_receipt,
+                format!("{case_id} failed corpus-v2 diagnosis: {classification}"),
+            );
+            profile_blockers_indexed = true;
+        }
+    }
+    if !profile_blockers_indexed {
+        if bool_at_any(&json, &["route_blocked"]) == Some(true) {
+            global_blockers.push("OpenVINO corpus-v2 diagnosis keeps route blocked".to_string());
+        }
+        if let Some(failed) = u64_at(&json, "quality_summary.failed")
+            && failed > 0
+        {
+            global_blockers
+                .push(format!("OpenVINO diagnosis reports {failed} corpus-v2 quality failures"));
+        }
+        global_blockers.extend(string_array_at(&json, "blocker_summary"));
+    }
+    if bool_at_any(&json, &["generated_token_visibility.direct_generated_token_ids_available"])
+        == Some(false)
+    {
+        global_blockers.push(
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                .to_string(),
+        );
+    }
+    if bool_at_any(&json, &["claim_boundary.route_promotion_changed"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.speedup_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.arc_or_npu_execution_claim"]) == Some(true)
+    {
+        gaps.push(format!(
+            "route diagnosis receipt violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+    global_blockers.sort();
+    global_blockers.dedup();
+    if !global_blockers.is_empty() {
+        index.add(route_id, source_receipt, global_blockers);
+    }
+    Ok(())
+}
+
+fn load_npu_cold_start_diagnostic(
+    root: &Path,
+    path: &Path,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!("NPU cold-start diagnosis receipt missing: {}", path_string(&path)));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_npu_cold_start_diagnosis")
+    {
+        gaps.push(format!(
+            "NPU cold-start diagnosis receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+    let mut blockers = Vec::new();
+    if bool_at_any(&json, &["cold_start.cold_load_dominant"]) == Some(true) {
+        let classification = string_at(&json, "cold_start.classification")
+            .unwrap_or_else(|| "cold_load_dominated".to_string());
+        blockers.push(format!("NPU cold start is {classification}"));
+        blockers.push("NPU cache or resident warm-route proof is missing".to_string());
+    }
+    if bool_at_any(&json, &["corpus_v2_context.route_blocked_by_quality"]) == Some(true)
+        && let Some(failed) = u64_at(&json, "corpus_v2_context.failed")
+    {
+        blockers.push(format!("NPU corpus-v2 context has {failed} failed cases"));
+    }
+    if bool_at_any(&json, &["claim_boundary.route_promotion_changed"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.speedup_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.power_advantage_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.acceleration_claim"]) == Some(true)
+    {
+        gaps.push(format!(
+            "NPU cold-start diagnosis violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+    blockers.sort();
+    blockers.dedup();
+    index.add("dense_slm_openvino_npu_candidate", path_string(&path), blockers);
+    Ok(())
+}
+
+fn load_openvino_generation_budget_sensitivity(
+    root: &Path,
+    path: &Path,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt missing: {}",
+            path_string(&path)
+        ));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_generation_budget_sensitivity")
+    {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+    if bool_at_any(&json, &["fallback_used"]) == Some(true) {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt observed fallback_used=true: {}",
+            path_string(&path)
+        ));
+    }
+    if bool_at_any(
+        &json,
+        &[
+            "route_promotion_changed",
+            "claim_boundary.route_promotion_changed",
+            "speedup_claim",
+            "claim_boundary.speedup_claim",
+            "power_advantage_claim",
+            "claim_boundary.power_advantage_claim",
+            "acceleration_claim",
+            "claim_boundary.acceleration_claim",
+        ],
+    ) == Some(true)
+    {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+
+    let Some(devices) = value_at(&json, "devices").and_then(Value::as_array) else {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt has no device entries: {}",
+            path_string(&path)
+        ));
+        return Ok(());
+    };
+    let source_receipt = path_string(&path);
+    for device in devices {
+        if bool_at_any(device, &["fallback_used"]) == Some(true) {
+            gaps.push(format!(
+                "OpenVINO generation-budget sensitivity device observed fallback_used=true: {}",
+                path_string(&path)
+            ));
+        }
+        let Some(route_id) = openvino_device_route_id(device) else {
+            continue;
+        };
+        let mut blockers = Vec::new();
+        let mut case_blockers_indexed = false;
+        if let Some(summary) = value_at(device, "summary") {
+            let overgeneration_count = u64_at(
+                summary,
+                "blocker_classes.fixture_budget_overgenerates_but_smaller_budget_passes",
+            )
+            .unwrap_or(0);
+            if overgeneration_count > 0 {
+                blockers.push(format!(
+                    "OpenVINO budget sensitivity reports {overgeneration_count} exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates"
+                ));
+            }
+            let no_budget_count =
+                u64_at(summary, "blocker_classes.no_budget_variant_passes").unwrap_or(0);
+            if no_budget_count > 0 {
+                blockers.push(format!(
+                    "OpenVINO budget sensitivity reports {no_budget_count} exact-answer case(s) with no passing tested generation budget"
+                ));
+            }
+        }
+        if let Some(cases) = value_at(device, "cases").and_then(Value::as_array) {
+            for case in cases {
+                let case_id = string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string());
+                let profile_id = string_at(case, "profile");
+                let blocker = match string_at(case, "blocker_class").as_deref() {
+                    Some("fixture_budget_overgenerates_but_smaller_budget_passes") => {
+                        if let Some(budget) = u64_at(case, "first_passing_budget") {
+                            Some(format!(
+                                "{case_id} overgenerates at the fixture budget but passes with max_new_tokens={budget}"
+                            ))
+                        } else {
+                            Some(format!(
+                                "{case_id} overgenerates at the fixture budget and needs a tighter generation budget rerun"
+                            ))
+                        }
+                    }
+                    Some("no_budget_variant_passes") => {
+                        Some(format!("{case_id} has no passing tested generation budget"))
+                    }
+                    Some(classification) => Some(format!(
+                        "{case_id} has generation-budget sensitivity class {classification}"
+                    )),
+                    None => None,
+                };
+                if let Some(blocker) = blocker {
+                    if profile_id.is_some() {
+                        index.add_case_blocker(route_id, profile_id, &source_receipt, blocker);
+                        case_blockers_indexed = true;
+                    } else {
+                        blockers.push(blocker);
+                    }
+                }
+            }
+        }
+        if case_blockers_indexed {
+            blockers.retain(|blocker| !blocker.starts_with("OpenVINO budget sensitivity reports "));
+        }
+        blockers.sort();
+        blockers.dedup();
+        if !blockers.is_empty() {
+            index.add(route_id, source_receipt.clone(), blockers);
+        }
+    }
+    Ok(())
+}
+
+fn load_profile_quality_index(
+    root: &Path,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+) -> Result<ProfileQualityIndex> {
+    let mut index = ProfileQualityIndex::default();
+    if let Some(path) = cpu_corpus_v2 {
+        let path = resolve_receipt_path(root, path);
+        let json: Value = read_json_receipt(&path)?;
+        let source = path_string(&path);
+        index.cpu_source = Some(source.clone());
+        insert_profile_summary(
+            &mut index,
+            DEFAULT_ASK_ROUTE,
+            &source,
+            value_at(&json, "profile_summary"),
+            bool_at_any(&json, &["fallback_used", "backend.fallback_used"]),
+        );
+    }
+    if let Some(path) = openvino_corpus_v2 {
+        let path = resolve_receipt_path(root, path);
+        let json: Value = read_json_receipt(&path)?;
+        let source = path_string(&path);
+        index.openvino_source = Some(source.clone());
+        if let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) {
+            for device in devices {
+                let Some(route_id) = openvino_device_route_id(device) else {
+                    continue;
+                };
+                insert_profile_summary(
+                    &mut index,
+                    route_id,
+                    &source,
+                    value_at(device, "quality_summary.profile_summary"),
+                    bool_at_any(device, &["fallback_used"]),
+                );
+            }
+        }
+    }
+    Ok(index)
+}
+
+fn openvino_device_route_id(device: &Value) -> Option<&'static str> {
+    match string_at_any(device, &["runtime_device", "device"]).as_deref()? {
+        "GPU.0" => Some("dense_slm_openvino_gpu_candidate"),
+        "NPU" => Some("dense_slm_openvino_npu_candidate"),
+        _ => None,
+    }
+}
+
+fn insert_profile_summary(
+    index: &mut ProfileQualityIndex,
+    route_id: &str,
+    source_receipt: &str,
+    profile_summary: Option<&Value>,
+    fallback_used: Option<bool>,
+) {
+    let Some(summary) = profile_summary.and_then(Value::as_object) else {
+        return;
+    };
+    for (profile_id, profile) in summary {
+        let cases_total = u64_at(profile, "total").unwrap_or(0);
+        let passed = u64_at(profile, "passed").unwrap_or(0);
+        let failed = u64_at(profile, "failed").unwrap_or(0);
+        let status = if failed == 0 && cases_total > 0 {
+            "passed"
+        } else if cases_total == 0 {
+            "missing"
+        } else {
+            "quality_failed"
+        };
+        let mut notes = Vec::new();
+        if failed > 0 {
+            notes.push(format!("{failed} corpus-v2 cases failed for profile {profile_id}"));
+        }
+        if fallback_used == Some(true) {
+            notes.push("fallback_used=true observed in corpus-v2 receipt".to_string());
+        }
+        index.insert(ProfileQualityEvidence {
+            source_receipt: source_receipt.to_string(),
+            route_id: route_id.to_string(),
+            profile_id: profile_id.clone(),
+            profile_present: cases_total > 0,
+            cases_total,
+            passed,
+            failed,
+            fallback_used,
+            status: status.to_string(),
+            notes,
+        });
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct CpuRouteProfileStatus {
+    profile_status: Option<String>,
+    promotion_decision: Option<String>,
+    blockers: Vec<String>,
+}
+
+fn cpu_route_profile_statuses(
+    route_profile_comparison: Option<&Value>,
+) -> BTreeMap<String, CpuRouteProfileStatus> {
+    let mut statuses = BTreeMap::new();
+    let Some(profiles) =
+        route_profile_comparison.and_then(|value| value.get("profiles")).and_then(Value::as_array)
+    else {
+        return statuses;
+    };
+    for profile in profiles {
+        let Some(profile_id) = string_at(profile, "profile_id") else {
+            continue;
+        };
+        let route = profile.get("route_evidence").and_then(Value::as_array).and_then(|routes| {
+            routes
+                .iter()
+                .find(|route| string_at(route, "route_id").as_deref() == Some(DEFAULT_ASK_ROUTE))
+        });
+        let Some(route) = route else {
+            continue;
+        };
+        statuses.insert(
+            profile_id,
+            CpuRouteProfileStatus {
+                profile_status: string_at(profile, "profile_status"),
+                promotion_decision: string_at(profile, "promotion_decision"),
+                blockers: string_array_at(route, "blockers"),
+            },
+        );
+    }
+    statuses
+}
+
+fn summarize_corpus_v2_quality(
+    corpus: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+) -> CorpusV2QualitySummary {
+    let quality = value_at(corpus, "quality_summary");
+    let failed_profiles = failed_cases
+        .iter()
+        .map(|case| case.profile.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let failed_categories = failed_cases
+        .iter()
+        .map(|case| case.category.as_str())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let mut failure_classes = BTreeMap::<String, u64>::new();
+    for case in failed_cases {
+        *failure_classes.entry(case.classification.clone()).or_default() += 1;
+    }
+
+    CorpusV2QualitySummary {
+        total: quality.and_then(|value| u64_at(value, "total")).unwrap_or(0),
+        passed: quality.and_then(|value| u64_at(value, "passed")).unwrap_or(0),
+        failed: quality
+            .and_then(|value| u64_at(value, "failed"))
+            .unwrap_or(failed_cases.len() as u64),
+        timeout: quality.and_then(|value| u64_at(value, "timeout")).unwrap_or(0),
+        not_run: quality.and_then(|value| u64_at(value, "not_run")).unwrap_or(0),
+        failed_profiles,
+        failed_categories,
+        failure_classes,
+    }
+}
+
+fn diagnose_corpus_v2_profiles(
+    corpus: &Value,
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+    route_profile_statuses: &BTreeMap<String, CpuRouteProfileStatus>,
+) -> Vec<CorpusV2ProfileDiagnosis> {
+    let mut profile_ids = BTreeSet::<String>::new();
+    if let Some(summary) = value_at(corpus, "profile_summary").and_then(Value::as_object) {
+        profile_ids.extend(summary.keys().cloned());
+    }
+    profile_ids.extend(failed_cases.iter().map(|case| case.profile.clone()));
+    profile_ids.extend(route_profile_statuses.keys().cloned());
+
+    profile_ids
+        .into_iter()
+        .map(|profile_id| {
+            let summary = value_at(corpus, "profile_summary")
+                .and_then(|value| value.get(&profile_id))
+                .unwrap_or(&Value::Null);
+            let failed_case_ids = failed_cases
+                .iter()
+                .filter(|case| case.profile == profile_id)
+                .map(|case| case.id.clone())
+                .collect::<Vec<_>>();
+            let route_status = route_profile_statuses.get(&profile_id);
+            let mut route_blockers =
+                route_status.map(|status| status.blockers.clone()).unwrap_or_default();
+            if let Some(decision) =
+                route_status.and_then(|status| status.promotion_decision.clone())
+            {
+                route_blockers.push(decision);
+            }
+            route_blockers.sort();
+            route_blockers.dedup();
+
+            let failed = u64_at(summary, "failed").unwrap_or(failed_case_ids.len() as u64);
+            CorpusV2ProfileDiagnosis {
+                profile_id,
+                total: u64_at(summary, "total").unwrap_or(0),
+                passed: u64_at(summary, "passed").unwrap_or(0),
+                failed,
+                blocked: failed > 0 || !route_blockers.is_empty(),
+                failed_case_ids,
+                route_profile_status: route_status.and_then(|status| status.profile_status.clone()),
+                route_blockers,
+            }
+        })
+        .collect()
+}
+
+fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
+    let scoring = value_at(case, "quality.scoring");
+    let details = scoring.and_then(|value| value.get("details"));
+    let missing_required_keywords = details
+        .map(|value| string_array_at(value, "required_keywords_missing"))
+        .unwrap_or_default();
+    let forbidden_tokens_observed = details
+        .map(|value| string_array_at(value, "forbidden_tokens_observed"))
+        .unwrap_or_default();
+    let answer = string_at(case, "answer")
+        .or_else(|| string_at(case, "generated_text"))
+        .or_else(|| string_at(case, "decoded_preview"))
+        .or_else(|| string_at(case, "normalized_output"))
+        .unwrap_or_default();
+    let failed_rules = string_array_at(case, "quality.failed_rules");
+    let scoring_passed = scoring.and_then(|value| value.get("passed")).and_then(Value::as_bool);
+    let gate_passed = bool_at_any(case, &["quality.answer_gate.passed", "answer_gate.passed"]);
+    let gate_kind = string_at(case, "quality.gate_kind");
+    let generated_tokens = u64_at(case, "quality.generated_tokens")
+        .or_else(|| u64_at(case, "tokens.generated"))
+        .or_else(|| u64_at(case, "generated_token_count"));
+    let expected_normalized = details.and_then(|value| string_at(value, "expected_normalized"));
+    let observed_normalized = details.and_then(|value| string_at(value, "observed_normalized"));
+    let classification = classify_corpus_v2_failure(
+        &answer,
+        gate_kind.as_deref(),
+        gate_passed,
+        scoring_passed,
+        &failed_rules,
+        &missing_required_keywords,
+        generated_tokens,
+        expected_normalized.as_deref(),
+        observed_normalized.as_deref(),
+    );
+    let recommended_fix =
+        recommended_corpus_v2_case_fix(&classification, gate_kind.as_deref(), scoring_passed);
+
+    CorpusV2FailedCaseDiagnosis {
+        id: string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string()),
+        profile: string_at(case, "profile").unwrap_or_else(|| "unknown_profile".to_string()),
+        category: string_at(case, "category").unwrap_or_else(|| "unknown_category".to_string()),
+        task_family: string_at(case, "task_family"),
+        status: string_at(case, "status").unwrap_or_else(|| "quality_failed".to_string()),
+        gate_kind,
+        scoring_kind: scoring.and_then(|value| string_at(value, "kind")),
+        failed_rules,
+        failure_taxonomy: string_array_at(case, "quality.failure_taxonomy"),
+        missing_required_keywords,
+        forbidden_tokens_observed,
+        expected_normalized,
+        observed_normalized,
+        answer_preview: answer_preview(&answer),
+        generated_tokens,
+        prompt_tokens: u64_at(case, "tokens.prompt").or_else(|| u64_at(case, "prompt_token_count")),
+        run_receipt_path: string_at(case, "run_receipt_path").map(|path| path.replace('\\', "/")),
+        fallback_used: bool_at_any(case, &["fallback_used", "backend.fallback_used"]),
+        classification,
+        recommended_fix,
+    }
+}
+
+fn classify_corpus_v2_failure(
+    answer: &str,
+    gate_kind: Option<&str>,
+    gate_passed: Option<bool>,
+    scoring_passed: Option<bool>,
+    failed_rules: &[String],
+    missing_required_keywords: &[String],
+    generated_tokens: Option<u64>,
+    expected_normalized: Option<&str>,
+    observed_normalized: Option<&str>,
+) -> String {
+    let trimmed = answer.trim_start();
+    if trimmed.starts_with(':')
+        && matches!(gate_kind, Some("starts_with_any"))
+        && failed_rules.iter().any(|rule| rule == "gate_starts_with_any")
+        && failed_rules.iter().any(|rule| rule.contains("normalized_match"))
+    {
+        return "assistant_prefix_gate_mismatch".to_string();
+    }
+    if trimmed.starts_with(':') && scoring_passed == Some(true) {
+        return "gate_stricter_than_scoring_after_prefix".to_string();
+    }
+    if failed_rules.iter().any(|rule| rule.contains("normalized_match")) {
+        if normalized_answer_overgenerated(expected_normalized, observed_normalized) {
+            return "exact_answer_overgenerated".to_string();
+        }
+        if matches!(gate_kind, Some("starts_with_any")) && gate_passed == Some(false) {
+            return "exact_answer_instruction_not_followed".to_string();
+        }
+        if gate_passed == Some(true) && scoring_passed == Some(false) {
+            return "exact_answer_scoring_mismatch_after_gate_pass".to_string();
+        }
+    }
+    if !missing_required_keywords.is_empty()
+        && generated_tokens.is_some_and(|tokens| tokens <= 8)
+        && (trimmed.ends_with('+') || trimmed.split_whitespace().count() < 6)
+    {
+        return "generation_budget_or_truncation".to_string();
+    }
+    if !missing_required_keywords.is_empty() {
+        if missing_keywords_present_case_insensitive(answer, missing_required_keywords) {
+            return "case_sensitive_required_keyword_mismatch".to_string();
+        }
+        if any_missing_keyword_present_case_insensitive(answer, missing_required_keywords) {
+            return "required_terms_missing_or_case_mismatch".to_string();
+        }
+        if gate_kind == Some("readable") {
+            return "readable_output_missing_required_terms".to_string();
+        }
+        return "answer_content_missing_required_terms".to_string();
+    }
+    if failed_rules.iter().any(|rule| rule.starts_with("gate_") || rule == "answer_gate") {
+        return "answer_gate_mismatch".to_string();
+    }
+    "answer_content_failed".to_string()
+}
+
+fn normalized_answer_overgenerated(
+    expected_normalized: Option<&str>,
+    observed_normalized: Option<&str>,
+) -> bool {
+    let Some(expected) = expected_normalized.map(str::trim).filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    let Some(observed) = observed_normalized.map(str::trim).filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    if observed == expected {
+        return false;
+    }
+    let Some(remainder) = observed.strip_prefix(expected) else {
+        return false;
+    };
+    remainder
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_whitespace() || matches!(ch, ',' | '.' | ':' | ';' | '!' | '?'))
+}
+
+fn missing_keywords_present_case_insensitive(
+    answer: &str,
+    missing_required_keywords: &[String],
+) -> bool {
+    !missing_required_keywords.is_empty()
+        && missing_required_keywords
+            .iter()
+            .all(|keyword| contains_case_insensitive(answer, keyword))
+}
+
+fn any_missing_keyword_present_case_insensitive(
+    answer: &str,
+    missing_required_keywords: &[String],
+) -> bool {
+    missing_required_keywords.iter().any(|keyword| contains_case_insensitive(answer, keyword))
+}
+
+fn contains_case_insensitive(answer: &str, keyword: &str) -> bool {
+    answer.to_lowercase().contains(&keyword.to_lowercase())
+}
+
+fn recommended_corpus_v2_case_fix(
+    classification: &str,
+    gate_kind: Option<&str>,
+    scoring_passed: Option<bool>,
+) -> String {
+    match classification {
+        "assistant_prefix_gate_mismatch" => {
+            "Normalize or suppress leading assistant-role punctuation before exact starts-with/normalized-match gates, then rerun the same case without changing route promotion.".to_string()
+        }
+        "gate_stricter_than_scoring_after_prefix" => {
+            "Review the gate versus scoring contract: scoring passed, but the bounded gate failed after role-prefix punctuation or wording drift.".to_string()
+        }
+        "generation_budget_or_truncation" => {
+            "Rerun this bounded case with either a tighter prompt or a slightly larger max_new_tokens budget; classify as output-budget drift before changing route policy.".to_string()
+        }
+        "exact_answer_overgenerated" => {
+            "The answer began with the expected exact token but continued; tighten stop/max-token policy or the prompt before treating this as a model-quality failure.".to_string()
+        }
+        "exact_answer_instruction_not_followed" => {
+            "The route ignored a one-word exact-answer instruction; rerun with stricter generation/stop policy before profile promotion.".to_string()
+        }
+        "exact_answer_scoring_mismatch_after_gate_pass" => {
+            "The loose answer gate passed but exact scoring failed; keep the profile blocked until the exact-answer contract is rerun cleanly or intentionally revised.".to_string()
+        }
+        "case_sensitive_required_keyword_mismatch" => {
+            "The output contains the required term only with different casing; review whether the corpus gate should normalize case before rerunning.".to_string()
+        }
+        "required_terms_missing_or_case_mismatch" => {
+            "The output contains some required terms only by case-insensitive match and still misses others; keep the profile blocked and tune prompt/gate wording before promotion.".to_string()
+        }
+        "readable_output_missing_required_terms" => {
+            "Readable output was produced but missed required route-policy terms; tune the prompt or expected keywords before route promotion.".to_string()
+        }
+        "answer_content_missing_required_terms" => {
+            "Treat this as a bounded answer-content failure for the dense Qwen route; adjust prompt/gate only if the expected answer contract is too narrow.".to_string()
+        }
+        _ if gate_kind == Some("readable") && scoring_passed == Some(false) => {
+            "Readable output was produced but missed required route-policy terms; tune the prompt or expected keywords before route promotion.".to_string()
+        }
+        _ => "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised.".to_string(),
+    }
+}
+
+fn corpus_v2_blocker_summary(
+    quality: &CorpusV2QualitySummary,
+    fallback_used: Option<bool>,
+) -> Vec<String> {
+    let mut blockers = Vec::new();
+    if fallback_used != Some(false) {
+        blockers.push("fallback_used is not false in the dense Qwen corpus-v2 receipt".to_string());
+    }
+    if quality.failed > 0 {
+        blockers.push(format!(
+            "{} of {} corpus-v2 cases failed across profiles [{}]",
+            quality.failed,
+            quality.total,
+            quality.failed_profiles.join(", ")
+        ));
+    }
+    for (classification, count) in &quality.failure_classes {
+        blockers.push(format!("{count} failed case(s) classified as {classification}"));
+    }
+    blockers
+}
+
+fn corpus_v2_recommended_actions(
+    failed_cases: &[CorpusV2FailedCaseDiagnosis],
+    route_blocked: bool,
+) -> Vec<String> {
+    let mut actions = Vec::new();
+    if route_blocked {
+        actions.push(
+            "Keep dense_slm_default_cpu blocked for affected corpus-v2 profiles until failed cases rerun cleanly."
+                .to_string(),
+        );
+    }
+    let classes =
+        failed_cases.iter().map(|case| case.classification.as_str()).collect::<BTreeSet<_>>();
+    if classes.contains("assistant_prefix_gate_mismatch") {
+        actions.push(
+            "Fix or normalize leading assistant-prefix punctuation for exact yes/no and one-word gates."
+                .to_string(),
+        );
+    }
+    if classes.contains("generation_budget_or_truncation") {
+        actions.push(
+            "Check short-answer max_new_tokens budgets before treating truncated math output as model incapability."
+                .to_string(),
+        );
+    }
+    if classes.contains("exact_answer_overgenerated")
+        || classes.contains("exact_answer_instruction_not_followed")
+    {
+        actions.push(
+            "Tighten exact-answer prompts, max-token budgets, or stop/EOS handling before promoting affected routes."
+                .to_string(),
+        );
+    }
+    if classes.contains("case_sensitive_required_keyword_mismatch")
+        || classes.contains("required_terms_missing_or_case_mismatch")
+    {
+        actions.push(
+            "Review corpus case-sensitivity versus model output casing before interpreting required-keyword misses as true answer failures."
+                .to_string(),
+        );
+    }
+    if classes.contains("answer_content_missing_required_terms") {
+        actions.push(
+            "Review prompt wording and required-keyword gates for answer-content misses, then rerun corpus v2."
+                .to_string(),
+        );
+    }
+    if actions.is_empty() {
+        actions.push(
+            "No corpus-v2 failures were found; keep regression v2 as the guardrail.".to_string(),
+        );
+    }
+    actions
 }
 
 fn promote_route(
@@ -2190,6 +8703,10 @@ fn evaluate_workload_profile(
     profile: &WorkloadProfile,
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
+    quality_index: &ProfileQualityIndex,
+    corpus_alignment: &CorpusCaseAlignmentIndex,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+    route_diagnostics: &RouteDiagnosticsIndex,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
     if let Some(route_id) = &profile.promoted_route {
@@ -2203,7 +8720,19 @@ fn evaluate_workload_profile(
 
     let route_evidence = route_ids
         .iter()
-        .map(|route_id| evaluate_profile_route(root, profile, route_id, ledger, phase_comparison))
+        .map(|route_id| {
+            evaluate_profile_route(
+                root,
+                profile,
+                route_id,
+                ledger,
+                phase_comparison,
+                quality_index,
+                corpus_alignment,
+                telemetry_context,
+                route_diagnostics,
+            )
+        })
         .collect::<Result<Vec<_>>>()?;
 
     let mut gaps = Vec::new();
@@ -2223,8 +8752,15 @@ fn evaluate_workload_profile(
     }
 
     let promoted_ready = route_evidence.iter().any(|route| route.promotion_eligible_for_profile);
+    let promoted_route_blocked = profile.promoted_route.as_ref().is_some_and(|route_id| {
+        route_evidence
+            .iter()
+            .any(|route| route.route_id == *route_id && !route.promotion_eligible_for_profile)
+    });
     let profile_status = if promoted_ready {
         "promoted_route_ready"
+    } else if promoted_route_blocked {
+        "promoted_route_blocked"
     } else if route_evidence.iter().any(|route| route.route_status == "candidate") {
         "candidate_only"
     } else {
@@ -2259,20 +8795,33 @@ fn evaluate_workload_profile(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn evaluate_profile_route(
     root: &Path,
     profile: &WorkloadProfile,
     route_id: &str,
     ledger: &LunarLakeRoutePromotionLedger,
     phase_comparison: &Value,
+    quality_index: &ProfileQualityIndex,
+    corpus_alignment: &CorpusCaseAlignmentIndex,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+    route_diagnostics: &RouteDiagnosticsIndex,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
         .routes
         .iter()
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("route `{route_id}` not found in promotion ledger"))?;
-    let timing = profile_timing_for_route(root, route_id, phase_comparison)?;
+    let timing = profile_timing_for_route(root, route_id, phase_comparison, telemetry_context)?;
+    let timing_applicability = timing_applicability_for_profile(profile, &timing);
     let mut blockers = route.missing_evidence.clone();
+    let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
+    let telemetry = telemetry_context.map(telemetry_for_profile_route);
+    if let Some(alignment) = corpus_alignment.get(route_id) {
+        blockers.extend(alignment.blockers.iter().cloned());
+    }
+    let route_diagnostic = route_diagnostics.get(route_id, &profile.profile_id);
+    blockers.extend(route_diagnostic.blockers.iter().cloned());
     if route.status != "promoted" || !route.promoted_for.contains(&profile.profile_id) {
         blockers.push(format!("route not promoted for profile {}", profile.profile_id));
     }
@@ -2282,11 +8831,37 @@ fn evaluate_profile_route(
     if timing.known_gaps.iter().any(|gap| gap.contains("missing")) {
         blockers.push("timing coverage has missing profile fields".to_string());
     }
+    if !timing_applicability.timing_matches_profile {
+        blockers.push(format!(
+            "timing evidence is not profile-specific for profile {}",
+            profile.profile_id
+        ));
+    }
     if profile.profile_id == "low_power" {
-        blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+        if telemetry_context.is_some_and(power_context_is_recorded) {
+            blockers.push("power advantage evidence missing for low_power promotion".to_string());
+        } else {
+            blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+        }
     }
     if route.speedup_claim {
         blockers.push("route source claims speedup before profile promotion".to_string());
+    }
+    if let Some(quality) = &profile_quality {
+        if !quality.profile_present {
+            blockers.push("corpus_v2 profile quality evidence missing".to_string());
+        }
+        if quality.fallback_used == Some(true) {
+            blockers.push("corpus_v2 profile observed fallback_used=true".to_string());
+        }
+        if quality.failed > 0 {
+            blockers.push(format!(
+                "corpus_v2 profile {} has {} quality failures",
+                profile.profile_id, quality.failed
+            ));
+        }
+    } else if quality_index.has_route(route_id) {
+        blockers.push("corpus_v2 profile quality evidence missing".to_string());
     }
     blockers.sort();
     blockers.dedup();
@@ -2295,6 +8870,25 @@ fn evaluate_profile_route(
         && route.promoted_for.contains(&profile.profile_id)
         && route.fallback_used == Some(false)
         && blockers.is_empty();
+
+    let mut evidence = route.present_evidence.clone();
+    if let Some(quality) = &profile_quality
+        && !evidence.contains(&quality.source_receipt)
+    {
+        evidence.push(quality.source_receipt.clone());
+    }
+    if let Some(alignment) = corpus_alignment.get(route_id) {
+        for source in &alignment.source_receipts {
+            if !evidence.contains(source) {
+                evidence.push(source.clone());
+            }
+        }
+    }
+    for source in &route_diagnostic.source_receipts {
+        if !evidence.contains(source) {
+            evidence.push(source.clone());
+        }
+    }
 
     Ok(ProfileRouteEvidence {
         route_id: route.route_id.clone(),
@@ -2305,20 +8899,99 @@ fn evaluate_profile_route(
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
         timing,
+        timing_applicability,
         benchmark_qualified_advantage: false,
         promotion_eligible_for_profile,
-        evidence: route.present_evidence.clone(),
+        profile_quality,
+        telemetry,
+        evidence,
         blockers,
     })
+}
+
+fn timing_applicability_for_profile(
+    profile: &WorkloadProfile,
+    timing: &ProfileTimingSummary,
+) -> ProfileTimingApplicability {
+    let mut notes = Vec::new();
+    let prompt_match = token_count_matches_requirement(
+        timing.prompt_tokens,
+        &profile.prompt_tokens,
+        "prompt",
+        &mut notes,
+    );
+    let output_match = token_count_matches_requirement(
+        timing.output_tokens,
+        &profile.output_tokens,
+        "output",
+        &mut notes,
+    );
+    let statuses = [prompt_match, output_match];
+    if statuses.iter().any(Option::is_none) {
+        notes
+            .push("profile token requirement is descriptive, not mechanically checked".to_string());
+    }
+    let timing_matches_profile = statuses.into_iter().all(|status| status.unwrap_or(true));
+
+    ProfileTimingApplicability {
+        profile_id: profile.profile_id.clone(),
+        required_prompt_tokens: profile.prompt_tokens.clone(),
+        required_output_tokens: profile.output_tokens.clone(),
+        measured_prompt_tokens: timing.prompt_tokens,
+        measured_output_tokens: timing.output_tokens,
+        timing_matches_profile,
+        notes,
+    }
+}
+
+fn token_count_matches_requirement(
+    measured: Option<u64>,
+    requirement: &str,
+    label: &str,
+    notes: &mut Vec<String>,
+) -> Option<bool> {
+    let requirement = requirement.trim();
+    let Some((operator, threshold)) = parse_token_requirement(requirement) else {
+        notes.push(format!("{label} requirement `{requirement}` is not a numeric promotion gate"));
+        return None;
+    };
+    let Some(measured) = measured else {
+        notes.push(format!("{label} token count missing for numeric requirement `{requirement}`"));
+        return Some(false);
+    };
+    let matches = match operator {
+        "<=" => measured <= threshold,
+        ">=" => measured >= threshold,
+        _ => false,
+    };
+    if matches {
+        notes.push(format!("{label} timing count {measured} satisfies `{requirement}`"));
+    } else {
+        notes.push(format!("{label} timing count {measured} does not satisfy `{requirement}`"));
+    }
+    Some(matches)
+}
+
+fn parse_token_requirement(requirement: &str) -> Option<(&'static str, u64)> {
+    let requirement = requirement.trim();
+    for operator in ["<=", ">="] {
+        let Some(rest) = requirement.strip_prefix(operator) else {
+            continue;
+        };
+        let value = rest.trim().parse::<u64>().ok()?;
+        return Some((operator, value));
+    }
+    None
 }
 
 fn profile_timing_for_route(
     root: &Path,
     route_id: &str,
     phase_comparison: &Value,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
 ) -> Result<ProfileTimingSummary> {
     match route_id {
-        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison),
+        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison, telemetry_context),
         "dense_slm_openvino_gpu_candidate" => {
             openvino_profile_timing(root, DENSE_OV_GPU_OPERATOR_ASK, "openvino_gpu_operator_ask")
         }
@@ -2328,6 +9001,7 @@ fn profile_timing_for_route(
         "bitnet_reference_cpu" => Ok(ProfileTimingSummary {
             timing_scope: "bitnet_reference_cpu_not_dense_slm_profile".to_string(),
             source_receipts: vec![BITNET_PERF_APPLIED.to_string(), BITNET_CPU_BUNDLE.to_string()],
+            prompt_tokens: None,
             cold_load_ms: None,
             tokenize_ms: None,
             prefill_ms: None,
@@ -2349,6 +9023,7 @@ fn profile_timing_for_route(
         _ => Ok(ProfileTimingSummary {
             timing_scope: "unknown_route".to_string(),
             source_receipts: vec![],
+            prompt_tokens: None,
             cold_load_ms: None,
             tokenize_ms: None,
             prefill_ms: None,
@@ -2364,14 +9039,42 @@ fn profile_timing_for_route(
     }
 }
 
-fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<ProfileTimingSummary> {
+fn dense_cpu_profile_timing(
+    root: &Path,
+    phase_comparison: &Value,
+    telemetry_context: Option<&BenchmarkTelemetryContext>,
+) -> Result<ProfileTimingSummary> {
     let ask_path = root.join(DENSE_CPU_OPERATOR_ASK);
     let ask: Value = read_json_receipt(&ask_path)?;
+    let cold_load_ms = number_at_any(&ask, &["timing.model_load_ms"]);
+    let tokenizer_load_ms = number_at_any(&ask, &["timing.tokenizer_load_ms"]);
+    let tokenize_ms = number_at_any(&ask, &["timing.tokenize_ms"]);
+    let prefill_ms = number_at_any(&ask, &["timing.prefill_ms"]);
     let output_tokens = number_at_any(&ask, &["tokens.generated_count", "timing.decode_tokens"])
         .map(|value| value as u64);
+    let prompt_tokens = number_at_any(
+        &ask,
+        &[
+            "tokens.prompt_count",
+            "tokens.prompt",
+            "source_receipt.execution.prompt_tokens",
+            "source_receipt.strict_provenance.prompt_tokens",
+        ],
+    )
+    .map(|value| value as u64);
     let generation_total_ms = number_at_any(&ask, &["timing.decode_total_ms"]);
     let throughput_tokens_per_s = number_at_any(&ask, &["timing.decode_steady_state_tok_s"])
         .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
+    let total_response_ms = number_at_any(&ask, &["latency.total_ms", "timing.total_response_ms"])
+        .or_else(|| {
+            sum_all_optional([
+                cold_load_ms,
+                tokenizer_load_ms,
+                tokenize_ms,
+                prefill_ms,
+                generation_total_ms,
+            ])
+        });
 
     let mut phase_coverage = vec![
         "operator_ask_math_brief".to_string(),
@@ -2385,6 +9088,19 @@ fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<Pro
     if decode_128 {
         phase_coverage.push("warm_decode_128".to_string());
     }
+    let mut known_gaps =
+        vec!["bounded math ask only; not expanded profile regression corpus".to_string()];
+    if let Some(context) = telemetry_context {
+        phase_coverage.push("telemetry_context_indexed".to_string());
+        if context.thermal_context.to_ascii_lowercase().contains("unavailable") {
+            known_gaps.push("thermal sensor context unavailable in telemetry receipt".to_string());
+        }
+        if !power_context_is_recorded(context) {
+            known_gaps.push("power context unavailable in telemetry receipt".to_string());
+        }
+    } else {
+        known_gaps.push("power and thermal context not normalized in this comparison".to_string());
+    }
 
     Ok(ProfileTimingSummary {
         timing_scope: "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts".to_string(),
@@ -2393,20 +9109,18 @@ fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<Pro
             DENSE_CPU_PHASE.to_string(),
             DENSE_PHASE_COMPARISON.to_string(),
         ],
-        cold_load_ms: number_at_any(&ask, &["timing.model_load_ms"]),
-        tokenize_ms: number_at_any(&ask, &["timing.tokenize_ms"]),
-        prefill_ms: number_at_any(&ask, &["timing.prefill_ms"]),
+        prompt_tokens,
+        cold_load_ms,
+        tokenize_ms,
+        prefill_ms,
         first_token_ms: number_at_any(&ask, &["timing.first_token_ms"]),
         decode_total_ms: generation_total_ms,
         generation_total_ms,
-        total_response_ms: number_at_any(&ask, &["latency.total_ms"]),
+        total_response_ms,
         output_tokens,
         throughput_tokens_per_s,
         phase_coverage,
-        known_gaps: vec![
-            "bounded math ask only; not expanded profile regression corpus".to_string(),
-            "power and thermal context not normalized in this comparison".to_string(),
-        ],
+        known_gaps,
     })
 }
 
@@ -2427,6 +9141,16 @@ fn openvino_profile_timing(
     Ok(ProfileTimingSummary {
         timing_scope: timing_scope.to_string(),
         source_receipts: vec![receipt_name.to_string(), DENSE_OV_PHASE.to_string()],
+        prompt_tokens: number_at_any(
+            &ask,
+            &[
+                "tokens.prompt_count",
+                "tokens.prompt",
+                "prompt.prompt_token_count",
+                "prompt_token_count",
+            ],
+        )
+        .map(|value| value as u64),
         cold_load_ms: number_at_any(
             &ask,
             &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
@@ -2480,6 +9204,10 @@ fn sum_optional(left: Option<f64>, right: Option<f64>) -> Option<f64> {
     }
 }
 
+fn sum_all_optional<const N: usize>(values: [Option<f64>; N]) -> Option<f64> {
+    values.into_iter().try_fold(0.0, |sum, value| value.map(|value| sum + value))
+}
+
 fn attached_route_evidence<'a>(
     route: &OperatorRoute,
     evidence: &'a [EvidenceStatus],
@@ -2499,7 +9227,10 @@ fn workload_profiles() -> Vec<WorkloadProfile> {
             output_tokens: "<=32".to_string(),
             purpose: "cheap strict regression smoke for local runs".to_string(),
             promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
-            candidate_routes: vec![],
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
         },
         WorkloadProfile {
             profile_id: "ask_short".to_string(),
@@ -2760,12 +9491,27 @@ fn string_at(json: &Value, path: &str) -> Option<String> {
     value_at(json, path).and_then(Value::as_str).map(ToString::to_string)
 }
 
+fn string_array_at(json: &Value, path: &str) -> Vec<String> {
+    value_at(json, path)
+        .and_then(Value::as_array)
+        .map(|values| values.iter().filter_map(Value::as_str).map(ToString::to_string).collect())
+        .unwrap_or_default()
+}
+
 fn bool_at_any(json: &Value, paths: &[&str]) -> Option<bool> {
     paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_bool))
 }
 
 fn number_at_any(json: &Value, paths: &[&str]) -> Option<f64> {
     paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_f64))
+}
+
+fn u64_at(json: &Value, path: &str) -> Option<u64> {
+    value_at(json, path).and_then(|value| {
+        value
+            .as_u64()
+            .or_else(|| value.as_f64().filter(|value| *value >= 0.0).map(|value| value as u64))
+    })
 }
 
 fn value_at<'a>(json: &'a Value, dotted_path: &str) -> Option<&'a Value> {
@@ -2778,6 +9524,15 @@ fn value_at<'a>(json: &'a Value, dotted_path: &str) -> Option<&'a Value> {
 
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn answer_preview(answer: &str) -> String {
+    const MAX_PREVIEW_CHARS: usize = 240;
+    let mut preview = answer.chars().take(MAX_PREVIEW_CHARS).collect::<String>();
+    if answer.chars().count() > MAX_PREVIEW_CHARS {
+        preview.push_str("...");
+    }
+    preview
 }
 
 #[cfg(test)]
@@ -2960,6 +9715,49 @@ mod tests {
     }
 
     #[test]
+    fn comparison_receipt_carries_strict_regression_v2_surface() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-17T02:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let mut regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-17T02:05:00Z".to_string(),
+        )?;
+        regression.regression_surface.answer_corpus_v2_indexed = true;
+        regression.regression_surface.route_profile_comparison_indexed = true;
+        regression.regression_surface.cold_warm_benchmark_indexed = true;
+        regression.regression_surface.durability_bundle_indexed = true;
+        regression.regression_surface.cold_warm_benchmark_ready = true;
+        regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.candidate_routes_remain_unpromoted = true;
+        regression.regression_surface.strict_ready = true;
+        regression.regression_surface.gaps.clear();
+        fs::write(temp.path().join(REGRESSION_BUNDLE_V2), serde_json::to_vec_pretty(&regression)?)?;
+
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE_V2),
+            "2026-05-17T02:10:00Z".to_string(),
+        )?;
+
+        assert!(comparison.comparison_ready, "{:?}", comparison.gaps);
+        assert!(comparison.regression_bundle.ends_with(REGRESSION_BUNDLE_V2));
+        assert!(comparison.regression_surface.strict_ready);
+        assert!(comparison.regression_surface.answer_corpus_v2_indexed);
+        assert!(comparison.regression_surface.route_profile_comparison_indexed);
+        assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
+        assert!(comparison.regression_surface.durability_bundle_indexed);
+        assert!(comparison.regression_surface.durability_stability_proven);
+        Ok(())
+    }
+
+    #[test]
     fn comparison_receipt_rejects_failed_regression_bundle() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), true)?;
@@ -3103,6 +9901,7 @@ mod tests {
                     "total_ms": 150.0
                 },
                 "tokens": {
+                    "prompt_count": 38,
                     "generated_count": 8
                 }
             }),
@@ -3165,11 +9964,46 @@ mod tests {
         assert!(ask_normal.route_evidence.iter().any(|route| {
             route.route_id == DEFAULT_ASK_ROUTE && route.promotion_eligible_for_profile
         }));
+        let cpu_ask_normal = ask_normal
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing ask_normal CPU route")?;
+        assert_eq!(cpu_ask_normal.timing_applicability.measured_prompt_tokens, Some(38));
+        assert!(cpu_ask_normal.timing_applicability.timing_matches_profile);
         assert!(ask_normal.route_evidence.iter().any(|route| {
             route.route_id == "dense_slm_openvino_gpu_candidate"
                 && route.route_status == "candidate"
                 && !route.benchmark_qualified_advantage
         }));
+        let gpu_ask_normal = ask_normal
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing ask_normal GPU route")?;
+        assert_eq!(gpu_ask_normal.timing_applicability.measured_output_tokens, None);
+        assert!(!gpu_ask_normal.timing_applicability.timing_matches_profile);
+        assert!(gpu_ask_normal.blockers.contains(
+            &"timing evidence is not profile-specific for profile ask_normal".to_string()
+        ));
+        let prefill_heavy = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "prefill_heavy")
+            .context("missing prefill_heavy profile")?;
+        let cpu_prefill_heavy = prefill_heavy
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing prefill_heavy CPU route")?;
+        assert!(!cpu_prefill_heavy.timing_applicability.timing_matches_profile);
+        assert!(
+            cpu_prefill_heavy
+                .timing_applicability
+                .notes
+                .iter()
+                .any(|note| { note.contains("prompt timing count 38 does not satisfy `>=2048`") })
+        );
         let Some(low_power) =
             profiles.profiles.iter().find(|profile| profile.profile_id == "low_power")
         else {
@@ -3181,6 +10015,1569 @@ mod tests {
                     &"power telemetry receipt missing for low_power promotion".to_string(),
                 )
         }));
+
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": "live_telemetry_context_captured_no_promotion_change",
+                "created_utc": "2026-05-17T05:45:00Z",
+                "machine_id": "intel-258v",
+                "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+                "power_context": "source=os_power_probe;active_scheme=Balanced;battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+                "thermal_context": "thermal_context_unavailable",
+                "gaps": [
+                    "thermal sensor context is not available from the current OS telemetry probe",
+                    "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+                ],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_measurement_executed": true,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        let profiles_with_telemetry = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            None,
+            None,
+            Some(Path::new(POWER_THERMAL_CONTEXT_FILE)),
+            "2026-05-17T06:55:00Z".to_string(),
+        )?;
+        assert!(
+            profiles_with_telemetry.profile_comparison_ready,
+            "{:?}",
+            profiles_with_telemetry.gaps
+        );
+        assert_eq!(
+            profiles_with_telemetry.telemetry_context_receipt.as_deref(),
+            Some(path_string(&temp.path().join(POWER_THERMAL_CONTEXT_FILE)).as_str())
+        );
+        let Some(ask_normal_with_telemetry) = profiles_with_telemetry
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_normal")
+        else {
+            bail!("missing ask_normal profile with telemetry");
+        };
+        let Some(cpu_route_with_telemetry) = ask_normal_with_telemetry
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        else {
+            bail!("missing CPU route evidence with telemetry");
+        };
+        assert!(cpu_route_with_telemetry.telemetry.is_some());
+        assert!(
+            !cpu_route_with_telemetry.timing.known_gaps.contains(
+                &"power and thermal context not normalized in this comparison".to_string()
+            )
+        );
+        assert!(
+            cpu_route_with_telemetry
+                .timing
+                .known_gaps
+                .contains(&"thermal sensor context unavailable in telemetry receipt".to_string())
+        );
+        let Some(low_power_with_telemetry) = profiles_with_telemetry
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "low_power")
+        else {
+            bail!("missing low_power profile with telemetry");
+        };
+        assert!(low_power_with_telemetry.route_evidence.iter().any(|route| {
+            route.route_id == "dense_slm_openvino_npu_candidate"
+                && route.blockers.contains(
+                    &"power advantage evidence missing for low_power promotion".to_string(),
+                )
+                && !route.blockers.contains(
+                    &"power telemetry receipt missing for low_power promotion".to_string(),
+                )
+        }));
+        Ok(())
+    }
+
+    #[test]
+    fn route_profile_comparison_indexes_corpus_v2_profile_quality_blockers() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenizer_load_ms": 5.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "tokens": {"prompt_count": 38, "generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": "telemetry_availability_recorded",
+                "created_utc": "2026-05-16T17:50:00Z",
+                "machine_id": "intel-258v",
+                "memory_context": "not_recorded_in_committed_receipts",
+                "power_context": "not_recorded_in_committed_receipts",
+                "thermal_context": "not_recorded_in_committed_receipts",
+                "gaps": ["power telemetry records absence only"],
+                "claim_boundary": {
+                    "new_measurement_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            OPENVINO_GPU_CORPUS_V2_DIAGNOSIS,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
+                "route_blocked": true,
+                "quality_summary": {"failed": 5},
+                "profile_diagnoses": [
+                    {
+                        "profile_id": "ask_short",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["GPU ask_short diagnosis blocker"]
+                    },
+                    {
+                        "profile_id": "regression_tiny",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["GPU regression_tiny diagnosis blocker"]
+                    }
+                ],
+                "failed_cases": [
+                    {
+                        "id": "yes_no_clear_sky",
+                        "profile": "ask_short",
+                        "classification": "exact_answer_overgenerated"
+                    },
+                    {
+                        "id": "stop_token_one_word_done",
+                        "profile": "regression_tiny",
+                        "classification": "exact_answer_instruction_not_followed"
+                    }
+                ],
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "blocker_summary": ["GPU diagnosis blocker"],
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "arc_or_npu_execution_claim": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            json!({
+                "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
+                "route_blocked": true,
+                "quality_summary": {"failed": 4},
+                "profile_diagnoses": [
+                    {
+                        "profile_id": "ask_short",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["NPU ask_short diagnosis blocker"]
+                    },
+                    {
+                        "profile_id": "regression_tiny",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["NPU regression_tiny diagnosis blocker"]
+                    }
+                ],
+                "failed_cases": [
+                    {
+                        "id": "yes_no_clear_sky",
+                        "profile": "ask_short",
+                        "classification": "exact_answer_overgenerated"
+                    },
+                    {
+                        "id": "stop_token_one_word_done",
+                        "profile": "regression_tiny",
+                        "classification": "exact_answer_instruction_not_followed"
+                    }
+                ],
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "blocker_summary": ["NPU diagnosis blocker"],
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "arc_or_npu_execution_claim": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            OPENVINO_NPU_COLD_START_DIAGNOSIS,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_npu_cold_start_diagnosis",
+                "cold_start": {
+                    "cold_load_dominant": true,
+                    "classification": "openvino_pipeline_load_or_device_compile_dominated"
+                },
+                "corpus_v2_context": {
+                    "route_blocked_by_quality": true,
+                    "failed": 4
+                },
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            OPENVINO_GENERATION_BUDGET_SENSITIVITY,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_generation_budget_sensitivity",
+                "fallback_used": false,
+                "route_promotion_changed": false,
+                "devices": [
+                    {
+                        "runtime_device": "GPU.0",
+                        "fallback_used": false,
+                        "summary": {
+                            "cases_total": 2,
+                            "fixture_budget_passed": 0,
+                            "any_budget_passed": 1,
+                            "blocker_classes": {
+                                "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+                                "no_budget_variant_passes": 1
+                            }
+                        },
+                        "cases": [
+                            {
+                                "id": "yes_no_clear_sky",
+                                "profile": "ask_short",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": true,
+                                "first_passing_budget": 1,
+                                "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes"
+                            },
+                            {
+                                "id": "stop_token_one_word_done",
+                                "profile": "regression_tiny",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": false,
+                                "first_passing_budget": null,
+                                "blocker_class": "no_budget_variant_passes"
+                            }
+                        ]
+                    },
+                    {
+                        "runtime_device": "NPU",
+                        "fallback_used": false,
+                        "summary": {
+                            "cases_total": 2,
+                            "fixture_budget_passed": 0,
+                            "any_budget_passed": 1,
+                            "blocker_classes": {
+                                "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+                                "no_budget_variant_passes": 1
+                            }
+                        },
+                        "cases": [
+                            {
+                                "id": "yes_no_clear_sky",
+                                "profile": "ask_short",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": true,
+                                "first_passing_budget": 1,
+                                "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes"
+                            },
+                            {
+                                "id": "stop_token_one_word_done",
+                                "profile": "regression_tiny",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": false,
+                                "first_passing_budget": null,
+                                "blocker_class": "no_budget_variant_passes"
+                            }
+                        ]
+                    }
+                ]
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let profiles = build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new("corpus-v2.yaml")),
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
+            Some(Path::new(OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)),
+            Some(Path::new("lunar-lake-openvino-npu-corpus-v2-diagnosis.json")),
+            Some(Path::new(OPENVINO_NPU_COLD_START_DIAGNOSIS)),
+            Some(Path::new(OPENVINO_GENERATION_BUDGET_SENSITIVITY)),
+            "2026-05-16T07:30:00Z".to_string(),
+        )?;
+
+        assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
+        assert_eq!(
+            profiles.answer_corpus_v2_fixture.as_deref(),
+            Some(path_string(&temp.path().join("corpus-v2.yaml")).as_str())
+        );
+        assert_eq!(profiles.route_diagnosis_receipts.len(), 4);
+        let cpu_corpus_path = path_string(&temp.path().join(DENSE_CPU_CORPUS_V2));
+        assert_eq!(profiles.cpu_corpus_v2_receipt.as_deref(), Some(cpu_corpus_path.as_str()));
+        let Some(ask_short) =
+            profiles.profiles.iter().find(|profile| profile.profile_id == "ask_short")
+        else {
+            bail!("missing ask_short profile");
+        };
+        assert_eq!(ask_short.profile_status, "promoted_route_blocked");
+        let Some(cpu_route) =
+            ask_short.route_evidence.iter().find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+        else {
+            bail!("missing CPU route evidence");
+        };
+        assert!(!cpu_route.promotion_eligible_for_profile);
+        assert_eq!(cpu_route.profile_quality.as_ref().map(|quality| quality.failed), Some(1));
+        assert!(cpu_route.blockers.iter().any(|blocker| {
+            blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
+        }));
+        let Some(gpu_route) = ask_short
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+        else {
+            bail!("missing GPU route evidence");
+        };
+        assert_eq!(gpu_route.profile_quality.as_ref().map(|quality| quality.passed), Some(1));
+        assert!(gpu_route.blockers.iter().any(|blocker| {
+            blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
+        }));
+        assert!(gpu_route.blockers.contains(&"GPU ask_short diagnosis blocker".to_string()));
+        assert!(
+            gpu_route.blockers.contains(
+                &"yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated"
+                    .to_string()
+            ),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            gpu_route.blockers.contains(
+                &"OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                    .to_string()
+            )
+        );
+        assert!(gpu_route.blockers.contains(
+            &"yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+                .to_string()
+        ));
+        assert!(
+            !gpu_route.blockers.contains(&"GPU regression_tiny diagnosis blocker".to_string()),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            !gpu_route.blockers.contains(
+                &"stop_token_one_word_done has no passing tested generation budget".to_string()
+            ),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            gpu_route.blockers.iter().any(|blocker| blocker.contains(
+                "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [arithmetic_add_7_8, short_reasoning_apples_left]"
+            )),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            gpu_route.blockers.iter().any(|blocker| blocker.contains(
+                "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]"
+            )),
+            "{:?}",
+            gpu_route.blockers
+        );
+        let Some(npu_route) = ask_short
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+        else {
+            bail!("missing NPU route evidence");
+        };
+        assert!(npu_route.blockers.contains(&"NPU ask_short diagnosis blocker".to_string()));
+        assert!(npu_route.blockers.contains(
+            &"NPU cold start is openvino_pipeline_load_or_device_compile_dominated".to_string()
+        ));
+        assert!(
+            npu_route
+                .blockers
+                .contains(&"NPU cache or resident warm-route proof is missing".to_string())
+        );
+        assert!(npu_route.blockers.contains(
+            &"yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+                .to_string()
+        ));
+        assert!(
+            !npu_route.blockers.contains(&"NPU regression_tiny diagnosis blocker".to_string()),
+            "{:?}",
+            npu_route.blockers
+        );
+        assert!(
+            !npu_route.blockers.contains(
+                &"stop_token_one_word_done has no passing tested generation budget".to_string()
+            ),
+            "{:?}",
+            npu_route.blockers
+        );
+        let Some(regression_tiny) =
+            profiles.profiles.iter().find(|profile| profile.profile_id == "regression_tiny")
+        else {
+            bail!("missing regression_tiny profile");
+        };
+        let regression_gpu = regression_tiny
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing regression_tiny GPU route evidence")?;
+        assert!(
+            regression_gpu.blockers.contains(&"GPU regression_tiny diagnosis blocker".to_string())
+        );
+        assert!(regression_gpu.blockers.contains(
+            &"stop_token_one_word_done has no passing tested generation budget".to_string()
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn cold_warm_benchmark_indexes_profile_timing_without_promoting_candidates() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenizer_load_ms": 5.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "tokens": {"prompt_count": 38, "generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": "telemetry_availability_recorded",
+                "created_utc": "2026-05-16T17:50:00Z",
+                "machine_id": "intel-258v",
+                "memory_context": "not_recorded_in_committed_receipts",
+                "power_context": "not_recorded_in_committed_receipts",
+                "thermal_context": "not_recorded_in_committed_receipts",
+                "gaps": ["power telemetry records absence only"],
+                "claim_boundary": {
+                    "new_measurement_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
+            "2026-05-16T07:30:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+
+        let benchmark = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new(POWER_THERMAL_CONTEXT_FILE)),
+            "2026-05-16T18:00:00Z".to_string(),
+        )?;
+
+        assert!(benchmark.benchmark_gate_ready, "{:?}", benchmark.gaps);
+        assert_eq!(benchmark.artifact_kind, "lunar_lake_cold_warm_profile_benchmark");
+        let Some(ask_normal) =
+            benchmark.profiles.iter().find(|profile| profile.profile_id == "ask_normal")
+        else {
+            bail!("missing ask_normal benchmark");
+        };
+        let cpu = ask_normal
+            .routes
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing CPU route benchmark")?;
+        assert!(cpu.critical_timing_present);
+        assert!(!cpu.promotion_blocked);
+        assert_eq!(cpu.timing.total_response_ms, Some(217.0));
+        assert!(cpu.telemetry.telemetry_receipt.is_some());
+        assert_eq!(cpu.telemetry.memory_context, "not_recorded_in_committed_receipts");
+        assert!(!cpu.blockers.iter().any(|blocker| blocker == "total response latency is missing"));
+        let gpu = ask_normal
+            .routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing GPU route benchmark")?;
+        assert!(gpu.promotion_blocked);
+        assert!(!gpu.benchmark_qualified_advantage);
+        let Some(low_power) =
+            benchmark.profiles.iter().find(|profile| profile.profile_id == "low_power")
+        else {
+            bail!("missing low_power benchmark");
+        };
+        assert!(low_power.routes.iter().any(|route| {
+            route.route_id == "dense_slm_openvino_npu_candidate"
+                && route.blockers.contains(
+                    &"power telemetry receipt does not provide low_power promotion evidence"
+                        .to_string(),
+                )
+        }));
+        assert!(!benchmark.claim_boundary.speedup_claim);
+        assert!(!benchmark.claim_boundary.route_promotion_changed);
+        Ok(())
+    }
+
+    #[test]
+    fn cpu_slm_phase_attribution_indexes_cold_and_warm_cpu_timing() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenizer_load_ms": 5.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 217.0},
+                "tokens": {"prompt_count": 38, "generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_PHASE,
+            json!({
+                "artifact_kind": "dense_slm_cpu_phase_warm_session",
+                "fallback_used": false,
+                "model_family": "qwen",
+                "model_architecture": "qwen2",
+                "quantization": "Q8_0",
+                "tokenizer_source": "gguf_metadata",
+                "prompt_template": "qwen2.5",
+                "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+                "session": {
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true
+                },
+                "timing": {
+                    "model_load_ms": 40.0,
+                    "tokenizer_load_ms": 5.0,
+                    "total_session_ms": 1000.0
+                },
+                "profiles": [
+                    {
+                        "profile": "prefill_512",
+                        "prompt_tokens": 512,
+                        "prefill_ms": 1024.0,
+                        "generated_tokens": 1,
+                        "first_token_decode_ms": 20.0,
+                        "decode_total_ms": 20.0,
+                        "fallback_used": false,
+                        "receipt_path": "prefill.json"
+                    },
+                    {
+                        "profile": "decode_128",
+                        "prompt_tokens": 32,
+                        "prefill_ms": 64.0,
+                        "generated_tokens": 128,
+                        "first_token_decode_ms": 12.0,
+                        "decode_total_ms": 640.0,
+                        "fallback_used": false,
+                        "receipt_path": "decode.json"
+                    }
+                ]
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}},
+                "openvino_paths": {
+                    "cpu": {
+                        "source_receipt": "openvino-cpu.json",
+                        "selected_backend": "openvino-cpu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "answer_gate": {"passed": true},
+                        "timing": {
+                            "pipeline_load_ms": 10.0,
+                            "case_elapsed_ms_sum": 20.0
+                        }
+                    }
+                }
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-17T08:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-17T08:01:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-17T08:02:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-17T08:03:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
+            "2026-05-17T08:04:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            "2026-05-17T08:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+
+        let receipt = build_cpu_slm_phase_attribution_with_created_utc(
+            temp.path(),
+            Path::new(DENSE_CPU_PHASE),
+            Path::new("cold-warm.json"),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-17T08:06:00Z".to_string(),
+        )?;
+
+        assert!(receipt.attribution_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_cpu_slm_phase_attribution");
+        assert_eq!(receipt.backend.selected_backend, "cpu-rust");
+        assert_eq!(receipt.backend.runtime_api, "cpu");
+        assert_eq!(receipt.cold_one_off.timing.total_response_ms, Some(217.0));
+        assert_eq!(receipt.cold_one_off.model_load_share_of_total, Some(100.0 / 217.0));
+        assert!(receipt.warm_session.model_loaded_once == Some(true));
+        let decode = receipt
+            .warm_session
+            .profiles
+            .iter()
+            .find(|profile| profile.profile == "decode_128")
+            .context("missing decode_128")?;
+        assert_eq!(decode.decode_tokens_per_s, Some(200.0));
+        let openvino = receipt.openvino_cpu_context.as_ref().context("missing openvino cpu")?;
+        assert_eq!(openvino.pipeline_load_ms, Some(10.0));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.arc_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn cpu_slm_resident_session_summarizes_no_reload_warm_loop() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            "phase-attribution.json",
+            json!({
+                "artifact_kind": "lunar_lake_cpu_slm_phase_attribution",
+                "attribution_ready": true,
+                "cold_one_off": {
+                    "profile_id": "ask_short",
+                    "timing": {
+                        "cold_load_ms": 100.0,
+                        "tokenize_ms": 2.0,
+                        "prefill_ms": 20.0,
+                        "first_token_ms": 30.0,
+                        "decode_total_ms": 40.0,
+                        "total_response_ms": 200.0
+                    }
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "resident.json",
+            json!({
+                "artifact_kind": "slm_cpu_warm_session",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "speedup_claim": false,
+                "quality_summary": {"passed": true},
+                "determinism": {
+                    "passed": true,
+                    "groups": [
+                        {
+                            "case_id": "ask_short_math",
+                            "attempt_count": 2,
+                            "stable_generated_token_ids": true,
+                            "stable_text": true,
+                            "prompt_indices": [0, 1]
+                        }
+                    ]
+                },
+                "claim_boundary": {
+                    "speedup_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "bitnet_quality_claimed": false
+                },
+                "model": {
+                    "family": "qwen",
+                    "architecture": "qwen2",
+                    "quant_format": "Q8_0",
+                    "tokenizer": "tokenizer.json"
+                },
+                "generation": {"prompt_template": "qwen2.5"},
+                "session": {
+                    "reuse_scope": "resident_session",
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true,
+                    "prompt_count": 2,
+                    "per_prompt_receipts_enabled": true,
+                    "session_owned_buffers": true,
+                    "prompt_token_buffer_reused": true,
+                    "generated_token_buffer_reused": true,
+                    "timing_buffers_reused": true,
+                    "stop_policy_precomputed_once": true
+                },
+                "memory": {"resident_memory_bytes": 1000},
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "model_sha256_ms": 5.0,
+                    "tokenizer_load_ms": 10.0,
+                    "total_session_ms": 260.0
+                },
+                "prompts": [
+                    {
+                        "prompt_index": 0,
+                        "case_id": "ask_short_math",
+                        "fallback_used": false,
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {
+                            "model_load_ms": 0.0,
+                            "tokenizer_load_ms": 0.0,
+                            "total_ms": 80.0,
+                            "time_to_first_token_ms": 30.0,
+                            "prefill_ms": 20.0,
+                            "decode_total_ms": 40.0,
+                            "tokenize_ms": 2.0
+                        }
+                    },
+                    {
+                        "prompt_index": 1,
+                        "case_id": "ask_short_math",
+                        "backend": {"fallback_used": false},
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {
+                            "model_load_ms": 0.0,
+                            "tokenizer_load_ms": 0.0,
+                            "total_ms": 100.0,
+                            "first_token_ms": 40.0,
+                            "prefill_ms": 22.0,
+                            "decode_total_ms": 44.0,
+                            "tokenize_ms": 3.0
+                        }
+                    }
+                ]
+            }),
+        )?;
+
+        let receipt = build_cpu_slm_resident_session_with_created_utc(
+            temp.path(),
+            Path::new("phase-attribution.json"),
+            Path::new("resident.json"),
+            2,
+            "2026-05-17T09:15:00Z".to_string(),
+        )?;
+
+        assert!(receipt.resident_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_cpu_slm_resident_session");
+        assert_eq!(receipt.backend.selected_backend, "cpu-rust");
+        assert_eq!(receipt.resident_session.model_loaded_once, Some(true));
+        assert_eq!(receipt.resident_session.tokenizer_loaded_once, Some(true));
+        let profile = receipt
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short profile")?;
+        assert_eq!(profile.observed_execution_count, 2);
+        assert_eq!(profile.total_ms.mean, Some(90.0));
+        assert_eq!(profile.decode_tokens_per_s_mean, Some(8.0 / 0.084));
+        assert_eq!(profile.cold_to_resident_total_ratio, Some(200.0 / 90.0));
+        assert!(profile.blockers.is_empty());
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.arc_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn cpu_slm_runtime_comparison_blocks_openvino_cpu_on_profile_quality() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            "phase-attribution.json",
+            json!({
+                "artifact_kind": "lunar_lake_cpu_slm_phase_attribution",
+                "attribution_ready": true,
+                "cold_one_off": {
+                    "profile_id": "ask_short",
+                    "timing": {"total_response_ms": 200.0}
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "resident-source.json",
+            json!({
+                "artifact_kind": "slm_cpu_warm_session",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "quality_summary": {"passed": true},
+                "determinism": {
+                    "passed": true,
+                    "groups": [
+                        {
+                            "case_id": "ask_short_math",
+                            "attempt_count": 2,
+                            "stable_generated_token_ids": true,
+                            "stable_text": true,
+                            "prompt_indices": [0, 1]
+                        }
+                    ]
+                },
+                "claim_boundary": {
+                    "speedup_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "bitnet_quality_claimed": false
+                },
+                "model": {"family": "qwen", "architecture": "qwen2", "quant_format": "Q8_0", "tokenizer": "tokenizer.json"},
+                "generation": {"prompt_template": "qwen2.5"},
+                "session": {"model_loaded_once": true, "tokenizer_loaded_once": true, "prompt_count": 2},
+                "timing": {"model_load_ms": 100.0, "tokenizer_load_ms": 10.0},
+                "prompts": [
+                    {
+                        "prompt_index": 0,
+                        "case_id": "ask_short_math",
+                        "fallback_used": false,
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {"model_load_ms": 0.0, "tokenizer_load_ms": 0.0, "total_ms": 80.0, "time_to_first_token_ms": 30.0, "decode_total_ms": 40.0, "tokenize_ms": 2.0}
+                    },
+                    {
+                        "prompt_index": 1,
+                        "case_id": "ask_short_math",
+                        "fallback_used": false,
+                        "generated_tokens": 4,
+                        "quality": {"passed": true},
+                        "timing": {"model_load_ms": 0.0, "tokenizer_load_ms": 0.0, "total_ms": 100.0, "time_to_first_token_ms": 40.0, "decode_total_ms": 44.0, "tokenize_ms": 3.0}
+                    }
+                ]
+            }),
+        )?;
+        let resident = build_cpu_slm_resident_session_with_created_utc(
+            temp.path(),
+            Path::new("phase-attribution.json"),
+            Path::new("resident-source.json"),
+            2,
+            "2026-05-17T09:35:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("resident.json"), serde_json::to_vec_pretty(&resident)?)?;
+        write_json(
+            temp.path(),
+            "ov-corpus.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "selected_backend": "openvino-cpu",
+                            "runtime_api": "openvino_genai",
+                            "runtime_device": "CPU",
+                            "fallback_used": false,
+                            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
+                            "pipeline_construct_wall_ms": 20.0,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 1, "failed": 1}
+                                }
+                            },
+                            "cases": [
+                                {
+                                    "id": "ask_short_pass",
+                                    "profile": "ask_short",
+                                    "status": "passed",
+                                    "fallback_used": false,
+                                    "timing": {
+                                        "generation_wall_ms": 10.0,
+                                        "first_streamed_text_chunk_ms": 5.0,
+                                        "openvino_perf_metrics": {
+                                            "tokenization": {"mean_ms": 1.0},
+                                            "num_generated_tokens": 4,
+                                            "throughput": {"mean_ms": 20.0}
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "ask_short_fail",
+                                    "profile": "ask_short",
+                                    "status": "failed",
+                                    "fallback_used": false,
+                                    "timing": {
+                                        "generation_wall_ms": 12.0,
+                                        "first_streamed_text_chunk_ms": 6.0,
+                                        "openvino_perf_metrics": {
+                                            "tokenization": {"mean_ms": 2.0},
+                                            "num_generated_tokens": 4,
+                                            "throughput": {"mean_ms": 18.0}
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "ov-phase.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_runner",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "selected_backend": "openvino-cpu",
+                            "runtime_api": "openvino_genai",
+                            "runtime_device": "CPU",
+                            "fallback_used": false,
+                            "pipeline_construct_wall_ms": 25.0
+                        }
+                    ]
+                }
+            }),
+        )?;
+
+        let receipt = build_cpu_slm_runtime_comparison_with_created_utc(
+            temp.path(),
+            Path::new("resident.json"),
+            Path::new("ov-corpus.json"),
+            Path::new("ov-phase.json"),
+            "2026-05-17T09:40:00Z".to_string(),
+        )?;
+
+        assert!(receipt.comparison_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_cpu_slm_runtime_comparison");
+        assert_eq!(receipt.rust_gguf_cpu.selected_backend, "cpu-rust");
+        assert_eq!(receipt.openvino_cpu.selected_backend, "openvino-cpu");
+        let profile = receipt
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short profile")?;
+        assert_eq!(profile.openvino_cpu.cases_failed, Some(1));
+        assert_eq!(profile.openvino_cpu.timing_ms.mean, Some(11.0));
+        assert_eq!(profile.openvino_to_rust_total_ratio, Some(11.0 / 90.0));
+        assert_eq!(profile.status, "blocked_candidate_context_only");
+        assert!(profile.blockers.iter().any(|blocker| blocker.contains("answer-gate failure")));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.arc_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn openvino_quality_diagnosis_classifies_gpu_corpus_failures() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
+        write_json(
+            temp.path(),
+            "ov-corpus.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "selected_backend": "openvino-gpu",
+                            "runtime_api": "openvino_genai",
+                            "runtime_device": "GPU.0",
+                            "backend_lane": "dense_slm_openvino_gpu",
+                            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu",
+                            "fallback_used": false,
+                            "promotion_status": "candidate_only_not_promoted",
+                            "quality_summary": {
+                                "cases_total": 2,
+                                "passed": 1,
+                                "failed": 1,
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 1, "failed": 1}
+                                },
+                                "category_summary": {
+                                    "yes_no": {"total": 1, "passed": 0, "failed": 1}
+                                }
+                            },
+                            "cases": [
+                                {
+                                    "id": "yes_no_clear_sky",
+                                    "profile": "ask_short",
+                                    "category": "yes_no",
+                                    "status": "failed",
+                                    "prompt_token_count": 40,
+                                    "generated_token_count": 6,
+                                    "generated_text": "Yes, the sky on a clear day",
+                                    "generated_token_ids_available_from_pipeline": false,
+                                    "generated_token_ids_source": "retokenized_decoded_text",
+                                    "fallback_used": false,
+                                    "quality": {
+                                        "passed": false,
+                                        "gate_kind": "normalized_match",
+                                        "failed_rules": ["normalized_match_failed"],
+                                        "failure_taxonomy": ["normalized_match_failed"],
+                                        "scoring": {
+                                            "kind": "normalized_match",
+                                            "passed": false,
+                                            "details": {
+                                                "expected_normalized": "yes",
+                                                "observed_normalized": "yes the sky on a clear day"
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "math_2_plus_2_brief",
+                                    "profile": "ask_short",
+                                    "category": "math",
+                                    "status": "passed",
+                                    "generated_token_ids_available_from_pipeline": false,
+                                    "generated_token_ids_source": "retokenized_decoded_text",
+                                    "fallback_used": false,
+                                    "quality": {"passed": true}
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )?;
+
+        let receipt = build_openvino_corpus_v2_diagnosis_with_created_utc(
+            temp.path(),
+            Path::new("ov-corpus.json"),
+            Some(Path::new("corpus-v2.yaml")),
+            "GPU.0",
+            "2026-05-17T09:55:00Z".to_string(),
+        )?;
+
+        assert!(receipt.diagnosis_ready, "{:?}", receipt.gaps);
+        assert_eq!(receipt.artifact_kind, "lunar_lake_openvino_corpus_v2_diagnosis");
+        assert_eq!(receipt.runtime_device.as_deref(), Some("GPU.0"));
+        assert!(receipt.route_blocked);
+        assert_eq!(receipt.quality_summary.failed, 1);
+        assert_eq!(receipt.failed_cases.len(), 1);
+        assert_eq!(receipt.failed_cases[0].answer_preview, "Yes, the sky on a clear day");
+        assert_eq!(receipt.failed_cases[0].classification, "exact_answer_overgenerated");
+        assert_eq!(
+            receipt.answer_corpus_v2_fixture.as_deref(),
+            Some(path_string(&temp.path().join("corpus-v2.yaml")).as_str())
+        );
+        assert!(receipt.case_alignment.fixture_verified);
+        assert_eq!(receipt.case_alignment.observed_case_count, 2);
+        assert_eq!(receipt.case_alignment.expected_case_count, Some(12));
+        assert_eq!(receipt.case_alignment.aligned_with_active_fixture, Some(false));
+        assert!(
+            receipt
+                .case_alignment
+                .missing_case_ids
+                .iter()
+                .any(|case_id| case_id == "short_reasoning_apples_left")
+        );
+        assert!(
+            receipt.blocker_summary.iter().any(
+                |blocker| blocker.contains("corpus-v2 receipt is missing active fixture cases")
+            )
+        );
+        assert!(!receipt.generated_token_visibility.direct_generated_token_ids_available);
+        assert!(receipt.generated_token_visibility.retokenized_generated_ids_used);
+        assert!(
+            receipt
+                .blocker_summary
+                .iter()
+                .any(|blocker| blocker.contains("generated token IDs are not directly available"))
+        );
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.arc_or_npu_execution_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_behavior_changed);
+        Ok(())
+    }
+
+    #[test]
+    fn corpus_v2_failure_classifier_separates_exact_and_keyword_contracts() {
+        let empty = Vec::<String>::new();
+        assert_eq!(
+            classify_corpus_v2_failure(
+                "Yes, it is usually blue",
+                Some("starts_with_any"),
+                Some(true),
+                Some(false),
+                &["normalized_match_failed".to_string()],
+                &empty,
+                Some(8),
+                Some("yes"),
+                Some("yes, it is usually blue"),
+            ),
+            "exact_answer_overgenerated"
+        );
+        assert_eq!(
+            classify_corpus_v2_failure(
+                "Yes, Tom still has one apple",
+                Some("contains_any"),
+                Some(true),
+                Some(false),
+                &["required_keywords_missing".to_string()],
+                &["yes".to_string()],
+                Some(8),
+                None,
+                None,
+            ),
+            "case_sensitive_required_keyword_mismatch"
+        );
+        assert_eq!(
+            classify_corpus_v2_failure(
+                "Fallback route check",
+                Some("readable"),
+                Some(true),
+                Some(false),
+                &["required_keywords_missing".to_string()],
+                &["fallback".to_string(), "model".to_string()],
+                Some(16),
+                None,
+                None,
+            ),
+            "required_terms_missing_or_case_mismatch"
+        );
+    }
+
+    #[test]
+    fn telemetry_context_records_live_context_without_route_claims() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+
+        let receipt = build_telemetry_context_with_created_utc(
+            temp.path(),
+            "2026-05-17T05:45:00Z".to_string(),
+        );
+
+        assert_eq!(receipt.artifact_kind, "lunar_lake_power_thermal_context");
+        assert_eq!(receipt.proof_stage, "live_telemetry_context_captured_no_promotion_change");
+        assert!(receipt.claim_boundary.telemetry_measurement_executed);
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(!receipt.claim_boundary.acceleration_claim);
+        assert_eq!(receipt.memory.source, "sysinfo");
+        assert!(receipt.sources.iter().any(|source| source.source == "sysinfo"));
+        Ok(())
+    }
+
+    #[test]
+    fn durability_bundle_indexes_repeat_gap_and_repeated_stability() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "fallback_used": false,
+                "profile_summary": {
+                    "regression_tiny": {"total": 4, "passed": 4, "failed": 0},
+                    "ask_short": {"total": 2, "passed": 2, "failed": 0},
+                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                },
+                "cases": [
+                    {"id": "math_2_plus_2_brief", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "copy_exact_color_triplet", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "stop_token_one_word_done", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "arithmetic_add_7_8", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "yes_no_clear_sky", "profile": "ask_short", "status": "passed"},
+                    {"id": "short_factual_capital_france", "profile": "ask_short", "status": "passed"},
+                    {"id": "instruction_single_sentence_rust", "profile": "ask_normal", "status": "passed"},
+                    {"id": "transcript_context_code_word", "profile": "ask_normal", "status": "passed"},
+                    {"id": "short_reasoning_apples_left", "profile": "ask_normal", "status": "passed"}
+                ]
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_OV_CORPUS_V2,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "runtime_device": "GPU.0",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0},
+                                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                                }
+                            }
+                        },
+                        {
+                            "runtime_device": "NPU",
+                            "fallback_used": false,
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0}
+                                }
+                            }
+                        }
+                    ]
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"prompt_count": 38, "generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
+            "2026-05-16T07:30:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            "2026-05-16T18:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+        let mut regression_v2 = build_regression_bundle_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Some(Path::new("corpus-v2.yaml")),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new("cold-warm.json")),
+            None,
+            "2026-05-16T19:05:00Z".to_string(),
+        )?;
+        // Seed the durability builder with the pre-REG-005 strict surface it
+        // originally consumed; REG-005 adds durability back into regression.
+        regression_v2.regression_passed = true;
+        regression_v2.gaps.clear();
+        regression_v2.regression_surface.strict_ready = true;
+        regression_v2.regression_surface.gaps.clear();
+        fs::write(
+            temp.path().join(REGRESSION_BUNDLE_V2),
+            serde_json::to_vec_pretty(&regression_v2)?,
+        )?;
+
+        let durability = build_durability_bundle_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new("cold-warm.json"),
+            Path::new(DENSE_CPU_CORPUS_V2),
+            Path::new(REGRESSION_BUNDLE_V2),
+            None,
+            10,
+            "2026-05-16T20:20:00Z".to_string(),
+        )?;
+
+        assert!(durability.durability_index_ready, "{:?}", durability.gaps);
+        assert!(!durability.stability_proven);
+        assert!(!durability.claim_boundary.repeated_run_stability_claim);
+        assert!(!durability.claim_boundary.new_inference_executed);
+        let ask_short = durability
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "ask_short")
+            .context("missing ask_short durability profile")?;
+        assert_eq!(ask_short.observed_execution_count, 1);
+        assert_eq!(ask_short.required_execution_count, 10);
+        assert_eq!(ask_short.baseline_cases_failed, 0);
+        assert!(ask_short.answer_drift_detected.is_none());
+        assert!(ask_short.blockers.iter().any(|blocker| blocker.contains("repeated-run")));
+        assert!(
+            durability
+                .next_required_evidence
+                .iter()
+                .any(|evidence| { evidence.contains("collect repeated-run receipts") })
+        );
+
+        write_repeated_warm_session_receipt(temp.path(), "durable-warm.json")?;
+        let durability = build_durability_bundle_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new("cold-warm.json"),
+            Path::new(DENSE_CPU_CORPUS_V2),
+            Path::new(REGRESSION_BUNDLE_V2),
+            Some(Path::new("durable-warm.json")),
+            10,
+            "2026-05-16T20:40:00Z".to_string(),
+        )?;
+
+        assert!(durability.durability_index_ready, "{:?}", durability.gaps);
+        assert!(durability.stability_proven, "{:?}", durability.profiles);
+        assert!(durability.claim_boundary.repeated_run_stability_claim);
+        let expected_repeated_receipt = path_string(&temp.path().join("durable-warm.json"));
+        assert_eq!(durability.repeated_warm_session_receipt, Some(expected_repeated_receipt));
+        assert!(
+            durability
+                .next_required_evidence
+                .iter()
+                .all(|evidence| !evidence.contains("repeated-run"))
+        );
+        for profile in &durability.profiles {
+            assert_eq!(profile.observed_execution_count, 10);
+            assert_eq!(profile.required_execution_count, 10);
+            assert_eq!(profile.answer_drift_detected, Some(false));
+            assert_eq!(profile.fallback_drift_detected, Some(false));
+            assert_eq!(profile.latency_variance_status, "variance_window_available");
+            assert_eq!(profile.stability_status, "stable");
+            assert!(profile.blockers.is_empty(), "{profile:?}");
+        }
         Ok(())
     }
 
@@ -3205,7 +11602,7 @@ mod tests {
                     "decode_steady_state_tok_s": 10.0
                 },
                 "latency": {"total_ms": 150.0},
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -3253,12 +11650,79 @@ mod tests {
             temp.path().join(ROUTE_PROFILE_COMPARISON),
             serde_json::to_vec_pretty(&profiles)?,
         )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            "2026-05-14T17:45:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "fallback_used": false,
+                "cases": [
+                    {"id": "math_2_plus_2_brief", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "copy_exact_color_triplet", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "stop_token_one_word_done", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "arithmetic_add_7_8", "profile": "regression_tiny", "status": "passed"},
+                    {"id": "yes_no_clear_sky", "profile": "ask_short", "status": "passed"},
+                    {"id": "short_factual_capital_france", "profile": "ask_short", "status": "passed"},
+                    {"id": "instruction_single_sentence_rust", "profile": "ask_normal", "status": "passed"},
+                    {"id": "transcript_context_code_word", "profile": "ask_normal", "status": "passed"},
+                    {"id": "short_reasoning_apples_left", "profile": "ask_normal", "status": "passed"}
+                ]
+            }),
+        )?;
+
+        write_json(
+            temp.path(),
+            "durability.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_durability_bundle",
+                "proof_stage": "repeated_run_requirements_indexed_no_new_inference",
+                "created_utc": "2026-05-14T23:45:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(temp.path()),
+                "route_profile_comparison_receipt": path_string(&temp.path().join(ROUTE_PROFILE_COMPARISON)),
+                "cold_warm_benchmark_receipt": path_string(&temp.path().join("cold-warm.json")),
+                "cpu_corpus_v2_receipt": path_string(&temp.path().join(DENSE_CPU_CORPUS_V2)),
+                "regression_bundle_receipt": path_string(&temp.path().join(REGRESSION_BUNDLE_V2)),
+                "repeated_warm_session_receipt": path_string(&temp.path().join("durable-warm.json")),
+                "required_repeat_count": 10,
+                "durability_index_ready": true,
+                "stability_proven": true,
+                "profiles": [
+                    stable_durability_profile("regression_tiny", 4, 4),
+                    stable_durability_profile("ask_short", 2, 2),
+                    stable_durability_profile("ask_normal", 3, 3)
+                ],
+                "gaps": [],
+                "next_required_evidence": [],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "broad_quality_claim": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "hidden_fallback_allowed": false,
+                    "dense_slm_as_bitnet_proof": false,
+                    "repeated_run_stability_claim": true
+                }
+            }),
+        )?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new("cold-warm.json")),
+            Some(Path::new("durability.json")),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -3284,6 +11748,21 @@ mod tests {
         assert!(bundle.regression_surface.strict_ready, "{:?}", bundle.regression_surface.gaps);
         assert!(bundle.regression_surface.answer_corpus_v2_indexed);
         assert!(bundle.regression_surface.route_profile_comparison_indexed);
+        assert!(bundle.regression_surface.cold_warm_benchmark_indexed);
+        assert!(bundle.regression_surface.cold_warm_benchmark_ready);
+        assert!(bundle.regression_surface.durability_bundle_indexed);
+        assert!(bundle.regression_surface.durability_stability_proven);
+        let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
+            bail!("missing cold_warm_benchmark summary");
+        };
+        assert!(cold_warm.promoted_routes_have_critical_timing);
+        assert!(cold_warm.candidate_routes_remain_unpromoted);
+        let Some(durability) = bundle.durability_bundle.as_ref() else {
+            bail!("missing durability bundle summary");
+        };
+        assert!(durability.regression_ready, "{:?}", durability.gaps);
+        assert!(durability.stability_proven);
+        assert_eq!(durability.stable_profile_count, 3);
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }
@@ -3309,7 +11788,7 @@ mod tests {
                     "decode_steady_state_tok_s": 10.0
                 },
                 "latency": {"total_ms": 150.0},
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -3363,12 +11842,22 @@ mod tests {
             temp.path().join(ROUTE_PROFILE_COMPARISON),
             serde_json::to_vec_pretty(&profiles)?,
         )?;
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            "2026-05-14T17:45:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Some(Path::new("corpus-v2.yaml")),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new("cold-warm.json")),
+            None,
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -3379,6 +11868,141 @@ mod tests {
             "{:?}",
             strict_regression_v2_gaps(&bundle)
         );
+        Ok(())
+    }
+
+    #[test]
+    fn quality_diagnosis_classifies_qwen_cpu_corpus_v2_blockers() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "requested_backend": "cpu",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "model_family": "qwen",
+                "model_architecture": "qwen2",
+                "quantization": "Q8_0",
+                "speedup_claim": false,
+                "quality_summary": {"total": 3, "passed": 1, "failed": 2, "timeout": 0, "not_run": 0},
+                "profile_summary": {
+                    "regression_tiny": {"total": 2, "passed": 1, "failed": 1},
+                    "ask_short": {"total": 1, "passed": 0, "failed": 1}
+                },
+                "cases": [
+                    {
+                        "id": "math_2_plus_2_brief",
+                        "profile": "regression_tiny",
+                        "category": "math",
+                        "status": "passed",
+                        "answer": "4",
+                        "quality": {"passed": true}
+                    },
+                    {
+                        "id": "arithmetic_add_7_8",
+                        "profile": "regression_tiny",
+                        "category": "math",
+                        "status": "quality_failed",
+                        "answer": "\nThe result of 7 + ",
+                        "tokens": {"prompt": 40, "generated": 8},
+                        "quality": {
+                            "passed": false,
+                            "gate_kind": "contains_any",
+                            "generated_tokens": 8,
+                            "failed_rules": ["gate_contains_any", "scoring_required_keywords"],
+                            "failure_taxonomy": ["answer_content"],
+                            "scoring": {
+                                "kind": "required_forbidden_tokens",
+                                "passed": false,
+                                "details": {
+                                    "required_keywords_missing": ["15"],
+                                    "forbidden_tokens_observed": []
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "yes_no_clear_sky",
+                        "profile": "ask_short",
+                        "category": "yes_no",
+                        "status": "quality_failed",
+                        "answer": ": Yes. The sky is usually blue",
+                        "backend": {"fallback_used": false},
+                        "tokens": {"prompt": 43, "generated": 8},
+                        "quality": {
+                            "passed": false,
+                            "gate_kind": "starts_with_any",
+                            "generated_tokens": 8,
+                            "failed_rules": ["scoring_normalized_match"],
+                            "failure_taxonomy": ["answer_content"],
+                            "scoring": {
+                                "kind": "normalized_match",
+                                "passed": false,
+                                "details": {
+                                    "expected_normalized": "yes",
+                                    "observed_normalized": "yes. the sky is usually blue"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            ROUTE_PROFILE_COMPARISON,
+            json!({
+                "profiles": [
+                    {
+                        "profile_id": "regression_tiny",
+                        "profile_status": "promoted_route_blocked",
+                        "promotion_decision": "dense_slm_default_cpu is listed as promoted but blocked",
+                        "route_evidence": [
+                            {
+                                "route_id": DEFAULT_ASK_ROUTE,
+                                "blockers": ["corpus_v2 profile regression_tiny has 1 quality failures"]
+                            }
+                        ]
+                    },
+                    {
+                        "profile_id": "ask_short",
+                        "profile_status": "promoted_route_blocked",
+                        "route_evidence": [
+                            {
+                                "route_id": DEFAULT_ASK_ROUTE,
+                                "blockers": ["corpus_v2 profile ask_short has 1 quality failures"]
+                            }
+                        ]
+                    }
+                ]
+            }),
+        )?;
+
+        let receipt = build_qwen_cpu_corpus_v2_diagnosis_with_created_utc(
+            temp.path(),
+            Path::new(DENSE_CPU_CORPUS_V2),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "2026-05-16T09:30:00Z".to_string(),
+        )?;
+
+        assert!(receipt.diagnosis_ready, "{:?}", receipt.gaps);
+        assert!(receipt.route_blocked);
+        assert_eq!(receipt.quality_summary.failed, 2);
+        assert_eq!(receipt.failed_cases.len(), 2);
+        assert!(
+            receipt.quality_summary.failure_classes.contains_key("generation_budget_or_truncation")
+        );
+        assert!(receipt.quality_summary.failure_classes.contains_key("exact_answer_overgenerated"));
+        assert!(
+            !receipt.quality_summary.failure_classes.contains_key("assistant_prefix_gate_mismatch")
+        );
+        assert!(receipt.profile_diagnoses.iter().any(|profile| profile.profile_id == "ask_short"
+            && profile.route_profile_status.as_deref() == Some("promoted_route_blocked")));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
         Ok(())
     }
 
@@ -3440,6 +12064,308 @@ mod tests {
                 .to_string();
 
         assert!(err.contains("not ready") || err.contains("fallback"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_selects_promoted_cpu_route_from_ledger() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-16T10:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-16T10:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-16T10:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-16T10:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let selection = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            "auto",
+            "auto",
+            "ask_normal",
+        )?;
+
+        assert_eq!(selection.selection_source, "promotion_ledger_auto");
+        assert_eq!(selection.selected_route, DEFAULT_ASK_ROUTE);
+        assert_eq!(selection.promotion_status, "promoted");
+        assert_eq!(selection.selected_backend, "cpu-rust");
+        assert_eq!(selection.runtime_api, "cpu");
+        assert!(
+            selection.candidate_routes.contains(&"dense_slm_openvino_gpu_candidate".to_string())
+        );
+        assert!(selection.why_not_gpu.iter().any(|reason| {
+            reason.contains("route status is `candidate`")
+                || reason.contains("route is not promoted for profile")
+        }));
+        assert!(selection.why_not_npu.iter().any(|reason| {
+            reason.contains("route status is `candidate`")
+                || reason.contains("route is not promoted for profile")
+        }));
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_rejects_unknown_profile() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-16T10:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-16T10:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-16T10:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-16T10:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            "auto",
+            "auto",
+            "unlisted_profile",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("profile `unlisted_profile` not found"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_rejects_explicit_accelerator_device_mismatch() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-16T10:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-16T10:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-16T10:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-16T10:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            "auto",
+            "openvino-npu",
+            "ask_normal",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("requested --device `openvino-npu`"), "got: {err}");
+        assert!(err.contains("explicit accelerator devices are not auto-routed"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn npu_cold_start_diagnosis_classifies_load_dominated_startup() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            DENSE_OV_PHASE,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_runner",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [{
+                        "runtime_device": "NPU",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "pipeline_construct_wall_ms": 37652.0,
+                        "passed": 3,
+                        "failed": 0,
+                        "cases": [{
+                            "generation_wall_ms": 1000.0,
+                            "first_streamed_text_chunk_ms": 300.0,
+                            "openvino_perf_metrics": {
+                                "load_time_ms": 37651.0,
+                                "time_to_first_token": {"mean_ms": 320.0},
+                                "generate": {"mean_ms": 990.0},
+                                "inference": {"mean_ms": 980.0},
+                                "tokenization": {"mean_ms": 15.0},
+                                "throughput": {"mean_ms": 12.5},
+                                "num_generated_tokens": 9
+                            }
+                        }]
+                    }]
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "openvino_paths": {
+                    "npu": {
+                        "timing": {
+                            "pipeline_load_ms": 35469.0,
+                            "case_elapsed_ms_sum": 2116.0
+                        }
+                    }
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_OV_NPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_operator_ask",
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "requested_backend": "openvino-npu",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "runtime_device": "NPU",
+                "resolved_device": "Intel(R) AI Boost",
+                "backend_lane": "dense_slm_openvino_npu",
+                "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+                "fallback_used": false,
+                "route": {"acceleration_claim": false},
+                "answer_gate": {"passed": true},
+                "timing": {
+                    "pipeline_construct_wall_ms": 40312.0,
+                    "generation_wall_ms": 943.0,
+                    "openvino_perf_metrics": {
+                        "load_time_ms": 40263.0,
+                        "time_to_first_token": {"mean_ms": 323.0},
+                        "generate": {"mean_ms": 942.0},
+                        "inference": {"mean_ms": 919.0},
+                        "tokenization": {"mean_ms": 17.0},
+                        "throughput": {"mean_ms": 12.9},
+                        "num_generated_tokens": 9
+                    }
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_OV_CORPUS_V2,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [{
+                        "runtime_device": "NPU",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "promotion_status": "candidate",
+                        "route_promotion_changed": false,
+                        "pipeline_construct_wall_ms": 32127.0,
+                        "quality_summary": {
+                            "cases_total": 12,
+                            "passed": 7,
+                            "failed": 5,
+                            "profile_summary": {
+                                "ask_short": {"total": 2, "passed": 1, "failed": 1}
+                            },
+                            "category_summary": {
+                                "yes_no": {"total": 1, "passed": 0, "failed": 1}
+                            }
+                        },
+                        "cases": [{
+                            "generated_token_ids_available_from_pipeline": false,
+                            "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+                            "timing": {
+                                "generation_wall_ms": 876.0,
+                                "first_streamed_text_chunk_ms": 680.0,
+                                "openvino_perf_metrics": {
+                                    "load_time_ms": 32127.0,
+                                    "time_to_first_token": {"mean_ms": 406.0},
+                                    "generate": {"mean_ms": 874.0},
+                                    "inference": {"mean_ms": 857.0},
+                                    "tokenization": {"mean_ms": 13.0},
+                                    "throughput": {"mean_ms": 14.9},
+                                    "num_generated_tokens": 8
+                                }
+                            }
+                        }]
+                    }]
+                }
+            }),
+        )?;
+
+        let receipt = build_npu_cold_start_diagnosis_with_created_utc(
+            temp.path(),
+            Path::new(DENSE_OV_PHASE),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Path::new(DENSE_OV_NPU_OPERATOR_ASK),
+            Path::new(DENSE_OV_CORPUS_V2),
+            "2026-05-17T10:00:00Z".to_string(),
+        )?;
+
+        assert!(receipt.diagnosis_ready, "{:?}", receipt.gaps);
+        assert!(receipt.cold_start.cold_load_dominant);
+        assert_eq!(
+            receipt.cold_start.classification,
+            "openvino_pipeline_load_or_device_compile_dominated"
+        );
+        assert!(receipt.cold_start.operator_load_to_generation_ratio.unwrap() > 40.0);
+        assert!(receipt.hot_path.hot_path_interesting);
+        assert!(receipt.corpus_v2_context.route_blocked_by_quality);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.speedup_claim);
+        assert!(!receipt.claim_boundary.acceleration_claim);
         Ok(())
     }
 
@@ -3519,6 +12445,104 @@ mod tests {
         Ok(())
     }
 
+    fn stable_durability_profile(profile_id: &str, total: u64, passed: u64) -> Value {
+        json!({
+            "profile_id": profile_id,
+            "route_id": DEFAULT_ASK_ROUTE,
+            "route_status": "promoted",
+            "promoted_route": DEFAULT_ASK_ROUTE,
+            "baseline_case_count": total,
+            "baseline_cases_passed": passed,
+            "baseline_cases_failed": total.saturating_sub(passed),
+            "observed_execution_count": 10,
+            "required_execution_count": 10,
+            "answer_drift_detected": false,
+            "route_drift_detected": false,
+            "fallback_drift_detected": false,
+            "latency_variance_status": "variance_window_available",
+            "stability_status": "stable",
+            "blockers": []
+        })
+    }
+
+    fn write_repeated_warm_session_receipt(root: &Path, file: &str) -> Result<()> {
+        let cases = [
+            ("regression_tiny_math_2_plus_2_brief", 0u64),
+            ("ask_short_capital_france", 10u64),
+            ("ask_normal_instruction_rust", 20u64),
+        ];
+        let groups = cases
+            .iter()
+            .map(|(case_id, start)| {
+                json!({
+                    "case_id": case_id,
+                    "attempt_count": 10,
+                    "prompt_indices": (*start..*start + 10).collect::<Vec<_>>(),
+                    "stable_generated_token_ids": true,
+                    "stable_text": true
+                })
+            })
+            .collect::<Vec<_>>();
+        let prompts = cases
+            .iter()
+            .flat_map(|(case_id, start)| {
+                (*start..*start + 10).map(move |prompt_index| {
+                    json!({
+                        "case_id": case_id,
+                        "prompt_index": prompt_index,
+                        "repeat_index": prompt_index - *start,
+                        "fallback_used": false,
+                        "backend": {
+                            "fallback_used": false,
+                            "runtime_api": "cpu",
+                            "selected_backend": "cpu-rust"
+                        },
+                        "quality": {
+                            "passed": true
+                        },
+                        "timing": {
+                            "total_ms": 1.0,
+                            "first_token_ms": 1.0,
+                            "decode_total_ms": 1.0
+                        }
+                    })
+                })
+            })
+            .collect::<Vec<_>>();
+
+        write_json(
+            root,
+            file,
+            json!({
+                "artifact_kind": "slm_cpu_warm_session",
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+                "backend": {
+                    "selected_backend": "cpu-rust",
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                },
+                "quality_summary": {
+                    "passed": true,
+                    "failed_prompt_indices": []
+                },
+                "determinism": {
+                    "passed": true,
+                    "repeated_prompt_groups": 3,
+                    "groups": groups
+                },
+                "claim_boundary": {
+                    "speedup_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "bitnet_quality_claimed": false
+                },
+                "prompts": prompts
+            }),
+        )
+    }
+
     fn write_answer_corpus_v2(root: &Path, file: &str) -> Result<()> {
         fs::create_dir_all(root)?;
         fs::write(
@@ -3541,6 +12565,10 @@ model:
   quant_format: Q8_0
 cases:
   - id: math_2_plus_2_brief
+    category: math
+    profile: regression_tiny
+    gate: {kind: contains_any}
+  - id: arithmetic_add_7_8
     category: math
     profile: regression_tiny
     gate: {kind: contains_any}
@@ -3576,7 +12604,7 @@ cases:
     category: long_prompt_summarization
     profile: prefill_heavy
     gate: {kind: contains_any}
-  - id: short_reasoning_heavier_object
+  - id: short_reasoning_apples_left
     category: short_reasoning
     profile: ask_normal
     gate: {kind: contains_any}
@@ -3585,6 +12613,94 @@ cases:
     profile: decode_heavy
     gate: {kind: readable}
 "#,
+        )?;
+        Ok(())
+    }
+
+    fn write_route_corpus_v2_receipts(root: &Path) -> Result<()> {
+        let current_case_ids = json!([
+            {"id": "math_2_plus_2_brief"},
+            {"id": "arithmetic_add_7_8"},
+            {"id": "copy_exact_color_triplet"},
+            {"id": "yes_no_clear_sky"},
+            {"id": "short_factual_capital_france"},
+            {"id": "instruction_single_sentence_rust"},
+            {"id": "stop_token_one_word_done"},
+            {"id": "transcript_context_code_word"},
+            {"id": "structured_json_city_country"},
+            {"id": "long_prompt_summary_route_policy"},
+            {"id": "short_reasoning_apples_left"},
+            {"id": "decode_heavy_short_list"}
+        ]);
+        let stale_openvino_case_ids = json!([
+            {"id": "math_2_plus_2_brief"},
+            {"id": "copy_exact_color_triplet"},
+            {"id": "yes_no_clear_sky"},
+            {"id": "short_factual_capital_france"},
+            {"id": "instruction_single_sentence_rust"},
+            {"id": "stop_token_one_word_done"},
+            {"id": "transcript_context_code_word"},
+            {"id": "structured_json_city_country"},
+            {"id": "long_prompt_summary_route_policy"},
+            {"id": "short_reasoning_heavier_object"},
+            {"id": "decode_heavy_short_list"}
+        ]);
+        write_json(
+            root,
+            DENSE_CPU_CORPUS_V2,
+            json!({
+                "artifact_kind": "slm_cpu_answer_corpus",
+                "fallback_used": false,
+                "cases": current_case_ids,
+                "profile_summary": {
+                    "regression_tiny": {"total": 4, "passed": 4, "failed": 0},
+                    "ask_short": {"total": 2, "passed": 1, "failed": 1},
+                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            DENSE_OV_CORPUS_V2,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "runtime_device": "CPU",
+                            "fallback_used": false,
+                            "cases": stale_openvino_case_ids.clone(),
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0}
+                                }
+                            }
+                        },
+                        {
+                            "runtime_device": "GPU.0",
+                            "fallback_used": false,
+                            "cases": stale_openvino_case_ids.clone(),
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 1, "failed": 1},
+                                    "ask_normal": {"total": 3, "passed": 3, "failed": 0}
+                                }
+                            }
+                        },
+                        {
+                            "runtime_device": "NPU",
+                            "fallback_used": false,
+                            "cases": stale_openvino_case_ids.clone(),
+                            "quality_summary": {
+                                "profile_summary": {
+                                    "ask_short": {"total": 2, "passed": 2, "failed": 0}
+                                }
+                            }
+                        }
+                    ]
+                }
+            }),
         )?;
         Ok(())
     }

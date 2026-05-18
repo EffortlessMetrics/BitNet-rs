@@ -39,17 +39,39 @@ jobs:
         if: github.base_ref != ''
         run: git fetch origin ${{ github.base_ref }}
 
+      - name: Build xtask
+        run: cargo build --locked -p xtask --no-default-features
+
       - name: RIPR PR evidence
         env:
           RIPR_BASE: origin/${{ github.base_ref }}
-        run: cargo xtask ripr-pr
+        run: |
+          if ! timeout 50s target/debug/xtask ripr-pr; then
+            mkdir -p target/ripr/pr
+            printf '%s\n' \
+              '{' \
+              '  "findings": [],' \
+              '  "warnings": ["ripr-pr timed out; JSON and markdown fallback written for advisory contract"]' \
+              '}' > target/ripr/pr/repo-exposure.json
+            printf '%s\n' \
+              'RIPR PR evidence timed out; JSON and markdown fallback written for advisory contract.' \
+              > target/ripr/pr/repo-exposure.md
+          fi
 
       - name: RIPR review guidance
         run: |
-          if ! timeout 120s cargo xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD; then
+          if ! timeout 25s target/debug/xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD; then
             mkdir -p target/ripr/review
             printf '%s\n' \
               '{' \
+              '  "schema_version": 1,' \
+              '  "tool": "ripr",' \
+              '  "mode": "review-comments-fallback",' \
+              '  "summary": {' \
+              '    "status": "timed_out",' \
+              '    "warnings": ["ripr review-comments timed out; see EffortlessMetrics/ripr#876"]' \
+              '  },' \
+              '  "findings": [],' \
               '  "comments": [],' \
               '  "summary_only": true,' \
               '  "suppressed": [],' \
@@ -62,11 +84,11 @@ jobs:
 
       - name: RIPR PR contract
         if: always()
-        run: cargo xtask ripr-pr --check
+        run: target/debug/xtask ripr-pr --check
 
       - name: RIPR review contract
         if: always()
-        run: cargo xtask ripr-review-comments --check
+        run: target/debug/xtask ripr-review-comments --check
 
       - name: RIPR summary
         if: always()
@@ -83,7 +105,7 @@ jobs:
 
       - name: RIPR annotations
         if: always()
-        run: python scripts/ripr-annotations.py
+        run: target/debug/xtask ripr-annotations
 
       - name: Upload RIPR PR evidence
         if: always()

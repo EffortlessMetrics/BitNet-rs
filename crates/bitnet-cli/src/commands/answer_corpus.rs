@@ -6,6 +6,7 @@ use clap::{Args, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use std::{
+    borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     ffi::OsString,
     fs::{self, File},
@@ -80,6 +81,17 @@ const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
     "timing_decode_total_ms_recorded",
     "latency_total_ms_recorded",
 ];
+const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
+    "exact_match",
+    "normalized_match",
+    "json_schema",
+    "numeric_tolerance",
+    "required_keywords",
+    "forbidden_tokens",
+    "required_forbidden_tokens",
+];
+const ANSWER_CORPUS_FAILURE_CATEGORIES: &[&str] =
+    &["formatting", "factual_table", "extraction", "refusal", "timeout", "schema", "normalization"];
 
 /// Run the fixed answer corpus through the existing `bitnet run` surface.
 #[derive(Args, Debug)]
@@ -333,12 +345,15 @@ impl AnswerCorpusCommand {
             "prompt_template": corpus.defaults.prompt_template.as_str(),
             "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
             "corpus": {
+                "id": corpus.corpus_id(),
                 "path": self.corpus.display().to_string(),
-                "name": corpus.name,
-                "description": corpus.description,
+                "name": corpus.name.clone(),
+                "description": corpus.description.clone(),
                 "case_count": corpus.cases.len(),
                 "selected_case_count": selected_case_ids.len(),
                 "selected_case_ids": selected_case_ids,
+                "metadata": answer_corpus_metadata_receipt(&corpus),
+                "contract": answer_corpus_contract_receipt(&corpus),
             },
             "model": {
                 "id": model_identity.id,
@@ -396,9 +411,12 @@ impl AnswerCorpusCommand {
                 "failed": failed,
                 "timeout": timed_out,
                 "not_run": not_run,
+                "failure_categories": failure_category_summary(&rows),
             },
             "scoring_summary": scoring_summary(&rows),
+            "scoring_contract": answer_corpus_scoring_contract_receipt(&corpus),
             "task_family_summary": task_family_summary(&rows),
+            "profile_summary": profile_summary(&rows),
             "reference_comparison": reference_comparison_summary(
                 &rows,
                 bitnet_answer_path,
@@ -581,11 +599,20 @@ impl AnswerCorpusCommand {
         quality.failed_rules.extend(answer_receipt_failed_rules(&run_receipt, device));
         quality.passed = quality.failed_rules.is_empty();
         let status = if quality.passed { "passed" } else { "quality_failed" };
+        let failure_category_labels = failure_categories_for_case(
+            case.task_family(),
+            status,
+            &quality.failed_rules,
+            &quality.failure_taxonomy,
+            quality.scoring.as_ref().map(|scoring| scoring.kind.as_str()),
+        );
+        let failure_categories = failure_category_fields(&failure_category_labels);
 
         Ok(json!({
             "id": case.id,
             "task_family": case.task_family(),
             "category": case.category.as_deref().unwrap_or_else(|| case.task_family()),
+            "profile": case.profile(),
             "seed_material": case.seed_material,
             "question": case.question,
             "status": status,
@@ -640,6 +667,8 @@ impl AnswerCorpusCommand {
                 "scoring": scoring_result_json(quality.scoring.as_ref()),
                 "failed_rules": quality.failed_rules,
                 "failure_taxonomy": quality.failure_taxonomy,
+                "failure_category_labels": failure_category_labels,
+                "failure_categories": failure_categories,
             },
             "backend": {
                 "requested_backend": run_receipt["requested_backend"].clone(),
@@ -698,6 +727,7 @@ impl AnswerCorpusCommand {
             "id": case.id,
             "task_family": case.task_family(),
             "category": case.category.as_deref().unwrap_or_else(|| case.task_family()),
+            "profile": case.profile(),
             "seed_material": case.seed_material,
             "question": case.question,
             "status": "not_run",
@@ -706,6 +736,8 @@ impl AnswerCorpusCommand {
                 "passed": false,
                 "failed_rules": ["not_run"],
                 "failure_taxonomy": [],
+                "failure_category_labels": [],
+                "failure_categories": failure_category_fields(&[]),
                 "scoring": scoring_not_run_json(case.scoring.as_ref()),
             },
             "backend": {
@@ -737,6 +769,8 @@ struct AnswerCorpus {
     artifact_kind: String,
     name: String,
     description: String,
+    #[serde(default)]
+    metadata: AnswerCorpusMetadata,
     model: CorpusModel,
     defaults: CorpusDefaults,
     cases: Vec<AnswerCase>,
@@ -757,11 +791,69 @@ impl AnswerCorpus {
         if corpus.cases.is_empty() {
             anyhow::bail!("answer corpus must contain at least one case");
         }
+        let mut case_ids = BTreeSet::new();
         for case in &corpus.cases {
+            if !case_ids.insert(case.id.as_str()) {
+                anyhow::bail!("answer corpus case id `{}` is duplicated", case.id);
+            }
             validate_answer_scoring(case)?;
         }
+        validate_answer_corpus_contract(&corpus)?;
         Ok(corpus)
     }
+
+    fn corpus_id(&self) -> &str {
+        self.metadata
+            .corpus_contract
+            .as_ref()
+            .map(|contract| contract.corpus_id.as_str())
+            .filter(|value| !value.is_empty())
+            .unwrap_or(self.name.as_str())
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct AnswerCorpusMetadata {
+    #[serde(default)]
+    campaign: Option<String>,
+    #[serde(default)]
+    work_item: Option<String>,
+    #[serde(default)]
+    seed: Option<u64>,
+    #[serde(default)]
+    generator_policy: Option<String>,
+    #[serde(default)]
+    case_count_target: Option<usize>,
+    #[serde(default)]
+    prompt_template: Option<String>,
+    #[serde(default)]
+    scoring_status: Option<String>,
+    #[serde(default)]
+    claim_boundary: Option<Value>,
+    #[serde(default)]
+    corpus_contract: Option<CorpusContract>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct CorpusContract {
+    #[serde(default)]
+    contract_version: String,
+    #[serde(default)]
+    corpus_id: String,
+    #[serde(default)]
+    corpus_version: String,
+    #[serde(default)]
+    seed_generation_rules: String,
+    #[serde(default)]
+    expected_output_provenance: String,
+    #[serde(default)]
+    normalization_rules: String,
+    #[serde(default)]
+    scoring_schema: String,
+    #[serde(default)]
+    scorer_self_tests: Vec<String>,
+    #[serde(default)]
+    receipt_contract: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -888,6 +980,8 @@ struct AnswerCase {
     #[serde(default)]
     category: Option<String>,
     #[serde(default)]
+    profile: Option<String>,
+    #[serde(default)]
     seed_material: Option<String>,
     question: String,
     max_new_tokens: Option<usize>,
@@ -904,6 +998,10 @@ struct AnswerCase {
 impl AnswerCase {
     fn task_family(&self) -> &str {
         self.category.as_deref().unwrap_or("uncategorized")
+    }
+
+    fn profile(&self) -> &str {
+        self.profile.as_deref().unwrap_or("unprofiled")
     }
 }
 
@@ -975,6 +1073,7 @@ struct ScoringResult {
     normalized_answer: String,
     failed_rules: Vec<String>,
     failure_taxonomy: Vec<String>,
+    failure_categories: Vec<String>,
     details: Value,
 }
 
@@ -1108,6 +1207,123 @@ fn validate_answer_corpus_inputs(
     Ok(())
 }
 
+fn validate_answer_corpus_contract(corpus: &AnswerCorpus) -> Result<()> {
+    let Some(contract) = corpus.metadata.corpus_contract.as_ref() else {
+        return Ok(());
+    };
+
+    let required_fields = [
+        ("contract_version", contract.contract_version.as_str()),
+        ("corpus_id", contract.corpus_id.as_str()),
+        ("corpus_version", contract.corpus_version.as_str()),
+        ("seed_generation_rules", contract.seed_generation_rules.as_str()),
+        ("expected_output_provenance", contract.expected_output_provenance.as_str()),
+        ("normalization_rules", contract.normalization_rules.as_str()),
+        ("scoring_schema", contract.scoring_schema.as_str()),
+        ("receipt_contract", contract.receipt_contract.as_str()),
+    ];
+    let missing: Vec<&str> = required_fields
+        .into_iter()
+        .filter_map(|(field, value)| value.trim().is_empty().then_some(field))
+        .collect();
+    if !missing.is_empty() {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract is missing required fields: {}",
+            corpus.name,
+            missing.join(", ")
+        );
+    }
+    if contract.scorer_self_tests.is_empty()
+        || contract.scorer_self_tests.iter().any(|value| value.trim().is_empty())
+    {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract.scorer_self_tests must list non-empty scorer self-tests",
+            corpus.name
+        );
+    }
+    if contract.corpus_id != corpus.name {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract.corpus_id must match corpus name `{}`",
+            contract.corpus_id,
+            corpus.name
+        );
+    }
+    if corpus.metadata.seed.is_none() {
+        anyhow::bail!("answer corpus `{}` corpus_contract requires metadata.seed", corpus.name);
+    }
+    if corpus.metadata.generator_policy.as_deref().is_none_or(str::is_empty) {
+        anyhow::bail!(
+            "answer corpus `{}` corpus_contract requires metadata.generator_policy",
+            corpus.name
+        );
+    }
+    if corpus.metadata.case_count_target != Some(corpus.cases.len()) {
+        anyhow::bail!(
+            "answer corpus `{}` metadata.case_count_target must equal case count {}",
+            corpus.name,
+            corpus.cases.len()
+        );
+    }
+    if corpus.metadata.prompt_template.as_deref() != Some(corpus.defaults.prompt_template.as_str())
+    {
+        anyhow::bail!(
+            "answer corpus `{}` metadata.prompt_template must match defaults.prompt_template `{}`",
+            corpus.name,
+            corpus.defaults.prompt_template
+        );
+    }
+    Ok(())
+}
+
+fn answer_corpus_metadata_receipt(corpus: &AnswerCorpus) -> Value {
+    json!({
+        "campaign": corpus.metadata.campaign,
+        "work_item": corpus.metadata.work_item,
+        "seed": corpus.metadata.seed,
+        "generator_policy": corpus.metadata.generator_policy,
+        "case_count_target": corpus.metadata.case_count_target,
+        "prompt_template": corpus.metadata.prompt_template,
+        "scoring_status": corpus.metadata.scoring_status,
+        "claim_boundary": corpus.metadata.claim_boundary,
+    })
+}
+
+fn answer_corpus_contract_receipt(corpus: &AnswerCorpus) -> Value {
+    corpus
+        .metadata
+        .corpus_contract
+        .as_ref()
+        .map(|contract| {
+            json!({
+                "contract_version": contract.contract_version,
+                "corpus_id": contract.corpus_id,
+                "corpus_version": contract.corpus_version,
+                "seed_generation_rules": contract.seed_generation_rules,
+                "expected_output_provenance": contract.expected_output_provenance,
+                "normalization_rules": contract.normalization_rules,
+                "scoring_schema": contract.scoring_schema,
+                "scorer_self_tests": contract.scorer_self_tests,
+                "receipt_contract": contract.receipt_contract,
+            })
+        })
+        .unwrap_or(Value::Null)
+}
+
+fn answer_corpus_scoring_contract_receipt(corpus: &AnswerCorpus) -> Value {
+    let contract = corpus.metadata.corpus_contract.as_ref();
+    json!({
+        "contract_version": contract.map(|contract| contract.contract_version.as_str()),
+        "scoring_schema": contract.map(|contract| contract.scoring_schema.as_str()),
+        "normalization_rules": contract.map(|contract| contract.normalization_rules.as_str()),
+        "expected_output_provenance": contract
+            .map(|contract| contract.expected_output_provenance.as_str()),
+        "receipt_contract": contract.map(|contract| contract.receipt_contract.as_str()),
+        "scorer_self_tests": contract.map(|contract| contract.scorer_self_tests.as_slice()),
+        "supported_scoring_kinds": ANSWER_CORPUS_SCORING_KINDS,
+        "supported_failure_categories": ANSWER_CORPUS_FAILURE_CATEGORIES,
+    })
+}
+
 fn corpus_answer_ready_artifact_available(model: &CorpusModel) -> bool {
     model.answer_ready.as_ref().is_some_and(|authority| authority.state == "answer_ready")
 }
@@ -1227,7 +1443,7 @@ fn evaluate_quality(
     min_generated_tokens: Option<usize>,
     min_distinct_generated_tokens: Option<usize>,
 ) -> QualityResult {
-    let normalized = strip_special_markers(answer).trim().to_string();
+    let normalized = normalize_scoring_text(answer);
     let non_empty_answer = !normalized.is_empty();
     let no_replacement_chars = !normalized.contains('\u{FFFD}');
     let no_raw_special_tokens = !contains_raw_special_token(&normalized);
@@ -1255,7 +1471,8 @@ fn evaluate_quality(
         failed_rules.push("printable_utf8".to_string());
     }
 
-    if !gate_passed(&normalized, gate) {
+    let gate_answer = gate_evaluation_text(&normalized, scoring);
+    if !gate_passed(&gate_answer, gate) {
         failed_rules.push(format!("gate_{}", gate.kind));
     }
     let scoring_result = scoring.map(|scoring| evaluate_scoring(&normalized, scoring));
@@ -1329,9 +1546,12 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
                 .map(|schema| validate_schema_style_json(&normalized_answer, &schema))
                 .unwrap_or_else(|| SchemaStyleResult {
                     parsed: false,
+                    source: "raw",
                     failures: vec!["schema_missing_or_invalid".to_string()],
                 });
             details.insert("parsed_json".to_string(), Value::Bool(schema_result.parsed));
+            details
+                .insert("json_source".to_string(), Value::String(schema_result.source.to_string()));
             if !schema_result.failures.is_empty() {
                 failed_rules.extend(schema_result.failures);
             }
@@ -1390,12 +1610,15 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
     }
 
     let failure_taxonomy = scoring_failure_taxonomy(answer, scoring, &kind, &failed_rules);
+    let failure_categories =
+        failure_categories_for_case("", "", &failed_rules, &failure_taxonomy, Some(&kind));
 
     ScoringResult {
         kind,
         passed: failed_rules.is_empty(),
         normalized_answer,
         failure_taxonomy,
+        failure_categories,
         failed_rules,
         details: Value::Object(details),
     }
@@ -1409,6 +1632,8 @@ fn scoring_result_json(result: Option<&ScoringResult>) -> Value {
             "normalized_answer": &result.normalized_answer,
             "failed_rules": &result.failed_rules,
             "failure_taxonomy": &result.failure_taxonomy,
+            "failure_category_labels": &result.failure_categories,
+            "failure_categories": failure_category_fields(&result.failure_categories),
             "details": &result.details,
         })
     })
@@ -1428,6 +1653,8 @@ fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
             "required_keywords": &scoring.required_keywords,
             "forbidden_tokens": &scoring.forbidden_tokens,
             "failure_taxonomy": [],
+            "failure_category_labels": [],
+            "failure_categories": failure_category_fields(&[]),
         })
     })
 }
@@ -1439,6 +1666,7 @@ fn scoring_summary(rows: &[Value]) -> Value {
     let mut not_run = 0usize;
     let mut kinds = BTreeSet::new();
     let mut failure_taxonomy = BTreeMap::<String, usize>::new();
+    let mut failure_categories = BTreeMap::<String, usize>::new();
     for row in rows {
         let scoring = &row["quality"]["scoring"];
         let Some(kind) = scoring["kind"].as_str() else {
@@ -1456,6 +1684,33 @@ fn scoring_summary(rows: &[Value]) -> Value {
         {
             *failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
         }
+        let mut scoring_categories = failure_categories_from_value(scoring);
+        if scoring_categories.is_empty() {
+            let failed_rules = scoring["failed_rules"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            let taxonomy = scoring["failure_taxonomy"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            scoring_categories.extend(failure_categories_for_case(
+                "",
+                "",
+                &failed_rules,
+                &taxonomy,
+                Some(kind),
+            ));
+        }
+        for category in scoring_categories {
+            *failure_categories.entry(category).or_default() += 1;
+        }
     }
     json!({
         "enabled": total > 0,
@@ -1465,7 +1720,18 @@ fn scoring_summary(rows: &[Value]) -> Value {
         "not_run": not_run,
         "kinds": kinds.into_iter().collect::<Vec<_>>(),
         "failure_taxonomy": failure_taxonomy,
+        "failure_categories": failure_categories,
     })
+}
+
+fn failure_category_summary(rows: &[Value]) -> BTreeMap<String, usize> {
+    let mut counts = BTreeMap::<String, usize>::new();
+    for row in rows {
+        for category in row_failure_categories(row) {
+            *counts.entry(category.to_string()).or_default() += 1;
+        }
+    }
+    counts
 }
 
 fn task_family_summary(rows: &[Value]) -> Value {
@@ -1499,12 +1765,56 @@ fn task_family_summary(rows: &[Value]) -> Value {
         for taxonomy in row_failure_taxonomy(row) {
             *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
         }
+        for category in row_failure_categories(row) {
+            *stats.failure_categories.entry(category.to_string()).or_default() += 1;
+        }
     }
 
     Value::Object(
         families
             .into_iter()
             .map(|(family, stats)| (family, stats.into_json()))
+            .collect::<Map<_, _>>(),
+    )
+}
+
+fn profile_summary(rows: &[Value]) -> Value {
+    let mut profiles = BTreeMap::<String, TaskFamilyStats>::new();
+    for row in rows {
+        let profile = row["profile"].as_str().unwrap_or("unprofiled");
+        let stats = profiles.entry(profile.to_string()).or_default();
+        stats.total += 1;
+        match row["status"].as_str().unwrap_or("unknown") {
+            "passed" => stats.passed += 1,
+            "quality_failed" | "command_failed" => stats.failed += 1,
+            "timeout" => stats.timeout += 1,
+            "not_run" => stats.not_run += 1,
+            status => *stats.status_counts.entry(status.to_string()).or_default() += 1,
+        }
+
+        let scoring = &row["quality"]["scoring"];
+        if let Some(kind) = scoring["kind"].as_str() {
+            stats.scoring_total += 1;
+            stats.scoring_kinds.insert(kind.to_string());
+            match scoring["passed"].as_bool() {
+                Some(true) => stats.scoring_passed += 1,
+                Some(false) => stats.scoring_failed += 1,
+                None => stats.scoring_not_run += 1,
+            }
+        }
+
+        for taxonomy in row_failure_taxonomy(row) {
+            *stats.failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
+        }
+        for category in row_failure_categories(row) {
+            *stats.failure_categories.entry(category.to_string()).or_default() += 1;
+        }
+    }
+
+    Value::Object(
+        profiles
+            .into_iter()
+            .map(|(profile, stats)| (profile, stats.into_json()))
             .collect::<Map<_, _>>(),
     )
 }
@@ -1524,6 +1834,51 @@ fn row_failure_taxonomy(row: &Value) -> BTreeSet<&str> {
     taxonomy
 }
 
+fn row_failure_categories(row: &Value) -> BTreeSet<String> {
+    let mut categories = BTreeSet::new();
+    categories.extend(failure_categories_from_value(&row["quality"]));
+    categories.extend(failure_categories_from_value(&row["quality"]["scoring"]));
+    if categories.is_empty() {
+        let failed_rules = row["quality"]["failed_rules"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        let taxonomy =
+            row_failure_taxonomy(row).into_iter().map(str::to_string).collect::<Vec<_>>();
+        let task_family =
+            row["task_family"].as_str().or_else(|| row["category"].as_str()).unwrap_or_default();
+        let status = row["status"].as_str().unwrap_or_default();
+        categories.extend(failure_categories_for_case(
+            task_family,
+            status,
+            &failed_rules,
+            &taxonomy,
+            None,
+        ));
+    }
+    categories
+}
+
+fn failure_categories_from_value(value: &Value) -> BTreeSet<String> {
+    let mut categories = BTreeSet::new();
+    if let Some(labels) = value["failure_category_labels"].as_array() {
+        for label in labels.iter().filter_map(Value::as_str) {
+            categories.insert(label.to_string());
+        }
+    }
+    if let Some(fields) = value["failure_categories"].as_object() {
+        for category in ANSWER_CORPUS_FAILURE_CATEGORIES {
+            if fields.get(*category).and_then(Value::as_bool) == Some(true) {
+                categories.insert((*category).to_string());
+            }
+        }
+    }
+    categories
+}
+
 #[derive(Default)]
 struct TaskFamilyStats {
     total: usize,
@@ -1538,6 +1893,7 @@ struct TaskFamilyStats {
     scoring_not_run: usize,
     scoring_kinds: BTreeSet<String>,
     failure_taxonomy: BTreeMap<String, usize>,
+    failure_categories: BTreeMap<String, usize>,
 }
 
 impl TaskFamilyStats {
@@ -1558,6 +1914,7 @@ impl TaskFamilyStats {
                 "kinds": self.scoring_kinds.into_iter().collect::<Vec<_>>(),
             },
             "failure_taxonomy": self.failure_taxonomy,
+            "failure_categories": self.failure_categories,
         })
     }
 }
@@ -1773,6 +2130,9 @@ fn quality_failure_taxonomy(
     if let Some(scoring) = scoring {
         taxonomy.extend(scoring.failure_taxonomy.iter().cloned());
     }
+    if !failed_rules.is_empty() && looks_like_refusal(answer) {
+        taxonomy.insert("refusal".to_string());
+    }
     taxonomy.into_iter().collect()
 }
 
@@ -1789,6 +2149,9 @@ fn scoring_failure_taxonomy(
     if contains_raw_special_token(answer) {
         taxonomy.insert("raw_special_token_tail".to_string());
         taxonomy.insert("template_or_stop".to_string());
+    }
+    if looks_like_refusal(answer) {
+        taxonomy.insert("refusal".to_string());
     }
     match kind {
         "exact_match" => {
@@ -1840,19 +2203,114 @@ fn scoring_failure_taxonomy(
     taxonomy.into_iter().collect()
 }
 
+fn failure_categories_for_case(
+    task_family: &str,
+    status: &str,
+    failed_rules: &[String],
+    failure_taxonomy: &[String],
+    scoring_kind: Option<&str>,
+) -> Vec<String> {
+    let mut categories = BTreeSet::<String>::new();
+    let has_failure =
+        status == "timeout" || !failed_rules.is_empty() || !failure_taxonomy.is_empty();
+    if !has_failure {
+        return Vec::new();
+    }
+
+    let has_taxonomy = |label: &str| failure_taxonomy.iter().any(|value| value == label);
+    let has_rule = |rule: &str| failed_rules.iter().any(|value| value == rule);
+
+    if status == "timeout" || has_rule("timeout") || has_taxonomy("timeout") {
+        categories.insert("timeout".to_string());
+    }
+    if has_taxonomy("refusal") {
+        categories.insert("refusal".to_string());
+    }
+    if has_taxonomy("punctuation_casing_normalization") {
+        categories.insert("normalization".to_string());
+    }
+    if has_taxonomy("raw_special_token_tail")
+        || has_taxonomy("template_or_stop")
+        || has_taxonomy("fenced_json")
+        || has_taxonomy("format_only")
+        || has_rule("replacement_chars")
+        || has_rule("mostly_text")
+        || has_rule("printable_utf8")
+        || has_rule("raw_special_tokens")
+    {
+        categories.insert("formatting".to_string());
+    }
+    if scoring_kind == Some("json_schema")
+        || failed_rules.iter().any(|rule| {
+            rule == "json_parse"
+                || rule == "schema_missing_or_invalid"
+                || rule.starts_with("json_")
+                || rule.starts_with("scoring_json_")
+        })
+    {
+        categories.insert("schema".to_string());
+    }
+
+    let task_family = task_family.to_ascii_lowercase();
+    if task_family.contains("fixed_table") || task_family.contains("factual") {
+        categories.insert("factual_table".to_string());
+    }
+    if task_family.contains("extraction") {
+        categories.insert("extraction".to_string());
+    }
+
+    categories.into_iter().collect()
+}
+
+fn failure_category_fields(categories: &[String]) -> Value {
+    let set = categories.iter().map(String::as_str).collect::<BTreeSet<_>>();
+    Value::Object(
+        ANSWER_CORPUS_FAILURE_CATEGORIES
+            .iter()
+            .map(|category| ((*category).to_string(), Value::Bool(set.contains(*category))))
+            .collect::<Map<_, _>>(),
+    )
+}
+
+fn looks_like_refusal(answer: &str) -> bool {
+    let normalized = normalize_match_text(answer);
+    [
+        "i cannot",
+        "i can not",
+        "i can't",
+        "cannot answer",
+        "can't answer",
+        "unable to answer",
+        "not able to answer",
+        "sorry",
+    ]
+    .iter()
+    .any(|needle| normalized.contains(needle))
+}
+
 fn contains_fenced_json(answer: &str) -> bool {
     let trimmed = answer.trim_start();
     trimmed.starts_with("```") || trimmed.contains("\n```")
 }
 
 fn normalize_scoring_text(value: &str) -> String {
-    strip_special_markers(value).split_whitespace().collect::<Vec<_>>().join(" ")
+    let stripped = strip_special_markers(value);
+    let collapsed = stripped.split_whitespace().collect::<Vec<_>>().join(" ");
+    strip_leading_assistant_separator(&collapsed).to_string()
 }
 
 fn normalize_match_text(value: &str) -> String {
     normalize_scoring_text(value)
         .trim_matches(|ch: char| matches!(ch, '.' | '!' | '?'))
         .to_ascii_lowercase()
+}
+
+fn gate_evaluation_text<'a>(answer: &'a str, scoring: Option<&AnswerScoring>) -> Cow<'a, str> {
+    if scoring.is_some_and(|scoring| scoring.kind() == "json_schema") {
+        json_scoring_candidate(answer).text
+    } else {
+        Cow::Borrowed(answer)
+    }
 }
 
 fn first_number(value: &str) -> Option<f64> {
@@ -1863,23 +2321,49 @@ fn first_number(value: &str) -> Option<f64> {
 }
 
 fn missing_keywords(answer: &str, keywords: Option<&[String]>) -> Vec<String> {
-    let answer = answer.to_ascii_lowercase();
     keywords
         .unwrap_or_default()
         .iter()
-        .filter(|keyword| !answer.contains(&keyword.to_ascii_lowercase()))
+        .filter(|keyword| !contains_keyword_boundary(answer, keyword))
         .cloned()
         .collect()
 }
 
 fn observed_forbidden_tokens(answer: &str, tokens: Option<&[String]>) -> Vec<String> {
-    let answer = answer.to_ascii_lowercase();
     tokens
         .unwrap_or_default()
         .iter()
-        .filter(|token| answer.contains(&token.to_ascii_lowercase()))
+        .filter(|token| contains_keyword_boundary(answer, token))
         .cloned()
         .collect()
+}
+
+fn contains_keyword_boundary(answer: &str, keyword: &str) -> bool {
+    let haystack = answer.to_ascii_lowercase();
+    let needle = keyword.trim().to_ascii_lowercase();
+    if needle.is_empty() {
+        return false;
+    }
+    let needle_starts_alnum = needle.chars().next().is_some_and(char::is_alphanumeric);
+    let needle_ends_alnum = needle.chars().next_back().is_some_and(char::is_alphanumeric);
+    let mut search_from = 0usize;
+    while let Some(relative_index) = haystack[search_from..].find(&needle) {
+        let start = search_from + relative_index;
+        let end = start + needle.len();
+        let before = haystack[..start].chars().next_back();
+        let after = haystack[end..].chars().next();
+        let left_ok = !needle_starts_alnum || before.is_none_or(|ch| !ch.is_alphanumeric());
+        let right_ok = !needle_ends_alnum || after.is_none_or(|ch| !ch.is_alphanumeric());
+        if left_ok && right_ok {
+            return true;
+        }
+        search_from = haystack[start..]
+            .chars()
+            .next()
+            .map(|ch| start + ch.len_utf8())
+            .unwrap_or(haystack.len());
+    }
+    false
 }
 
 fn normalized_json_schema(schema: &Value) -> Option<Value> {
@@ -1892,12 +2376,18 @@ fn normalized_json_schema(schema: &Value) -> Option<Value> {
 
 struct SchemaStyleResult {
     parsed: bool,
+    source: &'static str,
     failures: Vec<String>,
 }
 
 fn validate_schema_style_json(answer: &str, schema: &Value) -> SchemaStyleResult {
-    let Ok(value) = serde_json::from_str::<Value>(answer.trim()) else {
-        return SchemaStyleResult { parsed: false, failures: vec!["json_parse".to_string()] };
+    let candidate = json_scoring_candidate(answer);
+    let Ok(value) = serde_json::from_str::<Value>(candidate.text.trim()) else {
+        return SchemaStyleResult {
+            parsed: false,
+            source: candidate.source,
+            failures: vec!["json_parse".to_string()],
+        };
     };
     let mut failures = Vec::new();
     if schema["type"].as_str() == Some("object") && !value.is_object() {
@@ -1945,7 +2435,72 @@ fn validate_schema_style_json(answer: &str, schema: &Value) -> SchemaStyleResult
             }
         }
     }
-    SchemaStyleResult { parsed: true, failures }
+    SchemaStyleResult { parsed: true, source: candidate.source, failures }
+}
+
+struct JsonScoringCandidate<'a> {
+    text: Cow<'a, str>,
+    source: &'static str,
+}
+
+fn json_scoring_candidate(answer: &str) -> JsonScoringCandidate<'_> {
+    let trimmed = answer.trim();
+    if serde_json::from_str::<Value>(trimmed).is_ok() {
+        return JsonScoringCandidate { text: Cow::Borrowed(trimmed), source: "raw" };
+    }
+    if let Some(payload) = fenced_json_payload(trimmed) {
+        return JsonScoringCandidate { text: Cow::Owned(payload), source: "fenced_json" };
+    }
+    if let Some(payload) = embedded_json_object(trimmed) {
+        return JsonScoringCandidate { text: Cow::Owned(payload), source: "embedded_json" };
+    }
+    JsonScoringCandidate { text: Cow::Borrowed(trimmed), source: "raw" }
+}
+
+fn fenced_json_payload(answer: &str) -> Option<String> {
+    let fence_start = answer.find("```")?;
+    let after_open = &answer[fence_start + 3..];
+    let after_payload_start = if let Some(index) = after_open.find('\n') {
+        &after_open[index + 1..]
+    } else {
+        let trimmed = after_open.trim_start();
+        if trimmed.starts_with('{') || trimmed.starts_with('[') {
+            trimmed
+        } else {
+            let info_len = trimmed.find(char::is_whitespace)?;
+            trimmed[info_len..].trim_start()
+        }
+    };
+    let fence_end =
+        after_payload_start.find("\n```").or_else(|| after_payload_start.find("```"))?;
+    Some(after_payload_start[..fence_end].trim().to_string())
+}
+
+fn embedded_json_object(answer: &str) -> Option<String> {
+    let start = answer.find('{')?;
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (relative_index, ch) in answer[start..].char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match ch {
+            '\\' if in_string => escaped = true,
+            '"' => in_string = !in_string,
+            '{' if !in_string => depth += 1,
+            '}' if !in_string => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    let end = start + relative_index + ch.len_utf8();
+                    return Some(answer[start..end].trim().to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 fn json_type_matches(value: &Value, expected_type: &str) -> bool {
@@ -2269,12 +2824,44 @@ fn gate_passed(answer: &str, gate: &AnswerGate) -> bool {
 }
 
 fn strip_special_markers(answer: &str) -> String {
-    answer
-        .replace("<|begin_of_text|>", "")
-        .replace("<|end_of_text|>", "")
-        .replace("<|endoftext|>", "")
-        .replace("<|eot_id|>", "")
-        .replace("<|im_end|>", "")
+    let mut cleaned = strip_leading_chatml_assistant(answer.trim_start()).to_string();
+    cleaned = cleaned.replace("<|begin_of_text|>", "");
+    if let Some(index) = earliest_known_stop_marker(&cleaned) {
+        cleaned.truncate(index);
+    }
+    cleaned
+}
+
+fn strip_leading_chatml_assistant(answer: &str) -> &str {
+    let mut rest = answer;
+    loop {
+        let Some(after_marker) = rest.strip_prefix("<|im_start|>assistant") else {
+            return rest;
+        };
+        rest = after_marker
+            .strip_prefix("\r\n")
+            .or_else(|| after_marker.strip_prefix('\n'))
+            .or_else(|| after_marker.strip_prefix(' '))
+            .unwrap_or(after_marker)
+            .trim_start();
+    }
+}
+
+fn earliest_known_stop_marker(answer: &str) -> Option<usize> {
+    ["<|im_end|>", "<|end_of_text|>", "<|endoftext|>", "<|eot_id|>", "<|im_start|>"]
+        .iter()
+        .filter_map(|marker| answer.find(marker))
+        .min()
+}
+
+fn strip_leading_assistant_separator(answer: &str) -> &str {
+    if let Some(after_colon) = answer.strip_prefix(':')
+        && after_colon.starts_with(char::is_whitespace)
+    {
+        after_colon.trim_start()
+    } else {
+        answer
+    }
 }
 
 fn contains_raw_special_token(answer: &str) -> bool {
@@ -2326,10 +2913,21 @@ struct ChildFailureRowInput<'a> {
 }
 
 fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
+    let failed_rules = vec![input.failed_rule.to_string()];
+    let failure_taxonomy = vec![input.failed_rule.to_string()];
+    let failure_category_labels = failure_categories_for_case(
+        input.case.task_family(),
+        input.status,
+        &failed_rules,
+        &failure_taxonomy,
+        input.case.scoring.as_ref().map(AnswerScoring::kind),
+    );
+    let failure_categories = failure_category_fields(&failure_category_labels);
     json!({
         "id": input.case.id,
         "task_family": input.case.task_family(),
         "category": input.case.category.as_deref().unwrap_or_else(|| input.case.task_family()),
+        "profile": input.case.profile(),
         "seed_material": input.case.seed_material,
         "question": input.case.question,
         "status": input.status,
@@ -2338,8 +2936,10 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
         "run_receipt_path": input.case_receipt.display().to_string(),
         "quality": {
             "passed": false,
-            "failed_rules": [input.failed_rule],
-            "failure_taxonomy": [input.failed_rule],
+            "failed_rules": failed_rules,
+            "failure_taxonomy": failure_taxonomy,
+            "failure_category_labels": failure_category_labels,
+            "failure_categories": failure_categories,
             "scoring": scoring_not_run_json(input.case.scoring.as_ref()),
         },
         "backend": {
@@ -2653,6 +3253,79 @@ mod tests {
     }
 
     #[test]
+    fn slm_eval_scoring_quality_treats_qwen_im_start_tail_as_stop_marker() {
+        let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
+        let scoring =
+            AnswerScoring { expected_normalized: Some("4".to_string()), ..scoring("exact_match") };
+        let quality = evaluate_quality(
+            "4<|im_start|>user\nignored",
+            &gate,
+            Some(&scoring),
+            Some(&[19, 151644, 872]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert_eq!(
+            quality.scoring.as_ref().map(|scoring| scoring.normalized_answer.as_str()),
+            Some("4")
+        );
+        assert!(!quality.failed_rules.contains(&"raw_special_tokens".to_string()));
+    }
+
+    #[test]
+    fn slm_eval_scoring_quality_accepts_qwen_assistant_prefix_separator() {
+        let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
+        let scoring =
+            AnswerScoring { expected_normalized: Some("4".to_string()), ..scoring("exact_match") };
+        let quality = evaluate_quality(
+            ": 4<|im_end|>",
+            &gate,
+            Some(&scoring),
+            Some(&[25, 220, 19, 151645]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert_eq!(
+            quality.scoring.as_ref().map(|scoring| scoring.normalized_answer.as_str()),
+            Some("4")
+        );
+    }
+
+    #[test]
+    fn answer_corpus_quality_normalizes_leading_assistant_colon_for_starts_with() {
+        let gate = AnswerGate {
+            starts_with_any: Some(vec!["yes".to_string()]),
+            ..gate("starts_with_any")
+        };
+        let quality = evaluate_quality(
+            ": Yes, the sky is usually blue.<|im_end|>",
+            &gate,
+            None,
+            Some(&[25, 9454, 11, 279, 12765]),
+            None,
+            None,
+        );
+
+        assert!(quality.passed);
+        assert!(!quality.failed_rules.contains(&"gate_starts_with_any".to_string()));
+    }
+
+    #[test]
+    fn answer_corpus_scoring_normalizes_leading_assistant_colon_for_normalized_match() {
+        let scoring = AnswerScoring {
+            expected_normalized: Some("done".to_string()),
+            ..scoring("normalized_match")
+        };
+        let result = evaluate_scoring(": Done<|im_end|>", &scoring);
+
+        assert!(result.passed);
+    }
+
+    #[test]
     fn quality_rejects_punctuation_noise() {
         let quality = evaluate_quality("!!!,,,!!!", &gate("readable"), None, None, None, None);
         assert!(!quality.passed);
@@ -2711,10 +3384,76 @@ mod tests {
         assert!(result.failure_taxonomy.contains(&"format_only".to_string()));
 
         let fenced = evaluate_scoring("```json\n{\"status\":\"ready\"}\n```", &scoring);
-        assert!(!fenced.passed);
-        assert!(fenced.failed_rules.contains(&"json_parse".to_string()));
-        assert!(fenced.failure_taxonomy.contains(&"fenced_json".to_string()));
-        assert!(fenced.failure_taxonomy.contains(&"format_only".to_string()));
+        assert!(fenced.passed);
+        assert_eq!(fenced.details["json_source"], "fenced_json");
+
+        let embedded = evaluate_scoring("Here is the JSON: {\"status\":\"ready\"}", &scoring);
+        assert!(embedded.passed);
+        assert_eq!(embedded.details["json_source"], "embedded_json");
+
+        let malformed_fenced = evaluate_scoring("```json\n{\"status\":\"ready\"\n```", &scoring);
+        assert!(!malformed_fenced.passed);
+        assert!(malformed_fenced.failed_rules.contains(&"json_parse".to_string()));
+        assert!(malformed_fenced.failure_taxonomy.contains(&"fenced_json".to_string()));
+        assert!(malformed_fenced.failure_taxonomy.contains(&"format_only".to_string()));
+    }
+
+    #[test]
+    fn slm_eval_failure_categories_cover_mechanical_triage_fields() {
+        let exact =
+            AnswerScoring { expected_normalized: Some("15".to_string()), ..scoring("exact_match") };
+        let punctuation_only = evaluate_scoring("15.", &exact);
+        assert!(!punctuation_only.passed);
+        assert!(punctuation_only.failure_categories.contains(&"normalization".to_string()));
+
+        let schema = AnswerScoring {
+            schema: Some(json!({
+                "type": "object",
+                "required": ["status"],
+                "additionalProperties": false,
+                "properties": {
+                    "status": { "const": "ready", "type": "string" }
+                }
+            })),
+            ..scoring("json_schema")
+        };
+        let schema_result = evaluate_scoring(r#"{"status":"ready","extra":true}"#, &schema);
+        assert!(schema_result.failure_categories.contains(&"schema".to_string()));
+        assert!(schema_result.failure_categories.contains(&"formatting".to_string()));
+
+        let refused = evaluate_quality(
+            "Sorry, I cannot answer that.",
+            &AnswerGate { expected: Some("Paris".to_string()), ..gate("exact_trimmed") },
+            None,
+            Some(&[1, 2, 3]),
+            None,
+            None,
+        );
+        let refusal_categories = failure_categories_for_case(
+            "fixed_table_qa",
+            "quality_failed",
+            &refused.failed_rules,
+            &refused.failure_taxonomy,
+            None,
+        );
+        assert!(refusal_categories.contains(&"refusal".to_string()));
+        assert!(refusal_categories.contains(&"factual_table".to_string()));
+
+        let timeout_rule = vec!["timeout".to_string()];
+        let timeout_categories = failure_categories_for_case(
+            "synthetic_extraction",
+            "timeout",
+            &timeout_rule,
+            &timeout_rule,
+            Some("exact_match"),
+        );
+        assert!(timeout_categories.contains(&"timeout".to_string()));
+        assert!(timeout_categories.contains(&"extraction".to_string()));
+
+        let fields = failure_category_fields(&timeout_categories);
+        assert_eq!(fields["timeout"], true);
+        assert_eq!(fields["extraction"], true);
+        assert_eq!(fields["schema"], false);
     }
 
     #[test]
@@ -2754,6 +3493,33 @@ mod tests {
     }
 
     #[test]
+    fn slm_eval_scoring_keyword_checks_use_boundaries() {
+        let required = AnswerScoring {
+            required_keywords: Some(vec!["red".to_string()]),
+            ..scoring("required_keywords")
+        };
+        let missing = evaluate_scoring("ready", &required);
+        assert!(!missing.passed);
+        assert!(missing.failed_rules.contains(&"required_keywords".to_string()));
+
+        let forbidden = AnswerScoring {
+            forbidden_tokens: Some(vec!["red".to_string()]),
+            ..scoring("forbidden_tokens")
+        };
+        let clean = evaluate_scoring("ready", &forbidden);
+        assert!(clean.passed);
+        let observed = evaluate_scoring("red alert", &forbidden);
+        assert!(!observed.passed);
+        assert!(observed.failed_rules.contains(&"forbidden_tokens".to_string()));
+
+        let phrase = AnswerScoring {
+            required_keywords: Some(vec!["model cache".to_string()]),
+            ..scoring("required_keywords")
+        };
+        assert!(evaluate_scoring("The model cache is ready.", &phrase).passed);
+    }
+
+    #[test]
     fn slm_eval_scoring_summary_counts_failure_taxonomy() {
         let rows = vec![
             json!({
@@ -2781,6 +3547,9 @@ mod tests {
         assert_eq!(summary["failure_taxonomy"]["punctuation_casing_normalization"], 1);
         assert_eq!(summary["failure_taxonomy"]["fenced_json"], 1);
         assert_eq!(summary["failure_taxonomy"]["format_only"], 1);
+        assert_eq!(summary["failure_categories"]["normalization"], 1);
+        assert_eq!(summary["failure_categories"]["schema"], 1);
+        assert_eq!(summary["failure_categories"]["formatting"], 1);
     }
 
     #[test]
@@ -2788,6 +3557,7 @@ mod tests {
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
             category: Some("arithmetic_exact".to_string()),
+            profile: Some("regression_tiny".to_string()),
             seed_material: Some("seed=912587 family=arithmetic".to_string()),
             question: "What is 2+2?".to_string(),
             max_new_tokens: Some(4),
@@ -2846,6 +3616,8 @@ mod tests {
                 "status": "timeout",
                 "quality": {
                     "failure_taxonomy": ["timeout"],
+                    "failure_category_labels": ["timeout"],
+                    "failure_categories": { "timeout": true },
                     "scoring": {
                         "kind": "exact_match",
                         "passed": null,
@@ -2858,10 +3630,14 @@ mod tests {
                 "status": "quality_failed",
                 "quality": {
                     "failure_taxonomy": ["format_only"],
+                    "failure_category_labels": ["formatting", "schema"],
+                    "failure_categories": { "formatting": true, "schema": true },
                     "scoring": {
                         "kind": "json_schema",
                         "passed": false,
-                        "failure_taxonomy": ["fenced_json"]
+                        "failure_taxonomy": ["fenced_json"],
+                        "failure_category_labels": ["formatting", "schema"],
+                        "failure_categories": { "formatting": true, "schema": true }
                     }
                 }
             }),
@@ -2888,8 +3664,60 @@ mod tests {
         assert_eq!(summary["format_constrained_json"]["failed"], 1);
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["fenced_json"], 1);
         assert_eq!(summary["format_constrained_json"]["failure_taxonomy"]["format_only"], 1);
+        assert_eq!(summary["format_constrained_json"]["failure_categories"]["formatting"], 1);
+        assert_eq!(summary["format_constrained_json"]["failure_categories"]["schema"], 1);
         assert_eq!(summary["numeric_tolerance"]["failed"], 1);
         assert_eq!(summary["numeric_tolerance"]["failure_taxonomy"]["answer_content"], 1);
+    }
+
+    #[test]
+    fn slm_answer_profile_summary_counts_profile_statuses() {
+        let rows = vec![
+            json!({
+                "profile": "regression_tiny",
+                "status": "passed",
+                "quality": {
+                    "failure_taxonomy": [],
+                    "scoring": {
+                        "kind": "required_keywords",
+                        "passed": true,
+                        "failure_taxonomy": []
+                    }
+                }
+            }),
+            json!({
+                "profile": "regression_tiny",
+                "status": "quality_failed",
+                "quality": {
+                    "failure_taxonomy": ["answer_content"],
+                    "scoring": {
+                        "kind": "required_keywords",
+                        "passed": false,
+                        "failure_taxonomy": ["answer_content"]
+                    }
+                }
+            }),
+            json!({
+                "profile": "ask_normal",
+                "status": "timeout",
+                "quality": {
+                    "failure_taxonomy": ["timeout"],
+                    "scoring": {
+                        "kind": "required_keywords",
+                        "passed": null,
+                        "failure_taxonomy": []
+                    }
+                }
+            }),
+        ];
+
+        let summary = profile_summary(&rows);
+        assert_eq!(summary["regression_tiny"]["total"], 2);
+        assert_eq!(summary["regression_tiny"]["passed"], 1);
+        assert_eq!(summary["regression_tiny"]["failed"], 1);
+        assert_eq!(summary["regression_tiny"]["failure_taxonomy"]["answer_content"], 1);
+        assert_eq!(summary["ask_normal"]["timeout"], 1);
+        assert_eq!(summary["ask_normal"]["scoring"]["not_run"], 1);
     }
 
     #[test]
@@ -3227,6 +4055,7 @@ cases:
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
             category: None,
+            profile: None,
             seed_material: None,
             question: "What is 2+2? Answer with only the number.".to_string(),
             max_new_tokens: Some(4),
@@ -3305,6 +4134,7 @@ cases:
         let case = AnswerCase {
             id: "math_2_plus_2".to_string(),
             category: None,
+            profile: None,
             seed_material: None,
             question: "What is 2+2? Answer with only the number.".to_string(),
             max_new_tokens: Some(4),

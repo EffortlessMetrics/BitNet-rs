@@ -1,0 +1,25 @@
+timestamp = "2026-05-16T21:15:52Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-018"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-018-roadmap-state-refresh"
+pr = 5225
+head_sha = "3cb6ac1aee7cf41404de3054726c03adcfd08b63"
+summary = "Opened PR #5225 to refresh the M3 Air roadmap and selected-lane evidence policy."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5225",
+  ".github/workflows/apple-m3-air-dense-slm.yml",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/apple-silicon/macbook-lane.md",
+]
+
+notes = [
+  "The PR updates stale post-M3MBA-017 roadmap state so the next stack points at M3MBA-007 diagnostic work and M3MBA-008 handoff or closure.",
+  "The live PR metadata uses the item:M3MBA-018 label so campaign doctor can reconcile the open PR to this work item.",
+  "The staged M3 workflow now exposes comparison-profile inputs and uploads preflight/model-fetch phase evidence before the expensive validation phase.",
+  "No model inference was run, no BitNet artifact was downloaded or accepted, and the PR makes no M4 Mac mini performance, Metal/MPSGraph model inference, Neural Engine, QK256, or broad Apple Silicon claim.",
+]

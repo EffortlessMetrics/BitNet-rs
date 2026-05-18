@@ -1,0 +1,17 @@
+timestamp = "2026-05-16T07:56:50Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-004"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5089
+head_sha = "bcda848e3b080a7d4579e5c3da5830d2f104a32e"
+branch = "codex/apple-m4-inference-excellence/M4-EXCELLENCE-004-drift-thresholds"
+summary = "Opened PR #5089 for the M4 dense SLM and BitNet drift threshold docs."
+
+notes = [
+  "The PR publishes threshold tables for identity blockers, quality and timeout regressions, timing warnings, memory warnings, and unsupported claim boundaries.",
+  "It explicitly records that BitNet variable warm has dashboard matching-history evidence but no direct `bitnet mac regression --baseline` support yet for `bitnet_apple_m4_warm_session`.",
+  "The work is docs/tracking only and does not change runtime behavior, run live models, download models, enable BitNet chat/serve, or claim Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup.",
+]

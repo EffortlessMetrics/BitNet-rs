@@ -15,7 +15,7 @@ Options:
   -q, --question <QUESTION>
           Question to answer. Kept for scripts that already use `--question`
   -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --model-id <MODEL_ID>
           Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
       --cache-dir <PATH>
@@ -44,6 +44,8 @@ Options:
           Random seed for reproducibility
       --threads <THREADS>
           Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+      --timeout-seconds <SECONDS>
+          Optional wall-clock timeout for the explicit BitNet one-shot ask route
       --json-out <PATH>
           Output strict Mac answer receipt [default: target/apple-m4-productization/mac-ask.json]
       --progress

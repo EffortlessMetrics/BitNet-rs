@@ -18,66 +18,14 @@ use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
-use std::alloc::{GlobalAlloc, Layout, System};
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, error, info, warn};
 
 #[global_allocator]
-static ALLOCATION_AUDIT_ALLOCATOR: AllocationAuditAllocator = AllocationAuditAllocator;
+static ALLOCATION_AUDIT_ALLOCATOR: allocation_audit::AllocationAuditAllocator =
+    allocation_audit::AllocationAuditAllocator;
 
-static ALLOCATION_AUDIT_ENABLED: AtomicBool = AtomicBool::new(false);
-static ALLOCATION_AUDIT_ALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_ALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
-static ALLOCATION_AUDIT_DEALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
-
-struct AllocationAuditAllocator;
-
-unsafe impl GlobalAlloc for AllocationAuditAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { System.alloc_zeroed(layout) };
-        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-        }
-        unsafe { System.dealloc(ptr, layout) };
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        let new_ptr = unsafe { System.realloc(ptr, layout, new_size) };
-        if !new_ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
-            record_allocation_audit_dealloc(layout.size());
-            record_allocation_audit_alloc(new_size);
-        }
-        new_ptr
-    }
-}
-
-fn record_allocation_audit_alloc(size: usize) {
-    ALLOCATION_AUDIT_ALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_ALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
-fn record_allocation_audit_dealloc(size: usize) {
-    ALLOCATION_AUDIT_DEALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
-    ALLOCATION_AUDIT_DEALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
-}
-
+mod allocation_audit;
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
@@ -90,11 +38,22 @@ mod ln_rules;
 mod mac;
 mod model_cache;
 mod planner_receipts;
+mod prompt_audit;
 mod score;
 mod simple_generation;
 pub mod tokenizer_discovery;
 
+use allocation_audit::{
+    AllocationAuditGuard, AllocationAuditSnapshot, allocation_bytes_delta_json,
+    allocation_count_delta_json, allocation_samples_json, mean_alloc_bytes, mean_alloc_count,
+};
+#[cfg(feature = "full-cli")]
+use allocation_audit::{
+    WarmSessionPromptAllocationAudit, WarmSessionPromptSetupAllocationAudit,
+    warm_session_aggregate_allocation_audit_json, warm_session_prompt_allocation_audit_json,
+};
 use exit::*;
+use prompt_audit::*;
 
 /// Build the CLI command for external use (e.g., in tests)
 pub fn build_cli() -> clap::Command {
@@ -152,6 +111,8 @@ fn critical_not_claims() -> Vec<&'static str> {
 
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
+#[cfg(feature = "full-cli")]
+use commands::dense_gguf_linear_parity::is_supported_dense_qwen_cuda_model_path;
 #[cfg(feature = "full-cli")]
 use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufAllLayerPlanCommand,
@@ -1816,7 +1777,9 @@ async fn async_main() -> Result<()> {
             handle_lunar_lake_probe_command(json_out).await
         }
         #[cfg(feature = "full-cli")]
-        Some(Commands::LunarLake(command)) => handle_lunar_lake_command(command).await,
+        Some(Commands::LunarLake(command)) => {
+            handle_lunar_lake_command(command, &requested_backend_label).await
+        }
         Some(Commands::IntelNpuProbe { strict, json_out }) => {
             intel_npu::handle_probe_command(strict, json_out).await
         }
@@ -2277,196 +2240,6 @@ async fn handle_prompt_authority_audit_command(
 
     write_json_output(json_out.as_ref(), &receipt)?;
     Ok(())
-}
-
-fn prompt_audit_reference_parity_json(
-    reference_source: Option<String>,
-    reference_rendered_prompt: Option<String>,
-    reference_prompt_ids: &[u32],
-    bitnet_rendered_prompt: &str,
-    bitnet_prompt_ids: Option<&[u32]>,
-) -> serde_json::Value {
-    let rendered_prompt_available = reference_rendered_prompt.is_some();
-    let prompt_token_ids_available = !reference_prompt_ids.is_empty();
-    let rendered_prompt_match =
-        reference_rendered_prompt.as_deref().map(|reference| reference == bitnet_rendered_prompt);
-    let prompt_token_ids_match = if prompt_token_ids_available {
-        bitnet_prompt_ids.map(|bitnet_ids| reference_prompt_ids == bitnet_ids)
-    } else {
-        None
-    };
-    let first_rendered_prompt_mismatch = reference_rendered_prompt
-        .as_deref()
-        .and_then(|reference| first_string_mismatch(reference, bitnet_rendered_prompt));
-    let first_prompt_token_id_mismatch = if prompt_token_ids_available {
-        bitnet_prompt_ids
-            .and_then(|bitnet_ids| first_token_mismatch(reference_prompt_ids, bitnet_ids))
-    } else {
-        None
-    };
-    let passed = rendered_prompt_match == Some(true) && prompt_token_ids_match == Some(true);
-
-    serde_json::json!({
-        "available": rendered_prompt_available || prompt_token_ids_available,
-        "source": reference_source.unwrap_or_else(|| "unspecified_external_reference".to_string()),
-        "compared_against": "metadata_authority",
-        "reference_rendered_prompt_available": rendered_prompt_available,
-        "reference_prompt_token_ids_available": prompt_token_ids_available,
-        "rendered_prompt_match": rendered_prompt_match,
-        "prompt_token_ids_match": prompt_token_ids_match,
-        "first_rendered_prompt_mismatch_index": first_rendered_prompt_mismatch,
-        "first_prompt_token_id_mismatch_index": first_prompt_token_id_mismatch,
-        "passed": passed,
-    })
-}
-
-#[derive(Debug)]
-struct TokenizerJsonPromptMetadata {
-    family: Option<String>,
-    chat_template: Option<String>,
-}
-
-fn read_resolved_tokenizer_json_prompt_metadata(
-    source: bitnet_tokenizers::auto::TokenizerSource,
-    path: Option<&std::path::Path>,
-) -> Option<TokenizerJsonPromptMetadata> {
-    match source {
-        bitnet_tokenizers::auto::TokenizerSource::Explicit
-        | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
-            path.and_then(read_tokenizer_json_prompt_metadata)
-        }
-        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata
-        | bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => None,
-    }
-}
-
-fn read_tokenizer_json_prompt_metadata(
-    path: &std::path::Path,
-) -> Option<TokenizerJsonPromptMetadata> {
-    if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-        return None;
-    }
-    let value: serde_json::Value = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
-    let family = value
-        .get("tokenizer_class")
-        .and_then(serde_json::Value::as_str)
-        .or_else(|| {
-            value
-                .get("model")
-                .and_then(|model| model.get("type"))
-                .and_then(serde_json::Value::as_str)
-        })
-        .map(str::to_string);
-    let chat_template =
-        value.get("chat_template").and_then(serde_json::Value::as_str).map(str::to_string);
-    Some(TokenizerJsonPromptMetadata { family, chat_template })
-}
-
-fn prompt_audit_current_default_template(
-    model_path: &std::path::Path,
-    tokenizer_path: Option<&std::path::Path>,
-    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
-) -> bitnet_inference::TemplateType {
-    let path_template =
-        bitnet_inference::TemplateType::detect_from_paths(Some(model_path), tokenizer_path);
-    if matches!(path_template, bitnet_inference::TemplateType::BitnetCppAnswer) {
-        bitnet_inference::TemplateType::BitnetCppAnswer
-    } else if tokenizer.token_to_id("<|eot_id|>").is_some() {
-        bitnet_inference::TemplateType::Llama3Chat
-    } else {
-        bitnet_inference::TemplateType::Instruct
-    }
-}
-
-fn prompt_audit_variant_json(
-    label: &str,
-    template_type: bitnet_inference::TemplateType,
-    template_source: &str,
-    prompt: &str,
-    system_prompt: Option<&str>,
-    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
-) -> (serde_json::Value, Option<Vec<u32>>, String) {
-    let rendered_prompt = template_type.apply(prompt, system_prompt);
-    let add_bos = template_type.should_add_bos();
-    let parse_special = template_type.parse_special();
-    let encoded = tokenizer.encode(&rendered_prompt, add_bos, parse_special);
-    let (ids, error) = match encoded {
-        Ok(ids) => (Some(ids), None),
-        Err(error) => (None, Some(error.to_string())),
-    };
-    let entry = serde_json::json!({
-        "mode": label,
-        "prompt_policy": {
-            "template_type": template_type.to_string(),
-            "template_source": template_source,
-            "rendered_prompt": rendered_prompt,
-            "rendered_sha256": compute_sha256_bytes(rendered_prompt.as_bytes()),
-            "add_bos": add_bos,
-            "add_eos": false,
-            "parse_special": parse_special,
-            "add_generation_prompt": !matches!(template_type, bitnet_inference::TemplateType::Raw),
-        },
-        "tokens": {
-            "prompt_token_ids": ids.clone().unwrap_or_default(),
-            "prompt_token_count": ids.as_ref().map(Vec::len),
-            "encode_error": error,
-        }
-    });
-    (entry, ids, rendered_prompt)
-}
-
-fn prompt_audit_classification(
-    current_rendered: &str,
-    metadata_rendered: &str,
-    current_ids: &Option<Vec<u32>>,
-    metadata_ids: &Option<Vec<u32>>,
-) -> (&'static str, Vec<String>, Option<usize>) {
-    let mut notes = Vec::new();
-    if current_rendered != metadata_rendered {
-        notes.push("current_default_rendered_prompt_differs_from_metadata_authority".to_string());
-        return ("prompt", notes, first_string_mismatch(current_rendered, metadata_rendered));
-    }
-    match (current_ids, metadata_ids) {
-        (Some(left), Some(right)) if left != right => {
-            notes.push(
-                "current_default_prompt_token_ids_differ_from_metadata_authority".to_string(),
-            );
-            ("token_ids", notes, first_token_mismatch(left, right))
-        }
-        (Some(_), Some(_)) => {
-            notes.push("current_default_and_metadata_authority_prompt_tokens_match".to_string());
-            notes.push(
-                "model_inference_not_run; first-token logits remain unclassified".to_string(),
-            );
-            ("unknown", notes, None)
-        }
-        _ => {
-            notes.push("one_or_more_prompt_variants_failed_to_encode".to_string());
-            ("token_ids", notes, None)
-        }
-    }
-}
-
-fn first_token_mismatch(left: &[u32], right: &[u32]) -> Option<usize> {
-    let shared = left.len().min(right.len());
-    (0..shared).find(|idx| left[*idx] != right[*idx]).or(if left.len() != right.len() {
-        Some(shared)
-    } else {
-        None
-    })
-}
-
-fn first_string_mismatch(left: &str, right: &str) -> Option<usize> {
-    let mut left_chars = left.chars();
-    let mut right_chars = right.chars();
-    let mut index = 0;
-    loop {
-        match (left_chars.next(), right_chars.next()) {
-            (Some(left), Some(right)) if left == right => index += 1,
-            (Some(_), Some(_)) | (Some(_), None) | (None, Some(_)) => return Some(index),
-            (None, None) => return None,
-        }
-    }
 }
 
 async fn handle_device_smoke_command(
@@ -7471,6 +7244,17 @@ async fn run_cuda_warm_session(
         total_session_ms,
         "strict RTX 5070 Ti CUDA warm answer session",
         "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+        WarmSessionReuseReceiptContext {
+            sampler_reuse_enabled: false,
+            sampler_reuse_policy: "recreated_per_prompt_for_rng_state_independence",
+            sampler_reused_prompt_count: 0,
+            sampler_recreated_prompt_count: prompts.len(),
+            kv_cache_recreated_per_prompt: true,
+            kv_cache_reused_across_prompts: false,
+            kv_cache_reuse_policy: "recreated_per_turn_for_prompt_isolation",
+            kv_cache_reused_prompt_count: 0,
+            kv_cache_recreated_prompt_count: prompts.len(),
+        },
     );
     let cuda_execution_residency =
         cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
@@ -8276,6 +8060,28 @@ async fn run_slm_warm_session(
     let allocation_audit_enabled = allocation_audit;
     let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
     let mut session_buffers = WarmSessionPromptBuffers::default();
+    let mut aggregate_direct_greedy_logits_steps = 0usize;
+    let mut aggregate_logits_vec_extraction_steps = 0usize;
+    let mut aggregate_logits_scratch_reuse_steps = 0usize;
+    let mut prompt_token_cache = WarmSessionPromptTokenCache::default();
+    let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
+    let sampling_config =
+        SamplingConfig { temperature, top_k: top_k as u32, top_p, repetition_penalty, seed };
+    let sampler_reuse_enabled = warm_session_sampler_reuse_enabled(&sampling_config);
+    let sampler_reuse_policy = warm_session_sampler_reuse_policy(sampler_reuse_enabled);
+    let kv_cache_reuse_policy = "single_kv_cache_cleared_per_prompt_for_prompt_isolation";
+    let kv_cache_session_alloc_start = AllocationAuditSnapshot::current();
+    let mut session_kv_cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let kv_cache_session_alloc = AllocationAuditSnapshot::delta_since(kv_cache_session_alloc_start);
+    let kv_cache_reused_across_prompts = true;
+    let mut kv_cache_reused_prompt_count = 0usize;
+    let mut session_sampler = sampler_reuse_enabled.then(|| {
+        let mut sampler = SamplingStrategy::new(sampling_config.clone());
+        sampler.reserve_logits_capacity(logits_capacity);
+        sampler
+    });
+    let mut sampler_reused_prompt_count = 0usize;
+    let mut sampler_recreated_prompt_count = 0usize;
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -8295,17 +8101,29 @@ async fn run_slm_warm_session(
         let parse_special = template_type.parse_special();
         let prompt_tokenize_start = std::time::Instant::now();
         let prompt_tokenize_alloc_start = AllocationAuditSnapshot::current();
-        let encoded_prompt_tokens =
-            tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+        let (encoded_prompt_tokens, prompt_token_cache_hit) = prompt_token_cache
+            .get_or_insert_with(&formatted_prompt, bos_policy, parse_special, || {
+                Ok(tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?)
+            })?;
         let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
         let prompt_tokenize_alloc =
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
-        let buffer_reuse_evidence =
-            session_buffers.reset(encoded_prompt_tokens.len(), max_new_tokens, max_stop_len);
+        let prompt_setup_buffer_reset_alloc_start = AllocationAuditSnapshot::current();
+        let buffer_reuse_evidence = session_buffers.reset(
+            encoded_prompt_tokens.len(),
+            max_new_tokens,
+            max_stop_len,
+            logits_capacity,
+        );
+        let prompt_setup_buffer_reset_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_buffer_reset_alloc_start);
+        let prompt_setup_token_seed_alloc_start = AllocationAuditSnapshot::current();
         session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
         ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
+        let prompt_setup_token_seed_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_token_seed_alloc_start);
         let tokens = &mut session_buffers.tokens;
         let generated_tokens = &mut session_buffers.generated_tokens;
         let decode_step_ms = &mut session_buffers.decode_step_ms;
@@ -8324,20 +8142,34 @@ async fn run_slm_warm_session(
         let token_decode_step_allocs = &mut session_buffers.token_decode_step_allocs;
         let stop_tail_update_allocs = &mut session_buffers.stop_tail_update_allocs;
         let stop_tail = &mut session_buffers.stop_tail;
+        let logits_scratch = &mut session_buffers.logits_scratch;
         let prompt_token_count = tokens.len();
-        let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
-        let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
-        let mut sampler = SamplingStrategy::new(SamplingConfig {
-            temperature,
-            top_k: top_k as u32,
-            top_p,
-            repetition_penalty,
-            seed,
-        });
-        sampler.reserve_logits_capacity(config.model.vocab_size.max(tokenizer.vocab_size()));
+        let prompt_setup_kv_cache_alloc_start = AllocationAuditSnapshot::current();
+        session_kv_cache.clear();
+        kv_cache_reused_prompt_count += 1;
+        let prompt_setup_kv_cache_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_kv_cache_alloc_start);
+        let prompt_setup_sampler_alloc_start = AllocationAuditSnapshot::current();
+        let mut prompt_sampler = if sampler_reuse_enabled {
+            sampler_reused_prompt_count += 1;
+            None
+        } else {
+            sampler_recreated_prompt_count += 1;
+            let mut sampler = SamplingStrategy::new(sampling_config.clone());
+            sampler.reserve_logits_capacity(logits_capacity);
+            Some(sampler)
+        };
+        if let Some(sampler) = session_sampler.as_mut() {
+            sampler.reset();
+        }
+        let prompt_setup_sampler_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_sampler_alloc_start);
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
+        let mut direct_greedy_logits_steps = 0usize;
+        let mut logits_vec_extraction_steps = 0usize;
+        let mut logits_scratch_reuse_steps = 0usize;
 
         let prefill_start = std::time::Instant::now();
         let mut prefill_token_count = 0usize;
@@ -8345,7 +8177,7 @@ async fn run_slm_warm_session(
             for token in &tokens[..tokens.len() - 1] {
                 let prefill_alloc_start = AllocationAuditSnapshot::current();
                 let x = model.embed(&[*token])?;
-                let _ = model.forward(&x, any_cache.as_mut())?;
+                let _ = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
                 if allocation_audit_enabled {
                     prefill_step_allocs
                         .push(AllocationAuditSnapshot::delta_since(prefill_alloc_start));
@@ -8370,7 +8202,7 @@ async fn run_slm_warm_session(
 
             let forward_start = std::time::Instant::now();
             let forward_alloc_start = AllocationAuditSnapshot::current();
-            let h = model.forward(&x, any_cache.as_mut())?;
+            let h = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
             if allocation_audit_enabled {
                 forward_step_allocs.push(AllocationAuditSnapshot::delta_since(forward_alloc_start));
             }
@@ -8380,7 +8212,22 @@ async fn run_slm_warm_session(
             let logits_start = std::time::Instant::now();
             let logits_alloc_start = AllocationAuditSnapshot::current();
             let logits = model.logits(&last_hidden)?;
-            let logits_vec = extract_logits_2d(&logits)?;
+            let use_direct_greedy_logits = can_use_direct_greedy_logits(
+                temperature,
+                repetition_penalty,
+                generated_tokens.is_empty(),
+            );
+            let direct_next_token = if use_direct_greedy_logits {
+                direct_greedy_logits_steps += 1;
+                Some(greedy_argmax_token_2d(&logits)?)
+            } else {
+                if extract_logits_2d_into(&logits, logits_scratch)? {
+                    logits_scratch_reuse_steps += 1;
+                } else {
+                    logits_vec_extraction_steps += 1;
+                }
+                None
+            };
             if allocation_audit_enabled {
                 logits_step_allocs.push(AllocationAuditSnapshot::delta_since(logits_alloc_start));
             }
@@ -8388,7 +8235,17 @@ async fn run_slm_warm_session(
 
             let sample_start = std::time::Instant::now();
             let sample_alloc_start = AllocationAuditSnapshot::current();
-            let next_token = sampler.sample(&logits_vec, generated_tokens)?;
+            let next_token = match direct_next_token {
+                Some(token) => token,
+                None => {
+                    let Some(sampler) = session_sampler.as_mut().or(prompt_sampler.as_mut()) else {
+                        anyhow::bail!(
+                            "warm-session sampler was unavailable for non-direct sampling"
+                        );
+                    };
+                    sampler.sample_in_place(logits_scratch, generated_tokens)?
+                }
+            };
             if allocation_audit_enabled {
                 sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
             }
@@ -8635,9 +8492,26 @@ async fn run_slm_warm_session(
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": max_stop_len > 0,
-                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
-                "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+                "kv_cache_reuse_policy": kv_cache_reuse_policy,
+                "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": true,
+                "kv_cache_recreated_per_prompt": false,
+                "sampler_reuse_policy": sampler_reuse_policy,
+                "sampler_reused_across_prompts": sampler_reuse_enabled,
+                "sampler_recreated_per_prompt": !sampler_reuse_enabled,
+                "logits_buffer_reuse_policy": if logits_vec_extraction_steps == 0 {
+                    "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
+                } else {
+                    "model.logits extraction still falls back to allocating a vector for non-F32 or non-CPU logits; sampler logits scratch is preallocated separately"
+                },
+                "logits_vec_extraction_bypassed": logits_vec_extraction_steps == 0,
+                "direct_greedy_logits_steps": direct_greedy_logits_steps,
+                "logits_scratch_reuse_steps": logits_scratch_reuse_steps,
+                "logits_vec_extraction_steps": logits_vec_extraction_steps,
+                "prompt_token_cache_policy": WarmSessionPromptTokenCache::POLICY,
+                "prompt_token_cache_enabled": true,
+                "prompt_token_cache_hit": prompt_token_cache_hit,
+                "prompt_token_cache_entry_count": prompt_token_cache.entry_count(),
                 "stop_policy_precomputed_once": true,
                 "stop_sequence_count": all_stop_sequences.len(),
                 "stop_token_id_count": all_stop_ids.len(),
@@ -8672,6 +8546,12 @@ async fn run_slm_warm_session(
                 requested_backend: backend_identity.requested_backend.as_str(),
                 prompt_tokenize: prompt_tokenize_alloc,
                 prompt_setup: prompt_setup_alloc,
+                prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                    buffer_reset: prompt_setup_buffer_reset_alloc,
+                    token_seed: prompt_setup_token_seed_alloc,
+                    kv_cache: prompt_setup_kv_cache_alloc,
+                    sampler_setup: prompt_setup_sampler_alloc,
+                },
                 prompt_prefill: prefill_step_allocs,
                 decode_total: decode_step_allocs,
                 embed: embed_step_allocs,
@@ -8741,6 +8621,9 @@ async fn run_slm_warm_session(
         if output.write_prompt_receipts {
             prompt_receipts.push(prompt_receipt_path.display().to_string());
         }
+        aggregate_direct_greedy_logits_steps += direct_greedy_logits_steps;
+        aggregate_logits_vec_extraction_steps += logits_vec_extraction_steps;
+        aggregate_logits_scratch_reuse_steps += logits_scratch_reuse_steps;
         output.status(format!(
             "warm-session: prompt {}/{} completed; first_token_ms={:?}, generated_tokens={}",
             index + 1,
@@ -8758,6 +8641,17 @@ async fn run_slm_warm_session(
         total_session_ms,
         &format!("validated SLM warm session on {}", backend_identity.selected_backend.as_str()),
         "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+        WarmSessionReuseReceiptContext {
+            sampler_reuse_enabled,
+            sampler_reuse_policy,
+            sampler_reused_prompt_count,
+            sampler_recreated_prompt_count,
+            kv_cache_recreated_per_prompt: false,
+            kv_cache_reused_across_prompts,
+            kv_cache_reuse_policy,
+            kv_cache_reused_prompt_count,
+            kv_cache_recreated_prompt_count: 0,
+        },
     );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
@@ -8801,9 +8695,32 @@ async fn run_slm_warm_session(
             "timing_buffers_reused": true,
             "allocation_audit_buffers_reused": true,
             "stop_tail_buffer_reused": max_stop_len > 0,
-            "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-            "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
-            "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+            "kv_cache_reuse_policy": kv_cache_reuse_policy,
+            "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+            "kv_cache_cleared_per_prompt": true,
+            "kv_cache_recreated_per_prompt": false,
+            "kv_cache_reused_prompt_count": kv_cache_reused_prompt_count,
+            "kv_cache_recreated_prompt_count": 0,
+            "sampler_reuse_policy": sampler_reuse_policy,
+            "sampler_reused_across_prompts": sampler_reuse_enabled,
+            "sampler_recreated_per_prompt": !sampler_reuse_enabled,
+            "sampler_reused_prompt_count": sampler_reused_prompt_count,
+            "sampler_recreated_prompt_count": sampler_recreated_prompt_count,
+            "logits_buffer_reuse_policy": if aggregate_logits_vec_extraction_steps == 0 {
+                "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
+            } else {
+                "model.logits extraction still falls back to allocating a vector for non-F32 or non-CPU logits; sampler logits scratch is preallocated separately"
+            },
+            "logits_vec_extraction_bypassed": aggregate_logits_vec_extraction_steps == 0,
+            "direct_greedy_logits_steps": aggregate_direct_greedy_logits_steps,
+            "logits_scratch_reuse_steps": aggregate_logits_scratch_reuse_steps,
+            "logits_vec_extraction_steps": aggregate_logits_vec_extraction_steps,
+            "prompt_token_cache_policy": WarmSessionPromptTokenCache::POLICY,
+            "prompt_token_cache_enabled": true,
+            "prompt_token_cache_hits": prompt_token_cache.hits,
+            "prompt_token_cache_misses": prompt_token_cache.misses,
+            "prompt_token_cache_entry_count": prompt_token_cache.entry_count(),
+            "prompt_token_cache_reused_rendered_prompts": prompt_token_cache.hits > 0,
             "stop_policy_precomputed_once": true,
             "stop_sequence_count": all_stop_sequences.len(),
             "stop_token_id_count": all_stop_ids.len(),
@@ -8925,6 +8842,12 @@ async fn run_slm_warm_session(
             backend_identity.requested_backend.as_str(),
             &prompt_summaries,
         ),
+        "session_setup_allocation_audit": {
+            "enabled": allocation_audit_enabled,
+            "scope": "resident warm-session setup before prompt loop",
+            "kv_cache": allocation_samples_json(std::slice::from_ref(&kv_cache_session_alloc)),
+            "kv_cache_reuse_policy": kv_cache_reuse_policy,
+        },
         "claim_boundary": {
             "warm_session_flow": true,
             "model_loaded_once": true,
@@ -9192,6 +9115,60 @@ struct WarmSessionPromptInput {
 
 #[derive(Debug, Default)]
 #[cfg(feature = "full-cli")]
+struct WarmSessionPromptTokenCache {
+    entries: std::collections::BTreeMap<WarmSessionPromptTokenCacheKey, Vec<u32>>,
+    hits: usize,
+    misses: usize,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptTokenCacheKey {
+    rendered_prompt: String,
+    bos_policy: bool,
+    parse_special: bool,
+}
+
+#[cfg(feature = "full-cli")]
+impl WarmSessionPromptTokenCache {
+    const POLICY: &'static str =
+        "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts";
+
+    fn get_or_insert_with<F>(
+        &mut self,
+        rendered_prompt: &str,
+        bos_policy: bool,
+        parse_special: bool,
+        encode: F,
+    ) -> Result<(&[u32], bool)>
+    where
+        F: FnOnce() -> Result<Vec<u32>>,
+    {
+        let lookup_key = WarmSessionPromptTokenCacheKey {
+            rendered_prompt: rendered_prompt.to_string(),
+            bos_policy,
+            parse_special,
+        };
+        match self.entries.entry(lookup_key) {
+            std::collections::btree_map::Entry::Occupied(entry) => {
+                self.hits += 1;
+                Ok((entry.into_mut().as_slice(), true))
+            }
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                let encoded = encode()?;
+                self.misses += 1;
+                Ok((entry.insert(encoded).as_slice(), false))
+            }
+        }
+    }
+
+    fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+#[derive(Debug, Default)]
+#[cfg(feature = "full-cli")]
 struct WarmSessionPromptBuffers {
     tokens: Vec<u32>,
     generated_tokens: Vec<u32>,
@@ -9211,6 +9188,7 @@ struct WarmSessionPromptBuffers {
     token_decode_step_allocs: Vec<AllocationAuditSnapshot>,
     stop_tail_update_allocs: Vec<AllocationAuditSnapshot>,
     stop_tail: String,
+    logits_scratch: Vec<f32>,
 }
 
 #[cfg(feature = "full-cli")]
@@ -9220,6 +9198,7 @@ impl WarmSessionPromptBuffers {
         prompt_token_capacity: usize,
         max_new_tokens: usize,
         max_stop_len: usize,
+        logits_capacity: usize,
     ) -> serde_json::Value {
         let token_capacity = prompt_token_capacity.saturating_add(max_new_tokens);
         let evidence_before = WarmSessionPromptBufferReuseEvidence::capture_before(
@@ -9227,6 +9206,7 @@ impl WarmSessionPromptBuffers {
             token_capacity,
             max_new_tokens,
             max_stop_len,
+            logits_capacity,
         );
         reserve_total_capacity(&mut self.tokens, token_capacity);
         reserve_total_capacity(&mut self.generated_tokens, max_new_tokens);
@@ -9249,6 +9229,7 @@ impl WarmSessionPromptBuffers {
         reserve_total_capacity(&mut self.token_decode_step_allocs, max_new_tokens);
         reserve_total_capacity(&mut self.stop_tail_update_allocs, max_new_tokens);
         reserve_string_total_capacity(&mut self.stop_tail, max_stop_len.saturating_add(16));
+        reserve_total_capacity(&mut self.logits_scratch, logits_capacity);
 
         self.tokens.clear();
         self.generated_tokens.clear();
@@ -9268,6 +9249,7 @@ impl WarmSessionPromptBuffers {
         self.token_decode_step_allocs.clear();
         self.stop_tail_update_allocs.clear();
         self.stop_tail.clear();
+        self.logits_scratch.clear();
 
         evidence_before.capture_after(self)
     }
@@ -9279,15 +9261,18 @@ struct WarmSessionPromptBufferReuseEvidence {
     token_capacity_needed: usize,
     generated_token_capacity_needed: usize,
     stop_tail_capacity_needed: usize,
+    logits_capacity_needed: usize,
     previous_token_capacity: usize,
     previous_generated_token_capacity: usize,
     previous_stop_tail_capacity: usize,
+    previous_logits_capacity: usize,
     token_capacity: usize,
     generated_token_capacity: usize,
     decode_timing_capacity: usize,
     prefill_allocation_sample_capacity: usize,
     decode_allocation_sample_capacity: usize,
     stop_tail_capacity: usize,
+    logits_capacity: usize,
 }
 
 #[cfg(feature = "full-cli")]
@@ -9297,20 +9282,24 @@ impl WarmSessionPromptBufferReuseEvidence {
         token_capacity_needed: usize,
         generated_token_capacity_needed: usize,
         max_stop_len: usize,
+        logits_capacity_needed: usize,
     ) -> Self {
         Self {
             token_capacity_needed,
             generated_token_capacity_needed,
             stop_tail_capacity_needed: max_stop_len.saturating_add(16),
+            logits_capacity_needed,
             previous_token_capacity: buffers.tokens.capacity(),
             previous_generated_token_capacity: buffers.generated_tokens.capacity(),
             previous_stop_tail_capacity: buffers.stop_tail.capacity(),
+            previous_logits_capacity: buffers.logits_scratch.capacity(),
             token_capacity: buffers.tokens.capacity(),
             generated_token_capacity: buffers.generated_tokens.capacity(),
             decode_timing_capacity: buffers.decode_step_ms.capacity(),
             prefill_allocation_sample_capacity: buffers.prefill_step_allocs.capacity(),
             decode_allocation_sample_capacity: buffers.decode_step_allocs.capacity(),
             stop_tail_capacity: buffers.stop_tail.capacity(),
+            logits_capacity: buffers.logits_scratch.capacity(),
         }
     }
 
@@ -9321,6 +9310,7 @@ impl WarmSessionPromptBufferReuseEvidence {
         self.prefill_allocation_sample_capacity = buffers.prefill_step_allocs.capacity();
         self.decode_allocation_sample_capacity = buffers.decode_step_allocs.capacity();
         self.stop_tail_capacity = buffers.stop_tail.capacity();
+        self.logits_capacity = buffers.logits_scratch.capacity();
         self.to_json()
     }
 
@@ -9329,14 +9319,21 @@ impl WarmSessionPromptBufferReuseEvidence {
         let generated_token_capacity_grew =
             self.generated_token_capacity > self.previous_generated_token_capacity;
         let stop_tail_capacity_grew = self.stop_tail_capacity > self.previous_stop_tail_capacity;
-        let reset_reused_existing_capacity =
-            !(token_capacity_grew || generated_token_capacity_grew || stop_tail_capacity_grew);
+        let logits_capacity_grew = self.logits_capacity > self.previous_logits_capacity;
+        let reset_reused_existing_capacity = !(token_capacity_grew
+            || generated_token_capacity_grew
+            || stop_tail_capacity_grew
+            || logits_capacity_grew);
 
         serde_json::json!({
             "token_capacity_needed": self.token_capacity_needed,
             "token_capacity": self.token_capacity,
             "previous_token_capacity": self.previous_token_capacity,
             "token_capacity_grew": token_capacity_grew,
+            "logits_capacity_needed": self.logits_capacity_needed,
+            "logits_capacity": self.logits_capacity,
+            "previous_logits_capacity": self.previous_logits_capacity,
+            "logits_capacity_grew": logits_capacity_grew,
             "generated_token_capacity_needed": self.generated_token_capacity_needed,
             "generated_token_capacity": self.generated_token_capacity,
             "previous_generated_token_capacity": self.previous_generated_token_capacity,
@@ -9350,7 +9347,8 @@ impl WarmSessionPromptBufferReuseEvidence {
             "stop_tail_capacity_grew": stop_tail_capacity_grew,
             "capacity_sufficient_for_prompt": self.token_capacity >= self.token_capacity_needed
                 && self.generated_token_capacity >= self.generated_token_capacity_needed
-                && self.stop_tail_capacity >= self.stop_tail_capacity_needed,
+                && self.stop_tail_capacity >= self.stop_tail_capacity_needed
+                && self.logits_capacity >= self.logits_capacity_needed,
             "reset_reused_existing_capacity": reset_reused_existing_capacity,
             "buffers_cleared_without_reallocation": reset_reused_existing_capacity,
         })
@@ -9400,6 +9398,20 @@ struct WarmSessionSpeedAccumulator {
     steady_decode_tok_s: Vec<f64>,
 }
 
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionReuseReceiptContext<'a> {
+    sampler_reuse_enabled: bool,
+    sampler_reuse_policy: &'a str,
+    sampler_reused_prompt_count: usize,
+    sampler_recreated_prompt_count: usize,
+    kv_cache_recreated_per_prompt: bool,
+    kv_cache_reused_across_prompts: bool,
+    kv_cache_reuse_policy: &'a str,
+    kv_cache_reused_prompt_count: usize,
+    kv_cache_recreated_prompt_count: usize,
+}
+
 #[cfg(feature = "full-cli")]
 impl WarmSessionSpeedAccumulator {
     fn record(&mut self, prompt: WarmSessionPromptSpeed) {
@@ -9426,6 +9438,7 @@ impl WarmSessionSpeedAccumulator {
         total_session_ms: f64,
         measurement_scope: &str,
         claim: &str,
+        reuse: WarmSessionReuseReceiptContext<'_>,
     ) -> serde_json::Value {
         serde_json::json!({
             "measurement_scope": measurement_scope,
@@ -9444,12 +9457,19 @@ impl WarmSessionSpeedAccumulator {
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": true,
-                "kv_cache_recreated_per_prompt": true,
-                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-                "sampler_recreated_per_prompt": true,
-                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+                "kv_cache_recreated_per_prompt": reuse.kv_cache_recreated_per_prompt,
+                "kv_cache_reused_across_prompts": reuse.kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": reuse.kv_cache_reused_across_prompts,
+                "kv_cache_reuse_policy": reuse.kv_cache_reuse_policy,
+                "kv_cache_reused_prompt_count": reuse.kv_cache_reused_prompt_count,
+                "kv_cache_recreated_prompt_count": reuse.kv_cache_recreated_prompt_count,
+                "sampler_recreated_per_prompt": !reuse.sampler_reuse_enabled,
+                "sampler_reused_across_prompts": reuse.sampler_reuse_enabled,
+                "sampler_reuse_policy": reuse.sampler_reuse_policy,
+                "sampler_reused_prompt_count": reuse.sampler_reused_prompt_count,
+                "sampler_recreated_prompt_count": reuse.sampler_recreated_prompt_count,
                 "logits_buffer_reuse_claimed": false,
-                "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+                "logits_buffer_reuse_policy": "full logits Vec extraction is reported by the session receipt; model.logits tensor allocation remains measured",
             },
             "counts": {
                 "prompt_count": self.prompt_count,
@@ -9475,6 +9495,20 @@ impl WarmSessionSpeedAccumulator {
                 "decode_generated_tok_s": tokens_per_second_json(self.generated_tokens, self.decode_total_ms),
             },
         })
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_sampler_reuse_enabled(config: &bitnet_sampling::SamplingConfig) -> bool {
+    config.temperature.abs() <= f32::EPSILON
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_sampler_reuse_policy(reuse_enabled: bool) -> &'static str {
+    if reuse_enabled {
+        "single_sampler_reused_for_temperature_zero_prompt_independence"
+    } else {
+        "recreated_per_prompt_for_rng_state_independence"
     }
 }
 
@@ -9964,11 +9998,16 @@ fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) 
 }
 
 #[cfg(feature = "full-cli")]
-async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
+async fn handle_lunar_lake_command(
+    command: LunarLakeCommand,
+    requested_backend_label: &str,
+) -> Result<()> {
     match command.action {
         LunarLakeAction::Ask {
             artifact_root,
             operator_receipt,
+            promotion_ledger,
+            profile,
             route,
             model,
             tokenizer,
@@ -9982,6 +10021,8 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
             run_lunar_lake_ask(
                 artifact_root,
                 operator_receipt,
+                promotion_ledger,
+                profile,
                 route,
                 model,
                 tokenizer,
@@ -9989,6 +10030,7 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
                 max_new_tokens,
                 expect_contains,
                 json_out,
+                requested_backend_label,
             )
             .await
         }
@@ -10001,6 +10043,8 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
 async fn run_lunar_lake_ask(
     artifact_root: std::path::PathBuf,
     operator_receipt: std::path::PathBuf,
+    promotion_ledger: std::path::PathBuf,
+    profile: String,
     route_id: String,
     model: std::path::PathBuf,
     tokenizer: Option<std::path::PathBuf>,
@@ -10008,15 +10052,20 @@ async fn run_lunar_lake_ask(
     max_new_tokens: usize,
     expect_contains: Option<String>,
     json_out: Option<std::path::PathBuf>,
+    requested_backend_label: &str,
 ) -> Result<()> {
     if !(1..=128).contains(&max_new_tokens) {
         anyhow::bail!("lunar-lake ask requires --max-new-tokens in 1..=128");
     }
-    let route = commands::lunar_lake::load_operator_ask_route(
+    let route_selection = commands::lunar_lake::resolve_operator_ask_route_selection(
         &artifact_root,
         &operator_receipt,
+        &promotion_ledger,
         &route_id,
+        requested_backend_label,
+        &profile,
     )?;
+    let route = route_selection.route.clone();
     let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
     let source_run_path = source_run_receipt_path(&receipt_path);
 
@@ -10094,6 +10143,7 @@ async fn run_lunar_lake_ask(
         operator_receipt_path: &operator_receipt_path,
         source_run_path: &source_run_path,
         route: &route,
+        route_selection: &route_selection,
         question: &question,
         answer,
         normalized_answer: &normalized_answer,
@@ -10140,6 +10190,7 @@ struct LunarLakeAskReceiptContext<'a> {
     operator_receipt_path: &'a std::path::Path,
     source_run_path: &'a std::path::Path,
     route: &'a commands::lunar_lake::OperatorRoute,
+    route_selection: &'a commands::lunar_lake::OperatorAskRouteSelection,
     question: &'a str,
     answer: &'a str,
     normalized_answer: &'a str,
@@ -10170,6 +10221,15 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "artifact_root": ctx.artifact_root.display().to_string(),
         "operator_receipt": ctx.operator_receipt_path.display().to_string(),
         "source_run_receipt": ctx.source_run_path.display().to_string(),
+        "requested_device": ctx.route_selection.requested_device,
+        "requested_route": ctx.route_selection.requested_route,
+        "profile_id": ctx.route_selection.profile_id,
+        "selected_route": ctx.route_selection.selected_route,
+        "promotion_status": ctx.route_selection.promotion_status,
+        "route_reason": ctx.route_selection.route_reason,
+        "why_not_cpu": ctx.route_selection.why_not_cpu,
+        "why_not_gpu": ctx.route_selection.why_not_gpu,
+        "why_not_npu": ctx.route_selection.why_not_npu,
         "requested_backend": requested_backend,
         "selected_backend": selected_backend,
         "runtime_api": runtime_api,
@@ -10178,6 +10238,22 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "backend_lane": "dense_slm_cpu",
         "selected_kernel_or_runtime": selected_kernel_or_runtime,
         "route_id": ctx.route.route_id,
+        "route_selection": {
+            "requested_device": ctx.route_selection.requested_device,
+            "requested_route": ctx.route_selection.requested_route,
+            "profile_id": ctx.route_selection.profile_id,
+            "selected_route": ctx.route_selection.selected_route,
+            "selected_backend": ctx.route_selection.selected_backend,
+            "runtime_api": ctx.route_selection.runtime_api,
+            "promotion_status": ctx.route_selection.promotion_status,
+            "selection_source": ctx.route_selection.selection_source,
+            "route_reason": ctx.route_selection.route_reason,
+            "why_not_cpu": ctx.route_selection.why_not_cpu,
+            "why_not_gpu": ctx.route_selection.why_not_gpu,
+            "why_not_npu": ctx.route_selection.why_not_npu,
+            "candidate_routes": ctx.route_selection.candidate_routes,
+            "promotion_ledger": ctx.route_selection.promotion_ledger,
+        },
         "model_family": model_family,
         "model_architecture": model_architecture,
         "quantization": quantization,
@@ -10635,15 +10711,11 @@ fn is_dense_qwen_cuda_ask_backend(requested_backend_label: &str) -> bool {
 fn resolve_dense_qwen_cuda_ask_model(
     model: &std::path::Path,
 ) -> Result<Option<std::path::PathBuf>> {
-    const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
-
     if let Some(cached) = model_cache::verified_dense_qwen_cuda_model_arg(model, None)? {
         return Ok(Some(cached.path));
     }
 
-    if model.file_name().and_then(|value| value.to_str())
-        == Some(QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)
-    {
+    if is_supported_dense_qwen_cuda_model_path(model) {
         return Ok(Some(model.to_path_buf()));
     }
 
@@ -11241,6 +11313,42 @@ fn extract_last_token_hidden(
     }
 }
 
+#[cfg(any(test, feature = "full-cli"))]
+fn can_use_direct_greedy_logits(
+    temperature: f32,
+    repetition_penalty: f32,
+    context_tokens_empty: bool,
+) -> bool {
+    temperature == 0.0 && (repetition_penalty == 1.0 || context_tokens_empty)
+}
+
+/// Select the greedy token from 2D logits \[B,V\] without materializing a full
+/// host logits vector. This is only used under the same deterministic
+/// no-penalty guard as `bitnet_sampling::SamplingStrategy`.
+#[cfg(any(test, feature = "full-cli"))]
+fn greedy_argmax_token_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<u32> {
+    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
+
+    let shape = tensor.shape();
+    if shape.len() != 2 {
+        return Err(BitNetError::Validation("Expected 2D tensor".into()).into());
+    }
+    if shape[0] == 0 || shape[1] == 0 {
+        return Err(BitNetError::Validation("Expected non-empty logits tensor".into()).into());
+    }
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.as_candle();
+            let batch_0 = candle.i(0)?;
+            let batch_0 =
+                if batch_0.dtype() != DType::F32 { batch_0.to_dtype(DType::F32)? } else { batch_0 };
+            Ok(batch_0.argmax(0)?.to_scalar::<u32>()?)
+        }
+        ConcreteTensor::Mock(_) => Ok(0),
+    }
+}
+
 /// Extract logits vector from 2D tensor \[B,V\] -> `Vec<f32>`
 fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
@@ -11264,6 +11372,60 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
         ConcreteTensor::Mock(_) => {
             // Return mock logits for testing
             Ok(vec![0.1; 50257])
+        }
+    }
+}
+
+/// Extract 2D logits \[B,V\] into a caller-owned host scratch buffer.
+///
+/// Returns true when the data was copied directly from contiguous/non-contiguous
+/// CPU F32 storage without allocating a fresh `Vec<f32>`. Non-CPU or non-F32
+/// tensors fall back to the compatibility extractor.
+#[cfg(any(test, feature = "full-cli"))]
+fn extract_logits_2d_into(
+    tensor: &bitnet_common::ConcreteTensor,
+    scratch: &mut Vec<f32>,
+) -> Result<bool> {
+    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
+
+    let shape = tensor.shape();
+    if shape.len() != 2 {
+        return Err(BitNetError::Validation("Expected 2D tensor".into()).into());
+    }
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.as_candle();
+            let batch_0 = candle.i(0)?;
+            if batch_0.dtype() != DType::F32 {
+                scratch.clear();
+                scratch.extend(extract_logits_2d(tensor)?);
+                return Ok(false);
+            }
+
+            let (storage, layout) = batch_0.storage_and_layout();
+            let candle_core::Storage::Cpu(cpu_storage) = &*storage else {
+                scratch.clear();
+                scratch.extend(extract_logits_2d(tensor)?);
+                return Ok(false);
+            };
+            let data = cpu_storage.as_slice::<f32>()?;
+
+            scratch.clear();
+            if let Some((start, end)) = layout.contiguous_offsets() {
+                scratch.extend_from_slice(&data[start..end]);
+            } else {
+                scratch.reserve(batch_0.elem_count());
+                for index in batch_0.strided_index() {
+                    scratch.push(data[index]);
+                }
+            }
+            Ok(true)
+        }
+        ConcreteTensor::Mock(_) => {
+            scratch.clear();
+            scratch.resize(50257, 0.1);
+            Ok(true)
         }
     }
 }
@@ -11340,52 +11502,6 @@ fn rounded_ms(ms: f64) -> f64 {
     (ms * 1000.0).round() / 1000.0
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct AllocationAuditSnapshot {
-    alloc_count: u64,
-    alloc_bytes: u64,
-    dealloc_count: u64,
-    dealloc_bytes: u64,
-}
-
-impl AllocationAuditSnapshot {
-    fn current() -> Self {
-        Self {
-            alloc_count: ALLOCATION_AUDIT_ALLOC_COUNT.load(Ordering::Relaxed),
-            alloc_bytes: ALLOCATION_AUDIT_ALLOC_BYTES.load(Ordering::Relaxed),
-            dealloc_count: ALLOCATION_AUDIT_DEALLOC_COUNT.load(Ordering::Relaxed),
-            dealloc_bytes: ALLOCATION_AUDIT_DEALLOC_BYTES.load(Ordering::Relaxed),
-        }
-    }
-
-    fn delta_since(start: Self) -> Self {
-        let current = Self::current();
-        Self {
-            alloc_count: current.alloc_count.saturating_sub(start.alloc_count),
-            alloc_bytes: current.alloc_bytes.saturating_sub(start.alloc_bytes),
-            dealloc_count: current.dealloc_count.saturating_sub(start.dealloc_count),
-            dealloc_bytes: current.dealloc_bytes.saturating_sub(start.dealloc_bytes),
-        }
-    }
-}
-
-struct AllocationAuditGuard {
-    previous: bool,
-}
-
-impl AllocationAuditGuard {
-    fn enable(enabled: bool) -> Self {
-        let previous = ALLOCATION_AUDIT_ENABLED.swap(enabled, Ordering::Relaxed);
-        Self { previous }
-    }
-}
-
-impl Drop for AllocationAuditGuard {
-    fn drop(&mut self) {
-        ALLOCATION_AUDIT_ENABLED.store(self.previous, Ordering::Relaxed);
-    }
-}
-
 fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
     if samples.is_empty() {
         return serde_json::json!({
@@ -11449,319 +11565,6 @@ fn tokens_per_second_json(tokens: usize, elapsed_ms: f64) -> serde_json::Value {
     } else {
         serde_json::json!(rounded_ms(tokens as f64 / (elapsed_ms / 1000.0)))
     }
-}
-
-fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
-    if samples.is_empty() {
-        return serde_json::json!({
-            "count": 0,
-            "alloc_count_total": 0,
-            "alloc_bytes_total": 0,
-            "dealloc_count_total": 0,
-            "dealloc_bytes_total": 0,
-            "net_bytes_total": 0,
-            "mean_alloc_count_per_token": serde_json::Value::Null,
-            "mean_alloc_bytes_per_token": serde_json::Value::Null,
-            "max_alloc_count_per_token": serde_json::Value::Null,
-            "max_alloc_bytes_per_token": serde_json::Value::Null,
-        });
-    }
-
-    let total_alloc_count = samples.iter().map(|sample| sample.alloc_count).sum::<u64>();
-    let total_alloc_bytes = samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>();
-    let total_dealloc_count = samples.iter().map(|sample| sample.dealloc_count).sum::<u64>();
-    let total_dealloc_bytes = samples.iter().map(|sample| sample.dealloc_bytes).sum::<u64>();
-    let max_alloc_count = samples.iter().map(|sample| sample.alloc_count).max().unwrap_or(0);
-    let max_alloc_bytes = samples.iter().map(|sample| sample.alloc_bytes).max().unwrap_or(0);
-    let count = samples.len() as f64;
-
-    let net_bytes_total = total_alloc_bytes as i64 - total_dealloc_bytes as i64;
-
-    serde_json::json!({
-        "count": samples.len(),
-        "alloc_count_total": total_alloc_count,
-        "alloc_bytes_total": total_alloc_bytes,
-        "dealloc_count_total": total_dealloc_count,
-        "dealloc_bytes_total": total_dealloc_bytes,
-        "net_bytes_total": net_bytes_total,
-        "mean_alloc_count_per_token": rounded_ms(total_alloc_count as f64 / count),
-        "mean_alloc_bytes_per_token": rounded_ms(total_alloc_bytes as f64 / count),
-        "max_alloc_count_per_token": max_alloc_count,
-        "max_alloc_bytes_per_token": max_alloc_bytes,
-    })
-}
-
-#[cfg(feature = "full-cli")]
-struct WarmSessionPromptAllocationAudit<'a> {
-    enabled: bool,
-    requested_backend: &'a str,
-    prompt_tokenize: AllocationAuditSnapshot,
-    prompt_setup: AllocationAuditSnapshot,
-    prompt_prefill: &'a [AllocationAuditSnapshot],
-    decode_total: &'a [AllocationAuditSnapshot],
-    embed: &'a [AllocationAuditSnapshot],
-    forward: &'a [AllocationAuditSnapshot],
-    logits: &'a [AllocationAuditSnapshot],
-    sample: &'a [AllocationAuditSnapshot],
-    token_vector_update: &'a [AllocationAuditSnapshot],
-    token_decode: &'a [AllocationAuditSnapshot],
-    stop_tail_update: &'a [AllocationAuditSnapshot],
-    receipt_construction: AllocationAuditSnapshot,
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_prompt_allocation_audit_json(
-    audit: WarmSessionPromptAllocationAudit<'_>,
-) -> serde_json::Value {
-    if !audit.enabled {
-        return serde_json::json!({
-            "enabled": false,
-            "method": "not_requested",
-            "scope": "not_requested",
-        });
-    }
-
-    let prompt_tokenize = std::slice::from_ref(&audit.prompt_tokenize);
-    let prompt_setup = std::slice::from_ref(&audit.prompt_setup);
-    let receipt_construction = std::slice::from_ref(&audit.receipt_construction);
-    let mut hotspots = vec![
-        allocation_hotspot("prompt_tokenize", prompt_tokenize),
-        allocation_hotspot("prompt_setup", prompt_setup),
-        allocation_hotspot("prompt_prefill", audit.prompt_prefill),
-        allocation_hotspot("decode_total", audit.decode_total),
-        allocation_hotspot("model.embed", audit.embed),
-        allocation_hotspot("model.forward", audit.forward),
-        allocation_hotspot("model.logits_and_extract", audit.logits),
-        allocation_hotspot("sampler.sample", audit.sample),
-        allocation_hotspot("token_vector_updates", audit.token_vector_update),
-        allocation_hotspot("tokenizer.decode", audit.token_decode),
-        allocation_hotspot("stop_tail_updates", audit.stop_tail_update),
-        allocation_hotspot("receipt_construction", receipt_construction),
-    ];
-    hotspots.retain(|hotspot| hotspot.alloc_count > 0 || hotspot.alloc_bytes > 0);
-    hotspots.sort_by(|left, right| {
-        right
-            .alloc_bytes
-            .cmp(&left.alloc_bytes)
-            .then_with(|| right.alloc_count.cmp(&left.alloc_count))
-            .then_with(|| left.component.cmp(right.component))
-    });
-
-    serde_json::json!({
-        "enabled": true,
-        "method": "process_global_allocator_counter_delta",
-        "scope": warm_session_allocation_scope(audit.requested_backend),
-        "claim_scope": "allocation counter deltas for this prompt/profile only; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
-        "optimization_deferred": false,
-        "unavoidable_candidates_named_before_optimization": true,
-        "ranked_hotspots": hotspots.iter().map(AllocationHotspot::to_json).collect::<Vec<_>>(),
-        "unavoidable_candidates": [
-            "model.embed/model.forward/model.logits tensor outputs from the current dense Qwen CPU execution path",
-            "tokenizer.decode allocation for per-token text and stop-tail checks",
-            "receipt construction outside the decode hot loop",
-            "prompt token vector growth is controlled by reusable session buffers; model tensor outputs remain the dominant allocation source"
-        ],
-        "instrumentation_included": [
-            "prompt_tokenize",
-            "prompt_setup",
-            "prompt_prefill_step",
-            "decode_step_total",
-            "model.embed",
-            "model.forward",
-            "model.logits_and_extract",
-            "sampler.sample",
-            "token_vector_updates",
-            "tokenizer.decode",
-            "stop_tail_updates",
-            "receipt_construction"
-        ],
-        "instrumentation_excluded": [
-            "model_load",
-            "tokenizer_load",
-            "aggregate_receipt_serialization",
-            "OS allocator reuse and fragmentation outside counter deltas"
-        ],
-        "prompt_tokenize": allocation_samples_json(prompt_tokenize),
-        "prompt_setup": allocation_samples_json(prompt_setup),
-        "prompt_prefill": allocation_samples_json(audit.prompt_prefill),
-        "decode": {
-            "total": allocation_samples_json(audit.decode_total),
-            "steady_state": allocation_samples_json(audit.decode_total.get(1..).unwrap_or(&[])),
-            "embed": allocation_samples_json(audit.embed),
-            "forward": allocation_samples_json(audit.forward),
-            "logits": allocation_samples_json(audit.logits),
-            "sample": allocation_samples_json(audit.sample),
-            "token_vector_update": allocation_samples_json(audit.token_vector_update),
-            "token_decode": allocation_samples_json(audit.token_decode),
-            "stop_tail_update": allocation_samples_json(audit.stop_tail_update),
-        },
-        "receipt_construction": allocation_samples_json(receipt_construction),
-    })
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_aggregate_allocation_audit_json(
-    enabled: bool,
-    requested_backend: &str,
-    prompt_summaries: &[serde_json::Value],
-) -> serde_json::Value {
-    if !enabled {
-        return serde_json::json!({
-            "enabled": false,
-            "method": "not_requested",
-            "scope": "not_requested",
-        });
-    }
-
-    let mut totals = std::collections::BTreeMap::<String, (u64, u64)>::new();
-    for prompt in prompt_summaries {
-        let Some(hotspots) = prompt["allocation_audit"]["ranked_hotspots"].as_array() else {
-            continue;
-        };
-        for hotspot in hotspots {
-            let Some(component) = hotspot["component"].as_str() else {
-                continue;
-            };
-            let entry = totals.entry(component.to_string()).or_default();
-            entry.0 += hotspot["alloc_count"].as_u64().unwrap_or_default();
-            entry.1 += hotspot["alloc_bytes"].as_u64().unwrap_or_default();
-        }
-    }
-    let mut ranked = totals
-        .into_iter()
-        .map(|(component, (alloc_count, alloc_bytes))| {
-            serde_json::json!({
-                "component": component,
-                "alloc_count": alloc_count,
-                "alloc_bytes": alloc_bytes,
-            })
-        })
-        .collect::<Vec<_>>();
-    ranked.sort_by(|left, right| {
-        right["alloc_bytes"]
-            .as_u64()
-            .unwrap_or_default()
-            .cmp(&left["alloc_bytes"].as_u64().unwrap_or_default())
-            .then_with(|| {
-                right["alloc_count"]
-                    .as_u64()
-                    .unwrap_or_default()
-                    .cmp(&left["alloc_count"].as_u64().unwrap_or_default())
-            })
-            .then_with(|| {
-                left["component"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .cmp(right["component"].as_str().unwrap_or_default())
-            })
-    });
-
-    serde_json::json!({
-        "enabled": true,
-        "method": "process_global_allocator_counter_delta",
-        "scope": warm_session_allocation_scope(requested_backend),
-        "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
-        "prompt_count": prompt_summaries.len(),
-        "ranked_hotspots": ranked,
-        "optimization_deferred": false,
-    })
-}
-
-#[cfg(feature = "full-cli")]
-fn warm_session_allocation_scope(requested_backend: &str) -> &'static str {
-    match requested_backend.trim().to_ascii_lowercase().as_str() {
-        "cpu" => "selected generic CPU SLM warm-session prompt hot path",
-        "apple-m3-air-cpu-neon" => {
-            "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
-        }
-        _ => "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
-    }
-}
-
-#[cfg(feature = "full-cli")]
-struct AllocationHotspot {
-    component: &'static str,
-    alloc_count: u64,
-    alloc_bytes: u64,
-}
-
-#[cfg(feature = "full-cli")]
-impl AllocationHotspot {
-    fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
-            "component": self.component,
-            "alloc_count": self.alloc_count,
-            "alloc_bytes": self.alloc_bytes,
-        })
-    }
-}
-
-#[cfg(feature = "full-cli")]
-fn allocation_hotspot(
-    component: &'static str,
-    samples: &[AllocationAuditSnapshot],
-) -> AllocationHotspot {
-    AllocationHotspot {
-        component,
-        alloc_count: samples.iter().map(|sample| sample.alloc_count).sum(),
-        alloc_bytes: samples.iter().map(|sample| sample.alloc_bytes).sum(),
-    }
-}
-
-fn allocation_count_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
-    if samples.is_empty() {
-        return serde_json::json!({
-            "count": 0,
-            "total": 0,
-            "mean_per_token": serde_json::Value::Null,
-            "max_per_token": serde_json::Value::Null,
-        });
-    }
-
-    let total = samples.iter().map(|sample| sample.alloc_count).sum::<u64>();
-    let max = samples.iter().map(|sample| sample.alloc_count).max().unwrap_or(0);
-
-    serde_json::json!({
-        "count": samples.len(),
-        "total": total,
-        "mean_per_token": rounded_ms(total as f64 / samples.len() as f64),
-        "max_per_token": max,
-    })
-}
-
-fn allocation_bytes_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
-    if samples.is_empty() {
-        return serde_json::json!({
-            "count": 0,
-            "total": 0,
-            "mean_per_token": serde_json::Value::Null,
-            "max_per_token": serde_json::Value::Null,
-        });
-    }
-
-    let total = samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>();
-    let max = samples.iter().map(|sample| sample.alloc_bytes).max().unwrap_or(0);
-
-    serde_json::json!({
-        "count": samples.len(),
-        "total": total,
-        "mean_per_token": rounded_ms(total as f64 / samples.len() as f64),
-        "max_per_token": max,
-    })
-}
-
-fn mean_alloc_count(samples: &[AllocationAuditSnapshot]) -> Option<f64> {
-    if samples.is_empty() {
-        return None;
-    }
-    Some(samples.iter().map(|sample| sample.alloc_count).sum::<u64>() as f64 / samples.len() as f64)
-}
-
-fn mean_alloc_bytes(samples: &[AllocationAuditSnapshot]) -> Option<f64> {
-    if samples.is_empty() {
-        return None;
-    }
-    Some(samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>() as f64 / samples.len() as f64)
 }
 
 fn percentile_nearest(sorted_samples: &[f64], percentile: usize) -> f64 {
@@ -11909,7 +11712,7 @@ fn apple_backend_failure_note(requested_backend_label: &str) -> Option<&'static 
             "apple-m3-air-metal is the Apple M3 MacBook Air native Metal identity lane; it is not M4 Mac mini evidence, MPSGraph model inference, Neural Engine execution, or CPU fallback proof.",
         ),
         "apple-m3-air-mpsgraph" => Some(
-            "apple-m3-air-mpsgraph is the Apple M3 MacBook Air graph/reference identity lane; it is not native Metal kernel proof, M4 Mac mini evidence, or Neural Engine execution.",
+            "apple-m3-air-mpsgraph is the Apple M3 MacBook Air graph/reference identity lane; it is not native Metal kernel proof, not M4 Mac mini evidence, and not Neural Engine execution.",
         ),
         "apple-m3-air-cpu-neon" => Some(
             "apple-m3-air-cpu-neon is the Apple M3 MacBook Air CPU/NEON lane; it is not M4 Mac mini evidence, Metal acceleration, Neural Engine execution, or MPSGraph model inference.",
@@ -12586,6 +12389,17 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
+    fn dense_qwen_ask_resolves_qwen3_explicit_model_file() -> Result<()> {
+        let model = std::path::PathBuf::from("C:/models/Qwen3-0.6B-Q8_0.gguf");
+        let resolved = resolve_dense_qwen_cuda_ask_model(&model)?
+            .context("Qwen3 explicit GGUF should resolve to dense Qwen CUDA ask path")?;
+
+        assert_eq!(resolved, model);
+        Ok(())
+    }
+
+    #[test]
     fn ask_defaults_to_warn_logging_for_user_facing_output() {
         let command = Commands::Ask {
             model: std::path::PathBuf::from("qwen2.5-0.5b-instruct-q8_0"),
@@ -12621,6 +12435,7 @@ mod tests {
                     path: None,
                     latest: true,
                     json: false,
+                    format: None,
                 },
             }))),
             Some("warn")
@@ -13114,6 +12929,29 @@ mod tests {
             phase_evidence: Some("slm-phase-warm-session-qwen25-cpu.json".to_string()),
             acceleration_claim: false,
         };
+        let route_selection = commands::lunar_lake::OperatorAskRouteSelection {
+            requested_device: "auto".to_string(),
+            requested_route: "auto".to_string(),
+            profile_id: "ask_normal".to_string(),
+            selected_route: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            promotion_status: "promoted".to_string(),
+            selection_source: "promotion_ledger_auto".to_string(),
+            route_reason: "test route".to_string(),
+            why_not_cpu: vec![
+                "dense_slm_default_cpu is promoted for profile ask_normal and remains the safe no-fallback default"
+                    .to_string(),
+            ],
+            why_not_gpu: vec!["route is not promoted for profile `ask_normal`".to_string()],
+            why_not_npu: vec!["route is not promoted for profile `ask_normal`".to_string()],
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+            promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+            route: route.clone(),
+        };
         let source = serde_json::json!({
             "requested_backend": "cpu",
             "selected_backend": "cpu-rust",
@@ -13151,6 +12989,7 @@ mod tests {
             operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
             source_run_path: std::path::Path::new("lunar-lake-operator-ask-source-run.json"),
             route: &route,
+            route_selection: &route_selection,
             question: "2+2?",
             answer: "\n4<|im_end|>",
             normalized_answer: "4",
@@ -13166,6 +13005,13 @@ mod tests {
         assert_eq!(receipt["backend_lane"], "dense_slm_cpu");
         assert_eq!(receipt["selected_kernel_or_runtime"], "dense-qwen-cpu-reference");
         assert_eq!(receipt["route_id"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["requested_device"], "auto");
+        assert_eq!(receipt["requested_route"], "auto");
+        assert_eq!(receipt["profile_id"], "ask_normal");
+        assert_eq!(receipt["selected_route"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["promotion_status"], "promoted");
+        assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto");
+        assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");
         assert_eq!(receipt["quantization"], "Q8_0");
@@ -13486,6 +13332,17 @@ mod tests {
             1600.0,
             "strict RTX 5070 Ti CUDA warm answer session",
             "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+            WarmSessionReuseReceiptContext {
+                sampler_reuse_enabled: true,
+                sampler_reuse_policy: "single_sampler_reused_for_temperature_zero_prompt_independence",
+                sampler_reused_prompt_count: 2,
+                sampler_recreated_prompt_count: 0,
+                kv_cache_recreated_per_prompt: false,
+                kv_cache_reused_across_prompts: true,
+                kv_cache_reuse_policy: "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+                kv_cache_reused_prompt_count: 2,
+                kv_cache_recreated_prompt_count: 0,
+            },
         );
 
         assert_eq!(receipt["counts"]["prompt_count"], 2);
@@ -13497,6 +13354,43 @@ mod tests {
         assert_eq!(receipt["broad_performance_claim"], false);
         assert_eq!(receipt["reuse"]["model_loaded_once"], true);
         assert_eq!(receipt["reuse"]["logits_buffer_reuse_claimed"], false);
+        assert_eq!(receipt["reuse"]["kv_cache_recreated_per_prompt"], false);
+        assert_eq!(receipt["reuse"]["kv_cache_reused_across_prompts"], true);
+        assert_eq!(receipt["reuse"]["kv_cache_cleared_per_prompt"], true);
+        assert_eq!(
+            receipt["reuse"]["kv_cache_reuse_policy"],
+            "single_kv_cache_cleared_per_prompt_for_prompt_isolation"
+        );
+        assert_eq!(receipt["reuse"]["kv_cache_reused_prompt_count"], 2);
+        assert_eq!(receipt["reuse"]["sampler_recreated_per_prompt"], false);
+        assert_eq!(receipt["reuse"]["sampler_reused_across_prompts"], true);
+        assert_eq!(receipt["reuse"]["sampler_reused_prompt_count"], 2);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_sampler_reuse_is_only_for_temperature_zero() {
+        let greedy = bitnet_sampling::SamplingConfig {
+            temperature: 0.0,
+            repetition_penalty: 1.1,
+            ..Default::default()
+        };
+        let sampled = bitnet_sampling::SamplingConfig {
+            temperature: 0.7,
+            seed: Some(42),
+            ..Default::default()
+        };
+
+        assert!(warm_session_sampler_reuse_enabled(&greedy));
+        assert!(!warm_session_sampler_reuse_enabled(&sampled));
+        assert_eq!(
+            warm_session_sampler_reuse_policy(true),
+            "single_sampler_reused_for_temperature_zero_prompt_independence"
+        );
+        assert_eq!(
+            warm_session_sampler_reuse_policy(false),
+            "recreated_per_prompt_for_rng_state_independence"
+        );
     }
 
     #[test]
@@ -13574,6 +13468,79 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_allocation_audit_reports_prompt_setup_breakdown() {
+        let prompt_tokenize = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 64,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let prompt_setup = AllocationAuditSnapshot {
+            alloc_count: 4,
+            alloc_bytes: 400,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let buffer_reset = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 40,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let token_seed = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 60,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let kv_cache = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 250,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let sampler_setup = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 50,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+
+        let audit = warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
+            enabled: true,
+            requested_backend: "cpu",
+            prompt_tokenize,
+            prompt_setup,
+            prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                buffer_reset,
+                token_seed,
+                kv_cache,
+                sampler_setup,
+            },
+            prompt_prefill: &[],
+            decode_total: &[],
+            embed: &[],
+            forward: &[],
+            logits: &[],
+            sample: &[],
+            token_vector_update: &[],
+            token_decode: &[],
+            stop_tail_update: &[],
+            receipt_construction: AllocationAuditSnapshot::default(),
+        });
+
+        assert_eq!(audit["prompt_setup"]["alloc_bytes_total"], 400);
+        assert_eq!(audit["prompt_setup_breakdown"]["buffer_reset"]["alloc_bytes_total"], 40);
+        assert_eq!(audit["prompt_setup_breakdown"]["token_seed"]["alloc_bytes_total"], 60);
+        assert_eq!(audit["prompt_setup_breakdown"]["kv_cache"]["alloc_bytes_total"], 250);
+        assert_eq!(audit["prompt_setup_breakdown"]["sampler_setup"]["alloc_bytes_total"], 50);
+        assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
+            hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_setup.kv_cache")
+        }));
+    }
+
+    #[test]
     fn allocation_delta_helpers_record_per_token_means() {
         let samples = [
             AllocationAuditSnapshot {
@@ -13645,7 +13612,7 @@ mod tests {
         assert_eq!(slm_warm_session_artifact_kind("cpu"), "slm_cpu_warm_session");
         assert_eq!(slm_warm_session_prompt_artifact_kind("cpu"), "slm_cpu_warm_session_prompt");
         assert_eq!(
-            warm_session_allocation_scope("cpu"),
+            crate::allocation_audit::warm_session_allocation_scope("cpu"),
             "selected generic CPU SLM warm-session prompt hot path"
         );
         assert!(!allocation_audit_backend_supported(&RunBackendIdentity {
@@ -13662,7 +13629,7 @@ mod tests {
     fn warm_session_prompt_buffers_report_capacity_reuse() {
         let mut buffers = WarmSessionPromptBuffers::default();
 
-        let first = buffers.reset(8, 4, 3);
+        let first = buffers.reset(8, 4, 3, 16);
         assert_eq!(first["capacity_sufficient_for_prompt"], true);
         assert_eq!(first["reset_reused_existing_capacity"], false);
         assert_eq!(first["token_capacity_grew"], true);
@@ -13671,16 +13638,88 @@ mod tests {
         buffers.tokens.extend_from_slice(&[1, 2, 3]);
         buffers.generated_tokens.extend_from_slice(&[4, 5]);
         buffers.stop_tail.push_str("tail");
+        buffers.logits_scratch.extend_from_slice(&[0.1, 0.2, 0.3]);
 
-        let second = buffers.reset(4, 2, 2);
+        let second = buffers.reset(4, 2, 2, 8);
         assert!(buffers.tokens.is_empty());
         assert!(buffers.generated_tokens.is_empty());
         assert!(buffers.stop_tail.is_empty());
+        assert!(buffers.logits_scratch.is_empty());
         assert_eq!(second["capacity_sufficient_for_prompt"], true);
         assert_eq!(second["reset_reused_existing_capacity"], true);
         assert_eq!(second["token_capacity_grew"], false);
         assert_eq!(second["generated_token_capacity_grew"], false);
         assert_eq!(second["stop_tail_capacity_grew"], false);
+        assert_eq!(second["logits_capacity_grew"], false);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_prompt_token_cache_reuses_rendered_prompt_ids() -> Result<()> {
+        let mut cache = WarmSessionPromptTokenCache::default();
+        let mut encode_calls = 0usize;
+
+        let (first, first_hit) = cache.get_or_insert_with("prompt", false, true, || {
+            encode_calls += 1;
+            Ok(vec![1, 2, 3])
+        })?;
+        assert_eq!(first, &[1, 2, 3]);
+        assert!(!first_hit);
+
+        let (second, second_hit) = cache.get_or_insert_with("prompt", false, true, || {
+            encode_calls += 1;
+            Ok(vec![9])
+        })?;
+        assert_eq!(second, &[1, 2, 3]);
+        assert!(second_hit);
+
+        let (_third, third_hit) = cache.get_or_insert_with("prompt", true, true, || {
+            encode_calls += 1;
+            Ok(vec![0, 1, 2, 3])
+        })?;
+        assert!(!third_hit);
+
+        assert_eq!(encode_calls, 2);
+        assert_eq!(cache.hits, 1);
+        assert_eq!(cache.misses, 2);
+        assert_eq!(cache.entry_count(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn direct_greedy_logits_guard_matches_sampler_fast_path_policy() {
+        assert!(can_use_direct_greedy_logits(0.0, 1.0, false));
+        assert!(can_use_direct_greedy_logits(0.0, 1.2, true));
+        assert!(!can_use_direct_greedy_logits(0.7, 1.0, false));
+        assert!(!can_use_direct_greedy_logits(0.0, 1.2, false));
+    }
+
+    #[test]
+    fn greedy_argmax_token_2d_matches_lowest_id_tie_policy() -> Result<()> {
+        let logits =
+            candle_core::Tensor::new(&[[0.25f32, 1.0, 0.5, 1.0]], &candle_core::Device::Cpu)?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(logits));
+
+        assert_eq!(greedy_argmax_token_2d(&tensor)?, 1);
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn extract_logits_2d_into_reuses_host_scratch() -> Result<()> {
+        let logits =
+            candle_core::Tensor::new(&[[0.25f32, 1.0, 0.5, 1.5]], &candle_core::Device::Cpu)?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(logits));
+        let mut scratch = Vec::with_capacity(8);
+
+        let reused = extract_logits_2d_into(&tensor, &mut scratch)?;
+
+        assert!(reused);
+        assert_eq!(scratch, vec![0.25, 1.0, 0.5, 1.5]);
+        assert!(scratch.capacity() >= 8);
+        Ok(())
     }
 
     #[test]

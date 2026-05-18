@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T16:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-004"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5160
+head_sha = "9171282ff8a5ea4e12cec72d1965501293afddbc"
+branch = "codex/lunar-lake/LNL258V-OP-004-ledger-auto-route"
+summary = "Opened LNL258V-OP-004 to route Lunar Lake operator ask auto selection through the promotion ledger."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5160",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-math-brief.json",
+]
+
+notes = [
+  "The PR makes auto ask fail closed on ledger-promoted routes for the requested profile and selects dense_slm_default_cpu for ask_normal.",
+  "The auto ask receipt records selected_route, profile_id, promotion_status, route_reason, and GPU/NPU non-selection reasons with fallback_used=false.",
+  "No OpenVINO GPU/NPU promotion, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or BitNet QK256/I2_S behavior change is claimed.",
+]

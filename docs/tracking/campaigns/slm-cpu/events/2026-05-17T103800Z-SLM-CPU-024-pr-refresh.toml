@@ -1,0 +1,24 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-024"
+event = "pr_open"
+timestamp = "2026-05-17T10:38:00Z"
+actor = "codex"
+pr = 5342
+head_sha = "b17a0466eb31ff74d510dbd3cfb999860fb7bcbd"
+branch = "codex/slm-cpu-024-greedy-sampler-fast-path"
+
+summary = "Refreshed #5342 with tracker PR metadata and generated dashboard updates."
+
+notes = [
+  "The refresh marks SLM-CPU-024 as pr_open, records #5342, and updates generated dashboards.",
+  "No runtime code changed after the original sampler fast-path commit.",
+]
+
+validation = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign check slm-cpu",
+  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]

@@ -3,168 +3,20 @@
 //! Carries per-request metadata through an inference pipeline:
 //! request ID, timing, model selection, and client info.
 
-use std::time::{Duration, Instant};
+mod batch;
+mod client;
+mod context;
+mod id;
 
-/// Unique request identifier.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RequestId(pub String);
-
-impl RequestId {
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
-    }
-
-    /// Generate a simple sequential ID.
-    pub fn sequential(n: u64) -> Self {
-        Self(format!("req-{n}"))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for RequestId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// Client information.
-#[derive(Debug, Clone, Default)]
-pub struct ClientInfo {
-    pub ip: Option<String>,
-    pub user_agent: Option<String>,
-    pub api_key_id: Option<String>,
-}
-
-/// Request context carrying metadata through the pipeline.
-#[derive(Debug)]
-pub struct RequestContext {
-    pub id: RequestId,
-    pub created_at: Instant,
-    pub model_id: Option<String>,
-    pub client: ClientInfo,
-    pub max_tokens: usize,
-    pub temperature: f32,
-    pub stream: bool,
-    deadlines: Option<Duration>,
-}
-
-impl RequestContext {
-    pub fn new(id: RequestId) -> Self {
-        Self {
-            id,
-            created_at: Instant::now(),
-            model_id: None,
-            client: ClientInfo::default(),
-            max_tokens: 256,
-            temperature: 1.0,
-            stream: false,
-            deadlines: None,
-        }
-    }
-
-    #[must_use]
-    pub fn with_model(mut self, model: impl Into<String>) -> Self {
-        self.model_id = Some(model.into());
-        self
-    }
-
-    #[must_use]
-    pub const fn with_max_tokens(mut self, n: usize) -> Self {
-        self.max_tokens = n;
-        self
-    }
-
-    #[must_use]
-    pub const fn with_temperature(mut self, t: f32) -> Self {
-        self.temperature = t;
-        self
-    }
-
-    #[must_use]
-    pub const fn with_stream(mut self, stream: bool) -> Self {
-        self.stream = stream;
-        self
-    }
-
-    #[must_use]
-    pub const fn with_deadline(mut self, timeout: Duration) -> Self {
-        self.deadlines = Some(timeout);
-        self
-    }
-
-    #[must_use]
-    pub fn with_client(mut self, client: ClientInfo) -> Self {
-        self.client = client;
-        self
-    }
-
-    /// Time elapsed since request creation.
-    pub fn elapsed(&self) -> Duration {
-        self.created_at.elapsed()
-    }
-
-    /// Check if the request has exceeded its deadline.
-    pub fn is_expired(&self) -> bool {
-        self.deadlines.is_some_and(|deadline| self.elapsed() > deadline)
-    }
-
-    /// Remaining time before deadline (None if no deadline or expired).
-    pub fn remaining(&self) -> Option<Duration> {
-        self.deadlines.and_then(|d| d.checked_sub(self.elapsed()))
-    }
-}
-
-/// Builder for batch request contexts.
-#[derive(Debug)]
-pub struct RequestBatch {
-    requests: Vec<RequestContext>,
-}
-
-impl RequestBatch {
-    pub const fn new() -> Self {
-        Self { requests: Vec::new() }
-    }
-
-    pub fn add(&mut self, ctx: RequestContext) {
-        self.requests.push(ctx);
-    }
-
-    pub const fn len(&self) -> usize {
-        self.requests.len()
-    }
-
-    pub const fn is_empty(&self) -> bool {
-        self.requests.is_empty()
-    }
-
-    pub fn total_max_tokens(&self) -> usize {
-        self.requests.iter().map(|r| r.max_tokens).sum()
-    }
-
-    pub fn has_streaming(&self) -> bool {
-        self.requests.iter().any(|r| r.stream)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &RequestContext> {
-        self.requests.iter()
-    }
-
-    pub fn expired_count(&self) -> usize {
-        self.requests.iter().filter(|r| r.is_expired()).count()
-    }
-}
-
-impl Default for RequestBatch {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub use batch::RequestBatch;
+pub use client::ClientInfo;
+pub use context::RequestContext;
+pub use id::RequestId;
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::*;
 
     #[test]

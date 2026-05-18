@@ -190,19 +190,19 @@ fn resolve_unit_ci_uses_ci_parallelism() {
 }
 
 #[test]
-fn resolve_unit_ci_uses_larger_timeout() {
+fn resolve_unit_ci_uses_exact_larger_timeout() {
     let mgr = ScenarioConfigManager::new();
     let cfg = mgr.resolve(&TestingScenario::Unit, &EnvironmentType::Ci);
-    // max(unit=10s, ci=300s) — CI default timeout comes from TestConfigProfile::default
-    assert!(cfg.test_timeout >= Duration::from_secs(10));
+    // max(unit=10s, ci=300s) — CI default timeout comes from TestConfigProfile::default.
+    assert_eq!(cfg.test_timeout, Duration::from_secs(300));
 }
 
 #[test]
-fn resolve_unit_local_uses_unit_log_level() {
+fn resolve_unit_local_uses_exact_local_log_level() {
     let mgr = ScenarioConfigManager::new();
     let cfg = mgr.resolve(&TestingScenario::Unit, &EnvironmentType::Local);
-    // Unit scenario has "warn" but Local env has "info"; env overrides since it differs from default
-    assert!(!cfg.log_level.is_empty());
+    // Unit scenario has "warn"; Local env matches the base default, so the scenario value remains.
+    assert_eq!(cfg.log_level, "warn");
 }
 
 #[test]
@@ -325,13 +325,19 @@ fn scenario_description_performance() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn available_scenarios_has_unit() {
-    assert!(ScenarioConfigManager::available_scenarios().contains(&TestingScenario::Unit));
-}
+fn available_scenarios_are_comprehensive() {
+    let scenarios = ScenarioConfigManager::available_scenarios();
 
-#[test]
-fn available_scenarios_has_integration() {
-    assert!(ScenarioConfigManager::available_scenarios().contains(&TestingScenario::Integration));
+    assert_eq!(scenarios.len(), 9);
+    assert!(scenarios.contains(&TestingScenario::Unit));
+    assert!(scenarios.contains(&TestingScenario::Integration));
+    assert!(scenarios.contains(&TestingScenario::EndToEnd));
+    assert!(scenarios.contains(&TestingScenario::Performance));
+    assert!(scenarios.contains(&TestingScenario::Smoke));
+    assert!(scenarios.contains(&TestingScenario::CrossValidation));
+    assert!(scenarios.contains(&TestingScenario::Debug));
+    assert!(scenarios.contains(&TestingScenario::Development));
+    assert!(scenarios.contains(&TestingScenario::Minimal));
 }
 
 // ---------------------------------------------------------------------------

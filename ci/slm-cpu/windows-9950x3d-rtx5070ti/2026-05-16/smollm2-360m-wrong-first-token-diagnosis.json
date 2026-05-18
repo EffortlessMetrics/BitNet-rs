@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "slm_cpu_smollm2_360m_wrong_first_token_diagnosis",
+  "work_item": "SLM-CPU-021",
+  "timestamp_utc": "2026-05-16T13:25:36Z",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "summary": "Committed SmolLM2 evidence now localizes the next blocker to reference-compatible first-token diagnosis. The pinned artifact is reference-good under a raw SmolLM2 ChatML prompt, and the current Rust strict CPU retry reaches generation with fallback_used=false but selects token `The` for the math prompt. Existing committed evidence is insufficient to promote CPU answer readiness or start CUDA planning.",
+  "fresh_execution": false,
+  "evidence_synthesis_only": true,
+  "model": {
+    "id": "smollm2-360m-instruct",
+    "artifact_id": "smollm2-360m-instruct-q8_0",
+    "contract_id": "smollm2_360m_instruct_q8_0",
+    "repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+    "revision": "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f",
+    "file": "smollm2-360m-instruct-q8_0.gguf",
+    "sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+    "bytes": 386404992,
+    "gguf_architecture": "llama",
+    "quantization": "Q8_0",
+    "hidden_size": 960,
+    "intermediate_size": 2560,
+    "block_count": 32,
+    "vocab_size": 49152,
+    "context_length": 8192,
+    "tokenizer_pre": "smollm"
+  },
+  "source_evidence": [
+    {
+      "path": "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-15/smollm2-360m-strict-cpu-preflight-blocker.json",
+      "work_item": "SLM-CPU-017",
+      "finding": "Before the governed normalization exception, strict CPU loading failed closed at blk.0.ffn_norm.weight before tokenizer loading, prompt rendering, or generation."
+    },
+    {
+      "path": "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json",
+      "work_item": "SLM-CPU-019",
+      "finding": "Exact metadata-scoped SmolLM2 normalization validation was implemented while generic llama normalization validation remains fail-closed."
+    },
+    {
+      "path": "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+      "work_item": "SLM-CPU-020",
+      "finding": "Strict CPU tokenizer, prompt rendering, and one-token generation were reached with fallback_used=false, but the math prompt selected token id 504 decoded as `The` instead of the expected answer `4`."
+    },
+    {
+      "path": "ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml",
+      "work_item": "M4-MODEL-002",
+      "finding": "The same pinned artifact was reference-good under a raw SmolLM2 ChatML prompt for bounded math, capital, and Rust prompts."
+    },
+    {
+      "path": "ci/quality/apple-m4-slm-model-breadth-rust-m4-quality.toml",
+      "work_item": "M4-MODEL-003",
+      "finding": "Prior diagnostic probes matched prompt/token IDs for one prompt variant but still produced incoherent Rust output, so prompt/token parity alone was insufficient in that evidence set."
+    }
+  ],
+  "strict_cpu_retry_observation": {
+    "receipt": "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "prompt_template": "smollm-chat",
+    "system_prompt": "You are a helpful assistant.",
+    "question": "What is 2+2? Answer with only the number.",
+    "prompt_token_count": 33,
+    "prompt_token_ids_sha256": "cf14c165d7c1576b3c2e6a760fae59a2097b4b4b9d7c619b3186132aaf9707f9",
+    "rendered_prompt_sha256": "b405fcaf0b81921928815e1819bd5cd72eec32e5af63006a18375d03dc5e3516",
+    "generated_tokens": 1,
+    "selected_token_id": 504,
+    "decoded_text": "The",
+    "expected_answer": "4",
+    "quality_gate": "failed",
+    "failure_class": "wrong_first_token"
+  },
+  "reference_context": {
+    "reference_good": true,
+    "reference_prompt_template": "smollm2_chatml_with_explicit_system",
+    "reference_runner": "llama-cli",
+    "reference_math_output": "2+2 equals 4. [end of text]",
+    "reference_capital_output": "The capital of France is Paris. [end of text]",
+    "reference_rust_output_prefix": "Rust is a programming language that is known for its safety features, memory safety, and performance, making it a popular",
+    "reference_evidence_path": "ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml"
+  },
+  "diagnosis": {
+    "blocker": "wrong_first_token_after_strict_cpu_generation",
+    "cpu_answer_ready": false,
+    "prompt_authority_state": "contract_only_not_answer_ready",
+    "tokenizer_authority_state": "gguf_metadata_loaded_but_not_sufficient_for_answer_claim",
+    "fault_domain": "prompt_policy_or_shared_dense_cpu_math_unresolved",
+    "why_not_prompt_only": "Committed M4 diagnostic evidence records a prompt/token-ID parity probe that still produced incoherent Rust output after the first reference token, so prompt/token parity alone cannot promote the model.",
+    "why_not_math_only": "The latest strict CPU retry does not include a same-prompt reference first-token/top-k comparison, so this receipt cannot isolate the blocker to transformer math, LM-head logits, tokenizer policy, or prompt-template policy.",
+    "why_not_cuda": "SmolLM2 has no CPU answer-ready proof; dense all-layer planning and strict CUDA one-token proof remain blocked until the CPU/reference comparator localizes or clears the wrong-first-token behavior."
+  },
+  "next_required_proof": {
+    "name": "smollm2_reference_compatible_first_token_comparator",
+    "description": "Run the exact pinned SmolLM2 artifact with a reference-compatible raw ChatML prompt and record Rust CPU versus reference first-token/top-k or checkpoint evidence.",
+    "must_record": [
+      "exact artifact SHA",
+      "rendered prompt text or hash for both runners",
+      "prompt token IDs for both runners",
+      "reference selected token ID and decoded token",
+      "Rust selected token ID and decoded token",
+      "top-k logits or checkpoint stage for first divergence",
+      "fallback_used=false",
+      "claim booleans"
+    ],
+    "promotion_rule": "Only if the reference-compatible comparator passes may SmolLM2 move toward CPU answer sanity. CUDA all-layer planning remains blocked until CPU answer sanity is available or a separate explicit unsupported-route policy is accepted."
+  },
+  "claim_boundary": {
+    "wrong_first_token_diagnosed": true,
+    "strict_cpu_generation_reached": true,
+    "reference_good_external": true,
+    "cpu_answer_ready": false,
+    "answer_quality_claimed": false,
+    "broad_dense_gguf_claimed": false,
+    "cuda_claimed": false,
+    "dense_regular_llm_cuda_proof": false,
+    "bitnet_qk256_claimed": false,
+    "speedup_claim": false,
+    "server_ready": false,
+    "fallback_used": false
+  }
+}

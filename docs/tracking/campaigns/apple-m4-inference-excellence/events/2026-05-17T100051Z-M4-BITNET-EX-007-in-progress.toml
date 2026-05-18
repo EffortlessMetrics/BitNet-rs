@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T10:00:51Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-007"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-007-serve-gate"
+
+notes = [
+  "Started the BitNet serve gate item after M4-BITNET-EX-006 merged and campaign next advanced to M4-BITNET-EX-007.",
+  "Scope is an explicit local BitNet serve gate and gated CLI server route for the accepted Apple M4 CPU/NEON artifact/tokenizer only.",
+  "No crates/bitnet-server dependency, production hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon performance claim changes.",
+]

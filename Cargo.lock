@@ -476,6 +476,8 @@ name = "bitnet-bench-regression-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -483,6 +485,7 @@ name = "bitnet-build-info-core"
 version = "0.2.1-dev"
 dependencies = [
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -554,6 +557,8 @@ dependencies = [
  "anyhow",
  "dirs",
  "serde",
+ "temp-env",
+ "tempfile",
  "toml",
  "tracing",
 ]
@@ -676,6 +681,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-kernels",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -858,6 +864,7 @@ version = "0.2.1-dev"
 dependencies = [
  "proptest",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -981,6 +988,7 @@ name = "bitnet-inference-metrics-core"
 version = "0.2.1-dev"
 dependencies = [
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1410,6 +1418,7 @@ dependencies = [
  "bytemuck",
  "half",
  "safetensors 0.7.0",
+ "tempfile",
 ]
 
 [[package]]
@@ -1454,6 +1463,7 @@ dependencies = [
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-qk256-dispatch",
  "bitnet-request-context-core",
  "bitnet-request-router-core",
  "bitnet-runtime-bootstrap",
@@ -1635,6 +1645,7 @@ dependencies = [
  "anyhow",
  "clap",
  "fs2",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",
@@ -10031,12 +10042,14 @@ dependencies = [
  "assert_cmd",
  "bitnet",
  "bitnet-bdd-grid",
+ "bitnet-bench-regression-core",
  "bitnet-common",
  "bitnet-crossval",
  "bitnet-download",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-prompt-templates",
  "bitnet-sys",
  "bitnet-test-support",
  "bitnet-tokenizers",

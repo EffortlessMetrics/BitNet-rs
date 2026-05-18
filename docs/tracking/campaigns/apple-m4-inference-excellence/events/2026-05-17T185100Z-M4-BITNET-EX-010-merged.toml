@@ -1,0 +1,15 @@
+timestamp = "2026-05-17T18:51:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-010"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
+pr = 5395
+merge_sha = "e323fbc6a5838fe540c130c61821b0bf4fc9fbd0"
+
+notes = [
+  "Merged PR #5395 for the M4-BITNET-EX-010 deterministic 250-case BitNet corpus and scorer contract.",
+  "Closeout records a tracker-only state transition; it does not add fresh runtime, quality, performance, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.",
+]

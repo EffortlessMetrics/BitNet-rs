@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T06:15:01Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-002-artifact-provenance"
+pr = 5528
+head_sha = "2e759032097cbe71595fdd98016106cfed18ee49"
+merge_sha = "bcfc278d550b937db3ab381effd4a20597429625"
+
+notes = [
+  "Merged PR #5528, which publishes supported-model artifact provenance through `bitnet model verify --json`, successful cache metadata, and Apple M4 model status rows.",
+  "Closeout is tracker-only: M4-REPRO-002 is complete after the provenance manifest and cache verification metadata landed on main.",
+  "No runtime quality, benchmark, speedup, new model support, default-model, BitNet chat or serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, or broad performance claim.",
+]

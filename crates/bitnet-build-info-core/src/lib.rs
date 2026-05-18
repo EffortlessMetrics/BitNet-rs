@@ -83,4 +83,65 @@ mod tests {
         assert_eq!(metadata.cargo_target_triple, "x86_64-unknown-linux-gnu");
         assert_eq!(metadata.cargo_opt_level, "3");
     }
+
+    #[test]
+    fn from_env_substitutes_unknown_per_field() {
+        // Mixed Some/None inputs should fill exactly the None slots with "unknown".
+        let metadata =
+            BuildMetadata::from_env(Some("sha"), None, Some("ts"), None, Some("triple"), None);
+
+        assert_eq!(metadata.git_sha, "sha");
+        assert_eq!(metadata.git_branch, "unknown");
+        assert_eq!(metadata.build_timestamp, "ts");
+        assert_eq!(metadata.rustc_semver, "unknown");
+        assert_eq!(metadata.cargo_target_triple, "triple");
+        assert_eq!(metadata.cargo_opt_level, "unknown");
+    }
+
+    #[test]
+    fn unknown_equals_all_none_from_env() {
+        assert_eq!(
+            BuildMetadata::unknown(),
+            BuildMetadata::from_env(None, None, None, None, None, None)
+        );
+    }
+
+    #[test]
+    fn metadata_is_copy_and_eq() {
+        let a = BuildMetadata::from_env(Some("x"), None, None, None, None, None);
+        let b = a;
+        assert_eq!(a, b);
+        // a is still usable because BuildMetadata is Copy.
+        assert_eq!(a.git_sha, "x");
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_serializes_all_fields() -> Result<(), Box<dyn std::error::Error>> {
+        let metadata = BuildMetadata::from_env(
+            Some("deadbeef"),
+            Some("feature/x"),
+            Some("2026-01-01T00:00:00Z"),
+            Some("rustc 1.95"),
+            Some("aarch64-apple-darwin"),
+            Some("0"),
+        );
+        let json: serde_json::Value = serde_json::to_value(&metadata)?;
+        let obj = json
+            .as_object()
+            .ok_or_else(|| std::io::Error::other("serialized metadata should be a JSON object"))?;
+        assert_eq!(obj.get("git_sha").and_then(|v| v.as_str()), Some("deadbeef"));
+        assert_eq!(obj.get("git_branch").and_then(|v| v.as_str()), Some("feature/x"));
+        assert_eq!(
+            obj.get("build_timestamp").and_then(|v| v.as_str()),
+            Some("2026-01-01T00:00:00Z")
+        );
+        assert_eq!(obj.get("rustc_semver").and_then(|v| v.as_str()), Some("rustc 1.95"));
+        assert_eq!(
+            obj.get("cargo_target_triple").and_then(|v| v.as_str()),
+            Some("aarch64-apple-darwin")
+        );
+        assert_eq!(obj.get("cargo_opt_level").and_then(|v| v.as_str()), Some("0"));
+        Ok(())
+    }
 }

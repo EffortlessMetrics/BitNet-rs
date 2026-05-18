@@ -44,6 +44,19 @@ fn scalar_l2_norm(data: &[f32]) -> f32 {
     data.iter().map(|&v| v * v).sum::<f32>().sqrt()
 }
 
+#[cfg(target_arch = "x86_64")]
+const AVX2_LANES: usize = 8;
+
+#[cfg(target_arch = "x86_64")]
+fn avx2_chunks_len(len: usize) -> usize {
+    len / AVX2_LANES
+}
+
+#[cfg(target_arch = "x86_64")]
+fn avx2_tail_start(len: usize) -> usize {
+    avx2_chunks_len(len) * AVX2_LANES
+}
+
 // ── AVX2 implementations (x86_64 only) ─────────────────────────────
 
 /// Horizontal sum of all 8 lanes in a `__m256`.
@@ -121,17 +134,17 @@ unsafe fn avx2_exp_ps(x: __m256) -> __m256 {
 unsafe fn avx2_exp_f32(x: &[f32]) -> Vec<f32> {
     let len = x.len();
     let mut out = vec![0.0f32; len];
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     for i in 0..chunks {
-        let off = i * 8;
+        let off = i * AVX2_LANES;
         unsafe {
             let v = _mm256_loadu_ps(x.as_ptr().add(off));
             let r = avx2_exp_ps(v);
             _mm256_storeu_ps(out.as_mut_ptr().add(off), r);
         }
     }
-    for i in (chunks * 8)..len {
+    for i in avx2_tail_start(len)..len {
         out[i] = x[i].exp();
     }
     out
@@ -142,10 +155,10 @@ unsafe fn avx2_exp_f32(x: &[f32]) -> Vec<f32> {
 unsafe fn avx2_sigmoid_f32(x: &[f32]) -> Vec<f32> {
     let len = x.len();
     let mut out = vec![0.0f32; len];
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     for i in 0..chunks {
-        let off = i * 8;
+        let off = i * AVX2_LANES;
         unsafe {
             let v = _mm256_loadu_ps(x.as_ptr().add(off));
             let one = _mm256_set1_ps(1.0);
@@ -159,7 +172,7 @@ unsafe fn avx2_sigmoid_f32(x: &[f32]) -> Vec<f32> {
             _mm256_storeu_ps(out.as_mut_ptr().add(off), sig);
         }
     }
-    for i in (chunks * 8)..len {
+    for i in avx2_tail_start(len)..len {
         out[i] = 1.0 / (1.0 + (-x[i]).exp());
     }
     out
@@ -170,10 +183,10 @@ unsafe fn avx2_sigmoid_f32(x: &[f32]) -> Vec<f32> {
 unsafe fn avx2_tanh_f32(x: &[f32]) -> Vec<f32> {
     let len = x.len();
     let mut out = vec![0.0f32; len];
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     for i in 0..chunks {
-        let off = i * 8;
+        let off = i * AVX2_LANES;
         unsafe {
             let v = _mm256_loadu_ps(x.as_ptr().add(off));
             let two = _mm256_set1_ps(2.0);
@@ -190,7 +203,7 @@ unsafe fn avx2_tanh_f32(x: &[f32]) -> Vec<f32> {
             _mm256_storeu_ps(out.as_mut_ptr().add(off), tanh);
         }
     }
-    for i in (chunks * 8)..len {
+    for i in avx2_tail_start(len)..len {
         out[i] = x[i].tanh();
     }
     out
@@ -200,18 +213,18 @@ unsafe fn avx2_tanh_f32(x: &[f32]) -> Vec<f32> {
 #[target_feature(enable = "avx2")]
 unsafe fn avx2_dot_product(a: &[f32], b: &[f32]) -> f32 {
     let len = a.len();
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     unsafe {
         let mut acc = _mm256_setzero_ps();
         for i in 0..chunks {
-            let off = i * 8;
+            let off = i * AVX2_LANES;
             let va = _mm256_loadu_ps(a.as_ptr().add(off));
             let vb = _mm256_loadu_ps(b.as_ptr().add(off));
             acc = _mm256_add_ps(acc, _mm256_mul_ps(va, vb));
         }
         let mut sum = hsum_avx2(acc);
-        for i in (chunks * 8)..len {
+        for i in avx2_tail_start(len)..len {
             sum += a[i] * b[i];
         }
         sum
@@ -223,17 +236,17 @@ unsafe fn avx2_dot_product(a: &[f32], b: &[f32]) -> f32 {
 unsafe fn avx2_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
     let len = a.len();
     let mut out = vec![0.0f32; len];
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     for i in 0..chunks {
-        let off = i * 8;
+        let off = i * AVX2_LANES;
         unsafe {
             let va = _mm256_loadu_ps(a.as_ptr().add(off));
             let vb = _mm256_loadu_ps(b.as_ptr().add(off));
             _mm256_storeu_ps(out.as_mut_ptr().add(off), _mm256_add_ps(va, vb));
         }
     }
-    for i in (chunks * 8)..len {
+    for i in avx2_tail_start(len)..len {
         out[i] = a[i] + b[i];
     }
     out
@@ -244,17 +257,17 @@ unsafe fn avx2_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
 unsafe fn avx2_vector_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
     let len = a.len();
     let mut out = vec![0.0f32; len];
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     for i in 0..chunks {
-        let off = i * 8;
+        let off = i * AVX2_LANES;
         unsafe {
             let va = _mm256_loadu_ps(a.as_ptr().add(off));
             let vb = _mm256_loadu_ps(b.as_ptr().add(off));
             _mm256_storeu_ps(out.as_mut_ptr().add(off), _mm256_mul_ps(va, vb));
         }
     }
-    for i in (chunks * 8)..len {
+    for i in avx2_tail_start(len)..len {
         out[i] = a[i] * b[i];
     }
     out
@@ -265,17 +278,17 @@ unsafe fn avx2_vector_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
 unsafe fn avx2_vector_scale(data: &[f32], scale: f32) -> Vec<f32> {
     let len = data.len();
     let mut out = vec![0.0f32; len];
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     unsafe {
         let vs = _mm256_set1_ps(scale);
         for i in 0..chunks {
-            let off = i * 8;
+            let off = i * AVX2_LANES;
             let v = _mm256_loadu_ps(data.as_ptr().add(off));
             _mm256_storeu_ps(out.as_mut_ptr().add(off), _mm256_mul_ps(v, vs));
         }
     }
-    for i in (chunks * 8)..len {
+    for i in avx2_tail_start(len)..len {
         out[i] = data[i] * scale;
     }
     out
@@ -285,17 +298,17 @@ unsafe fn avx2_vector_scale(data: &[f32], scale: f32) -> Vec<f32> {
 #[target_feature(enable = "avx2")]
 unsafe fn avx2_l2_norm(data: &[f32]) -> f32 {
     let len = data.len();
-    let chunks = len / 8;
+    let chunks = avx2_chunks_len(len);
 
     unsafe {
         let mut acc = _mm256_setzero_ps();
         for i in 0..chunks {
-            let off = i * 8;
+            let off = i * AVX2_LANES;
             let v = _mm256_loadu_ps(data.as_ptr().add(off));
             acc = _mm256_add_ps(acc, _mm256_mul_ps(v, v));
         }
         let mut sum = hsum_avx2(acc);
-        for &v in &data[(chunks * 8)..] {
+        for &v in &data[avx2_tail_start(len)..] {
             sum += v * v;
         }
         sum.sqrt()
@@ -415,8 +428,15 @@ pub fn simd_l2_norm(data: &[f32]) -> f32 {
 mod tests {
     use super::*;
 
+    const TEST_LENGTHS: &[usize] = &[0, 1, 7, 8, 15, 16, 100, 1024];
+    const NON_EMPTY_TEST_LENGTHS: &[usize] = &[1, 7, 8, 15, 16, 100, 1024];
+
     fn max_abs_error(a: &[f32], b: &[f32]) -> f32 {
         a.iter().zip(b).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max)
+    }
+
+    fn ramp(len: usize, scale: f32) -> Vec<f32> {
+        (0..len).map(|i| i as f32 * scale).collect()
     }
 
     // ── exp ──
@@ -470,7 +490,7 @@ mod tests {
 
     #[test]
     fn test_exp_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
+        for &len in TEST_LENGTHS {
             let input: Vec<f32> = (0..len).map(|i| (i as f32) * 0.01 - 0.5).collect();
             let result = fast_exp_f32(&input);
             let expected: Vec<f32> = input.iter().map(|&x| x.exp()).collect();
@@ -532,7 +552,7 @@ mod tests {
 
     #[test]
     fn test_tanh_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
+        for &len in TEST_LENGTHS {
             let input: Vec<f32> = (0..len).map(|i| (i as f32) * 0.02 - 1.0).collect();
             let result = fast_tanh_f32(&input);
             assert_eq!(result.len(), len);
@@ -587,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_sigmoid_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
+        for &len in TEST_LENGTHS {
             let input: Vec<f32> = (0..len).map(|i| (i as f32) * 0.02 - 1.0).collect();
             let result = fast_sigmoid_f32(&input);
             assert_eq!(result.len(), len);
@@ -623,7 +643,7 @@ mod tests {
 
     #[test]
     fn test_dot_product_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
+        for &len in TEST_LENGTHS {
             let a: Vec<f32> = (0..len).map(|i| i as f32).collect();
             let b: Vec<f32> = (0..len).map(|i| (i as f32) * 0.1).collect();
             let result = simd_dot_product(&a, &b);
@@ -653,9 +673,9 @@ mod tests {
 
     #[test]
     fn test_vector_add_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
-            let a: Vec<f32> = (0..len).map(|i| i as f32).collect();
-            let b: Vec<f32> = (0..len).map(|i| -(i as f32)).collect();
+        for &len in TEST_LENGTHS {
+            let a = ramp(len, 1.0);
+            let b = ramp(len, -1.0);
             let result = simd_vector_add(&a, &b);
             assert_eq!(result.len(), len);
             assert!(result.iter().all(|&x| x == 0.0), "Failed for len={len}");
@@ -696,7 +716,7 @@ mod tests {
 
     #[test]
     fn test_vector_mul_identity() {
-        let a: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        let a = ramp(16, 1.0);
         let ones = vec![1.0; 16];
         let result = simd_vector_mul(&a, &ones);
         assert_eq!(result, a);
@@ -712,9 +732,9 @@ mod tests {
 
     #[test]
     fn test_vector_mul_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
-            let a: Vec<f32> = (0..len).map(|i| i as f32).collect();
-            let b: Vec<f32> = (0..len).map(|i| (i as f32) * 0.5).collect();
+        for &len in TEST_LENGTHS {
+            let a = ramp(len, 1.0);
+            let b = ramp(len, 0.5);
             let result = simd_vector_mul(&a, &b);
             let expected: Vec<f32> = a.iter().zip(&b).map(|(x, y)| x * y).collect();
             assert_eq!(result.len(), len);
@@ -739,14 +759,14 @@ mod tests {
 
     #[test]
     fn test_vector_scale_zero() {
-        let data: Vec<f32> = (0..16).map(|i| i as f32).collect();
+        let data = ramp(16, 1.0);
         let result = simd_vector_scale(&data, 0.0);
         assert!(result.iter().all(|&x| x == 0.0));
     }
 
     #[test]
     fn test_vector_scale_identity() {
-        let data: Vec<f32> = (0..16).map(|i| i as f32 * 0.5).collect();
+        let data = ramp(16, 0.5);
         let result = simd_vector_scale(&data, 1.0);
         assert_eq!(result, data);
     }
@@ -760,8 +780,8 @@ mod tests {
 
     #[test]
     fn test_vector_scale_various_lengths() {
-        for &len in &[0, 1, 7, 8, 15, 16, 100, 1024] {
-            let data: Vec<f32> = (0..len).map(|i| i as f32).collect();
+        for &len in TEST_LENGTHS {
+            let data = ramp(len, 1.0);
             let result = simd_vector_scale(&data, 2.5);
             let expected: Vec<f32> = data.iter().map(|&v| v * 2.5).collect();
             assert_eq!(result.len(), len);
@@ -799,8 +819,8 @@ mod tests {
 
     #[test]
     fn test_l2_norm_various_lengths() {
-        for &len in &[1, 7, 8, 15, 16, 100, 1024] {
-            let data: Vec<f32> = (0..len).map(|i| (i as f32) * 0.01).collect();
+        for &len in NON_EMPTY_TEST_LENGTHS {
+            let data = ramp(len, 0.01);
             let result = simd_l2_norm(&data);
             let expected = data.iter().map(|&v| v * v).sum::<f32>().sqrt();
             let tol = expected.abs() * 1e-5 + 1e-5;

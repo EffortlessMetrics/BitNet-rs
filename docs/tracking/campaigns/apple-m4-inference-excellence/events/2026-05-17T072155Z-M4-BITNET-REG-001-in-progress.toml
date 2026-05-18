@@ -1,0 +1,14 @@
+timestamp = "2026-05-17T07:21:55Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-REG-001"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-REG-001-warm-regression"
+summary = "Started direct BitNet M4 warm-session regression support."
+
+notes = [
+  "This item adds `bitnet mac regression --baseline` support for `bitnet_apple_m4_warm_session` receipts with matching accepted artifact/tokenizer identity, backend, fallback state, prompt set, warm profile, timeout policy, and receipt schema before drift is reported.",
+  "Scope is BitNet warm-session regression comparison support only; no live model run, new receipt, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is made.",
+]

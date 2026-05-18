@@ -1,0 +1,123 @@
+schema_version = "1.0"
+policy = "docs-source-of-truth"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-16"
+
+# This ledger names the BitNet-rs source-of-truth surfaces for proof-backed
+# model, hardware, CI, campaign, and product claims. It is descriptive policy:
+# proposals, specs, plans, campaign manifests, model coverage ledgers, hardware
+# receipts, and generated dashboards keep their existing operational roles.
+
+[source.roadmap]
+path = "ROADMAP.md"
+owns = ["release_direction", "current_limitations", "milestone_strategy"]
+hand_editable = true
+
+[source.proposals]
+path = "docs/proposals/"
+owns = ["why", "user_value", "alternatives", "success_criteria"]
+hand_editable = true
+
+[source.specs]
+path = "docs/specs/"
+owns = ["behavior_contract", "acceptance", "proof_requirements", "claim_boundaries"]
+hand_editable = true
+
+[source.adrs]
+path = "docs/adr/"
+owns = ["durable_architecture_decisions", "durable_proof_decisions"]
+hand_editable = true
+
+[source.plans]
+path = "plans/"
+owns = ["pr_sequence", "proof_commands", "rollback"]
+hand_editable = true
+
+[source.handoffs]
+path = "docs/handoffs/"
+owns = ["operator_transfer", "closeout_summary", "remaining_work", "validation_gaps"]
+hand_editable = true
+
+[source.status_docs]
+path = "docs/status/"
+owns = ["user_facing_claim_map", "claim_tiers", "proof_commands", "claim_boundaries"]
+hand_editable = true
+
+[source.cuda_capability_matrix]
+path = "docs/status/CUDA_CAPABILITY_MATRIX.md"
+owns = ["cuda_product_claim_summary", "model_family_boundaries", "next_proof_summary"]
+hand_editable = true
+
+[source.answer_artifact_gate]
+path = "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md"
+owns = ["model_answer_readiness", "tokenizer_authority", "prompt_suite_authority"]
+hand_editable = true
+
+[source.model_coverage_matrix]
+path = "ci/model-artifacts/model-coverage-matrix.toml"
+owns = ["model_tiers", "claim_booleans", "next_proof", "forbidden_claims"]
+hand_editable = true
+
+[source.hardware_matrix]
+path = "docs/hardware/HARDWARE_MATRIX.md"
+owns = ["hardware_lane_identity", "runtime_identity", "backend_claim_boundaries"]
+hand_editable = true
+
+[source.hardware_receipts]
+path = "ci/hardware/"
+owns = ["hardware_backend_proof_receipts", "fallback_status", "runtime_identity"]
+hand_editable = false
+
+[source.campaign_tracker_model]
+path = "docs/tracking/TRACKER_MODEL.md"
+owns = ["campaign_manifest_contract", "active_work_item_contract", "generated_dashboard_rules"]
+hand_editable = true
+
+[source.campaigns]
+path = "docs/tracking/campaigns/"
+owns = ["active_work_items", "campaign_events", "campaign_claim_boundaries"]
+hand_editable = true
+
+[source.ci_cost_policy]
+path = "docs/ci/cost-and-verification-policy.md"
+owns = ["ci_economics_doctrine", "default_pr_posture", "expensive_lane_routing"]
+hand_editable = true
+
+[source.ci_lanes]
+path = "policy/ci-lanes.toml"
+owns = ["ci_lane_cost", "ci_lane_intent", "ci_lane_posture"]
+hand_editable = true
+
+[source.ci_budget]
+path = "policy/ci-budget.toml"
+owns = ["lem_bands", "budget_guardrails", "timeout_policy"]
+hand_editable = true
+
+[source.ci_risk_packs]
+path = "policy/ci-risk-packs.toml"
+owns = ["path_to_lane_routing", "label_to_deep_lane_routing"]
+hand_editable = true
+
+[source.file_policy]
+path = "policy/non-rust-allowlist.toml"
+owns = ["non_rust_file_allowlist", "policy_surface_classification"]
+hand_editable = true
+
+[derived.campaign_dashboards]
+paths = [
+  "docs/tracking/generated/",
+  "docs/tracking/campaigns/*/generated/",
+]
+owns = ["derived_campaign_status_views"]
+hand_editable = false
+generated_by = "cargo run --locked -p xtask --no-default-features -- campaign generate"
+
+[rules]
+active_execution_state = "docs/tracking/campaigns/<campaign>/active.toml"
+no_hidden_goal_files = [".adze/goals", ".bitnet/goals"]
+readme_role = "summary_not_final_proof_map"
+receipts_role = "evidence_for_what_happened"
+handoffs_role = "operator_transfer_not_claim_authority"
+closeouts_role = "what_landed_what_remains"
+generated_dashboards_hand_editable = false

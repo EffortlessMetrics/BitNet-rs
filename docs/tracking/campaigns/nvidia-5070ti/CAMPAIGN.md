@@ -167,9 +167,9 @@ the claim boundary before new runtime work.
 | Lane | Current state | Last real receipt | Next missing proof |
 |---|---|---|---|
 | BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
-| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts and benchmark qualification reviews exist; direct ask/chat hardware receipts not found | `docs/reports/CUDA_DENSE_QWEN25_Q8_PRODUCT_AUDIT.md` | direct ask/chat user-path receipts if required, then server reuse |
+| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; strict one-token, short-decode, warm-session, benchmark-review, and exact-profile server-readiness receipts exist; speed, full residency, broad dense GGUF, and broad server readiness remain false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json` | governed speedup/full-residency evidence, and any broader server readiness, require later exact-profile receipts |
 | Qwen3 0.6B | accelerator-ready dense SLM candidate with artifact, CPU sanity, all-layer plan, one-token strict CUDA proof, bounded short-decode strict CUDA proof, warm-session strict CUDA proof, and benchmark qualification review; product CLI, speed, server, full-residency, and BitNet QK256 claims remain false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json` | user-facing ask/chat product UX or repeated comparator evidence before any product CLI or speed profile promotion |
-| SmolLM2 360M | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| SmolLM2 360M | structurally valid artifact contract; strict CPU retry reached one-token generation with `fallback_used=false` but failed the math quality gate; wrong-first-token diagnosis and comparator contract are recorded | `ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json` | same-prompt first-token/top-k or checkpoint comparator capture before CPU answer readiness, all-layer planning, or CUDA |
 | Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | Llama 3.2 3B | registered candidate | none | memory envelope, artifact contract, tokenizer/prompt authority |
 | Gemma/Phi small | registered candidate | none | architecture policy, artifact contract, tokenizer/prompt authority |
@@ -252,12 +252,18 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-MODEL-006 | merged | PR #4985 recorded Qwen3 0.6B warm-session strict CUDA proof after short-decode CUDA landed, keeping ask/chat product UX, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-007 | merged | PR #4996 recorded a Qwen3 0.6B benchmark qualification review for one-token, short-decode, and warm-session strict CUDA proof receipts, rejected speedup for every reviewed profile, and kept server, full-residency, broad dense GGUF, and BitNet QK256 claims false. |
 | CUDA-MODEL-008 | merged | PR #5007 synced Qwen3 0.6B model coverage and model-status output to the exact earned accelerator-ready candidate tier after CUDA-MODEL-007, without promoting product CLI, speed, server, full-residency, broad dense GGUF, or BitNet QK256 claims. |
-| CUDA-MODEL-SMOLLM2-001 | ready | Next executable dense SLM onboarding item: add the exact SmolLM2 360M artifact contract before any CPU answer, CUDA, product CLI, speed, server, full-residency, broad dense GGUF, or BitNet QK256 claim. |
+| CUDA-MODEL-SMOLLM2-001 | merged | PR #5029 added the exact SmolLM2 360M Instruct Q8_0 artifact contract and report, promoted the coverage row only to structurally valid artifact-contract state, and kept CPU answer, CUDA, product CLI, speed, server, full-residency, broad dense GGUF, proof inheritance, and BitNet QK256 claims false. |
+| CUDA-MODEL-SMOLLM2-002 | merged | PR #5048 synced the CUDA/model coverage view to the SLM-CPU-017 strict CPU preflight blocker: SmolLM2 360M reached strict CPU model-load preflight on the 9950X3D, then failed closed at the LayerNorm gamma guard before tokenizer/prompt/generation. The next proof is an SLM CPU loader policy follow-up, not CUDA. |
 | CUDA-UX-008 | merged | PR #4724 added a CUDA model support dashboard sourced from the model coverage matrix. |
 | CUDA-UX-009 | merged | PR #4754 added the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
 | CUDA-UX-010 | merged | PR #4768 added the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces were current. |
 | CUDA-SERVER-001 | merged | PR #4820 added claim-safe strict dense Qwen server receipt classification without promoting server readiness or speed. |
 | CUDA-SERVER-002 | merged | PR #4854 committed the exact bounded dense Qwen strict RTX 5070 Ti server-smoke receipt before any server-ready coverage promotion. |
+| CUDA-SERVER-003 | merged | PR #5190 audited the bounded dense Qwen server-smoke receipt against BITNET-SPEC-0010 and recorded that `server_ready` remains false until a refreshed or supplemental receipt carries artifact checksum identity, endpoint/profile scope, and generation-policy fields. |
+| CUDA-SERVER-004 | merged | PR #5393 hardened shared-engine server receipt fields and validation for exact-profile server-readiness evidence while keeping coverage promotion out of that slice. |
+| CUDA-SERVER-005 | merged | PR #5410 promoted dense Qwen2.5 Q8_0 `server_ready=true` only for the exact non-streaming RTX 5070 Ti shared-engine `/v1/chat/completions` receipt, without speed, full-residency, deployment, concurrency, or BitNet proof claims. |
+| CUDA-SERVER-006 | merged | PR #5439 added separate official BitNet I2_S/QK256 strict server-smoke evidence for the `bitnet_qk256_cuda` route while keeping broad production server readiness false. |
+| CUDA-STATUS-001 | merged | PR #5158 added a user-facing CUDA capability matrix page backed by model coverage and campaign proof state without promoting model, speed, server, or residency claims. |
 
 ## Review Policy
 

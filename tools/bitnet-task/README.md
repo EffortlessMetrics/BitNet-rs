@@ -6,6 +6,7 @@ Control-plane boundary:
 
 - `xtask` owns internal developer workflows, CI orchestration, and new maintenance commands.
 - `bitnet-task` owns only the command surface needed to preserve existing shell entrypoints while those scripts remain supported.
+- Patch policy enforcement now lives in Rust as `bitnet-task check-patch-policy`, with `scripts/check-patch-policy.sh` retained as a compatibility wrapper.
 - `test-generation` intentionally narrows the old shell behavior by delegating to the existing `bitnet-models` integration smoke instead of compiling an ad hoc scratch binary.
 
 Wrapper contract:

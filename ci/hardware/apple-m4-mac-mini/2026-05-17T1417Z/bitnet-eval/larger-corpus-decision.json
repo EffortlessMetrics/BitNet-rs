@@ -1,0 +1,131 @@
+{
+  "artifact_kind": "apple_m4_bitnet_eval_larger_corpus_decision",
+  "schema_version": "1.0.0",
+  "work_item": "M4-BITNET-EX-009",
+  "machine_id": "apple-m4-mac-mini",
+  "created_at": "2026-05-17T1417Z",
+  "decision": {
+    "stage_250_case_corpus": true,
+    "stage_500_case_corpus_now": false,
+    "publish_broad_bitnet_quality_envelope": false,
+    "summary": "Stage a 250-case BitNet corpus before any 500-case expansion or broad BitNet quality envelope claim."
+  },
+  "accepted_identity": {
+    "model": {
+      "family": "bitnet",
+      "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+      "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+      "file": "ggml-model-i2_s.gguf",
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "quant_format": "I2_S"
+    },
+    "tokenizer": {
+      "source": "external_tokenizer_json",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "ggml_pre": "llama-bpe"
+    },
+    "backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "prompt_template": "bitnetcpp-answer"
+  },
+  "source_artifacts": {
+    "current_answer_corpus": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+    "baseline_answer_corpus": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+    "current_task_family_rollup": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/task-family-pass-rates.json",
+    "current_reference_vs_rust": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/reference-vs-rust-comparison.json",
+    "reference_runner_output": "ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/reference-runner-output.json",
+    "regression": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/regression-vs-2026-05-15T2214Z.json"
+  },
+  "current_runtime_result": {
+    "cases_total": 100,
+    "cases_passed": 79,
+    "cases_failed": 21,
+    "timeouts": 0,
+    "not_run": 0,
+    "generated_tokens": 765,
+    "mechanical_scoring_only": true,
+    "llm_judge_required": false,
+    "task_family_passes": {
+      "arithmetic_exact": 10,
+      "closed_label_classification": 9,
+      "constrained_summary": 8,
+      "fixed_table_qa": 6,
+      "format_constrained_json": 10,
+      "numeric_tolerance": 5,
+      "ordering_sorting": 8,
+      "required_forbidden_tokens": 7,
+      "rewrite_normalized": 9,
+      "synthetic_extraction": 7
+    },
+    "weak_or_variable_families": [
+      "numeric_tolerance",
+      "fixed_table_qa",
+      "required_forbidden_tokens",
+      "synthetic_extraction",
+      "constrained_summary"
+    ]
+  },
+  "matching_history": {
+    "baseline_cases_passed": 75,
+    "current_cases_passed": 79,
+    "baseline_timeouts": 0,
+    "current_timeouts": 0,
+    "matched_context": true,
+    "regression_advisory": true,
+    "regression_warning_count": 4,
+    "regression_warning_scope": "constrained_summary pass drop and failure increase versus 2026-05-15T2214Z"
+  },
+  "reference_vs_rust": {
+    "total": 100,
+    "text_matches": 54,
+    "text_mismatches": 46,
+    "mechanical_scoring_matches": 83,
+    "mechanical_scoring_deltas": 17,
+    "reference_passed": 70,
+    "rust_passed": 79,
+    "reference_passed_rust_failed": 4,
+    "rust_passed_reference_failed": 13,
+    "generated_token_id_unavailable": 100
+  },
+  "rationale": [
+    "The accepted artifact/tokenizer/backend identity now has matching 100-case BitNet eval history with fallback_used=false, zero timeouts, and mechanical scoring in both runs.",
+    "The current run improved aggregate Rust mechanical passes from 75/100 to 79/100, but a matched-context regression still emitted four advisory warnings for constrained_summary.",
+    "Several task families remain weak or variable: numeric_tolerance is 5/10, fixed_table_qa is 6/10, required_forbidden_tokens and synthetic_extraction are 7/10, and constrained_summary is 8/10 with the regression warning.",
+    "Format-constrained JSON improved to 10/10 in the current run, but one repeat is not enough to treat that as stable broad BitNet quality.",
+    "Reference-vs-Rust comparison still shows only 54/100 text matches, 83/100 mechanical scoring matches, and no comparable reference generated token IDs.",
+    "A 250-case stage is large enough to expose scorer/output variance by weak task family before paying the cost of a 500-case BitNet runtime campaign."
+  ],
+  "recommended_next_items": [
+    {
+      "id": "M4-BITNET-EX-010",
+      "summary": "Define a 250-case BitNet corpus expansion focused on existing weak or variable families while preserving deterministic mechanical scoring."
+    },
+    {
+      "id": "M4-BITNET-EX-011",
+      "summary": "Run the 250-case BitNet corpus on the accepted M4 artifact/tokenizer identity and compare it against the 100-case history without broad quality claims."
+    },
+    {
+      "id": "M4-BITNET-EX-012",
+      "summary": "Decide whether 500-case BitNet expansion is justified after the 250-case scorer and output variance are understood."
+    }
+  ],
+  "claim_boundary": {
+    "bitnet_eval_history": true,
+    "larger_corpus_decision": true,
+    "broad_bitnet_quality_claim": false,
+    "dense_slm_evidence_used": false,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "fresh_runtime_chat_or_serve_proof": false,
+    "full_metal_inference": false,
+    "qk256": false,
+    "neural_engine": false,
+    "mpsgraph": false,
+    "macbook_runtime_proof": false,
+    "broad_apple_silicon_performance": false,
+    "speedup_claim": false
+  }
+}

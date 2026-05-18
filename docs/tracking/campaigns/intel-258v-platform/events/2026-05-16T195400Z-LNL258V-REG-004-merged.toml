@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T19:54:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5200
+branch = "codex/lunar-lake/LNL258V-REG-004-benchmark-regression"
+head_sha = "55eb50bd3f2e3d6fc676c88717136f625867cffd"
+merge_sha = "77593fcc47765f8e271365be65abb839adca6123"
+summary = "Merged LNL258V-REG-004 cold/warm benchmark strict regression wiring."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5200",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+]
+
+notes = [
+  "Strict Lunar Lake regression v2 now indexes the cold/warm benchmark qualification receipt by default.",
+  "The committed v2 regression bundle records cold_warm_benchmark_indexed=true and cold_warm_benchmark_ready=true.",
+  "No route promotion, speedup, acceleration, new inference, or BitNet QK256/I2_S behavior change is claimed.",
+]

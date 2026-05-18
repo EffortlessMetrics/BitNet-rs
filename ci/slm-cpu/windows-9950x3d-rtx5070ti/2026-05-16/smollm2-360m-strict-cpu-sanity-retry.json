@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "slm_cpu_smollm2_360m_strict_cpu_sanity_retry",
+  "work_item": "SLM-CPU-020",
+  "timestamp_utc": "2026-05-16T10:00:52Z",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "summary": "The pinned SmolLM2 360M Q8_0 artifact passes exact metadata-scoped normalization validation, reaches strict CPU tokenizer/prompt/generation, and emits one deterministic token. The generated token does not satisfy the math sanity prompt, so CPU answer readiness remains false.",
+  "model": {
+    "id": "smollm2-360m-instruct",
+    "artifact_id": "smollm2-360m-instruct-q8_0",
+    "contract_id": "smollm2_360m_instruct_q8_0",
+    "repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+    "revision": "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f",
+    "file": "smollm2-360m-instruct-q8_0.gguf",
+    "sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+    "bytes": 386404992,
+    "gguf_architecture": "llama",
+    "quantization": "Q8_0",
+    "hidden_size": 960,
+    "intermediate_size": 2560,
+    "block_count": 32,
+    "vocab_size": 49152,
+    "context_length": 8192
+  },
+  "normalization_validation": {
+    "policy": "slm_cpu_020_smollm2_exact_metadata_norm_envelope",
+    "generic_llama_guard": "fail_closed",
+    "required_scope": [
+      "exact_artifact_sha256",
+      "general.architecture=llama",
+      "tokenizer.ggml.pre=smollm",
+      "hidden_size=960",
+      "block_count=32",
+      "vocab_size=49152",
+      "intermediate_size=2560"
+    ],
+    "accepted_corrections": 64,
+    "correction_type": "smollm2_norm_gamma_envelope_accept",
+    "rms_envelope": [
+      0.02,
+      2.0
+    ],
+    "receipt_visible": true
+  },
+  "command": {
+    "shape": "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu run --model <smollm2-360m-instruct-q8_0.gguf> --prompt-template smollm-chat --system-prompt <system> --prompt <math> --max-new-tokens 1 --temperature 0.0 --greedy --deterministic --strict-loader --strict-tokenizer --logits-dump-steps 1 --logits-topk 10 --json-out <receipt> --no-warnings",
+    "exit_code": 0,
+    "deterministic": true,
+    "greedy": true,
+    "strict_loader": true,
+    "strict_tokenizer": true,
+    "max_new_tokens": 1,
+    "temperature": 0.0,
+    "logits_dump_steps": 1,
+    "logits_topk": 10
+  },
+  "hardware": {
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "thread_count": 1
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true,
+    "load_reached": true,
+    "pretokenizer": "smollm"
+  },
+  "prompt": {
+    "template_family": "smollm-chat",
+    "system_prompt": "You are a helpful assistant.",
+    "question": "What is 2+2? Answer with only the number.",
+    "prompt_token_count": 33,
+    "prompt_token_ids_sha256": "cf14c165d7c1576b3c2e6a760fae59a2097b4b4b9d7c619b3186132aaf9707f9",
+    "rendered_prompt_sha256": "b405fcaf0b81921928815e1819bd5cd72eec32e5af63006a18375d03dc5e3516"
+  },
+  "generation": {
+    "generation_reached": true,
+    "generated_tokens": 1,
+    "selected_token_id": 504,
+    "decoded_text": "The",
+    "valid_utf8": true,
+    "expected_answer": "4",
+    "quality_gate": "failed",
+    "failure_class": "wrong_first_token"
+  },
+  "timing": {
+    "model_load_ms": 2356.88,
+    "tokenizer_load_ms": 80.079,
+    "prompt_prefill_ms": 1680.096,
+    "first_token_decode_ms": 53.063,
+    "total_ms": 1733
+  },
+  "claim_boundary": {
+    "strict_cpu_sanity_retried": true,
+    "strict_cpu_generation_reached": true,
+    "cpu_answer_ready": false,
+    "answer_quality_claimed": false,
+    "broad_dense_gguf_claimed": false,
+    "cuda_claimed": false,
+    "dense_regular_llm_cuda_proof": false,
+    "bitnet_qk256_claimed": false,
+    "speedup_claim": false,
+    "server_ready": false,
+    "fallback_used": false
+  },
+  "next_proof": "Diagnose SmolLM2 wrong-first-token behavior or prompt/template policy before CPU answer readiness, all-layer CUDA planning, or any strict CUDA proof can be claimed."
+}

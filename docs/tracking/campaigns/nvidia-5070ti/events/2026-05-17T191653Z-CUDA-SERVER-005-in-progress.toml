@@ -1,0 +1,22 @@
+timestamp = "2026-05-17T19:16:53Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-005"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "docs/dense-qwen-exact-server-readiness"
+summary = "Started exact-profile dense Qwen server readiness promotion after generating a refreshed hardened shared-engine receipt."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json",
+  "docs/reports/CUDA_SERVER_005_DENSE_QWEN_EXACT_PROFILE_SERVER_READY.md",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The refreshed receipt carries model SHA-256, endpoint/request profile, generation policy, strict selected backend, CUDA runtime API, dense route, and quality gate fields required by BITNET-SPEC-0010.",
+  "The promotion is exact-profile only for Qwen2.5 0.5B Q8_0 on the RTX 5070 Ti shared-engine non-streaming chat-completions path.",
+  "Speedup, full CUDA residency, global dense server readiness, production deployment readiness, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
+]
+

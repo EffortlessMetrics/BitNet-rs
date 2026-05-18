@@ -1,0 +1,27 @@
+timestamp = "2026-05-16T15:45:04Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-006"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5149
+head_sha = "10c62900829fbf09263f165eacb9a3e58f4160f4"
+merge_sha = "a5c8f048161c9f5a02ef1da095d9ae9810a103e1"
+branch = "codex/lunar-lake/LNL258V-QUAL-006-corpus-contract"
+summary = "Merged LNL258V-QUAL-006 after CI passed to tighten bounded dense Qwen corpus-v2 prompt/gate contracts and refresh Lunar Lake quality/profile regression evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5149",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The merged corpus-v2 receipt records 12 of 12 bounded dense Qwen CPU cases passing with fallback_used=false.",
+  "The refreshed diagnosis reports route_blocked=false and no failed profiles or categories.",
+  "No broad dense SLM quality, speedup, route-promotion, Arc/NPU execution, or BitNet QK256/I2_S behavior-change claim is made.",
+]

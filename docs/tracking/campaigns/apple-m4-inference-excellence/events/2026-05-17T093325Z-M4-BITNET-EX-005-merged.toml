@@ -1,0 +1,17 @@
+timestamp = "2026-05-17T09:33:25Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-005"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-005-progress-timeout"
+pr = 5323
+head_sha = "459c5706ad06e473cf74fb17433a782ef2192e9b"
+merge_sha = "64ba64379f05c022c047cc348086bcc770660cd1"
+
+notes = [
+  "Merged PR #5323 for M4-BITNET-EX-005 BitNet progress and timeout UX hardening.",
+  "The merge adds BitNet one-shot ask timeout handling, progress taxonomy, timeout boundary fields, repair guidance, explicit partial-generation fields, and warm failure receipt partial-generation availability alignment.",
+  "BitNet chat and serve remain disabled; no model, runtime proof, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad Apple Silicon performance claim changes.",
+]

@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "slm_cpu_smollm2_360m_reference_comparator_contract",
+  "work_item": "SLM-CPU-022",
+  "timestamp_utc": "2026-05-16T14:18:01Z",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "summary": "Defines the reference-compatible SmolLM2 360M first-token/top-k comparator required after SLM-CPU-021. This is a contract and validator-fixture slice only; it does not contain a fresh external reference run and does not promote CPU answer readiness or CUDA planning.",
+  "fresh_execution": false,
+  "contract_only": true,
+  "model": {
+    "id": "smollm2-360m-instruct",
+    "artifact_id": "smollm2-360m-instruct-q8_0",
+    "contract_id": "smollm2_360m_instruct_q8_0",
+    "repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+    "revision": "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f",
+    "file": "smollm2-360m-instruct-q8_0.gguf",
+    "sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+    "bytes": 386404992,
+    "gguf_architecture": "llama",
+    "quantization": "Q8_0",
+    "hidden_size": 960,
+    "intermediate_size": 2560,
+    "block_count": 32,
+    "vocab_size": 49152,
+    "context_length": 8192,
+    "tokenizer_pre": "smollm"
+  },
+  "source_evidence": [
+    {
+      "path": "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+      "work_item": "SLM-CPU-020",
+      "finding": "Strict CPU tokenizer, prompt rendering, and one-token generation were reached with fallback_used=false, but the selected token was 504 / `The`."
+    },
+    {
+      "path": "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-wrong-first-token-diagnosis.json",
+      "work_item": "SLM-CPU-021",
+      "finding": "Existing committed evidence is not same-prompt/top-k comparable, so the fault remains prompt-policy or shared dense CPU math unresolved."
+    },
+    {
+      "path": "ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml",
+      "work_item": "M4-MODEL-002",
+      "finding": "The same pinned artifact is reference-good under a raw SmolLM2 ChatML prompt, but that evidence does not record the same prompt/token/top-k comparator fields required for CPU answer readiness."
+    }
+  ],
+  "required_comparator_artifact": {
+    "artifact_kind": "backend_reference_compare",
+    "schema_version": "1.0.0",
+    "model_family": "smollm2",
+    "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+    "prompt_template": "smollm2_chatml_with_explicit_system",
+    "bos": true,
+    "reference_required_fields": [
+      "backend",
+      "kernel",
+      "prompt_ids",
+      "generated_ids",
+      "text",
+      "topk_step0 or checkpoints",
+      "chosen_id"
+    ],
+    "bitnet_rs_required_fields": [
+      "backend=cpu-rust",
+      "runtime_api=cpu",
+      "kernel",
+      "loader_mode=real_gguf",
+      "tokenizer_source=gguf_metadata",
+      "tokenizer_strict=true",
+      "fallback_used=false",
+      "prompt_ids",
+      "generated_ids",
+      "text",
+      "topk_step0 or checkpoints",
+      "chosen_id"
+    ],
+    "must_match": [
+      "exact model SHA",
+      "rendered prompt text or rendered prompt hash",
+      "prompt token IDs",
+      "BOS policy",
+      "greedy first-token settings"
+    ],
+    "must_classify": [
+      "prompt_tokenizer_template",
+      "logits_or_shared_transformer_math",
+      "sampler",
+      "output_head_vocab_indexing_or_shared_transformer_math",
+      "tokenizer_decode",
+      "shared_transformer_math_checkpoint_values",
+      "shared_transformer_math_checkpoint_shape"
+    ]
+  },
+  "validation_commands": [
+    "python -m json.tool ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator.json",
+    "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- reference-compare --artifact ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator.json --json-out target/slm-cpu/smollm2-360m-reference-comparator-validation.json"
+  ],
+  "promotion_rule": {
+    "cpu_answer_readiness": "A later SmolLM2 CPU answer-sanity proof may proceed only after a same-prompt comparator validates or localizes the wrong-first-token behavior.",
+    "cuda_planning": "Dense all-layer CUDA planning remains blocked until CPU answer sanity is available or a separate explicit unsupported-route policy is accepted.",
+    "speedup": "Speedup remains false; this comparator is correctness triage only."
+  },
+  "claim_boundary": {
+    "comparator_contract_defined": true,
+    "fresh_reference_comparator_captured": false,
+    "cpu_answer_ready": false,
+    "answer_quality_claimed": false,
+    "broad_dense_gguf_claimed": false,
+    "cuda_claimed": false,
+    "dense_regular_llm_cuda_proof": false,
+    "bitnet_qk256_claimed": false,
+    "speedup_claim": false,
+    "server_ready": false,
+    "fallback_used": false
+  }
+}

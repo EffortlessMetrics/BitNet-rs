@@ -431,7 +431,7 @@ mod tests {
 
     #[test]
     fn gpu_diagnostics_default_creates_instance() {
-        let _diag = GpuDiagnostics::default();
+        let _diag = GpuDiagnostics;
     }
 
     #[test]

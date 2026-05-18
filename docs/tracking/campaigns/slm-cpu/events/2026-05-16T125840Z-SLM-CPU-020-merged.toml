@@ -1,0 +1,24 @@
+timestamp = "2026-05-16T12:58:40Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-020"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5108
+head_sha = "3c99ddb9a078a21ae40ccc73f2bba25c9ce2e160"
+merge_sha = "8590c563628f0f855de6d2bb682b5097757c210e"
+branch = "model/slm-cpu-020-smollm2-cpu-sanity"
+
+summary = "Merged SLM-CPU-020 strict SmolLM2 360M CPU sanity retry evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5108",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-strict-cpu-sanity-retry.json",
+]
+
+notes = [
+  "The retry reached strict tokenizer loading, prompt rendering, and one-token generation with fallback_used=false.",
+  "The math sanity prompt generated `The`, so CPU answer readiness remains false.",
+  "The next proof is wrong-first-token diagnosis before all-layer CUDA planning, strict CUDA execution, speedup, server, broad dense GGUF, or BitNet QK256 claims.",
+]

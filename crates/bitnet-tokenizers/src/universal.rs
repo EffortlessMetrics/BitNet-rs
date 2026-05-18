@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_test_module)]
+
 use bitnet_common::{BitNetError, InferenceError, Result};
 use std::path::Path;
 use tracing::{debug, warn};
@@ -266,44 +268,6 @@ impl UniversalTokenizer {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::UniversalTokenizer;
-
-    #[test]
-    fn infer_model_type_maps_sentencepiece_like_architectures_to_llama() {
-        for arch in
-            ["llama", "llama3", "mistral", "gemma", "qwen", "qwen2", "qwen3", "phi", "phi2", "phi3"]
-        {
-            assert_eq!(
-                UniversalTokenizer::infer_model_type_from_architecture(arch),
-                "llama",
-                "{arch}"
-            );
-        }
-    }
-
-    #[test]
-    fn infer_model_type_maps_bpe_architectures_to_gpt2() {
-        for arch in ["gpt2", "gpt-2", "bloom", "falcon", "gpt-j", "gptj", "gpt-neox", "gpt_neox"] {
-            assert_eq!(
-                UniversalTokenizer::infer_model_type_from_architecture(arch),
-                "gpt2",
-                "{arch}"
-            );
-        }
-    }
-
-    #[test]
-    fn infer_model_type_returns_unknown_for_unmapped_architecture() {
-        assert_eq!(
-            UniversalTokenizer::infer_model_type_from_architecture("totally-new-arch"),
-            "unknown"
-        );
-        assert_eq!(UniversalTokenizer::infer_model_type_from_architecture(""), "unknown");
-    }
-}
-
 impl Tokenizer for UniversalTokenizer {
     fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
         // Apply pre-tokenization if needed
@@ -351,5 +315,43 @@ impl Tokenizer for UniversalTokenizer {
             InternalTokenizerBackend::SentencePiece(t) => t.token_to_piece(token),
             InternalTokenizerBackend::Mock(t) => t.token_to_piece(token),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UniversalTokenizer;
+
+    #[test]
+    fn infer_model_type_maps_sentencepiece_like_architectures_to_llama() {
+        for arch in
+            ["llama", "llama3", "mistral", "gemma", "qwen", "qwen2", "qwen3", "phi", "phi2", "phi3"]
+        {
+            assert_eq!(
+                UniversalTokenizer::infer_model_type_from_architecture(arch),
+                "llama",
+                "{arch}"
+            );
+        }
+    }
+
+    #[test]
+    fn infer_model_type_maps_bpe_architectures_to_gpt2() {
+        for arch in ["gpt2", "gpt-2", "bloom", "falcon", "gpt-j", "gptj", "gpt-neox", "gpt_neox"] {
+            assert_eq!(
+                UniversalTokenizer::infer_model_type_from_architecture(arch),
+                "gpt2",
+                "{arch}"
+            );
+        }
+    }
+
+    #[test]
+    fn infer_model_type_returns_unknown_for_unmapped_architecture() {
+        assert_eq!(
+            UniversalTokenizer::infer_model_type_from_architecture("totally-new-arch"),
+            "unknown"
+        );
+        assert_eq!(UniversalTokenizer::infer_model_type_from_architecture(""), "unknown");
     }
 }

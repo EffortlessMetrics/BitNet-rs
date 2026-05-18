@@ -19,7 +19,9 @@ lane sits in the proof ladder.
 
 Higher tiers do not erase the underlying claim boundary. For example, a model
 can be CLI-ready for a bounded CUDA ask/chat path while still having
-`speedup_claim=false`, `full_residency_claim=false`, and `server_ready=false`.
+`speedup_claim=false` and `full_residency_claim=false`. Server readiness is a
+separate exact-profile claim and is true only where the row names the accepted
+server receipt and scope.
 
 ## Required Boundaries
 
@@ -42,7 +44,7 @@ official I2_S answer lane:
 
 | Entry | Artifact lane | Current tier | Boundary |
 |---|---|---|---|
-| `bitnet_official_2b_i2s_qk256` | GGUF I2_S / QK256 | `product_cli_ready` | Current official x86/CUDA answer lane, not globally speed-qualified. |
+| `bitnet_official_2b_i2s_qk256` | GGUF I2_S / QK256 | `product_cli_ready` | Current official x86/CUDA answer lane with strict RTX 5070 Ti `bitnet_qk256_cuda` server-smoke evidence only; speedup, full residency, dense regular-LLM CUDA, and broad production server readiness remain unclaimed. |
 | `bitnet_official_2b_tl1_arm_candidate` | GGUF TL1 | `registered` | ARM-oriented candidate; needs TL1 layout, scalar, NEON/Apple proofs. |
 | `bitnet_official_2b_tl2_x86_candidate` | GGUF TL2 | `registered` | x86 LUT candidate; needs TL2 runner and scalar/AVX proofs. |
 | `bitnet_official_2b_bf16_gpu_int2_candidate` | BF16 master to GPU packed int2/W2A8 | `registered` | Separate GPU-reference path; does not satisfy GGUF I2_S proof. |
@@ -56,15 +58,15 @@ official I2_S answer lane:
 ## Dense SLM Family Rows
 
 `MODEL-COVERAGE-003` expands the dense SLM side of the matrix beyond the
-current Qwen2.5 Q8_0 CUDA answer lane. These rows are coverage contracts only:
-they register future model families and required proof receipts, but they do
-not inherit Qwen2.5 CUDA proof or claim dense CUDA execution.
+current Qwen2.5 Q8_0 CUDA answer lane. These rows are coverage contracts: each
+model family must earn its own tier from receipts and must not inherit Qwen2.5
+CUDA proof.
 
 | Entry | Artifact lane | Current tier | Boundary |
 |---|---|---|---|
-| `dense_qwen25_05b_q8_cuda` | Qwen2.5 0.5B Q8_0 GGUF | `product_cli_ready` | Current dense CUDA SLM answer lane, not globally speed-qualified. |
-| `dense_qwen3_06b_q8_candidate` | Qwen3 0.6B Q8_0 GGUF candidate | `registered` | Future Qwen-family coverage row; needs its own artifact, authority, CPU sanity, and CUDA receipts. |
-| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `registered` | Low-footprint dense SLM control; no CPU answer, CUDA route, speedup, or server claim. |
+| `dense_qwen25_05b_q8_cuda` | Qwen2.5 0.5B Q8_0 GGUF | `product_cli_ready` | Current dense CUDA SLM answer lane. `server_ready=true` is promoted only for the refreshed non-streaming RTX 5070 Ti shared-engine `/v1/chat/completions` receipt with artifact checksum identity, endpoint profile, and greedy two-token generation policy under BITNET-SPEC-0010. It is not broad dense GGUF, BitNet, speedup, full-residency, concurrency, or deployment readiness. |
+| `dense_qwen3_06b_q8_candidate` | Qwen3 0.6B Q8_0 GGUF candidate | `accelerator_answer_ready` | Accelerator-ready dense SLM candidate with its own artifact, CPU sanity, all-layer plan, one-token, short-decode, warm-session, and benchmark-review receipts; product CLI, speedup, server, full-residency, broad dense GGUF, and BitNet QK256 claims remain false. |
+| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `structurally_valid` | Exact artifact contract plus strict CPU preflight blocker, normalization-policy audit, exact metadata-scoped validation, strict CPU retry evidence, wrong-first-token diagnosis, and comparator contract. The retry reaches one-token generation but fails the math quality gate; a same-prompt reference-compatible first-token/top-k or checkpoint comparator capture is required before CPU answer readiness or CUDA planning. |
 | `dense_smollm2_17b_candidate` | SmolLM2 1.7B GGUF candidate | `registered` | Larger low-footprint pressure row; no answer or CUDA claim. |
 | `dense_llama32_1b_candidate` | Llama 3.2 1B GGUF candidate | `registered` | Llama-family tokenizer/model-shape control; does not inherit Qwen proof. |
 | `dense_llama32_3b_candidate` | Llama 3.2 3B GGUF candidate | `registered` | Larger Llama-family small-LLM pressure row; needs its own proof ladder. |

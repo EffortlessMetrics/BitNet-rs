@@ -33,6 +33,258 @@ fn workspace_path(path: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
 }
 
+fn write_bitnet_chat_streaming_semantics_receipt(
+    path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_chat_streaming_semantics",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "streaming_semantics": {
+            "token_order_preserved": true,
+            "final_receipt_exported": true
+        }
+    });
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
+
+fn write_bitnet_chat_session_receipt(
+    path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let source = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(source)?)?;
+    let prompt_count = receipt["session"]["prompt_count"].clone();
+    let object = receipt.as_object_mut().ok_or("receipt must be object")?;
+    object.insert("artifact_kind".to_string(), serde_json::json!("bitnet_apple_m4_chat_session"));
+    object.insert("operator_command".to_string(), serde_json::json!("mac chat"));
+    object.insert("model_id".to_string(), serde_json::json!("microsoft-bitnet-b1.58-2B-4T-i2s"));
+    object.insert(
+        "bitnet_chat_gate".to_string(),
+        serde_json::json!({
+            "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0000Z/bitnet-chat-gate/gate.json",
+            "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "status": "ready_to_enable",
+            "gate_passed": true,
+            "validated": true,
+            "work_item": "M4-BITNET-EX-006"
+        }),
+    );
+    object.insert(
+        "bitnet_chat".to_string(),
+        serde_json::json!({
+            "enabled": true,
+            "route": "bitnet mac chat --model-family bitnet",
+            "prompt_count": prompt_count,
+            "serve_enabled": false,
+            "streaming_requested": true,
+            "per_turn_receipts_enabled": true,
+            "gate_required": true
+        }),
+    );
+    object.insert(
+        "mac_bitnet_claim_boundary".to_string(),
+        serde_json::json!({
+            "bitnet_chat_session": true,
+            "answer_corpus_proof_gate": "MODEL-ARTIFACT-007/M4-QA-001",
+            "chat_gate_work_item": "M4-BITNET-EX-006",
+            "requested_backend": "apple-m4-cpu-neon",
+            "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+            "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+            "chat_enabled": true,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }),
+    );
+    if let Some(claim_boundary) =
+        object.get_mut("claim_boundary").and_then(|value| value.as_object_mut())
+    {
+        claim_boundary.insert("bitnet_chat_session".to_string(), serde_json::json!(true));
+        claim_boundary.insert("chat_enabled".to_string(), serde_json::json!(true));
+        claim_boundary.insert("serve_enabled".to_string(), serde_json::json!(false));
+        claim_boundary.insert("qk256_apple_claimed".to_string(), serde_json::json!(false));
+        claim_boundary
+            .insert("neural_engine_execution_claimed".to_string(), serde_json::json!(false));
+        claim_boundary.insert("mpsgraph_inference_claimed".to_string(), serde_json::json!(false));
+    }
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
+
+fn write_bitnet_serve_streaming_semantics_receipt(
+    path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_streaming_semantics",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "streaming_semantics": {
+            "token_order_preserved": true,
+            "final_receipt_exported": true,
+            "sse_done_sent": true
+        },
+        "claim_boundary": {
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }
+    });
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
+
+fn write_bitnet_serve_failure_receipt(
+    path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_failure",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "failure": {
+            "stage": "decode",
+            "message": "synthetic timeout boundary fixture"
+        },
+        "timeout_boundary": {
+            "enforced": true,
+            "reached": true,
+            "stage": "decode",
+            "configured_seconds": 1
+        },
+        "mac_bitnet_claim_boundary": {
+            "serve_enabled": false,
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "bitnet_quality_claimed": false
+    });
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
+
+fn write_bitnet_serve_check_receipt(
+    path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_local_server_check",
+        "timestamp": "2026-05-17T00:00:00Z",
+        "artifact_path": path,
+        "result": "pass",
+        "model_family": "bitnet",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "server": {
+            "url": "http://127.0.0.1:8080",
+            "health_endpoint": "/health",
+            "ready_endpoint": "/ready",
+            "models_endpoint": "/models",
+            "completion_endpoint": "/v1/chat/completions",
+            "receipt_export_endpoint": "/receipts/{id}"
+        },
+        "checks": {
+            "health": {
+                "executed": true,
+                "status": 200,
+                "passed": true,
+                "model_family": "bitnet",
+                "generation_executed": false
+            },
+            "ready": {
+                "executed": true,
+                "status": 200,
+                "passed": true,
+                "ready": true,
+                "model_family": "bitnet",
+                "selected_backend": "apple-m4-cpu-neon",
+                "fallback_used": false
+            },
+            "models": {
+                "executed": true,
+                "status": 200,
+                "passed": true,
+                "artifact_kind": "bitnet_apple_m4_local_server_models",
+                "resident_model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "generation_executed": false
+            },
+            "completion": {
+                "executed": true,
+                "status": 200,
+                "passed": true,
+                "request_id": "bitnet-serve-test",
+                "receipt_id": "bitnet-serve-test",
+                "generated_tokens": 1,
+                "finish_reason": "length"
+            },
+            "receipt_export": {
+                "executed": true,
+                "status": 200,
+                "passed": true,
+                "request_id": "bitnet-serve-test",
+                "artifact_kind": "bitnet_apple_m4_serve_completion",
+                "selected_backend": "apple-m4-cpu-neon",
+                "fallback_used": false
+            }
+        },
+        "claim_boundary": {
+            "server_health_checked": true,
+            "server_readiness_checked": true,
+            "model_catalog_checked": true,
+            "completion_probe_executed": true,
+            "receipt_export_checked": true,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false
+        }
+    });
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
+
 // ============================================================================
 // Run subcommand: required arguments
 // ============================================================================
@@ -442,6 +694,10 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
         .stdout(predicate::str::contains("Apple M4 inference status"))
         .stdout(predicate::str::contains("Dense SLM:"))
         .stdout(predicate::str::contains("BitNet:"))
+        .stdout(predicate::str::contains("Dense readiness:"))
+        .stdout(predicate::str::contains("BitNet readiness:"))
+        .stdout(predicate::str::contains("Last receipts:"))
+        .stdout(predicate::str::contains("Disabled: BitNet chat=false, BitNet serve=false"))
         .stdout(predicate::str::contains("no live model run"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
@@ -456,6 +712,33 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
     assert_eq!(receipt_json["bitnet"]["warm_enabled"], true);
     assert_eq!(receipt_json["bitnet"]["chat_enabled"], false);
     assert_eq!(receipt_json["bitnet"]["serve_enabled"], false);
+    assert_eq!(receipt_json["readiness"]["dense_slm"]["status"], "cache_repair_required");
+    assert!(
+        receipt_json["readiness"]["dense_slm"]["cache_repair_guidance"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("bitnet model fetch"))
+    );
+    assert_eq!(
+        receipt_json["readiness"]["dense_slm"]["last_matching_receipts"]["eval"]
+            .as_str()
+            .is_some_and(|path| path.contains("slm-eval-v2")),
+        true
+    );
+    assert_eq!(
+        receipt_json["readiness"]["bitnet"]["disabled_surfaces"]
+            .as_array()
+            .is_some_and(|surfaces| surfaces.iter().any(|surface| surface == "chat")
+                && surfaces.iter().any(|surface| surface == "serve")),
+        true
+    );
+    assert_eq!(receipt_json["readiness"]["bitnet"]["chat_enabled"], false);
+    assert_eq!(receipt_json["readiness"]["bitnet"]["serve_enabled"], false);
+    assert!(
+        receipt_json["readiness"]["bitnet"]["last_matching_receipts"]["variable_warm"]
+            .as_str()
+            .is_some_and(|path| path.contains("bitnet-productization"))
+    );
+    assert_eq!(receipt_json["readiness"]["disk_pressure"]["low_disk"].as_bool().is_some(), true);
     assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["claim_boundary"]["full_metal_inference_claimed"], false);
@@ -476,6 +759,72 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("evidence-summary.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "evidence",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 evidence summary"))
+        .stdout(predicate::str::contains("Last dense report:"))
+        .stdout(predicate::str::contains("Last BitNet report:"))
+        .stdout(predicate::str::contains("Regressions:"))
+        .stdout(predicate::str::contains("no live model run"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_operator_evidence_summary");
+    assert_eq!(receipt_json["operator_command"], "mac evidence");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["evidence_contract"]["committed_reports_only"], true);
+    assert_eq!(receipt_json["evidence_contract"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["default_model"]["id"], "qwen2.5-0.5b-instruct-q8_0");
+    assert_eq!(receipt_json["supported_models"]["dense_slm_supported_count"], 3);
+    assert_eq!(receipt_json["supported_models"]["bitnet_state"], "supported-ask");
+    assert_eq!(receipt_json["supported_models"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["supported_models"]["bitnet_serve_enabled"], false);
+    assert!(
+        receipt_json["reports"]["last_dense_report"]
+            .as_str()
+            .is_some_and(|path| { path.contains("slm-eval-v2") && path.ends_with("summary.json") })
+    );
+    assert!(receipt_json["reports"]["last_bitnet_report"].as_str().is_some_and(|path| {
+        path.contains("bitnet-eval-250") && path.ends_with("larger-corpus-decision.json")
+    }));
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
+    assert_eq!(receipt_json["unsupported_claims"]["full_metal_inference"], false);
+    assert_eq!(receipt_json["unsupported_claims"]["qk256"], false);
+    assert!(
+        receipt_json["recommended_next_command"]
+            .as_str()
+            .is_some_and(|command| command.starts_with("bitnet "))
+    );
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_evidence_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
 fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
@@ -491,17 +840,37 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
             report_root_str.as_str(),
             "--json-out",
             receipt_str.as_str(),
+            "--explain",
+            "--open-targets",
         ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Apple M4 report refresh manifest"))
         .stdout(predicate::str::contains("dense_slm_eval_v2"))
         .stdout(predicate::str::contains("bitnet_benchmark"))
+        .stdout(predicate::str::contains("Status explanations"))
+        .stdout(predicate::str::contains("Open targets"))
         .stdout(predicate::str::contains("no live model run"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_report_refresh_manifest");
     assert_eq!(receipt_json["operator_command"], "mac report-refresh");
+    assert_eq!(
+        receipt_json["operator_affordances"]["explain_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--explain")),
+        true
+    );
+    assert_eq!(
+        receipt_json["operator_affordances"]["open_targets_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--open-targets")),
+        true
+    );
+    assert_eq!(
+        receipt_json["status_explanations"]["comparable"]["meaning"].as_str().is_some(),
+        true
+    );
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_model_free"], true);
     assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_live_model_run"], false);
@@ -515,6 +884,10 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
         family["id"] == "dense_slm_eval_v2"
             && family["evidence_family"] == "dense_slm"
             && family["expected_artifact_kind"] == "apple_m4_slm_eval_summary"
+            && family["operator_status"] == "comparable"
+            && family["operator_status_reason"]
+                .as_str()
+                .is_some_and(|reason| reason.contains("committed report"))
             && family["report_count"].as_u64().is_some_and(|count| count >= 3)
             && family["generic_pr_ci"]["live_model_run"] == false
             && family["claim_boundary"]["bitnet_evidence"] == false
@@ -561,15 +934,37 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
             receipt_str.as_str(),
             "--markdown-out",
             markdown_str.as_str(),
+            "--explain",
+            "--open-targets",
         ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Apple M4 regression dashboard"))
+        .stdout(predicate::str::contains("Group explanations"))
+        .stdout(predicate::str::contains("Open targets"))
         .stdout(predicate::str::contains("dense SLM and BitNet evidence stay separate"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_regression_dashboard");
     assert_eq!(receipt_json["operator_command"], "mac regression-dashboard");
+    assert_eq!(
+        receipt_json["operator_affordances"]["explain_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--explain")),
+        true
+    );
+    assert_eq!(
+        receipt_json["operator_affordances"]["open_markdown_hint"]
+            .as_str()
+            .is_some_and(|hint| hint.contains("open ")),
+        true
+    );
+    assert_eq!(
+        receipt_json["status_explanations"]["insufficient_history"]["next_action"]
+            .as_str()
+            .is_some_and(|action| action.contains("second matching report")),
+        true
+    );
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["dashboard_contract"]["model_free"], true);
     assert_eq!(receipt_json["dashboard_contract"]["matching_requires_same_model_id"], true);
@@ -586,6 +981,15 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
         family["id"] == "dense_slm_benchmark_v2"
             && family["evidence_family"] == "dense_slm"
             && family["group_count"].as_u64().is_some_and(|count| count >= 3)
+            && family["groups"].as_array().is_some_and(|groups| {
+                groups.iter().any(|group| {
+                    group["operator_status"] == "comparable"
+                        && group["operator_status_reason"]
+                            .as_str()
+                            .is_some_and(|reason| reason.contains("matching reports"))
+                        && group["open_targets"]["latest_report"].as_str().is_some()
+                })
+            })
             && family["claim_boundary"]["bitnet_evidence"] == false
     }));
     assert!(families.iter().any(|family| {
@@ -605,6 +1009,77 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
         .success()
         .stdout(predicate::str::contains("apple_m4_regression_dashboard"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_accepts_m4_report_ops_run_identity() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("report-refresh-manifest.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "report-refresh",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["schema_version"], "1.2.0");
+    assert_eq!(receipt_json["run_identity"]["contract_version"], "m4-run-identity-v1");
+    assert_eq!(receipt_json["run_identity"]["machine_id"], "apple-m4-mac-mini");
+    assert_eq!(receipt_json["run_identity"]["soc"], "apple-m4");
+    assert_eq!(receipt_json["run_identity"]["artifact_kind"], "apple_m4_report_refresh_manifest");
+    assert_eq!(receipt_json["run_identity"]["backend"]["fallback_used"], false);
+    assert!(receipt_json["run_identity_sha256"].as_str().is_some_and(|sha| sha.len() == 64));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_report_refresh_manifest"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_m4_report_ops_missing_run_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("report-refresh-manifest.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "report-refresh",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json.as_object_mut().unwrap().remove("run_identity");
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("run_identity"));
     Ok(())
 }
 
@@ -685,8 +1160,9 @@ fn mac_check_rejects_blocked_bitnet_model_before_cache_guidance() {
 }
 
 #[test]
-fn model_fetch_offline_missing_cache_explains_repair_options() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_fetch_offline_missing_cache_explains_repair_options()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -704,16 +1180,16 @@ fn model_fetch_offline_missing_cache_explains_repair_options() {
         .stderr(predicate::str::contains("offline mode"))
         .stderr(predicate::str::contains("pre-seed"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+    Ok(())
 }
 
 #[test]
-fn model_verify_corrupt_cache_explains_prune_and_fetch() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_verify_corrupt_cache_explains_prune_and_fetch() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
-    std::fs::create_dir_all(&model_dir).expect("model dir");
-    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")
-        .expect("partial model");
+    std::fs::create_dir_all(&model_dir)?;
+    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")?;
     let cache_str = cache.to_string_lossy().into_owned();
 
     bitnet()
@@ -725,6 +1201,68 @@ fn model_verify_corrupt_cache_explains_prune_and_fetch() {
         .stderr(predicate::str::contains("got bytes=7"))
         .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+    Ok(())
+}
+
+#[test]
+fn model_verify_json_includes_dense_m4_artifact_provenance()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "model",
+            "verify",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("\"artifact_kind\": \"m4_supported_model_provenance\""))
+        .stdout(predicate::str::contains("\"spdx\": \"apache-2.0\""))
+        .stdout(predicate::str::contains("\"tokenizer\""))
+        .stdout(predicate::str::contains(
+            "\"sha256_status\": \"embedded_gguf_metadata_bound_to_model_sha256\"",
+        ))
+        .stdout(predicate::str::contains("\"identity\": \"qwen2.5\""))
+        .stdout(predicate::str::contains("\"local_cache\""))
+        .stdout(predicate::str::contains("\"symlink_status\": \"not_symlink\""))
+        .stdout(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
+        .stdout(predicate::str::contains("runtime quality and performance require separate eval"));
+    Ok(())
+}
+
+#[test]
+fn model_verify_json_includes_bitnet_external_tokenizer_provenance() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "model",
+            "verify",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("\"artifact_kind\": \"m4_supported_model_provenance\""))
+        .stdout(predicate::str::contains(
+            "\"sha256_status\": \"external_tokenizer_json_sha256_recorded\"",
+        ))
+        .stdout(predicate::str::contains(
+            "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+        ))
+        .stdout(predicate::str::contains("\"identity\": \"bitnetcpp-answer\""))
+        .stdout(predicate::str::contains("Redistribution boundary recorded"))
+        .stdout(predicate::str::contains("does not prove BitNet chat"));
 }
 
 #[test]
@@ -735,6 +1273,7 @@ fn mac_ask_help_documents_positional_question() {
         .success()
         .stdout(predicate::str::contains("[QUESTION]"))
         .stdout(predicate::str::contains("--question <QUESTION>"))
+        .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
         .stdout(predicate::str::contains("--quiet"));
 }
@@ -812,7 +1351,17 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
-fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
+fn mac_bitnet_ask_timeout_seconds_is_bitnet_only_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "ask", "What is 2+2?", "--timeout-seconds", "10"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("explicit BitNet one-shot route"))
+        .stderr(predicate::str::contains("dense SLM ask does not use this timeout flag yet"));
+}
+
+#[test]
+fn mac_bitnet_ask_requires_explicit_tokenizer_before_cache_lookup() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt = dir.path().join("bitnet-ask-missing-tokenizer-authority.json");
     let receipt_str = receipt.to_string_lossy().into_owned();
@@ -839,7 +1388,7 @@ fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
 }
 
 #[test]
-fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
+fn mac_bitnet_ask_writes_failure_receipt_for_missing_tokenizer()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let receipt = dir.path().join("bitnet-ask-failure.json");
@@ -858,6 +1407,9 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
             "missing-bitnet.gguf",
             "--tokenizer",
             tokenizer_str.as_str(),
+            "--timeout-seconds",
+            "60",
+            "--progress",
             "--json-out",
             receipt_str.as_str(),
         ])
@@ -866,7 +1418,8 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
         .stderr(predicate::str::contains("tokenizer is missing"))
         .stderr(predicate::str::contains("failure receipt written"))
         .stderr(predicate::str::contains("Repair guidance:"))
-        .stderr(predicate::str::contains("shasum -a 256"));
+        .stderr(predicate::str::contains("shasum -a 256"))
+        .stderr(predicate::str::contains("mac ask progress: tokenizer_verify_start"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
@@ -874,6 +1427,17 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
     assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["generation"]["generated_tokens"], 0);
+    assert_eq!(receipt_json["generation"]["partial_generation_available"], false);
+    assert_eq!(receipt_json["timeout_boundary"]["configured_seconds"], 60);
+    assert_eq!(receipt_json["timeout_boundary"]["enforced"], true);
+    assert_eq!(receipt_json["timeout_boundary"]["reached"], false);
+    assert_eq!(receipt_json["timeout_boundary"]["stage"], "tokenizer_missing");
+    assert_eq!(receipt_json["progress"]["enabled"], true);
+    assert_eq!(receipt_json["progress"]["last_stage"], "tokenizer_missing");
+    let stage_taxonomy =
+        receipt_json["progress"]["stage_taxonomy"].as_array().ok_or("stage taxonomy missing")?;
+    assert!(stage_taxonomy.iter().any(|stage| stage.as_str() == Some("decode")));
+    assert!(stage_taxonomy.iter().any(|stage| stage.as_str() == Some("receipt_write")));
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
 
@@ -887,7 +1451,7 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
 }
 
 #[test]
-fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
+fn mac_bitnet_ask_rejects_wrong_tokenizer_sha_before_model_lookup()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let tokenizer = dir.path().join("tokenizer.json");
@@ -1061,20 +1625,24 @@ fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
         .stdout(predicate::str::contains("--model-path"))
         .stdout(predicate::str::contains("--tokenizer"))
         .stdout(predicate::str::contains("--prompt <TEXT>"))
+        .stdout(predicate::str::contains("--profile <PROFILE>"))
+        .stdout(predicate::str::contains("resident_25"))
         .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
         .stdout(predicate::str::contains("--json-out"));
 }
 
 #[test]
-fn mac_chat_rejects_bitnet_model_family_before_prompt_collection() {
+fn mac_bitnet_chat_requires_ready_gate_before_prompt_collection() {
     bitnet()
         .args(["mac", "chat", "--model-family", "bitnet"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("BitNet Mac chat is disabled"))
-        .stderr(predicate::str::contains("M4-BITNET-PROD-004"))
+        .stderr(predicate::str::contains(
+            "BitNet Mac chat requires a ready M4-BITNET-EX-006 gate receipt",
+        ))
         .stderr(predicate::str::contains("bitnet mac bitnet-chat-gate"))
+        .stderr(predicate::str::contains("--bitnet-chat-gate-receipt"))
         .stderr(predicate::str::contains("mac chat requires at least two prompts").not());
 }
 
@@ -1103,6 +1671,7 @@ fn mac_bitnet_chat_gate_writes_blocked_receipt_without_required_evidence()
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_chat_gate");
+    assert_eq!(receipt_json["model_id"], "microsoft-bitnet-b1.58-2B-4T-i2s");
     assert_eq!(receipt_json["status"], "blocked");
     assert_eq!(receipt_json["chat_enablement"]["gate_passed"], false);
     assert_eq!(receipt_json["chat_enablement"]["chat_enabled"], false);
@@ -1127,6 +1696,643 @@ fn mac_bitnet_chat_gate_writes_blocked_receipt_without_required_evidence()
         .success()
         .stdout(predicate::str::contains("bitnet_apple_m4_chat_gate"))
         .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_chat_gate_writes_ready_receipt_with_required_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let failure_receipt = dir.path().join("bitnet-warm-failure.json");
+    let streaming_receipt = dir.path().join("bitnet-chat-streaming.json");
+    let gate_receipt = dir.path().join("bitnet-chat-gate.json");
+    let missing_tokenizer = dir.path().join("missing-tokenizer.json");
+    let warm_receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    let missing_tokenizer_str = missing_tokenizer.to_string_lossy().into_owned();
+    let warm_receipt_str = warm_receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            missing_tokenizer_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--json-out",
+            failure_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failure receipt written"));
+    write_bitnet_chat_streaming_semantics_receipt(&streaming_receipt)?;
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-chat-gate",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--warm-receipt",
+            warm_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ready-to-enable"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_chat_gate");
+    assert_eq!(receipt_json["status"], "ready_to_enable");
+    assert_eq!(receipt_json["chat_enablement"]["gate_passed"], true);
+    assert_eq!(receipt_json["chat_enablement"]["chat_enabled"], false);
+    assert_eq!(receipt_json["chat_enablement"]["serve_enabled"], false);
+    assert_eq!(receipt_json["requirements"]["variable_warm_session_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["timeout_failure_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["streaming_semantics_receipt"]["passed"], true);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_chat_gate"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_chat_ready_gate_reaches_model_verification() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let failure_receipt = dir.path().join("bitnet-warm-failure.json");
+    let streaming_receipt = dir.path().join("bitnet-chat-streaming.json");
+    let gate_receipt = dir.path().join("bitnet-chat-gate.json");
+    let missing_tokenizer = dir.path().join("missing-tokenizer.json");
+    let warm_receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    let missing_tokenizer_str = missing_tokenizer.to_string_lossy().into_owned();
+    let warm_receipt_str = warm_receipt.to_string_lossy().into_owned();
+    let tokenizer = workspace_path("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json");
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            missing_tokenizer_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--json-out",
+            failure_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failure receipt written"));
+    write_bitnet_chat_streaming_semantics_receipt(&streaming_receipt)?;
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-chat-gate",
+            "--warm-receipt",
+            warm_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat",
+            "--model-family",
+            "bitnet",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--bitnet-chat-gate-receipt",
+            gate_receipt_str.as_str(),
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Name the capital of France. Answer with one word.",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("accepted GGUF"))
+        .stderr(predicate::str::contains("ready M4-BITNET-EX-006 gate receipt").not())
+        .stderr(predicate::str::contains("mac chat requires at least two prompts").not());
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_chat_session_receipt_validates_claim_boundary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let source = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+    );
+    let receipt_path = dir.path().join("bitnet-chat-session.json");
+    let receipt_path_str = receipt_path.to_string_lossy().into_owned();
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(source)?)?;
+    let prompt_count = receipt["session"]["prompt_count"].clone();
+    let object = receipt.as_object_mut().ok_or("receipt must be object")?;
+    object.insert("artifact_kind".to_string(), serde_json::json!("bitnet_apple_m4_chat_session"));
+    object.insert("operator_command".to_string(), serde_json::json!("mac chat"));
+    object.insert("model_id".to_string(), serde_json::json!("microsoft-bitnet-b1.58-2B-4T-i2s"));
+    object.insert(
+        "bitnet_chat_gate".to_string(),
+        serde_json::json!({
+            "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0000Z/bitnet-chat-gate/gate.json",
+            "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "status": "ready_to_enable",
+            "gate_passed": true,
+            "validated": true,
+            "work_item": "M4-BITNET-EX-006"
+        }),
+    );
+    object.insert(
+        "bitnet_chat".to_string(),
+        serde_json::json!({
+            "enabled": true,
+            "route": "bitnet mac chat --model-family bitnet",
+            "prompt_count": prompt_count,
+            "serve_enabled": false,
+            "streaming_requested": true,
+            "per_turn_receipts_enabled": true,
+            "gate_required": true
+        }),
+    );
+    object.insert(
+        "mac_bitnet_claim_boundary".to_string(),
+        serde_json::json!({
+            "bitnet_chat_session": true,
+            "answer_corpus_proof_gate": "MODEL-ARTIFACT-007/M4-QA-001",
+            "chat_gate_work_item": "M4-BITNET-EX-006",
+            "requested_backend": "apple-m4-cpu-neon",
+            "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+            "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+            "chat_enabled": true,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }),
+    );
+    if let Some(claim_boundary) =
+        object.get_mut("claim_boundary").and_then(|value| value.as_object_mut())
+    {
+        claim_boundary.insert("bitnet_chat_session".to_string(), serde_json::json!(true));
+        claim_boundary.insert("chat_enabled".to_string(), serde_json::json!(true));
+        claim_boundary.insert("serve_enabled".to_string(), serde_json::json!(false));
+        claim_boundary.insert("qk256_apple_claimed".to_string(), serde_json::json!(false));
+        claim_boundary
+            .insert("neural_engine_execution_claimed".to_string(), serde_json::json!(false));
+        claim_boundary.insert("mpsgraph_inference_claimed".to_string(), serde_json::json!(false));
+    }
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_path_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_chat_session"))
+        .stdout(predicate::str::contains("\"prompt_count\": 100"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_serve_help_documents_ready_gate() {
+    bitnet()
+        .args(["mac", "serve", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--model-family <MODEL_FAMILY>"))
+        .stdout(predicate::str::contains("--model-path <PATH>"))
+        .stdout(predicate::str::contains("--tokenizer <PATH>"))
+        .stdout(predicate::str::contains("--bitnet-serve-gate-receipt <PATH>"));
+}
+
+#[test]
+fn mac_bitnet_serve_requires_ready_gate_before_cache_or_bind()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_dir = dir.path().join("receipts");
+    let receipt_dir_str = receipt_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "serve",
+            "--model-family",
+            "bitnet",
+            "--receipt-dir",
+            receipt_dir_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "BitNet Mac serve requires a ready M4-BITNET-EX-007 gate receipt",
+        ))
+        .stderr(predicate::str::contains("bitnet mac bitnet-serve-gate"))
+        .stderr(predicate::str::contains("--bitnet-serve-gate-receipt"))
+        .stderr(predicate::str::contains("bitnet model fetch").not())
+        .stderr(predicate::str::contains("failed to bind").not());
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_serve_gate_writes_blocked_receipt_without_required_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let chat_receipt = dir.path().join("missing-chat-session.json");
+    let gate_receipt = dir.path().join("bitnet-serve-gate.json");
+    let chat_receipt_str = chat_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-serve-gate",
+            "--chat-receipt",
+            chat_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("BitNet serve gate is blocked"))
+        .stderr(predicate::str::contains("receipt written"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_serve_gate");
+    assert_eq!(receipt_json["model_id"], "microsoft-bitnet-b1.58-2B-4T-i2s");
+    assert_eq!(receipt_json["status"], "blocked");
+    assert_eq!(receipt_json["serve_enablement"]["gate_passed"], false);
+    assert_eq!(receipt_json["serve_enablement"]["serve_enabled"], false);
+    assert_eq!(receipt_json["requirements"]["chat_session_receipt"]["passed"], false);
+    assert_eq!(receipt_json["requirements"]["streaming_semantics_receipt"]["passed"], false);
+    assert_eq!(receipt_json["requirements"]["timeout_failure_receipt"]["passed"], false);
+    assert_eq!(receipt_json["requirements"]["serve_check_receipt"]["passed"], false);
+    assert_eq!(receipt_json["requirements"]["health_ready_endpoints"]["passed"], false);
+    assert_eq!(receipt_json["requirements"]["per_request_receipt_export"]["passed"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["production_hosting_claimed"], false);
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["openai_compatibility_claimed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_serve_gate"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_serve_gate_writes_ready_receipt_with_required_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let chat_receipt = dir.path().join("bitnet-chat-session.json");
+    let streaming_receipt = dir.path().join("bitnet-serve-streaming.json");
+    let failure_receipt = dir.path().join("bitnet-serve-failure.json");
+    let serve_check_receipt = dir.path().join("bitnet-serve-check.json");
+    let gate_receipt = dir.path().join("bitnet-serve-gate.json");
+    let chat_receipt_str = chat_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let serve_check_receipt_str = serve_check_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    write_bitnet_chat_session_receipt(&chat_receipt)?;
+    write_bitnet_serve_streaming_semantics_receipt(&streaming_receipt)?;
+    write_bitnet_serve_failure_receipt(&failure_receipt)?;
+    write_bitnet_serve_check_receipt(&serve_check_receipt)?;
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-serve-gate",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--chat-receipt",
+            chat_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--serve-check-receipt",
+            serve_check_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ready-to-enable"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_serve_gate");
+    assert_eq!(receipt_json["status"], "ready_to_enable");
+    assert_eq!(receipt_json["serve_enablement"]["gate_passed"], true);
+    assert_eq!(receipt_json["serve_enablement"]["serve_enabled"], false);
+    assert_eq!(receipt_json["requirements"]["chat_session_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["chat_session_receipt"]["chat_enabled"], true);
+    assert_eq!(receipt_json["requirements"]["chat_session_receipt"]["serve_enabled"], false);
+    assert_eq!(receipt_json["requirements"]["streaming_semantics_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["timeout_failure_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["serve_check_receipt"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["health_ready_endpoints"]["passed"], true);
+    assert_eq!(receipt_json["requirements"]["per_request_receipt_export"]["passed"], true);
+    assert_eq!(
+        receipt_json["requirements"]["timeout_failure_receipt"]["timeout_boundary_recorded"],
+        true
+    );
+    assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_serve_gate"));
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_serve_gate_blocks_invalid_failure_evidence() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let chat_receipt = dir.path().join("bitnet-chat-session.json");
+    let streaming_receipt = dir.path().join("bitnet-serve-streaming.json");
+    let failure_receipt = dir.path().join("bitnet-serve-failure.json");
+    let serve_check_receipt = dir.path().join("bitnet-serve-check.json");
+    let gate_receipt = dir.path().join("bitnet-serve-gate.json");
+    let chat_receipt_str = chat_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let serve_check_receipt_str = serve_check_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    write_bitnet_chat_session_receipt(&chat_receipt)?;
+    write_bitnet_serve_streaming_semantics_receipt(&streaming_receipt)?;
+    write_bitnet_serve_failure_receipt(&failure_receipt)?;
+    write_bitnet_serve_check_receipt(&serve_check_receipt)?;
+    let mut failure_json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&failure_receipt)?)?;
+    failure_json["timeout_boundary"]["enforced"] = serde_json::json!(false);
+    std::fs::write(&failure_receipt, serde_json::to_vec_pretty(&failure_json)?)?;
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-serve-gate",
+            "--chat-receipt",
+            chat_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--serve-check-receipt",
+            serve_check_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("BitNet serve gate is blocked"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    assert_eq!(receipt_json["status"], "blocked");
+    assert_eq!(receipt_json["requirements"]["timeout_failure_receipt"]["passed"], false);
+    assert!(
+        receipt_json["requirements"]["timeout_failure_receipt"]["error"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("timeout_boundary.enforced")
+    );
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_serve_ready_gate_reaches_model_verification() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let chat_receipt = dir.path().join("bitnet-chat-session.json");
+    let streaming_receipt = dir.path().join("bitnet-serve-streaming.json");
+    let failure_receipt = dir.path().join("bitnet-serve-failure.json");
+    let serve_check_receipt = dir.path().join("bitnet-serve-check.json");
+    let gate_receipt = dir.path().join("bitnet-serve-gate.json");
+    let receipt_dir = dir.path().join("serve-receipts");
+    let chat_receipt_str = chat_receipt.to_string_lossy().into_owned();
+    let streaming_receipt_str = streaming_receipt.to_string_lossy().into_owned();
+    let failure_receipt_str = failure_receipt.to_string_lossy().into_owned();
+    let serve_check_receipt_str = serve_check_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+    let receipt_dir_str = receipt_dir.to_string_lossy().into_owned();
+    let tokenizer = workspace_path("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json");
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+    write_bitnet_chat_session_receipt(&chat_receipt)?;
+    write_bitnet_serve_streaming_semantics_receipt(&streaming_receipt)?;
+    write_bitnet_serve_failure_receipt(&failure_receipt)?;
+    write_bitnet_serve_check_receipt(&serve_check_receipt)?;
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-serve-gate",
+            "--chat-receipt",
+            chat_receipt_str.as_str(),
+            "--streaming-receipt",
+            streaming_receipt_str.as_str(),
+            "--failure-receipt",
+            failure_receipt_str.as_str(),
+            "--serve-check-receipt",
+            serve_check_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    bitnet()
+        .args([
+            "mac",
+            "serve",
+            "--model-family",
+            "bitnet",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--bitnet-serve-gate-receipt",
+            gate_receipt_str.as_str(),
+            "--receipt-dir",
+            receipt_dir_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("accepted GGUF"))
+        .stderr(predicate::str::contains("ready M4-BITNET-EX-007 gate receipt").not())
+        .stderr(predicate::str::contains("failed to bind").not());
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_serve_completion_receipt_validates_claim_boundary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("bitnet-serve-completion.json");
+    let receipt_path_str = receipt_path.to_string_lossy().into_owned();
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_completion",
+        "timestamp": "2026-05-17T00:00:00Z",
+        "request_id": "bitnet-serve-test",
+        "artifact_path": receipt_path_str,
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": null,
+        "server": {
+            "host": "127.0.0.1",
+            "port": 8080,
+            "started_at": "2026-05-17T00:00:00Z",
+            "streaming_default": true,
+            "receipt_dir": dir.path().join("receipts"),
+            "model_family": "bitnet"
+        },
+        "model_family": "bitnet",
+        "model": {
+            "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "display_name": "Microsoft BitNet b1.58 2B 4T I2_S",
+            "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+            "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+            "sha256_source": "verified_cache_metadata_and_startup_check",
+            "bytes": 1187801280,
+            "architecture": "bitnet_b1_58",
+            "quantization": "I2_S"
+        },
+        "tokenizer": {
+            "type": "hf-tokenizers-json",
+            "source": "external_tokenizer_json",
+            "strict": true,
+            "pretokenizer_authority": "llama-bpe",
+            "prompt_template": "bitnetcpp-answer",
+            "bos": 1,
+            "eos": 2
+        },
+        "request": {
+            "model": "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "prompt": "Answer with one digit: 2+2=",
+            "system_prompt": null,
+            "stream": true,
+            "max_new_tokens": 1,
+            "temperature": 0.0,
+            "top_k": 1,
+            "top_p": 1.0,
+            "repetition_penalty": 1.1,
+            "seed": null
+        },
+        "generation": {
+            "mode": "greedy",
+            "text": "4",
+            "finish_reason": "length",
+            "prompt_tokens": 8,
+            "generated_tokens": 1,
+            "prompt_token_ids": [1, 2, 3],
+            "generated_token_ids": [19],
+            "token_texts": ["4"]
+        },
+        "timing": {
+            "model_load_ms": 0.0,
+            "tokenizer_load_ms": 0.0,
+            "tokenize_ms": 1.0,
+            "prefill_ms": 1.0,
+            "first_token_ms": 2,
+            "time_to_first_token_ms": 2,
+            "decode_ms": 1.0,
+            "sampling_ms": 0.1,
+            "total_ms": 3.0,
+            "decode_step_ms": {"count": 1, "min": 1.0, "max": 1.0, "mean": 1.0},
+            "sample_step_ms": {"count": 1, "min": 0.1, "max": 0.1, "mean": 0.1}
+        },
+        "session_reuse": {
+            "reuse_scope": "resident_server",
+            "model_loaded_at_startup": true,
+            "tokenizer_loaded_at_startup": true,
+            "request_serialized": true,
+            "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation"
+        },
+        "claim_boundary": {
+            "local_server_completion_endpoint": true,
+            "streaming_transport": true,
+            "openai_compatibility_claimed": false,
+            "production_readiness_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false
+        },
+        "mac_bitnet_claim_boundary": {
+            "bitnet_serve_session": true,
+            "serve_gate_work_item": "M4-BITNET-EX-007",
+            "serve_gate_path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0000Z/bitnet-serve-gate/gate.json",
+            "serve_gate_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "serve_enabled": true,
+            "chat_required": true,
+            "requested_backend": "apple-m4-cpu-neon",
+            "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }
+    });
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_path.to_string_lossy().as_ref(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_serve_completion"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 1"));
     Ok(())
 }
 
@@ -1237,6 +2443,27 @@ fn mac_bitnet_warm_rejects_empty_operator_prompt_before_cache_lookup() {
 }
 
 #[test]
+fn mac_bitnet_warm_rejects_profile_prompt_mix_before_cache_lookup() {
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--profile",
+            "resident_25",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+            "--prompt",
+            "Answer with a single digit: 2+2=",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "`bitnet mac bitnet-warm --profile` cannot be combined with --prompt",
+        ))
+        .stderr(predicate::str::contains("BitNet warm session requires").not());
+}
+
+#[test]
 fn mac_bitnet_warm_writes_failure_receipt_for_missing_tokenizer()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
@@ -1276,6 +2503,7 @@ fn mac_bitnet_warm_writes_failure_receipt_for_missing_tokenizer()
     assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["generation"]["generated_tokens"], 0);
+    assert_eq!(receipt_json["generation"]["partial_generation_available"], false);
     assert_eq!(receipt_json["timeout_boundary"]["enforced"], true);
     assert_eq!(receipt_json["timeout_boundary"]["reached"], false);
     assert_eq!(receipt_json["progress"]["enabled"], true);
@@ -1359,6 +2587,23 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
             .unwrap_or_default()
             .contains("bitnet mac models")
     );
+    assert_eq!(receipt_json["readiness"]["dense_slm"]["status"], "cache_repair_required");
+    assert!(
+        receipt_json["readiness"]["dense_slm"]["cache_repair_guidance"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("bitnet model fetch"))
+    );
+    assert_eq!(receipt_json["readiness"]["bitnet"]["chat_enabled"], false);
+    assert_eq!(receipt_json["readiness"]["bitnet"]["serve_enabled"], false);
+    assert!(
+        receipt_json["readiness"]["bitnet"]["last_matching_receipts"]["variable_warm"]
+            .as_str()
+            .is_some_and(|path| path.contains("variable-warm-session.json"))
+    );
+    assert_eq!(
+        receipt_json["readiness"]["bitnet"]["claim_boundary"]["bitnet_quality_claimed"],
+        false
+    );
     assert_eq!(receipt_json["mac_claim_boundary"]["bitnet_quality_claimed"], false);
     Ok(())
 }
@@ -1430,6 +2675,9 @@ fn mac_chat_help_documents_resident_prompts() {
         .stdout(predicate::str::contains("--stdin"))
         .stdout(predicate::str::contains("--interactive"))
         .stdout(predicate::str::contains("/exit"))
+        .stdout(predicate::str::contains("--model-path <PATH>"))
+        .stdout(predicate::str::contains("--tokenizer <PATH>"))
+        .stdout(predicate::str::contains("--bitnet-chat-gate-receipt <PATH>"))
         .stdout(predicate::str::contains("--no-stream"))
         .stdout(predicate::str::contains("--no-turn-receipts"));
 }
@@ -1902,6 +3150,106 @@ fn mac_regression_rejects_bitnet_eval_context_mismatch() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn mac_regression_accepts_matching_bitnet_warm_session() -> Result<(), Box<dyn std::error::Error>> {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            receipt_str.as_str(),
+            "--baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_bitnet_warm_session_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-warm.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["speed"]["throughput"]["decode_generated_tok_s"] = serde_json::json!(0.5);
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_bitnet_warm_session_context_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let dir = tempfile::tempdir()?;
+    let observed = dir.path().join("observed-bitnet-warm.json");
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&baseline)?)?;
+    receipt["tokenizer"]["pretokenizer_authority"] = serde_json::json!("other-tokenizer");
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("tokenizer.pretokenizer_authority mismatch"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_receipts_check_accepts_bitnet_warm_session_baseline()
+-> Result<(), Box<dyn std::error::Error>> {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            receipt_str.as_str(),
+            "--regression-baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
 fn mac_regression_accepts_matching_bitnet_benchmark_v1() -> Result<(), Box<dyn std::error::Error>> {
     let receipt =
         workspace_path("ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json");
@@ -2310,8 +3658,8 @@ fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt()
 }
 
 #[test]
-fn mac_receipts_check_accepts_golden_smoke_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_golden_smoke_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("mac-smoke.json");
     std::fs::write(
         &receipt_path,
@@ -2353,10 +3701,8 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
                 "broad_performance_claim": false,
                 "speedup_claim": false
             }
-        }))
-        .expect("json"),
-    )
-    .expect("write receipt");
+        }))?,
+    )?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2365,6 +3711,7 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_golden_smoke"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
 }
 
 #[test]
@@ -2751,13 +4098,90 @@ fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
 }
 
 #[test]
+fn mac_benchmark_preflight_writes_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("benchmark-preflight.json");
+    let cache_dir = dir.path().join("cache");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let cache_str = cache_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "benchmark-preflight",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--background-load-note",
+            "test harness idle",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"artifact_kind\": \"apple_m4_benchmark_preflight\""))
+        .stdout(predicate::str::contains("\"timing_result_recorded\": false"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_benchmark_preflight");
+    assert_eq!(receipt_json["run_identity"]["contract_version"], "m4-run-identity-v1");
+    assert_eq!(receipt_json["run_identity"]["command"]["live_model_run"], false);
+    assert_eq!(receipt_json["benchmark_preflight"]["live_model_run"], false);
+    assert_eq!(receipt_json["claim_boundary"]["broad_performance_claim"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_benchmark_preflight"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_preflight_receipt_rejects_missing_invalid_reasons()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("benchmark-preflight.json");
+    let cache_dir = dir.path().join("cache");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let cache_str = cache_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "benchmark-preflight",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json["comparison_readiness"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing comparison_readiness"))?
+        .remove("invalid_comparison_reasons");
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid_comparison_reasons"));
+    Ok(())
+}
+
+#[test]
 fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("slm-benchmark-v2.json");
     std::fs::write(
         &receipt_path,
         serde_json::to_vec_pretty(&serde_json::json!({
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0",
             "artifact_kind": "apple_m4_slm_benchmark_v2",
             "requested_backend": "apple-m4-cpu-neon",
             "selected_backend": "apple-m4-cpu-neon",
@@ -2782,6 +4206,7 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
             "prompt_count": 3,
             "generated_tokens": 48,
             "speed": benchmark_speed_v2_json(),
+            "benchmark_contract": benchmark_contract_v2_json(),
             "memory": {
                 "peak_memory_mb_p50": 3900.0,
                 "peak_memory_mb_p90": 3950.0,
@@ -2826,14 +4251,14 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
 }
 
 #[test]
-fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("slm-benchmark-v2-resident-100.json");
     let mut receipt = slm_benchmark_v2_summary();
     receipt["profiles_required"] = serde_json::json!(["resident_100"]);
     receipt["profiles"] = serde_json::json!([benchmark_profile_v2_json("resident_100")]);
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -2842,6 +4267,46 @@ fn mac_receipts_check_accepts_slm_benchmark_v2_resident_100_profile() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_benchmark_v2"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("slm-benchmark-v2-missing-sampling.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["speed"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing speed object"))?
+        .remove("sampling_ms_per_token_p50");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("sampling_ms_per_token_p50"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("slm-benchmark-v2-profile-mismatch.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["profiles_required"] = serde_json::json!(["resident_100"]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("profiles_required must match profiles order"));
+    Ok(())
 }
 
 #[test]
@@ -3653,6 +5118,9 @@ fn benchmark_speed_v2_json() -> serde_json::Value {
         "ttft_ms_p50": 1800.0,
         "ttft_ms_p90": 2100.0,
         "ttft_ms_p99": 2300.0,
+        "sampling_ms_per_token_p50": 0.2,
+        "sampling_ms_per_token_p90": 0.3,
+        "sampling_ms_per_token_p99": 0.4,
         "input_tok_s_p50": 118.0,
         "input_tok_s_p90": 130.0,
         "input_tok_s_p99": 140.0,
@@ -3665,6 +5133,58 @@ fn benchmark_speed_v2_json() -> serde_json::Value {
         "total_wall_ms_p50": 5200.0,
         "total_wall_ms_p90": 5600.0,
         "total_wall_ms_p99": 5900.0
+    })
+}
+
+fn benchmark_contract_v2_json() -> serde_json::Value {
+    serde_json::json!({
+        "contract_version": "1.1.0",
+        "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+        "profile_execution_model": "one resident warm-session run per named profile",
+        "supported_profiles": [
+            "short_prompt_16_out",
+            "short_prompt_64_out",
+            "long_prompt_16_out",
+            "long_prompt_128_out",
+            "context_1k",
+            "context_4k",
+            "resident_25",
+            "resident_50",
+            "resident_100"
+        ],
+        "required_metrics": {
+            "timing": [
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "time_to_first_token_ms",
+                "decode_total_ms",
+                "sampling_ms_per_token",
+                "total_wall_ms"
+            ],
+            "throughput": [
+                "input_tokens_per_second",
+                "output_tokens_per_second",
+                "decode_tokens_per_second"
+            ],
+            "memory": [
+                "peak_memory_mb",
+                "memory_drift_mb"
+            ],
+            "aggregate_speed": [
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "ttft_ms",
+                "sampling_ms_per_token",
+                "input_tok_s",
+                "output_tok_s",
+                "decode_tok_s",
+                "total_wall_ms"
+            ]
+        }
     })
 }
 
@@ -3881,7 +5401,7 @@ fn slm_eval_summary_report() -> serde_json::Value {
 
 fn slm_benchmark_v2_summary() -> serde_json::Value {
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "artifact_kind": "apple_m4_slm_benchmark_v2",
         "requested_backend": "apple-m4-cpu-neon",
         "selected_backend": "apple-m4-cpu-neon",
@@ -3906,6 +5426,7 @@ fn slm_benchmark_v2_summary() -> serde_json::Value {
         "prompt_count": 3,
         "generated_tokens": 48,
         "speed": benchmark_speed_v2_json(),
+        "benchmark_contract": benchmark_contract_v2_json(),
         "memory": {
             "peak_memory_mb_p50": 3900.0,
             "peak_memory_mb_p90": 3950.0,
@@ -5423,8 +6944,31 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
 
     let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus");
     assert_eq!(receipt["corpus"]["case_count"], 100);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 912587);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-bitnet-v1"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "1.0.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+    );
     assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
     assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
     assert_eq!(receipt["model"]["bytes"], 1_187_801_280u64);
@@ -5469,6 +7013,125 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
     Ok(())
 }
 
+/// `answer-corpus --dry-run` validates the Apple M4 BitNet 250-case corpus contract.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("apple-m4-bitnet-eval-250.json");
+    let corpus = workspace_path("ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
+    assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["backend_lane"], "apple_m4_cpu_neon");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-bitnet-eval-seeded-corpus-250");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus-250");
+    assert_eq!(receipt["corpus"]["case_count"], 250);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 912587);
+    assert_eq!(receipt["corpus"]["metadata"]["work_item"], "M4-BITNET-EX-010");
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-bitnet-v2"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.0.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+    );
+    assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
+    assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
+    assert_eq!(receipt["model"]["bytes"], 1_187_801_280u64);
+    assert_eq!(
+        receipt["model"]["sha256"],
+        "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+    );
+    assert_eq!(receipt["model"]["architecture"], "bitnet_b1_58");
+    assert_eq!(receipt["model"]["quant_format"], "I2_S");
+    assert_eq!(receipt["tokenizer"]["authority"]["source"], "external_tokenizer_json");
+    assert_eq!(receipt["tokenizer"]["authority"]["ggml_pre"], "llama-bpe");
+    assert_eq!(receipt["prompt_template_policy"]["family"], "bitnetcpp-answer");
+    assert_eq!(receipt["scoring_summary"]["enabled"], true);
+    assert_eq!(receipt["scoring_summary"]["total"], 250);
+    assert_eq!(receipt["scoring_summary"]["not_run"], 250);
+
+    for (family, expected_total) in [
+        ("arithmetic_exact", 15),
+        ("closed_label_classification", 20),
+        ("constrained_summary", 30),
+        ("fixed_table_qa", 35),
+        ("format_constrained_json", 20),
+        ("numeric_tolerance", 35),
+        ("ordering_sorting", 20),
+        ("required_forbidden_tokens", 30),
+        ("rewrite_normalized", 20),
+        ("synthetic_extraction", 25),
+    ] {
+        assert_eq!(receipt["task_family_summary"][family]["total"], expected_total);
+        assert_eq!(receipt["task_family_summary"][family]["not_run"], expected_total);
+    }
+
+    assert_eq!(receipt["task_family_summary"]["numeric_tolerance"]["scoring"]["total"], 35);
+    assert_eq!(receipt["task_family_summary"]["fixed_table_qa"]["scoring"]["total"], 35);
+    assert_eq!(receipt["task_family_summary"]["required_forbidden_tokens"]["scoring"]["total"], 30);
+    assert_eq!(receipt["cases"][0]["task_family"], "arithmetic_exact");
+    assert!(
+        receipt["cases"][0]["seed_material"]
+            .as_str()
+            .ok_or("missing seed material")?
+            .contains("seed=912587")
+    );
+    assert_eq!(
+        receipt["cases"][0]["reference_comparison"]["schema"],
+        "bitnet_reference_vs_rust_v1"
+    );
+    assert_eq!(
+        receipt["cases"][0]["reference_comparison"]["comparison"]["status"],
+        "reference_not_supplied"
+    );
+    assert_eq!(receipt["reference_comparison"]["enabled"], true);
+    assert_eq!(receipt["reference_comparison"]["rust_runner"]["fallback_used"], false);
+    assert_eq!(receipt["reference_comparison"]["summary"]["reference_not_supplied"], 250);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["dense_slm_evidence_used"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["chat_enabled"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["serve_enabled"], false);
+    assert_eq!(receipt["reference_comparison"]["claim_boundary"]["performance_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
+    Ok(())
+}
+
 /// `answer-corpus --model-id` pins aggregate SLM receipt identity to a supported M4 model.
 #[cfg(feature = "full-cli")]
 #[test]
@@ -5499,8 +7162,69 @@ fn slm_eval_v2_dry_run_pins_supported_dense_model_identity()
     let receipt: serde_json::Value =
         serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
     assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-slm-eval-seeded-corpus-v2");
     assert_eq!(receipt["corpus"]["name"], "apple-m4-slm-eval-seeded-corpus-v2");
-    assert_eq!(receipt["corpus"]["case_count"], 120);
+    assert_eq!(receipt["corpus"]["case_count"], 500);
+    assert_eq!(receipt["corpus"]["metadata"]["seed"], 777331);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["generator_policy"],
+        "deterministic-static-fixture-v2"
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["contract_version"],
+        "m4-eval-corpus-scorer-contract-v1"
+    );
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.2.0");
+    assert_eq!(
+        receipt["corpus"]["contract"]["expected_output_provenance"],
+        "Closed-form deterministic fixture answers derived from the prompt data in this YAML; no model output, live run, or LLM judge is used as expected-output authority."
+    );
+    assert_eq!(
+        receipt["corpus"]["contract"]["normalization_rules"],
+        "answer_corpus_normalize_scoring_text_v2 plus normalize_match_text_v1 for normalized_match only; known Qwen ChatML stop tails and leading assistant separators are stripped before scoring, JSON/schema scoring may extract fenced or embedded JSON payloads deterministically, keyword checks use token boundaries, and exact_match remains strict after trim."
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["scoring_schema"],
+        "answer_corpus_mechanical_scoring_v1"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["receipt_contract"],
+        "answer_corpus_aggregate_receipt_v1"
+    );
+    let scoring_kinds: Vec<&str> = receipt["scoring_contract"]["supported_scoring_kinds"]
+        .as_array()
+        .ok_or("missing supported scoring kinds")?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for kind in [
+        "exact_match",
+        "normalized_match",
+        "json_schema",
+        "numeric_tolerance",
+        "required_keywords",
+        "forbidden_tokens",
+        "required_forbidden_tokens",
+    ] {
+        assert!(scoring_kinds.contains(&kind), "missing scoring contract kind `{kind}`");
+    }
+    let failure_categories: Vec<&str> = receipt["scoring_contract"]["supported_failure_categories"]
+        .as_array()
+        .ok_or("missing supported failure categories")?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for category in [
+        "formatting",
+        "factual_table",
+        "extraction",
+        "refusal",
+        "timeout",
+        "schema",
+        "normalization",
+    ] {
+        assert!(failure_categories.contains(&category), "missing failure category `{category}`");
+    }
     assert_eq!(receipt["model"]["id"], "qwen2.5-1.5b-instruct-q4_k_m");
     assert_eq!(receipt["model"]["repo"], "Qwen/Qwen2.5-1.5B-Instruct-GGUF");
     assert_eq!(receipt["model"]["revision"], "91cad51170dc346986eccefdc2dd33a9da36ead9");
@@ -5607,6 +7331,131 @@ fn reference_compare_validates_slm_external_reference_artifact() {
     );
     assert_eq!(receipt["comparison"]["first_divergence"]["index"], 0);
     assert_eq!(receipt["speedup_claim"], false);
+}
+
+/// `reference-compare` accepts the SmolLM2 first-token/top-k comparator shape.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_validates_smollm2_first_token_topk_artifact()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let artifact = dir.path().join("smollm2-reference.json");
+    let out = dir.path().join("smollm2-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "model_family": "smollm2",
+          "prompt_text": "What is 2+2? Answer with only the number.",
+          "prompt_template": "smollm2_chatml_with_explicit_system",
+          "bos": true,
+          "reference": {
+            "backend": "llama-cli-known-good",
+            "kernel": "external-reference",
+            "prompt_ids": [1, 9690, 198, 2683, 359, 253, 5356, 11173, 30, 2],
+            "generated_ids": [34],
+            "text": "4",
+            "topk_step0": [[34, 12.0], [504, 4.0]],
+            "chosen_id": 34
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "kernel": "dense-q8_0-reference",
+            "loader_mode": "real_gguf",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_strict": true,
+            "fallback_used": false,
+            "prompt_ids": [1, 9690, 198, 2683, 359, 253, 5356, 11173, 30, 2],
+            "generated_ids": [504],
+            "text": "The",
+            "topk_step0": [[504, 10.0], [34, 8.0]],
+            "chosen_id": 504
+          }
+        }"#,
+    )?;
+
+    bitnet()
+        .arg("reference-compare")
+        .arg("--artifact")
+        .arg(&artifact)
+        .arg("--json-out")
+        .arg(&out)
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
+    assert_eq!(receipt["artifact_kind"], "slm_reference_divergence_validation");
+    assert_eq!(receipt["model"]["family"], "smollm2");
+    assert_eq!(receipt["validation"]["passed"], true);
+    assert_eq!(receipt["comparison"]["passed"], false);
+    assert_eq!(receipt["comparison"]["first_divergence"]["phase"], "logits");
+    assert_eq!(
+        receipt["comparison"]["first_divergence"]["classification"],
+        "logits_or_shared_transformer_math"
+    );
+    assert_eq!(receipt["comparison"]["bitnet_rs"]["fallback_used"], false);
+    assert_eq!(receipt["speedup_claim"], false);
+    Ok(())
+}
+
+/// `--require-match` keeps the SmolLM2 comparator fail-closed when top-k diverges.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_require_match_fails_smollm2_topk_divergence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let artifact = dir.path().join("smollm2-reference.json");
+    let out = dir.path().join("smollm2-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "model_family": "smollm2",
+          "prompt_text": "What is 2+2? Answer with only the number.",
+          "prompt_template": "smollm2_chatml_with_explicit_system",
+          "bos": true,
+          "reference": {
+            "backend": "llama-cli-known-good",
+            "kernel": "external-reference",
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [34],
+            "text": "4",
+            "topk_step0": [[34, 12.0], [504, 4.0]],
+            "chosen_id": 34
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "kernel": "dense-q8_0-reference",
+            "loader_mode": "real_gguf",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_strict": true,
+            "fallback_used": false,
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [504],
+            "text": "The",
+            "topk_step0": [[504, 10.0], [34, 8.0]],
+            "chosen_id": 504
+          }
+        }"#,
+    )?;
+
+    bitnet()
+        .arg("reference-compare")
+        .arg("--artifact")
+        .arg(&artifact)
+        .arg("--json-out")
+        .arg(&out)
+        .arg("--require-match")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("reference artifact diverged"));
+    Ok(())
 }
 
 /// `first-token-divergence --help` documents the external reference and local CPU inputs.

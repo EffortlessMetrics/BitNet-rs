@@ -1,0 +1,15 @@
+timestamp = "2026-05-16T09:57:58Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ACCURACY-000"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5099
+merge_sha = "eee9866d94a53c336971689c74d1126042619655"
+
+notes = [
+  "Merged PR #5099, freezing machine-readable corpus/scorer contract metadata for the primary Apple M4 dense SLM eval-v2 and BitNet eval corpora.",
+  "The merged change parses and validates the contract in answer-corpus and emits corpus.contract plus scoring_contract fields in aggregate receipts.",
+  "M4-ACCURACY-000 is tracker-closed as additive contract and dry-run validation work only; no live model run, model download, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]

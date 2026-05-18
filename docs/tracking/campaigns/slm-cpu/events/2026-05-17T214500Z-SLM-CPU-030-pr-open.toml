@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-030"
+event = "pr_open"
+timestamp = "2026-05-17T21:45:00Z"
+actor = "codex"
+pr = 5457
+branch = "codex/slm-cpu-030-prompt-setup-attribution"
+head_sha = "ea532c57aea04aa772cbc2a9bd1c9070d57a84f0"
+summary = "Opened the bounded Qwen3 Q8_0 warm-session prompt setup allocation attribution slice."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5457",
+]
+notes = [
+  "The slice keeps the existing prompt_setup total for receipt continuity while adding buffer reset, token seeding, KV-cache creation, and sampler setup subcomponent deltas.",
+  "No generation behavior, sustained-throughput claim, broad answer-quality claim, Q4/Q5 runtime support, accelerator path, Qwen3.5 support, or BitNet QK256 path is changed.",
+]

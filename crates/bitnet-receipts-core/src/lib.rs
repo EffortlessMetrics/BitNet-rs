@@ -27,456 +27,54 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
-/// Schema version for receipt format
-pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
+mod artifact_kinds;
+mod schema;
 
-/// Alias for schema version (for consistency)
-pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
+pub use artifact_kinds::{
+    CUDA_PLANNER_RECEIPT_VERSION, DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND, DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND,
+    DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND, DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND,
+    DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
+    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS,
+    M4_RUN_IDENTITY_CONTRACT_VERSION, RECEIPT_SCHEMA, RECEIPT_SCHEMA_VERSION,
+    SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND,
+};
+pub use schema::{
+    AccuracyMetric, AccuracyTestResults, CacheEfficiency, CrossValidation, DeterminismTestResults,
+    KVCacheTestResults, M4RunIdentity, M4RunIdentityBackend, M4RunIdentityBinary,
+    M4RunIdentityCommand, M4RunIdentityEvidence, M4RunIdentityGit, M4RunIdentityModel,
+    M4RunIdentityOs, M4RunIdentityPromptTemplate, M4RunIdentityTiming, M4RunIdentityTokenizer,
+    ModelInfo, ParityMetadata, PerformanceBaseline, StrictInferenceProvenance, TestResults,
+};
 
-/// Artifact kind for the dense regular-LLM CUDA reference lane.
-///
-/// This is deliberately separate from BitNet packed I2_S/QK256 CUDA receipt
-/// kinds. Dense CUDA evidence may share CUDA runtime plumbing, but it must not
-/// satisfy BitNet packed-kernel proof gates.
-pub const DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND: &str = "dense_regular_llm_cuda";
-
-/// Artifact kind for descriptor-only dense GGUF tensor inspection.
-///
-/// This is not a CUDA execution receipt. It records that a dense GGUF reader
-/// path can classify model tensor roles without claiming dense inference,
-/// speedup, full residency, or BitNet packed-kernel proof.
-pub const DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND: &str =
-    "dense_gguf_tensor_descriptor_inspection";
-
-/// Artifact kind for dense GGUF linear fixture extraction.
-///
-/// This remains below dense GGUF CUDA execution. It records that one recognized
-/// dense GGUF linear tensor can be materialized as F32 and evaluated by a CPU
-/// reference matvec, but it must not claim dense inference, CUDA parity,
-/// speedup, full residency, or BitNet packed-kernel proof.
-pub const DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND: &str = "dense_gguf_linear_fixture_extraction";
-
-/// Artifact kind for dense GGUF norm fixture extraction.
-///
-/// This is a CPU-reference fixture for RMSNorm weights extracted from a dense
-/// GGUF artifact. It is below CUDA parity and dense GGUF inference.
-pub const DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND: &str = "dense_gguf_norm_fixture_extraction";
-
-/// Artifact kind for dense GGUF RMSNorm CUDA parity.
-///
-/// This receipt proves descriptor-extracted dense GGUF norm fixtures can run
-/// through the dense F32 CUDA RMSNorm path and match CPU references. It is
-/// still fixture-level evidence, not dense GGUF inference.
-pub const DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND: &str = "dense_gguf_norm_cuda_parity";
-
-/// Artifact kind for dense GGUF RoPE CUDA parity.
-///
-/// This receipt proves metadata-derived dense GGUF Q/K RoPE fixtures can run
-/// through the dense F32 CUDA RoPE path and match CPU references. It is still
-/// fixture-level evidence, not dense GGUF inference.
-pub const DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND: &str = "dense_gguf_rope_cuda_parity";
-
-/// Artifact kind for dense GGUF attention-score fixture extraction.
-///
-/// This receipt records a CPU-reference attention score fixture derived from
-/// metadata-based RoPE Q/K outputs. It is below CUDA parity and dense GGUF
-/// inference. It does not by itself promote planner routing.
-pub const DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND: &str =
-    "dense_gguf_attention_score_fixture_extraction";
-
-/// Artifact kind for dense GGUF attention-score CUDA parity.
-///
-/// This receipt proves metadata-derived dense GGUF Q/K score fixtures can run
-/// through a strict F32 CUDA attention-score kernel and match CPU references.
-/// It remains fixture-level evidence, not dense GGUF inference.
-pub const DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND: &str =
-    "dense_gguf_attention_score_cuda_parity";
-
-/// Artifact kind for dense GGUF attention-softmax fixture extraction.
-///
-/// This receipt records CPU-reference softmax probabilities derived from the
-/// metadata-based attention-score fixture. It is below CUDA parity and dense
-/// GGUF inference.
-pub const DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND: &str =
-    "dense_gguf_attention_softmax_fixture_extraction";
-
-/// Artifact kind for dense GGUF attention-softmax CUDA parity.
-///
-/// This receipt proves the metadata-derived attention-softmax fixture can run
-/// through a strict CUDA F32 softmax kernel. It is below dense GGUF inference.
-pub const DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND: &str =
-    "dense_gguf_attention_softmax_cuda_parity";
-
-/// Artifact kind for dense GGUF attention V-mix fixture extraction.
-///
-/// This receipt records CPU-reference context vectors derived from verified
-/// attention-softmax probabilities and a deterministic attention-V fixture. It
-/// is below CUDA parity and dense GGUF inference.
-pub const DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND: &str =
-    "dense_gguf_attention_v_mix_fixture_extraction";
-
-/// Artifact kind for dense GGUF attention V-mix CUDA parity.
-///
-/// This receipt proves the metadata-derived attention V-mix fixture can run
-/// through a strict CUDA F32 V-mix kernel. It is below dense GGUF inference and
-/// does not by itself promote one-layer planner routing.
-pub const DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND: &str =
-    "dense_gguf_attention_v_mix_cuda_parity";
-
-/// Artifact kind for dense GGUF MLP activation fixture extraction.
-///
-/// This receipt records CPU-reference SiLU(gate) * up activation values derived
-/// from verified dense GGUF MLP gate/up fixture outputs. It is below CUDA
-/// parity and dense GGUF inference.
-pub const DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND: &str =
-    "dense_gguf_mlp_activation_fixture_extraction";
-
-/// Artifact kind for dense GGUF MLP activation CUDA parity.
-///
-/// This receipt proves the metadata-derived SiLU(gate) * up activation fixture
-/// can run through a strict CUDA F32 activation kernel. It is below dense GGUF
-/// inference and does not by itself promote one-layer planner routing.
-pub const DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND: &str =
-    "dense_gguf_mlp_activation_cuda_parity";
-
-/// Artifact kind for dense GGUF single-linear CUDA parity.
-///
-/// This receipt proves one descriptor-extracted dense GGUF linear fixture can
-/// be routed through the dense FP16 CUDA GEMM path and compared against the
-/// bridge CPU reference. It is not full dense GGUF inference.
-pub const DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND: &str = "dense_gguf_linear_cuda_parity";
-
-/// Artifact kind for dense GGUF linear role-sweep CUDA parity.
-///
-/// This receipt proves multiple descriptor-extracted dense GGUF linear fixtures
-/// can be routed through the dense FP16 CUDA GEMM path in one model-aware
-/// planner receipt. It is still not full dense GGUF inference.
-pub const DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND: &str =
-    "dense_gguf_linear_role_sweep_cuda_parity";
-
-/// Artifact kind for dense GGUF one-layer execution-plan gap receipts.
-///
-/// This receipt proves planner routing and fail-closed strict CUDA behavior for
-/// one dense transformer layer. It does not execute full dense GGUF inference.
-pub const DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
-    "dense_gguf_one_layer_execution_plan";
-
-/// Artifact kind for dense GGUF one-layer CPU reference harness receipts.
-///
-/// This receipt records a deterministic CPU-only layer-0 reference output for
-/// the dense regular-LLM lane. It is the comparison anchor for later integrated
-/// CUDA layer parity, not dense GGUF inference or CUDA execution.
-pub const DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND: &str =
-    "dense_gguf_one_layer_cpu_reference";
-
-/// Artifact kind for integrated dense GGUF one-layer CUDA parity receipts.
-///
-/// This receipt runs the full governed layer-0 CUDA-routable plan against the
-/// CPU reference harness. It proves one-layer CUDA parity only; it is not dense
-/// GGUF inference, token generation, speedup, persistent residency, full CUDA
-/// residency, or BitNet packed I2_S/QK256 proof.
-pub const DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND: &str =
-    "dense_gguf_one_layer_cuda_integrated_parity";
-
-/// Artifact kind for dense GGUF all-layer execution-plan receipts.
-///
-/// This receipt inspects the whole transformer-block stack and records whether
-/// each layer matches the governed dense CUDA layer plan. It is not dense GGUF
-/// inference, token generation, speedup, persistent residency, full CUDA
-/// residency, or BitNet packed I2_S/QK256 proof.
-pub const DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
-    "dense_gguf_all_layer_execution_plan";
-
-/// Artifact kind for dense GGUF model-boundary fixture receipts.
-///
-/// This receipt records token embedding lookup, final model norm, LM head, and
-/// logits diagnostics after the transformer-block plan is route-complete. It
-/// is not Qwen one-token inference, sampling, KV cache policy, speedup, full
-/// CUDA residency, or BitNet packed I2_S/QK256 proof.
-pub const DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND: &str =
-    "dense_gguf_model_boundary_fixtures";
-
-/// Artifact kind for dense GGUF KV-cache policy receipts.
-///
-/// This receipt records the governed KV-cache shape, planned residency, and
-/// byte estimates needed before Qwen one-token CUDA proof. It is not KV-cache
-/// allocation, token generation, speedup, full CUDA residency, or BitNet
-/// packed I2_S/QK256 proof.
-pub const DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND: &str = "dense_gguf_kv_cache_policy";
-
-/// Artifact kind for dense GGUF sampling-policy receipts.
-///
-/// This receipt records the governed logits-transfer and deterministic sampler
-/// policy needed before Qwen one-token CUDA proof. It is not token generation,
-/// runtime sampling integration, speedup, full CUDA residency, or BitNet packed
-/// I2_S/QK256 proof.
-pub const DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND: &str = "dense_gguf_sampling_policy";
-
-/// Artifact kind for strict dense Qwen one-token CUDA proof receipts.
-///
-/// This is the first dense GGUF token-generation proof gate. It must consume
-/// the governed all-layer plan, model-boundary fixtures, KV-cache policy, and
-/// sampling policy receipts, compare CPU and CUDA selected-token evidence, and
-/// keep short-decode, chat, speedup, full-residency, server, and BitNet packed
-/// I2_S/QK256 proof claims false.
-pub const DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
-    "dense_gguf_qwen_one_token_strict_cuda_proof";
-/// Artifact kind for the governed dense Qwen short-decode strict CUDA proof.
-///
-/// This is a bounded 5-16 token proof layered after the one-token proof. It
-/// must keep chat, speedup, server, full-residency, and BitNet packed I2_S/QK256
-/// proof claims false.
-pub const DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
-    "dense_gguf_qwen_short_decode_strict_cuda_proof";
-/// Artifact kind for the governed dense Qwen warm-session strict CUDA proof.
-///
-/// This is a bounded multi-turn proof layered after the short-decode proof. It
-/// may claim scoped warm-session reuse, but must keep ask/chat, speedup, server,
-/// full-residency, and BitNet packed I2_S/QK256 proof claims false.
-pub const DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
-    "dense_gguf_qwen_warm_session_strict_cuda_proof";
-/// Artifact kind for the governed dense Qwen CUDA ask UX receipt.
-///
-/// This wraps the bounded short-decode and warm-session proof boundary into the
-/// user-facing `bitnet ask --device cuda` path. It may claim the scoped ask UX
-/// path, but must keep chat, server, speedup, full-residency, and BitNet packed
-/// I2_S/QK256 proof claims false.
-pub const DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
-    "dense_gguf_qwen_ask_strict_cuda_proof";
-/// Artifact kind for the governed dense Qwen CUDA chat UX receipt.
-///
-/// This wraps the bounded warm-session proof boundary into the user-facing
-/// `bitnet chat --device cuda` path. It may claim the scoped chat UX path, but
-/// must keep server, speedup, full-residency, broad dense GGUF inference, and
-/// BitNet packed I2_S/QK256 proof claims false.
-pub const DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
-    "dense_gguf_qwen_chat_strict_cuda_proof";
-const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
-const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
-const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
-    "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
-const QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen3-0.6b-instruct-q8_0";
-const QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE: &str = "Qwen3-0.6B-Q8_0.gguf";
-const QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
-    "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031";
-const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
-    &["attention_softmax", "attention_v_mix", "mlp_activation"];
-const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
-    &["attention_v_mix", "mlp_activation"];
-const DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER: &[&str] = &["mlp_activation"];
-const DENSE_ONE_LAYER_NO_REMAINING_GAP_CANDIDATE_ORDER: &[&str] = &[];
-
-/// Model class label for CUDA receipts that exercise dense regular LLM kernels.
-pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
-
-/// Planner receipt schema version currently emitted by CUDA execution receipts.
-pub const CUDA_PLANNER_RECEIPT_VERSION: &str = "cuda-planner-004";
-
-/// Model information in receipt
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ModelInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model_path: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quantization_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub layers: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub hidden_size: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub num_attention_heads: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub num_key_value_heads: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vocab_size: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sha256: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub effective_correction_digest: Option<String>,
-}
-
-/// Test execution results
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct TestResults {
-    pub total_tests: usize,
-    pub passed: usize,
-    pub failed: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub skipped: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub accuracy_tests: Option<AccuracyTestResults>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub determinism_tests: Option<DeterminismTestResults>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub kv_cache_tests: Option<KVCacheTestResults>,
-}
-
-/// Accuracy test results (AC5)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccuracyTestResults {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub i2s_accuracy: Option<AccuracyMetric>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tl1_accuracy: Option<AccuracyMetric>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tl2_accuracy: Option<AccuracyMetric>,
-}
-
-/// Individual accuracy metric
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccuracyMetric {
-    pub mse: f64,
-    pub tolerance: f64,
-    pub passed: bool,
-}
-
-/// Determinism test results (AC3, AC6)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeterminismTestResults {
-    pub identical_sequences: bool,
-    pub runs: usize,
-    pub tokens_per_run: usize,
-}
-
-/// KV-cache test results (AC7)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KVCacheTestResults {
-    pub prefill_decode_parity: bool,
-    pub cache_hit_rate: f64,
-}
-
-/// Performance baseline metrics
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct PerformanceBaseline {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tokens_generated: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_time_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tokens_per_second: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_token_latency_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_token_latency_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory_usage_mb: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cache_efficiency: Option<CacheEfficiency>,
-}
-
-/// Cache efficiency metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheEfficiency {
-    pub kv_cache_hit_rate: f64,
-    pub tensor_cache_hits: usize,
-    pub tensor_cache_misses: usize,
-}
-
-/// Cross-validation metrics (deprecated - use ParityMetadata instead)
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct CrossValidation {
-    pub cpp_reference_available: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tolerance: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub parity_tests_passed: Option<bool>,
-}
-
-/// Parity validation metadata (AC4)
-///
-/// Captures C++ reference comparison metrics for reproducibility and CI validation.
-///
-/// # Schema Version: 1.0.0
-///
-/// Status values:
-/// - "ok": Rust and C++ outputs match (cosine ≥ 0.99, exact_match_rate = 1.0)
-/// - "rust_only": C++ reference not available
-/// - "divergence": Outputs differ (cosine < 0.99 or exact_match_rate < 1.0)
-/// - "timeout": Parity test exceeded timeout
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParityMetadata {
-    /// C++ reference available for comparison
-    pub cpp_available: bool,
-
-    /// Cosine similarity between Rust and C++ logits (0.0 to 1.0)
-    /// Present only when cpp_available=true
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cosine_similarity: Option<f32>,
-
-    /// Exact match rate for generated tokens (0.0 to 1.0)
-    /// Present only when cpp_available=true
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exact_match_rate: Option<f32>,
-
-    /// Parity status: "ok" | "rust_only" | "divergence" | "timeout"
-    pub status: String,
-}
-
-/// Strict CPU inference provenance required for end-to-end proof receipts.
-///
-/// These fields make the strict CPU lane auditable: a receipt can state which
-/// backend/kernel were requested, which were actually selected, which loader and
-/// tokenizer authorities were used, and whether any fallback was taken.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct StrictInferenceProvenance {
-    /// Backend requested by the caller (for strict CPU proofs this must be a CPU proof label).
-    pub requested_backend: String,
-    /// Backend selected by runtime dispatch (for strict CPU proofs this must be a CPU proof label).
-    pub selected_backend: String,
-    /// Kernel requested by the caller, for example `qk256-avx2-gemv`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub requested_kernel: Option<String>,
-    /// Kernel selected by runtime dispatch.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub selected_kernel: Option<String>,
-    /// Loader authority, for example `real_gguf`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub loader_mode: Option<String>,
-    /// Tokenizer authority, for example `explicit`, `embedded_gguf`, or `sibling_file`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tokenizer_source: Option<String>,
-    /// True when tokenizer resolution ran under strict proof policy.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tokenizer_strict: Option<bool>,
-    /// Model family normalized from GGUF metadata, for example `llama` or `bitnet`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model_family: Option<String>,
-    /// Quantization format normalized from metadata, for example `I2_S` or `QK256/I2_S`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quant_format: Option<String>,
-    /// CPU model string reported by the proof host.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cpu_model: Option<String>,
-    /// Runtime CPU feature list used for dispatch decisions.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub cpu_features: Vec<String>,
-    /// Thread count used by the decode lane.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thread_count: Option<usize>,
-    /// True if any compatibility, mock, diagnostic, scalar-substitution, or dequant fallback was used.
-    pub fallback_used: bool,
-    /// Human-readable fallback reason; must be absent when `fallback_used=false`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fallback_reason: Option<String>,
-    /// Prompt token count seen by the proof run.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prompt_tokens: Option<usize>,
-    /// Decode token count generated by the proof run.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub decode_tokens: Option<usize>,
-    /// Strict proof phase: `prefill` or `decode`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub phase: Option<String>,
-    /// p50 per-token decode latency in milliseconds.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub latency_p50_ms: Option<f64>,
-    /// p95 per-token decode latency in milliseconds.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub latency_p95_ms: Option<f64>,
-    /// Decode throughput in tokens per second.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub decode_tps: Option<f64>,
-}
+use artifact_kinds::{
+    BITNET_B158_2B_4T_I2S_MODEL_FILE, BITNET_B158_2B_4T_I2S_MODEL_ID,
+    BITNET_B158_2B_4T_I2S_MODEL_SHA256,
+    DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER,
+    DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER, DENSE_ONE_LAYER_NO_REMAINING_GAP_CANDIDATE_ORDER,
+    DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER, QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE,
+    QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID, QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256,
+    QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE, QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
+    QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256,
+};
 
 /// Validate a receipt for the RTX 5070 Ti CUDA tiny-kernel smoke proof.
 ///
@@ -600,6 +198,233 @@ pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<(
     require_non_negative_number(parity, "tolerance")?;
     require_string_non_empty(parity, "tolerance_source")?;
 
+    Ok(())
+}
+
+/// Validate a strict RTX 5070 Ti server shared-engine chat-completion receipt.
+///
+/// This validates the exact-profile fields required before a server smoke can
+/// be considered for promotion. It deliberately keeps `server_ready_claimed`
+/// false; a later promotion validator can narrow this further when model
+/// coverage actually sets `server_ready=true` for an exact profile.
+pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Value) -> Result<()> {
+    require_string_eq(receipt, "receipt_kind", SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND)?;
+    require_string_eq(receipt, "runtime_path", "shared_local_inference_engine")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "simulated_inference", false)?;
+    require_bool_eq(receipt, "generated_text_non_empty", true)?;
+    require_bool_eq(receipt, "server_smoke_response_claimed", true)?;
+    require_bool_eq(receipt, "server_ready_claimed", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
+    require_string_non_empty(receipt, "request_id")?;
+    require_string_non_empty(receipt, "prompt_template")?;
+    require_string_non_empty(receipt, "tokenizer_authority")?;
+    require_string_non_empty(receipt, "prompt_authority")?;
+    require_positive_u64(receipt, "prompt_tokens")?;
+    require_positive_u64(receipt, "completion_tokens")?;
+    required_u64(receipt, "total_ms")?;
+
+    let model_identity = object_field(receipt, "model_identity")?;
+    require_string_non_empty(model_identity, "model_id")?;
+    require_string_non_empty(model_identity, "requested_model")?;
+    require_string_non_empty(model_identity, "active_model_id")?;
+    require_string_non_empty(model_identity, "active_model_path")?;
+    require_sha256(model_identity, "model_sha256")?;
+    require_sha256(receipt, "model_sha256")?;
+    require_same_string(receipt, "model_sha256", model_identity, "model_sha256", "model_sha256")?;
+    require_same_string(
+        receipt,
+        "requested_model",
+        model_identity,
+        "requested_model",
+        "requested_model",
+    )?;
+    require_same_string(
+        model_identity,
+        "model_id",
+        model_identity,
+        "requested_model",
+        "model_identity.model_id",
+    )?;
+    require_same_string(
+        receipt,
+        "active_model_id",
+        model_identity,
+        "active_model_id",
+        "active_model_id",
+    )?;
+    require_same_string(
+        receipt,
+        "active_model_path",
+        model_identity,
+        "active_model_path",
+        "active_model_path",
+    )?;
+
+    let endpoint = object_field(receipt, "endpoint_profile")?;
+    require_string_eq(endpoint, "endpoint", "/v1/chat/completions")?;
+    require_string_eq(endpoint, "method", "POST")?;
+    require_string_non_empty(endpoint, "request_profile")?;
+    let endpoint_streaming = object_field(endpoint, "streaming")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `streaming` must be a bool"))?;
+    let receipt_streaming = object_field(receipt, "streaming")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `streaming` must be a bool"))?;
+    if endpoint_streaming != receipt_streaming {
+        return Err(anyhow!(
+            "`streaming` must match between `endpoint_profile` and top-level receipt"
+        ));
+    }
+    require_positive_u64(endpoint, "message_count")?;
+
+    let generation_policy = object_field(receipt, "generation_policy")?;
+    require_positive_u64(generation_policy, "max_tokens")?;
+    require_non_negative_number(generation_policy, "temperature")?;
+    require_positive_number(generation_policy, "top_p")?;
+    require_string_non_empty(generation_policy, "decoding")?;
+
+    match required_string(receipt, "selected_route")? {
+        "dense_regular_llm_cuda" => {
+            validate_dense_qwen_server_shared_engine_receipt(receipt, model_identity)?
+        }
+        "bitnet_qk256_cuda" => {
+            validate_bitnet_qk256_server_shared_engine_receipt(receipt, model_identity)?
+        }
+        route => {
+            return Err(anyhow!(
+                "server shared-engine receipt selected_route `{route}` is not an accepted exact-profile server-smoke route"
+            ));
+        }
+    }
+
+    let quality = object_field(receipt, "quality_gate")?;
+    require_string_non_empty(quality, "gate")?;
+    require_bool_eq(quality, "passed", true)?;
+    require_bool_eq(quality, "generated_text_non_empty", true)?;
+    require_bool_eq(quality, "utf8_valid", true)?;
+    require_bool_eq(quality, "broad_chat_quality_claimed", false)?;
+
+    Ok(())
+}
+
+fn validate_dense_qwen_server_shared_engine_receipt(
+    receipt: &Value,
+    model_identity: &Value,
+) -> Result<()> {
+    require_string_eq(model_identity, "model_id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
+    require_string_eq(model_identity, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_coverage_row", "dense_qwen25_05b_q8_cuda")?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_shared_engine_receipt(
+    receipt: &Value,
+    model_identity: &Value,
+) -> Result<()> {
+    require_string_eq(model_identity, "model_id", BITNET_B158_2B_4T_I2S_MODEL_ID)?;
+    require_string_eq(model_identity, "model_sha256", BITNET_B158_2B_4T_I2S_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_sha256", BITNET_B158_2B_4T_I2S_MODEL_SHA256)?;
+    let active_model_path = required_string(model_identity, "active_model_path")?;
+    let normalized_path = active_model_path.replace('\\', "/");
+    if !normalized_path.ends_with(BITNET_B158_2B_4T_I2S_MODEL_FILE) {
+        return Err(anyhow!(
+            "model_identity.active_model_path must end with `{}` for BitNet QK256 server smoke",
+            BITNET_B158_2B_4T_I2S_MODEL_FILE
+        ));
+    }
+    require_string_eq(receipt, "model_coverage_row", "bitnet_official_2b_i2s_qk256")?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", false)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", true)?;
+    validate_bitnet_qk256_server_execution_plan(receipt)?;
+    validate_bitnet_qk256_server_execution_coverage(receipt)?;
+    validate_bitnet_qk256_server_kernel_stats(receipt)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_execution_plan(receipt: &Value) -> Result<()> {
+    let plan = object_field(receipt, "execution_plan")?;
+    require_string_eq(plan, "planner_version", CUDA_PLANNER_RECEIPT_VERSION)?;
+    require_string_eq(plan, "model_family", "bitnet_b1_58")?;
+    require_string_eq(plan, "quantization", "i2_s_qk256")?;
+    require_string_eq(plan, "selected_route", "bitnet_qk256_cuda")?;
+    require_string_eq(plan, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "runtime_api", "cuda")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", false)?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", true)?;
+    require_positive_u64(plan, "cuda_bitnet_qk256_ops")?;
+    let cuda_bitnet_ops = required_u64(plan, "cuda_bitnet_qk256_ops")?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_u64_eq(plan, "total_ops", cuda_bitnet_ops)?;
+    require_u64_eq(plan, "cuda_ops", cuda_bitnet_ops)?;
+    require_bool_eq(plan, "mixed_cuda_routes", false)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_execution_coverage(receipt: &Value) -> Result<()> {
+    let coverage = object_field(receipt, "execution_coverage")?;
+    require_string_eq(coverage, "execution_claim", "cuda_inference_contribution")?;
+    require_positive_u64(coverage, "bitnet_linear_layers_total")?;
+    require_positive_u64(coverage, "bitnet_linear_layers_on_cuda")?;
+    let total = required_u64(coverage, "bitnet_linear_layers_total")?;
+    let on_cuda = required_u64(coverage, "bitnet_linear_layers_on_cuda")?;
+    if total != on_cuda {
+        return Err(anyhow!(
+            "execution_coverage bitnet_linear_layers_total must match bitnet_linear_layers_on_cuda for zero-fallback BitNet QK256 server smoke"
+        ));
+    }
+    require_u64_eq(coverage, "bitnet_linear_layers_cpu_fallback", 0)?;
+    require_bool_eq(coverage, "fallback_used", false)?;
+    let unsupported_ops = array_field(coverage, "unsupported_ops")?;
+    if !unsupported_ops.is_empty() {
+        return Err(anyhow!("execution_coverage.unsupported_ops must be empty"));
+    }
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_kernel_stats(receipt: &Value) -> Result<()> {
+    let stats = array_field(receipt, "kernel_stats")?;
+    if stats.is_empty() {
+        return Err(anyhow!("kernel_stats must contain QK256 CUDA server-smoke entries"));
+    }
+    let mut total_invocations = 0_u64;
+    for (index, stat) in stats.iter().enumerate() {
+        require_string_eq(stat, "kernel_id", "qk256_gemv_cuda")?;
+        require_positive_u64(stat, "invocations")?;
+        let invocations = required_u64(stat, "invocations")?;
+        total_invocations += invocations;
+        require_u64_eq(stat, "fallback_invocations", 0)?;
+        require_u64_eq(stat, "cpu_fallback_invocations", 0)?;
+        require_optional_u64_field(stat, "host_to_device_bytes")?;
+        require_optional_u64_field(stat, "device_to_host_bytes")?;
+        require_positive_u64(stat, "kernel_launches")?;
+        require_optional_non_negative_number(stat, "kernel_time_ms")?;
+        require_optional_u64_field(stat, "kernel_time_samples")?;
+        if required_u64(stat, "kernel_launches")? != invocations {
+            return Err(anyhow!(
+                "kernel_stats[{index}].kernel_launches must match invocations for QK256 server smoke"
+            ));
+        }
+    }
+    let coverage = object_field(receipt, "execution_coverage")?;
+    require_u64_eq(coverage, "bitnet_linear_layers_on_cuda", total_invocations)?;
     Ok(())
 }
 
@@ -6541,12 +6366,8 @@ pub fn validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(receipt: &Val
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
@@ -6801,12 +6622,8 @@ pub fn validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(receipt: &Va
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
@@ -8166,6 +7983,167 @@ fn load_json_receipt(path: &Path) -> Result<Value> {
     Ok(serde_json::from_str(&content)?)
 }
 
+/// Return the canonical SHA256 identity digest for an Apple M4 `run_identity`.
+pub fn m4_run_identity_sha256(run_identity: &Value) -> Result<String> {
+    let bytes = serde_json::to_vec(run_identity)?;
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Validate the reusable Apple M4 run-identity contract on a receipt.
+///
+/// This checks the top-level `run_identity` object and, when present, the
+/// top-level `run_identity_sha256` digest. It also cross-checks the common
+/// top-level backend and artifact fields so receipt validators can share one
+/// identity gate without duplicating field-level checks.
+pub fn validate_m4_run_identity_contract_json(receipt: &Value) -> Result<()> {
+    let identity = object_field(receipt, "run_identity")?;
+    require_string_eq(identity, "contract_version", M4_RUN_IDENTITY_CONTRACT_VERSION)?;
+    require_string_non_empty_not_tbd(identity, "machine_id")?;
+    require_string_non_empty_not_tbd(identity, "soc")?;
+    require_string_non_empty_not_tbd(identity, "artifact_kind")?;
+    require_string_non_empty_not_tbd(identity, "evidence_family")?;
+
+    if let Some(receipt_artifact_kind) = receipt.get("artifact_kind").and_then(Value::as_str) {
+        let identity_artifact_kind = required_string(identity, "artifact_kind")?;
+        if identity_artifact_kind != receipt_artifact_kind {
+            return Err(anyhow!("run_identity.artifact_kind must match receipt artifact_kind"));
+        }
+    }
+
+    validate_m4_run_identity_os(object_field(identity, "os")?)?;
+    validate_m4_run_identity_git(object_field(identity, "git")?)?;
+    validate_m4_run_identity_binary(object_field(identity, "binary")?)?;
+    validate_m4_run_identity_command(object_field(identity, "command")?)?;
+    validate_m4_run_identity_model(object_field(identity, "model")?)?;
+    validate_m4_run_identity_tokenizer(object_field(identity, "tokenizer")?)?;
+    validate_m4_run_identity_prompt_template(object_field(identity, "prompt_template")?)?;
+    validate_m4_run_identity_backend(receipt, object_field(identity, "backend")?)?;
+    validate_m4_run_identity_evidence(object_field(identity, "evidence_identity")?)?;
+    validate_m4_run_identity_timing(object_field(identity, "timing")?)?;
+
+    let digest = object_field(receipt, "run_identity_sha256")?
+        .as_str()
+        .ok_or_else(|| anyhow!("field `run_identity_sha256` must be a string"))?;
+    if digest.len() != 64 || !digest.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return Err(anyhow!(
+            "field `run_identity_sha256` must be a 64-character sha256 hex digest"
+        ));
+    }
+    let expected = m4_run_identity_sha256(identity)?;
+    if digest != expected {
+        return Err(anyhow!("field `run_identity_sha256` does not match run_identity"));
+    }
+
+    Ok(())
+}
+
+fn validate_m4_run_identity_os(os: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(os, "name")?;
+    require_string_non_empty_not_tbd(os, "version")?;
+    require_string_non_empty_not_tbd(os, "version_source")
+}
+
+fn validate_m4_run_identity_git(git: &Value) -> Result<()> {
+    let commit = required_string(git, "commit")?;
+    if commit.trim().is_empty() || commit == "TBD" || commit == "unknown" {
+        return Err(anyhow!("field `commit` must record a concrete git commit"));
+    }
+    require_string_non_empty_not_tbd(git, "commit_source")
+}
+
+fn validate_m4_run_identity_binary(binary: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(binary, "crate_version")?;
+    let build_profile = binary.get("build_profile").and_then(Value::as_str);
+    let binary_sha256 = binary.get("binary_sha256").and_then(Value::as_str);
+    if build_profile.is_none_or(|value| value.trim().is_empty())
+        && binary_sha256.is_none_or(str::is_empty)
+    {
+        return Err(anyhow!("run_identity.binary must record build_profile or binary_sha256"));
+    }
+    if let Some(sha256) = binary_sha256
+        && (sha256.len() != 64 || !sha256.chars().all(|ch| ch.is_ascii_hexdigit()))
+    {
+        return Err(anyhow!("field `binary_sha256` must be a 64-character sha256 hex digest"));
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_command(command: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(command, "class")?;
+    object_field(command, "live_model_run")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `live_model_run` must be a boolean"))?;
+    Ok(())
+}
+
+fn validate_m4_run_identity_model(model: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(model, "id")?;
+    require_sha256_or_not_applicable(model, "sha256")
+}
+
+fn validate_m4_run_identity_tokenizer(tokenizer: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(tokenizer, "authority")?;
+    require_sha256_or_not_applicable(tokenizer, "sha256")?;
+    if let Some(strict) = tokenizer.get("strict") {
+        strict.as_bool().ok_or_else(|| anyhow!("field `strict` must be a boolean"))?;
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_prompt_template(prompt_template: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(prompt_template, "id")?;
+    require_sha256(prompt_template, "sha256")
+}
+
+fn validate_m4_run_identity_backend(receipt: &Value, backend: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(backend, "requested_backend")?;
+    require_string_non_empty_not_tbd(backend, "selected_backend")?;
+    require_string_non_empty_not_tbd(backend, "runtime_api")?;
+    require_bool_eq(backend, "fallback_used", false)?;
+    require_same_string(
+        backend,
+        "requested_backend",
+        backend,
+        "selected_backend",
+        "run_identity backend selection",
+    )?;
+    for field in ["requested_backend", "selected_backend", "runtime_api"] {
+        if let Some(top_level) = receipt.get(field).and_then(Value::as_str) {
+            let identity_value = required_string(backend, field)?;
+            if top_level != identity_value {
+                return Err(anyhow!("run_identity.backend.{field} must match receipt {field}"));
+            }
+        }
+    }
+    if let Some(top_level_fallback) = receipt.get("fallback_used").and_then(Value::as_bool)
+        && top_level_fallback != object_field(backend, "fallback_used")?.as_bool().unwrap_or(true)
+    {
+        return Err(anyhow!("run_identity.backend.fallback_used must match receipt fallback_used"));
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_evidence(evidence: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(evidence, "scope")?;
+    require_string_non_empty_not_tbd(evidence, "seed")?;
+    require_string_non_empty_not_tbd(evidence, "corpus_id")?;
+    require_string_non_empty_not_tbd(evidence, "profile_id")
+}
+
+fn validate_m4_run_identity_timing(timing: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(timing, "source")
+}
+
+fn require_sha256_or_not_applicable(object: &Value, field: &str) -> Result<()> {
+    let value = required_string(object, field)?;
+    if value == "not_applicable" {
+        return Ok(());
+    }
+    require_sha256(object, field)
+}
+
 fn validate_cuda_receipt_common<'a>(
     receipt: &'a Value,
     artifact_kind: &str,
@@ -8238,6 +8216,21 @@ fn require_string_eq(object: &Value, field: &str, expected: &str) -> Result<()> 
     let actual = required_string(object, field)?;
     if actual != expected {
         return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+    }
+    Ok(())
+}
+
+fn require_same_string(
+    left: &Value,
+    left_field: &str,
+    right: &Value,
+    right_field: &str,
+    label: &str,
+) -> Result<()> {
+    let left = required_string(left, left_field)?;
+    let right = required_string(right, right_field)?;
+    if left != right {
+        return Err(anyhow!("`{label}` must match between `{left_field}` and `{right_field}`"));
     }
     Ok(())
 }
@@ -8404,6 +8397,15 @@ fn require_optional_positive_u64(object: &Value, field: &str) -> Result<()> {
     if actual == 0 {
         return Err(anyhow!("field `{field}` must be greater than zero when measured"));
     }
+    Ok(())
+}
+
+fn require_optional_u64_field(object: &Value, field: &str) -> Result<()> {
+    let value = object_field(object, field)?;
+    if value.is_null() {
+        return Ok(());
+    }
+    value.as_u64().ok_or_else(|| anyhow!("field `{field}` must be null or an unsigned integer"))?;
     Ok(())
 }
 

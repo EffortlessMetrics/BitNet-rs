@@ -31,6 +31,7 @@ bitnet-kernels = { path = "../crates/bitnet-kernels", version = "0.2.1-dev", def
 bitnet-common = { path = "../crates/bitnet-common", version = "0.2.1-dev", default-features = false }
 bitnet-download = { path = "../crates/bitnet-download", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", version = "0.2.1-dev", default-features = false, features = ["spm"] }
+bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates", version = "0.2.1-dev" }
 bitnet-inference = { path = "../crates/bitnet-inference", version = "0.2.1-dev", default-features = false, optional = true }
 bitnet = { path = "..", version = "0.2.1-dev", default-features = false, features = ["cpu"], optional = true }
 tokio = { version = "1.48.0", features = ["rt"], optional = true }
@@ -40,6 +41,7 @@ xtask-build-helper = { path = "../xtask-build-helper", version = "0.2.1-dev" }
 bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", default-features = false, optional = true }
 bitnet-sys = { path = "../crates/bitnet-sys", version = "0.2.1-dev", default-features = false, optional = true }
 bitnet-bdd-grid = { path = "../crates/bitnet-bdd-grid", version = "0.2.1-dev" }
+bitnet-bench-regression-core = { path = "../crates/bitnet-bench-regression-core" }
 scopeguard = "1.2.0"
 thiserror = "2.0.17"
 

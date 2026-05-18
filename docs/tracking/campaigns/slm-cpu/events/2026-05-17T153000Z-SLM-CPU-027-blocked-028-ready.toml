@@ -1,0 +1,18 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-027"
+event = "blocked"
+timestamp = "2026-05-17T15:30:00Z"
+actor = "codex"
+previous_status = "ready"
+new_status = "blocked"
+
+summary = "Blocked SLM-CPU-027 as duplicate second-model work and advanced SLM-CPU-028 for bounded Q4_K_M/Q4_K_S planning gates."
+
+notes = [
+  "SLM-CPU-017 already recorded the second-model strict preflight blocker slice.",
+  "SLM-CPU-017A already recorded positive Qwen2.5-0.5B Q8_0 second-model sanity evidence with strict CPU provenance and fallback=false.",
+  "SLM-CPU-027 is therefore not the next concrete SLM CPU item; leaving it ready would repeat already-merged work.",
+  "SLM-CPU-028 is ready as a docs/planning gate for Q4_K_M/Q4_K_S expansion after Qwen3 Q8_0 is measured and Qwen2.5 Q8_0 provides adapter-generality evidence.",
+  "No Q4 runtime support, sustained throughput, broad answer quality, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

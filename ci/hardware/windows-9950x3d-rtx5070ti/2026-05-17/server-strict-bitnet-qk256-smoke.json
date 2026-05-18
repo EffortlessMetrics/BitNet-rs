@@ -1,0 +1,104 @@
+{
+    "receipt_kind":  "server_shared_engine_chat_completion",
+    "request_id":  "81a3a60f-48d3-464b-b01a-6cae18de1d79",
+    "runtime_path":  "shared_local_inference_engine",
+    "runtime_api":  "cuda",
+    "model_identity":  {
+                           "model_id":  "microsoft-bitnet-b1.58-2B-4T-i2s",
+                           "requested_model":  "microsoft-bitnet-b1.58-2B-4T-i2s",
+                           "active_model_id":  "model-1",
+                           "active_model_path":  "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\microsoft-bitnet-b1.58-2B-4T-i2s\\ggml-model-i2_s.gguf",
+                           "model_sha256":  "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+                       },
+    "endpoint_profile":  {
+                             "endpoint":  "/v1/chat/completions",
+                             "method":  "POST",
+                             "request_profile":  "non_streaming_chat_completion",
+                             "streaming":  false,
+                             "message_count":  1
+                         },
+    "generation_policy":  {
+                              "max_tokens":  2,
+                              "temperature":  0.0,
+                              "top_p":  1.0,
+                              "decoding":  "greedy"
+                          },
+    "requested_model":  "microsoft-bitnet-b1.58-2B-4T-i2s",
+    "active_model_id":  "model-1",
+    "active_model_path":  "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\microsoft-bitnet-b1.58-2B-4T-i2s\\ggml-model-i2_s.gguf",
+    "model_sha256":  "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "model_coverage_row":  "bitnet_official_2b_i2s_qk256",
+    "model_coverage_tier":  "product_cli_ready",
+    "selected_backend":  "nvidia-rtx-5070-ti-cuda",
+    "requested_backend":  "nvidia-rtx-5070-ti-cuda",
+    "selected_route":  "bitnet_qk256_cuda",
+    "execution_plan":  {
+                           "planner_version":  "cuda-planner-004",
+                           "model_family":  "bitnet_b1_58",
+                           "quantization":  "i2_s_qk256",
+                           "selected_route":  "bitnet_qk256_cuda",
+                           "requested_backend":  "nvidia-rtx-5070-ti-cuda",
+                           "selected_backend":  "nvidia-rtx-5070-ti-cuda",
+                           "runtime_api":  "cuda",
+                           "strict_fallback_policy":  "reject",
+                           "dense_regular_llm_cuda":  false,
+                           "bitnet_packed_qk256_cuda":  true,
+                           "cuda_bitnet_qk256_ops":  630,
+                           "cuda_dense_regular_llm_ops":  0,
+                           "cpu_fallback_ops":  0,
+                           "unsupported_ops":  0,
+                           "total_ops":  630,
+                           "cuda_ops":  630,
+                           "mixed_cuda_routes":  false,
+                           "fallback_used":  false,
+                           "strict_cuda_ready":  true,
+                           "speedup_claim":  false,
+                           "full_cuda_residency_claimed":  false
+                       },
+    "execution_coverage":  {
+                               "execution_claim":  "cuda_inference_contribution",
+                               "bitnet_linear_layers_total":  630,
+                               "bitnet_linear_layers_on_cuda":  630,
+                               "bitnet_linear_layers_cpu_fallback":  0,
+                               "unsupported_ops":  [
+
+                                                   ],
+                               "fallback_used":  false
+                           },
+    "kernel_stats":  [
+                         {
+                             "kernel_id":  "qk256_gemv_cuda",
+                             "invocations":  630,
+                             "fallback_invocations":  0,
+                             "cpu_fallback_invocations":  0,
+                             "host_to_device_bytes":  80179200,
+                             "device_to_host_bytes":  82022400,
+                             "kernel_launches":  630,
+                             "kernel_time_ms":  46082.157,
+                             "kernel_time_samples":  630
+                         }
+                     ],
+    "prompt_template":  "chatml",
+    "tokenizer_authority":  "active_model_tokenizer",
+    "prompt_authority":  "server_chat_template",
+    "fallback_used":  false,
+    "simulated_inference":  false,
+    "streaming":  false,
+    "generated_text_non_empty":  true,
+    "prompt_tokens":  27,
+    "completion_tokens":  1,
+    "total_ms":  48912,
+    "quality_gate":  {
+                         "gate":  "server_non_empty_utf8_response",
+                         "passed":  true,
+                         "generated_text_non_empty":  true,
+                         "utf8_valid":  true,
+                         "broad_chat_quality_claimed":  false
+                     },
+    "server_smoke_response_claimed":  true,
+    "server_ready_claimed":  false,
+    "speedup_claim":  false,
+    "full_cuda_residency_claimed":  false,
+    "dense_regular_llm_cuda_inference_claimed":  false,
+    "bitnet_packed_i2s_qk256_proof":  true
+}

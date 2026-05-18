@@ -1,0 +1,21 @@
+timestamp = "2026-05-17T10:03:50Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-GPU-QUAL-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5327
+branch = "codex/lunar-lake/LNL258V-GPU-QUAL-001-openvino-gpu-diagnosis"
+head_sha = "da091657aa2ce96a7a73c5a88ff406a98ed8e233"
+summary = "Opened LNL258V-GPU-QUAL-001 OpenVINO GPU corpus-v2 diagnosis PR."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+]
+
+notes = [
+  "PR #5327 adds a no-new-inference OpenVINO GPU corpus-v2 diagnosis command and receipt.",
+  "The receipt classifies GPU.0 failures by profile, category, and failure class and records generated-token visibility.",
+  "The PR keeps OpenVINO GPU unpromoted and preserves no speedup, route-promotion, power-advantage, Arc/NPU acceleration, and BitNet QK256/I2_S behavior-change boundaries.",
+]

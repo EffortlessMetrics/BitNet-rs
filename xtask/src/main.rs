@@ -1,4 +1,7 @@
 use anyhow::{Context, Result, anyhow, bail};
+use bitnet_bench_regression_core::{
+    compare_performance_metrics, extract_legacy_benchmark_metrics, merge_benchmark_metrics,
+};
 use bitnet_common::Device;
 use bitnet_download::{
     atomic_write, exp_backoff_ms, offline_enabled as bitnet_offline_enabled,
@@ -38,6 +41,7 @@ use walkdir::WalkDir;
 mod apple_m4;
 mod bench_receipt;
 mod campaign;
+mod check_greedy_argmax;
 mod ci;
 mod claims;
 mod cpp_setup_auto;
@@ -48,6 +52,7 @@ mod grid_check;
 mod hardware;
 #[allow(dead_code)]
 mod health_check;
+mod llm_experience;
 mod model_contract;
 mod model_coverage;
 #[allow(dead_code)]
@@ -314,6 +319,13 @@ enum Cmd {
         cmd: ClaimsCmd,
     },
 
+    /// Generate and verify LLM experience proof artifacts.
+    #[command(name = "llm-experience")]
+    LlmExperience {
+        #[command(subcommand)]
+        cmd: LlmExperienceCmd,
+    },
+
     /// Verify hardware claim rails and resolve device-specific kernel routes.
     Hardware {
         #[command(subcommand)]
@@ -375,6 +387,26 @@ enum Cmd {
         rs_dir: PathBuf,
         /// C++ trace directory
         cpp_dir: PathBuf,
+    },
+
+    /// Verify greedy argmax invariant from CLI JSON output
+    ///
+    /// Native Rust port of `scripts/check_greedy_argmax.py`. Reads the JSON
+    /// produced by `bitnet run --json-out ... --dump-logit-steps ...` and
+    /// confirms that the chosen token at every recorded step matches the
+    /// argmax of the recorded top logits.
+    ///
+    /// Exit codes:
+    ///   0 — invariant holds for every step
+    ///   7 — invariant violated for at least one step
+    ///   non-zero anyhow error — JSON file missing or malformed
+    ///
+    /// Usage:
+    ///   cargo run -p xtask -- check-greedy-argmax path/to/cli-output.json
+    #[command(name = "check-greedy-argmax")]
+    CheckGreedyArgmax {
+        /// Path to the JSON file produced by `bitnet run --json-out`
+        json_file: PathBuf,
     },
 
     /// Check C++ backend availability for cross-validation
@@ -949,6 +981,28 @@ enum Cmd {
         format: String,
     },
 
+    /// Compare legacy release-validation performance JSON files.
+    ///
+    /// Rust replacement for scripts/compare_performance.py. Accepts the same
+    /// four-file benchmark layout and optional JSON output.
+    #[command(name = "compare-performance")]
+    ComparePerformance {
+        /// Baseline inference benchmark results
+        baseline_inference: PathBuf,
+        /// Current inference benchmark results
+        current_inference: PathBuf,
+        /// Baseline kernels benchmark results
+        baseline_kernels: PathBuf,
+        /// Current kernels benchmark results
+        current_kernels: PathBuf,
+        /// Output comparison results to JSON file
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Performance threshold ratio (0.95 = allow about 5% regression)
+        #[arg(long, default_value_t = 0.95)]
+        threshold: f64,
+    },
+
     /// Compare benchmark results against baseline with regression thresholds
     ///
     /// Compares current criterion benchmark results against established baselines
@@ -1199,6 +1253,14 @@ enum Cmd {
         /// Pull-request head revision.
         #[arg(long, default_value = "HEAD")]
         head: String,
+    },
+
+    /// Emit GitHub workflow annotations from RIPR review guidance JSON.
+    #[command(name = "ripr-annotations")]
+    RiprAnnotations {
+        /// RIPR review guidance JSON file to read.
+        #[arg(long, default_value = "target/ripr/review/comments.json")]
+        path: PathBuf,
     },
 
     /// Lint GitHub workflow files for YAML syntax issues (duplicate keys, etc).
@@ -1452,6 +1514,38 @@ enum ClaimsCmd {
 }
 
 #[derive(Subcommand)]
+enum LlmExperienceCmd {
+    /// Generate an exact-token CLI-stage plan for an experience benchmark profile.
+    #[command(name = "profile-cli-plan")]
+    ProfileCliPlan {
+        /// Model contract YAML file.
+        #[arg(long, default_value = "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml")]
+        model_contract: PathBuf,
+        /// Benchmark profiles TOML file.
+        #[arg(long, default_value = "ci/benchmarks/profiles.toml")]
+        profiles: PathBuf,
+        /// Benchmark profile ID to synthesize.
+        #[arg(long, default_value = "prefill_512_decode_64")]
+        profile: String,
+        /// Planned backend for the generated CLI command.
+        #[arg(long, default_value = "intel-arc-a770-opencl")]
+        backend: String,
+        /// Concrete device slug for the generated proof plan.
+        #[arg(long, default_value = "amd-5700x-intel-a770")]
+        device_slug: String,
+        /// Declared kernel route ID for diagnostic proof binding.
+        #[arg(long, default_value = "a770.bitnet.i2s.qk256")]
+        kernel_route: String,
+        /// Output plan JSON file.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage-plan.json")]
+        output: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum HardwareCmd {
     /// Intel Arc A770 hardware claim checks.
     A770 {
@@ -1605,6 +1699,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
 }
 
 fn real_main() -> Result<()> {
+    if llm_experience::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
     let cli = Cli::parse();
     match cli.cmd {
         Cmd::DownloadModel {
@@ -1705,6 +1802,27 @@ fn real_main() -> Result<()> {
                 claims::docs(&ledger, &output, check, &format)
             }
         },
+        Cmd::LlmExperience { cmd } => match cmd {
+            LlmExperienceCmd::ProfileCliPlan {
+                model_contract,
+                profiles,
+                profile,
+                backend,
+                device_slug,
+                kernel_route,
+                output,
+                format,
+            } => llm_experience::profile_cli_plan(
+                &model_contract,
+                &profiles,
+                &profile,
+                &backend,
+                &device_slug,
+                &kernel_route,
+                Some(&output),
+                &format,
+            ),
+        },
         Cmd::Hardware { cmd } => match cmd {
             HardwareCmd::A770 { cmd } => match cmd {
                 A770HardwareCmd::KernelCapabilityCheck { matrix, format } => {
@@ -1745,6 +1863,7 @@ fn real_main() -> Result<()> {
             trace_diff::run(&rs_dir, &cpp_dir)?;
             Ok(())
         }
+        Cmd::CheckGreedyArgmax { json_file } => check_greedy_argmax::run(&json_file),
         #[cfg(any(feature = "crossval", feature = "crossval-all"))]
         Cmd::Preflight { backend, verbose, repair, no_repair } => {
             cpp_backend_preflight_cmd(backend, verbose, repair, no_repair)?;
@@ -1918,6 +2037,21 @@ fn real_main() -> Result<()> {
             deterministic,
             &format,
         ),
+        Cmd::ComparePerformance {
+            baseline_inference,
+            current_inference,
+            baseline_kernels,
+            current_kernels,
+            output,
+            threshold,
+        } => compare_performance_cmd(
+            &baseline_inference,
+            &current_inference,
+            &baseline_kernels,
+            &current_kernels,
+            output.as_deref(),
+            threshold,
+        ),
         Cmd::BenchCompare {
             current,
             baseline,
@@ -1995,6 +2129,7 @@ fn real_main() -> Result<()> {
         Cmd::Badges { check } => badges(check),
         Cmd::RiprPr { check } => ripr_pr(check),
         Cmd::RiprReviewComments { check, base, head } => ripr_review_comments(check, &base, &head),
+        Cmd::RiprAnnotations { path } => ripr_annotations(path),
         Cmd::LintWorkflows => xtask::lint_workflows::lint_workflows(),
         Cmd::Ci { command } => match command {
             CiCmd::Actuals {
@@ -2325,6 +2460,140 @@ fn validate_ripr_review_contract(workspace_root: &Path) -> Result<()> {
     }
     println!("ripr-review-comments: output contract is valid");
     Ok(())
+}
+
+fn ripr_annotations(path: PathBuf) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let data = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    let parsed = serde_json::from_str::<Value>(&data)
+        .with_context(|| format!("{} is not valid JSON", path.display()))?;
+
+    emit_ripr_comment_annotations(&parsed);
+    emit_ripr_finding_annotations(&parsed);
+    Ok(())
+}
+
+fn emit_ripr_comment_annotations(data: &Value) {
+    let Some(comments) = data.get("comments").and_then(Value::as_array) else {
+        return;
+    };
+
+    for item in comments {
+        let Some(file) = item.get("path").or_else(|| item.get("file")).and_then(Value::as_str)
+        else {
+            continue;
+        };
+        let Some(line) = github_annotation_line(item.get("line")) else {
+            continue;
+        };
+        let title = item.get("title").and_then(Value::as_str).unwrap_or("RIPR");
+        let body = item
+            .get("body")
+            .or_else(|| item.get("message"))
+            .map(github_annotation_value)
+            .unwrap_or_default();
+
+        print_github_annotation("warning", file, &line, title, &body);
+    }
+}
+
+fn emit_ripr_finding_annotations(data: &Value) {
+    let Some(findings) = data.get("findings").and_then(Value::as_array) else {
+        return;
+    };
+
+    for finding in findings {
+        let Some(probe) = finding.get("probe") else {
+            continue;
+        };
+        let Some(file) = probe.get("file").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(line) = github_annotation_line(probe.get("line")) else {
+            continue;
+        };
+
+        let classification =
+            finding.get("classification").and_then(Value::as_str).unwrap_or("ripr");
+        let severity = finding.get("severity").and_then(Value::as_str).unwrap_or("note");
+        let expression = probe.get("expression").map(github_annotation_value);
+        let confidence = finding.get("confidence").map(github_annotation_value);
+        let next_step = finding
+            .get("suggested_next_action")
+            .or_else(|| finding.get("recommended_next_step"))
+            .map(github_annotation_value)
+            .unwrap_or_else(|| "Review RIPR evidence for this changed line.".to_string());
+
+        let mut body_parts = vec![next_step];
+        if let Some(expression) = expression
+            && !expression.is_empty()
+        {
+            body_parts.push(format!("Expression: {expression}"));
+        }
+        if let Some(confidence) = confidence {
+            body_parts.push(format!("Confidence: {confidence}"));
+        }
+
+        let level = if severity == "warning" { "warning" } else { "notice" };
+        print_github_annotation(
+            level,
+            file,
+            &line,
+            &format!("RIPR {classification}"),
+            &body_parts.join(" | "),
+        );
+    }
+}
+
+fn github_annotation_line(value: Option<&Value>) -> Option<String> {
+    match value? {
+        Value::Number(number) => Some(number.to_string()),
+        Value::String(line) if !line.is_empty() => Some(line.clone()),
+        _ => None,
+    }
+}
+
+fn github_annotation_value(value: &Value) -> String {
+    match value {
+        Value::Null => String::new(),
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
+}
+
+fn print_github_annotation(level: &str, file: &str, line: &str, title: &str, body: &str) {
+    println!(
+        "::{level} file={},line={},title={}::{}",
+        escape_github_annotation_property(&repo_relative_annotation_path(file)),
+        escape_github_annotation_property(line),
+        escape_github_annotation_property(title),
+        escape_github_annotation_message(body),
+    );
+}
+
+fn repo_relative_annotation_path(path: &str) -> String {
+    let path = Path::new(path);
+    if !path.is_absolute() {
+        return path.to_string_lossy().replace('\\', "/");
+    }
+
+    std::env::current_dir()
+        .ok()
+        .and_then(|cwd| path.strip_prefix(cwd).ok().map(Path::to_path_buf))
+        .unwrap_or_else(|| path.to_path_buf())
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
+fn escape_github_annotation_message(value: &str) -> String {
+    value.replace('%', "%25").replace('\r', "%0D").replace('\n', "%0A")
+}
+
+fn escape_github_annotation_property(value: &str) -> String {
+    escape_github_annotation_message(value).replace(',', "%2C")
 }
 
 fn require_nonempty_file(path: &Path) -> Result<()> {
@@ -3490,6 +3759,57 @@ fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
 }
 
 /// Load benchmark results from JSON file
+fn compare_performance_cmd(
+    baseline_inference: &Path,
+    current_inference: &Path,
+    baseline_kernels: &Path,
+    current_kernels: &Path,
+    output: Option<&Path>,
+    threshold: f64,
+) -> Result<()> {
+    if !(0.0..=1.0).contains(&threshold) || threshold == 0.0 {
+        bail!("threshold must be greater than 0 and less than or equal to 1");
+    }
+
+    let baseline_inference = load_benchmark_results(baseline_inference)?;
+    let current_inference = load_benchmark_results(current_inference)?;
+    let baseline_kernels = load_benchmark_results(baseline_kernels)?;
+    let current_kernels = load_benchmark_results(current_kernels)?;
+
+    let baseline_metrics = merge_benchmark_metrics(
+        extract_legacy_benchmark_metrics(&baseline_inference),
+        extract_legacy_benchmark_metrics(&baseline_kernels),
+    );
+    let current_metrics = merge_benchmark_metrics(
+        extract_legacy_benchmark_metrics(&current_inference),
+        extract_legacy_benchmark_metrics(&current_kernels),
+    );
+
+    let comparison = compare_performance_metrics(&baseline_metrics, &current_metrics, threshold);
+    let report = comparison.to_markdown();
+    println!("{report}");
+
+    if let Some(path) = output {
+        let mut value = serde_json::to_value(&comparison)?;
+        if let Value::Object(ref mut object) = value {
+            object.insert("report".to_string(), Value::String(report));
+        }
+        fs::write(path, serde_json::to_string_pretty(&value)?)
+            .with_context(|| format!("Failed to write comparison results to {}", path.display()))?;
+        println!("\nComparison results saved to: {}", path.display());
+    }
+
+    if !comparison.passed {
+        bail!(
+            "Performance validation failed: {} regressions detected",
+            comparison.regressions.len()
+        );
+    }
+
+    println!("\n✅ Performance validation passed");
+    Ok(())
+}
+
 fn load_benchmark_results(path: &Path) -> Result<Value> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read benchmark file: {}", path.display()))?;

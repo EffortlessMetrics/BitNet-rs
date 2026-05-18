@@ -1,0 +1,16 @@
+timestamp = "2026-05-16T05:44:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EXCELLENCE-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5057
+head_sha = "e2c02eb1b7a529f7d5162c7e6a5369bb129c54a1"
+
+notes = [
+  "Opened PR #5057 for the second dense SLM eval-v2 refresh across all supported M4 dense model identities.",
+  "The PR records 2026-05-16T0240Z summaries, answer-corpus aggregates, and per-case receipts for Qwen2.5 0.5B Q8_0, Qwen2.5 0.5B Q4_K_M, and Qwen2.5 1.5B Q4_K_M.",
+  "The summaries validate individually and compare against the 2026-05-14 matching baselines; Q8_0 has no warnings, while both Q4_K_M reports carry advisory ttft_ms_p90 warnings.",
+  "This is dense SLM eval-v2 receipt refresh only: no corpus change, default model change, BitNet proof, chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim.",
+]

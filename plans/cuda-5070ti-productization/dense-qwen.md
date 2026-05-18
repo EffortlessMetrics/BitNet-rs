@@ -16,12 +16,14 @@ speedup_claim = false
 server_ready = false
 ```
 
-The first productization task is to audit which Qwen receipts are real hardware
-user-path receipts versus validators, fixtures, or contracts.
+The productization audit, one-token proof, short-decode proof, warm-session
+proof, benchmark qualification review, and bounded server-smoke receipt have
+landed. The remaining boundary is still conservative: speedup and broad server
+readiness stay false until later profile-specific readiness gates promote them.
 
 ## Work item: CUDA-DENSE-050
 
-Status: PR open (#4713)
+Status: merged (#4589)
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
@@ -119,7 +121,7 @@ Remove the new receipt and demote any matrix/status row that depended on it.
 
 ## Work item: CUDA-DENSE-052
 
-Status: pr_open
+Status: merged (#4695)
 Campaign item: `CUDA-DENSE-052`
 Blocked by: none
 

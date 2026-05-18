@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T05:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OV-QUAL-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-003-quality-failure-taxonomy"
+pr = 5518
+head_sha = "0c36024f6667bfb15e94cf68d9bf9b4d41bc5128"
+summary = "Opened LNL258V-OV-QUAL-003 to refine OpenVINO candidate corpus-v2 quality failure taxonomy."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "PR #5518 refines existing OpenVINO GPU/NPU quality diagnosis without running new inference.",
+  "The refreshed diagnosis distinguishes exact-answer overgeneration, exact-answer instruction misses, case-sensitive keyword mismatches, partial required-term misses, and true answer-content misses.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]

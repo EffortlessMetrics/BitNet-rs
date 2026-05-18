@@ -40,7 +40,7 @@ Options:
           Output file for results
 
   -d, --device <DEVICE>
-          Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple M4 labels
+          Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple proof labels
 
   -q, --quantization <TYPE>
           Quantization type (i2s, tl1, tl2, auto)

@@ -1,0 +1,29 @@
+timestamp = "2026-05-17T18:33:07Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-004"
+event = "merged"
+actor = "codex"
+from = "proposed"
+to = "merged"
+branch = "server/dense-qwen-receipt-fields"
+pr = 5393
+head_sha = "2b7c80117005606e004fa0f4267e137284b9b7ea"
+merge_sha = "c10230447f0802d24bb22175fde49fb5d8f57a9e"
+summary = "Merged PR #5393 with the dense Qwen shared-engine server receipt hardening."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5393",
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5398",
+  "crates/bitnet-receipts-core/src/artifact_kinds.rs",
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "crates/bitnet-receipts/tests/cuda_receipt_validation.rs",
+  "crates/bitnet-server/src/lib.rs",
+  "crates/bitnet-cli/src/commands/receipts.rs",
+]
+
+notes = [
+  "PR #5393 added the server_shared_engine_chat_completion receipt kind and hardened validation for artifact checksum identity, endpoint/request-profile scope, generation policy, route labels, token usage, timing, quality gates, and claim booleans.",
+  "The PR kept dense Qwen server_ready, speedup_claim, full_cuda_residency_claim, and BitNet packed I2_S/QK256 proof false.",
+  "PR #5398 fixed the follow-up no-default-features CPU all-targets MSRV check by gating the full-cli-only logits scratch test with the same feature as the helper it exercises.",
+  "No refreshed hardware server-smoke receipt was committed, so CUDA-SERVER-005 still requires refreshed or supplemental exact-profile server evidence before any server_ready promotion.",
+]

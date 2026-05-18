@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 68
 expression: help
 ---
 Run simple text generation
@@ -28,7 +29,7 @@ Options:
           Model file or directory path (.gguf file or HuggingFace model directory)
 
   -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
 
       --model-format <FORMAT>
           Model format: auto (detect from path), gguf, safetensors
@@ -96,6 +97,12 @@ Options:
       --json-out <JSON_OUT>
           Output JSON results to file
 
+      --proof-model-contract <PROOF_MODEL_CONTRACT>
+          Declared model contract for diagnostic proof binding
+
+      --proof-kernel-route <PROOF_KERNEL_ROUTE>
+          Declared kernel route id for diagnostic proof binding
+
       --dump-ids
           Dump token IDs to stdout
 
@@ -117,6 +124,11 @@ Options:
           Prompt template: auto (detect), raw, instruct, llama3-chat, bitnetcpp-answer
 
           [default: auto]
+
+      --no-think
+          Disable Qwen thinking mode by appending the Qwen no-thinking assistant suffix
+
+          [aliases: --no-thinking]
 
       --system-prompt <TEXT>
           System prompt for chat models

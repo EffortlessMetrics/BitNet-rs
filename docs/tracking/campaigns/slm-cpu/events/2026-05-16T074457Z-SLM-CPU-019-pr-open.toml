@@ -1,0 +1,27 @@
+timestamp = "2026-05-16T07:44:57Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-019"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 5081
+branch = "model/slm-cpu-019-smollm2-normalization-validation"
+head_sha = "9d5f152b706ee02fded9c0185ae1565853afeb84"
+
+summary = "Opened #5081 with exact metadata-scoped SmolLM2 360M normalization validation for SLM-CPU-019."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5081",
+  "crates/bitnet-models/src/formats/gguf/loader.rs",
+  "crates/bitnet-models/src/formats/gguf/loader/tensor_loading.rs",
+  "crates/bitnet-models/src/formats/gguf/tests.rs",
+  "ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-normalization-validation-implementation.json",
+]
+
+notes = [
+  "The PR keeps generic llama strict LayerNorm/RMSNorm gamma validation fail-closed.",
+  "The SmolLM2 normalization exception requires the pinned SHA plus exact architecture, tokenizer pre-tokenizer, dimensions, vocab size, block count, and intermediate size.",
+  "The accepted exception emits a receipt-visible correction record for support evidence.",
+  "No CPU answer, CUDA, speed, server, broad dense GGUF, or BitNet QK256 claim is made.",
+]

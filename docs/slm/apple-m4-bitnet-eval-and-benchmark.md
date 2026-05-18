@@ -35,6 +35,27 @@ through the existing answer-corpus parser/scoring path. This is a fixture and
 tracking PR only. It does not run the model and does not claim runtime accuracy
 or performance.
 
+`M4-ACCURACY-000` freezes the BitNet eval corpus/scorer contract before any
+larger BitNet accuracy expansion. The YAML records `metadata.corpus_contract`
+with:
+
+```text
+contract_version: m4-eval-corpus-scorer-contract-v1
+corpus_id: apple-m4-bitnet-eval-seeded-corpus
+corpus_version: 1.0.0
+seed: 912587
+generator_policy: deterministic-static-fixture-bitnet-v1
+scoring_schema: answer_corpus_mechanical_scoring_v1
+receipt_contract: answer_corpus_aggregate_receipt_v1
+```
+
+Expected outputs are closed-form deterministic fixture answers from the YAML
+prompt data. Reference-runner answers can be added as comparison evidence, but
+they do not replace the mechanical expected-output authority. `answer-corpus`
+aggregate receipts propagate the contract under `corpus.contract` and
+`scoring_contract`; this keeps BitNet eval identity separate from dense SLM
+evidence.
+
 Later work items add:
 
 - BitNet eval/report schema fields for reference-vs-Rust comparison.
@@ -115,12 +136,88 @@ Task-family pass rates:
 | rewrite_normalized | 9 | 1 |
 | synthetic_extraction | 7 | 3 |
 
-The receipt records generated text, generated token IDs, tokenizer authority,
-model SHA, per-case timing, task-family scoring, and failure taxonomy for the
-bounded corpus. It also keeps the explicit claim boundary: this is not a broad
-BitNet quality benchmark, not a performance envelope, not dense SLM evidence,
-and not chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad
-Apple Silicon proof.
+The inference-excellence tracker later publishes a standalone derived rollup at
+`ci/hardware/apple-m4-mac-mini/2026-05-17T0810Z/bitnet-eval/task-family-pass-rates.json`.
+That report keeps these BitNet task-family pass rates, mechanical failure
+taxonomy, and the reference-vs-Rust comparison deltas in one BitNet-only
+artifact. It is derived from committed receipts and is not a fresh runtime run.
+
+`M4-BITNET-EX-009` then adds a fresh matching eval refresh at
+`ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json`
+with the same accepted artifact/tokenizer/backend identity. The run records
+79/100 mechanical passes, zero timeouts, and `fallback_used=false`. Its
+matching regression against `2026-05-15T2214Z` reports `matched_context=true`
+with four advisory warnings isolated to the constrained-summary family. The
+same directory includes a fresh task-family rollup, a current
+reference-vs-Rust comparison, and `larger-corpus-decision.json`, which stages a
+250-case BitNet corpus before any 500-case expansion or broad BitNet quality
+envelope claim.
+
+The follow-on inference-excellence tracker work splits that stage into
+`M4-BITNET-EX-010` for the 250-case corpus/scorer contract,
+`M4-BITNET-EX-011` for bounded 250-case M4 receipts, and `M4-BITNET-EX-012`
+for the 500-case expansion-or-repair decision.
+
+`M4-BITNET-EX-010` defines that first stage as
+`ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml`: a dry-run-checked
+250-case corpus with the same accepted artifact/tokenizer identity and
+mechanical scoring authority, but no new runtime pass-rate or performance
+claim.
+
+`M4-BITNET-EX-011` runs that 250-case corpus through the accepted Microsoft
+I2_S BitNet GGUF, accepted external tokenizer, and `apple-m4-cpu-neon` backend.
+
+Recorded report:
+
+- Aggregate receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json`
+- Child receipts:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus-runs/*.json`
+- Derived compact summary:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json`
+- Receipt validation:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json`
+- Strict regression context mismatch:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json`
+- 500-case expansion decision:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/larger-corpus-decision.json`
+
+The live run records 250 mechanically scored cases, 196 passes, 54
+quality-failed cases, zero timeouts, generated token IDs for every case, 2,086
+generated tokens, and `fallback_used=false`. The compact summary records p50,
+p90, and p99 timing for model load, tokenizer load, prompt tokenization,
+prefill, first token, decode, input tok/s, output tok/s, and sampling overhead.
+
+| Task family | Passed | Quality failed |
+|---|---:|---:|
+| arithmetic_exact | 14 | 1 |
+| numeric_tolerance | 24 | 11 |
+| fixed_table_qa | 23 | 12 |
+| format_constrained_json | 20 | 0 |
+| closed_label_classification | 18 | 2 |
+| synthetic_extraction | 19 | 6 |
+| ordering_sorting | 17 | 3 |
+| rewrite_normalized | 15 | 5 |
+| constrained_summary | 24 | 6 |
+| required_forbidden_tokens | 22 | 8 |
+
+The regression command intentionally does not compare this receipt against the
+100-case baseline because the corpus identity, selected case IDs, and case
+count differ. The context-mismatch artifact records that boundary explicitly.
+This is bounded BitNet runtime evidence for one accepted
+artifact/tokenizer/backend identity only. It is not a broad BitNet quality
+benchmark, not a performance envelope, not dense SLM evidence, and not chat,
+serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon
+proof.
+
+`M4-BITNET-EX-012` records the follow-on decision: do not expand BitNet to 500
+cases yet. The 250-case run completed without timeouts or fallback, but the
+evidence still exposes repair targets before the next runtime-cost increase:
+numeric tolerance has two format-only failures, fixed-table QA has twelve
+factual-table misses, rewrite-normalized dropped from 90% in the latest
+100-case run to 75%, and required/forbidden-token, extraction, and constrained
+summary families remain visibly weak. The decision requires a repair-focused
+250-case refresh before approving a 500-case BitNet campaign.
 
 ## M4 Benchmark Report Slice
 

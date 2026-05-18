@@ -1,0 +1,23 @@
+timestamp = "2026-05-16T12:35:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-005"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-005-qwen-gate-normalization"
+summary = "Started LNL258V-QUAL-005 to normalize dense Qwen corpus-v2 assistant-prefix gate/scoring evidence and refresh the Lunar Lake quality/profile regression artifacts."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The answer-corpus quality path should apply the same narrow leading assistant-role colon normalization already used by warm-session quality receipts.",
+  "The refreshed CPU corpus-v2 evidence may improve bounded gates, but affected profiles remain blocked until every required case reruns cleanly or gates are intentionally revised.",
+  "No broad quality, speedup, route-promotion, Arc/NPU execution, or BitNet QK256/I2_S behavior-change claim is made.",
+]

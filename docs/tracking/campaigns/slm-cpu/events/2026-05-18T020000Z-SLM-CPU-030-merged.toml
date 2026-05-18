@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T02:00:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-030"
+event = "merged"
+pr = 5457
+head_sha = "9c2400fb4c781c2189a4935f1e3744b85567bd3d"
+merge_sha = "87325006e25bb5820fd5c366ee7dad88fd7ea77c"
+actor = "codex"
+notes = [
+  "Merged the prompt setup attribution slice for Kaby Qwen3 Q8_0 warm-session allocation receipts.",
+  "The receipt surface preserves the existing prompt_setup total and adds buffer_reset, token_seed, kv_cache, and sampler_setup subcomponents.",
+  "The slice does not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server/GPU/NPU/OpenVINO/UHD 620 execution, Qwen3.5, or BitNet QK256 changes.",
+]

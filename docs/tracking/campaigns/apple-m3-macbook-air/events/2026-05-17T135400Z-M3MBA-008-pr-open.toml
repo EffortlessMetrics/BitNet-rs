@@ -1,0 +1,20 @@
+timestamp = "2026-05-17T13:54:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-008"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5372
+branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
+head_sha = "43805f94aeb8b0a87c22e02d3e3765611325f502"
+summary = "Opened M3MBA-008 handoff PR for the accepted Microsoft 2B I2_S M3 Air reference-runner artifact."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5372",
+  "docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md",
+]
+notes = [
+  "The PR hands the Microsoft 2B I2_S artifact to separate M4 strict-proof work using M3 Air BitNet.cpp reference-runner evidence as selection evidence only.",
+  "The 0.7B and 3B secondary candidates remain blocked and are not handoff targets.",
+  "No runtime code, model downloads, model binaries, or inference receipts are included.",
+]
