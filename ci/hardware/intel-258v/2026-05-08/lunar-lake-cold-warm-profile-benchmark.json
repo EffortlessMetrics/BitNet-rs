@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-18T08:05:00Z",
+  "created_utc": "2026-05-18T09:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -12,7 +12,10 @@
     {
       "profile_id": "regression_tiny",
       "promoted_route": "dense_slm_default_cpu",
-      "candidate_routes": [],
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
       "routes": [
         {
           "route_id": "dense_slm_default_cpu",
@@ -67,9 +70,147 @@
             "bounded math ask only; not expanded profile regression corpus",
             "thermal sensor context unavailable in telemetry receipt"
           ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 6001.0,
+            "tokenize_ms": 22.948999404907227,
+            "prefill_ms": null,
+            "first_token_ms": 1455.4078369140625,
+            "decode_total_ms": 2458.3375999936834,
+            "generation_total_ms": 2458.3375999936834,
+            "total_response_ms": 8547.64849995263,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 3.661010595136781,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile regression_tiny has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile regression_tiny",
+            "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
+            "stop_token_one_word_done has no passing tested generation budget",
+            "timing coverage has missing profile fields"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "route_status": "candidate",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-npu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+            ],
+            "cold_load_ms": 40263.0,
+            "tokenize_ms": 17.43000030517578,
+            "prefill_ms": null,
+            "first_token_ms": 323.50177001953125,
+            "decode_total_ms": 943.2322999928148,
+            "generation_total_ms": 943.2322999928148,
+            "total_response_ms": 41255.641800002195,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 9.541657977646183,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time"
+            ],
+            "known_gaps": [
+              "profile regression bundle missing",
+              "benchmark-qualified speedup or power advantage missing",
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+              "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "thermal_context_unavailable",
+            "telemetry_gaps": [
+              "thermal sensor context is not available from the current OS telemetry probe",
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "NPU cache or resident warm-route proof is missing",
+            "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+            "NPU corpus-v2 context has 5 failed cases",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s)",
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing",
+            "benchmark_qualified_speedup_or_power_advantage",
+            "candidate route requires benchmark-qualified profile evidence",
+            "corpus_v2 profile regression_tiny has 1 quality failures",
+            "generated token IDs are not available directly from OpenVINO GenAI internals",
+            "profile regression bundle missing",
+            "profile_regression_bundle",
+            "route not promoted for profile regression_tiny",
+            "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
+            "stop_token_one_word_done has no passing tested generation budget",
+            "timing coverage has missing profile fields"
+          ]
         }
       ],
-      "profile_gaps": []
+      "profile_gaps": [
+        "regression_tiny route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile regression_tiny has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile regression_tiny; stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields",
+        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile regression_tiny has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile regression_tiny; stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields"
+      ]
     },
     {
       "profile_id": "ask_short",
@@ -182,15 +323,8 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "1 failed case(s) classified as readable_output_missing_required_terms",
-            "4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 4 corpus-v2 quality failures",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
@@ -198,12 +332,11 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_short has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "stop_token_one_word_done has no passing tested generation budget",
             "timing coverage has missing profile fields",
+            "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
             "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
         },
@@ -256,17 +389,11 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "NPU corpus-v2 context has 5 failed cases",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 3 corpus-v2 quality failures",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
@@ -274,19 +401,18 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_short has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "stop_token_one_word_done has no passing tested generation budget",
             "timing coverage has missing profile fields",
+            "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
             "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
         }
       ],
       "profile_gaps": [
-        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 1 failed case(s) classified as readable_output_missing_required_terms; 4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 4 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
-        "ask_short route dense_slm_openvino_npu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]; NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 3 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; timing coverage has missing profile fields; yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
+        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; timing coverage has missing profile fields; yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
       ]
     },
     {
@@ -400,28 +526,16 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "1 failed case(s) classified as readable_output_missing_required_terms",
-            "4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 4 corpus-v2 quality failures",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         },
         {
@@ -473,36 +587,25 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "NPU corpus-v2 context has 5 failed cases",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 3 corpus-v2 quality failures",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         }
       ],
       "profile_gaps": [
-        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 1 failed case(s) classified as readable_output_missing_required_terms; 4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 4 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
-        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]; NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 3 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; timing coverage has missing profile fields",
+        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; timing coverage has missing profile fields"
       ]
     },
     {
@@ -618,15 +721,8 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "1 failed case(s) classified as readable_output_missing_required_terms",
-            "4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 4 corpus-v2 quality failures",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
@@ -634,13 +730,11 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile prefill_heavy has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+            "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         },
         {
@@ -692,17 +786,11 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "NPU corpus-v2 context has 5 failed cases",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 3 corpus-v2 quality failures",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
@@ -710,19 +798,17 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile prefill_heavy has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
+            "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         }
       ],
       "profile_gaps": [
-        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 1 failed case(s) classified as readable_output_missing_required_terms; 4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 4 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
-        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]; NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 3 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; timing coverage has missing profile fields",
+        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; timing coverage has missing profile fields"
       ]
     },
     {
@@ -838,29 +924,20 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "1 failed case(s) classified as readable_output_missing_required_terms",
-            "4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 4 corpus-v2 quality failures",
+            "OpenVINO candidate profile has 1 answer-gate failure(s)",
+            "OpenVINO diagnosis profile decode_heavy has 1 corpus-v2 quality failure(s)",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile decode_heavy has 1 quality failures",
+            "decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         },
         {
@@ -912,36 +989,25 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "NPU corpus-v2 context has 5 failed cases",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 3 corpus-v2 quality failures",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         }
       ],
       "profile_gaps": [
-        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 1 failed case(s) classified as readable_output_missing_required_terms; 4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 4 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile decode_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
-        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]; NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 3 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile decode_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile decode_heavy has 1 quality failures; decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; timing coverage has missing profile fields",
+        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; timing coverage has missing profile fields"
       ]
     },
     {
@@ -1124,17 +1190,9 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "NPU corpus-v2 context has 5 failed cases",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 3 corpus-v2 quality failures",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
@@ -1142,14 +1200,11 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "power advantage evidence missing for low_power promotion",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         },
         {
@@ -1201,15 +1256,6 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "1 failed case(s) classified as answer_content_missing_required_terms",
-            "1 failed case(s) classified as exact_answer_instruction_not_followed",
-            "1 failed case(s) classified as exact_answer_overgenerated",
-            "1 failed case(s) classified as readable_output_missing_required_terms",
-            "4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
-            "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
-            "OpenVINO corpus-v2 diagnosis keeps route blocked",
-            "OpenVINO diagnosis reports 4 corpus-v2 quality failures",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
@@ -1217,20 +1263,17 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "power advantage evidence missing for low_power promotion",
             "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "timing coverage has missing profile fields"
           ]
         }
       ],
       "profile_gaps": [
-        "low_power route dense_slm_openvino_npu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]; NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 3 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
-        "low_power route dense_slm_openvino_gpu_candidate remains blocked: 1 failed case(s) classified as answer_content_missing_required_terms; 1 failed case(s) classified as exact_answer_instruction_not_followed; 1 failed case(s) classified as exact_answer_overgenerated; 1 failed case(s) classified as readable_output_missing_required_terms; 4 of 12 corpus-v2 cases failed across profiles [ask_short, decode_heavy, prefill_heavy, regression_tiny]; OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates; OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget; OpenVINO corpus-v2 diagnosis keeps route blocked; OpenVINO diagnosis reports 4 corpus-v2 quality failures; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; generated token IDs are not directly available from OpenVINO GenAI pipeline internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
+        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
       ]
     },
     {

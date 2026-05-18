@@ -7592,6 +7592,7 @@ fn corpus_case_alignment_blockers(
 #[derive(Debug, Clone, Default)]
 struct RouteDiagnosticsIndex {
     by_route: BTreeMap<String, RouteDiagnosticEvidence>,
+    by_route_profile: BTreeMap<(String, String), RouteDiagnosticEvidence>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -7603,25 +7604,77 @@ struct RouteDiagnosticEvidence {
 impl RouteDiagnosticsIndex {
     fn add(&mut self, route_id: &str, source_receipt: String, blockers: Vec<String>) {
         let entry = self.by_route.entry(route_id.to_string()).or_default();
-        if !entry.source_receipts.contains(&source_receipt) {
-            entry.source_receipts.push(source_receipt);
-        }
-        entry.blockers.extend(blockers);
-        entry.blockers.sort();
-        entry.blockers.dedup();
+        add_route_diagnostic_evidence(entry, source_receipt, blockers);
     }
 
-    fn get(&self, route_id: &str) -> Option<&RouteDiagnosticEvidence> {
-        self.by_route.get(route_id)
+    fn add_for_profile(
+        &mut self,
+        route_id: &str,
+        profile_id: &str,
+        source_receipt: String,
+        blockers: Vec<String>,
+    ) {
+        let entry = self
+            .by_route_profile
+            .entry((route_id.to_string(), profile_id.to_string()))
+            .or_default();
+        add_route_diagnostic_evidence(entry, source_receipt, blockers);
+    }
+
+    fn get(&self, route_id: &str, profile_id: &str) -> RouteDiagnosticEvidence {
+        let mut evidence = self.by_route.get(route_id).cloned().unwrap_or_default();
+        if let Some(profile_evidence) =
+            self.by_route_profile.get(&(route_id.to_string(), profile_id.to_string()))
+        {
+            for source in &profile_evidence.source_receipts {
+                if !evidence.source_receipts.contains(source) {
+                    evidence.source_receipts.push(source.clone());
+                }
+            }
+            evidence.blockers.extend(profile_evidence.blockers.iter().cloned());
+            evidence.blockers.sort();
+            evidence.blockers.dedup();
+        }
+        evidence
     }
 
     fn source_receipts(&self) -> Vec<String> {
         self.by_route
             .values()
+            .chain(self.by_route_profile.values())
             .flat_map(|evidence| evidence.source_receipts.iter().cloned())
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect()
+    }
+}
+
+fn add_route_diagnostic_evidence(
+    entry: &mut RouteDiagnosticEvidence,
+    source_receipt: String,
+    blockers: Vec<String>,
+) {
+    if !entry.source_receipts.contains(&source_receipt) {
+        entry.source_receipts.push(source_receipt);
+    }
+    entry.blockers.extend(blockers);
+    entry.blockers.sort();
+    entry.blockers.dedup();
+}
+
+impl RouteDiagnosticsIndex {
+    fn add_case_blocker(
+        &mut self,
+        route_id: &str,
+        profile_id: Option<String>,
+        source_receipt: &str,
+        blocker: String,
+    ) {
+        if let Some(profile_id) = profile_id.filter(|profile| !profile.trim().is_empty()) {
+            self.add_for_profile(route_id, &profile_id, source_receipt.to_string(), vec![blocker]);
+        } else {
+            self.add(route_id, source_receipt.to_string(), vec![blocker]);
+        }
     }
 }
 
@@ -7682,24 +7735,67 @@ fn load_openvino_quality_diagnostic(
             path_string(&path)
         ));
     }
-    let mut blockers = Vec::new();
-    if bool_at_any(&json, &["route_blocked"]) == Some(true) {
-        blockers.push("OpenVINO corpus-v2 diagnosis keeps route blocked".to_string());
-    }
-    if let Some(failed) = u64_at(&json, "quality_summary.failed")
-        && failed > 0
+    let source_receipt = path_string(&path);
+    let mut global_blockers = Vec::new();
+    let mut profile_blockers_indexed = false;
+    if let Some(profile_diagnoses) = value_at(&json, "profile_diagnoses").and_then(Value::as_array)
     {
-        blockers.push(format!("OpenVINO diagnosis reports {failed} corpus-v2 quality failures"));
+        for profile_diagnosis in profile_diagnoses {
+            let Some(profile_id) = string_at(profile_diagnosis, "profile_id") else {
+                continue;
+            };
+            let mut blockers = string_array_at(profile_diagnosis, "route_blockers");
+            if let Some(failed) = u64_at(profile_diagnosis, "failed")
+                && failed > 0
+            {
+                blockers.push(format!(
+                    "OpenVINO diagnosis profile {profile_id} has {failed} corpus-v2 quality failure(s)"
+                ));
+            }
+            blockers.sort();
+            blockers.dedup();
+            if !blockers.is_empty() {
+                index.add_for_profile(route_id, &profile_id, source_receipt.clone(), blockers);
+                profile_blockers_indexed = true;
+            }
+        }
+    }
+    if let Some(failed_cases) = value_at(&json, "failed_cases").and_then(Value::as_array) {
+        for failed_case in failed_cases {
+            let case_id =
+                string_at(failed_case, "id").unwrap_or_else(|| "unknown_case".to_string());
+            let classification = string_at(failed_case, "classification")
+                .unwrap_or_else(|| "quality_failed".to_string());
+            let profile_id = string_at(failed_case, "profile");
+            index.add_case_blocker(
+                route_id,
+                profile_id,
+                &source_receipt,
+                format!("{case_id} failed corpus-v2 diagnosis: {classification}"),
+            );
+            profile_blockers_indexed = true;
+        }
+    }
+    if !profile_blockers_indexed {
+        if bool_at_any(&json, &["route_blocked"]) == Some(true) {
+            global_blockers.push("OpenVINO corpus-v2 diagnosis keeps route blocked".to_string());
+        }
+        if let Some(failed) = u64_at(&json, "quality_summary.failed")
+            && failed > 0
+        {
+            global_blockers
+                .push(format!("OpenVINO diagnosis reports {failed} corpus-v2 quality failures"));
+        }
+        global_blockers.extend(string_array_at(&json, "blocker_summary"));
     }
     if bool_at_any(&json, &["generated_token_visibility.direct_generated_token_ids_available"])
         == Some(false)
     {
-        blockers.push(
+        global_blockers.push(
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals"
                 .to_string(),
         );
     }
-    blockers.extend(string_array_at(&json, "blocker_summary"));
     if bool_at_any(&json, &["claim_boundary.route_promotion_changed"]) == Some(true)
         || bool_at_any(&json, &["claim_boundary.speedup_claim"]) == Some(true)
         || bool_at_any(&json, &["claim_boundary.arc_or_npu_execution_claim"]) == Some(true)
@@ -7709,9 +7805,11 @@ fn load_openvino_quality_diagnostic(
             path_string(&path)
         ));
     }
-    blockers.sort();
-    blockers.dedup();
-    index.add(route_id, path_string(&path), blockers);
+    global_blockers.sort();
+    global_blockers.dedup();
+    if !global_blockers.is_empty() {
+        index.add(route_id, source_receipt, global_blockers);
+    }
     Ok(())
 }
 
@@ -7819,6 +7917,7 @@ fn load_openvino_generation_budget_sensitivity(
         ));
         return Ok(());
     };
+    let source_receipt = path_string(&path);
     for device in devices {
         if bool_at_any(device, &["fallback_used"]) == Some(true) {
             gaps.push(format!(
@@ -7830,6 +7929,7 @@ fn load_openvino_generation_budget_sensitivity(
             continue;
         };
         let mut blockers = Vec::new();
+        let mut case_blockers_indexed = false;
         if let Some(summary) = value_at(device, "summary") {
             let overgeneration_count = u64_at(
                 summary,
@@ -7852,31 +7952,45 @@ fn load_openvino_generation_budget_sensitivity(
         if let Some(cases) = value_at(device, "cases").and_then(Value::as_array) {
             for case in cases {
                 let case_id = string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string());
-                match string_at(case, "blocker_class").as_deref() {
+                let profile_id = string_at(case, "profile");
+                let blocker = match string_at(case, "blocker_class").as_deref() {
                     Some("fixture_budget_overgenerates_but_smaller_budget_passes") => {
                         if let Some(budget) = u64_at(case, "first_passing_budget") {
-                            blockers.push(format!(
+                            Some(format!(
                                 "{case_id} overgenerates at the fixture budget but passes with max_new_tokens={budget}"
-                            ));
+                            ))
                         } else {
-                            blockers.push(format!(
+                            Some(format!(
                                 "{case_id} overgenerates at the fixture budget and needs a tighter generation budget rerun"
-                            ));
+                            ))
                         }
                     }
                     Some("no_budget_variant_passes") => {
-                        blockers.push(format!("{case_id} has no passing tested generation budget"));
+                        Some(format!("{case_id} has no passing tested generation budget"))
                     }
-                    Some(classification) => blockers.push(format!(
+                    Some(classification) => Some(format!(
                         "{case_id} has generation-budget sensitivity class {classification}"
                     )),
-                    None => {}
+                    None => None,
+                };
+                if let Some(blocker) = blocker {
+                    if profile_id.is_some() {
+                        index.add_case_blocker(route_id, profile_id, &source_receipt, blocker);
+                        case_blockers_indexed = true;
+                    } else {
+                        blockers.push(blocker);
+                    }
                 }
             }
         }
+        if case_blockers_indexed {
+            blockers.retain(|blocker| !blocker.starts_with("OpenVINO budget sensitivity reports "));
+        }
         blockers.sort();
         blockers.dedup();
-        index.add(route_id, path_string(&path), blockers);
+        if !blockers.is_empty() {
+            index.add(route_id, source_receipt.clone(), blockers);
+        }
     }
     Ok(())
 }
@@ -8692,9 +8806,8 @@ fn evaluate_profile_route(
     if let Some(alignment) = corpus_alignment.get(route_id) {
         blockers.extend(alignment.blockers.iter().cloned());
     }
-    if let Some(diagnostic) = route_diagnostics.get(route_id) {
-        blockers.extend(diagnostic.blockers.iter().cloned());
-    }
+    let route_diagnostic = route_diagnostics.get(route_id, &profile.profile_id);
+    blockers.extend(route_diagnostic.blockers.iter().cloned());
     if route.status != "promoted" || !route.promoted_for.contains(&profile.profile_id) {
         blockers.push(format!("route not promoted for profile {}", profile.profile_id));
     }
@@ -8751,11 +8864,9 @@ fn evaluate_profile_route(
             }
         }
     }
-    if let Some(diagnostic) = route_diagnostics.get(route_id) {
-        for source in &diagnostic.source_receipts {
-            if !evidence.contains(source) {
-                evidence.push(source.clone());
-            }
+    for source in &route_diagnostic.source_receipts {
+        if !evidence.contains(source) {
+            evidence.push(source.clone());
         }
     }
 
@@ -8997,7 +9108,10 @@ fn workload_profiles() -> Vec<WorkloadProfile> {
             output_tokens: "<=32".to_string(),
             purpose: "cheap strict regression smoke for local runs".to_string(),
             promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
-            candidate_routes: vec![],
+            candidate_routes: vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
         },
         WorkloadProfile {
             profile_id: "ask_short".to_string(),
@@ -9901,6 +10015,32 @@ mod tests {
                 "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
                 "route_blocked": true,
                 "quality_summary": {"failed": 5},
+                "profile_diagnoses": [
+                    {
+                        "profile_id": "ask_short",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["GPU ask_short diagnosis blocker"]
+                    },
+                    {
+                        "profile_id": "regression_tiny",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["GPU regression_tiny diagnosis blocker"]
+                    }
+                ],
+                "failed_cases": [
+                    {
+                        "id": "yes_no_clear_sky",
+                        "profile": "ask_short",
+                        "classification": "exact_answer_overgenerated"
+                    },
+                    {
+                        "id": "stop_token_one_word_done",
+                        "profile": "regression_tiny",
+                        "classification": "exact_answer_instruction_not_followed"
+                    }
+                ],
                 "generated_token_visibility": {
                     "direct_generated_token_ids_available": false
                 },
@@ -9919,6 +10059,32 @@ mod tests {
                 "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
                 "route_blocked": true,
                 "quality_summary": {"failed": 4},
+                "profile_diagnoses": [
+                    {
+                        "profile_id": "ask_short",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["NPU ask_short diagnosis blocker"]
+                    },
+                    {
+                        "profile_id": "regression_tiny",
+                        "failed": 1,
+                        "blocked": true,
+                        "route_blockers": ["NPU regression_tiny diagnosis blocker"]
+                    }
+                ],
+                "failed_cases": [
+                    {
+                        "id": "yes_no_clear_sky",
+                        "profile": "ask_short",
+                        "classification": "exact_answer_overgenerated"
+                    },
+                    {
+                        "id": "stop_token_one_word_done",
+                        "profile": "regression_tiny",
+                        "classification": "exact_answer_instruction_not_followed"
+                    }
+                ],
                 "generated_token_visibility": {
                     "direct_generated_token_ids_available": false
                 },
@@ -9974,6 +10140,7 @@ mod tests {
                         "cases": [
                             {
                                 "id": "yes_no_clear_sky",
+                                "profile": "ask_short",
                                 "fixture_budget_passed": false,
                                 "any_budget_passed": true,
                                 "first_passing_budget": 1,
@@ -9981,6 +10148,7 @@ mod tests {
                             },
                             {
                                 "id": "stop_token_one_word_done",
+                                "profile": "regression_tiny",
                                 "fixture_budget_passed": false,
                                 "any_budget_passed": false,
                                 "first_passing_budget": null,
@@ -10003,6 +10171,7 @@ mod tests {
                         "cases": [
                             {
                                 "id": "yes_no_clear_sky",
+                                "profile": "ask_short",
                                 "fixture_budget_passed": false,
                                 "any_budget_passed": true,
                                 "first_passing_budget": 1,
@@ -10010,6 +10179,7 @@ mod tests {
                             },
                             {
                                 "id": "stop_token_one_word_done",
+                                "profile": "regression_tiny",
                                 "fixture_budget_passed": false,
                                 "any_budget_passed": false,
                                 "first_passing_budget": null,
@@ -10097,8 +10267,12 @@ mod tests {
         assert!(gpu_route.blockers.iter().any(|blocker| {
             blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
         }));
+        assert!(gpu_route.blockers.contains(&"GPU ask_short diagnosis blocker".to_string()));
         assert!(
-            gpu_route.blockers.contains(&"GPU diagnosis blocker".to_string()),
+            gpu_route.blockers.contains(
+                &"yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated"
+                    .to_string()
+            ),
             "{:?}",
             gpu_route.blockers
         );
@@ -10112,9 +10286,18 @@ mod tests {
             &"yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
                 .to_string()
         ));
-        assert!(gpu_route.blockers.contains(
-            &"stop_token_one_word_done has no passing tested generation budget".to_string()
-        ));
+        assert!(
+            !gpu_route.blockers.contains(&"GPU regression_tiny diagnosis blocker".to_string()),
+            "{:?}",
+            gpu_route.blockers
+        );
+        assert!(
+            !gpu_route.blockers.contains(
+                &"stop_token_one_word_done has no passing tested generation budget".to_string()
+            ),
+            "{:?}",
+            gpu_route.blockers
+        );
         assert!(
             gpu_route.blockers.iter().any(|blocker| blocker.contains(
                 "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [arithmetic_add_7_8, short_reasoning_apples_left]"
@@ -10136,7 +10319,7 @@ mod tests {
         else {
             bail!("missing NPU route evidence");
         };
-        assert!(npu_route.blockers.contains(&"NPU diagnosis blocker".to_string()));
+        assert!(npu_route.blockers.contains(&"NPU ask_short diagnosis blocker".to_string()));
         assert!(npu_route.blockers.contains(
             &"NPU cold start is openvino_pipeline_load_or_device_compile_dominated".to_string()
         ));
@@ -10149,7 +10332,32 @@ mod tests {
             &"yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
                 .to_string()
         ));
-        assert!(npu_route.blockers.contains(
+        assert!(
+            !npu_route.blockers.contains(&"NPU regression_tiny diagnosis blocker".to_string()),
+            "{:?}",
+            npu_route.blockers
+        );
+        assert!(
+            !npu_route.blockers.contains(
+                &"stop_token_one_word_done has no passing tested generation budget".to_string()
+            ),
+            "{:?}",
+            npu_route.blockers
+        );
+        let Some(regression_tiny) =
+            profiles.profiles.iter().find(|profile| profile.profile_id == "regression_tiny")
+        else {
+            bail!("missing regression_tiny profile");
+        };
+        let regression_gpu = regression_tiny
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing regression_tiny GPU route evidence")?;
+        assert!(
+            regression_gpu.blockers.contains(&"GPU regression_tiny diagnosis blocker".to_string())
+        );
+        assert!(regression_gpu.blockers.contains(
             &"stop_token_one_word_done has no passing tested generation budget".to_string()
         ));
         Ok(())
