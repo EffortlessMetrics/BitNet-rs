@@ -2251,7 +2251,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-037"
-status = "in_progress"
+status = "merged"
+pr = 5643
+head_sha = "fc18f1147d93c62c4cf3e94764c775cf6aa55c3a"
+merge_sha = "724a42346fb38130c868def7faaedd1655bd0078"
 branch = "codex/slm-cpu-037-transformer-forward-buffer-reuse"
 stackable = false
 review_mode = "codex_premerge"
@@ -2290,6 +2293,58 @@ forbidden_paths = [
 may_claim = [
   "The next Qwen3 Q8_0 Kaby allocation slice targets transformer-forward buffer reuse after prompt_prefill.forward classification.",
   "Any implemented allocation change preserves the strict Qwen3 Q8_0 behavior oracle and fallback=false if real artifacts are regenerated.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-038"
+status = "ready"
+branch = "codex/slm-cpu-038-typed-transformer-forward-workspace"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-037"]
+acceptance = "Use the SLM-CPU-037 no-reuse classification to introduce the first typed transformer forward workspace API boundary, or explicitly prove the next narrower API hook needed before replacing owned tensor outputs. The slice must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false when behavior artifacts are regenerated. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_aggregate_allocation_audit",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli --all-targets -- -D warnings",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The next Qwen3 Q8_0 Kaby allocation slice is scoped to a typed transformer forward workspace API boundary.",
+  "Any implemented API or workspace change preserves the strict Qwen3 Q8_0 behavior oracle and fallback=false if real artifacts are regenerated.",
 ]
 must_not_claim = [
   "Sustained 8250U throughput is proven.",
