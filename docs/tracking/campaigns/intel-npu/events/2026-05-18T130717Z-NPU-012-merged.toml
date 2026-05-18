@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T13:07:17Z"
+campaign = "intel-npu"
+item = "NPU-012"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 5634
+merge_sha = "b5f70d28a18bf7d5e62adad5d04fb2f4609e3aa4"
+actor = "codex"
+branch = "codex/add-npu-productization-proposal"
+summary = "Merged NPU-012 NPU source-of-truth map and implementation plan."
+
+notes = [
+  "Merged #5634, adding the docs-only NPU source-of-truth map and NPU implementation plan.",
+  "The source map keeps NPU-002 through NPU-011 bounded to runtime visibility, tiny static graph execution, and selected static BitNet-shaped subgraph parity.",
+  "This does not claim full BitNet inference, native bitnet-rs NPU inference, Intel NPU acceleration, packed QK256 decode, CPU fallback proof, OpenVINO GPU proof, cross-family NPU proof, or warm/resident route promotion.",
+]
