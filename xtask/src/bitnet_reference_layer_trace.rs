@@ -1577,6 +1577,11 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             attention_selected_query_score_input_candidate_policy_frontier(
                 &selected_query_score_input_bucket_source,
             );
+        let selected_query_score_input_candidate_policy_boundary =
+            attention_selected_query_score_input_candidate_policy_boundary(
+                &selected_query_score_input_candidate_policy,
+                &selected_query_score_input_bucket_source,
+            );
         let selected_query_head_boundary_frontier = attention_selected_query_head_boundary_frontier(
             &selected_query_score_input_bucket_source,
         );
@@ -1702,6 +1707,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_score_input_bucket_source;
         cpu_comparison["attention_selected_query_score_input_candidate_policy_frontier"] =
             selected_query_score_input_candidate_policy;
+        cpu_comparison["attention_selected_query_score_input_candidate_policy_boundary"] =
+            selected_query_score_input_candidate_policy_boundary;
         cpu_comparison["attention_selected_query_head_boundary_frontier"] =
             selected_query_head_boundary_frontier;
         cpu_comparison["attention_selected_query_rope_to_f16_head_conversion_frontier"] =
@@ -32466,6 +32473,191 @@ fn attention_selected_query_score_input_candidate_policy_frontier(
     })
 }
 
+fn selected_query_candidate_policy_boundary_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_query_score_input_candidate_policy_boundary_reference_q_f16_rust_q_f32" => {
+            "capture or bind the selected reference q-F16 and Rust q-F32 query operands to the exact raw score input before changing score-input policy"
+        }
+        "selected_query_score_input_candidate_policy_boundary_reference_q_f32_rust_q_f16" => {
+            "capture or bind the selected reference q-F32 and Rust q-F16 query operands to the exact raw score input before changing score-input policy"
+        }
+        "selected_query_score_input_candidate_policy_boundary_query_policy_unpinned" => {
+            "pin selected query candidate-policy operands against query boundary rows before changing score-input policy"
+        }
+        "selected_query_score_input_candidate_policy_boundary_rows_missing" => {
+            "capture selected query boundary rows for the active candidate score-input policy before changing runtime math"
+        }
+        "selected_query_score_input_candidate_policy_boundary_clean" => {
+            "selected query candidate-policy boundary is clean; rerun downstream score residual attribution"
+        }
+        "selected_query_score_input_candidate_policy_boundary_not_active" => {
+            "follow the active candidate-policy classification before capturing selected query policy boundary rows"
+        }
+        "selected_query_score_input_candidate_policy_boundary_missing_context" => {
+            "capture selected query candidate product contributors and query boundary rows before changing runtime math"
+        }
+        _ => "keep selected query candidate-policy boundary diagnostic-only",
+    }
+}
+
+fn selected_query_candidate_policy_boundary_summary(source: &Value, key: &str) -> Value {
+    let boundary = source.pointer(key).unwrap_or(&Value::Null);
+    if boundary.is_null() {
+        return json!({
+            "status": "missing_boundary",
+            "exact_selected_bucket": false,
+            "selected_dim_and_token_bucket": false,
+        });
+    }
+
+    json!({
+        "status": boundary.pointer("/status").cloned().unwrap_or(Value::Null),
+        "material_mismatch": value_bool(boundary, "/material_mismatch").unwrap_or(false),
+        "exact_selected_bucket": value_bool(boundary, "/exact_selected_bucket").unwrap_or(false),
+        "selected_dim_bucket": value_bool(boundary, "/selected_dim_bucket").unwrap_or(false),
+        "selected_token_bucket": value_bool(boundary, "/selected_token_bucket").unwrap_or(false),
+        "selected_dim_and_token_bucket": value_bool(boundary, "/selected_dim_and_token_bucket").unwrap_or(false),
+        "max_abs_delta": boundary.pointer("/max_abs_delta").cloned().unwrap_or(Value::Null),
+        "first_f16_bucket_mismatch_layout": boundary.pointer("/first_f16_bucket_mismatch_layout").cloned().unwrap_or(Value::Null),
+        "selected_dim_mismatch_row": boundary.pointer("/selected_dim_mismatch_row").cloned().unwrap_or(Value::Null),
+        "selected_token_mismatch_row": boundary.pointer("/selected_token_mismatch_row").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn selected_query_candidate_boundary_row_present(boundary: &Value) -> bool {
+    boundary
+        .pointer("/status")
+        .and_then(Value::as_str)
+        .is_some_and(|status| status != "missing_boundary" && status != "missing_input")
+}
+
+fn attention_selected_query_score_input_candidate_policy_boundary(
+    candidate_policy: &Value,
+    selected_query_source: &Value,
+) -> Value {
+    let policy_classification = candidate_policy.pointer("/classification").and_then(Value::as_str);
+    let top_contributor = candidate_policy.pointer("/top_contributor").unwrap_or(&Value::Null);
+    let top_contributor_present = top_contributor.pointer("/dim").and_then(Value::as_u64).is_some();
+    let query_boundary_present =
+        value_bool(selected_query_source, "/query_boundary_present").unwrap_or(false);
+    let reference_to_rope = selected_query_candidate_policy_boundary_summary(
+        selected_query_source,
+        "/reference_to_rust_rope",
+    );
+    let rope_to_f16 = selected_query_candidate_policy_boundary_summary(
+        selected_query_source,
+        "/rust_rope_to_f16",
+    );
+    let f16_to_score = selected_query_candidate_policy_boundary_summary(
+        selected_query_source,
+        "/rust_f16_to_score_input",
+    );
+    let reference_to_score = selected_query_candidate_policy_boundary_summary(
+        selected_query_source,
+        "/reference_to_score_input",
+    );
+    let boundary_rows_present =
+        [&reference_to_rope, &rope_to_f16, &f16_to_score, &reference_to_score]
+            .iter()
+            .any(|boundary| selected_query_candidate_boundary_row_present(boundary));
+    let reference_query_f16 =
+        value_bool(candidate_policy, "/reference_query_f16_roundtrip").unwrap_or(false);
+    let rust_query_f16 = value_bool(candidate_policy, "/rust_query_f16_roundtrip").unwrap_or(false);
+    let same_key_policy = value_bool(candidate_policy, "/same_key_policy").unwrap_or(false);
+    let query_changed_dim_count =
+        value_u64(candidate_policy, "/query_changed_dim_count").unwrap_or(0);
+    let key_changed_dim_count = value_u64(candidate_policy, "/key_changed_dim_count").unwrap_or(0);
+
+    let classification = match policy_classification {
+        Some("selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32")
+            if top_contributor_present && boundary_rows_present =>
+        {
+            "selected_query_score_input_candidate_policy_boundary_reference_q_f16_rust_q_f32"
+        }
+        Some("selected_query_score_input_candidate_policy_reference_q_f32_rust_q_f16")
+            if top_contributor_present && boundary_rows_present =>
+        {
+            "selected_query_score_input_candidate_policy_boundary_reference_q_f32_rust_q_f16"
+        }
+        Some("selected_query_score_input_candidate_policy_query_policy_unpinned")
+            if top_contributor_present && boundary_rows_present =>
+        {
+            "selected_query_score_input_candidate_policy_boundary_query_policy_unpinned"
+        }
+        Some("selected_query_score_input_candidate_policy_clean") => {
+            "selected_query_score_input_candidate_policy_boundary_clean"
+        }
+        Some("selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32")
+        | Some("selected_query_score_input_candidate_policy_reference_q_f32_rust_q_f16")
+        | Some("selected_query_score_input_candidate_policy_query_policy_unpinned")
+            if top_contributor_present && !boundary_rows_present =>
+        {
+            "selected_query_score_input_candidate_policy_boundary_rows_missing"
+        }
+        Some("selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32")
+        | Some("selected_query_score_input_candidate_policy_reference_q_f32_rust_q_f16")
+        | Some("selected_query_score_input_candidate_policy_query_policy_unpinned")
+            if !top_contributor_present =>
+        {
+            "selected_query_score_input_candidate_policy_boundary_missing_context"
+        }
+        Some(_) => "selected_query_score_input_candidate_policy_boundary_not_active",
+        None => "selected_query_score_input_candidate_policy_boundary_missing_context",
+    };
+
+    let blocked_reasons = if classification
+        == "selected_query_score_input_candidate_policy_boundary_missing_context"
+        || classification == "selected_query_score_input_candidate_policy_boundary_rows_missing"
+    {
+        let mut reasons = Vec::<&str>::new();
+        if !top_contributor_present {
+            reasons.push("selected_query_candidate_top_contributor_missing");
+        }
+        if !boundary_rows_present {
+            reasons.push("selected_query_candidate_boundary_rows_missing");
+        }
+        json!(reasons)
+    } else {
+        json!([])
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query score-input candidate-policy boundary rows are diagnostic-only evidence for the active q-F16/q-F32 candidate split; they compactly carry the selected product contributor and query boundary summaries, but do not change RMSNorm, QK256, RoPE, F16 score-input conversion, score accumulation, softmax, value-mix, or runtime math and do not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "source_report": "attention_selected_query_score_input_candidate_policy_frontier",
+        "source_classification": policy_classification,
+        "head": candidate_policy.pointer("/head").cloned().unwrap_or(Value::Null),
+        "selected_dim": candidate_policy.pointer("/selected_dim").cloned().unwrap_or(Value::Null),
+        "selected_token": candidate_policy.pointer("/selected_token").cloned().unwrap_or(Value::Null),
+        "key_slot": candidate_policy.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "contributor_dim": top_contributor.pointer("/dim").cloned().unwrap_or(Value::Null),
+        "selected_row_context_source": candidate_policy.pointer("/selected_row_context_source").cloned().unwrap_or(Value::Null),
+        "dominant_input": candidate_policy.pointer("/dominant_input").cloned().unwrap_or(Value::Null),
+        "reference_score_input_variant": candidate_policy.pointer("/reference_score_input_variant").cloned().unwrap_or(Value::Null),
+        "rust_score_input_variant": candidate_policy.pointer("/rust_score_input_variant").cloned().unwrap_or(Value::Null),
+        "reference_query_source": candidate_policy.pointer("/reference_query_source").cloned().unwrap_or(Value::Null),
+        "rust_query_source": candidate_policy.pointer("/rust_query_source").cloned().unwrap_or(Value::Null),
+        "reference_key_source": candidate_policy.pointer("/reference_key_source").cloned().unwrap_or(Value::Null),
+        "rust_key_source": candidate_policy.pointer("/rust_key_source").cloned().unwrap_or(Value::Null),
+        "reference_query_f16_roundtrip": reference_query_f16,
+        "rust_query_f16_roundtrip": rust_query_f16,
+        "same_key_policy": same_key_policy,
+        "query_changed_dim_count": query_changed_dim_count,
+        "key_changed_dim_count": key_changed_dim_count,
+        "top_contributor": top_contributor.clone(),
+        "query_boundary_present": query_boundary_present,
+        "boundary_rows_present": boundary_rows_present,
+        "reference_to_rust_rope": reference_to_rope,
+        "rust_rope_to_f16": rope_to_f16,
+        "rust_f16_to_score_input": f16_to_score,
+        "reference_to_score_input": reference_to_score,
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": selected_query_candidate_policy_boundary_next_diagnostic(classification),
+    })
+}
+
 fn selected_query_head_boundary_next_diagnostic(classification: &str) -> &'static str {
     match classification {
         "selected_query_head_boundary_reference_to_rope" => {
@@ -53275,6 +53467,190 @@ mod tests {
             Some(&json!("selected_query_score_input_candidate_policy_missing_context"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    fn selected_query_candidate_policy_source_with_boundary(product_delta: Value) -> Value {
+        json!({
+            "classification": "selected_query_score_input_bucket_source_unpinned",
+            "head": 0,
+            "selected_dim": 36,
+            "selected_token": 0,
+            "query_boundary_present": true,
+            "selected_row_source": "mixed_score_position_row",
+            "selected_qk_bucket_row": {
+                "head": 0,
+                "key_slot": 0,
+                "query_token": 0,
+                "product_delta": product_delta
+            },
+            "reference_to_rust_rope": {
+                "status": "compared",
+                "material_mismatch": true,
+                "exact_selected_bucket": true,
+                "selected_dim_bucket": true,
+                "selected_token_bucket": true,
+                "selected_dim_and_token_bucket": true,
+                "max_abs_delta": 0.000244140625_f64,
+                "first_f16_bucket_mismatch_layout": {
+                    "dim": 36,
+                    "token": 0,
+                    "left_f16_bits": 49024,
+                    "right_f16_bits": 49023
+                }
+            },
+            "rust_rope_to_f16": {
+                "status": "compared",
+                "material_mismatch": false,
+                "exact_selected_bucket": false,
+                "selected_dim_bucket": false,
+                "selected_token_bucket": false,
+                "selected_dim_and_token_bucket": false
+            },
+            "rust_f16_to_score_input": {
+                "status": "compared",
+                "material_mismatch": false,
+                "exact_selected_bucket": false,
+                "selected_dim_bucket": false,
+                "selected_token_bucket": false,
+                "selected_dim_and_token_bucket": false
+            },
+            "reference_to_score_input": {
+                "status": "compared",
+                "material_mismatch": true,
+                "exact_selected_bucket": true,
+                "selected_dim_bucket": true,
+                "selected_token_bucket": true,
+                "selected_dim_and_token_bucket": true
+            }
+        })
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_boundary_reports_reference_q_f16_rust_q_f32() {
+        let source = selected_query_candidate_policy_source_with_boundary(
+            selected_query_candidate_product_delta("query", true, false, 128, 0),
+        );
+        let candidate_policy =
+            attention_selected_query_score_input_candidate_policy_frontier(&source);
+        let report = attention_selected_query_score_input_candidate_policy_boundary(
+            &candidate_policy,
+            &source,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_query_score_input_candidate_policy_boundary_reference_q_f16_rust_q_f32"
+            ))
+        );
+        assert_eq!(report.pointer("/contributor_dim"), Some(&json!(36)));
+        assert_eq!(report.pointer("/reference_query_f16_roundtrip"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rust_query_f16_roundtrip"), Some(&json!(false)));
+        assert_eq!(report.pointer("/boundary_rows_present"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/reference_to_rust_rope/exact_selected_bucket"),
+            Some(&json!(true))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_boundary_reports_reference_q_f32_rust_q_f16() {
+        let source = selected_query_candidate_policy_source_with_boundary(
+            selected_query_candidate_product_delta("query", false, true, 128, 0),
+        );
+        let candidate_policy =
+            attention_selected_query_score_input_candidate_policy_frontier(&source);
+        let report = attention_selected_query_score_input_candidate_policy_boundary(
+            &candidate_policy,
+            &source,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_query_score_input_candidate_policy_boundary_reference_q_f32_rust_q_f16"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_boundary_reports_missing_boundary_rows() {
+        let source = selected_query_candidate_policy_source(
+            selected_query_candidate_product_delta("query", true, false, 128, 0),
+        );
+        let candidate_policy =
+            attention_selected_query_score_input_candidate_policy_frontier(&source);
+        let report = attention_selected_query_score_input_candidate_policy_boundary(
+            &candidate_policy,
+            &source,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_boundary_rows_missing"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_candidate_boundary_rows_missing"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_boundary_reports_missing_context() {
+        let candidate_policy = json!({
+            "classification": "selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32"
+        });
+        let report = attention_selected_query_score_input_candidate_policy_boundary(
+            &candidate_policy,
+            &json!({}),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_boundary_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_candidate_top_contributor_missing"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_boundary_reports_not_active() {
+        let source = selected_query_candidate_policy_source_with_boundary(
+            selected_query_candidate_product_delta("key", false, false, 0, 128),
+        );
+        let candidate_policy =
+            attention_selected_query_score_input_candidate_policy_frontier(&source);
+        let report = attention_selected_query_score_input_candidate_policy_boundary(
+            &candidate_policy,
+            &source,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_boundary_not_active"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_boundary_reports_clean() {
+        let source = selected_query_candidate_policy_source_with_boundary(
+            selected_query_candidate_product_delta("none", false, false, 0, 0),
+        );
+        let candidate_policy =
+            attention_selected_query_score_input_candidate_policy_frontier(&source);
+        let report = attention_selected_query_score_input_candidate_policy_boundary(
+            &candidate_policy,
+            &source,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_boundary_clean"))
+        );
     }
 
     #[test]
