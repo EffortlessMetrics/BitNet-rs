@@ -8290,13 +8290,22 @@ fn load_npu_cache_experiment(
     {
         blockers.push("NPU cache experiment answer gates did not both pass".to_string());
     }
-    if bool_at_any(&json, &["cache.cache_hit_runtime_metric_available"]) != Some(true) {
+    let cache_effective_by_timing =
+        bool_at_any(&json, &["cache.cache_effective_by_timing"]) == Some(true);
+    let cache_files_created = bool_at_any(&json, &["cache.cache_files_created"]) == Some(true);
+    let cache_files_reused_or_stable =
+        bool_at_any(&json, &["cache.cache_files_reused_or_stable"]) == Some(true);
+    let runtime_metric_available =
+        bool_at_any(&json, &["cache.cache_hit_runtime_metric_available"]) == Some(true);
+    if !runtime_metric_available
+        && !(cache_effective_by_timing && cache_files_created && cache_files_reused_or_stable)
+    {
         blockers.push(
             "NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric"
                 .to_string(),
         );
     }
-    if bool_at_any(&json, &["cache.cache_effective_by_timing"]) != Some(true) {
+    if !cache_effective_by_timing {
         let classification = string_at(&json, "comparison.classification")
             .unwrap_or_else(|| "cache_not_materially_proven_for_pipeline_construct".to_string());
         blockers.push(format!(
@@ -11791,6 +11800,83 @@ mod tests {
                 "NPU cached cold process does not materially reduce pipeline construction",
             )
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn npu_cache_experiment_accepts_file_and_timing_cache_evidence() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            OPENVINO_NPU_CACHE_EXPERIMENT,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
+                "selected_backend": "openvino-npu",
+                "runtime_device": "NPU",
+                "fallback_used": false,
+                "cache": {
+                    "cache_hit_runtime_metric_available": false,
+                    "cache_files_created": true,
+                    "cache_files_reused_or_stable": true,
+                    "cache_effective_by_timing": true
+                },
+                "comparison": {
+                    "cache_experiment_ready": true,
+                    "first_answer_gate_passed": true,
+                    "second_answer_gate_passed": true,
+                    "classification": "cache_materially_reduces_pipeline_construct"
+                },
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_npu_inference_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let mut gaps = Vec::new();
+        let diagnostics = load_route_diagnostics_index(
+            temp.path(),
+            None,
+            None,
+            None,
+            None,
+            Some(Path::new(OPENVINO_NPU_CACHE_EXPERIMENT)),
+            None,
+            &mut gaps,
+        )?;
+        assert!(gaps.is_empty(), "{gaps:?}");
+        let evidence = diagnostics.get("dense_slm_openvino_npu_candidate", "low_power");
+        assert!(
+            evidence
+                .source_receipts
+                .iter()
+                .any(|source| source.ends_with(OPENVINO_NPU_CACHE_EXPERIMENT)),
+            "{:?}",
+            evidence.source_receipts
+        );
+        assert!(
+            !evidence.blockers.iter().any(|blocker| blocker.contains("NPU cache hit evidence")),
+            "{:?}",
+            evidence.blockers
+        );
+        assert!(
+            !evidence.blockers.iter().any(|blocker| blocker.contains("NPU cached cold process")),
+            "{:?}",
+            evidence.blockers
+        );
+        assert!(
+            evidence.blockers.contains(
+                &"OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                    .to_string()
+            )
+        );
         Ok(())
     }
 
