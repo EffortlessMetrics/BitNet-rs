@@ -2098,7 +2098,6 @@ mod tests {
         Ok(())
     }
 
-
     #[test]
     #[serial(bitnet_env)]
     fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {

@@ -118,12 +118,11 @@ impl super::Tokenizer for HfTokenizer {
         // still recognize literal AddedToken specials with post-processing
         // disabled; enabling post-processing here injects template specials
         // such as BOS/EOS a second time for rendered chat prompts.
-        let enc =
-            self.inner.encode(EncodeInput::Single(text.into()), false).map_err(|e| {
-                bitnet_common::BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
-                    reason: format!("Tokenizer encode error: {}", e),
-                })
-            })?;
+        let enc = self.inner.encode(EncodeInput::Single(text.into()), false).map_err(|e| {
+            bitnet_common::BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: format!("Tokenizer encode error: {}", e),
+            })
+        })?;
 
         let mut ids = enc.get_ids().to_vec();
 
