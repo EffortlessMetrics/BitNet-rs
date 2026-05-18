@@ -12,6 +12,15 @@ bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
 bitnet receipts explain --latest --format json
 ```
 
+For issue reports, prefer the single support bundle. It includes model status,
+the latest receipt explanation, route/backend/fallback summary, quality gate,
+server-readiness scope, proof-family booleans, binary identity, and runtime
+identity when the receipt exposes it:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+```
+
 Or explain a specific receipt:
 
 ```powershell
@@ -23,7 +32,8 @@ row to claim. The receipt tells you what the last command actually did.
 
 ## What To Paste In An Issue
 
-Paste the `receipts explain` summary plus:
+Paste the `support bundle` JSON when available. If bundle creation fails, paste
+the `receipts explain` summary plus:
 
 ```text
 model_coverage_row
@@ -225,6 +235,26 @@ dense SLM behavior.
 If the issue mixes these claims, paste the route and model coverage row first.
 The route usually determines whether the issue belongs to BitNet QK256 CUDA,
 dense regular-LLM CUDA, CPU reference, server, or benchmark triage.
+
+## If Qwen2.5 Proof Is Mistaken For Qwen3 Proof
+
+Qwen2.5 and Qwen3 are separate model coverage rows. A Qwen2.5 receipt can prove
+only the Qwen2.5 artifact/profile it names. It does not prove Qwen3 artifact
+identity, tokenizer/prompt authority, user-path ask/chat behavior, server
+readiness, speedup, or residency.
+
+Check:
+
+- `model_coverage_row`;
+- model id and artifact checksum;
+- selected route;
+- prompt and tokenizer authority;
+- whether the receipt path names Qwen2.5 or Qwen3;
+- whether the model coverage row already earned the claim being discussed.
+
+Allowed claim: the exact model/profile named by the receipt.
+Not allowed: inheriting Qwen2.5 server readiness, speed, or quality proof for
+Qwen3.
 
 ## If The Receipt Is Missing
 

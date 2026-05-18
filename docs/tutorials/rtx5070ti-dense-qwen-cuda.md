@@ -148,6 +148,20 @@ The useful fields to paste into an issue are:
 - server readiness state
 - claim boundary
 
+For support issues, collect the status row and latest receipt explanation in one
+artifact:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+```
+
+For Qwen2.5, the bundle should show `selected_route =
+dense_regular_llm_cuda`, `server_ready = true`,
+`server_ready_scope = exact_profile`, `speedup_claim = false`,
+`full_residency_claim = false`, `bitnet_packed_i2s_qk256_proof = false`, and
+`dense_regular_llm_cuda_proof = true`. Those Qwen2.5 claims do not transfer to
+Qwen3 or any other dense model row.
+
 ## Read The Governed Benchmark Receipt
 
 The current dense Qwen benchmark qualification review is committed as:
