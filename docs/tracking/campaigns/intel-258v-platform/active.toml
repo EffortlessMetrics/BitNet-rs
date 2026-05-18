@@ -6694,3 +6694,44 @@ must_not_claim = [
   "OpenVINO GPU or NPU is promoted by this PR.",
   "Rust-native OpenVINO execution, server readiness, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-STATUS-001"
+status = "pr_open"
+pr = 5620
+head_sha = "8155e8b2960c984ed9bb5ca23e81adfbe105f4f0"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-STATUS-001-capability-matrix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-VALIDATE-001"]
+acceptance = "Add a claim-neutral OpenVINO capability matrix for Qwen2.5 OpenVINO CPU/GPU/NPU and BitNet OpenVINO subgraph research, including source-of-truth evidence links, route status, claim boundaries, validator commands, and promotion blockers without route promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "npx --yes markdownlint-cli2@0.18.1 --config .markdownlint.jsonc docs/status/OPENVINO_CAPABILITY_MATRIX.md docs/status/README.md plans/openvino-lunar-lake/implementation-plan.md",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/status/OPENVINO_CAPABILITY_MATRIX.md",
+  "docs/status/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO status matrix documents current candidate, promoted, diagnostic, and planned rows and their claim boundaries.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO speedup, power advantage, server readiness, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
+]

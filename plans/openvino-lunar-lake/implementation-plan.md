@@ -236,11 +236,25 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-STATUS-001
 
-Status: proposed
+Status: in progress
 Blocked by: `LNL258V-OPENVINO-VALIDATE-001`
 
 Add `docs/status/OPENVINO_CAPABILITY_MATRIX.md` with claim-neutral rows for
 Qwen2.5 OpenVINO CPU/GPU/NPU and BitNet OpenVINO subgraph research.
+
+Production delta: status documentation only. The matrix indexes current
+candidate, promoted, diagnostic, and planned OpenVINO rows, the source receipts,
+the validator command, and the claim boundaries without running inference or
+promoting GPU/NPU routes.
+
+Acceptance additions:
+
+- OpenVINO CPU/GPU/NPU dense SLM rows link to the route ledger, route-profile
+  comparison, corpus-v2, phase, NPU cold-start, and operator-ask evidence.
+- BitNet OpenVINO rows remain diagnostic/planned subgraph research and do not
+  imply BitNet QK256/I2_S, full accelerator inference, or QK256 decode proof.
+- The status surface names the validation command and the blockers required
+  before route promotion, speedup, power, or server claims can be made.
 
 ### Work item: LNL258V-OPENVINO-UX-001
 
