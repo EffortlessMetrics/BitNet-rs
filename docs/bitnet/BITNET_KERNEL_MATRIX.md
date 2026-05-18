@@ -46,9 +46,18 @@ Kernel family and kernel implementation are different fields. For example:
 | `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
 | `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
 | `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
+| `qk256` | `qk256-avx512-f32-gemv` | AVX-512 no-scale F32 decode smoke/parity GEMV |
+| `qk256` | `qk256-avx512-i8s-scaled-gemv` | AVX-512 scaled BitNet I2_S × I8_S decode GEMV |
+| `qk256` | `qk256-avx512-i8s-scaled-gemm` | AVX-512 scaled BitNet I2_S × I8_S prefill GEMM |
 | `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
 
 Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
+
+AVX-512 is a wider x86 lane, not a separate proof family. It must inherit
+scalar packed parity and compare against AVX2 before any speed claim. AVX-512
+detection, dispatch, execution, phase speed, and sustained speed are separate
+claim levels; receipts must not collapse them into a single `selected_kernel`
+label.
 
 ### ARM / M4 Lane
 
@@ -146,3 +155,5 @@ Every kernel proof must record:
 
 - `docs/bitnet/BITNET_CPU_PATH_PLAN.md`
 - `docs/bitnet/BITNET_RECEIPT_FIELDS.md`
+- `docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md`
+- `docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md`

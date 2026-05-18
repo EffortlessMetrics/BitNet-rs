@@ -1,5 +1,20 @@
 # AMD Ryzen 9 9950X3D CPU Roadmap
 
+Status: draft
+Owner: BitNet-rs maintainers
+Created: 2026-05-18
+Linked proposal: n/a
+Linked specs:
+- `docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md`
+- `docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md`
+Linked ADRs: n/a
+Linked plan:
+- `plans/cpu-avx512/implementation-plan.md`
+Linked issues: n/a
+Linked PRs: n/a
+Support-tier impact: 9950X3D AVX-512 claims remain receipt-scoped and CPU-only.
+Policy impact: No policy exception.
+
 ## Purpose
 
 This lane validates the modern high-end AMD desktop CPU path for BitNet-rs.
@@ -56,6 +71,36 @@ This is a dual-CCD X3D CPU. Receipts should record scheduler, core placement, an
 | 3 | Strict CPU inference receipt validates | CPU proof receipt backed |
 | 4 | Cache-sensitive and sustained-power baselines exist | Modern desktop CPU benchmark recorded |
 
+## Required AVX-512 Profiles
+
+The 9950X3D AVX-512 lane must record profile-specific evidence before any
+profile-specific speed claim:
+
+```text
+micro_qk256_f32_gemv
+micro_qk256_i8s_scaled_gemv
+layer_0_decode
+prefill_128
+prefill_512
+first_token
+decode_32
+decode_128
+warm_session_3_turns
+sustained_decode_10min
+```
+
+Required comparisons are:
+
+```text
+scalar vs avx2
+scalar vs avx512
+avx2 vs avx512
+avx512 vs cuda diagnostic
+```
+
+The CUDA comparison is diagnostic only. It does not turn the 9950X3D lane into
+a GPU proof lane and must not be used for a CUDA readiness claim.
+
 ## Receipt Fields
 
 Minimum CPU proof receipt:
@@ -78,9 +123,17 @@ Minimum CPU proof receipt:
     "avx512_detected": true,
     "tdp_watts": 170
   },
+  "cpu_topology": {
+    "ccd_count": 2,
+    "x3d_cache_domain": "...",
+    "core_affinity": "...",
+    "scheduler_policy": "...",
+    "smt_enabled": true
+  },
   "power": {
     "mode": "...",
-    "sustained_run": true
+    "sustained_run": true,
+    "duration_seconds": 600
   }
 }
 ```
@@ -97,7 +150,7 @@ Collect OS, CPU flags, topology, scheduler/core placement context, memory, gover
 
 ### AMD9950X3D-003 - Scalar, AVX2, and AVX-512 Dispatch Proof
 
-Prove scalar, AVX2, and AVX-512 paths can be forced independently and receipts record selected CPU kernel path.
+Prove scalar, AVX2, and AVX-512 paths can be forced independently and receipts record requested kernel, selected kernel, CPU features, fallback status, fallback reason, and AVX-512 invocation counters. AVX-512 detection or a receipt label is not enough.
 
 ### AMD9950X3D-004 - Strict CPU Proof Run
 
@@ -125,6 +178,12 @@ The 9950X3D answers:
 ```text
 How does the CPU-first path behave on a modern high-end AVX-512 and large-cache AMD desktop?
 ```
+
+## Related AVX-512 Contracts
+
+- `docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md`
+- `docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md`
+- `plans/cpu-avx512/implementation-plan.md`
 
 ## Do Not
 

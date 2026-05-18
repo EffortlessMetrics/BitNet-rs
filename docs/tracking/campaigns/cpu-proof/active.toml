@@ -801,3 +801,45 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+
+[[work_item]]
+id = "CPU-AVX512-000"
+status = "ready"
+branch = "codex/cpu-avx512-kernel-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "AVX-512 CPU proof rails are documented before runtime work: detection is separated from dispatch/execution/speed/sustained proof, strict requested AVX-512 fallback is fatal, auto-selection remains unpromoted, and the PR queue is encoded."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md",
+  "docs/specs/amd-9950x3d-cpu-roadmap.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "plans/cpu-avx512/implementation-plan.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The AVX-512 CPU kernel contract and implementation sequence are documented after merge.",
+  "AVX-512 remains explicit-request or campaign-only until parity, phase, and sustained receipts justify profile-specific auto promotion after merge.",
+]
+must_not_claim = [
+  "AVX-512 kernels are implemented.",
+  "AVX-512 execution is proven.",
+  "AVX-512 speedup or sustained performance is proven.",
+  "GPU, NPU, server, CUDA, OpenCL, or OpenVINO readiness is proven.",
+]
