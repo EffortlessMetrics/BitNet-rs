@@ -1,0 +1,328 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_bitnet_eval_larger_corpus_decision",
+  "work_item": "M4-BITNET-EX-012",
+  "machine_id": "apple-m4-mac-mini",
+  "created_at": "2026-05-18T0057Z",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "decision": {
+    "expand_to_500_cases_now": false,
+    "repair_corpus_scorer_template_first": true,
+    "rerun_250_after_repair": true,
+    "use_dense_slm_evidence": false,
+    "publish_broad_bitnet_quality_envelope": false,
+    "enable_bitnet_chat": false,
+    "enable_bitnet_serve": false,
+    "enable_bitnet_metal": false,
+    "summary": "Do not expand BitNet to 500 cases yet. Repair corpus, scorer, and prompt-template issues exposed by the 250-case run, then rerun the 250-case receipt before approving a 500-case runtime campaign."
+  },
+  "accepted_identity": {
+    "model": {
+      "family": "bitnet",
+      "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+      "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+      "file": "ggml-model-i2_s.gguf",
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "quant_format": "I2_S"
+    },
+    "tokenizer": {
+      "source": "external_tokenizer_json",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "ggml_pre": "llama-bpe",
+      "strict": true
+    },
+    "prompt_template": "bitnetcpp-answer"
+  },
+  "source_artifacts": {
+    "current_100_case_answer_corpus": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+    "current_100_case_task_family_rollup": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/task-family-pass-rates.json",
+    "current_100_case_reference_vs_rust": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/reference-vs-rust-comparison.json",
+    "current_100_case_regression": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/regression-vs-2026-05-15T2214Z.json",
+    "current_250_case_answer_corpus": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+    "current_250_case_summary": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json",
+    "current_250_case_receipts_check": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json",
+    "current_250_case_regression_context_mismatch": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json"
+  },
+  "evidence_100_case": {
+    "corpus_name": "apple-m4-bitnet-eval-seeded-corpus",
+    "cases_total": 100,
+    "cases_passed": 79,
+    "cases_failed": 21,
+    "pass_rate": 0.79,
+    "timeouts": 0,
+    "not_run": 0,
+    "generated_tokens": 765,
+    "fallback_used": false,
+    "mechanical_scoring_only": true,
+    "failure_taxonomy": {
+      "answer_content": 21
+    },
+    "failure_categories": {
+      "extraction": 3,
+      "factual_table": 4
+    }
+  },
+  "evidence_250_case": {
+    "corpus_name": "apple-m4-bitnet-eval-seeded-corpus-250",
+    "cases_total": 250,
+    "cases_passed": 196,
+    "cases_failed": 54,
+    "pass_rate": 0.784,
+    "timeouts": 0,
+    "not_run": 0,
+    "generated_tokens": 2086,
+    "fallback_used": false,
+    "mechanical_scoring_only": true,
+    "failure_taxonomy": {
+      "answer_content": 52,
+      "format_only": 2
+    },
+    "failure_categories": {
+      "extraction": 6,
+      "factual_table": 12,
+      "formatting": 2
+    },
+    "timing": {
+      "first_token_ms": {
+        "p50": 17087,
+        "p90": 58187,
+        "p99": 70389
+      },
+      "input_tok_s": {
+        "p50": 1.600581680484173,
+        "p90": 2.3892907890905897,
+        "p99": 2.407711224894193
+      },
+      "output_tok_s": {
+        "p50": 0.23074704355350445,
+        "p90": 0.7687503002930861,
+        "p99": 1.2106537530266344
+      },
+      "decode_steady_state_tok_s": {
+        "p50": 1.423,
+        "p90": 2.088,
+        "p99": 2.097
+      }
+    }
+  },
+  "task_family_comparison": [
+    {
+      "family": "arithmetic_exact",
+      "cases_100": 10,
+      "passed_100": 10,
+      "pass_rate_100": 1.0,
+      "cases_250": 15,
+      "passed_250": 14,
+      "failed_250": 1,
+      "pass_rate_250": 0.9333333333333333,
+      "pass_rate_delta": -0.06666666666666665,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ]
+    },
+    {
+      "family": "numeric_tolerance",
+      "cases_100": 10,
+      "passed_100": 5,
+      "pass_rate_100": 0.5,
+      "cases_250": 35,
+      "passed_250": 24,
+      "failed_250": 11,
+      "pass_rate_250": 0.6857142857142857,
+      "pass_rate_delta": 0.18571428571428572,
+      "failure_taxonomy_250": [
+        "answer_content",
+        "format_only"
+      ],
+      "repair_signal": "Two format-only failures mean scorer and output-format normalization should be audited before 500 cases."
+    },
+    {
+      "family": "fixed_table_qa",
+      "cases_100": 10,
+      "passed_100": 6,
+      "pass_rate_100": 0.6,
+      "cases_250": 35,
+      "passed_250": 23,
+      "failed_250": 12,
+      "pass_rate_250": 0.6571428571428571,
+      "pass_rate_delta": 0.05714285714285716,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ],
+      "repair_signal": "Factual table failures remain the largest named category."
+    },
+    {
+      "family": "format_constrained_json",
+      "cases_100": 10,
+      "passed_100": 10,
+      "pass_rate_100": 1.0,
+      "cases_250": 20,
+      "passed_250": 20,
+      "failed_250": 0,
+      "pass_rate_250": 1.0,
+      "pass_rate_delta": 0.0,
+      "failure_taxonomy_250": []
+    },
+    {
+      "family": "closed_label_classification",
+      "cases_100": 10,
+      "passed_100": 9,
+      "pass_rate_100": 0.9,
+      "cases_250": 20,
+      "passed_250": 18,
+      "failed_250": 2,
+      "pass_rate_250": 0.9,
+      "pass_rate_delta": 0.0,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ]
+    },
+    {
+      "family": "synthetic_extraction",
+      "cases_100": 10,
+      "passed_100": 7,
+      "pass_rate_100": 0.7,
+      "cases_250": 25,
+      "passed_250": 19,
+      "failed_250": 6,
+      "pass_rate_250": 0.76,
+      "pass_rate_delta": 0.06000000000000005,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ],
+      "repair_signal": "Extraction remains a named failure category and should be inspected for prompt/scorer ambiguity."
+    },
+    {
+      "family": "ordering_sorting",
+      "cases_100": 10,
+      "passed_100": 8,
+      "pass_rate_100": 0.8,
+      "cases_250": 20,
+      "passed_250": 17,
+      "failed_250": 3,
+      "pass_rate_250": 0.85,
+      "pass_rate_delta": 0.04999999999999993,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ]
+    },
+    {
+      "family": "rewrite_normalized",
+      "cases_100": 10,
+      "passed_100": 9,
+      "pass_rate_100": 0.9,
+      "cases_250": 20,
+      "passed_250": 15,
+      "failed_250": 5,
+      "pass_rate_250": 0.75,
+      "pass_rate_delta": -0.15000000000000002,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ],
+      "repair_signal": "The largest pass-rate drop is in normalized rewrite cases, so normalization and expected-output strictness should be audited."
+    },
+    {
+      "family": "constrained_summary",
+      "cases_100": 10,
+      "passed_100": 8,
+      "pass_rate_100": 0.8,
+      "cases_250": 30,
+      "passed_250": 24,
+      "failed_250": 6,
+      "pass_rate_250": 0.8,
+      "pass_rate_delta": 0.0,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ],
+      "repair_signal": "The 100-case matched-history regression already warned on constrained summary, and 250-case output still has six content failures."
+    },
+    {
+      "family": "required_forbidden_tokens",
+      "cases_100": 10,
+      "passed_100": 7,
+      "pass_rate_100": 0.7,
+      "cases_250": 30,
+      "passed_250": 22,
+      "failed_250": 8,
+      "pass_rate_250": 0.7333333333333333,
+      "pass_rate_delta": 0.033333333333333326,
+      "failure_taxonomy_250": [
+        "answer_content"
+      ],
+      "repair_signal": "Instruction-following failures remain common enough to audit required/forbidden-token prompt wording."
+    }
+  ],
+  "reference_vs_rust": {
+    "case_count_100": 100,
+    "text_matches_100": 54,
+    "text_mismatches_100": 46,
+    "mechanical_scoring_matches_100": 83,
+    "mechanical_scoring_deltas_100": 17,
+    "reference_passed_100": 70,
+    "rust_passed_100": 79,
+    "reference_passed_rust_failed_100": 4,
+    "rust_passed_reference_failed_100": 13,
+    "generated_token_id_unavailable_100": 100,
+    "case_count_250": 250,
+    "reference_available_for_250": false,
+    "case_count_250_status": "No comparable 250-case reference-runner output was published with M4-BITNET-EX-011; only the 100-case reference-vs-Rust comparison is available."
+  },
+  "regression_context": {
+    "strict_100_vs_250_regression": false,
+    "context_mismatch_recorded": true,
+    "mismatch_field": "corpus.name",
+    "observed": "apple-m4-bitnet-eval-seeded-corpus-250",
+    "baseline": "apple-m4-bitnet-eval-seeded-corpus",
+    "reason": "Strict regression intentionally rejects the 250-case receipt against the 100-case baseline because corpus identity, selected case IDs, and case count differ."
+  },
+  "rationale": [
+    "The 250-case BitNet run is usable evidence for corpus staging: it completed all 250 cases, recorded 2086 generated tokens, had zero timeouts and zero not_run rows, and preserved fallback_used=false on apple-m4-cpu-neon.",
+    "Aggregate pass rate is stable but not stronger: the 250-case run passed 196/250 (78.4%) versus the latest 100-case run at 79/100 (79.0%).",
+    "The expanded corpus still exposes weak or repair-sensitive families: fixed_table_qa is 23/35, numeric_tolerance is 24/35 with two format-only failures, rewrite_normalized fell from 90% to 75%, required_forbidden_tokens is 22/30, and synthetic_extraction is 19/25.",
+    "Reference-vs-Rust comparison remains incomplete for expansion decisions: the 100-case comparison had 54/100 text matches and 83/100 mechanical scoring matches, while no 250-case reference-runner comparison was published.",
+    "Because the next target is trustworthy, benchmarkable inference rather than raw corpus size, the honest next step is a repair-focused 250-case refresh before paying for a 500-case BitNet runtime campaign."
+  ],
+  "recommended_next_items": [
+    {
+      "id": "M4-BITNET-REPAIR-001",
+      "summary": "Audit and repair the 250-case BitNet scorer/template/normalization issues before approving a 500-case run.",
+      "scope": [
+        "numeric_tolerance format-only failures",
+        "fixed_table_qa factual table misses",
+        "rewrite_normalized normalization/expected-output strictness",
+        "required_forbidden_tokens prompt wording",
+        "synthetic_extraction expected-output ambiguity"
+      ]
+    },
+    {
+      "id": "M4-BITNET-REPAIR-002",
+      "summary": "Publish a repaired 250-case BitNet refresh with the same accepted artifact/tokenizer/backend identity and compare it against this decision receipt."
+    },
+    {
+      "id": "M4-BITNET-500-001",
+      "summary": "Approve a 500-case BitNet corpus only after the repaired 250-case receipt shows no scorer/template blockers and preserves zero timeout and fallback=false behavior."
+    }
+  ],
+  "claim_boundary": {
+    "bitnet_eval_history": true,
+    "larger_corpus_decision": true,
+    "broad_bitnet_quality_claim": false,
+    "bitnet_performance_claim": false,
+    "dense_slm_evidence_used": false,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "fresh_runtime_chat_or_serve_proof": false,
+    "full_metal_inference": false,
+    "qk256": false,
+    "neural_engine": false,
+    "mpsgraph": false,
+    "macbook_runtime_proof": false,
+    "broad_apple_silicon_performance": false,
+    "speedup_claim": false
+  }
+}

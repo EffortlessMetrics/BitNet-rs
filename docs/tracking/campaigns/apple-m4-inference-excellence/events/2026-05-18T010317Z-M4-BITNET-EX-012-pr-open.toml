@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T01:03:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-012"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5456
+head_sha = "b4803defb756c669574994acb94b3d16b621b812"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-012-bitnet-500-decision"
+
+notes = [
+  "Opened PR #5456 to publish the M4-BITNET-EX-012 larger-corpus decision receipt and dedicated receipts-check validator.",
+  "The decision is repair-first before 500-case BitNet expansion because the 250-case receipt is complete and fallback-free but still exposes numeric formatting, fixed-table, rewrite, extraction, constrained-summary, and required/forbidden-token repair targets.",
+  "The PR does not approve a 500-case runtime run, claim broad BitNet quality or performance, use dense SLM evidence as BitNet proof, or enable BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]

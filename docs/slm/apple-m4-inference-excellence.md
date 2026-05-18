@@ -500,6 +500,7 @@ ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus-run
 ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json
 ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json
 ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/larger-corpus-decision.json
 ```
 
 The receipt records 250 mechanically scored cases, 196 passes, 54
@@ -531,6 +532,18 @@ evidence only; it does not use dense Qwen evidence, does not make a broad
 BitNet quality or performance claim, and does not enable chat, serve, Metal,
 QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon performance, or
 speedup claims.
+
+`M4-BITNET-EX-012` records the larger-corpus decision from the 100-case and
+250-case evidence. The decision is repair-first, not 500-case expansion:
+`larger-corpus-decision.json` keeps `expand_to_500_cases_now=false` and
+`repair_corpus_scorer_template_first=true`. The reason is not runtime failure;
+the 250-case run completed with zero timeouts, zero `not_run` cases, 2,086
+generated tokens, and `fallback_used=false`. The blocker is evidence quality:
+numeric tolerance still has format-only failures, fixed-table QA records twelve
+factual-table misses, rewrite-normalized drops to 15/20, and no comparable
+250-case reference-vs-Rust output exists. The next BitNet eval work should
+repair scorer/template/normalization issues and rerun the 250-case receipt
+before approving a 500-case runtime campaign.
 
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
