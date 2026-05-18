@@ -350,11 +350,14 @@
 | intel-258v-platform | LNL258V-OPENVINO-VALIDATE-001 | LNL258V-OPENVINO-DOCS-006 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-001 | LNL258V-OPENVINO-QUAL-FIX-001 | merged |
 | intel-258v-platform | LNL258V-QUAL-007 | LNL258V-OPENVINO-QUAL-RERUN-001 | merged |
+| intel-258v-platform | LNL258V-OP-005 | LNL258V-QUAL-007 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-REPORT-001 | LNL258V-OPENVINO-UX-001, LNL258V-OV-QUAL-005 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-POLICY-001 | LNL258V-OPENVINO-QUAL-REPORT-001, LNL258V-OV-QUAL-005 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-FIX-001 | LNL258V-OPENVINO-QUAL-POLICY-001 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-STATUS-001 | LNL258V-OPENVINO-VALIDATE-001 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-UX-001 | LNL258V-OPENVINO-STATUS-001 | merged |
+| intel-258v-platform | LNL258V-QUAL-008 | LNL258V-QUAL-007, LNL258V-OP-005 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
 | intel-a770 | A770-003 | A770-000 | proposed |
 | intel-a770 | A770-004 | A770-003 | proposed |
 | intel-a770 | A770-005 | A770-004 | proposed |
@@ -440,7 +443,7 @@
 | nvidia-5070ti | CUDA-MODEL-008 | CUDA-MODEL-007 | merged |
 | nvidia-5070ti | CUDA-MODEL-009 | CUDA-MODEL-008 | merged |
 | nvidia-5070ti | CUDA-MODEL-010 | CUDA-MODEL-009 | merged |
-| nvidia-5070ti | CUDA-MODEL-011 | CUDA-MODEL-010 | pr_open |
+| nvidia-5070ti | CUDA-MODEL-011 | CUDA-MODEL-010 | merged |
 | nvidia-5070ti | CUDA-MODEL-SMOLLM2-001 | CUDA-MODEL-008 | merged |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
 | nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | merged |

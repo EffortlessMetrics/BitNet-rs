@@ -84,7 +84,7 @@ Revert user-path changes and keep existing proof receipts unchanged.
 
 ## Work item: CUDA-MODEL-011
 
-Status: pr_open
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0013-model-onboarding-proof-ladder.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -122,13 +122,13 @@ Revert Qwen3 warm-session changes.
 
 ## Work item: CUDA-MODEL-012
 
-Status: blocked
+Status: in_progress
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0013-model-onboarding-proof-ladder.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: Qwen3 server readiness review
-Blocked by: CUDA-MODEL-010, CUDA-MODEL-011
+Blocked by: none
 
 ### Goal
 
@@ -136,8 +136,9 @@ Review whether Qwen3 should be promoted to `product_cli_ready`.
 
 ### Production delta
 
-If accepted, set Qwen3 product CLI booleans while keeping server, speedup, and
-full residency false.
+Accepted for the bounded Qwen3 ask/chat CLI surface. Set Qwen3 product CLI
+booleans while keeping server, speedup, benchmark-qualified, and full residency
+false.
 
 ### Non-goals
 
@@ -146,6 +147,7 @@ No server-ready or speedup claim.
 ### Acceptance
 
 Model coverage and status docs agree on the promoted tier and forbidden claims.
+Qwen3 remains separate from Qwen2.5 and BitNet QK256 proof families.
 
 ### Proof commands
 
@@ -156,4 +158,5 @@ git diff --check
 
 ### Rollback
 
-Demote the row and revert status docs if review rejects promotion.
+Demote the row and revert status docs if future evidence invalidates the
+accepted ask/chat user-path receipts.
