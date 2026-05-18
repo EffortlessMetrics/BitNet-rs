@@ -2528,9 +2528,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-042"
-status = "pr_open"
+status = "merged"
 pr = 5773
-head_sha = "d6d3c28c46e7f92d89e6943c7a2ef3438ade631a"
+head_sha = "60c2d6397fe6e831728e466d6dff365e705c28cb"
+merge_sha = "a2c869122d3930379437f67d7fc8abba9699d766"
 branch = "codex/slm-cpu-042-q8-dense-linear-locality"
 stackable = false
 review_mode = "codex_premerge"
@@ -2571,6 +2572,59 @@ may_claim = [
   "The next Kaby SLM performance slice is scoped to Qwen3 Q8_0 dense linear locality or matmul/dequant boundary evidence after the Candle output-storage API blocker.",
   "A valid runtime optimization must preserve generated IDs/text, strict tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false before claiming any bounded improvement.",
   "A valid no-change slice may identify the first concrete dense-math implementation boundary for the next behavior-preserving optimization.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "A runtime speedup is proven without before/after behavior-preserving receipts.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-043"
+status = "ready"
+branch = "codex/slm-cpu-043-q8-packed-linear-prototype"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-042"]
+acceptance = "Use the SLM-CPU-042 eager Q8_0 dequant-to-F32-before-Candle boundary to attempt the first behavior-preserving Q8_0 dense linear locality implementation, such as a packed Q8_0 sidecar or dequant-fused dense-linear prototype on a narrow path. The slice must compare against the existing eager F32 path and preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false before claiming any bounded improvement. If no safe runtime change is made, it must produce a concrete no-change blocker artifact naming the API or layout gap for the next slice. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_aggregate_allocation_audit",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "A Q8_0 dense linear locality implementation or no-change blocker is scoped to the SLM-CPU-042 eager dequant-to-F32-before-Candle boundary.",
+  "Any bounded improvement is valid only if generated IDs/text, strict tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false are preserved against the existing eager F32 path.",
 ]
 must_not_claim = [
   "Sustained 8250U throughput is proven.",

@@ -1,0 +1,19 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T21:25:07Z"
+event = "merged"
+item = "SLM-CPU-042"
+pr = 5773
+head_sha = "60c2d6397fe6e831728e466d6dff365e705c28cb"
+merge_sha = "a2c869122d3930379437f67d7fc8abba9699d766"
+branch = "codex/slm-cpu-042-q8-dense-linear-locality"
+actor = "codex"
+summary = "Recorded SLM-CPU-042 as merged and queued SLM-CPU-043 as the next behavior-preserving Q8_0 dense linear locality implementation slice."
+
+notes = [
+  "PR #5773 instrumented the dense standard quant load boundary where Q8_0 blocks are eagerly dequantized into a host Vec<f32> before Candle tensor construction.",
+  "The warm-session allocation audit now names q8_dense_linear_locality_boundary as the next Kaby Qwen3 Q8_0 dense-math target after the Candle output-storage API blocker.",
+  "SLM-CPU-043 is ready to attempt a packed Q8_0 sidecar or dequant-fused dense-linear prototype on a narrow path, or to record a concrete no-change blocker artifact if the current API/layout prevents a safe runtime change.",
+  "Any implementation must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false before claiming a bounded improvement.",
+  "No sustained 8250U throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
