@@ -97,6 +97,8 @@ pub struct Plan {
     pub estimated_lem: u64,
     #[serde(skip_serializing)]
     pub band: String,
+    #[serde(skip_serializing)]
+    pub changed_count: usize,
     /// Soft-budget guard verdict (PR 18). One of "ok", "warn",
     /// "strong-warn", "ack-suggested", "block".
     #[serde(skip_serializing)]
@@ -629,6 +631,7 @@ pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
         lanes,
         estimated_lem: total,
         band: band_for(total).to_string(),
+        changed_count: changed.len(),
         guard,
         override_labels_present,
     }
