@@ -74,7 +74,7 @@
 | apple-m4-inference-excellence | M4-ACCURACY-007 | M4-ACCURACY-006 | merged |
 | apple-m4-inference-excellence | M4-CANARY-001 | M4-ACCURACY-000, M4-REPRO-003 | merged |
 | apple-m4-inference-excellence | M4-DENSE-REF-000 | M4-CANARY-001, M4-REPRO-003, M4-REPRO-004 | merged |
-| apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-DENSE-REF-000, M4-REPRO-004 | proposed |
+| apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-DENSE-REF-000, M4-REPRO-004 | pr_open |
 | apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-ROBUSTNESS-001 | M4-ACCURACY-007, M4-BITNET-EX-012, M4-CANARY-001, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | merged |
@@ -349,6 +349,7 @@
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-006 | LNL258V-OPENVINO-DOCS-005 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-VALIDATE-001 | LNL258V-OPENVINO-DOCS-006 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-001 | LNL258V-OPENVINO-QUAL-FIX-001 | merged |
+| intel-258v-platform | LNL258V-QUAL-007 | LNL258V-OPENVINO-QUAL-RERUN-001 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-REPORT-001 | LNL258V-OPENVINO-UX-001, LNL258V-OV-QUAL-005 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-POLICY-001 | LNL258V-OPENVINO-QUAL-REPORT-001, LNL258V-OV-QUAL-005 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-FIX-001 | LNL258V-OPENVINO-QUAL-POLICY-001 | merged |

@@ -2366,6 +2366,47 @@ fn contains_keyword_boundary(answer: &str, keyword: &str) -> bool {
     if needle.is_empty() {
         return false;
     }
+    keyword_boundary_forms(&needle).iter().any(|needle| contains_keyword_form(&haystack, needle))
+}
+
+fn keyword_boundary_forms(needle: &str) -> Vec<String> {
+    let mut forms = vec![needle.to_string()];
+    if let Some(plural) = regular_plural_form(needle)
+        && plural != needle
+    {
+        forms.push(plural);
+    }
+    forms
+}
+
+fn regular_plural_form(needle: &str) -> Option<String> {
+    let last = needle.chars().next_back()?;
+    if !last.is_ascii_alphabetic() || needle.ends_with('s') {
+        return None;
+    }
+    let plural = if needle.ends_with('x')
+        || needle.ends_with('z')
+        || needle.ends_with("ch")
+        || needle.ends_with("sh")
+    {
+        format!("{needle}es")
+    } else if needle.ends_with('y') {
+        let preceding = needle[..needle.len() - 1].chars().next_back();
+        if preceding.is_some_and(|ch| {
+            ch.is_ascii_alphabetic()
+                && !matches!(ch.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u')
+        }) {
+            format!("{}ies", &needle[..needle.len() - 1])
+        } else {
+            format!("{needle}s")
+        }
+    } else {
+        format!("{needle}s")
+    };
+    Some(plural)
+}
+
+fn contains_keyword_form(haystack: &str, needle: &str) -> bool {
     let needle_starts_alnum = needle.chars().next().is_some_and(char::is_alphanumeric);
     let needle_ends_alnum = needle.chars().next_back().is_some_and(char::is_alphanumeric);
     let mut search_from = 0usize;
@@ -3556,6 +3597,20 @@ mod tests {
             ..scoring("required_keywords")
         };
         assert!(evaluate_scoring("The model cache is ready.", &phrase).passed);
+
+        let plural_required = AnswerScoring {
+            required_keywords: Some(vec!["fallback".to_string()]),
+            ..scoring("required_keywords")
+        };
+        assert!(evaluate_scoring("Check local route fallbacks.", &plural_required).passed);
+
+        let plural_forbidden = AnswerScoring {
+            forbidden_tokens: Some(vec!["warning".to_string()]),
+            ..scoring("forbidden_tokens")
+        };
+        let observed_plural = evaluate_scoring("Warnings were emitted.", &plural_forbidden);
+        assert!(!observed_plural.passed);
+        assert!(observed_plural.failed_rules.contains(&"forbidden_tokens".to_string()));
     }
 
     #[test]

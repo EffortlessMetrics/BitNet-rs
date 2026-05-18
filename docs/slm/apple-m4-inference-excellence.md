@@ -406,6 +406,13 @@ The validator is exercised by
 `crates/bitnet-cli/tests/fixtures/apple-m4-dense-reference-vs-rust-comparison.json`;
 that fixture is schema evidence only and does not stand in for reference-runner
 or live Rust M4 output.
+`M4-DENSE-REF-001` records the bounded live comparison under
+`ci/hardware/apple-m4-mac-mini/2026-05-18T1115Z/slm-reference-vs-rust/` for
+the three supported Qwen identities. The receipts compare 7 deterministic
+quality prompts against `llama-cli` CPU-only `-ngl 0` reference output and Rust
+`apple-m4-cpu-neon` `mac validate` output. Reference generated token IDs are
+recorded as unavailable because the reference runner does not expose them in
+this path; Rust generated token IDs remain recorded.
 
 ## BitNet Ladder
 
