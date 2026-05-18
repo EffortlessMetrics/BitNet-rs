@@ -16,6 +16,10 @@ from typing import Any
 
 import yaml
 
+from openvino_genai_token_utils import generate_with_direct_token_ids
+from openvino_genai_token_utils import prompt_evidence as ov_prompt_evidence
+from openvino_genai_token_utils import public_prompt_evidence
+
 
 DEVICE_BACKENDS = {
     "CPU": ("openvino-cpu", "dense_slm_openvino_cpu", "openvino-genai-llmpipeline-cpu"),
@@ -169,15 +173,7 @@ def readable_words(text: str) -> list[str]:
 
 
 def prompt_evidence(tokenizer: Any, question: str) -> dict[str, Any]:
-    messages = [{"role": "user", "content": question}]
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    token_ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)
-    return {
-        "rendered_prompt": rendered,
-        "rendered_sha256": hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
-        "prompt_token_ids": token_ids,
-        "prompt_token_count": len(token_ids),
-    }
+    return public_prompt_evidence(ov_prompt_evidence(tokenizer, question))
 
 
 def mean_std(pair: Any) -> dict[str, float | None]:
@@ -349,7 +345,6 @@ def summarize_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
 def run_device(
     device: str,
     model_dir: Path,
-    tokenizer: Any,
     ov_genai: Any,
     ov_core: Any,
     cases: list[dict[str, Any]],
@@ -367,12 +362,12 @@ def run_device(
     construct_start = time.perf_counter()
     pipe = ov_genai.LLMPipeline(str(model_dir), device)
     construct_wall_ms = (time.perf_counter() - construct_start) * 1000.0
+    tokenizer = pipe.get_tokenizer()
 
     results: list[dict[str, Any]] = []
     for case in cases:
         question = str(case["question"])
         max_new_tokens = int(case.get("max_new_tokens") or defaults.get("max_new_tokens") or 48)
-        prompt = prompt_evidence(tokenizer, question)
         chunks: list[dict[str, Any]] = []
         first_chunk_at: list[float | None] = [None]
         generation_start = time.perf_counter()
@@ -384,20 +379,21 @@ def run_device(
             chunks.append({"elapsed_ms": (now - generation_start) * 1000.0, "text": text})
             return ov_genai.StreamingStatus.RUNNING
 
-        result = pipe.generate(
-            [question],
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-            num_beams=1,
-            apply_chat_template=True,
+        generation = generate_with_direct_token_ids(
+            pipe,
+            tokenizer,
+            ov_genai,
+            question,
+            max_new_tokens,
             streamer=streamer,
         )
         generation_wall_ms = (time.perf_counter() - generation_start) * 1000.0
-        generated_text = result.texts[0] if getattr(result, "texts", None) else ""
+        result = generation["result"]
+        prompt = generation["prompt"]
+        generated_text = generation["generated_text"]
         gate = evaluate_gate(case.get("gate"), generated_text)
         scoring = evaluate_scoring(case.get("scoring"), generated_text)
         quality = quality_status(gate, scoring, generated_text)
-        generated_ids = tokenizer.encode(generated_text, add_special_tokens=False)
         first_chunk_ms = None
         if first_chunk_at[0] is not None:
             first_chunk_ms = (first_chunk_at[0] - generation_start) * 1000.0
@@ -428,10 +424,12 @@ def run_device(
                 "generated_text": generated_text,
                 "decoded_preview": generated_text[:240],
                 "normalized_output": normalize_text(generated_text),
-                "generated_token_ids": generated_ids,
-                "generated_token_ids_available_from_pipeline": False,
-                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-                "generated_token_count": len(generated_ids),
+                "generated_token_ids": generation["generated_token_ids"],
+                "generated_token_ids_available_from_pipeline": generation[
+                    "generated_token_ids_available_from_pipeline"
+                ],
+                "generated_token_ids_source": generation["generated_token_ids_source"],
+                "generated_token_count": generation["generated_token_count"],
                 "stop_eos": {
                     "raw_special_token_seen": "<|" in generated_text,
                     "eos_marker_seen": "<|im_end|>" in generated_text or "<|endoftext|>" in generated_text,
@@ -512,16 +510,14 @@ def main() -> int:
     args = parse_args()
     import openvino as ov
     import openvino_genai as ov_genai
-    from transformers import AutoTokenizer
 
     corpus = load_corpus(args.corpus)
     defaults = corpus.get("defaults") or {}
     cases = corpus["cases"]
-    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, trust_remote_code=True)
     core = ov.Core()
 
     devices = [
-        run_device(device, args.model_dir, tokenizer, ov_genai, core, cases, defaults)
+        run_device(device, args.model_dir, ov_genai, core, cases, defaults)
         for device in args.devices
     ]
     all_cases = [case for device in devices for case in device["cases"]]
@@ -554,7 +550,8 @@ def main() -> int:
             "normalized_match": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, trim terminal punctuation, lowercase",
             "required_keywords": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
             "forbidden_tokens": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
-            "generated_token_ids": "retokenized_generated_text_not_pipeline_internal_ids",
+            "generated_token_ids": "openvino_genai_encoded_results_tokens",
+            "direct_generated_token_ids": "captured from OpenVINO GenAI EncodedResults.tokens by generating from OpenVINO TokenizedInputs",
         },
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": False,
@@ -593,8 +590,9 @@ def main() -> int:
             "openvino": {"version": ov.get_version(), "available_devices": core.available_devices},
             "openvino_genai": {"version": getattr(ov_genai, "__version__", None)},
             "transformers": {
-                "tokenizer_loaded_from_export_dir": True,
-                "generated_token_ids_available_from_pipeline": False,
+                "tokenizer_loaded_from_export_dir": False,
+                "openvino_tokenizer_loaded_from_export_dir": True,
+                "generated_token_ids_available_from_pipeline": True,
             },
         },
         "corpus": corpus_metadata(corpus),
@@ -611,8 +609,8 @@ def main() -> int:
             "fallback_used": fallback_used_any,
             "openvino_perf_metrics_recorded": True,
             "streamer_first_text_chunk_recorded": True,
-            "generated_token_ids_available_from_pipeline": False,
-            "generated_token_ids_retaken_from_text": True,
+            "generated_token_ids_available_from_pipeline": True,
+            "generated_token_ids_retokenized_from_text": False,
             "route_promotion_changed": False,
             "candidate_routes_remain_unpromoted": True,
             "quality_failures_are_evidence_not_route_policy": True,
@@ -629,7 +627,6 @@ def main() -> int:
                 "Broad dense SLM answer quality is proven beyond bounded corpus v2 evidence.",
                 "OpenVINO GPU evidence proves native OpenCL execution.",
                 "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
-                "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
                 "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
                 "BitNet QK256/I2_S behavior changed.",
             ],

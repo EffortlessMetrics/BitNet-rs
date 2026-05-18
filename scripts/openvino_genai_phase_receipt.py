@@ -12,6 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from openvino_genai_token_utils import generate_with_direct_token_ids
+from openvino_genai_token_utils import prompt_evidence as ov_prompt_evidence
+from openvino_genai_token_utils import public_prompt_evidence
+
 
 CASES = [
     {
@@ -113,17 +117,10 @@ def perf_metrics(result: Any) -> dict[str, Any]:
 
 
 def prompt_evidence(tokenizer: Any, question: str) -> dict[str, Any]:
-    messages = [{"role": "user", "content": question}]
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    token_ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)
-    return {
-        "rendered_prompt": rendered,
-        "prompt_token_ids": token_ids,
-        "prompt_token_count": len(token_ids),
-    }
+    return public_prompt_evidence(ov_prompt_evidence(tokenizer, question))
 
 
-def run_device(device: str, model_dir: Path, tokenizer: Any, ov_genai: Any, ov_core: Any) -> dict[str, Any]:
+def run_device(device: str, model_dir: Path, ov_genai: Any, ov_core: Any) -> dict[str, Any]:
     selected_backend, backend_lane, runtime = DEVICE_BACKENDS.get(
         device,
         (f"openvino-{device.lower()}", f"dense_slm_openvino_{device.lower()}", f"openvino-genai-llmpipeline-{device.lower()}"),
@@ -136,10 +133,10 @@ def run_device(device: str, model_dir: Path, tokenizer: Any, ov_genai: Any, ov_c
     construct_start = time.perf_counter()
     pipe = ov_genai.LLMPipeline(str(model_dir), device)
     construct_wall_ms = (time.perf_counter() - construct_start) * 1000.0
+    tokenizer = pipe.get_tokenizer()
 
     cases = []
     for case in CASES:
-        prompt = prompt_evidence(tokenizer, case["question"])
         chunks: list[dict[str, Any]] = []
         generation_start = time.perf_counter()
         first_chunk_at: list[float | None] = [None]
@@ -151,16 +148,18 @@ def run_device(device: str, model_dir: Path, tokenizer: Any, ov_genai: Any, ov_c
             chunks.append({"elapsed_ms": (now - generation_start) * 1000.0, "text": text})
             return ov_genai.StreamingStatus.RUNNING
 
-        result = pipe.generate(
-            [case["question"]],
-            max_new_tokens=case["max_new_tokens"],
-            do_sample=False,
-            num_beams=1,
-            apply_chat_template=True,
+        generation = generate_with_direct_token_ids(
+            pipe,
+            tokenizer,
+            ov_genai,
+            case["question"],
+            case["max_new_tokens"],
             streamer=streamer,
         )
         generation_wall_ms = (time.perf_counter() - generation_start) * 1000.0
-        generated_text = result.texts[0] if getattr(result, "texts", None) else ""
+        result = generation["result"]
+        prompt = generation["prompt"]
+        generated_text = generation["generated_text"]
         matched = [needle for needle in case["contains_any"] if needle in generated_text]
         first_chunk_ms = None
         if first_chunk_at[0] is not None:
@@ -180,7 +179,12 @@ def run_device(device: str, model_dir: Path, tokenizer: Any, ov_genai: Any, ov_c
                     "max_new_tokens": case["max_new_tokens"],
                 },
                 "generated_text": generated_text,
-                "generated_token_ids_available_from_pipeline": False,
+                "generated_token_ids": generation["generated_token_ids"],
+                "generated_token_ids_available_from_pipeline": generation[
+                    "generated_token_ids_available_from_pipeline"
+                ],
+                "generated_token_ids_source": generation["generated_token_ids_source"],
+                "generated_token_count": generation["generated_token_count"],
                 "generation_wall_ms": generation_wall_ms,
                 "first_streamed_text_chunk_ms": first_chunk_ms,
                 "first_streamed_text_chunk": chunks[0]["text"] if chunks else None,
@@ -235,15 +239,13 @@ def main() -> int:
     args = parse_args()
     import openvino as ov
     import openvino_genai as ov_genai
-    from transformers import AutoTokenizer
 
     model_dir = args.model_dir
-    tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
     core = ov.Core()
 
     devices = []
     for device in args.devices:
-        devices.append(run_device(device, model_dir, tokenizer, ov_genai, core))
+        devices.append(run_device(device, model_dir, ov_genai, core))
 
     all_passed = all(device["failed"] == 0 for device in devices)
     fallback_used_any = any(device["fallback_used"] for device in devices)
@@ -303,8 +305,9 @@ def main() -> int:
                 "version": getattr(ov_genai, "__version__", None),
             },
             "transformers": {
-                "tokenizer_loaded_from_export_dir": True,
-                "generated_token_ids_available_from_pipeline": False,
+                "tokenizer_loaded_from_export_dir": False,
+                "openvino_tokenizer_loaded_from_export_dir": True,
+                "generated_token_ids_available_from_pipeline": True,
             },
         },
         "generation": {
@@ -320,7 +323,7 @@ def main() -> int:
             "fallback_used": fallback_used_any,
             "openvino_perf_metrics_recorded": True,
             "streamer_first_text_chunk_recorded": True,
-            "generated_token_ids_available_from_pipeline": False,
+            "generated_token_ids_available_from_pipeline": True,
         },
         "claim_boundary": {
             "may_claim": [
@@ -330,7 +333,6 @@ def main() -> int:
             ],
             "must_not_claim": [
                 "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
-                "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
                 "prefill_512 or decode_128 phase profiles are measured.",
                 "OpenVINO GPU evidence proves native OpenCL execution.",
                 "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",

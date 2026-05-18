@@ -3,7 +3,7 @@
   "artifact_kind": "lunar_lake_openvino_operator_ask",
   "campaign": "intel-258v-platform",
   "item": "LNL258V-ASK-004",
-  "created_utc": "2026-05-14T08:01:00Z",
+  "created_utc": "2026-05-19T02:31:00Z",
   "machine_id": "intel-258v",
   "proof_stage": "operator_candidate_route_executed",
   "requested_backend": "openvino-npu",
@@ -25,75 +25,75 @@
     "route_id": "dense_slm_openvino_npu_candidate",
     "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
     "acceleration_claim": false,
-    "answer_gate_evidence": "slm-openvino-npu-llmpipeline-smoke.json",
+    "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
     "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json"
   },
   "inputs": {
     "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
     "artifact_root": "ci/hardware/intel-258v/2026-05-08",
-    "model_dir": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym"
+    "model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym"
   },
   "model": {
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
-    "local_model_dir": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
     "model_binary_committed": false,
     "files": {
       "openvino_model.xml": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
         "exists": true,
         "bytes": 2167169,
         "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
       },
       "openvino_model.bin": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
         "exists": true,
         "bytes": 321326157,
         "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
       },
       "openvino_tokenizer.xml": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
         "exists": true,
         "bytes": 27536,
         "sha256": "779af8438ed2689107ba0bacc939e81734085d3e1a3dbf403402d2ccc982fe1b"
       },
       "openvino_tokenizer.bin": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
         "exists": true,
         "bytes": 5588603,
         "sha256": "651d8b86c94c40710919f6089189a748ebf4ad1b0f0da728440454d14379b078"
       },
       "openvino_detokenizer.xml": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
         "exists": true,
         "bytes": 10030,
         "sha256": "a1d28ba5b537fd7a07771e2b019fbdbd29f8d3e57f3b928e6827dd5a1aff813d"
       },
       "openvino_detokenizer.bin": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
         "exists": true,
         "bytes": 2189639,
         "sha256": "3ca47601554a3b871c1e45e8f31aa6e17d726365c075fb430d1a2089484ae8d6"
       },
       "tokenizer.json": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
         "exists": true,
         "bytes": 11421896,
         "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
       },
       "tokenizer_config.json": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
         "exists": true,
         "bytes": 4893,
         "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
       },
       "generation_config.json": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
         "exists": true,
         "bytes": 256,
         "sha256": "b017173db4a82cfc6dc6e4368aee7f8f4eceeb380cdae840528833be24ac45c8"
       },
       "chat_template.jinja": {
-        "path": "C:/Code/Rust/BitNet-rs/models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
         "exists": true,
         "bytes": 2561,
         "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
@@ -111,6 +111,7 @@
       "max_new_tokens": 16
     },
     "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+    "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
     "prompt_token_ids": [
       151644,
       8948,
@@ -157,8 +158,21 @@
   "output": {
     "generated_text": "2 + 2 equals 4.",
     "normalized_answer": "2 + 2 equals 4.",
-    "generated_token_ids_available_from_pipeline": false,
-    "first_streamed_text_chunk_ms": 667.0953999273479,
+    "generated_token_ids": [
+      17,
+      488,
+      220,
+      17,
+      16819,
+      220,
+      19,
+      13,
+      151645
+    ],
+    "generated_token_ids_available_from_pipeline": true,
+    "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+    "generated_token_count": 9,
+    "first_streamed_text_chunk_ms": 342.5390999764204,
     "first_streamed_text_chunk": "2",
     "streamed_chunks_count": 8,
     "streamed_text": "2 + 2 equals 4."
@@ -170,41 +184,41 @@
     "failed_rules": []
   },
   "timing": {
-    "pipeline_construct_wall_ms": 40312.40950000938,
-    "generation_wall_ms": 943.2322999928147,
+    "pipeline_construct_wall_ms": 29396.27910000854,
+    "generation_wall_ms": 510.03449998097494,
     "openvino_perf_metrics": {
-      "load_time_ms": 40263.0,
+      "load_time_ms": 29373.0,
       "tokenization": {
-        "mean_ms": 17.43000030517578,
-        "std_ms": 0.0
+        "mean_ms": -1.0,
+        "std_ms": -1.0
       },
       "generate": {
-        "mean_ms": 942.9669799804688,
+        "mean_ms": 502.3110046386719,
         "std_ms": 0.0
       },
       "inference": {
-        "mean_ms": 919.8629760742188,
+        "mean_ms": 499.3179931640625,
         "std_ms": 0.0
       },
       "time_to_first_token": {
-        "mean_ms": 323.50177001953125,
+        "mean_ms": 241.01649475097656,
         "std_ms": 0.0
       },
       "time_per_output_token": {
-        "mean_ms": 77.2913589477539,
-        "std_ms": 61.080177307128906
+        "mean_ms": 32.59922409057617,
+        "std_ms": 12.345602035522461
       },
       "inter_token_latency": {
-        "mean_ms": 102.20700073242188,
-        "std_ms": 92.04179382324219
+        "mean_ms": 55.47977828979492,
+        "std_ms": 66.42837524414062
       },
       "throughput": {
-        "mean_ms": 12.938056945800781,
-        "std_ms": 10.22441291809082
+        "mean_ms": 30.67557716369629,
+        "std_ms": 11.617100715637207
       },
       "detokenization": {
-        "mean_ms": 0.210999995470047,
-        "std_ms": 0.0
+        "mean_ms": -1.0,
+        "std_ms": -1.0
       },
       "num_input_tokens": 39,
       "num_generated_tokens": 9
@@ -233,7 +247,7 @@
     "answer_gate_passed": true,
     "fallback_used": false,
     "openvino_perf_metrics_recorded": true,
-    "generated_token_ids_available_from_pipeline": false,
+    "generated_token_ids_available_from_pipeline": true,
     "acceleration_claim": false
   },
   "claim_boundary": {
@@ -244,7 +258,6 @@
     "must_not_claim": [
       "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
       "The default Lunar Lake ask route changed away from CPU.",
-      "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
       "OpenVINO GPU evidence proves native OpenCL execution.",
       "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
       "Dense SLM receipts prove BitNet QK256/I2_S behavior.",

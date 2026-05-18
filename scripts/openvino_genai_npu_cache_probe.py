@@ -20,6 +20,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from openvino_genai_token_utils import generate_with_direct_token_ids
+from openvino_genai_token_utils import prompt_evidence as ov_prompt_evidence
+from openvino_genai_token_utils import public_prompt_evidence
+
 
 QUESTION = "What is 2+2? Answer briefly."
 EXPECTED = "4"
@@ -124,26 +128,11 @@ def perf_metrics(result: Any) -> dict[str, Any] | None:
 
 
 def prompt_evidence(tokenizer: Any, question: str) -> dict[str, Any]:
-    messages = [{"role": "user", "content": question}]
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    token_ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)
-    return {
-        "rendered_prompt": rendered,
-        "rendered_sha256": hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
-        "prompt_token_ids": token_ids,
-        "prompt_token_count": len(token_ids),
-    }
+    return public_prompt_evidence(ov_prompt_evidence(tokenizer, question))
 
 
 def normalize_answer(text: str) -> str:
     return text.replace("<|im_end|>", "").replace("<|endoftext|>", "").strip()
-
-
-def retokenize_generated_text(tokenizer: Any, text: str) -> list[int]:
-    try:
-        return list(tokenizer.encode(text, add_special_tokens=False))
-    except TypeError:
-        return list(tokenizer.encode(text))
 
 
 def run_child(args: argparse.Namespace) -> int:
@@ -151,7 +140,6 @@ def run_child(args: argparse.Namespace) -> int:
         raise SystemExit("this cache probe is scoped to --device NPU")
     import openvino as ov
     import openvino_genai as ov_genai
-    from transformers import AutoTokenizer
 
     args.cache_dir.mkdir(parents=True, exist_ok=True)
     core = ov.Core()
@@ -160,11 +148,11 @@ def run_child(args: argparse.Namespace) -> int:
     except Exception as exc:  # pragma: no cover - depends on installed runtime devices.
         resolved_device = f"unavailable: {type(exc).__name__}: {exc}"
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, trust_remote_code=True)
-    prompt = prompt_evidence(tokenizer, args.question)
     construct_start = time.perf_counter()
     pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {"CACHE_DIR": str(args.cache_dir)})
     construct_wall_ms = (time.perf_counter() - construct_start) * 1000.0
+    tokenizer = pipe.get_tokenizer()
+    prompt = prompt_evidence(tokenizer, args.question)
 
     chunks: list[dict[str, Any]] = []
     generation_start = time.perf_counter()
@@ -177,18 +165,19 @@ def run_child(args: argparse.Namespace) -> int:
         chunks.append({"elapsed_ms": (now - generation_start) * 1000.0, "text": text})
         return ov_genai.StreamingStatus.RUNNING
 
-    result = pipe.generate(
-        [args.question],
-        max_new_tokens=args.max_new_tokens,
-        do_sample=False,
-        num_beams=1,
-        apply_chat_template=True,
+    generation = generate_with_direct_token_ids(
+        pipe,
+        tokenizer,
+        ov_genai,
+        args.question,
+        args.max_new_tokens,
         streamer=streamer,
     )
     generation_wall_ms = (time.perf_counter() - generation_start) * 1000.0
-    generated_text = result.texts[0] if getattr(result, "texts", None) else ""
+    result = generation["result"]
+    prompt = generation["prompt"]
+    generated_text = generation["generated_text"]
     normalized = normalize_answer(generated_text)
-    generated_token_ids = retokenize_generated_text(tokenizer, normalized)
     first_chunk_ms = None
     if first_chunk_at[0] is not None:
         first_chunk_ms = (first_chunk_at[0] - generation_start) * 1000.0
@@ -205,9 +194,12 @@ def run_child(args: argparse.Namespace) -> int:
         "question": args.question,
         "max_new_tokens": args.max_new_tokens,
         "generated_text": generated_text,
-        "generated_token_ids": generated_token_ids,
-        "generated_token_ids_available_from_pipeline": False,
-        "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+        "generated_token_ids": generation["generated_token_ids"],
+        "generated_token_ids_available_from_pipeline": generation[
+            "generated_token_ids_available_from_pipeline"
+        ],
+        "generated_token_ids_source": generation["generated_token_ids_source"],
+        "generated_token_count": generation["generated_token_count"],
         "generation_wall_ms": generation_wall_ms,
         "first_streamed_text_chunk_ms": first_chunk_ms,
         "streamed_chunks_count": len(chunks),
@@ -393,8 +385,8 @@ def main() -> int:
             "openvino_genai_version": getattr(ov_genai, "__version__", None),
         },
         "generated_token_visibility": {
-            "direct_generated_token_ids_available": False,
-            "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+            "direct_generated_token_ids_available": True,
+            "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
         },
         "claim_boundary": {
             "route_promotion_changed": False,

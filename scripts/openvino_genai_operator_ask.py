@@ -18,6 +18,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from openvino_genai_token_utils import generate_with_direct_token_ids
+from openvino_genai_token_utils import prompt_evidence as ov_prompt_evidence
+from openvino_genai_token_utils import public_prompt_evidence
+
 
 DEVICE_ROUTES = {
     "GPU.0": {
@@ -158,14 +162,7 @@ def normalize_answer(text: str) -> str:
 
 
 def prompt_evidence(tokenizer: Any, question: str) -> dict[str, Any]:
-    messages = [{"role": "user", "content": question}]
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    token_ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)
-    return {
-        "rendered_prompt": rendered,
-        "prompt_token_ids": token_ids,
-        "prompt_token_count": len(token_ids),
-    }
+    return public_prompt_evidence(ov_prompt_evidence(tokenizer, question))
 
 
 def answer_gate(normalized: str, expected: str | None) -> dict[str, Any]:
@@ -203,7 +200,6 @@ def main() -> int:
 
     import openvino as ov
     import openvino_genai as ov_genai
-    from transformers import AutoTokenizer
 
     core = ov.Core()
     try:
@@ -211,12 +207,11 @@ def main() -> int:
     except Exception as exc:  # pragma: no cover - depends on installed runtime devices.
         resolved_device = f"unavailable: {type(exc).__name__}: {exc}"
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, trust_remote_code=True)
-    prompt = prompt_evidence(tokenizer, args.question)
-
     construct_start = time.perf_counter()
     pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device)
     pipeline_construct_wall_ms = (time.perf_counter() - construct_start) * 1000.0
+    tokenizer = pipe.get_tokenizer()
+    prompt = prompt_evidence(tokenizer, args.question)
 
     chunks: list[dict[str, Any]] = []
     generation_start = time.perf_counter()
@@ -229,16 +224,18 @@ def main() -> int:
         chunks.append({"elapsed_ms": (now - generation_start) * 1000.0, "text": text})
         return ov_genai.StreamingStatus.RUNNING
 
-    result = pipe.generate(
-        [args.question],
-        max_new_tokens=args.max_new_tokens,
-        do_sample=False,
-        num_beams=1,
-        apply_chat_template=True,
+    generation = generate_with_direct_token_ids(
+        pipe,
+        tokenizer,
+        ov_genai,
+        args.question,
+        args.max_new_tokens,
         streamer=streamer,
     )
     generation_wall_ms = (time.perf_counter() - generation_start) * 1000.0
-    generated_text = result.texts[0] if getattr(result, "texts", None) else ""
+    result = generation["result"]
+    prompt = generation["prompt"]
+    generated_text = generation["generated_text"]
     normalized = normalize_answer(generated_text)
     gate = answer_gate(normalized, args.expect_contains)
     first_chunk_ms = None
@@ -316,7 +313,12 @@ def main() -> int:
         "output": {
             "generated_text": generated_text,
             "normalized_answer": normalized,
-            "generated_token_ids_available_from_pipeline": False,
+            "generated_token_ids": generation["generated_token_ids"],
+            "generated_token_ids_available_from_pipeline": generation[
+                "generated_token_ids_available_from_pipeline"
+            ],
+            "generated_token_ids_source": generation["generated_token_ids_source"],
+            "generated_token_count": generation["generated_token_count"],
             "first_streamed_text_chunk_ms": first_chunk_ms,
             "first_streamed_text_chunk": chunks[0]["text"] if chunks else None,
             "streamed_chunks_count": len(chunks),
@@ -347,7 +349,7 @@ def main() -> int:
             "answer_gate_passed": gate["passed"],
             "fallback_used": False,
             "openvino_perf_metrics_recorded": True,
-            "generated_token_ids_available_from_pipeline": False,
+            "generated_token_ids_available_from_pipeline": True,
             "acceleration_claim": False,
         },
         "claim_boundary": {
@@ -358,7 +360,6 @@ def main() -> int:
             "must_not_claim": [
                 "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
                 "The default Lunar Lake ask route changed away from CPU.",
-                "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
                 "OpenVINO GPU evidence proves native OpenCL execution.",
                 "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
                 "Dense SLM receipts prove BitNet QK256/I2_S behavior.",

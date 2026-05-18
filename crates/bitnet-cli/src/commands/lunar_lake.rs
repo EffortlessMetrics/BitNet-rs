@@ -9970,12 +9970,24 @@ fn openvino_profile_timing(
         "openvino_genai_perf_metrics".to_string(),
         "pipeline_construct_and_generation_wall_time".to_string(),
     ];
+    let direct_generated_token_ids_available =
+        bool_at_any(&ask, &["output.generated_token_ids_available_from_pipeline"]) == Some(true)
+            || corpus_context
+                .as_ref()
+                .is_some_and(|context| context.direct_generated_token_ids_available);
     let mut known_gaps = vec![
         "benchmark-qualified speedup or power advantage missing".to_string(),
         "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             .to_string(),
-        "generated token IDs are not available directly from OpenVINO GenAI internals".to_string(),
     ];
+    if direct_generated_token_ids_available {
+        phase_coverage.push("direct_openvino_generated_token_ids".to_string());
+    } else {
+        known_gaps.push(
+            "generated token IDs are not available directly from OpenVINO GenAI internals"
+                .to_string(),
+        );
+    }
     if let Some(context) = corpus_context.as_ref() {
         if !source_receipts.contains(&context.source_receipt) {
             source_receipts.push(context.source_receipt.clone());
@@ -10055,6 +10067,7 @@ struct OpenVinoCorpusOperatorTimingContext {
     generation_total_ms: Option<f64>,
     total_response_ms: Option<f64>,
     throughput_tokens_per_s: Option<f64>,
+    direct_generated_token_ids_available: bool,
 }
 
 fn openvino_corpus_operator_timing_context(
@@ -10154,6 +10167,10 @@ fn openvino_corpus_operator_timing_context(
         generation_total_ms,
         total_response_ms,
         throughput_tokens_per_s,
+        direct_generated_token_ids_available: bool_at_any(
+            case,
+            &["generated_token_ids_available_from_pipeline"],
+        ) == Some(true),
     }))
 }
 

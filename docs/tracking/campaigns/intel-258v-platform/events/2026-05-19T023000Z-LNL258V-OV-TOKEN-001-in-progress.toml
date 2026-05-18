@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T02:30:00Z"
+event = "in_progress"
+item = "LNL258V-OV-TOKEN-001"
+branch = "codex/lunar-lake/LNL258V-OV-TOKEN-001"
+actor = "codex"
+summary = "Started LNL258V-OV-TOKEN-001 to capture direct OpenVINO GenAI generated token IDs for dense Qwen OpenVINO candidate receipts."
+
+notes = [
+  "The branch generates dense Qwen OpenVINO candidate output from OpenVINO TokenizedInputs so EncodedResults.tokens can be recorded as direct generated-token IDs instead of retokenized output.",
+  "The OpenVINO corpus-v2, phase, operator ask, NPU resident/cache, diagnosis, route-profile, benchmark, regression-v2, and operator comparison artifacts are refreshed with GPU/NPU routes still unpromoted.",
+  "The claim boundary remains no route promotion, no speedup claim, no power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]

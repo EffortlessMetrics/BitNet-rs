@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-19T00:15:00Z",
+  "created_utc": "2026-05-19T02:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -98,16 +98,14 @@
     "blockers": []
   },
   "generated_token_visibility": {
-    "direct_generated_token_ids_available": false,
-    "retokenized_generated_ids_used": true,
+    "direct_generated_token_ids_available": true,
+    "retokenized_generated_ids_used": false,
     "sources": [
-      "retokenized_generated_text_not_pipeline_internal_ids"
+      "openvino_genai_encoded_results_tokens"
     ]
   },
   "route_blocked": false,
-  "blocker_summary": [
-    "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
-  ],
+  "blocker_summary": [],
   "recommended_next_actions": [
     "Keep OpenVINO GPU/NPU routes unpromoted until failed corpus-v2 cases are cleanly rerun or intentionally re-gated",
     "Classify yes/no, stop/EOS, long-prefill, short-reasoning, and decode-heavy failures separately before profile promotion",
