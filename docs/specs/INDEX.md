@@ -1,5 +1,76 @@
 # Specs Index
 
+## Official Microsoft BitNet 2B Productization
+
+Use these artifacts before implementing or claiming support for
+`microsoft/BitNet-b1.58-2B-4T`:
+
+1. [Official BitNet 2B Source Map](../bitnet/official-2b/README.md)
+   - Records the official model family, current I2_S/QK256 answer authority,
+     route split, claim boundaries, and source-of-truth stack.
+2. [Official BitNet 2B Implementation Plan](../../plans/official-bitnet-2b/implementation-plan.md)
+   - Sequences source-map, proposal, specs, CPU/CUDA excellence, Apple/A770,
+     TL1/TL2, BF16/GPU-int2, and product-polish work.
+3. [Official BitNet 2B Campaign](../tracking/campaigns/official-bitnet-2b/CAMPAIGN.md)
+   - Summarizes the active campaign boundaries and route-specific proof model.
+
+The current I2_S/QK256 row may remain bounded product-CLI-ready exactly as
+recorded in `ci/model-artifacts/model-coverage-matrix.toml`. Do not promote
+speedup, full residency, broad server readiness, TL1, TL2, BF16/GPU-int2,
+Apple, or A770 claims without route-specific specs and receipts. Dense SLM
+proof and diagnostic no-scale F32 QK256 proof do not satisfy production
+BitNet packed I2_S/QK256 proof.
+
+## Falcon-E Family Compact 1.58-bit Lane
+
+Use these specs before implementing or claiming Falcon-E support:
+
+1. [Falcon-E Family Proposal](../proposals/BITNET-PROP-0013-falcon-e-family-supported-models.md)
+   - Explains why Falcon-E is a compact direct-GGUF 1.58-bit validation lane and why it remains separate from Microsoft BitNet, 1bitLLM, Falcon3, and dense Falcon.
+2. [Falcon-E Artifact Contract](BITNET-SPEC-FALCON-E-FAMILY-ARTIFACT-CONTRACT.md)
+   - Defines the 1B and 3B direct `I2_S` GGUF candidate artifacts and inventory receipt fields.
+3. [Falcon-E Route Compatibility](BITNET-SPEC-FALCON-E-FAMILY-ROUTE-COMPATIBILITY.md)
+   - Defines x86/ARM `I2_S`, `TL1`, and `TL2` initial route status and diagnostic boundaries.
+4. [Falcon-E Tokenizer and Prompt](BITNET-SPEC-FALCON-E-FAMILY-TOKENIZER-PROMPT.md) and [Reference Quality](BITNET-SPEC-FALCON-E-FAMILY-REFERENCE-QUALITY.md)
+   - Define tokenizer/prompt authority and bounded reference answer gates.
+5. [Falcon-E I2_S](BITNET-SPEC-FALCON-E-FAMILY-I2S.md) and [TL1/TL2](BITNET-SPEC-FALCON-E-FAMILY-TL1-TL2.md)
+   - Define layout-proof requirements before QK256 aliasing or TL backend work.
+6. [Falcon-E CPU](BITNET-SPEC-FALCON-E-FAMILY-CPU.md), [CUDA](BITNET-SPEC-FALCON-E-FAMILY-CUDA.md), [Apple](BITNET-SPEC-FALCON-E-FAMILY-APPLE.md), [A770/OpenCL](BITNET-SPEC-FALCON-E-FAMILY-A770-OPENCL.md), and [Performance](BITNET-SPEC-FALCON-E-FAMILY-PERFORMANCE.md)
+   - Define backend and benchmark proof ladders with fallback-explicit receipts.
+
+Do not proceed from direct GGUF availability, upstream support listings, or one
+Falcon-E size to answer, backend, speed, server, or full-residency claims. Claims
+require exact artifact, tokenizer/prompt, layout, quality, and backend receipts
+for the specific model size and route.
+
+## Falcon3 Family Onboarding
+
+Use these artifacts before implementing or claiming Falcon3 Family support:
+
+1. [Falcon3 Family Proposal](../proposals/BITNET-PROP-0012-falcon3-family-supported-models.md)
+   - Explains why Falcon3 is the first multi-size BitNet-family onboarding lane and why 1B/7B direct GGUFs precede 3B/10B conversion routes.
+2. [Falcon3 Artifact Contract](BITNET-SPEC-FALCON3-FAMILY-ARTIFACT-CONTRACT.md)
+   - Defines exact artifact IDs, required inventory receipts, nominal/HF-displayed size recording, and no-binary rules.
+3. [Falcon3 Route Compatibility](BITNET-SPEC-FALCON3-FAMILY-ROUTE-COMPATIBILITY.md)
+   - Mirrors listed upstream I2_S/TL route support as unpromoted runner-verification candidates.
+4. [Falcon3 Tokenizer and Prompt Contract](BITNET-SPEC-FALCON3-FAMILY-TOKENIZER-PROMPT.md)
+   - Requires tokenizer hashes, chat-template authority, prompt token IDs, stop policy, and reference-runner command before answer claims.
+5. [Falcon3 Reference Quality Contract](BITNET-SPEC-FALCON3-FAMILY-REFERENCE-QUALITY.md)
+   - Defines tiny smoke, answer corpus, behavior, and long-decode gates.
+6. [Falcon3 I2_S Contract](BITNET-SPEC-FALCON3-FAMILY-I2S.md)
+   - Defines I2_S/QK256 layout verification before kernel aliasing.
+7. [Falcon3 TL1/TL2 Contract](BITNET-SPEC-FALCON3-FAMILY-TL1-TL2.md)
+   - Keeps TL routes separate from I2_S/QK256 and requires scalar TL oracles.
+8. [Falcon3 CPU Contract](BITNET-SPEC-FALCON3-FAMILY-CPU.md), [CUDA Contract](BITNET-SPEC-FALCON3-FAMILY-CUDA.md), [Apple Contract](BITNET-SPEC-FALCON3-FAMILY-APPLE.md), [A770/OpenCL Contract](BITNET-SPEC-FALCON3-FAMILY-A770-OPENCL.md), and [Performance Contract](BITNET-SPEC-FALCON3-FAMILY-PERFORMANCE.md)
+   - Define exact backend and benchmark gates after artifact, tokenizer/prompt, reference-good, and layout proof.
+9. [Falcon3 Family Plan](../../plans/falcon3-family/implementation-plan.md)
+   - Defines the PR order from registered candidates through artifact inventory, CPU proof, accelerated backends, benchmarks, product CLI, and server exact-profile work.
+
+Do not proceed from Falcon3 registration, upstream listed support, Falcon-E
+evidence, Microsoft BitNet 2B evidence, Llama3-8B-1.58 evidence, dense Falcon3
+evidence, or dense SLM evidence to Falcon3 answer/backend/speed/server claims.
+Claims are exact artifact, route, backend, and profile scoped.
+
 ## NPU productization
 
 Use these artifacts before implementing or claiming NPU product support:
@@ -92,6 +163,76 @@ or server support:
 Do not proceed from upstream support, HF safetensors presence, or F16 structural
 conversion to answer, backend, or speed claims. Claims require exact artifact,
 tokenizer, prompt, reference, backend, fallback, and benchmark receipts.
+
+## BitNet b1.58 3B TL Candidate
+
+Use these specs before implementing or claiming support for
+`1bitLLM/bitnet_b1_58-3B`:
+
+1. [3B Artifact Contract](BITNET-SPEC-B158-3B-ARTIFACT-CONTRACT.md)
+   - Defines exact source revision, shard, tokenizer/config, hash, storage, and
+     claim-boundary requirements.
+2. [3B Conversion Contract](BITNET-SPEC-B158-3B-CONVERSION.md)
+   - Defines allowed safetensors, reference-runner, TL1/TL2 conversion, F16
+     structural, and third-party GGUF diagnostic lanes.
+3. [3B TL1/TL2 Layout](BITNET-SPEC-B158-3B-TL1-TL2-LAYOUT.md)
+   - Defines the route-specific TL layout fields and scalar-oracle prerequisite
+     before accelerator work.
+4. [3B Tokenizer and Prompt](BITNET-SPEC-B158-3B-TOKENIZER-PROMPT.md)
+   - Defines tokenizer hashes, special token IDs, prompt rendering, token IDs,
+     stop policy, and reference runner mode.
+5. [3B Reference Quality](BITNET-SPEC-B158-3B-REFERENCE-QUALITY.md)
+   - Defines tiny smoke, answer corpus, behavior, and long-decode reference
+     gates.
+6. [3B CPU](BITNET-SPEC-B158-3B-CPU.md)
+   - Defines x86 TL2 and ARM TL1 CPU proof paths and `I2_S` diagnostic
+     rejection boundaries.
+7. [3B CUDA](BITNET-SPEC-B158-3B-CUDA.md)
+   - Defines the CUDA TL2 path after x86 TL2 CPU answer proof.
+8. [3B Apple](BITNET-SPEC-B158-3B-APPLE.md)
+   - Defines the ARM TL1 Apple CPU/NEON path and MacBook/M4/Metal boundaries.
+9. [3B Performance](BITNET-SPEC-B158-3B-PERFORMANCE.md)
+   - Defines exact-profile benchmark metrics and promotion rules.
+
+Do not treat the 3B model as an `I2_S`/QK256 sibling of the official Microsoft
+2B artifact. x86 TL2 and ARM TL1 remain runner/conversion candidates until
+route-specific receipts prove them; all answer, backend, server, and speed
+claims remain false before the shared artifact gate and these specs pass.
+
+## Llama3 8B 1.58 Supported-Model Candidate
+
+Use these specs before implementing or claiming support for
+`HF1BitLLM/Llama3-8B-1.58-100B-tokens`:
+
+1. [Artifact Contract](BITNET-SPEC-LLAMA3-8B-158-ARTIFACT-CONTRACT.md)
+   - Defines exact revision, file hashes, tokenizer/config hashes, HF metadata,
+     and the upstream/HF identity discrepancy required before artifact claims.
+2. [Conversion](BITNET-SPEC-LLAMA3-8B-158-CONVERSION.md)
+   - Defines safetensors, reference-runner, F16 structural, I2_S, TL1, TL2,
+     and third-party GGUF lanes and their claim boundaries.
+3. [Tokenizer and Prompt](BITNET-SPEC-LLAMA3-8B-158-TOKENIZER-PROMPT.md)
+   - Defines the Llama3-derived tokenizer/prompt audit and forbids unproven
+     Microsoft 2B prompt inheritance.
+4. [Route Compatibility](BITNET-SPEC-LLAMA3-8B-158-ROUTE-COMPATIBILITY.md)
+   - Records upstream-listed x86 I2_S/TL2 and ARM I2_S/TL1 routes as
+     `listed_supported_verify_runner` candidates only.
+5. [Reference Quality](BITNET-SPEC-LLAMA3-8B-158-REFERENCE-QUALITY.md)
+   - Defines the bounded reference-good corpora and pass criteria.
+6. [I2_S](BITNET-SPEC-LLAMA3-8B-158-I2S.md)
+   - Defines the model-specific I2_S/QK256 layout proof and kernel IDs.
+7. [TL1/TL2](BITNET-SPEC-LLAMA3-8B-158-TL1-TL2.md)
+   - Defines TL layout/oracle requirements separately from QK256.
+8. [CPU](BITNET-SPEC-LLAMA3-8B-158-CPU.md),
+   [CUDA](BITNET-SPEC-LLAMA3-8B-158-CUDA.md),
+   [Apple](BITNET-SPEC-LLAMA3-8B-158-APPLE.md), and
+   [Performance](BITNET-SPEC-LLAMA3-8B-158-PERFORMANCE.md)
+   - Define backend and benchmark gates after artifact, tokenizer, conversion,
+     reference-good, and layout proofs pass.
+
+Do not treat this model as “the official Microsoft 2B model but bigger.” The
+current allowed claim is registered candidate only: upstream route support is
+known, the HF safetensors artifact is visible, and BitNet-rs has conservative
+onboarding contracts.
 
 ## CPU AVX-512 Kernel Proof
 

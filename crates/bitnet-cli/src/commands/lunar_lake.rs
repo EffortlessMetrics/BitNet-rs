@@ -600,7 +600,7 @@ pub enum LunarLakeAction {
         strict: bool,
     },
 
-    /// Ask through the evidence-backed Lunar Lake default route.
+    /// Ask through an evidence-backed Lunar Lake route.
     Ask {
         /// Artifact root containing the 258V receipts to index.
         #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
@@ -626,11 +626,13 @@ pub enum LunarLakeAction {
         profile: String,
 
         /// Operator route to execute, or auto to select from the promotion ledger.
-        /// Only ledger-promoted dense_slm_default_cpu can execute today.
+        /// Auto selection only uses ledger-promoted routes; OpenVINO candidate routes require
+        /// an explicit --route plus matching --device request.
         #[arg(long, default_value = DEFAULT_ASK_ROUTE)]
         route: String,
 
-        /// Dense Qwen GGUF model path.
+        /// Dense Qwen model path. Use a GGUF file for the CPU route and an OpenVINO IR directory
+        /// for explicit OpenVINO candidate routes.
         #[arg(long)]
         model: PathBuf,
 
@@ -6858,36 +6860,18 @@ pub fn load_operator_ask_route(
         .iter()
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("operator route `{route_id}` not found"))?;
-    if route.route_id != DEFAULT_ASK_ROUTE {
-        bail!(
-            "Lunar Lake ask currently supports only route `{DEFAULT_ASK_ROUTE}`; got `{}`",
-            route.route_id
-        );
-    }
-    if route.workload != "ask" {
+    if !matches!(
+        route.workload.as_str(),
+        "ask" | "dense_slm_acceleration_candidate" | "dense_slm_static_graph_candidate"
+    ) {
         bail!("Lunar Lake ask route has unexpected workload `{}`", route.workload);
     }
-    if route.selected_backend != "cpu-rust" || route.runtime_api != "cpu" {
-        bail!(
-            "Lunar Lake ask default route must select cpu-rust/cpu; got {}/{}",
-            route.selected_backend,
-            route.runtime_api
-        );
-    }
-    if route.selected_kernel_or_runtime != "dense-qwen-cpu-reference" {
-        bail!(
-            "Lunar Lake ask default route must use dense-qwen-cpu-reference; got {}",
-            route.selected_kernel_or_runtime
-        );
-    }
+    validate_lunar_lake_ask_route_runtime(route)?;
     if route.fallback_policy != "strict_no_fallback" {
-        bail!(
-            "Lunar Lake ask default route must be strict_no_fallback; got {}",
-            route.fallback_policy
-        );
+        bail!("Lunar Lake ask route must be strict_no_fallback; got {}", route.fallback_policy);
     }
     if route.acceleration_claim {
-        bail!("Lunar Lake ask default route must not claim acceleration");
+        bail!("Lunar Lake ask route must not claim acceleration");
     }
     for evidence_file in [&route.answer_gate_evidence, &route.phase_evidence].into_iter().flatten()
     {
@@ -6902,6 +6886,36 @@ pub fn load_operator_ask_route(
     }
 
     Ok(route.clone())
+}
+
+fn validate_lunar_lake_ask_route_runtime(route: &OperatorRoute) -> Result<()> {
+    match (
+        route.route_id.as_str(),
+        route.selected_backend.as_str(),
+        route.runtime_api.as_str(),
+        route.selected_kernel_or_runtime.as_str(),
+    ) {
+        (DEFAULT_ASK_ROUTE, "cpu-rust", "cpu", "dense-qwen-cpu-reference") => Ok(()),
+        (
+            "dense_slm_openvino_gpu_candidate",
+            "openvino-gpu",
+            "openvino_genai",
+            "openvino-genai-llmpipeline-gpu" | "openvino-genai-llmpipeline-gpu0",
+        ) => Ok(()),
+        (
+            "dense_slm_openvino_npu_candidate",
+            "openvino-npu",
+            "openvino_genai",
+            "openvino-genai-llmpipeline-npu",
+        ) => Ok(()),
+        _ => bail!(
+            "Lunar Lake ask route `{}` has unsupported runtime identity {}/{}/{}",
+            route.route_id,
+            route.selected_backend,
+            route.runtime_api,
+            route.selected_kernel_or_runtime
+        ),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -6956,6 +6970,7 @@ pub fn resolve_operator_ask_route_selection(
                 route_profile_comparison,
                 &route.route_id,
                 profile_id,
+                route.route_id == DEFAULT_ASK_ROUTE,
             )?)
         } else {
             None
@@ -7006,6 +7021,7 @@ pub fn resolve_operator_ask_route_selection(
             route_profile_comparison,
             selected_route_id,
             profile_id,
+            true,
         )?)
     } else {
         None
@@ -7053,6 +7069,24 @@ fn validate_operator_ask_requested_device(
     let normalized = requested_device.to_ascii_lowercase();
     let route_is_cpu = route.selected_backend == "cpu-rust" && route.runtime_api == "cpu";
     if route_is_cpu && matches!(normalized.as_str(), "cpu" | "cpu-rust" | DEFAULT_ASK_ROUTE) {
+        return Ok(());
+    }
+    if route.selected_backend == "openvino-gpu"
+        && route.runtime_api == "openvino_genai"
+        && matches!(
+            normalized.as_str(),
+            "gpu" | "gpu.0" | "openvino-gpu" | "dense_slm_openvino_gpu_candidate"
+        )
+    {
+        return Ok(());
+    }
+    if route.selected_backend == "openvino-npu"
+        && route.runtime_api == "openvino_genai"
+        && matches!(
+            normalized.as_str(),
+            "npu" | "openvino-npu" | "dense_slm_openvino_npu_candidate"
+        )
+    {
         return Ok(());
     }
 
@@ -7141,6 +7175,7 @@ fn validate_ask_route_profile_guard(
     route_profile_comparison: &Path,
     selected_route_id: &str,
     profile_id: &str,
+    require_promotion_ready: bool,
 ) -> Result<AutoRouteProfileGuard> {
     let comparison_path = resolve_receipt_path(root, route_profile_comparison);
     let comparison: LunarLakeRouteProfileComparison = read_json_receipt(&comparison_path)?;
@@ -7186,28 +7221,36 @@ fn validate_ask_route_profile_guard(
 
     let mut blockers = route.blockers.clone();
     blockers.extend(profile.gaps.iter().cloned());
-    if !route.promotion_eligible_for_profile {
+    if require_promotion_ready && !route.promotion_eligible_for_profile {
         blockers.push(format!(
             "route `{selected_route_id}` is not promotion-eligible for profile `{profile_id}` in route-profile comparison"
         ));
     }
-    if profile.profile_status != "promoted_route_ready" {
+    if require_promotion_ready && profile.profile_status != "promoted_route_ready" {
         blockers.push(format!(
             "profile `{profile_id}` route-profile status is `{}`",
             profile.profile_status
         ));
     }
+    let mut fatal_blockers = Vec::new();
     if route.fallback_used != Some(false) {
-        blockers.push(format!(
+        let blocker = format!(
             "route `{selected_route_id}` does not prove fallback_used=false in route-profile comparison"
-        ));
+        );
+        blockers.push(blocker.clone());
+        fatal_blockers.push(blocker);
+    }
+    if require_promotion_ready {
+        fatal_blockers.extend(blockers.iter().cloned());
     }
     blockers.sort();
     blockers.dedup();
-    if !blockers.is_empty() {
+    fatal_blockers.sort();
+    fatal_blockers.dedup();
+    if !fatal_blockers.is_empty() {
         bail!(
             "ask route `{selected_route_id}` for profile `{profile_id}` is blocked by route-profile comparison: {}",
-            blockers.join("; ")
+            fatal_blockers.join("; ")
         );
     }
 
@@ -8272,8 +8315,8 @@ fn load_npu_cache_experiment(
         bool_at_any(&json, &["cache.cache_files_reused_or_stable"]) == Some(true);
     let runtime_metric_available =
         bool_at_any(&json, &["cache.cache_hit_runtime_metric_available"]) == Some(true);
-    if !runtime_metric_available
-        && !(cache_effective_by_timing && cache_files_created && cache_files_reused_or_stable)
+    if !(runtime_metric_available
+        || cache_effective_by_timing && cache_files_created && cache_files_reused_or_stable)
     {
         blockers.push(
             "NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric"
@@ -9420,7 +9463,8 @@ fn profile_regression_bundle_evidence_satisfied(
 }
 
 fn lunar_lake_ask_runtime_requires_cpu(route_id: &str) -> bool {
-    matches!(route_id, "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate")
+    let _ = route_id;
+    false
 }
 
 fn promotion_blocker_summary(
@@ -11050,7 +11094,7 @@ mod tests {
             &"timing evidence is not profile-specific for profile ask_normal".to_string()
         ));
         assert!(
-            gpu_ask_normal.blockers.contains(
+            !gpu_ask_normal.blockers.contains(
                 &"lunar-lake ask runtime does not execute OpenVINO routes yet".to_string()
             )
         );
@@ -13502,7 +13546,7 @@ mod tests {
     }
 
     #[test]
-    fn ask_route_rejects_openvino_candidate() -> Result<()> {
+    fn ask_route_loads_explicit_openvino_candidate() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
         let operator = build_operator_readiness_receipt_with_created_utc(
@@ -13511,15 +13555,17 @@ mod tests {
         )?;
         fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
 
-        let err = load_operator_ask_route(
+        let route = load_operator_ask_route(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             "dense_slm_openvino_gpu_candidate",
-        )
-        .unwrap_err()
-        .to_string();
+        )?;
 
-        assert!(err.contains("supports only route"), "got: {err}");
+        assert_eq!(route.route_id, "dense_slm_openvino_gpu_candidate");
+        assert_eq!(route.selected_backend, "openvino-gpu");
+        assert_eq!(route.runtime_api, "openvino_genai");
+        assert_eq!(route.selected_kernel_or_runtime, "openvino-genai-llmpipeline-gpu");
+        assert!(!route.acceleration_claim);
         Ok(())
     }
 
@@ -13814,6 +13860,34 @@ mod tests {
 
         assert!(err.contains("requested --device `openvino-npu`"), "got: {err}");
         assert!(err.contains("explicit accelerator devices are not auto-routed"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn direct_openvino_ask_route_records_profile_blockers_without_promoting() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_auto_ask_selection_artifacts(temp.path())?;
+
+        let selection = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "dense_slm_openvino_gpu_candidate",
+            "GPU.0",
+            "ask_normal",
+        )?;
+
+        assert_eq!(selection.selection_source, "operator_receipt_direct");
+        assert_eq!(selection.selected_route, "dense_slm_openvino_gpu_candidate");
+        assert_eq!(selection.selected_backend, "openvino-gpu");
+        assert_eq!(selection.runtime_api, "openvino_genai");
+        assert_eq!(selection.promotion_status, "direct_route_validated");
+        assert_eq!(selection.route_profile_status.as_deref(), Some("promoted_route_ready"));
+        assert!(selection.route_profile_blockers.iter().any(|blocker| {
+            blocker.contains("route not promoted for profile")
+                || blocker.contains("candidate route requires benchmark-qualified profile evidence")
+        }));
         Ok(())
     }
 

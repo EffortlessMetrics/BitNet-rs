@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T040500Z"
+event = "in_progress"
+item = "LNL258V-OP-007"
+branch = "codex/lunar-lake/LNL258V-OP-007-openvino-ask-dispatch"
+actor = "codex"
+summary = "Started LNL258V-OP-007 to let explicit bitnet lunar-lake ask requests execute dense Qwen OpenVINO GPU/NPU candidate routes without promoting them."
+
+notes = [
+  "The work keeps auto routing ledger-gated on promoted routes only.",
+  "Explicit OpenVINO candidate asks must preserve fallback_used=false, bounded answer gates, route/profile blockers, and no speedup or acceleration claims.",
+]

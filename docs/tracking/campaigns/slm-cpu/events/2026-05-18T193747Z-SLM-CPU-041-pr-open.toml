@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T19:37:47Z"
+event = "pr_open"
+item = "SLM-CPU-041"
+pr = 5754
+head_sha = "0bcc9c3f052176c4075a3b9c3bfc311552b36dfb"
+branch = "codex/slm-cpu-041-linear-output-storage-api"
+actor = "codex"
+summary = "Opened the dense linear output-storage API boundary slice."
+
+notes = [
+  "The slice records that candle_nn::Linear exposes weight and optional bias tensors for the Qwen3 FeedForward::down_proj boundary.",
+  "Reusable output storage remains blocked because Candle Tensor matmul and optional bias-add operations return owned tensors without caller-provided output storage.",
+  "The change preserves the existing behavior oracle and makes no speedup, sustained-throughput, Q4/Q5, accelerator, server, Qwen3.5, or BitNet QK256 claim.",
+]

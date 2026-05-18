@@ -10231,49 +10231,72 @@ async fn run_lunar_lake_ask(
     let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
     let source_run_path = source_run_receipt_path(&receipt_path);
 
-    run_simple_generation(
-        "cpu",
-        model,
-        "auto".to_string(),
-        None,
-        tokenizer,
-        question.clone(),
-        max_new_tokens,
-        0.0,
-        0,
-        1.0,
-        1.1,
-        None,
-        false,
-        false,
-        true,
-        true,
-        Some(source_run_path.clone()),
-        None,
-        None,
-        false,
-        false,
-        true,
-        true,
-        0,
-        "qwen2.5".to_string(),
-        false,
-        None,
-        vec!["<|im_end|>".to_string()],
-        Vec::new(),
-        None,
-        10,
-        false,
-        None,
-        None,
-        false,
-        None,
-        false,
-        Some("lunar_lake_ask".to_string()),
-        false,
-        false,
-    )
-    .await?;
+    let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
+        operator_receipt.clone()
+    } else {
+        artifact_root.join(&operator_receipt)
+    };
+    if route.runtime_api == "openvino_genai" {
+        if tokenizer.is_some() {
+            anyhow::bail!(
+                "lunar-lake OpenVINO ask uses the tokenizer exported in the OpenVINO model directory; --tokenizer is only supported for the CPU GGUF route"
+            );
+        }
+        run_openvino_lunar_lake_operator_ask(OpenVINOOperatorAskContext {
+            artifact_root: &artifact_root,
+            operator_receipt_path: &operator_receipt_path,
+            model_dir: &model,
+            route: &route,
+            question: &question,
+            max_new_tokens,
+            expect_contains: expect_contains.as_deref(),
+            json_out: &source_run_path,
+        })?;
+    } else {
+        run_simple_generation(
+            "cpu",
+            model,
+            "auto".to_string(),
+            None,
+            tokenizer,
+            question.clone(),
+            max_new_tokens,
+            0.0,
+            0,
+            1.0,
+            1.1,
+            None,
+            false,
+            false,
+            true,
+            true,
+            Some(source_run_path.clone()),
+            None,
+            None,
+            false,
+            false,
+            true,
+            true,
+            0,
+            "qwen2.5".to_string(),
+            false,
+            None,
+            vec!["<|im_end|>".to_string()],
+            Vec::new(),
+            None,
+            10,
+            false,
+            None,
+            None,
+            false,
+            None,
+            false,
+            Some("lunar_lake_ask".to_string()),
+            false,
+            false,
+        )
+        .await?;
+    }
 
     let source_run_receipt: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&source_run_path).with_context(|| {
@@ -10282,8 +10305,8 @@ async fn run_lunar_lake_ask(
         .with_context(|| format!("invalid run receipt {}", source_run_path.display()))?;
     validate_lunar_lake_ask_source_receipt(&source_run_receipt, &route)?;
 
-    let answer = source_run_receipt["text"].as_str().unwrap_or_default();
-    let normalized_answer = normalize_lunar_lake_answer(answer);
+    let answer = lunar_lake_source_answer_text(&source_run_receipt);
+    let normalized_answer = lunar_lake_source_normalized_answer(&source_run_receipt, &answer);
     let answer_gate =
         evaluate_lunar_lake_answer_gate(&normalized_answer, expect_contains.as_deref());
     let answer_gate_passed = answer_gate.passed;
@@ -10295,11 +10318,6 @@ async fn run_lunar_lake_ask(
         }
         anyhow::bail!("lunar-lake ask produced an empty normalized answer");
     }
-    let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
-        operator_receipt
-    } else {
-        artifact_root.join(operator_receipt)
-    };
     let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
         artifact_root: &artifact_root,
         operator_receipt_path: &operator_receipt_path,
@@ -10307,7 +10325,7 @@ async fn run_lunar_lake_ask(
         route: &route,
         route_selection: &route_selection,
         question: &question,
-        answer,
+        answer: &answer,
         normalized_answer: &normalized_answer,
         answer_gate: &answer_gate,
         expect_contains: expect_contains.as_deref(),
@@ -10331,6 +10349,94 @@ fn default_lunar_lake_ask_receipt_path() -> std::path::PathBuf {
 fn source_run_receipt_path(receipt_path: &std::path::Path) -> std::path::PathBuf {
     let stem = receipt_path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("ask");
     receipt_path.with_file_name(format!("{stem}-source-run.json"))
+}
+
+#[cfg(feature = "full-cli")]
+struct OpenVINOOperatorAskContext<'a> {
+    artifact_root: &'a std::path::Path,
+    operator_receipt_path: &'a std::path::Path,
+    model_dir: &'a std::path::Path,
+    route: &'a commands::lunar_lake::OperatorRoute,
+    question: &'a str,
+    max_new_tokens: usize,
+    expect_contains: Option<&'a str>,
+    json_out: &'a std::path::Path,
+}
+
+#[cfg(feature = "full-cli")]
+fn run_openvino_lunar_lake_operator_ask(ctx: OpenVINOOperatorAskContext<'_>) -> Result<()> {
+    let device = openvino_operator_device_for_route(ctx.route)?;
+    let python = openvino_operator_python();
+    let mut command = std::process::Command::new(&python);
+    command
+        .arg("scripts/openvino_genai_operator_ask.py")
+        .arg("--model-dir")
+        .arg(ctx.model_dir)
+        .arg("--device")
+        .arg(device)
+        .arg("--question")
+        .arg(ctx.question)
+        .arg("--artifact-root")
+        .arg(ctx.artifact_root)
+        .arg("--operator-receipt")
+        .arg(ctx.operator_receipt_path)
+        .arg("--route-id")
+        .arg(&ctx.route.route_id)
+        .arg("--max-new-tokens")
+        .arg(ctx.max_new_tokens.to_string())
+        .arg("--json-out")
+        .arg(ctx.json_out);
+    if let Some(expected) = ctx.expect_contains {
+        command.arg("--expect-contains").arg(expected);
+    }
+    let output = command.output().with_context(|| {
+        format!("failed to launch OpenVINO operator ask helper via {}", python.display())
+    })?;
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!(
+            "OpenVINO operator ask helper failed with status {}.\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            stdout.trim(),
+            stderr.trim()
+        );
+    }
+    Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn openvino_operator_device_for_route(
+    route: &commands::lunar_lake::OperatorRoute,
+) -> Result<&'static str> {
+    match route.selected_backend.as_str() {
+        "openvino-gpu" if route.runtime_api == "openvino_genai" => Ok("GPU.0"),
+        "openvino-npu" if route.runtime_api == "openvino_genai" => Ok("NPU"),
+        _ => anyhow::bail!("route `{}` is not an OpenVINO GenAI candidate route", route.route_id),
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn openvino_operator_python() -> std::path::PathBuf {
+    let venv_python = std::path::PathBuf::from(".venv").join("Scripts").join("python.exe");
+    if venv_python.exists() { venv_python } else { std::path::PathBuf::from("python") }
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_source_answer_text(source: &serde_json::Value) -> String {
+    source["text"]
+        .as_str()
+        .or_else(|| source["output"]["generated_text"].as_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_source_normalized_answer(source: &serde_json::Value, answer: &str) -> String {
+    source["output"]["normalized_answer"]
+        .as_str()
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| normalize_lunar_lake_answer(answer))
 }
 
 #[cfg(feature = "full-cli")]
@@ -10368,16 +10474,63 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
     let runtime_api = ctx.source_run_receipt["runtime_api"].clone();
     let fallback_used = ctx.source_run_receipt["fallback_used"].clone();
     let fallback_reason = ctx.source_run_receipt["fallback_reason"].clone();
-    let selected_kernel_or_runtime = ctx.source_run_receipt["kernel"]["kernel_id"].clone();
-    let model_family = ctx.source_run_receipt["model"]["family"].clone();
-    let model_architecture = ctx.source_run_receipt["model"]["architecture"].clone();
-    let quantization = ctx.source_run_receipt["model"]["quant_format"].clone();
-    let tokenizer_source = ctx.source_run_receipt["model"]["tokenizer"].clone();
+    let selected_kernel_or_runtime = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["kernel.kernel_id", "selected_kernel_or_runtime"],
+    );
+    let backend_lane = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["backend.backend_lane", "backend_lane"],
+    );
+    let model_family =
+        lunar_lake_source_value_at_any(ctx.source_run_receipt, &["model.family", "model_family"]);
+    let model_architecture = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["model.architecture", "model_architecture"],
+    );
+    let quantization = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["model.quant_format", "quantization"],
+    );
+    let tokenizer_source = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["model.tokenizer", "tokenizer_source"],
+    );
+    let prompt_template = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["prompt_template", "prompt_policy.prompt_template"],
+    );
+    let prompt_render = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["prompt_render", "prompt_policy.rendered_prompt"],
+    );
+    let prompt_token_ids = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["tokens.prompt_ids", "prompt_policy.prompt_token_ids"],
+    );
+    let generated_token_ids = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["tokens.generated_ids", "output.generated_token_ids"],
+    );
+    let generated_count = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["tokens.generated", "output.generated_token_count"],
+    );
+    let prompt_count = lunar_lake_source_value_at_any(
+        ctx.source_run_receipt,
+        &["tokens.prompt", "prompt_policy.prompt_token_count"],
+    );
+    let openvino_candidate_executed = ctx.route.runtime_api == "openvino_genai";
+    let proof_stage = if openvino_candidate_executed {
+        "operator_candidate_route_executed_through_lunar_lake_ask"
+    } else {
+        "operator_default_route_executed"
+    };
 
     serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "lunar_lake_operator_ask",
-        "proof_stage": "operator_default_route_executed",
+        "proof_stage": proof_stage,
         "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         "machine_id": "intel-258v",
         "artifact_root": ctx.artifact_root.display().to_string(),
@@ -10400,7 +10553,7 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "runtime_api": runtime_api,
         "fallback_used": fallback_used,
         "fallback_reason": fallback_reason,
-        "backend_lane": "dense_slm_cpu",
+        "backend_lane": backend_lane,
         "selected_kernel_or_runtime": selected_kernel_or_runtime,
         "route_id": ctx.route.route_id,
         "route_selection": {
@@ -10426,13 +10579,14 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "model_architecture": model_architecture,
         "quantization": quantization,
         "tokenizer_source": tokenizer_source,
-        "prompt_template": "qwen2.5",
+        "prompt_template": prompt_template,
         "answer_gate_passed": ctx.answer_gate.passed,
         "speedup_claim": false,
         "acceleration_claim": false,
         "broad_quality_claim": false,
         "bitnet_qk256_i2s_claim": false,
         "arc_or_npu_execution_claim": false,
+        "openvino_candidate_route_executed": openvino_candidate_executed,
         "route": {
             "route_id": ctx.route.route_id,
             "workload": ctx.route.workload,
@@ -10459,25 +10613,26 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
             },
         },
         "model": {
-            "path": ctx.source_run_receipt["model"]["path"].clone(),
-            "sha256": ctx.source_run_receipt["model"]["sha256"].clone(),
-            "family": ctx.source_run_receipt["model"]["family"].clone(),
-            "architecture": ctx.source_run_receipt["model"]["architecture"].clone(),
-            "quant_format": ctx.source_run_receipt["model"]["quant_format"].clone(),
-            "tokenizer": ctx.source_run_receipt["model"]["tokenizer"].clone(),
+            "path": lunar_lake_source_value_at_any(ctx.source_run_receipt, &["model.path", "model.local_model_dir", "inputs.model_dir"]),
+            "sha256": lunar_lake_source_value_at_any(ctx.source_run_receipt, &["model.sha256"]),
+            "family": model_family,
+            "architecture": model_architecture,
+            "quant_format": quantization,
+            "tokenizer": tokenizer_source,
             "vocab_size": ctx.source_run_receipt["model"]["vocab_size"].clone(),
             "loader_mode": ctx.source_run_receipt["model"]["loader_mode"].clone(),
             "fallback_loader_used": ctx.source_run_receipt["model"]["fallback_loader_used"].clone(),
+            "source": ctx.source_run_receipt["model"].clone(),
         },
         "prompt": {
-            "template": "qwen2.5",
-            "render": ctx.source_run_receipt["prompt_render"].clone(),
-            "token_ids": ctx.source_run_receipt["tokens"]["prompt_ids"].clone(),
+            "template": prompt_template,
+            "render": prompt_render,
+            "token_ids": prompt_token_ids,
         },
         "tokens": {
-            "generated_ids": ctx.source_run_receipt["tokens"]["generated_ids"].clone(),
-            "generated_count": ctx.source_run_receipt["tokens"]["generated"].clone(),
-            "prompt_count": ctx.source_run_receipt["tokens"]["prompt"].clone(),
+            "generated_ids": generated_token_ids,
+            "generated_count": generated_count,
+            "prompt_count": prompt_count,
         },
         "backend": {
             "requested_backend": ctx.source_run_receipt["requested_backend"].clone(),
@@ -10485,23 +10640,47 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
             "runtime_api": ctx.source_run_receipt["runtime_api"].clone(),
             "fallback_used": ctx.source_run_receipt["fallback_used"].clone(),
             "fallback_reason": ctx.source_run_receipt["fallback_reason"].clone(),
-            "backend_lane": "dense_slm_cpu",
-            "selected_kernel_or_runtime": ctx.source_run_receipt["kernel"]["kernel_id"].clone(),
+            "backend_lane": backend_lane,
+            "selected_kernel_or_runtime": selected_kernel_or_runtime,
         },
         "dense_slm": ctx.source_run_receipt["dense_slm"].clone(),
         "execution_coverage": ctx.source_run_receipt["execution_coverage"].clone(),
         "timing": ctx.source_run_receipt["timing"].clone(),
         "profile": ctx.source_run_receipt["profile"].clone(),
         "claim_boundary": {
-            "cpu_default_route_only": true,
+            "cpu_default_route_only": !openvino_candidate_executed,
+            "openvino_candidate_route_executed": openvino_candidate_executed,
+            "default_route_changed": false,
             "fallback_used": false,
             "acceleration_claim": false,
             "broad_dense_slm_quality_claim": false,
             "bitnet_qk256_i2s_claim": false,
-            "arc_or_npu_execution_claim": false,
+            "arc_or_npu_acceleration_claim": false,
         },
         "source_receipt": ctx.source_run_receipt,
     })
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_source_value_at_any(source: &serde_json::Value, paths: &[&str]) -> serde_json::Value {
+    for path in paths {
+        if let Some(value) = lunar_lake_source_value_at(source, path) {
+            return value.clone();
+        }
+    }
+    serde_json::Value::Null
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_source_value_at<'a>(
+    source: &'a serde_json::Value,
+    dotted_path: &str,
+) -> Option<&'a serde_json::Value> {
+    let mut current = source;
+    for segment in dotted_path.split('.') {
+        current = current.get(segment)?;
+    }
+    Some(current)
 }
 
 #[cfg(feature = "full-cli")]
@@ -10538,31 +10717,56 @@ fn validate_lunar_lake_ask_source_receipt(
     let selected_backend = source_run_receipt["selected_backend"].as_str().unwrap_or_default();
     let runtime_api = source_run_receipt["runtime_api"].as_str().unwrap_or_default();
     let fallback_used = source_run_receipt["fallback_used"].as_bool().unwrap_or(true);
-    let selected_kernel = source_run_receipt["kernel"]["kernel_id"].as_str().unwrap_or_default();
-    if requested_backend != "cpu"
+    let selected_kernel = lunar_lake_source_value_at_any(
+        source_run_receipt,
+        &["kernel.kernel_id", "selected_kernel_or_runtime"],
+    )
+    .as_str()
+    .unwrap_or_default()
+    .to_string();
+    let requested_backend_ok = if route.selected_backend == "cpu-rust" && route.runtime_api == "cpu"
+    {
+        matches!(requested_backend, "cpu" | "cpu-rust")
+    } else {
+        requested_backend == route.selected_backend
+    };
+    if !requested_backend_ok
         || selected_backend != route.selected_backend
         || runtime_api != route.runtime_api
     {
         anyhow::bail!(
-            "lunar-lake ask did not preserve the default CPU route: requested_backend={requested_backend}, selected_backend={selected_backend}, runtime_api={runtime_api}"
+            "lunar-lake ask did not preserve route `{}`: requested_backend={requested_backend}, selected_backend={selected_backend}, runtime_api={runtime_api}",
+            route.route_id
         );
     }
     if fallback_used {
         anyhow::bail!("lunar-lake ask source receipt recorded fallback_used=true");
     }
-    if selected_kernel != route.selected_kernel_or_runtime {
+    if !lunar_lake_source_kernel_matches_route(&selected_kernel, &route.selected_kernel_or_runtime)
+    {
         anyhow::bail!(
             "lunar-lake ask selected kernel `{selected_kernel}`, expected `{}`",
             route.selected_kernel_or_runtime
         );
     }
-    if source_run_receipt.get("dense_slm").is_none() {
-        anyhow::bail!("lunar-lake ask source receipt is missing dense_slm provenance");
+    let dense_slm_or_openvino_qwen = source_run_receipt.get("dense_slm").is_some()
+        || (route.runtime_api == "openvino_genai"
+            && source_run_receipt["model_family"].as_str() == Some("qwen")
+            && source_run_receipt["model_architecture"].as_str() == Some("qwen2"));
+    if !dense_slm_or_openvino_qwen {
+        anyhow::bail!("lunar-lake ask source receipt is missing dense SLM provenance");
     }
     if source_run_receipt.get("bitnet").is_some() {
         anyhow::bail!("lunar-lake ask source receipt unexpectedly contains BitNet provenance");
     }
     Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_source_kernel_matches_route(source_kernel: &str, route_kernel: &str) -> bool {
+    source_kernel == route_kernel
+        || (source_kernel == "openvino-genai-llmpipeline-gpu0"
+            && route_kernel == "openvino-genai-llmpipeline-gpu")
 }
 
 fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static str> {
@@ -11494,6 +11698,33 @@ fn extract_last_token_hidden(
             // Return mock hidden state [B, H]
             Ok(ConcreteTensor::mock(vec![batch_size, hidden_size]))
         }
+    }
+}
+
+#[cfg(test)]
+mod extract_last_token_hidden_tests {
+    use super::{extract_last_token_hidden, tensor_to_vec};
+    use bitnet_common::Tensor as _;
+
+    #[test]
+    fn extract_last_token_hidden_uses_final_sequence_position() -> anyhow::Result<()> {
+        let device = candle_core::Device::Cpu;
+        let hidden = candle_core::Tensor::from_vec(
+            vec![
+                1.0f32, 2.0, 3.0, 4.0, // position 0
+                10.0, 20.0, 30.0, 40.0, // position 1
+                100.0, 200.0, 300.0, 400.0, // position 2
+            ],
+            (1usize, 3usize, 4usize),
+            &device,
+        )?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(hidden));
+
+        let last = extract_last_token_hidden(&tensor)?;
+        assert_eq!(last.shape(), vec![1, 4]);
+        assert_eq!(tensor_to_vec(&last)?, vec![100.0f32, 200.0, 300.0, 400.0]);
+        Ok(())
     }
 }
 
@@ -13243,6 +13474,122 @@ mod tests {
         assert!(receipt["source_receipt"].is_object());
     }
 
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_operator_ask_receipt_accepts_openvino_source_shape() {
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: "dense_slm_openvino_gpu_candidate".to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct INT4_SYM OpenVINO IR".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            selected_kernel_or_runtime: "openvino-genai-llmpipeline-gpu0".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "explicit OpenVINO GPU candidate route".to_string(),
+            answer_gate_evidence: Some(
+                "lunar-lake-openvino-operator-ask-gpu-math-brief.json".to_string(),
+            ),
+            phase_evidence: Some("slm-openvino-cpu-gpu-npu-phase-runner.json".to_string()),
+            acceleration_claim: false,
+        };
+        let route_selection = commands::lunar_lake::OperatorAskRouteSelection {
+            requested_device: "GPU.0".to_string(),
+            requested_route: "dense_slm_openvino_gpu_candidate".to_string(),
+            profile_id: "ask_normal".to_string(),
+            selected_route: "dense_slm_openvino_gpu_candidate".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            promotion_status: "direct_route_validated".to_string(),
+            selection_source: "operator_receipt_direct".to_string(),
+            route_reason: "explicit OpenVINO GPU candidate route".to_string(),
+            why_not_cpu: vec!["CPU route was not requested".to_string()],
+            why_not_gpu: vec!["auto routing was not requested".to_string()],
+            why_not_npu: vec!["auto routing was not requested".to_string()],
+            candidate_routes: vec![],
+            promotion_ledger: None,
+            route_profile_comparison: Some("lunar-lake-route-profile-comparison.json".to_string()),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec!["route not promoted for profile ask_normal".to_string()],
+            route: route.clone(),
+        };
+        let source = serde_json::json!({
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "requested_backend": "openvino-gpu",
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0",
+            "fallback_used": false,
+            "fallback_reason": null,
+            "backend_lane": "dense_slm_openvino_gpu_arc140v",
+            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+            "model_family": "qwen",
+            "model_architecture": "qwen2",
+            "quantization": "INT4_SYM",
+            "prompt_template": "qwen2.5",
+            "tokenizer_source": "hf_tokenizer_export",
+            "model": {
+                "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym"
+            },
+            "prompt_policy": {
+                "rendered_prompt": "<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n",
+                "prompt_token_ids": [1, 2, 3],
+                "prompt_token_count": 3
+            },
+            "output": {
+                "generated_text": "2 + 2 equals 4.",
+                "normalized_answer": "2 + 2 equals 4.",
+                "generated_token_ids": [17, 488, 220, 17, 16819, 220, 19, 13, 151645],
+                "generated_token_count": 9
+            },
+            "answer_gate": {
+                "kind": "contains",
+                "expected": "4",
+                "passed": true,
+                "failed_rules": []
+            },
+            "timing": {"generation_wall_ms": 301.0}
+        });
+        validate_lunar_lake_ask_source_receipt(&source, &route).expect("openvino source receipt");
+        let answer = lunar_lake_source_answer_text(&source);
+        let normalized = lunar_lake_source_normalized_answer(&source, &answer);
+        let gate = evaluate_lunar_lake_answer_gate(&normalized, Some("4"));
+        let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
+            artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
+            operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
+            source_run_path: std::path::Path::new("lunar-lake-openvino-ask-source-run.json"),
+            route: &route,
+            route_selection: &route_selection,
+            question: "2+2?",
+            answer: &answer,
+            normalized_answer: &normalized,
+            answer_gate: &gate,
+            expect_contains: Some("4"),
+            source_run_receipt: &source,
+        });
+
+        assert_eq!(
+            receipt["proof_stage"],
+            "operator_candidate_route_executed_through_lunar_lake_ask"
+        );
+        assert_eq!(receipt["requested_backend"], "openvino-gpu");
+        assert_eq!(receipt["selected_backend"], "openvino-gpu");
+        assert_eq!(receipt["runtime_api"], "openvino_genai");
+        assert_eq!(receipt["backend_lane"], "dense_slm_openvino_gpu_arc140v");
+        assert_eq!(receipt["selected_kernel_or_runtime"], "openvino-genai-llmpipeline-gpu0");
+        assert_eq!(receipt["route_id"], "dense_slm_openvino_gpu_candidate");
+        assert_eq!(receipt["openvino_candidate_route_executed"], true);
+        assert_eq!(receipt["claim_boundary"]["openvino_candidate_route_executed"], true);
+        assert_eq!(receipt["claim_boundary"]["default_route_changed"], false);
+        assert_eq!(receipt["claim_boundary"]["acceleration_claim"], false);
+        assert_eq!(receipt["model_family"], "qwen");
+        assert_eq!(receipt["model_architecture"], "qwen2");
+        assert_eq!(receipt["quantization"], "INT4_SYM");
+        assert_eq!(receipt["tokenizer_source"], "hf_tokenizer_export");
+        assert_eq!(receipt["prompt"]["token_ids"], serde_json::json!([1, 2, 3]));
+        assert_eq!(receipt["tokens"]["generated_count"], 9);
+        assert_eq!(receipt["answer"]["normalized_text"], "2 + 2 equals 4.");
+    }
+
     #[test]
     fn dense_slm_cpu_reference_requires_cpu_backend_without_fallback() {
         assert!(uses_dense_slm_cpu_reference("cpu", "cpu-rust", "cpu", false));
@@ -13822,7 +14169,7 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
-            "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_storage_owner"],
@@ -13834,7 +14181,16 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
-            "typed_transformer_forward_workspace"
+            "dense_linear_output_storage_api_boundary"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["weight_accessible"],
+            true
+        );
+        assert_eq!(audit["prompt_prefill_breakdown"]["forward_boundary"]["bias_accessible"], true);
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["can_fill_caller_output_storage"],
+            false
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["behavior_gate"],
@@ -13884,11 +14240,11 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "feed_forward_down_proj_output_storage_boundary"
+            "dense_linear_output_storage_api_boundary"
         );
         assert_eq!(
             audit["next_optimization_target"]["status"],
-            "down_proj_output_storage_reuse_blocked"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         );
         assert_eq!(audit["optimization_deferred"], true);
         assert_eq!(
@@ -13922,12 +14278,12 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "feed_forward_down_proj_output_storage_boundary"
+            "dense_linear_output_storage_api_boundary"
         );
         assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["status"],
-            "down_proj_output_storage_reuse_blocked"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         );
         assert_eq!(audit["optimization_deferred"], true);
     }
