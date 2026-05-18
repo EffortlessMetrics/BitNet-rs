@@ -1596,6 +1596,13 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 cpu_f64_records,
                 Some(&model_path),
             );
+        let selected_query_attention_norm_input_history_epsilon =
+            attention_selected_query_attention_norm_input_history_epsilon(
+                &selected_query_projection_epsilon_source,
+                &reference_records,
+                cpu_f64_records,
+                Some(&model_path),
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1615,6 +1622,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_rope_expression_policy;
         cpu_comparison["attention_selected_query_projection_epsilon_source"] =
             selected_query_projection_epsilon_source;
+        cpu_comparison["attention_selected_query_attention_norm_input_history_epsilon"] =
+            selected_query_attention_norm_input_history_epsilon;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -33184,6 +33193,242 @@ fn attention_selected_query_projection_epsilon_source(
     })
 }
 
+fn selected_query_attention_norm_input_history_epsilon_classification(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "no_selected_k_projection_replay_explained_rows" => {
+            "no_selected_query_projection_attention_norm_input_history_rows"
+        }
+        "selected_historical_k_attention_norm_source_missing_context" => {
+            "selected_query_attention_norm_input_history_epsilon_missing_context"
+        }
+        "selected_historical_k_attention_norm_source_input_history_epsilon" => {
+            "selected_query_attention_norm_input_history_epsilon_upstream_input_history"
+        }
+        "selected_historical_k_attention_norm_source_output_replay_explains_epsilon" => {
+            "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+        }
+        "selected_historical_k_attention_norm_source_output_epsilon_unpinned" => {
+            "selected_query_attention_norm_input_history_epsilon_output_unpinned"
+        }
+        "selected_historical_k_attention_norm_source_clean" => {
+            "selected_query_attention_norm_input_history_epsilon_clean"
+        }
+        _ => "selected_query_attention_norm_input_history_epsilon_unpinned",
+    }
+}
+
+fn selected_query_attention_norm_input_history_epsilon_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_query_attention_norm_input_history_epsilon_upstream_input_history" => {
+            "localize selected query attention-norm input-history epsilon at embedding/layer-input handoff before changing RMSNorm, Q projection, RoPE, or score-input runtime math"
+        }
+        "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output" => {
+            "pin whether attention RMSNorm accumulation or trace serialization explains the selected query projection input epsilon"
+        }
+        "selected_query_attention_norm_input_history_epsilon_output_unpinned" => {
+            "capture enough attention RMSNorm replay context to explain selected query projection input epsilon before changing runtime math"
+        }
+        "selected_query_attention_norm_input_history_epsilon_missing_context" => {
+            "capture model and full attention-norm input/output histories before selected query attention-norm input attribution"
+        }
+        "no_selected_query_projection_attention_norm_input_history_rows" => {
+            "pin selected query projection epsilon source before attention-norm input attribution"
+        }
+        "selected_query_attention_norm_input_history_epsilon_clean" => {
+            "selected query attention-norm input source is clean; inspect upstream selection or downstream score residual before runtime math changes"
+        }
+        _ => "keep selected query attention-norm input-history epsilon diagnostic-only",
+    }
+}
+
+fn selected_query_attention_norm_input_history_epsilon_runtime_candidate(
+    candidate: Option<&str>,
+) -> &'static str {
+    match candidate {
+        Some("localize_attention_norm_input_history_before_changing_rmsnorm_or_k_projection") => {
+            "localize_query_attention_norm_input_history_before_changing_rmsnorm_or_q_projection"
+        }
+        Some("pin_attention_rmsnorm_accumulation_or_serialization_policy") => {
+            "pin_query_attention_rmsnorm_accumulation_or_serialization_policy"
+        }
+        Some("pin_attention_norm_replay_delta_before_runtime_change") => {
+            "pin_query_attention_norm_replay_delta_before_runtime_change"
+        }
+        Some("none_from_selected_attention_norm_input_or_output") => {
+            "none_from_selected_query_attention_norm_input_or_output"
+        }
+        _ => "selected_query_attention_norm_input_history_context_missing",
+    }
+}
+
+fn attention_selected_query_attention_norm_input_history_epsilon(
+    projection_epsilon_source: &Value,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    model_path: Option<&Path>,
+) -> Value {
+    let selected_source_rows = projection_epsilon_source
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter()
+                .filter(|row| {
+                    row.pointer("/classification").and_then(Value::as_str)
+                        == Some(
+                            "selected_query_projection_epsilon_source_attention_norm_input_history",
+                        )
+                })
+                .cloned()
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let translated_rows = selected_source_rows
+        .iter()
+        .map(|row| {
+            let mut translated = row.clone();
+            if let Some(object) = translated.as_object_mut() {
+                object.insert(
+                    "classification".to_string(),
+                    json!("selected_historical_k_projection_replay_explains_raw_epsilon"),
+                );
+                object.insert(
+                    "key_slot".to_string(),
+                    row.pointer("/selected_token").cloned().unwrap_or(Value::Null),
+                );
+                object.insert(
+                    "query_token".to_string(),
+                    row.pointer("/selected_token").cloned().unwrap_or(Value::Null),
+                );
+                object.insert(
+                    "dominant_projection_input".to_string(),
+                    row.pointer("/input_pair_component").cloned().unwrap_or(Value::Null),
+                );
+                object.insert(
+                    "dominant_projection_input_dim".to_string(),
+                    row.pointer("/projection_dim").cloned().unwrap_or(Value::Null),
+                );
+                object.insert(
+                    "dominant_projection_pair_delta".to_string(),
+                    row.pointer("/materiality_delta").cloned().unwrap_or(Value::Null),
+                );
+                object.insert(
+                    "target_head_dim".to_string(),
+                    row.pointer("/head_dim").cloned().unwrap_or(Value::Null),
+                );
+            }
+            translated
+        })
+        .collect::<Vec<_>>();
+    let translated_source = json!({
+        "rows": translated_rows,
+    });
+    let mut report = attention_selected_historical_k_attention_norm_source(
+        &translated_source,
+        reference_records,
+        rust_records,
+        model_path,
+    );
+
+    let classification = report
+        .pointer("/classification")
+        .and_then(Value::as_str)
+        .map(selected_query_attention_norm_input_history_epsilon_classification)
+        .unwrap_or("selected_query_attention_norm_input_history_epsilon_unpinned");
+    if let Some(object) = report.as_object_mut() {
+        object.insert(
+            "policy".to_string(),
+            json!("Selected query attention-norm input-history epsilon is diagnostic-only evidence for whether the selected query projection input epsilon is already present before attention RMSNorm or introduced at attention RMSNorm output; it does not change RMSNorm, QK256, RoPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion"),
+        );
+        object.insert("classification".to_string(), json!(classification));
+        object.insert(
+            "source_report".to_string(),
+            json!("attention_selected_query_projection_epsilon_source"),
+        );
+        object.insert(
+            "next_diagnostic".to_string(),
+            json!(selected_query_attention_norm_input_history_epsilon_next_diagnostic(
+                classification
+            )),
+        );
+        if let Some(rows) = object.get_mut("rows").and_then(Value::as_array_mut) {
+            for (index, row) in rows.iter_mut().enumerate() {
+                let source_row = selected_source_rows.get(index);
+                if let Some(row_object) = row.as_object_mut() {
+                    let row_classification = row_object
+                        .get("classification")
+                        .and_then(Value::as_str)
+                        .map(selected_query_attention_norm_input_history_epsilon_classification)
+                        .unwrap_or("selected_query_attention_norm_input_history_epsilon_unpinned");
+                    row_object.insert("classification".to_string(), json!(row_classification));
+                    row_object.insert(
+                        "runtime_change_candidate".to_string(),
+                        json!(
+                            selected_query_attention_norm_input_history_epsilon_runtime_candidate(
+                                row_object.get("runtime_change_candidate").and_then(Value::as_str)
+                            )
+                        ),
+                    );
+                    row_object.insert(
+                        "source_report".to_string(),
+                        json!("attention_selected_query_projection_epsilon_source"),
+                    );
+                    if let Some(source_row) = source_row {
+                        row_object.insert(
+                            "input_pair_component".to_string(),
+                            source_row
+                                .pointer("/input_pair_component")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "selected_query_projection_dim".to_string(),
+                            source_row.pointer("/projection_dim").cloned().unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "materiality_delta".to_string(),
+                            source_row
+                                .pointer("/materiality_delta")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "target_delta_rust_minus_reference".to_string(),
+                            source_row
+                                .pointer("/target_delta_rust_minus_reference")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "replay_delta_rust_minus_reference".to_string(),
+                            source_row
+                                .pointer("/replay_delta_rust_minus_reference")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "replay_delta_minus_target_delta".to_string(),
+                            source_row
+                                .pointer("/replay_delta_minus_target_delta")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "selected_query_projection_epsilon_source_row".to_string(),
+                            source_row.clone(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    report
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -49643,6 +49888,124 @@ mod tests {
         let reasons = row.pointer("/blocked_reasons").and_then(Value::as_array).unwrap();
         assert!(reasons.contains(&json!("model_path_missing_for_query_projection_replay")));
         assert!(reasons.contains(&json!("reference_attention_norm_history_missing")));
+    }
+
+    #[test]
+    fn selected_query_attention_norm_input_history_epsilon_maps_input_history_classification() {
+        assert_eq!(
+            selected_query_attention_norm_input_history_epsilon_classification(
+                "selected_historical_k_attention_norm_source_input_history_epsilon"
+            ),
+            "selected_query_attention_norm_input_history_epsilon_upstream_input_history"
+        );
+        assert_eq!(
+            selected_query_attention_norm_input_history_epsilon_classification(
+                "selected_historical_k_attention_norm_source_output_replay_explains_epsilon"
+            ),
+            "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+        );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_input_history_epsilon_blocks_without_context() {
+        let projection_epsilon_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_query_projection_epsilon_source_attention_norm_input_history",
+                    "input_pair_component": "x0",
+                    "head": 0,
+                    "selected_token": 17,
+                    "projection_dim": 5,
+                    "head_dim": 128,
+                    "overall_projection_dim": 5,
+                    "materiality_delta": -2.38418579101562e-7_f64,
+                    "target_delta_rust_minus_reference": -2.38418579101562e-7_f64,
+                    "replay_delta_rust_minus_reference": -2.38418579101562e-7_f64,
+                    "replay_delta_minus_target_delta": 0.0,
+                }
+            ]
+        });
+
+        let report = attention_selected_query_attention_norm_input_history_epsilon(
+            &projection_epsilon_source,
+            &[],
+            &BTreeMap::new(),
+            None,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_attention_norm_input_history_epsilon_missing_context"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/source_report"),
+            Some(&json!("attention_selected_query_projection_epsilon_source"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_query_attention_norm_input_history_epsilon_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/runtime_change_candidate"),
+            Some(&json!("selected_query_attention_norm_input_history_context_missing"))
+        );
+        assert_eq!(report.pointer("/rows/0/selected_query_projection_dim"), Some(&json!(5)));
+        assert_eq!(report.pointer("/rows/0/input_pair_component"), Some(&json!("x0")));
+        assert_eq!(
+            report.pointer("/rows/0/selected_query_projection_epsilon_source_row/classification"),
+            Some(&json!("selected_query_projection_epsilon_source_attention_norm_input_history"))
+        );
+        assert!(report.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| {
+                reasons.contains(&json!("model_path_missing_for_selected_attention_norm_replay"))
+                    && reasons.contains(&json!("reference_attention_norm_input_history_missing"))
+                    && reasons.contains(&json!("rust_attention_norm_output_history_missing"))
+            }
+        ));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture model and full attention-norm input/output histories before selected query attention-norm input attribution"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_input_history_epsilon_reports_no_rows() {
+        let projection_epsilon_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_query_projection_epsilon_source_clean",
+                    "head": 0,
+                    "selected_token": 17,
+                    "projection_dim": 5,
+                }
+            ]
+        });
+
+        let report = attention_selected_query_attention_norm_input_history_epsilon(
+            &projection_epsilon_source,
+            &[],
+            &BTreeMap::new(),
+            None,
+        );
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("no_selected_query_projection_attention_norm_input_history_rows"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected query projection epsilon source before attention-norm input attribution"
+            ))
+        );
     }
 
     #[test]
