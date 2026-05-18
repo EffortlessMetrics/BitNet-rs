@@ -6295,9 +6295,9 @@ dependencies = [
 
 [[package]]
 name = "opencl3"
-version = "0.12.1"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d751bba4112cee4736166d8b8bd61ef57bbb3807e41d18b33a843dc8f974a9ee"
+checksum = "ecb3473c4f01afd0eea3ee5b31649fec47dbc23353a63e1b916aa67cd810fb73"
 dependencies = [
  "cl3",
  "libc",
