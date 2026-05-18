@@ -32475,6 +32475,9 @@ fn selected_query_score_frontier_next_diagnostic(classification: &str) -> &'stat
         "selected_query_score_frontier_f16_boundary_active" => {
             "pin selected query F16 score-input conversion before changing score accumulation or softmax"
         }
+        "selected_query_score_frontier_head_policy_score_operand_unpinned" => {
+            "replay the head-level query F16 score-operand policy before attributing pre-score RoPE source rows or changing runtime math"
+        }
         "selected_query_score_frontier_pre_score_rope_unpinned" => {
             "pin selected query pre-score RoPE source before changing query projection or RoPE math"
         }
@@ -32546,6 +32549,8 @@ fn attention_selected_query_score_frontier(
         == Some("selected_query_score_input_bucket_source_head_boundary_unpinned")
         && rope_to_f16_head_classification
             == Some("selected_query_rope_to_f16_head_conversion_score_input_matches_f16");
+    let head_policy_without_selected_dim =
+        source_pinned_by_head_policy && value_u64(score_input_source, "/selected_dim").is_none();
 
     let classification = if missing_context {
         "selected_query_score_frontier_missing_context"
@@ -32555,6 +32560,8 @@ fn attention_selected_query_score_frontier(
         && f16_classification != Some("selected_query_score_input_f16_frontier_not_f16_boundary")
     {
         "selected_query_score_frontier_f16_boundary_active"
+    } else if head_policy_without_selected_dim {
+        "selected_query_score_frontier_head_policy_score_operand_unpinned"
     } else if pre_score_classification
         != Some("selected_query_pre_score_rope_source_pre_rope_projection_epsilon")
     {
@@ -32598,6 +32605,7 @@ fn attention_selected_query_score_frontier(
         "score_input_source_classification": source_classification,
         "rope_to_f16_head_conversion_classification": rope_to_f16_head_classification,
         "score_input_source_pinned_by_head_policy": source_pinned_by_head_policy,
+        "head_policy_without_selected_dim": head_policy_without_selected_dim,
         "f16_frontier_classification": f16_classification,
         "pre_score_rope_source_classification": pre_score_classification,
         "pre_rope_projection_materiality_classification": pre_rope_classification,
@@ -52029,11 +52037,59 @@ mod tests {
     }
 
     #[test]
-    fn selected_query_score_frontier_accepts_head_policy_match() {
+    fn selected_query_score_frontier_reports_head_policy_without_dim() {
         let mut source = selected_query_score_frontier_source_fixture();
         source["classification"] =
             json!("selected_query_score_input_bucket_source_head_boundary_unpinned");
         source["selected_dim"] = Value::Null;
+
+        let report = attention_selected_query_score_frontier(
+            &source,
+            &json!({
+                "classification": "selected_query_rope_to_f16_head_conversion_score_input_matches_f16"
+            }),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_clean"
+            }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_frontier_head_policy_score_operand_unpinned"))
+        );
+        assert_eq!(report.pointer("/score_input_source_pinned_by_head_policy"), Some(&json!(true)));
+        assert_eq!(report.pointer("/head_policy_without_selected_dim"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "replay the head-level query F16 score-operand policy before attributing pre-score RoPE source rows or changing runtime math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_score_frontier_accepts_head_policy_with_dim() {
+        let mut source = selected_query_score_frontier_source_fixture();
+        source["classification"] =
+            json!("selected_query_score_input_bucket_source_head_boundary_unpinned");
 
         let report = attention_selected_query_score_frontier(
             &source,
@@ -52070,6 +52126,7 @@ mod tests {
             ))
         );
         assert_eq!(report.pointer("/score_input_source_pinned_by_head_policy"), Some(&json!(true)));
+        assert_eq!(report.pointer("/head_policy_without_selected_dim"), Some(&json!(false)));
         assert_eq!(
             report.pointer("/rope_to_f16_head_conversion_classification"),
             Some(&json!("selected_query_rope_to_f16_head_conversion_score_input_matches_f16"))
