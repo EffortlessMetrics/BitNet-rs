@@ -45,6 +45,7 @@ const DEFAULT_ATTN_NORM_WEIGHT: &str = "blk.0.attn_norm.weight";
 const DEFAULT_ATTN_SUBNORM_WEIGHT: &str = "blk.0.attn_sub_norm.weight";
 const DEFAULT_FFN_NORM_WEIGHT: &str = "blk.0.ffn_norm.weight";
 const DEFAULT_FINAL_NORM_WEIGHT: &str = "output_norm.weight";
+const TRACE_FIRST_VALUES_MAX_LIMIT: usize = 262_144;
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -582,6 +583,14 @@ fn print_help() {
     println!(
         "Plan target-local BitNet reference layer/stage trace instrumentation\n\nUsage: xtask.exe bitnet-reference-layer-trace-plan [OPTIONS]\n\nOptions:\n      --cpp-root <PATH>          llama.cpp checkout root [default: target/external/BitNet-reference/3rdparty/llama.cpp]\n      --rust-transformer <PATH>  Rust transformer source [default: crates/bitnet-transformer/src/lib.rs]\n      --output <PATH>            Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-plan.json]\n      --format <FORMAT>          Output format: human or json [default: human]\n  -h, --help                     Print help"
     );
+}
+
+fn requested_first_values_limit(arg: Option<usize>, env_name: &str) -> Option<usize> {
+    arg.or_else(|| std::env::var(env_name).ok().and_then(|value| value.parse().ok()))
+}
+
+fn effective_first_values_limit(arg: Option<usize>, env_name: &str) -> Option<usize> {
+    requested_first_values_limit(arg, env_name).map(|limit| limit.min(TRACE_FIRST_VALUES_MAX_LIMIT))
 }
 
 fn print_run_help() {
@@ -1336,9 +1345,10 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
             "cpp_status_before": capture_json(cpp_status_before.as_ref()),
             "first_values_limit_env": std::env::var("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT").ok(),
             "first_values_limit_arg": args.first_values_limit,
-            "first_values_limit_effective": args
-                .first_values_limit
-                .or_else(|| std::env::var("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT").ok().and_then(|value| value.parse().ok())),
+            "first_values_limit_effective": effective_first_values_limit(
+                args.first_values_limit,
+                "BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT",
+            ),
             "trace_layer": args.trace_layer,
         },
         "kernel_codegen": capture_json(codegen_capture.as_ref()),
@@ -1678,9 +1688,10 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "a770_trace_dir_prepare": a770_prepare,
             "first_values_limit_env": std::env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok(),
             "first_values_limit_arg": args.first_values_limit,
-            "first_values_limit_effective": args
-                .first_values_limit
-                .or_else(|| std::env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok().and_then(|value| value.parse().ok())),
+            "first_values_limit_effective": effective_first_values_limit(
+                args.first_values_limit,
+                "BITNET_TRACE_FIRST_VALUES_LIMIT",
+            ),
         },
         "cpu": cpu,
         "a770": a770,
@@ -29960,7 +29971,7 @@ mod tests {
             plan: dir.path().join("missing-plan.json"),
             sidecar: dir.path().join("sidecar.json"),
             trace_layer: None,
-            first_values_limit: None,
+            first_values_limit: Some(999_999),
             output: None,
             format: "json".to_string(),
         })
@@ -29970,6 +29981,8 @@ mod tests {
 
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/preflight/first_values_limit_arg"), Some(&json!(999999)));
+        assert_eq!(report.pointer("/preflight/first_values_limit_effective"), Some(&json!(262144)));
         assert!(reasons.contains(&json!("reference_root_missing")));
         assert!(reasons.contains(&json!("reference_layer_trace_patch_missing")));
         assert!(reasons.contains(&json!("reference_plan_missing")));
@@ -30129,7 +30142,7 @@ mod tests {
             skip_a770: true,
             diag_rmsnorm_f64_accum: true,
             trace_layer: Some(1),
-            first_values_limit: Some(124416),
+            first_values_limit: Some(999_999),
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -30140,11 +30153,11 @@ mod tests {
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(true)));
         assert_eq!(report.pointer("/inputs/trace_layer"), Some(&json!(1)));
-        assert_eq!(report.pointer("/inputs/first_values_limit"), Some(&json!(124416)));
+        assert_eq!(report.pointer("/inputs/first_values_limit"), Some(&json!(999999)));
         assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(true)));
         assert_eq!(report.pointer("/preflight/trace_layer"), Some(&json!(1)));
-        assert_eq!(report.pointer("/preflight/first_values_limit_arg"), Some(&json!(124416)));
-        assert_eq!(report.pointer("/preflight/first_values_limit_effective"), Some(&json!(124416)));
+        assert_eq!(report.pointer("/preflight/first_values_limit_arg"), Some(&json!(999999)));
+        assert_eq!(report.pointer("/preflight/first_values_limit_effective"), Some(&json!(262144)));
         assert_eq!(
             report.pointer("/preflight/diag_rmsnorm_f64_accum_env"),
             Some(&json!("BITNET_DIAG_RMSNORM_F64_ACCUM=1"))
