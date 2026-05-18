@@ -5933,3 +5933,63 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "BitNet QK256/I2_S behavior changed.",
 ]
+
+[[work_item]]
+id = "LNL258V-OV-QUAL-005"
+status = "pr_open"
+pr = 5526
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-005-generation-budget-sensitivity"
+head_sha = "c883b871f3829289404fe1c8a3741a3b860f17d9"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OV-QUAL-004"]
+acceptance = "Add a diagnostic OpenVINO GenAI generation-budget sensitivity probe for Lunar Lake dense SLM corpus-v2 exact-answer failures, rerun CPU/GPU/NPU candidate routes on normalized-match cases across smaller max-new-token budgets and the fixture budget, classify overgeneration-sensitive failures separately from true instruction-following misses, and preserve candidate-only GPU/NPU routing with no route promotion, speedup/power-advantage claim, acceleration claim, or BitNet QK256/I2_S behavior change."
+commands = [
+  "python -m py_compile scripts/openvino_genai_generation_budget_sensitivity.py",
+  "python -m py_compile scripts/openvino_genai_corpus_v2.py",
+  ".venv/Scripts/python.exe scripts/openvino_genai_generation_budget_sensitivity.py --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --devices CPU GPU.0 NPU --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json --created-utc 2026-05-18T07:00:00Z",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "scripts/openvino_genai_generation_budget_sensitivity.py",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/openvino_genai_corpus_v2.py",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+may_claim = [
+  "OpenVINO CPU/GPU/NPU normalized-match corpus-v2 failures are classified by generation-budget sensitivity.",
+  "The yes_no_clear_sky failure is fixture-budget overgeneration sensitive on CPU, GPU.0, and NPU because max_new_tokens=1 passes while the fixture max_new_tokens=8 fails.",
+  "The stop_token_one_word_done failure is not generation-budget sensitive on CPU, GPU.0, or NPU for the tested budgets.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]

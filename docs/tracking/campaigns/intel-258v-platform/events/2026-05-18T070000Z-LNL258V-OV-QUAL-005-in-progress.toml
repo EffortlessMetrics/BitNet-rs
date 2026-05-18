@@ -1,0 +1,21 @@
+timestamp = "2026-05-18T07:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OV-QUAL-005"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-005-generation-budget-sensitivity"
+summary = "Started OpenVINO GenAI generation-budget sensitivity diagnosis for exact-answer corpus-v2 failures."
+
+artifacts = [
+  "scripts/openvino_genai_generation_budget_sensitivity.py",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
+]
+
+notes = [
+  "The diagnostic reruns CPU, GPU.0, and NPU candidate routes on normalized-match corpus-v2 cases across smaller max-new-token budgets and the fixture budget.",
+  "The yes_no_clear_sky failure is overgeneration-sensitive: max_new_tokens=1 passes on CPU, GPU.0, and NPU while the fixture budget fails.",
+  "The stop_token_one_word_done failure remains a true instruction-following miss for the tested budgets on CPU, GPU.0, and NPU.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
