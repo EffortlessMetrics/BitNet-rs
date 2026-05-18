@@ -1,0 +1,439 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_slm_reference_vs_rust_comparison_v1",
+  "timestamp": "2026-05-18T11:20:43.621332+00:00",
+  "campaign": "apple-m4-inference-excellence",
+  "work_item": "M4-DENSE-REF-001",
+  "machine_id": "apple-m4-mac-mini",
+  "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "prompt_template": "qwen2.5",
+  "model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "family": "qwen",
+    "architecture": "qwen2",
+    "quantization": "Q4_K_M"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "authority": "gguf_metadata",
+    "pretokenizer_authority": "qwen2",
+    "strict": true
+  },
+  "corpus": {
+    "name": "apple-m4-slm-quality-determinism-v2",
+    "path": "ci/quality/apple-m4-slm-quality-corpus.yaml",
+    "case_count": 7,
+    "selected_case_count": 7
+  },
+  "reference_runner": {
+    "name": "llama-cli",
+    "path": "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli",
+    "version": "version: 3962 (1f86f058); built with Apple clang version 21.0.0 (clang-2100.0.123.102) for arm64-apple-darwin25.4.0",
+    "command_shape": "llama-cli -m <model.gguf> -p <qwen2.5-chatml-prompt> -n <max> -ngl 0 --threads 1 --threads-batch 1 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --repeat-penalty 1.1 --seed 42 -r <|im_end|>",
+    "runtime_api": "cpu",
+    "generated_token_ids_available": false,
+    "generated_token_ids_status": "not_exposed_by_reference_runner",
+    "sampler": {
+      "temperature": 0.0,
+      "top_k": 1,
+      "top_p": 1.0,
+      "min_p": 0.0,
+      "repeat_penalty": 1.1,
+      "seed": 42
+    },
+    "runtime_note": "Reference command sets -ngl 0 and reports offloaded 0 model layers. llama.cpp may initialize a Metal context, but no model layers are offloaded."
+  },
+  "rust_runner": {
+    "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1115Z/slm-reference-vs-rust/qwen2.5-0.5b-instruct-q4_k_m/rust-mac-validate.json",
+    "prompt_template": "qwen2.5",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false
+  },
+  "summary": {
+    "total": 7,
+    "comparable_cases": 7,
+    "text_matches": 0,
+    "text_mismatches": 7,
+    "mechanical_scoring_matches": 7,
+    "mechanical_scoring_deltas": 0,
+    "generated_token_id_comparable": 0,
+    "generated_token_id_matches": 0,
+    "generated_token_id_mismatches": 0,
+    "generated_token_id_unavailable": 7
+  },
+  "claim_boundary": {
+    "dense_slm_only": true,
+    "bitnet_evidence_used": false,
+    "reference_only_output_proves_rust": false,
+    "broad_quality_claim": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "speedup_claim": false
+  },
+  "cases": [
+    {
+      "case_id": "math_2_plus_2",
+      "task_family": "arithmetic_exact",
+      "prompt": {
+        "text": "What is 2+2? Answer briefly.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "a759fa78f8d34f36417322e8cfe564d507ea113c8379fd8b436e8d28f27724fe"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "2+2 equals 4. [end of text]",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "2+2 equals 4."
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "\n2+2 equals 4.<|im_end|>",
+        "generated_token_count": 9,
+        "generated_token_ids": [
+          198,
+          17,
+          10,
+          17,
+          16819,
+          220,
+          19,
+          13,
+          151645
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "2+2 equals 4."
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "capital_france",
+      "task_family": "fixed_table_qa",
+      "prompt": {
+        "text": "Name the capital of France.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "7b37a7e062ba8b8d9fd460b25ee04cf21d40e7cda9b25c51adeb5f07d153ab78"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "The capital of France is Paris. [end of text]",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "The capital of France is Paris."
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": " The capital of France is Paris.<|im_end|>",
+        "generated_token_count": 8,
+        "generated_token_ids": [
+          576,
+          6722,
+          315,
+          9625,
+          374,
+          12095,
+          13,
+          151645
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "The capital of France is Paris."
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "rust_sentence",
+      "task_family": "constrained_summary",
+      "prompt": {
+        "text": "Write one short sentence about Rust.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "4f152271c0af95045e5bea772ed91d125e11652756a1e5179213bb28bce5e739"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "Rust is an open-source, statically typed language that emphasizes safety and performance.",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "Rust is an open-source, statically typed language that emphasizes safety and performance."
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": " Rust is a programming language that was created by the Massachusetts Institute of Technology (MIT",
+        "generated_token_count": 16,
+        "generated_token_ids": [
+          33789,
+          374,
+          264,
+          15473,
+          4128,
+          429,
+          572,
+          3465,
+          553,
+          279,
+          21393,
+          9976,
+          315,
+          11791,
+          320,
+          18330
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "Rust is a programming language that was created by the Massachusetts Institute of Technology (MIT"
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "ready_instruction",
+      "task_family": "instruction_following_required_forbidden",
+      "prompt": {
+        "text": "In one short sentence, say that the system is ready.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "ae6b2bdbbf6353a229f0c3afe817347c3de8cd16327abdf028d193564ea7a0c9"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "The system is ready for use. [end of text]",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "The system is ready for use."
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "\nThe system is ready, as it has been configured and tested to meet the",
+        "generated_token_count": 16,
+        "generated_token_ids": [
+          198,
+          785,
+          1849,
+          374,
+          5527,
+          11,
+          438,
+          432,
+          702,
+          1012,
+          19755,
+          323,
+          12510,
+          311,
+          3367,
+          279
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "The system is ready, as it has been configured and tested to meet the"
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "answer_prefix_blue",
+      "task_family": "instruction_following_required_forbidden",
+      "prompt": {
+        "text": "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "7128b0d470b958af5e82eafec40bfd7daa5fbce7c81287b1b2011398605958fd"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "Answer: blue [end of text]",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "starts_with_any",
+          "normalized_text": "Answer: blue"
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": ": Answer: blue<|im_end|>",
+        "generated_token_count": 5,
+        "generated_token_ids": [
+          25,
+          21806,
+          25,
+          6303,
+          151645
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "starts_with_any",
+          "normalized_text": "Answer: blue"
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "summarize_rust_traits",
+      "task_family": "constrained_summary",
+      "prompt": {
+        "text": "Summarize in three words: Rust is fast, safe, and reliable.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "45d38d66fa39d68c63d890b1e1dc9bc33dee46dd5a6cc4034fcf7487b8ba3c7c"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "Rust is fast, safe, and reliable. [end of text]",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "Rust is fast, safe, and reliable."
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": ": Rust is a high-performance, safe, and reliable programming language. It's",
+        "generated_token_count": 16,
+        "generated_token_ids": [
+          25,
+          33789,
+          374,
+          264,
+          1550,
+          57474,
+          11,
+          6092,
+          11,
+          323,
+          14720,
+          15473,
+          4128,
+          13,
+          1084,
+          594
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "Rust is a high-performance, safe, and reliable programming language. It's"
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    },
+    {
+      "case_id": "rewrite_cache_sentence",
+      "task_family": "copy_edit_rewrite",
+      "prompt": {
+        "text": "Rewrite as a short plain sentence: The model cache is healthy.",
+        "template_family": "qwen2.5",
+        "rendered_sha256": "0f6260c4bc1c9f5120c635c04832b354397758454c2ba4fbda559bddd8c78825"
+      },
+      "reference": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": "The model cache is in good condition. [end of text]",
+        "generated_token_ids": null,
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "The model cache is in good condition."
+        }
+      },
+      "rust": {
+        "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "prompt_template": "qwen2.5",
+        "text": ": The model cache is in good condition.<|im_end|>",
+        "generated_token_count": 10,
+        "generated_token_ids": [
+          25,
+          576,
+          1614,
+          6500,
+          374,
+          304,
+          1661,
+          2971,
+          13,
+          151645
+        ],
+        "scoring": {
+          "passed": true,
+          "gate_kind": "contains_any",
+          "normalized_text": "The model cache is in good condition."
+        }
+      },
+      "comparison": {
+        "text_match": false,
+        "mechanical_scoring_match": true,
+        "generated_token_ids_status": "not_exposed_by_reference_runner",
+        "generated_token_ids_match": false
+      }
+    }
+  ]
+}
