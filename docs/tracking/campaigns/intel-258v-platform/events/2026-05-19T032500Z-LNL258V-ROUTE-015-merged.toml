@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T03:25:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-015"
+branch = "codex/lunar-lake/LNL258V-ROUTE-015-benchmark-qualified-advantage"
+pr = 5744
+head_sha = "13fba48c7947a16efdd76fcbf4d5098f525cde8a"
+merge_sha = "4e94f1a06bfa45f70d642e8c86fdf2d7c8f57f8b"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-015 after classifying benchmark-qualified latency evidence for OpenVINO candidate routes."
+
+notes = [
+  "OpenVINO GPU now records benchmark-qualified latency evidence for regression_tiny, ask_short, and ask_normal when profile quality, fallback, direct-token, timing, and CPU-baseline gates pass.",
+  "GPU and NPU routes remain candidate-only and unpromoted in the refreshed route-profile, benchmark, regression-v2, and operator-comparison artifacts.",
+  "The merge does not claim route promotion, speedup, power advantage, Arc/NPU acceleration, native OpenCL/NPU execution, or BitNet QK256/I2_S behavior change.",
+]
