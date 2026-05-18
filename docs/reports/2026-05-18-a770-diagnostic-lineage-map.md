@@ -61,6 +61,12 @@ merged into the same branch chain as selected-key score-input bucket source
 evidence. A follow-up queue refresh showed 153 open scoped PRs: 152 `a770/*`,
 0 `codex/*`, and 1 `claude/*`.
 
+Post-reopen repair note on 2026-05-18: the earlier bulk-close framing was
+reversed. A live refresh after reopening showed 157 open scoped PRs: 150
+`a770/*`, 6 `codex/*`, and 1 `claude/*`. The A770 diagnostic PRs are open
+content inventory until each one is audited by exact content, not age or branch
+distance.
+
 ## Disposition Rule
 
 Do not merge current A770 diagnostic probes directly into `main`.
@@ -98,6 +104,24 @@ Use them as source material for replacement PRs only when the replacement:
 | Attention score, softmax, and value-mix hypotheses | #4990-#5064, #5098-#5131, #5711 | Diagnostic localization of score input, value cache, probability, value mix, history, and selected query boundary rows. | Archive lineage first. Port no runtime math fix until contradictory hypotheses are reconciled against current `main`. |
 | Transient probe rows | Most one-off `diag-*history*`, `diag-*boundary*`, and selected-row probes in #4976-#5131 and #5711 | Local investigation evidence. | Audit for unique report/test/tool value. Close only after an exact successor, duplicate, or historical-only ledger entry is recorded. |
 | Draft AVX2 perf branch | #5092 | Possible QK256 AVX2 optimization. | Leave draft until parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
+
+## Post-Reopen Audit Guardrails
+
+The current default for reopened A770 diagnostic PRs is `keep open pending
+content audit`. A PR being old, stacked, or far behind `main` is not evidence
+that its content is obsolete.
+
+Read-only audit on 2026-05-18 found:
+
+| PRs | Finding | Next action |
+| --- | --- | --- |
+| #4774-#5131 | No exact-superseded group was proven. Many PRs preserve unique layer scope, trace infrastructure, report shape, or diagnostic evidence. | Keep open while replacement PRs are built; do not close by range. |
+| #4751-#4770, #4801, #4837, #4845, #4850, #4853, #4855, #4883, #4885, #4892, #4959, #4961, #5010, #5012, #5020 | Runtime, loader, tokenizer, QK256, embedding, attention, CLI, and proof candidates may still contain useful invariants. | Audit against current `main`; port smallest confirmed fixes with direct tests. |
+| #5730, #5731 | Exact duplicate docs/specs pair by stable patch-id. | Keep one survivor after rebase; only then close the duplicate with the kept PR named. |
+
+No diagnostic PR should be closed as "historical evidence" unless this map or a
+successor ledger names the exact report, test, or behavior that preserves its
+useful content and confirms there is no unique content left to port.
 
 ## Immediate Queue Decisions
 
