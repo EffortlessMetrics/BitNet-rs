@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_qwen_cpu_corpus_v2_diagnosis",
   "proof_stage": "corpus_v2_failures_classified_no_inference",
-  "created_utc": "2026-05-18T11:05:59Z",
+  "created_utc": "2026-05-18T12:55:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
@@ -17,21 +17,18 @@
   "fallback_used": false,
   "quality_summary": {
     "total": 12,
-    "passed": 10,
-    "failed": 2,
+    "passed": 11,
+    "failed": 1,
     "timeout": 0,
     "not_run": 0,
     "failed_profiles": [
-      "decode_heavy",
       "regression_tiny"
     ],
     "failed_categories": [
-      "decode_heavy",
       "stop_and_eos"
     ],
     "failure_classes": {
-      "answer_gate_mismatch": 1,
-      "case_sensitive_required_keyword_mismatch": 1
+      "answer_gate_mismatch": 1
     }
   },
   "profile_diagnoses": [
@@ -62,12 +59,10 @@
     {
       "profile_id": "decode_heavy",
       "total": 1,
-      "passed": 0,
-      "failed": 1,
+      "passed": 1,
+      "failed": 0,
       "blocked": true,
-      "failed_case_ids": [
-        "decode_heavy_short_list"
-      ],
+      "failed_case_ids": [],
       "route_profile_status": "candidate_only",
       "route_blockers": [
         "decode_heavy has no promoted route; candidate evidence is indexed without promotion",
@@ -113,9 +108,10 @@
       "failed_case_ids": [
         "stop_token_one_word_done"
       ],
-      "route_profile_status": "promoted_route_ready",
+      "route_profile_status": "promoted_route_blocked",
       "route_blockers": [
-        "dense_slm_default_cpu remains promoted for regression_tiny"
+        "corpus_v2 profile regression_tiny has 1 quality failures",
+        "dense_slm_default_cpu is listed as promoted for regression_tiny, but profile evidence is incomplete"
       ]
     },
     {
@@ -159,43 +155,15 @@
       "fallback_used": false,
       "classification": "answer_gate_mismatch",
       "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
-    },
-    {
-      "id": "decode_heavy_short_list",
-      "profile": "decode_heavy",
-      "category": "decode_heavy",
-      "task_family": "decode_heavy",
-      "status": "quality_failed",
-      "gate_kind": "readable",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "scoring_required_keywords"
-      ],
-      "failure_taxonomy": [
-        "answer_content"
-      ],
-      "missing_required_keywords": [
-        "fallback"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "1. Check for local inference route fallbacks\n2. Verify model compatibility with local environment\n3. Ensure reliable data sources are available locally\n4. Confirm that the model is trained on a compatible dataset \n5. Validate the accuracy o...",
-      "generated_tokens": 64,
-      "prompt_tokens": 51,
-      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/decode_heavy_short_list.json",
-      "fallback_used": false,
-      "classification": "case_sensitive_required_keyword_mismatch",
-      "recommended_fix": "The output contains the required term only with different casing; review whether the corpus gate should normalize case before rerunning."
     }
   ],
   "route_blocked": true,
   "blocker_summary": [
-    "2 of 12 corpus-v2 cases failed across profiles [decode_heavy, regression_tiny]",
-    "1 failed case(s) classified as answer_gate_mismatch",
-    "1 failed case(s) classified as case_sensitive_required_keyword_mismatch"
+    "1 of 12 corpus-v2 cases failed across profiles [regression_tiny]",
+    "1 failed case(s) classified as answer_gate_mismatch"
   ],
   "recommended_next_actions": [
-    "Keep dense_slm_default_cpu blocked for affected corpus-v2 profiles until failed cases rerun cleanly.",
-    "Review corpus case-sensitivity versus model output casing before interpreting required-keyword misses as true answer failures."
+    "Keep dense_slm_default_cpu blocked for affected corpus-v2 profiles until failed cases rerun cleanly."
   ],
   "diagnosis_ready": true,
   "gaps": [],
