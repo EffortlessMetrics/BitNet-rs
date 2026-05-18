@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T15:26:49Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-012"
+event = "merged"
+actor = "codex"
+pr = 5703
+head_sha = "2a47c7093d4e80192c4e98e6d54e1669986a3e4e"
+merge_sha = "1fde4024df7d93ae03bf8382b735a93abca5ee2a"
+branch = "codex/lunar-lake/LNL258V-ROUTE-012-advantage-context"
+summary = "Merged LNL258V-ROUTE-012 after adding diagnostic route advantage context to Lunar Lake route-profile and cold/warm benchmark receipts."
+notes = [
+  "PR #5703 preserved no new inference, route promotion, speedup, power advantage, acceleration, native OpenCL/NPU, or BitNet QK256/I2_S claim.",
+]
