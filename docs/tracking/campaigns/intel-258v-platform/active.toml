@@ -8139,6 +8139,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-OP-007"
 status = "in_progress"
+pr = 5767
+head_sha = "39275bb4628f9f52f1b86519b866b1bd12ac08fc"
 branch = "codex/lunar-lake/LNL258V-OP-007-openvino-ask-dispatch"
 stackable = false
 review_mode = "codex_premerge"
