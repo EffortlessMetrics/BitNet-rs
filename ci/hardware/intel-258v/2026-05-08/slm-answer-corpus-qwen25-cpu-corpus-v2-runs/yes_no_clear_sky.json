@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 11651,
-    "decode_first_ms": 11651,
-    "total_ms": 11653
+    "cmd_to_first_ms": 11426,
+    "decode_first_ms": 11426,
+    "total_ms": 11427
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,41 +270,41 @@
     "decode": {
       "embed_ms": {
         "count": 1,
-        "max_ms": 0.029,
-        "mean_ms": 0.029,
-        "min_ms": 0.029,
-        "p50_ms": 0.029,
-        "p95_ms": 0.029,
-        "total_ms": 0.029
+        "max_ms": 0.034,
+        "mean_ms": 0.034,
+        "min_ms": 0.034,
+        "p50_ms": 0.034,
+        "p95_ms": 0.034,
+        "total_ms": 0.034
       },
-      "first_token_decode_ms": 341.677,
+      "first_token_decode_ms": 336.836,
       "forward_ms": {
         "count": 1,
-        "max_ms": 248.628,
-        "mean_ms": 248.628,
-        "min_ms": 248.628,
-        "p50_ms": 248.628,
-        "p95_ms": 248.628,
-        "total_ms": 248.628
+        "max_ms": 244.047,
+        "mean_ms": 244.047,
+        "min_ms": 244.047,
+        "p50_ms": 244.047,
+        "p95_ms": 244.047,
+        "total_ms": 244.047
       },
       "generated_tokens": 1,
       "logits_ms": {
         "count": 1,
-        "max_ms": 82.995,
-        "mean_ms": 82.995,
-        "min_ms": 82.995,
-        "p50_ms": 82.995,
-        "p95_ms": 82.995,
-        "total_ms": 82.995
+        "max_ms": 83.098,
+        "mean_ms": 83.098,
+        "min_ms": 83.098,
+        "p50_ms": 83.098,
+        "p95_ms": 83.098,
+        "total_ms": 83.098
       },
       "per_token_ms": {
         "count": 1,
-        "max_ms": 341.677,
-        "mean_ms": 341.677,
-        "min_ms": 341.677,
-        "p50_ms": 341.677,
-        "p95_ms": 341.677,
-        "total_ms": 341.677
+        "max_ms": 336.836,
+        "mean_ms": 336.836,
+        "min_ms": 336.836,
+        "p50_ms": 336.836,
+        "p95_ms": 336.836,
+        "total_ms": 336.836
       },
       "sample_ms": {
         "count": 1,
@@ -328,24 +328,24 @@
       "steady_state_tokens": 0,
       "token_decode_ms": {
         "count": 1,
-        "max_ms": 0.122,
-        "mean_ms": 0.122,
-        "min_ms": 0.122,
-        "p50_ms": 0.122,
-        "p95_ms": 0.122,
-        "total_ms": 0.122
+        "max_ms": 0.075,
+        "mean_ms": 0.075,
+        "min_ms": 0.075,
+        "p50_ms": 0.075,
+        "p95_ms": 0.075,
+        "total_ms": 0.075
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13263.527,
+    "model_load_ms": 13530.885,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 11309.958,
+      "ms": 11088.537,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -357,9 +357,9 @@
       },
       "tokens": 48
     },
-    "prompt_tokenize_ms": 577.74,
+    "prompt_tokenize_ms": 456.269,
     "requested": false,
-    "tokenizer_load_ms": 579.423
+    "tokenizer_load_ms": 574.931
   },
   "prompt": "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?",
   "prompt_generation_identity": {
@@ -480,7 +480,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 1,
-    "decode_tps": 0.08581481163648845,
+    "decode_tps": 0.08751203290452438,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -500,22 +500,22 @@
   "text": "Yes",
   "throughput": {
     "decoded_tokens": 1,
-    "tokens_per_second": 0.08581481163648845
+    "tokens_per_second": 0.08751203290452438
   },
-  "timestamp": "2026-05-18T12:55:07.677122600+00:00",
+  "timestamp": "2026-05-18T13:33:23.709328700+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
     "decode_steady_state_tok_s": null,
-    "decode_total_ms": 341.677,
+    "decode_total_ms": 336.836,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 341.677,
-    "first_token_ms": 11651,
+    "first_token_decode_ms": 336.836,
+    "first_token_ms": 11426,
     "host_to_device_bytes": null,
-    "model_load_ms": 13263.527,
-    "prefill_ms": 11309.958,
+    "model_load_ms": 13530.885,
+    "prefill_ms": 11088.537,
     "sampling_ms_per_token": 1.993,
-    "tokenize_ms": 577.74,
-    "tokenizer_load_ms": 579.423
+    "tokenize_ms": 456.269,
+    "tokenizer_load_ms": 574.931
   },
   "tokenizer": {
     "bos": 151643,

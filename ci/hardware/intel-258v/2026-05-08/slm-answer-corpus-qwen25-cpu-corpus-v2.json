@@ -24,9 +24,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9211,
-        "decode_first_ms": 9211,
-        "total_ms": 11491
+        "cmd_to_first_ms": 9148,
+        "decode_first_ms": 9148,
+        "total_ms": 11447
       },
       "loader": {
         "mode": "real_gguf"
@@ -212,21 +212,21 @@
       "task_family": "math",
       "throughput": {
         "decoded_tokens": 8,
-        "tokens_per_second": 0.6961970237577234
+        "tokens_per_second": 0.6988730671791736
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.073,
-        "decode_total_ms": 2606.604,
+        "decode_steady_state_tok_s": 3.049,
+        "decode_total_ms": 2631.181,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 328.685,
-        "first_token_ms": 9211,
+        "first_token_decode_ms": 335.043,
+        "first_token_ms": 9148,
         "host_to_device_bytes": null,
-        "model_load_ms": 13667.007,
-        "prefill_ms": 8882.117,
-        "sampling_ms_per_token": 2.07,
-        "tokenize_ms": 469.272,
-        "tokenizer_load_ms": 631.324
+        "model_load_ms": 13586.519,
+        "prefill_ms": 8812.728,
+        "sampling_ms_per_token": 2.175,
+        "tokenize_ms": 495.206,
+        "tokenizer_load_ms": 607.128
       },
       "token_ids": {
         "generated": [
@@ -370,9 +370,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9647,
-        "decode_first_ms": 9647,
-        "total_ms": 12209
+        "cmd_to_first_ms": 9750,
+        "decode_first_ms": 9750,
+        "total_ms": 12426
       },
       "loader": {
         "mode": "real_gguf"
@@ -559,21 +559,21 @@
       "task_family": "math",
       "throughput": {
         "decoded_tokens": 9,
-        "tokens_per_second": 0.7371611106560734
+        "tokens_per_second": 0.724287783679382
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.123,
-        "decode_total_ms": 2902.44,
+        "decode_steady_state_tok_s": 2.992,
+        "decode_total_ms": 3007.137,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 341.042,
-        "first_token_ms": 9647,
+        "first_token_decode_ms": 332.987,
+        "first_token_ms": 9750,
         "host_to_device_bytes": null,
-        "model_load_ms": 13432.827,
-        "prefill_ms": 9305.053,
-        "sampling_ms_per_token": 2.273,
-        "tokenize_ms": 567.371,
-        "tokenizer_load_ms": 606.237
+        "model_load_ms": 13258.312,
+        "prefill_ms": 9416.428,
+        "sampling_ms_per_token": 2.332,
+        "tokenize_ms": 468.233,
+        "tokenizer_load_ms": 582.934
       },
       "token_ids": {
         "generated": [
@@ -724,9 +724,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9578,
-        "decode_first_ms": 9578,
-        "total_ms": 10576
+        "cmd_to_first_ms": 9607,
+        "decode_first_ms": 9607,
+        "total_ms": 10578
       },
       "loader": {
         "mode": "real_gguf"
@@ -907,21 +907,21 @@
       "task_family": "copy_exact",
       "throughput": {
         "decoded_tokens": 4,
-        "tokens_per_second": 0.37821482602118
+        "tokens_per_second": 0.37814331631688414
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.011,
-        "decode_total_ms": 1322.183,
+        "decode_steady_state_tok_s": 3.094,
+        "decode_total_ms": 1305.537,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 325.802,
-        "first_token_ms": 9578,
+        "first_token_decode_ms": 335.83,
+        "first_token_ms": 9607,
         "host_to_device_bytes": null,
-        "model_load_ms": 13311.83,
-        "prefill_ms": 9251.754,
-        "sampling_ms_per_token": 2.173,
-        "tokenize_ms": 452.842,
-        "tokenizer_load_ms": 572.286
+        "model_load_ms": 13447.958,
+        "prefill_ms": 9268.675,
+        "sampling_ms_per_token": 2.447,
+        "tokenize_ms": 504.494,
+        "tokenizer_load_ms": 584.939
       },
       "token_ids": {
         "generated": [
@@ -1057,9 +1057,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 11651,
-        "decode_first_ms": 11651,
-        "total_ms": 11653
+        "cmd_to_first_ms": 11426,
+        "decode_first_ms": 11426,
+        "total_ms": 11427
       },
       "loader": {
         "mode": "real_gguf"
@@ -1238,21 +1238,21 @@
       "task_family": "yes_no",
       "throughput": {
         "decoded_tokens": 1,
-        "tokens_per_second": 0.08581481163648845
+        "tokens_per_second": 0.08751203290452438
       },
       "timing": {
         "cuda_kernel_time_ms": null,
         "decode_steady_state_tok_s": null,
-        "decode_total_ms": 341.677,
+        "decode_total_ms": 336.836,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 341.677,
-        "first_token_ms": 11651,
+        "first_token_decode_ms": 336.836,
+        "first_token_ms": 11426,
         "host_to_device_bytes": null,
-        "model_load_ms": 13263.527,
-        "prefill_ms": 11309.958,
+        "model_load_ms": 13530.885,
+        "prefill_ms": 11088.537,
         "sampling_ms_per_token": 1.993,
-        "tokenize_ms": 577.74,
-        "tokenizer_load_ms": 579.423
+        "tokenize_ms": 456.269,
+        "tokenizer_load_ms": 574.931
       },
       "token_ids": {
         "generated": [
@@ -1395,9 +1395,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 8352,
-        "decode_first_ms": 8352,
-        "total_ms": 10699
+        "cmd_to_first_ms": 8245,
+        "decode_first_ms": 8245,
+        "total_ms": 10533
       },
       "loader": {
         "mode": "real_gguf"
@@ -1582,21 +1582,21 @@
       "task_family": "short_factual",
       "throughput": {
         "decoded_tokens": 8,
-        "tokens_per_second": 0.7477334330311244
+        "tokens_per_second": 0.7595177062565271
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.985,
-        "decode_total_ms": 2709.984,
+        "decode_steady_state_tok_s": 3.061,
+        "decode_total_ms": 2620.729,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 364.561,
-        "first_token_ms": 8352,
+        "first_token_decode_ms": 333.988,
+        "first_token_ms": 8245,
         "host_to_device_bytes": null,
-        "model_load_ms": 13379.17,
-        "prefill_ms": 7986.772,
-        "sampling_ms_per_token": 2.181,
-        "tokenize_ms": 525.929,
-        "tokenizer_load_ms": 615.448
+        "model_load_ms": 13179.054,
+        "prefill_ms": 7909.953,
+        "sampling_ms_per_token": 2.375,
+        "tokenize_ms": 490.935,
+        "tokenizer_load_ms": 599.741
       },
       "token_ids": {
         "generated": [
@@ -1732,9 +1732,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 8470,
-        "decode_first_ms": 8470,
-        "total_ms": 16085
+        "cmd_to_first_ms": 8486,
+        "decode_first_ms": 8486,
+        "total_ms": 16093
       },
       "loader": {
         "mode": "real_gguf"
@@ -1935,21 +1935,21 @@
       "task_family": "instruction_following",
       "throughput": {
         "decoded_tokens": 24,
-        "tokens_per_second": 1.4920733602735468
+        "tokens_per_second": 1.4913316348723047
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.021,
-        "decode_total_ms": 7947.461,
+        "decode_steady_state_tok_s": 3.024,
+        "decode_total_ms": 7950.139,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 334.649,
-        "first_token_ms": 8470,
+        "first_token_decode_ms": 345.033,
+        "first_token_ms": 8486,
         "host_to_device_bytes": null,
-        "model_load_ms": 13192.346,
-        "prefill_ms": 8135.216,
-        "sampling_ms_per_token": 2.242,
-        "tokenize_ms": 530.969,
-        "tokenizer_load_ms": 593.964
+        "model_load_ms": 13560.922,
+        "prefill_ms": 8140.267,
+        "sampling_ms_per_token": 2.321,
+        "tokenize_ms": 425.15,
+        "tokenizer_load_ms": 584.847
       },
       "token_ids": {
         "generated": [
@@ -2135,9 +2135,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 8801,
-        "decode_first_ms": 8801,
-        "total_ms": 9135
+        "cmd_to_first_ms": 8999,
+        "decode_first_ms": 8999,
+        "total_ms": 9335
       },
       "loader": {
         "mode": "real_gguf"
@@ -2317,21 +2317,21 @@
       "task_family": "stop_and_eos",
       "throughput": {
         "decoded_tokens": 2,
-        "tokens_per_second": 0.21893814997263272
+        "tokens_per_second": 0.2142474558114622
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.006,
-        "decode_total_ms": 669.022,
+        "decode_steady_state_tok_s": 2.992,
+        "decode_total_ms": 678.469,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 336.377,
-        "first_token_ms": 8801,
+        "first_token_decode_ms": 344.209,
+        "first_token_ms": 8999,
         "host_to_device_bytes": null,
-        "model_load_ms": 13401.848,
-        "prefill_ms": 8464.336,
-        "sampling_ms_per_token": 2.104,
-        "tokenize_ms": 524.521,
-        "tokenizer_load_ms": 688.805
+        "model_load_ms": 13335.209,
+        "prefill_ms": 8655.119,
+        "sampling_ms_per_token": 2.148,
+        "tokenize_ms": 398.029,
+        "tokenizer_load_ms": 579.376
       },
       "token_ids": {
         "generated": [
@@ -2455,9 +2455,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 14120,
-        "decode_first_ms": 14120,
-        "total_ms": 14446
+        "cmd_to_first_ms": 14741,
+        "decode_first_ms": 14741,
+        "total_ms": 15075
       },
       "loader": {
         "mode": "real_gguf"
@@ -2636,21 +2636,21 @@
       "task_family": "prompt_history_sensitivity",
       "throughput": {
         "decoded_tokens": 2,
-        "tokens_per_second": 0.13844662882458814
+        "tokens_per_second": 0.13266998341625208
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.082,
-        "decode_total_ms": 657.228,
+        "decode_steady_state_tok_s": 3.002,
+        "decode_total_ms": 698.598,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 332.79,
-        "first_token_ms": 14120,
+        "first_token_decode_ms": 365.48,
+        "first_token_ms": 14741,
         "host_to_device_bytes": null,
-        "model_load_ms": 13322.075,
-        "prefill_ms": 13787.162,
-        "sampling_ms_per_token": 2.19,
-        "tokenize_ms": 482.946,
-        "tokenizer_load_ms": 576.089
+        "model_load_ms": 13311.174,
+        "prefill_ms": 14374.959,
+        "sampling_ms_per_token": 2.215,
+        "tokenize_ms": 418.201,
+        "tokenizer_load_ms": 475.686
       },
       "token_ids": {
         "generated": [
@@ -2820,9 +2820,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 10321,
-        "decode_first_ms": 10321,
-        "total_ms": 16974
+        "cmd_to_first_ms": 10392,
+        "decode_first_ms": 10392,
+        "total_ms": 16935
       },
       "loader": {
         "mode": "real_gguf"
@@ -3020,21 +3020,21 @@
       "task_family": "structured_output",
       "throughput": {
         "decoded_tokens": 21,
-        "tokens_per_second": 1.237186284906327
+        "tokens_per_second": 1.2400354295837024
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.008,
-        "decode_total_ms": 6973.542,
+        "decode_steady_state_tok_s": 3.057,
+        "decode_total_ms": 6871.641,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 324.695,
-        "first_token_ms": 10321,
+        "first_token_decode_ms": 330.258,
+        "first_token_ms": 10392,
         "host_to_device_bytes": null,
-        "model_load_ms": 13392.102,
-        "prefill_ms": 9995.481,
-        "sampling_ms_per_token": 2.163,
-        "tokenize_ms": 505.46,
-        "tokenizer_load_ms": 583.552
+        "model_load_ms": 13496.164,
+        "prefill_ms": 10061.073,
+        "sampling_ms_per_token": 2.292,
+        "tokenize_ms": 428.398,
+        "tokenizer_load_ms": 600.066
       },
       "token_ids": {
         "generated": [
@@ -3212,7 +3212,7 @@
       }
     },
     {
-      "answer": "Lunar Lake prioritizes OpenVINO GPU and NPU over Qwen CPU for efficient inference tasks, while BitNet CPU remains the standard reference path.<|im_end|>",
+      "answer": "Lunar Lake prioritizes Qwen CPU over other candidate routes, focusing on open-source libraries like OpenVINO for profile timings and fallback-free execution.<|im_end|>",
       "backend": {
         "fallback_used": false,
         "requested_backend": "cpu",
@@ -3227,9 +3227,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 20612,
-        "decode_first_ms": 20612,
-        "total_ms": 30832
+        "cmd_to_first_ms": 23200,
+        "decode_first_ms": 23200,
+        "total_ms": 33207
       },
       "loader": {
         "mode": "real_gguf"
@@ -3254,15 +3254,15 @@
         "vocab_size": 151936
       },
       "position": {
-        "next_decode_position": 88
+        "next_decode_position": 98
       },
       "profile": "prefill_heavy",
       "prompt": {
         "add_bos": false,
         "add_special": true,
         "qwen_no_think": false,
-        "rendered_sha256": "18faf7acfda6eee989fc98ba30c9ade35f1ca8e026536b8d5543a7108406f388",
-        "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nRead this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
+        "rendered_sha256": "7d75b1d90fd412637083b949dd60fd019b35b39760ac8574af6bdaff821d0d5c",
+        "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nSummarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
         "template_family": "qwen2.5"
       },
       "prompt_generation_identity": {
@@ -3314,11 +3314,11 @@
         }
       },
       "prompt_prefill": {
-        "decode_start_position": 88,
+        "decode_start_position": 98,
         "executed": true,
         "exercised": true,
         "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-        "prompt_token_count": 88,
+        "prompt_token_count": 98,
         "source": "run_receipt_profile"
       },
       "prompt_template": "qwen2.5",
@@ -3337,7 +3337,7 @@
         "failure_category_labels": [],
         "failure_taxonomy": [],
         "gate_kind": "contains_any",
-        "generated_tokens": 32,
+        "generated_tokens": 31,
         "min_distinct_generated_tokens": 2,
         "min_generated_tokens": 1,
         "mostly_text": true,
@@ -3364,11 +3364,11 @@
           "failure_category_labels": [],
           "failure_taxonomy": [],
           "kind": "required_keywords",
-          "normalized_answer": "Lunar Lake prioritizes OpenVINO GPU and NPU over Qwen CPU for efficient inference tasks, while BitNet CPU remains the standard reference path.",
+          "normalized_answer": "Lunar Lake prioritizes Qwen CPU over other candidate routes, focusing on open-source libraries like OpenVINO for profile timings and fallback-free execution.",
           "passed": true
         }
       },
-      "question": "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
+      "question": "Summarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
       "reference_comparison": {
         "comparison": {
           "comparable_fields": [],
@@ -3397,38 +3397,37 @@
             11678,
             44677,
             4756,
-            5264,
-            53,
-            47975,
-            22670,
-            323,
-            451,
-            6325,
-            916,
             1207,
             16948,
             13940,
-            369,
-            11050,
-            44378,
-            9079,
+            916,
+            1008,
+            9144,
+            11291,
             11,
-            1393,
-            6495,
-            6954,
-            13940,
-            8458,
-            279,
-            5297,
-            5785,
-            1815,
+            21080,
+            389,
+            1787,
+            30774,
+            20186,
+            1075,
+            5264,
+            53,
+            47975,
+            369,
+            5526,
+            84798,
+            323,
+            32772,
+            12577,
+            11320,
             13,
             151645
           ],
           "runtime_api": "cpu",
           "selected_backend": "cpu-rust",
           "status": "available",
-          "text": "Lunar Lake prioritizes OpenVINO GPU and NPU over Qwen CPU for efficient inference tasks, while BitNet CPU remains the standard reference path.<|im_end|>"
+          "text": "Lunar Lake prioritizes Qwen CPU over other candidate routes, focusing on open-source libraries like OpenVINO for profile timings and fallback-free execution.<|im_end|>"
         },
         "schema": "bitnet_reference_vs_rust_v1"
       },
@@ -3437,22 +3436,22 @@
       "status": "passed",
       "task_family": "long_prompt_summarization",
       "throughput": {
-        "decoded_tokens": 32,
-        "tokens_per_second": 1.0378827192527245
+        "decoded_tokens": 31,
+        "tokens_per_second": 0.9335381094347576
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.034,
-        "decode_total_ms": 10567.311,
+        "decode_steady_state_tok_s": 2.998,
+        "decode_total_ms": 10345.771,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 348.76,
-        "first_token_ms": 20612,
+        "first_token_decode_ms": 340.697,
+        "first_token_ms": 23200,
         "host_to_device_bytes": null,
-        "model_load_ms": 13189.486,
-        "prefill_ms": 20261.86,
-        "sampling_ms_per_token": 2.199,
-        "tokenize_ms": 581.777,
-        "tokenizer_load_ms": 629.14
+        "model_load_ms": 13604.439,
+        "prefill_ms": 22858.59,
+        "sampling_ms_per_token": 2.223,
+        "tokenize_ms": 585.022,
+        "tokenizer_load_ms": 649.976
       },
       "token_ids": {
         "generated": [
@@ -3461,31 +3460,30 @@
           11678,
           44677,
           4756,
-          5264,
-          53,
-          47975,
-          22670,
-          323,
-          451,
-          6325,
-          916,
           1207,
           16948,
           13940,
-          369,
-          11050,
-          44378,
-          9079,
+          916,
+          1008,
+          9144,
+          11291,
           11,
-          1393,
-          6495,
-          6954,
-          13940,
-          8458,
-          279,
-          5297,
-          5785,
-          1815,
+          21080,
+          389,
+          1787,
+          30774,
+          20186,
+          1075,
+          5264,
+          53,
+          47975,
+          369,
+          5526,
+          84798,
+          323,
+          32772,
+          12577,
+          11320,
           13,
           151645
         ],
@@ -3514,17 +3512,27 @@
           151644,
           872,
           198,
-          4418,
+          9190,
+          5612,
+          551,
           419,
-          2805,
           4842,
           5185,
-          323,
-          62079,
-          432,
           304,
           825,
           11652,
+          11,
+          323,
+          2924,
+          279,
+          4734,
+          4244,
+          78095,
+          11,
+          13940,
+          11,
+          323,
+          6021,
           25,
           78095,
           11678,
@@ -3587,38 +3595,37 @@
         "strict": true
       },
       "tokens": {
-        "generated": 32,
+        "generated": 31,
         "generated_ids": [
           43,
           84992,
           11678,
           44677,
           4756,
-          5264,
-          53,
-          47975,
-          22670,
-          323,
-          451,
-          6325,
-          916,
           1207,
           16948,
           13940,
-          369,
-          11050,
-          44378,
-          9079,
+          916,
+          1008,
+          9144,
+          11291,
           11,
-          1393,
-          6495,
-          6954,
-          13940,
-          8458,
-          279,
-          5297,
-          5785,
-          1815,
+          21080,
+          389,
+          1787,
+          30774,
+          20186,
+          1075,
+          5264,
+          53,
+          47975,
+          369,
+          5526,
+          84798,
+          323,
+          32772,
+          12577,
+          11320,
           13,
           151645
         ],
@@ -3628,35 +3635,34 @@
           11678,
           44677,
           4756,
-          5264,
-          53,
-          47975,
-          22670,
-          323,
-          451,
-          6325,
-          916,
           1207,
           16948,
           13940,
-          369,
-          11050,
-          44378,
-          9079,
+          916,
+          1008,
+          9144,
+          11291,
           11,
-          1393,
-          6495,
-          6954,
-          13940,
-          8458,
-          279,
-          5297,
-          5785,
-          1815,
+          21080,
+          389,
+          1787,
+          30774,
+          20186,
+          1075,
+          5264,
+          53,
+          47975,
+          369,
+          5526,
+          84798,
+          323,
+          32772,
+          12577,
+          11320,
           13,
           151645
         ],
-        "prompt": 88,
+        "prompt": 98,
         "prompt_ids": [
           151644,
           8948,
@@ -3682,17 +3688,27 @@
           151644,
           872,
           198,
-          4418,
+          9190,
+          5612,
+          551,
           419,
-          2805,
           4842,
           5185,
-          323,
-          62079,
-          432,
           304,
           825,
           11652,
+          11,
+          323,
+          2924,
+          279,
+          4734,
+          4244,
+          78095,
+          11,
+          13940,
+          11,
+          323,
+          6021,
           25,
           78095,
           11678,
@@ -3747,7 +3763,7 @@
           77091,
           198
         ],
-        "total": 120
+        "total": 129
       }
     },
     {
@@ -3766,9 +3782,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 11933,
-        "decode_first_ms": 11933,
-        "total_ms": 12593
+        "cmd_to_first_ms": 11977,
+        "decode_first_ms": 11977,
+        "total_ms": 12638
       },
       "loader": {
         "mode": "real_gguf"
@@ -3948,21 +3964,21 @@
       "task_family": "short_reasoning",
       "throughput": {
         "decoded_tokens": 3,
-        "tokens_per_second": 0.23822758675454617
+        "tokens_per_second": 0.23737933217281215
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.038,
-        "decode_total_ms": 994.963,
+        "decode_steady_state_tok_s": 3.031,
+        "decode_total_ms": 996.967,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 336.543,
-        "first_token_ms": 11933,
+        "first_token_decode_ms": 337.185,
+        "first_token_ms": 11977,
         "host_to_device_bytes": null,
-        "model_load_ms": 13067.064,
-        "prefill_ms": 11596.255,
-        "sampling_ms_per_token": 2.058,
-        "tokenize_ms": 590.676,
-        "tokenizer_load_ms": 622.446
+        "model_load_ms": 13170.095,
+        "prefill_ms": 11639.727,
+        "sampling_ms_per_token": 2.22,
+        "tokenize_ms": 426.871,
+        "tokenizer_load_ms": 643.319
       },
       "token_ids": {
         "generated": [
@@ -4100,7 +4116,7 @@
       }
     },
     {
-      "answer": "1. Check for local inference route fallbacks\n2. Verify model compatibility with local environment\n3. Ensure reliable data sources are available locally\n4. Confirm that the model is trained on a compatible dataset \n5. Validate the accuracy of predictions in your application's context \n6. Test the performance of your inference process",
+      "answer": "Fallback check, model check, tokenizer check, route reason, timing receipt.<|im_end|>",
       "backend": {
         "fallback_used": false,
         "requested_backend": "cpu",
@@ -4115,9 +4131,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 11912,
-        "decode_first_ms": 11912,
-        "total_ms": 32762
+        "cmd_to_first_ms": 13524,
+        "decode_first_ms": 13524,
+        "total_ms": 18549
       },
       "loader": {
         "mode": "real_gguf"
@@ -4142,15 +4158,15 @@
         "vocab_size": 151936
       },
       "position": {
-        "next_decode_position": 51
+        "next_decode_position": 57
       },
       "profile": "decode_heavy",
       "prompt": {
         "add_bos": false,
         "add_special": true,
         "qwen_no_think": false,
-        "rendered_sha256": "1218e23d76623e5dc614d609bfd6877e0e1d1dd50c7a6f466ee7c24f014a3cfa",
-        "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nList six local inference route checks and include the words fallback and model. Use short comma-separated phrases.<|im_end|>\n<|im_start|>assistant\n",
+        "rendered_sha256": "00f0ce18247cc9568b6a5f81a53bed70f28fd9f8f1e5cfa111f8bdea011e6622",
+        "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nUse these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.<|im_end|>\n<|im_start|>assistant\n",
         "template_family": "qwen2.5"
       },
       "prompt_generation_identity": {
@@ -4202,16 +4218,16 @@
         }
       },
       "prompt_prefill": {
-        "decode_start_position": 51,
+        "decode_start_position": 57,
         "executed": true,
         "exercised": true,
         "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-        "prompt_token_count": 51,
+        "prompt_token_count": 57,
         "source": "run_receipt_profile"
       },
       "prompt_template": "qwen2.5",
       "quality": {
-        "distinct_generated_tokens": 49,
+        "distinct_generated_tokens": 11,
         "failed_rules": [],
         "failure_categories": {
           "extraction": false,
@@ -4225,7 +4241,7 @@
         "failure_category_labels": [],
         "failure_taxonomy": [],
         "gate_kind": "readable",
-        "generated_tokens": 64,
+        "generated_tokens": 16,
         "min_distinct_generated_tokens": 2,
         "min_generated_tokens": 1,
         "mostly_text": true,
@@ -4252,11 +4268,11 @@
           "failure_category_labels": [],
           "failure_taxonomy": [],
           "kind": "required_keywords",
-          "normalized_answer": "1. Check for local inference route fallbacks 2. Verify model compatibility with local environment 3. Ensure reliable data sources are available locally 4. Confirm that the model is trained on a compatible dataset 5. Validate the accuracy of predictions in your application's context 6. Test the performance of your inference process",
+          "normalized_answer": "Fallback check, model check, tokenizer check, route reason, timing receipt.",
           "passed": true
         }
       },
-      "question": "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases.",
+      "question": "Use these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.",
       "reference_comparison": {
         "comparison": {
           "comparable_fields": [],
@@ -4280,75 +4296,27 @@
         "rust": {
           "fallback_used": false,
           "generated_token_ids": [
-            16,
-            13,
-            4248,
-            369,
-            2205,
-            44378,
+            87206,
+            1779,
+            11,
+            1614,
+            1779,
+            11,
+            45958,
+            1779,
+            11,
             6021,
-            32772,
-            82,
-            198,
-            17,
+            2874,
+            11,
+            18405,
+            22567,
             13,
-            25429,
-            1614,
-            24748,
-            448,
-            2205,
-            4573,
-            198,
-            18,
-            13,
-            29279,
-            14720,
-            821,
-            8173,
-            525,
-            2500,
-            23490,
-            198,
-            19,
-            13,
-            33563,
-            429,
-            279,
-            1614,
-            374,
-            16176,
-            389,
-            264,
-            18146,
-            10337,
-            715,
-            20,
-            13,
-            23282,
-            279,
-            13403,
-            315,
-            19898,
-            304,
-            697,
-            3766,
-            594,
-            2266,
-            715,
-            21,
-            13,
-            3393,
-            279,
-            5068,
-            315,
-            697,
-            44378,
-            1882
+            151645
           ],
           "runtime_api": "cpu",
           "selected_backend": "cpu-rust",
           "status": "available",
-          "text": "1. Check for local inference route fallbacks\n2. Verify model compatibility with local environment\n3. Ensure reliable data sources are available locally\n4. Confirm that the model is trained on a compatible dataset \n5. Validate the accuracy of predictions in your application's context \n6. Test the performance of your inference process"
+          "text": "Fallback check, model check, tokenizer check, route reason, timing receipt.<|im_end|>"
         },
         "schema": "bitnet_reference_vs_rust_v1"
       },
@@ -4357,89 +4325,41 @@
       "status": "passed",
       "task_family": "decode_heavy",
       "throughput": {
-        "decoded_tokens": 64,
-        "tokens_per_second": 1.9534826933642635
+        "decoded_tokens": 16,
+        "tokens_per_second": 0.8625801930023183
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.022,
-        "decode_total_ms": 21177.762,
+        "decode_steady_state_tok_s": 2.986,
+        "decode_total_ms": 5365.917,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 331.338,
-        "first_token_ms": 11912,
+        "first_token_decode_ms": 342.228,
+        "first_token_ms": 13524,
         "host_to_device_bytes": null,
-        "model_load_ms": 13334.847,
-        "prefill_ms": 11580.127,
-        "sampling_ms_per_token": 2.239,
-        "tokenize_ms": 446.593,
-        "tokenizer_load_ms": 565.809
+        "model_load_ms": 13535.355,
+        "prefill_ms": 13181.109,
+        "sampling_ms_per_token": 2.434,
+        "tokenize_ms": 484.047,
+        "tokenizer_load_ms": 646.141
       },
       "token_ids": {
         "generated": [
-          16,
-          13,
-          4248,
-          369,
-          2205,
-          44378,
+          87206,
+          1779,
+          11,
+          1614,
+          1779,
+          11,
+          45958,
+          1779,
+          11,
           6021,
-          32772,
-          82,
-          198,
-          17,
+          2874,
+          11,
+          18405,
+          22567,
           13,
-          25429,
-          1614,
-          24748,
-          448,
-          2205,
-          4573,
-          198,
-          18,
-          13,
-          29279,
-          14720,
-          821,
-          8173,
-          525,
-          2500,
-          23490,
-          198,
-          19,
-          13,
-          33563,
-          429,
-          279,
-          1614,
-          374,
-          16176,
-          389,
-          264,
-          18146,
-          10337,
-          715,
-          20,
-          13,
-          23282,
-          279,
-          13403,
-          315,
-          19898,
-          304,
-          697,
-          3766,
-          594,
-          2266,
-          715,
-          21,
-          13,
-          3393,
-          279,
-          5068,
-          315,
-          697,
-          44378,
-          1882
+          151645
         ],
         "prompt": [
           151644,
@@ -4466,27 +4386,33 @@
           151644,
           872,
           198,
-          852,
-          4743,
-          2205,
-          44378,
-          6021,
-          12341,
-          323,
-          2924,
-          279,
-          4244,
-          32772,
-          323,
-          1614,
-          13,
-          5443,
-          2805,
-          31683,
-          12,
-          325,
-          49600,
+          10253,
+          1493,
+          4734,
           31747,
+          304,
+          264,
+          2805,
+          4226,
+          25,
+          32772,
+          1779,
+          11,
+          1614,
+          1779,
+          11,
+          45958,
+          1779,
+          11,
+          6021,
+          2874,
+          11,
+          18405,
+          22567,
+          11,
+          7304,
+          902,
+          32772,
           13,
           151645,
           198,
@@ -4502,140 +4428,44 @@
         "strict": true
       },
       "tokens": {
-        "generated": 64,
+        "generated": 16,
         "generated_ids": [
-          16,
-          13,
-          4248,
-          369,
-          2205,
-          44378,
+          87206,
+          1779,
+          11,
+          1614,
+          1779,
+          11,
+          45958,
+          1779,
+          11,
           6021,
-          32772,
-          82,
-          198,
-          17,
+          2874,
+          11,
+          18405,
+          22567,
           13,
-          25429,
-          1614,
-          24748,
-          448,
-          2205,
-          4573,
-          198,
-          18,
-          13,
-          29279,
-          14720,
-          821,
-          8173,
-          525,
-          2500,
-          23490,
-          198,
-          19,
-          13,
-          33563,
-          429,
-          279,
-          1614,
-          374,
-          16176,
-          389,
-          264,
-          18146,
-          10337,
-          715,
-          20,
-          13,
-          23282,
-          279,
-          13403,
-          315,
-          19898,
-          304,
-          697,
-          3766,
-          594,
-          2266,
-          715,
-          21,
-          13,
-          3393,
-          279,
-          5068,
-          315,
-          697,
-          44378,
-          1882
+          151645
         ],
         "ids": [
-          16,
-          13,
-          4248,
-          369,
-          2205,
-          44378,
+          87206,
+          1779,
+          11,
+          1614,
+          1779,
+          11,
+          45958,
+          1779,
+          11,
           6021,
-          32772,
-          82,
-          198,
-          17,
+          2874,
+          11,
+          18405,
+          22567,
           13,
-          25429,
-          1614,
-          24748,
-          448,
-          2205,
-          4573,
-          198,
-          18,
-          13,
-          29279,
-          14720,
-          821,
-          8173,
-          525,
-          2500,
-          23490,
-          198,
-          19,
-          13,
-          33563,
-          429,
-          279,
-          1614,
-          374,
-          16176,
-          389,
-          264,
-          18146,
-          10337,
-          715,
-          20,
-          13,
-          23282,
-          279,
-          13403,
-          315,
-          19898,
-          304,
-          697,
-          3766,
-          594,
-          2266,
-          715,
-          21,
-          13,
-          3393,
-          279,
-          5068,
-          315,
-          697,
-          44378,
-          1882
+          151645
         ],
-        "prompt": 51,
+        "prompt": 57,
         "prompt_ids": [
           151644,
           8948,
@@ -4661,27 +4491,33 @@
           151644,
           872,
           198,
-          852,
-          4743,
-          2205,
-          44378,
-          6021,
-          12341,
-          323,
-          2924,
-          279,
-          4244,
-          32772,
-          323,
-          1614,
-          13,
-          5443,
-          2805,
-          31683,
-          12,
-          325,
-          49600,
+          10253,
+          1493,
+          4734,
           31747,
+          304,
+          264,
+          2805,
+          4226,
+          25,
+          32772,
+          1779,
+          11,
+          1614,
+          1779,
+          11,
+          45958,
+          1779,
+          11,
+          6021,
+          2874,
+          11,
+          18405,
+          22567,
+          11,
+          7304,
+          902,
+          32772,
           13,
           151645,
           198,
@@ -4689,7 +4525,7 @@
           77091,
           198
         ],
-        "total": 115
+        "total": 73
       }
     }
   ],
@@ -5345,7 +5181,7 @@
       "total": 1
     }
   },
-  "timestamp": "2026-05-18T12:59:38.252045200+00:00",
+  "timestamp": "2026-05-18T13:37:43.580110300+00:00",
   "tokenizer": {
     "authority": null,
     "path": null,
