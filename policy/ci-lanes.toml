@@ -2,7 +2,7 @@ schema_version = "1.0"
 policy = "ci-lanes"
 owner = "release/ci"
 status = "active"
-updated = "2026-05-07"
+updated = "2026-05-18"
 
 # policy/ci-lanes.toml is the planner's compact view of lane costs
 # and posture. The authoritative inventory is
@@ -73,6 +73,42 @@ blocking = true
 base_lem = 150
 runner = "macos_14"
 default_pr = false
+blocking = false
+
+[lane.macos-arm64-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
+[lane.macos-arm64-build-test]
+base_lem = 250
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-metal-build]
+base_lem = 250
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-workflow-clippy]
+base_lem = 150
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-format]
+base_lem = 5
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-success]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
 blocking = false
 
 [lane.gpu-native]
