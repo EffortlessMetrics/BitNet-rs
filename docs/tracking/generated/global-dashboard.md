@@ -34,6 +34,7 @@
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | falcon-e-family | FE-000 | TBD | ready | FE-001 | Do not commit model binaries. |
+| falcon3-family | F3-000 | TBD | ready | none | Do not commit model binaries. |
 | intel-258v-platform | LNL258V-OP-006 | #5749 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | A770-003 | TBD | proposed | A770-004 | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-012 | #5634 | merged | none | Device-node detection is not inference. |

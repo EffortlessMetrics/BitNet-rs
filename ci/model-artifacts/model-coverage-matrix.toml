@@ -98,6 +98,199 @@ claim_boundary = "Official Microsoft 2B I2_S is the current BitNet QK256 x86/CUD
   dense_regular_llm_cuda_proof = false
 
 [[entry]]
+id = "falcon3_1b_instruct_158_i2s_gguf_candidate"
+model_class = "bitnet"
+family = "falcon3_158bit"
+artifact_kind = "gguf_i2_s_candidate"
+contract_id = "tiiuae_falcon3_1b_instruct_158_i2s_gguf"
+status = "registered_direct_gguf_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts tiiuae_falcon3_1b_instruct_158_i2s_gguf"
+tokenizer_authority = "pending_falcon3_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon3_prompt_audit"
+cpu_reference = "pending_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "microsoft_2b_proof_inheritance",
+  "falcon_e_proof_inheritance",
+  "llama3_8b_158_proof_inheritance",
+  "dense_falcon3_proof_inheritance",
+  "dense_slm_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "a770_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Probe the official 1B direct I2_S GGUF artifact, record exact revision/file/size/SHA/tokenizer metadata, audit tokenizer/prompt authority, run reference quality, then prove I2_S layout and CPU answer corpus."
+claim_boundary = "Falcon3 1B is a registered direct-GGUF candidate only. It does not inherit Microsoft BitNet 2B, Falcon-E, Llama3-8B-1.58, dense Falcon3, or dense SLM proof and does not prove any other Falcon3 size, TL route, backend, speed, or server claim."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon3_7b_instruct_158_i2s_gguf_candidate"
+model_class = "bitnet"
+family = "falcon3_158bit"
+artifact_kind = "gguf_i2_s_candidate"
+contract_id = "tiiuae_falcon3_7b_instruct_158_i2s_gguf"
+status = "registered_direct_gguf_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts tiiuae_falcon3_7b_instruct_158_i2s_gguf"
+tokenizer_authority = "pending_falcon3_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon3_prompt_audit"
+cpu_reference = "pending_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "microsoft_2b_proof_inheritance",
+  "falcon_e_proof_inheritance",
+  "falcon3_1b_proof_inheritance",
+  "dense_falcon3_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "a770_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Probe the official 7B direct I2_S GGUF artifact after/alongside 1B, then record tokenizer/prompt authority, reference quality, I2_S layout proof, CPU corpus, memory envelope, and load timing."
+claim_boundary = "Falcon3 7B is a registered direct-GGUF candidate only. It needs independent proof and does not inherit Falcon3 1B, Microsoft BitNet 2B, Falcon-E, Llama3-8B-1.58, dense Falcon3, or dense SLM evidence."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon3_3b_instruct_158_conversion_candidate"
+model_class = "bitnet"
+family = "falcon3_158bit"
+artifact_kind = "safetensors_conversion_i2_s_candidate"
+contract_id = "tiiuae_falcon3_3b_instruct_158_safetensors"
+status = "registered_conversion_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon3_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon3_prompt_audit"
+cpu_reference = "pending_conversion_and_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "conversion_runner_authority",
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "direct_gguf_authority_without_conversion_receipt",
+  "microsoft_2b_proof_inheritance",
+  "falcon_e_proof_inheritance",
+  "falcon3_1b_or_7b_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Record exact safetensors input hashes, conversion/setup_env command, tool commit, output artifact hash if produced, runner command, tokenizer/prompt authority, and reference quality before any backend proof."
+claim_boundary = "Falcon3 3B is a registered conversion candidate only. No direct-GGUF, answer, CPU, accelerator, speed, or server claim is allowed until conversion/runner authority and independent quality receipts exist."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon3_10b_instruct_158_conversion_candidate"
+model_class = "bitnet"
+family = "falcon3_158bit"
+artifact_kind = "safetensors_conversion_i2_s_candidate"
+contract_id = "tiiuae_falcon3_10b_instruct_158_safetensors"
+status = "registered_conversion_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon3_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon3_prompt_audit"
+cpu_reference = "pending_conversion_and_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "conversion_runner_authority",
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "direct_gguf_authority_without_conversion_receipt",
+  "microsoft_2b_proof_inheritance",
+  "falcon_e_proof_inheritance",
+  "falcon3_1b_or_7b_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "After 1B/7B direct-GGUF proof is boring, record exact 10B safetensors input hashes, conversion/setup_env command, tool commit, output artifact hash if produced, runner command, tokenizer/prompt authority, and reference quality."
+claim_boundary = "Falcon3 10B is a registered conversion candidate only. It needs independent conversion, artifact, tokenizer, reference, layout, CPU, and backend receipts before any claim beyond planning."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
 id = "bitnet_official_2b_tl1_arm_candidate"
 source_map = "docs/bitnet/official-2b/README.md"
 model_class = "bitnet"

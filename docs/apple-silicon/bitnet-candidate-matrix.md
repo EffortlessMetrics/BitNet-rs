@@ -26,6 +26,10 @@ ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
 | 4 | `1bitLLM/bitnet_b1_58-3B` | ARM `TL1` diagnostic candidate; ARM `TL2` unsupported | Separate TL-model lane. Blocked at revision `af89e318d78a70802061246bf037199d2fb97020`: the official repository has safetensors shards and tokenizer files but no GGUF, and the current M3 Air free-space state cannot safely absorb the shards without cleanup or an approved conversion plan. Use only TL1 diagnostic routes until a verified runner path and coherent reference output exist; do not inherit Microsoft 2B `I2_S`/QK256 proof. |
 | 5 | `tiiuae/Falcon-E-1B-Instruct-GGUF` | ARM `I2_S` artifact inventory, tokenizer/prompt audit, reference-good, then CPU/NEON | Compact secondary BitNet-like family; registered only until exact source/file/SHA/size/tokenizer/reference output and cleanup status are recorded. |
 | 6 | `tiiuae/Falcon-E-3B-Instruct-GGUF` | ARM `I2_S` after 1B source-map and storage checks | Larger secondary family; must not inherit 1B proof and remains registered only until its own receipts pass. |
+| 7 | `tiiuae/Falcon3-1B-Instruct-1.58bit-GGUF` `ggml-model-i2_s.gguf` | ARM `I2_S`, TL1 listed but unpromoted | First Falcon3 direct I2_S family target; candidate only until artifact, tokenizer/prompt, reference, I2_S layout, and CPU/NEON receipts exist. |
+| 8 | `tiiuae/Falcon3-7B-Instruct-1.58bit-GGUF` `ggml-model-i2_s.gguf` | ARM `I2_S`, TL1 listed but unpromoted | Second Falcon3 direct I2_S target and larger Apple pressure candidate; needs independent 7B receipts. |
+| 9 | `tiiuae/Falcon3-3B-Instruct-1.58bit` | Conversion-required `I2_S`; TL1 listed but unpromoted | Safetensors/conversion candidate only until exact conversion/runner authority exists. |
+| 10 | `tiiuae/Falcon3-10B-Instruct-1.58bit` | Conversion-required `I2_S`; TL1 listed but unpromoted | Later safetensors/conversion candidate after the direct-GGUF path is boring. |
 
 ## bitnet_b1_58-large control-model lane
 
@@ -86,6 +90,10 @@ passes the shared answer gate or records the exact failing prompt IDs
 
 Rejected runs should keep enough output in the report for review, but model
 binaries stay local-only.
+
+## Falcon3 Family Boundary
+
+Falcon3 is tracked separately from Falcon-E, Microsoft BitNet 2B, 1bitLLM, Llama3-8B-1.58, and dense SLM evidence. A Falcon3 candidate must record its own exact source revision, file, SHA256, size, tokenizer authority, prompt template, reference-runner command, coherent prompt-suite output, I2_S/TL layout proof where applicable, backend/fallback receipt, and cleanup status before any answer/backend claim. Falcon3 1B proof does not prove Falcon3 7B, 3B, or 10B. Falcon3 I2_S proof does not prove TL1/TL2.
 
 ## Claim Boundary
 

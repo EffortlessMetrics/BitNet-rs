@@ -1,0 +1,68 @@
+id = "falcon3-family"
+title = "Falcon3 multi-size BitNet-family onboarding"
+status = "active"
+
+objective = "Register Falcon3 Family as a first-class multi-size BitNet-family onboarding lane while keeping artifact, tokenizer/prompt, route, backend, performance, and server claims exact and unpromoted until receipts exist."
+
+end_state = [
+  "Falcon3 1B and 7B direct I2_S GGUF candidates have exact artifact inventory, tokenizer/prompt authority, reference-good output, structural Rust load, I2_S layout proof, and strict CPU answer receipts before any backend promotion.",
+  "Falcon3 3B and 10B remain conversion/runner-authority candidates until exact conversion receipts exist.",
+  "Falcon3 TL1/TL2 routes remain separate from I2_S/QK256 and require scalar oracles before backend proof.",
+  "Falcon3 claims remain per artifact, route, backend, and profile.",
+]
+
+hard_constraints = [
+  "Do not commit model binaries.",
+  "Do not claim all Falcon3 works from one model size.",
+  "Do not claim Falcon3 proof inherits Microsoft 2B, Falcon-E, Llama3-8B-1.58, or dense SLM proof.",
+  "Do not claim I2_S/QK256 compatibility before layout proof.",
+  "Do not route TL1/TL2 through QK256/I2_S kernels.",
+  "Do not claim CPU/CUDA/Apple/A770 answer readiness before artifact, tokenizer/prompt, reference-good, and exact backend receipts pass.",
+  "Do not claim speedup before exact-profile benchmark review.",
+]
+
+[[work_item]]
+id = "F3-000"
+status = "ready"
+branch = "codex/falcon3-family/F3-000-source-map-specs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add Falcon3 family proposal, source map, implementation plan, active campaign tracker, spec contracts, and registered-only model/hardware matrix rows without runtime changes, model binaries, answer readiness, backend readiness, speedup, server readiness, or proof inheritance claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check falcon3-family",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0012-falcon3-family-supported-models.md",
+  "docs/bitnet/falcon3-family/**",
+  "plans/falcon3-family/**",
+  "docs/tracking/campaigns/falcon3-family/**",
+  "docs/tracking/generated/**",
+  "docs/specs/BITNET-SPEC-FALCON3-FAMILY-*.md",
+  "docs/specs/INDEX.md",
+  "ci/model-artifacts/model-kernel-compatibility.toml",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/apple-silicon/bitnet-candidate-matrix.md",
+  "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/**",
+]
+may_claim = [
+  "Falcon3 Family is registered as a candidate multi-size BitNet-family onboarding lane.",
+  "Falcon3 1B and 7B direct I2_S GGUF routes are prioritized for future artifact inventory and proof.",
+  "Falcon3 3B and 10B are conversion/runner-authority candidates.",
+]
+must_not_claim = [
+  "Falcon3 answers correctly in BitNet-rs.",
+  "Falcon3 CPU, CUDA, Apple, A770, TL1, or TL2 execution is proven.",
+  "Falcon3 inherits Microsoft BitNet 2B, Falcon-E, Llama3-8B-1.58, dense Falcon3, or dense SLM proof.",
+  "Falcon3 I2_S is QK256-compatible before layout proof.",
+  "Falcon3 speedup, full residency, product CLI readiness, or server readiness is proven.",
+]

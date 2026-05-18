@@ -43,6 +43,34 @@ Falcon-E size to answer, backend, speed, server, or full-residency claims. Claim
 require exact artifact, tokenizer/prompt, layout, quality, and backend receipts
 for the specific model size and route.
 
+## Falcon3 Family Onboarding
+
+Use these artifacts before implementing or claiming Falcon3 Family support:
+
+1. [Falcon3 Family Proposal](../proposals/BITNET-PROP-0012-falcon3-family-supported-models.md)
+   - Explains why Falcon3 is the first multi-size BitNet-family onboarding lane and why 1B/7B direct GGUFs precede 3B/10B conversion routes.
+2. [Falcon3 Artifact Contract](BITNET-SPEC-FALCON3-FAMILY-ARTIFACT-CONTRACT.md)
+   - Defines exact artifact IDs, required inventory receipts, nominal/HF-displayed size recording, and no-binary rules.
+3. [Falcon3 Route Compatibility](BITNET-SPEC-FALCON3-FAMILY-ROUTE-COMPATIBILITY.md)
+   - Mirrors listed upstream I2_S/TL route support as unpromoted runner-verification candidates.
+4. [Falcon3 Tokenizer and Prompt Contract](BITNET-SPEC-FALCON3-FAMILY-TOKENIZER-PROMPT.md)
+   - Requires tokenizer hashes, chat-template authority, prompt token IDs, stop policy, and reference-runner command before answer claims.
+5. [Falcon3 Reference Quality Contract](BITNET-SPEC-FALCON3-FAMILY-REFERENCE-QUALITY.md)
+   - Defines tiny smoke, answer corpus, behavior, and long-decode gates.
+6. [Falcon3 I2_S Contract](BITNET-SPEC-FALCON3-FAMILY-I2S.md)
+   - Defines I2_S/QK256 layout verification before kernel aliasing.
+7. [Falcon3 TL1/TL2 Contract](BITNET-SPEC-FALCON3-FAMILY-TL1-TL2.md)
+   - Keeps TL routes separate from I2_S/QK256 and requires scalar TL oracles.
+8. [Falcon3 CPU Contract](BITNET-SPEC-FALCON3-FAMILY-CPU.md), [CUDA Contract](BITNET-SPEC-FALCON3-FAMILY-CUDA.md), [Apple Contract](BITNET-SPEC-FALCON3-FAMILY-APPLE.md), [A770/OpenCL Contract](BITNET-SPEC-FALCON3-FAMILY-A770-OPENCL.md), and [Performance Contract](BITNET-SPEC-FALCON3-FAMILY-PERFORMANCE.md)
+   - Define exact backend and benchmark gates after artifact, tokenizer/prompt, reference-good, and layout proof.
+9. [Falcon3 Family Plan](../../plans/falcon3-family/implementation-plan.md)
+   - Defines the PR order from registered candidates through artifact inventory, CPU proof, accelerated backends, benchmarks, product CLI, and server exact-profile work.
+
+Do not proceed from Falcon3 registration, upstream listed support, Falcon-E
+evidence, Microsoft BitNet 2B evidence, Llama3-8B-1.58 evidence, dense Falcon3
+evidence, or dense SLM evidence to Falcon3 answer/backend/speed/server claims.
+Claims are exact artifact, route, backend, and profile scoped.
+
 ## NPU productization
 
 Use these artifacts before implementing or claiming NPU product support:
