@@ -1555,10 +1555,17 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             &cpu_records,
             cpu_f64_records,
         );
+        let selected_pre_rope_f64_residual =
+            attention_selected_pre_rope_attention_norm_f64_residual(
+                &selected_pre_rope_f64_effect,
+                &f64_downstream,
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
             selected_pre_rope_f64_effect;
+        cpu_comparison["attention_selected_pre_rope_attention_norm_f64_residual"] =
+            selected_pre_rope_f64_residual;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -30903,6 +30910,266 @@ fn attention_selected_pre_rope_attention_norm_f64_effect(
     report
 }
 
+fn pre_rope_attention_norm_f64_residual_classification(
+    row_classification: Option<&str>,
+    downstream_frontier_classification: Option<&str>,
+) -> &'static str {
+    match row_classification {
+        Some("selected_pre_rope_attention_norm_f64_effect_clears_bucket_with_residual") => {
+            match downstream_frontier_classification {
+                Some("f64_downstream_residual_frontier_score_history_drives_value_mix") => {
+                    "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix"
+                }
+                Some("f64_downstream_residual_frontier_probability_source_drives_value_mix") => {
+                    "selected_pre_rope_attention_norm_f64_residual_probability_source_drives_value_mix"
+                }
+                Some("f64_downstream_residual_frontier_value_mix_numeric_policy") => {
+                    "selected_pre_rope_attention_norm_f64_residual_value_mix_numeric_policy"
+                }
+                Some("f64_downstream_residual_frontier_value_cache_source_drives_value_mix") => {
+                    "selected_pre_rope_attention_norm_f64_residual_value_cache_source_drives_value_mix"
+                }
+                Some("f64_downstream_residual_frontier_attention_output_boundary") => {
+                    "selected_pre_rope_attention_norm_f64_residual_attention_output_boundary"
+                }
+                Some("f64_downstream_residual_frontier_score_history") => {
+                    "selected_pre_rope_attention_norm_f64_residual_score_history"
+                }
+                Some("f64_downstream_residual_frontier_probability_history") => {
+                    "selected_pre_rope_attention_norm_f64_residual_probability_history"
+                }
+                Some("f64_downstream_residual_frontier_ffn_history") => {
+                    "selected_pre_rope_attention_norm_f64_residual_ffn_history"
+                }
+                Some("f64_downstream_residual_frontier_layer_operation") => {
+                    "selected_pre_rope_attention_norm_f64_residual_layer_operation"
+                }
+                Some("f64_downstream_residual_frontier_layer_output") => {
+                    "selected_pre_rope_attention_norm_f64_residual_layer_output"
+                }
+                Some("f64_downstream_residual_frontier_clear") => {
+                    "selected_pre_rope_attention_norm_f64_residual_downstream_clear"
+                }
+                Some("f64_downstream_residual_frontier_capture_not_cleared") => {
+                    "selected_pre_rope_attention_norm_f64_residual_capture_not_cleared"
+                }
+                _ => "selected_pre_rope_attention_norm_f64_residual_unpinned",
+            }
+        }
+        Some("selected_pre_rope_attention_norm_f64_effect_clears_bucket_exact") => {
+            "selected_pre_rope_attention_norm_f64_residual_bucket_exact"
+        }
+        Some("selected_pre_rope_attention_norm_f64_effect_improves_but_bucket_remains") => {
+            "selected_pre_rope_attention_norm_f64_residual_bucket_remains"
+        }
+        Some("selected_pre_rope_attention_norm_f64_effect_not_better") => {
+            "selected_pre_rope_attention_norm_f64_residual_not_better"
+        }
+        Some("selected_pre_rope_attention_norm_f64_effect_missing_context") => {
+            "selected_pre_rope_attention_norm_f64_residual_missing_context"
+        }
+        _ => "selected_pre_rope_attention_norm_f64_residual_unpinned",
+    }
+}
+
+fn pre_rope_attention_norm_f64_residual_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix" => {
+            "localize f64 raw score-history drift before changing pre-RoPE attention RMSNorm, value-mix, softmax, or production math"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_probability_source_drives_value_mix" => {
+            "localize f64 probability-history source drift before changing value-mix or pre-RoPE attention RMSNorm production math"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_value_mix_numeric_policy" => {
+            "pin f64 value-mix numeric policy before changing attention RMSNorm production math"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_value_cache_source_drives_value_mix" => {
+            "localize f64 value-cache source drift before changing value-mix or attention RMSNorm production math"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_attention_output_boundary" => {
+            "localize the first f64 attention-output boundary before production RMSNorm changes"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_downstream_clear" => {
+            "rerun full first-token/reference parity before considering a production attention RMSNorm change"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_bucket_exact" => {
+            "rerun downstream score and value-mix diagnostics under f64 RMSNorm before changing production math"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_bucket_remains" => {
+            "pin the remaining selected pre-RoPE attention-norm bucket mismatch before runtime changes"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_not_better" => {
+            "do not change attention RMSNorm accumulation; inspect trace serialization or another selected source"
+        }
+        "selected_pre_rope_attention_norm_f64_residual_missing_context" => {
+            "capture matching selected pre-RoPE f64 effect and downstream residual context before attribution"
+        }
+        "no_selected_pre_rope_attention_norm_f64_residual_rows" => {
+            "pin selected pre-RoPE f64 effect rows before residual attribution"
+        }
+        _ => {
+            "keep selected pre-RoPE f64 residual diagnostic-only until the first downstream boundary is pinned"
+        }
+    }
+}
+
+fn compact_pre_rope_attention_norm_f64_residual_row(
+    row: &Value,
+    downstream_frontier: &Value,
+) -> Value {
+    let row_classification = row.pointer("/classification").and_then(Value::as_str);
+    let downstream_classification =
+        downstream_frontier.pointer("/classification").and_then(Value::as_str);
+    let classification = pre_rope_attention_norm_f64_residual_classification(
+        row_classification,
+        downstream_classification,
+    );
+    let downstream_attention_boundary_row = compact_first_material_boundary(
+        downstream_frontier.pointer("/attention_output_first_boundary_row").unwrap_or(&Value::Null),
+    );
+
+    json!({
+        "classification": classification,
+        "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "selected_k_output_dim": row.pointer("/selected_k_output_dim").cloned().unwrap_or(Value::Null),
+        "baseline_max_abs_delta": row.pointer("/baseline_max_abs_delta").cloned().unwrap_or(Value::Null),
+        "f64_max_abs_delta": row.pointer("/f64_max_abs_delta").cloned().unwrap_or(Value::Null),
+        "baseline_f16_bucket_mismatch_count": row.pointer("/baseline_f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+        "f64_f16_bucket_mismatch_count": row.pointer("/f64_f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+        "f64_clears_bucket": row.pointer("/f64_clears_bucket").cloned().unwrap_or(Value::Null),
+        "dominant_projection_pair_delta": row.pointer("/dominant_projection_pair_delta").cloned().unwrap_or(Value::Null),
+        "target_delta_rust_minus_reference": row.pointer("/target_delta_rust_minus_reference").cloned().unwrap_or(Value::Null),
+        "replay_delta_rust_minus_reference": row.pointer("/replay_delta_rust_minus_reference").cloned().unwrap_or(Value::Null),
+        "downstream_frontier_classification": downstream_classification,
+        "downstream_attention_output_first_boundary": downstream_frontier.pointer("/attention_output_first_boundary").cloned().unwrap_or(Value::Null),
+        "downstream_attention_output_first_boundary_row": downstream_attention_boundary_row,
+        "first_material_score_source_row": downstream_frontier.pointer("/first_material_score_source_row").cloned().unwrap_or(Value::Null),
+        "first_material_probability_source_row": downstream_frontier.pointer("/first_material_probability_source_row").cloned().unwrap_or(Value::Null),
+        "first_material_target_row": downstream_frontier.pointer("/first_material_target_row").cloned().unwrap_or(Value::Null),
+        "first_material_rust_self_recompute_row": downstream_frontier.pointer("/first_material_rust_self_recompute_row").cloned().unwrap_or(Value::Null),
+        "next_diagnostic": pre_rope_attention_norm_f64_residual_next_diagnostic(classification),
+    })
+}
+
+fn attention_selected_pre_rope_attention_norm_f64_residual(
+    selected_f64_effect: &Value,
+    f64_downstream: &Value,
+) -> Value {
+    let downstream_frontier = f64_downstream.pointer("/residual_frontier").unwrap_or(&Value::Null);
+    let downstream_classification =
+        downstream_frontier.pointer("/classification").and_then(Value::as_str);
+    let rows = selected_f64_effect
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter()
+                .map(|row| {
+                    compact_pre_rope_attention_norm_f64_residual_row(row, downstream_frontier)
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let selected_count = rows.len();
+    let missing_context_count = rows
+        .iter()
+        .filter(|row| {
+            row.pointer("/classification").and_then(Value::as_str)
+                == Some("selected_pre_rope_attention_norm_f64_residual_missing_context")
+        })
+        .count();
+    let residual_count = rows
+        .iter()
+        .filter(|row| {
+            row.pointer("/classification").and_then(Value::as_str).is_some_and(|classification| {
+                classification.starts_with("selected_pre_rope_attention_norm_f64_residual_")
+                    && !matches!(
+                        classification,
+                        "selected_pre_rope_attention_norm_f64_residual_bucket_exact"
+                            | "selected_pre_rope_attention_norm_f64_residual_missing_context"
+                            | "selected_pre_rope_attention_norm_f64_residual_not_better"
+                            | "selected_pre_rope_attention_norm_f64_residual_bucket_remains"
+                    )
+            })
+        })
+        .count();
+    let bucket_exact_count = rows
+        .iter()
+        .filter(|row| {
+            row.pointer("/classification").and_then(Value::as_str)
+                == Some("selected_pre_rope_attention_norm_f64_residual_bucket_exact")
+        })
+        .count();
+    let bucket_remains_count = rows
+        .iter()
+        .filter(|row| {
+            row.pointer("/classification").and_then(Value::as_str)
+                == Some("selected_pre_rope_attention_norm_f64_residual_bucket_remains")
+        })
+        .count();
+    let not_better_count = rows
+        .iter()
+        .filter(|row| {
+            row.pointer("/classification").and_then(Value::as_str)
+                == Some("selected_pre_rope_attention_norm_f64_residual_not_better")
+        })
+        .count();
+    let first_residual_classification = rows
+        .iter()
+        .find(|row| {
+            row.pointer("/classification").and_then(Value::as_str).is_some_and(|classification| {
+                !matches!(
+                    classification,
+                    "selected_pre_rope_attention_norm_f64_residual_bucket_exact"
+                        | "selected_pre_rope_attention_norm_f64_residual_missing_context"
+                        | "selected_pre_rope_attention_norm_f64_residual_not_better"
+                        | "selected_pre_rope_attention_norm_f64_residual_bucket_remains"
+                )
+            })
+        })
+        .and_then(|row| row.pointer("/classification"))
+        .and_then(Value::as_str);
+    let classification = if selected_count == 0 {
+        "no_selected_pre_rope_attention_norm_f64_residual_rows"
+    } else if missing_context_count == selected_count {
+        "selected_pre_rope_attention_norm_f64_residual_missing_context"
+    } else if residual_count > 0 {
+        first_residual_classification
+            .unwrap_or("selected_pre_rope_attention_norm_f64_residual_unpinned")
+    } else if bucket_exact_count > 0 {
+        "selected_pre_rope_attention_norm_f64_residual_bucket_exact"
+    } else if bucket_remains_count > 0 {
+        "selected_pre_rope_attention_norm_f64_residual_bucket_remains"
+    } else if not_better_count > 0 {
+        "selected_pre_rope_attention_norm_f64_residual_not_better"
+    } else {
+        "selected_pre_rope_attention_norm_f64_residual_unpinned"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected pre-RoPE attention-norm f64 residual is diagnostic-only evidence for choosing the next optic after f64 attention RMSNorm clears the selected pre-RoPE bucket but leaves residual trace delta; it does not change production RMSNorm, QK256, ROPE, score-input, score, softmax, value-mix, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "residual_count": residual_count,
+        "missing_context_count": missing_context_count,
+        "bucket_exact_count": bucket_exact_count,
+        "bucket_remains_count": bucket_remains_count,
+        "not_better_count": not_better_count,
+        "selected_effect_classification": selected_f64_effect.pointer("/classification").cloned().unwrap_or(Value::Null),
+        "downstream_frontier_classification": downstream_classification,
+        "downstream_frontier": downstream_frontier.clone(),
+        "f64_downstream_clear": f64_downstream.pointer("/f64_downstream_clear").cloned().unwrap_or(Value::Null),
+        "current_blocked_reasons": f64_downstream.pointer("/current_blocked_reasons").cloned().unwrap_or(Value::Null),
+        "rows": rows,
+        "next_diagnostic": pre_rope_attention_norm_f64_residual_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -45868,6 +46135,142 @@ mod tests {
             Some(&json!(
                 "pin selected pre-RoPE attention-norm source before f64 effect attribution"
             ))
+        );
+    }
+
+    #[test]
+    fn selected_pre_rope_attention_norm_f64_residual_points_to_score_history() {
+        let selected_f64_effect = json!({
+            "classification": "selected_pre_rope_attention_norm_f64_effect_clears_bucket_with_residual",
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_f64_effect_clears_bucket_with_residual",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "selected_k_output_dim": 13,
+                    "baseline_max_abs_delta": 9.68575477600098e-8_f64,
+                    "f64_max_abs_delta": 1.49011611938477e-8_f64,
+                    "baseline_f16_bucket_mismatch_count": 4,
+                    "f64_f16_bucket_mismatch_count": 0,
+                    "f64_clears_bucket": true,
+                    "dominant_projection_pair_delta": -3.5762786865234375e-6_f64,
+                    "target_delta_rust_minus_reference": -3.5762786865234375e-6_f64,
+                    "replay_delta_rust_minus_reference": -3.5762786865234375e-6_f64,
+                }
+            ]
+        });
+        let f64_downstream = json!({
+            "f64_downstream_clear": false,
+            "current_blocked_reasons": [
+                "f64_score_raw_history_material_mismatch_present"
+            ],
+            "residual_frontier": {
+                "classification": "f64_downstream_residual_frontier_score_history_drives_value_mix",
+                "attention_output_first_boundary": "attention_value_mix_merged_history",
+                "attention_output_first_boundary_row": {
+                    "boundary": "attention_value_mix_merged_history",
+                    "reference_stage": "kqv_head0",
+                    "rust_stage": "attention_value_mix_merged_history_head0",
+                    "reference": {
+                        "first_values": [1.0, 2.0, 3.0]
+                    }
+                },
+                "first_material_score_source_row": {
+                    "source": "score_source_delta",
+                    "token": 3,
+                    "head": 0
+                },
+                "first_material_probability_source_row": {
+                    "source": "probability_source_delta",
+                    "token": 3,
+                    "head": 0
+                },
+                "first_material_target_row": {
+                    "source": "target_delta",
+                    "token": 3,
+                    "head": 0
+                }
+            }
+        });
+
+        let report = attention_selected_pre_rope_attention_norm_f64_residual(
+            &selected_f64_effect,
+            &f64_downstream,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix"
+            ))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/residual_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/downstream_frontier_classification"),
+            Some(&json!("f64_downstream_residual_frontier_score_history_drives_value_mix"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!(
+                "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix"
+            ))
+        );
+        assert_eq!(
+            report.pointer(
+                "/rows/0/downstream_attention_output_first_boundary_row/reference/first_values"
+            ),
+            None
+        );
+        assert_eq!(
+            report.pointer("/rows/0/first_material_score_source_row/source"),
+            Some(&json!("score_source_delta"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/dominant_projection_pair_delta"),
+            Some(&json!(-3.5762786865234375e-6_f64))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize f64 raw score-history drift before changing pre-RoPE attention RMSNorm, value-mix, softmax, or production math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_pre_rope_attention_norm_f64_residual_reports_no_rows() {
+        let selected_f64_effect = json!({
+            "classification": "no_selected_pre_rope_attention_norm_output_replay_rows",
+            "rows": []
+        });
+        let f64_downstream = json!({
+            "f64_downstream_clear": false,
+            "residual_frontier": {
+                "classification": "f64_downstream_residual_frontier_score_history_drives_value_mix"
+            }
+        });
+
+        let report = attention_selected_pre_rope_attention_norm_f64_residual(
+            &selected_f64_effect,
+            &f64_downstream,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("no_selected_pre_rope_attention_norm_f64_residual_rows"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/rows").and_then(Value::as_array).map(Vec::len), Some(0));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!("pin selected pre-RoPE f64 effect rows before residual attribution"))
         );
     }
 
