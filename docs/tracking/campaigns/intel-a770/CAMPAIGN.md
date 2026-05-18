@@ -30,7 +30,7 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 
 | Work item | Status | Notes |
 | --- | --- | --- |
-| A770-000 | ready | Reconcile committed tracker, matrices, claim ledger, and model contract before runtime work. |
+| A770-000 | merged | Reconcile committed tracker, matrices, claim ledger, and model contract before runtime work. |
 | A770-003 | proposed | Preserve selected-device identity after reconciliation. |
 | A770-004 | proposed | Add runtime probe. |
 | A770-005 | proposed | Run OpenCL smoke. |
