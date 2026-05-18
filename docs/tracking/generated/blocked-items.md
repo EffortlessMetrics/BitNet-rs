@@ -371,7 +371,7 @@
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
-| intel-258v-platform | LNL258V-OP-007 | LNL258V-OP-006 | in_progress |
+| intel-258v-platform | LNL258V-OP-007 | LNL258V-OP-006 | merged |
 | intel-258v-platform | LNL258V-OP-006 | LNL258V-ROUTE-015 | merged |
 | intel-a770 | A770-003 | A770-000 | proposed |
 | intel-a770 | A770-004 | A770-003 | proposed |
