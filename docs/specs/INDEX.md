@@ -1,5 +1,27 @@
 # Specs Index
 
+
+## CPU AVX-512 Kernel Proof
+
+Use these specs before implementing or claiming AVX-512 CPU kernel support:
+
+1. [CPU AVX-512 Kernel Contract](BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md)
+   - Defines the difference between AVX-512 detection, dispatch, execution,
+     parity, performance, and sustained-performance proof.
+2. [CPU ISA Selection](BITNET-SPEC-CPU-ISA-SELECTION.md)
+   - Defines strict `auto`, `scalar`, `avx2`, `avx512`, and `avx512-vnni`
+     request behavior and fallback receipts.
+3. [AMD Ryzen 9 9950X3D CPU Roadmap](amd-9950x3d-cpu-roadmap.md)
+   - Defines the 9950X3D CPU-only lane, required profiles, comparisons, and
+     sustained/cache-domain metadata.
+4. [CPU AVX-512 Implementation Plan](../../plans/cpu-avx512/implementation-plan.md)
+   - Defines the PR-by-PR sequence from documentation rails to profile-scoped
+     auto-selection promotion.
+
+Do not proceed from AVX-512 detection or an AVX-512 receipt label to speed or
+execution claims. Claims require distinct selected kernel IDs, strict fallback
+truth, invocation counters, parity, and profile/sustained receipts.
+
 ## A770 BitNet Productization
 
 Use these specs before implementing or claiming A770 BitNet product support:

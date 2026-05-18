@@ -46,7 +46,16 @@ Kernel family and kernel implementation are different fields. For example:
 | `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
 | `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
 | `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
+| `qk256` | `qk256-avx512-f32-gemv` | AVX-512 no-scale F32-style decode GEMV |
+| `qk256` | `qk256-avx512-i8s-scaled-gemv` | AVX-512 BitNet I2_S × I8_S inline-scale decode GEMV |
+| `qk256` | `qk256-avx512-i8s-scaled-gemm` | AVX-512 BitNet I2_S × I8_S inline-scale prefill GEMM |
 | `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
+
+AVX-512 is a wider x86 lane, not a separate proof family. It must inherit
+scalar packed parity and compare against AVX2 before speed claims. AVX-512
+detection or an AVX-512 receipt label is not optimized AVX-512 kernel proof;
+strict receipts must prove selected kernel ID, fallback status, and AVX-512
+hot-path invocation counters.
 
 Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
 
