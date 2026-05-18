@@ -376,6 +376,15 @@ recorded as embedded GGUF metadata bound to the model SHA; the accepted BitNet
 artifact records the external tokenizer JSON SHA from the artifact authority
 lane.
 
+`M4-REPRO-003` adds runtime prompt-generation identity to the receipt surface.
+Dense SLM and BitNet eval, ask, warm/chat, and serve receipts should carry a
+`prompt_generation_identity` object with template family/source/hash, tokenizer
+authority, stop criteria and stop hashes, generation parameters and parameter
+hash, plus an overall identity hash. Receipt validation treats those hashes as
+comparison hygiene only: they make mismatched templates, stop rules, or sampling
+parameters visible before regression comparison, but they do not prove improved
+quality, speed, chat enablement, serve readiness, or acceleration.
+
 Dense SLMs also get a bounded reference-vs-Rust control so reference runner,
 template, tokenizer, and Rust behavior can be distinguished without using that
 control as broad model-quality evidence.

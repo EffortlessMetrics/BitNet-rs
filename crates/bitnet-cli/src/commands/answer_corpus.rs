@@ -320,6 +320,8 @@ impl AnswerCorpusCommand {
             aggregate_case_str(&rows, &["kernel", "selected_kernel"])
                 .unwrap_or(&top_level_runtime_api)
                 .to_string();
+        let prompt_generation_identity =
+            aggregate_case_value(&rows, &["prompt_generation_identity"]).unwrap_or(Value::Null);
         let top_level_backend_lane =
             answer_corpus_backend_lane(&device, slm_answer_path, &top_level_model_family);
         let answer_ready_artifact_available = corpus_answer_ready_artifact_available(&corpus.model);
@@ -343,6 +345,7 @@ impl AnswerCorpusCommand {
             "quantization": top_level_quantization.clone(),
             "tokenizer_source": top_level_tokenizer_source,
             "prompt_template": corpus.defaults.prompt_template.as_str(),
+            "prompt_generation_identity": &prompt_generation_identity,
             "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
             "corpus": {
                 "id": corpus.corpus_id(),
@@ -389,6 +392,7 @@ impl AnswerCorpusCommand {
             "execution_plan": aggregate_execution_plan,
             "prompt_template_policy": {
                 "family": corpus.defaults.prompt_template.as_str(),
+                "identity_sha256": prompt_generation_identity["identity_sha256"].as_str(),
             },
             "generation": {
                 "mode": if corpus.defaults.greedy { "greedy" } else { "sampling" },
@@ -645,8 +649,9 @@ impl AnswerCorpusCommand {
                             run_receipt["tokenizer"]["bos"].is_number()
                                 || run_receipt["tokenizer"]["eos"].is_number(),
                         )
-                    }),
+                }),
             },
+            "prompt_generation_identity": run_receipt["prompt_generation_identity"].clone(),
             "prompt_template": corpus.defaults.prompt_template,
             "prompt_prefill": prompt_prefill,
             "position": {
@@ -1124,6 +1129,16 @@ fn aggregate_case_str<'a>(rows: &'a [Value], path: &[&str]) -> Option<&'a str> {
             cursor = cursor.get(*key)?;
         }
         cursor.as_str()
+    })
+}
+
+fn aggregate_case_value(rows: &[Value], path: &[&str]) -> Option<Value> {
+    rows.iter().find_map(|row| {
+        let mut cursor = row;
+        for key in path {
+            cursor = cursor.get(*key)?;
+        }
+        Some(cursor.clone())
     })
 }
 

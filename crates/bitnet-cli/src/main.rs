@@ -4952,12 +4952,46 @@ async fn run_simple_generation(
             "bos": bos_policy,
             "explicit_bos_requested": bos,
             "parse_special": parse_special,
+            "max_new_tokens": max_new_tokens,
             "temperature": temperature,
+            "top_k": top_k,
+            "top_p": top_p,
+            "repetition_penalty": repetition_penalty,
             "seed": seed.unwrap_or(0),
             "greedy": greedy,
             "deterministic": deterministic,
             "qwen_no_think": no_think,
         });
+        let prompt_generation_identity = simple_generation::prompt::prompt_generation_identity(
+            simple_generation::prompt::PromptGenerationIdentityInput {
+                template_family: &template_type.to_string(),
+                template_source: "bitnet-prompt-templates-core",
+                tokenizer_source: Some(tokenizer_source_str),
+                tokenizer_authority: Some(pretokenizer_authority),
+                tokenizer_sha256: None,
+                tokenizer_strict: Some(tokenizer_strict),
+                manual_stop_sequences: &stop,
+                stop_sequences: &all_stop_sequences,
+                manual_stop_token_ids: &stop_id,
+                stop_token_ids: &all_stop_ids,
+                stop_string_window: Some(10),
+                stop_policy: "manual_plus_template_defaults",
+                generation_params: simple_generation::prompt::PromptGenerationParams {
+                    max_new_tokens: Some(max_new_tokens),
+                    temperature: Some(temperature),
+                    top_k: Some(top_k),
+                    top_p: Some(top_p),
+                    repetition_penalty: Some(repetition_penalty),
+                    seed,
+                    greedy: Some(greedy),
+                    deterministic: Some(deterministic),
+                    threads: Some(effective_thread_count(threads)),
+                    qwen_no_think: Some(no_think),
+                    fixed_token_count: Some(false),
+                    stream: None,
+                },
+            },
+        );
         let prompt_render_receipt = serde_json::json!({
             "template_family": template_type.to_string(),
             "qwen_no_think": no_think,
@@ -4965,8 +4999,8 @@ async fn run_simple_generation(
             "rendered_sha256": rendered_prompt_sha256,
             "add_bos": bos_policy,
             "parse_special": parse_special,
-            "stop_sequences": all_stop_sequences,
-            "stop_token_ids": all_stop_ids,
+            "stop_sequences": &all_stop_sequences,
+            "stop_token_ids": &all_stop_ids,
         });
         let loader_info = serde_json::json!({
             "mode": loader_mode,
@@ -5251,6 +5285,7 @@ async fn run_simple_generation(
             "fallback_reason": fallback_reason,
             "prompt": prompt,
             "prompt_render": prompt_render_receipt,
+            "prompt_generation_identity": prompt_generation_identity,
             "text": generated_text,
             "prompt_identity": {
                 "template": template_type.to_string(),
@@ -8000,6 +8035,37 @@ async fn run_slm_warm_session(
         template_type,
         tokenizer.as_ref(),
     );
+    let thread_count = effective_thread_count(threads);
+    let prompt_generation_identity = simple_generation::prompt::prompt_generation_identity(
+        simple_generation::prompt::PromptGenerationIdentityInput {
+            template_family: &template_type.to_string(),
+            template_source: "bitnet-prompt-templates-core",
+            tokenizer_source: Some(tokenizer_source_str),
+            tokenizer_authority: Some(pretokenizer_authority),
+            tokenizer_sha256: None,
+            tokenizer_strict: Some(tokenizer_strict),
+            manual_stop_sequences: &stop,
+            stop_sequences: &all_stop_sequences,
+            manual_stop_token_ids: &stop_id,
+            stop_token_ids: &all_stop_ids,
+            stop_string_window: None,
+            stop_policy: "manual_plus_template_defaults",
+            generation_params: simple_generation::prompt::PromptGenerationParams {
+                max_new_tokens: Some(max_new_tokens),
+                temperature: Some(temperature),
+                top_k: Some(top_k),
+                top_p: Some(top_p),
+                repetition_penalty: Some(repetition_penalty),
+                seed,
+                greedy: Some(greedy),
+                deterministic: Some(deterministic),
+                threads: Some(thread_count),
+                qwen_no_think: Some(no_think),
+                fixed_token_count: Some(false),
+                stream: Some(output.stream_tokens),
+            },
+        },
+    );
     let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
@@ -8024,7 +8090,6 @@ async fn run_slm_warm_session(
     let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
     let kernel_implementation = cpu_kernel_implementation(config.quantization.quantization_type);
     let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
-    let thread_count = effective_thread_count(threads);
     let cpu_features = detected_cpu_feature_labels();
     let cpu_model = detected_cpu_model_label();
     let apple_machine = apple_machine_receipt_json(
@@ -8096,6 +8161,7 @@ async fn run_slm_warm_session(
             template_type.apply(prompt, system_prompt.as_deref()),
             no_think,
         )?;
+        let rendered_prompt_sha256 = compute_sha256_bytes(formatted_prompt.as_bytes());
 
         let bos_policy = template_type.should_add_bos();
         let parse_special = template_type.parse_special();
@@ -8403,6 +8469,17 @@ async fn run_slm_warm_session(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
             "prompt": prompt,
+            "prompt_render": {
+                "template_family": template_type.to_string(),
+                "qwen_no_think": no_think,
+                "rendered_text": &formatted_prompt,
+                "rendered_sha256": rendered_prompt_sha256,
+                "add_bos": bos_policy,
+                "parse_special": parse_special,
+                "stop_sequences": &all_stop_sequences,
+                "stop_token_ids": &all_stop_ids,
+            },
+            "prompt_generation_identity": prompt_generation_identity.clone(),
             "text": generated_text,
             "tokens": {
                 "prompt": prompt_token_count,
@@ -8734,9 +8811,10 @@ async fn run_slm_warm_session(
             "repetition_penalty": repetition_penalty,
             "deterministic": deterministic,
             "max_new_tokens": max_new_tokens,
-            "prompt_template": prompt_template,
+            "prompt_template": prompt_template.as_str(),
             "qwen_no_think": no_think,
         },
+        "prompt_generation_identity": prompt_generation_identity,
         "model": {
             "repo": model_repo.as_str(),
             "file": model_file.as_str(),

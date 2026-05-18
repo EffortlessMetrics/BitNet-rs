@@ -7030,6 +7030,7 @@ impl MacServeGenerator {
         let stream = request.stream.unwrap_or(state.stream);
         let request_started = std::time::Instant::now();
         let formatted_prompt = self.prompt_template.apply(&prompt, system_prompt.as_deref());
+        let rendered_prompt_sha256 = sha256_hex(formatted_prompt.as_bytes());
 
         let mut all_stop_sequences = self.stop_sequences.clone();
         for template_stop in self.prompt_template.default_stop_sequences() {
@@ -7043,6 +7044,37 @@ impl MacServeGenerator {
                 all_stop_ids.push(template_id);
             }
         }
+        let prompt_generation_identity =
+            crate::simple_generation::prompt::prompt_generation_identity(
+                crate::simple_generation::prompt::PromptGenerationIdentityInput {
+                    template_family: self.prompt_template_label.as_str(),
+                    template_source: "bitnet-prompt-templates-core",
+                    tokenizer_source: Some(self.tokenizer_source.as_str()),
+                    tokenizer_authority: Some(self.pretokenizer_authority.as_str()),
+                    tokenizer_sha256: state.bitnet_tokenizer_sha256.as_deref(),
+                    tokenizer_strict: Some(self.tokenizer_strict),
+                    manual_stop_sequences: &self.stop_sequences,
+                    stop_sequences: &all_stop_sequences,
+                    manual_stop_token_ids: &[],
+                    stop_token_ids: &all_stop_ids,
+                    stop_string_window: None,
+                    stop_policy: "server_manual_plus_template_defaults",
+                    generation_params: crate::simple_generation::prompt::PromptGenerationParams {
+                        max_new_tokens: Some(max_new_tokens),
+                        temperature: Some(temperature),
+                        top_k: Some(top_k),
+                        top_p: Some(top_p),
+                        repetition_penalty: Some(repetition_penalty),
+                        seed,
+                        greedy: Some(temperature == 0.0 && top_k == 1),
+                        deterministic: seed.is_some().then_some(true),
+                        threads: None,
+                        qwen_no_think: Some(false),
+                        fixed_token_count: Some(false),
+                        stream: Some(stream),
+                    },
+                },
+            );
         let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
 
         let tokenize_start = std::time::Instant::now();
@@ -7200,6 +7232,16 @@ impl MacServeGenerator {
                 "bos": self.tokenizer.bos_token_id().unwrap_or(1),
                 "eos": self.tokenizer.eos_token_id().unwrap_or(2),
             },
+            "prompt_render": {
+                "template_family": self.prompt_template_label.as_str(),
+                "rendered_text": formatted_prompt,
+                "rendered_sha256": rendered_prompt_sha256,
+                "add_bos": self.prompt_template.should_add_bos(),
+                "parse_special": self.prompt_template.parse_special(),
+                "stop_sequences": &all_stop_sequences,
+                "stop_token_ids": &all_stop_ids,
+            },
+            "prompt_generation_identity": prompt_generation_identity,
             "request": {
                 "model": request.model,
                 "prompt": prompt,
@@ -9429,6 +9471,11 @@ fn apple_m4_benchmark_preflight_run_identity_json(
             "family": metadata.family,
             "quantization": metadata.quantization,
             "loader_mode": "not_loaded_preflight_only",
+            "supported_prompt_template": {
+                "id": metadata.prompt_template,
+                "sha256": metadata.prompt_template_sha256,
+                "source": metadata.prompt_template_source,
+            },
         },
         "tokenizer": {
             "authority": metadata.tokenizer_authority,
@@ -14187,6 +14234,7 @@ fn validate_mac_receipt_value(
         bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
             .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
     }
+    validate_prompt_generation_identity_contract(path, receipt)?;
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
         || artifact_kind == "slm_apple_m3_air_warm_session"
@@ -14258,6 +14306,110 @@ fn validate_mac_receipt_value(
         passed: true,
         regression: None,
     })
+}
+
+fn validate_prompt_generation_identity_contract(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<()> {
+    let Some(identity) = receipt.get("prompt_generation_identity") else {
+        return Ok(());
+    };
+    if identity.is_null() {
+        return Ok(());
+    }
+    if !identity.is_object() {
+        anyhow::bail!("{} prompt_generation_identity must be an object", path.display());
+    }
+    let template_family =
+        identity["template_family"].as_str().filter(|value| !value.trim().is_empty()).ok_or_else(
+            || anyhow!("{} prompt_generation_identity.template_family is required", path.display()),
+        )?;
+    let template_sha256 =
+        prompt_generation_identity_sha256_field(identity, "template_sha256", path)?;
+    let stop_criteria_sha256 =
+        prompt_generation_identity_sha256_field(identity, "stop_criteria_sha256", path)?;
+    let stop_sequences_sha256 =
+        prompt_generation_identity_sha256_field(identity, "stop_sequences_sha256", path)?;
+    let stop_token_ids_sha256 =
+        prompt_generation_identity_sha256_field(identity, "stop_token_ids_sha256", path)?;
+    let generation_params_sha256 =
+        prompt_generation_identity_sha256_field(identity, "generation_params_sha256", path)?;
+    let identity_sha256 =
+        prompt_generation_identity_sha256_field(identity, "identity_sha256", path)?;
+    if sha256_json_value(&identity["template"])? != template_sha256 {
+        anyhow::bail!("{} prompt_generation_identity.template_sha256 mismatch", path.display());
+    }
+    if sha256_json_value(&identity["stop_criteria"])? != stop_criteria_sha256 {
+        anyhow::bail!(
+            "{} prompt_generation_identity.stop_criteria_sha256 mismatch",
+            path.display()
+        );
+    }
+    if sha256_json_value(&identity["stop_criteria"]["stop_sequences"])? != stop_sequences_sha256 {
+        anyhow::bail!(
+            "{} prompt_generation_identity.stop_sequences_sha256 mismatch",
+            path.display()
+        );
+    }
+    if sha256_json_value(&identity["stop_criteria"]["stop_token_ids"])? != stop_token_ids_sha256 {
+        anyhow::bail!(
+            "{} prompt_generation_identity.stop_token_ids_sha256 mismatch",
+            path.display()
+        );
+    }
+    if sha256_json_value(&identity["generation_parameters"])? != generation_params_sha256 {
+        anyhow::bail!(
+            "{} prompt_generation_identity.generation_params_sha256 mismatch",
+            path.display()
+        );
+    }
+    let mut identity_without_hash = identity.clone();
+    if let Some(object) = identity_without_hash.as_object_mut() {
+        object.remove("identity_sha256");
+    }
+    if sha256_json_value(&identity_without_hash)? != identity_sha256 {
+        anyhow::bail!("{} prompt_generation_identity.identity_sha256 mismatch", path.display());
+    }
+    for observed in [
+        receipt["prompt_render"]["template_family"].as_str(),
+        receipt["generation"]["prompt_template"].as_str(),
+        receipt["tokenizer"]["prompt_template"].as_str(),
+        receipt["prompt"]["template_family"].as_str(),
+        receipt["prompt_template"].as_str(),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if observed != template_family {
+            anyhow::bail!(
+                "{} prompt_generation_identity.template_family {template_family:?} conflicts with receipt template {observed:?}",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn prompt_generation_identity_sha256_field<'a>(
+    identity: &'a serde_json::Value,
+    field: &str,
+    path: &Path,
+) -> Result<&'a str> {
+    let Some(value) = identity[field].as_str() else {
+        anyhow::bail!("{} prompt_generation_identity.{field} is required", path.display());
+    };
+    if !is_sha256_hex(value) {
+        anyhow::bail!(
+            "{} prompt_generation_identity.{field} must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    Ok(value)
+}
+
+fn sha256_json_value(value: &serde_json::Value) -> Result<String> {
+    Ok(sha256_hex(&serde_json::to_vec(value)?))
 }
 
 fn is_supported_mac_cpu_neon_receipt_backend(label: &str) -> bool {

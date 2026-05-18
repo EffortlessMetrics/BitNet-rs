@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T07:10:11Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-003"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-003-template-registry"
+pr = 5549
+head_sha = "c811dd84af1f099a668961343b1296042d387bec"
+
+notes = [
+  "Opened PR #5549 to add prompt-generation identity evidence to M4 dense SLM and BitNet receipts.",
+  "Receipts now record a canonical `prompt_generation_identity` with template family/source/hash, tokenizer authority, stop criteria and hashes, generation parameters and hash, and an overall identity hash for ask, answer-corpus eval, warm/chat-backed sessions, and serve completion paths.",
+  "No runtime quality, benchmark speedup, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, or broad performance claim.",
+]
