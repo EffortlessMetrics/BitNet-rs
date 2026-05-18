@@ -1576,6 +1576,12 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
         let selected_query_head_boundary_frontier = attention_selected_query_head_boundary_frontier(
             &selected_query_score_input_bucket_source,
         );
+        let selected_query_rope_to_f16_head_conversion =
+            attention_selected_query_rope_to_f16_head_conversion_frontier(
+                &selected_query_head_boundary_frontier,
+                &selected_query_score_input_bucket_source,
+                &f64_downstream,
+            );
         let selected_query_score_input_f16_frontier =
             attention_selected_query_score_input_f16_frontier(
                 &selected_query_score_input_bucket_source,
@@ -1660,6 +1666,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_score_input_bucket_source;
         cpu_comparison["attention_selected_query_head_boundary_frontier"] =
             selected_query_head_boundary_frontier;
+        cpu_comparison["attention_selected_query_rope_to_f16_head_conversion_frontier"] =
+            selected_query_rope_to_f16_head_conversion;
         cpu_comparison["attention_selected_query_score_input_f16_frontier"] =
             selected_query_score_input_f16_frontier;
         cpu_comparison["attention_selected_f64_query_pre_score_rope_source"] =
@@ -32107,6 +32115,162 @@ fn attention_selected_query_head_boundary_frontier(selected_query_source: &Value
     })
 }
 
+fn selected_query_rope_to_f16_head_conversion_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_query_rope_to_f16_head_conversion_exact_selected_bucket" => {
+            "selected query RoPE-to-F16 bucket is exact at the selected dim/token; compare selected score policy before runtime changes"
+        }
+        "selected_query_rope_to_f16_head_conversion_score_input_matches_f16" => {
+            "selected score input follows Rust query F16 conversion; pin whether this is intended score-operand policy before changing runtime math"
+        }
+        "selected_query_rope_to_f16_head_conversion_score_partially_follows_f16" => {
+            "selected score partially follows Rust query F16 conversion; split F16 conversion from mixed Q/K score residual before runtime changes"
+        }
+        "selected_query_rope_to_f16_head_conversion_pre_f16_query_better" => {
+            "pre-F16 query better predicts the selected score; inspect score accumulation or mixed Q/K contribution before changing F16 score-input policy"
+        }
+        "selected_query_rope_to_f16_head_conversion_f16_not_explaining_score" => {
+            "Rust query F16 conversion does not explain the selected score residual; inspect score accumulation, key contribution, or serialization"
+        }
+        "selected_query_rope_to_f16_head_conversion_selected_context_only" => {
+            "promote selected dim/token RoPE-to-F16 context to exact score-policy attribution before runtime changes"
+        }
+        "selected_query_rope_to_f16_head_conversion_head_only_unpinned" => {
+            "capture selected query RoPE-to-F16 policy row for the head-level boundary before changing F16 score-input or score accumulation"
+        }
+        "selected_query_rope_to_f16_head_conversion_not_active" => {
+            "follow the active selected query head-boundary classification before probing RoPE-to-F16 conversion"
+        }
+        "selected_query_rope_to_f16_head_conversion_missing_context" => {
+            "capture selected query head boundary and F16 policy context before changing runtime math"
+        }
+        _ => "keep selected query RoPE-to-F16 head conversion diagnostic-only",
+    }
+}
+
+fn attention_selected_query_rope_to_f16_head_conversion_frontier(
+    head_boundary: &Value,
+    selected_query_source: &Value,
+    f64_downstream: &Value,
+) -> Value {
+    let head_boundary_classification = selected_report_classification(head_boundary);
+    let source_classification = selected_report_classification(selected_query_source);
+    let head = value_u64(head_boundary, "/head");
+    let selected_dim = value_u64(head_boundary, "/selected_dim");
+    let selected_token = value_u64(head_boundary, "/selected_token");
+    let selected_row = selected_query_source
+        .pointer("/selected_qk_bucket_row")
+        .filter(|row| !row.is_null())
+        .unwrap_or_else(|| {
+            head_boundary.pointer("/first_mixed_score_position_row").unwrap_or(&Value::Null)
+        });
+    let key_slot = value_u64(selected_row, "/key_slot");
+    let rope_to_f16 = head_boundary.pointer("/rust_rope_to_f16").unwrap_or(&Value::Null);
+    let exact_selected_bucket = value_bool(rope_to_f16, "/exact_selected_bucket").unwrap_or(false);
+    let selected_dim_token_context = value_bool(rope_to_f16, "/selected_dim_and_token_bucket")
+        .unwrap_or(false)
+        || (value_bool(rope_to_f16, "/selected_dim_bucket").unwrap_or(false)
+            && value_bool(rope_to_f16, "/selected_token_bucket").unwrap_or(false));
+    let selected_context = exact_selected_bucket
+        || selected_dim_token_context
+        || value_bool(rope_to_f16, "/selected_dim_bucket").unwrap_or(false)
+        || value_bool(rope_to_f16, "/selected_token_bucket").unwrap_or(false);
+    let policy_effect = f64_downstream
+        .pointer("/f64/probability_history_effect/attention_query_score_input_f16_policy_effect")
+        .unwrap_or(&Value::Null);
+    let policy_effect_classification =
+        policy_effect.pointer("/classification").and_then(Value::as_str);
+    let policy_row = policy_effect
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .and_then(|rows| {
+            rows.iter().find(|row| {
+                value_u64(row, "/head") == head
+                    && value_u64(row, "/query_token") == selected_token
+                    && key_slot.is_none_or(|key_slot| value_u64(row, "/key_slot") == Some(key_slot))
+            })
+        })
+        .unwrap_or(&Value::Null);
+    let policy_row_classification = policy_row.pointer("/classification").and_then(Value::as_str);
+    let active = matches!(
+        head_boundary_classification,
+        Some("selected_query_head_boundary_f16_conversion")
+            | Some("selected_query_head_boundary_selected_dim_token_context")
+    );
+    let missing_identity = head.is_none() || selected_dim.is_none() || selected_token.is_none();
+    let policy_row_missing = policy_effect.is_null()
+        || policy_row.is_null()
+        || policy_row.pointer("/status").and_then(Value::as_str) == Some("missing_input");
+
+    let classification = if head_boundary_classification.is_none() || missing_identity {
+        "selected_query_rope_to_f16_head_conversion_missing_context"
+    } else if !active {
+        "selected_query_rope_to_f16_head_conversion_not_active"
+    } else if exact_selected_bucket {
+        "selected_query_rope_to_f16_head_conversion_exact_selected_bucket"
+    } else if policy_row_missing {
+        if selected_context {
+            "selected_query_rope_to_f16_head_conversion_selected_context_only"
+        } else {
+            "selected_query_rope_to_f16_head_conversion_head_only_unpinned"
+        }
+    } else {
+        match policy_row_classification {
+            Some("score_input_matches_f16_conversion") => {
+                "selected_query_rope_to_f16_head_conversion_score_input_matches_f16"
+            }
+            Some("score_delta_better_predicted_by_query_f16_conversion") => {
+                "selected_query_rope_to_f16_head_conversion_score_partially_follows_f16"
+            }
+            Some("score_delta_better_predicted_by_pre_f16_query") => {
+                "selected_query_rope_to_f16_head_conversion_pre_f16_query_better"
+            }
+            Some("score_delta_not_explained_by_query_f16_policy") => {
+                "selected_query_rope_to_f16_head_conversion_f16_not_explaining_score"
+            }
+            _ => "selected_query_rope_to_f16_head_conversion_missing_context",
+        }
+    };
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if classification == "selected_query_rope_to_f16_head_conversion_missing_context" {
+        blocked_reasons
+            .push("selected_query_rope_to_f16_head_conversion_missing_context".to_string());
+    }
+    if classification == "selected_query_rope_to_f16_head_conversion_head_only_unpinned" {
+        blocked_reasons
+            .push("selected_query_rope_to_f16_head_conversion_policy_row_missing".to_string());
+    }
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query RoPE-to-F16 head-conversion frontier is diagnostic-only evidence for connecting a head-level RoPE-to-F16 query bucket boundary to the existing selected score F16 policy probe; it does not change RMSNorm, QK256, RoPE, F16 score-input conversion, score accumulation, softmax, value-mix, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "head_boundary_classification": head_boundary_classification,
+        "source_classification": source_classification,
+        "policy_effect_classification": policy_effect_classification,
+        "policy_row_classification": policy_row_classification,
+        "head": head,
+        "selected_dim": selected_dim,
+        "selected_token": selected_token,
+        "key_slot": key_slot,
+        "selected_row_source": selected_query_source.pointer("/selected_row_source").cloned().unwrap_or(Value::Null),
+        "exact_selected_bucket": exact_selected_bucket,
+        "selected_dim_token_context": selected_dim_token_context,
+        "selected_context": selected_context,
+        "policy_effect_present": !policy_effect.is_null(),
+        "policy_row_present": !policy_row.is_null(),
+        "rust_rope_to_f16": head_boundary.pointer("/rust_rope_to_f16").cloned().unwrap_or(Value::Null),
+        "first_mixed_score_position_row": head_boundary.pointer("/first_mixed_score_position_row").cloned().unwrap_or(Value::Null),
+        "selected_policy_row": compact_query_f16_policy_row(policy_row),
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": selected_query_rope_to_f16_head_conversion_next_diagnostic(classification),
+    })
+}
+
 fn selected_query_score_input_f16_frontier_next_diagnostic(classification: &str) -> &'static str {
     match classification {
         "selected_query_score_input_f16_frontier_score_input_matches_f16_conversion" => {
@@ -51212,6 +51376,169 @@ mod tests {
         assert_eq!(
             report.pointer("/blocked_reasons/0"),
             Some(&json!("selected_query_head_boundary_missing_context"))
+        );
+    }
+
+    fn selected_query_rope_to_f16_policy_effect(row_classification: &str) -> Value {
+        json!({
+            "f64": {
+                "probability_history_effect": {
+                    "attention_query_score_input_f16_policy_effect": {
+                        "classification": "selected_score_drift_follows_query_f16_score_input",
+                        "rows": [
+                            {
+                                "label": "first_material_position",
+                                "status": "compared",
+                                "classification": row_classification,
+                                "head": 0,
+                                "key_slot": 0,
+                                "query_token": 0,
+                                "actual_score_shift": -0.001,
+                                "f16_shift_residual_abs": 0.0,
+                                "rope_shift_residual_abs": 0.001,
+                                "score_input_shift_residual_abs": 0.0
+                            }
+                        ]
+                    }
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_reports_score_input_match() {
+        let selected_source = selected_query_head_boundary_source(
+            "selected_query_score_input_bucket_source_head_boundary_unpinned",
+            "rust_query_f16_score_conversion",
+        );
+        let head_boundary = attention_selected_query_head_boundary_frontier(&selected_source);
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &selected_source,
+            &selected_query_rope_to_f16_policy_effect("score_input_matches_f16_conversion"),
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_score_input_matches_f16"))
+        );
+        assert_eq!(report.pointer("/head"), Some(&json!(0)));
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(112)));
+        assert_eq!(report.pointer("/selected_token"), Some(&json!(0)));
+        assert_eq!(report.pointer("/policy_row_present"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/selected_policy_row/classification"),
+            Some(&json!("score_input_matches_f16_conversion"))
+        );
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_reports_pre_f16_better() {
+        let selected_source = selected_query_head_boundary_source(
+            "selected_query_score_input_bucket_source_head_boundary_unpinned",
+            "rust_query_f16_score_conversion",
+        );
+        let head_boundary = attention_selected_query_head_boundary_frontier(&selected_source);
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &selected_source,
+            &selected_query_rope_to_f16_policy_effect(
+                "score_delta_better_predicted_by_pre_f16_query",
+            ),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_pre_f16_query_better"))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pre-F16 query better predicts the selected score; inspect score accumulation or mixed Q/K contribution before changing F16 score-input policy"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_reports_selected_context_only() {
+        let mut selected_source = selected_query_head_boundary_source(
+            "selected_query_score_input_bucket_source_head_boundary_unpinned",
+            "rust_query_f16_score_conversion",
+        );
+        selected_source["rust_rope_to_f16"]["selected_dim_bucket"] = json!(true);
+        let head_boundary = attention_selected_query_head_boundary_frontier(&selected_source);
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &selected_source,
+            &json!({}),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_selected_context_only"))
+        );
+        assert_eq!(report.pointer("/selected_context"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_reports_head_only_unpinned() {
+        let selected_source = selected_query_head_boundary_source(
+            "selected_query_score_input_bucket_source_head_boundary_unpinned",
+            "rust_query_f16_score_conversion",
+        );
+        let head_boundary = attention_selected_query_head_boundary_frontier(&selected_source);
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &selected_source,
+            &json!({}),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_head_only_unpinned"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_policy_row_missing"))
+        );
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_reports_not_active() {
+        let selected_source = selected_query_head_boundary_source(
+            "selected_query_score_input_bucket_source_reference_to_rope",
+            "reference_to_rust_query_rope",
+        );
+        let head_boundary = attention_selected_query_head_boundary_frontier(&selected_source);
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &selected_source,
+            &selected_query_rope_to_f16_policy_effect("score_input_matches_f16_conversion"),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_not_active"))
+        );
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_reports_missing_context() {
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &json!({}),
+            &json!({}),
+            &json!({}),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_missing_context"))
         );
     }
 
