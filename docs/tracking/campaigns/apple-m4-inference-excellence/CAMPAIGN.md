@@ -117,7 +117,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BITNET-EX-010 | merged | Define the staged 250-case BitNet corpus and scorer contract. |
 | M4-BITNET-EX-011 | merged | Run and publish bounded 250-case BitNet M4 receipts. |
 | M4-BITNET-EX-012 | merged | Decide whether BitNet expands to 500 cases or repairs corpus/scoring first. |
-| M4-OPS-UX-001 | in_progress | Add an operator-facing M4 evidence summary. |
+| M4-OPS-UX-001 | pr_open | Add an operator-facing M4 evidence summary. |
 | M4-OPS-UX-002 | proposed | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
 | M4-OPS-UX-003 | proposed | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
 | M4-OPS-SLO-001 | proposed | Translate receipts into local operator envelope classes. |
