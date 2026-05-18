@@ -643,9 +643,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-CHAT-001"
-status = "pr_open"
+status = "merged"
 pr = 5675
-head_sha = "8736f99161b711e96f5c8474b9590ed944a56524"
+head_sha = "b0f572012a2e332eebd025a57117673c0270a0d6"
+merge_sha = "13b5eea5b0c8155ed4f32ebb74c3936b6646ab6d"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
 stackable = false
 review_mode = "codex_premerge"
