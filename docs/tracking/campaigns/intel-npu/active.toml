@@ -503,8 +503,9 @@ must_not_claim = [
 [[work_item]]
 id = "NPU-012"
 status = "pr_open"
-branch = "codex/add-npu-productization-proposal"
 pr = 5634
+head_sha = "7254a143acfa8410216280da362451e3c97ce945"
+branch = "codex/add-npu-productization-proposal"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

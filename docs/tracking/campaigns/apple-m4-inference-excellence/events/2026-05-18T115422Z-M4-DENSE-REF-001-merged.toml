@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T11:54:22Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-REF-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-001-reference-vs-rust"
+pr = 5653
+head_sha = "4d2ae8b071ddb6b3cc966f76bdb5326a518ad96c"
+merge_sha = "e0f16fc8e47ffac7fa7858f604b892bb43b1e088"
+
+notes = [
+  "PR #5653 merged bounded dense SLM reference-runner vs Rust M4 comparison evidence for the supported Qwen model identities.",
+  "The evidence records reference-runner command shape, prompt template, generated text, Rust token IDs, reference token-ID availability status, mechanical scores, and comparison deltas.",
+  "No BitNet behavior, BitNet chat or serve enablement, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim.",
+]
