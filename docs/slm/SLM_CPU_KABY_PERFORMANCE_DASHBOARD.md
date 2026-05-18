@@ -349,8 +349,8 @@ accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
 
 SLM-CPU-036 classifies the first reusable allocation surface under
 `prompt_prefill.forward` before changing dense math. The warm-session receipt
-now records the boundary as transformer forward workspace and owned tensor
-outputs that are not yet caller-reusable from the CLI warm-session loop:
+first recorded the boundary as transformer forward workspace and owned tensor
+outputs that were not caller-reusable from the CLI warm-session loop:
 
 ```text
 next_optimization_target = prefill_forward_buffer_boundary
@@ -367,19 +367,33 @@ tensor math to the existing owned-output path, so reusable tensor storage is not
 enabled yet. The receipt therefore records:
 
 ```text
-reuse_status = api_boundary_present_owned_tensor_reuse_not_enabled
 required_api_boundary = typed_transformer_forward_workspace
-next_optimization_target = typed_transformer_forward_workspace_api
-status = workspace_api_present_reuse_deferred
 optimization_deferred = true
 ```
 
-The next safe implementation target is replacing one owned transformer tensor
-output with workspace-owned storage behind tests that preserve generated IDs,
-decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel,
-model SHA, and `fallback=false`. This remains an allocation-boundary proof
-only; it makes no speedup, sustained-throughput, broad-answer-quality, Q4/Q5
-runtime, accelerator, Qwen3.5, or BitNet QK256 claim.
+SLM-CPU-039 narrows that boundary to the first workspace-owned transformer
+output surface. `FeedForward::forward_with_workspace` now routes the owned
+feed-forward output tensor through `TransformerForwardWorkspace` before
+returning it to the existing block math. Candle still constructs the tensor
+through the existing owned-output path, so this is ownership plumbing and
+allocation attribution, not reusable storage or a speedup claim:
+
+```text
+first_reusable_allocation_surface = feed_forward.output
+workspace_storage_owner = TransformerForwardWorkspace
+reuse_status = feed_forward_output_workspace_owned_reuse_not_enabled
+next_optimization_target = feed_forward_output_workspace_owned_boundary
+status = workspace_owned_output_reuse_deferred
+optimization_deferred = true
+```
+
+The next safe implementation target is replacing `FeedForward::down_proj`
+output construction with reusable workspace-backed storage behind tests that
+preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected
+CPU backend/kernel, model SHA, and `fallback=false`. This remains an
+allocation-boundary proof only; it makes no speedup, sustained-throughput,
+broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256
+claim.
 
 This is a classification slice. It does not change Q8_0 GEMV, RMSNorm, RoPE,
 attention, output-head math, tokenizer behavior, or generated tokens, and it
