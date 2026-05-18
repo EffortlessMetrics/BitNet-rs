@@ -1378,12 +1378,10 @@ fn print_model_status_group(dashboard: &ModelStatusDashboard, title: &str, categ
         println!("    tier: {}", row.tier);
         println!("    cpu answer: {}", ready_label(row.cpu_answer_ready));
         println!("    cuda answer: {}", ready_label(row.accelerator_answer_ready));
-        if row.model_class == "dense_slm" && row.route.as_deref() == Some("dense_regular_llm_cuda")
-        {
+        println!("    ask: {}", row.ask);
+        if matches!(row.route.as_deref(), Some("dense_regular_llm_cuda" | "bitnet_qk256_cuda")) {
             println!("    one-token: {}", row.one_token);
             println!("    short-decode: {}", row.short_decode);
-        } else {
-            println!("    ask: {}", row.ask);
         }
         println!("    warm-session: {}", row.warm_session);
         println!("    benchmark: {}", row.benchmark);
@@ -3048,6 +3046,8 @@ mod tests {
         assert!(!bitnet.server_ready);
         assert!(!bitnet.full_residency_claim);
         assert_eq!(bitnet.ask, "ready");
+        assert_eq!(bitnet.one_token, "ready");
+        assert_eq!(bitnet.short_decode, "ready");
         assert_eq!(bitnet.warm_session, "ready");
         assert_eq!(bitnet.benchmark, "reviewed, speedup not accepted");
         assert!(bitnet.claim_boundary.contains("does not prove dense regular-LLM CUDA"));

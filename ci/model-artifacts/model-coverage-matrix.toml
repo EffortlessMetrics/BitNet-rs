@@ -65,6 +65,8 @@ required_receipts = [
   "strict_answer_corpus",
   "cpu_cuda_answer_parity",
   "execution_plan",
+  "one_token_strict_cuda",
+  "short_decode_strict_cuda",
   "strict_cuda_ask",
   "warm_session",
   "benchmark_profile_receipt",
