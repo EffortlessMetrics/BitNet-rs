@@ -34718,6 +34718,41 @@ fn selected_score_residual_decision_from_query_history(
     }
 }
 
+fn selected_score_residual_decision_from_qk_downstream(
+    qk_downstream_classification: Option<&str>,
+) -> Option<&'static str> {
+    match qk_downstream_classification {
+        Some("selected_qk_downstream_score_residual_selected_query_history") => {
+            Some("selected_score_residual_decision_frontier_selected_query_history")
+        }
+        Some("selected_qk_downstream_score_residual_key_pre_rope")
+        | Some("selected_qk_downstream_score_residual_key_post_rope_history")
+        | Some("selected_qk_downstream_score_residual_key_score_input_expansion")
+        | Some("selected_qk_downstream_score_residual_key_exact_boundary") => {
+            Some("selected_score_residual_decision_frontier_selected_key_history")
+        }
+        Some("selected_qk_downstream_score_residual_mixed_qk_product") => {
+            Some("selected_score_residual_decision_frontier_selected_qk_history")
+        }
+        Some("selected_qk_downstream_score_residual_raw_score_accumulation") => {
+            Some("selected_score_residual_decision_frontier_raw_score_accumulation")
+        }
+        Some("selected_qk_downstream_score_residual_score_history_serialization") => {
+            Some("selected_score_residual_decision_frontier_score_history_serialization")
+        }
+        Some("selected_qk_downstream_score_residual_softmax_probability") => {
+            Some("selected_score_residual_decision_frontier_softmax_probability")
+        }
+        Some("selected_qk_downstream_score_residual_value_mix") => {
+            Some("selected_score_residual_decision_frontier_value_mix")
+        }
+        Some("selected_qk_downstream_score_residual_clean") => {
+            Some("selected_score_residual_decision_frontier_clean")
+        }
+        _ => None,
+    }
+}
+
 fn attention_selected_score_residual_decision_frontier(
     selected_key_f64_score_history: &Value,
     selected_query_history_residual: &Value,
@@ -34732,6 +34767,8 @@ fn attention_selected_score_residual_decision_frontier(
         selected_report_classification(selected_query_raw_score_operand);
     let query_downstream_classification = selected_report_classification(selected_query_downstream);
     let qk_downstream_classification = selected_report_classification(selected_qk_downstream);
+    let qk_downstream_decision =
+        selected_score_residual_decision_from_qk_downstream(qk_downstream_classification);
 
     let classification = match key_f64_classification {
         None | Some("selected_key_f64_score_history_frontier_missing_context") => {
@@ -34739,10 +34776,15 @@ fn attention_selected_score_residual_decision_frontier(
         }
         Some("selected_key_f64_score_history_frontier_selected_query_history")
         | Some("selected_key_f64_score_history_frontier_query_history") => {
-            selected_score_residual_decision_from_query_history(
+            let query_decision = selected_score_residual_decision_from_query_history(
                 query_history_classification,
                 raw_score_operand_classification,
-            )
+            );
+            if query_decision == "selected_score_residual_decision_frontier_missing_context" {
+                qk_downstream_decision.unwrap_or(query_decision)
+            } else {
+                query_decision
+            }
         }
         Some("selected_key_f64_score_history_frontier_selected_key_history")
         | Some("selected_key_f64_score_history_frontier_key_history")
@@ -34794,6 +34836,7 @@ fn attention_selected_score_residual_decision_frontier(
         "selected_query_head_raw_score_operand_classification": raw_score_operand_classification,
         "selected_query_downstream_score_residual_classification": query_downstream_classification,
         "selected_qk_downstream_score_residual_classification": qk_downstream_classification,
+        "selected_qk_downstream_decision_candidate": qk_downstream_decision,
         "selected_query_head": value_u64(selected_key_f64_score_history, "/selected_query_head")
             .or_else(|| value_u64(selected_query_history_residual, "/selected_query_head"))
             .or_else(|| value_u64(selected_query_raw_score_operand, "/head"))
@@ -56383,6 +56426,68 @@ mod tests {
             report.pointer("/classification"),
             Some(&json!("selected_score_residual_decision_frontier_selected_qk_history"))
         );
+    }
+
+    #[test]
+    fn selected_score_residual_decision_uses_qk_downstream_when_query_history_missing() {
+        let report = attention_selected_score_residual_decision_frontier(
+            &selected_score_decision_key_frontier(
+                "selected_key_f64_score_history_frontier_selected_query_history",
+            ),
+            &selected_score_decision_query_history(
+                "selected_query_history_residual_missing_context",
+            ),
+            &selected_score_decision_raw_operand(
+                "selected_query_head_raw_score_operand_missing_context",
+            ),
+            &selected_score_decision_downstream(
+                "selected_query_downstream_score_residual_selected_qk_history",
+            ),
+            &selected_score_decision_downstream(
+                "selected_qk_downstream_score_residual_key_post_rope_history",
+            ),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_score_residual_decision_frontier_selected_key_history"))
+        );
+        assert_eq!(
+            report.pointer("/selected_qk_downstream_decision_candidate"),
+            Some(&json!("selected_score_residual_decision_frontier_selected_key_history"))
+        );
+        assert_eq!(report.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_score_residual_decision_uses_qk_mixed_when_query_history_missing() {
+        let report = attention_selected_score_residual_decision_frontier(
+            &selected_score_decision_key_frontier(
+                "selected_key_f64_score_history_frontier_selected_query_history",
+            ),
+            &selected_score_decision_query_history(
+                "selected_query_history_residual_missing_context",
+            ),
+            &selected_score_decision_raw_operand(
+                "selected_query_head_raw_score_operand_missing_context",
+            ),
+            &selected_score_decision_downstream(
+                "selected_query_downstream_score_residual_selected_qk_history",
+            ),
+            &selected_score_decision_downstream(
+                "selected_qk_downstream_score_residual_mixed_qk_product",
+            ),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_score_residual_decision_frontier_selected_qk_history"))
+        );
+        assert_eq!(
+            report.pointer("/selected_qk_downstream_decision_candidate"),
+            Some(&json!("selected_score_residual_decision_frontier_selected_qk_history"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
