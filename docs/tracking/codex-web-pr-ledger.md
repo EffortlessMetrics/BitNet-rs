@@ -26,6 +26,9 @@ Snapshot source:
 - Refresh note: the queue is actively moving. After processing #5488, a
   follow-up `gh pr list` refresh showed 175 open scoped PRs: 12 `codex/*`, 162
   `a770/*`, and 1 `claude/*`.
+- Later refresh note: after this ledger branch opened, #5545, #5546, and #5547
+  appeared as additional AVX2 BitNet hot-path planning variants. They belong
+  to the same duplicate/overlap cluster as #5540 through #5544.
 
 ## Initial Queue Summary
 
@@ -83,4 +86,4 @@ Snapshot source:
 
 | PRs | Intent | Disposition |
 |---|---|---|
-| #5540, #5541, #5542, #5543, #5544 | AVX2/QK256 hot-path audit, diagnostic counters, receipt fields, and implementation planning. | Treat as a duplicate/overlap cluster. Compare claims and proofs, keep at most one canonical implementation plus one docs/plan PR if evidence supports it, and close superseded attempts. |
+| #5540, #5541, #5542, #5543, #5544, #5545, #5546, #5547 | AVX2/QK256 hot-path audit, diagnostic counters, receipt fields, and implementation planning. | Treat as a duplicate/overlap cluster. Compare claims and proofs, keep at most one canonical implementation plus one docs/plan PR if evidence supports it, and close superseded attempts. |
