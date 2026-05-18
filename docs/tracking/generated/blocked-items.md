@@ -346,7 +346,7 @@
 | intel-258v-platform | LNL258V-ROUTE-013 | LNL258V-ROUTE-012 | merged |
 | intel-258v-platform | LNL258V-ROUTE-014 | LNL258V-ROUTE-013 | merged |
 | intel-258v-platform | LNL258V-REG-006 | LNL258V-ROUTE-014 | merged |
-| intel-258v-platform | LNL258V-REG-007 | LNL258V-BITNET-INTAKE-001 | in_progress |
+| intel-258v-platform | LNL258V-REG-007 | LNL258V-BITNET-INTAKE-001 | merged |
 | intel-258v-platform | LNL258V-QUAL-010 | LNL258V-QUAL-009 | merged |
 | intel-258v-platform | LNL258V-BENCH-005 | LNL258V-ROUTE-009 | merged |
 | intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |
