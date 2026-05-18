@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T17:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-VALIDATE-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5614
+branch = "codex/lunar-lake/LNL258V-OPENVINO-VALIDATE-001-receipt-gates"
+head_sha = "da2c13f8e608c0a2b1c41e2605b3deeb3222d702"
+merge_sha = "54c332b664b6548788167df3d4b2d2ea61b5209d"
+summary = "Merged PR #5614, completing the Lunar Lake OpenVINO receipt-boundary validators."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5614",
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The merged validators reject fallback, backend/device drift, retokenized-token ambiguity, BitNet/QK256 claim leakage, native OpenCL claim leakage, and NPU promotion attempts without cache plus warm/resident evidence.",
+  "The closeout records no new inference, route promotion, runtime execution change, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU execution, full BitNet accelerator inference, or QK256 accelerator decode claim.",
+]
