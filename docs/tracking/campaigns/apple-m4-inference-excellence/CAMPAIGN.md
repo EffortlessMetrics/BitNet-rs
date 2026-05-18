@@ -124,7 +124,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-OPS-SLO-001 | proposed | Translate receipts into local operator envelope classes. |
 | M4-CONTEXT-001 | proposed | Add long-context guardrails against recorded dense SLM and BitNet evidence envelopes. |
 | M4-CONTEXT-002 | proposed | Publish long-context quality and timing receipts where supported. |
-| M4-REPRO-001 | in_progress | Define the reusable M4 run-identity contract for all evidence families. |
+| M4-REPRO-001 | pr_open | Define the reusable M4 run-identity contract for all evidence families. |
 | M4-REPRO-002 | proposed | Publish supported-model artifact provenance and cache verification manifests. |
 | M4-REPRO-003 | proposed | Record prompt-template, stop-sequence, and generation-parameter identity. |
 | M4-RECEIPT-001 | proposed | Add receipt-schema compatibility and negative fixtures for M4 evidence families. |
