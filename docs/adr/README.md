@@ -22,6 +22,7 @@ from campaign manifests and events.
 | ADR | What decision was made and why it is durable |
 | Plan | PR order and proof commands |
 | Campaign `active.toml` | Current executable work |
+| Handoff | Operator transfer context and closeout notes |
 | Policy TOML | Enforceable ledger |
 | Receipt or artifact | Evidence |
 

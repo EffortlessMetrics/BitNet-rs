@@ -17,6 +17,7 @@ and proof receipts.
 | ADR | Durable architecture or proof decision |
 | Plan | PR order, proof commands, rollback path |
 | Campaign `active.toml` | Current executable work item state |
+| Handoff | Operator transfer context, closeout summary, remaining work |
 | Status document | User-facing claim tier, proof command, artifact link |
 | Policy TOML | Enforceable CI, exception, allowlist, or routing ledger |
 | Receipt or artifact | Evidence for what actually happened |
