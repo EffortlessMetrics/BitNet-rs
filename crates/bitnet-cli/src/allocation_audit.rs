@@ -283,6 +283,12 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
         "prompt_prefill_breakdown": {
             "embed": allocation_samples_json(audit.prompt_prefill_embed),
             "forward": allocation_samples_json(audit.prompt_prefill_forward),
+            "forward_boundary": {
+                "first_reusable_allocation_surface": "transformer_forward_workspace_and_owned_tensor_outputs",
+                "classification": "model.forward returns owned tensors and uses transformer-layer workspace/tensor outputs that are not yet caller-reusable from the warm-session loop",
+                "next_safe_change": "introduce or thread reusable transformer forward buffers only behind generated-ID and strict-receipt preservation gates",
+                "claim_scope": "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made",
+            },
         },
         "decode": {
             "total": allocation_samples_json(audit.decode_total),
@@ -378,9 +384,13 @@ fn warm_session_next_optimization_target(
     let component =
         ranked_hotspots.first().and_then(|hotspot| hotspot["component"].as_str()).unwrap_or("none");
     let (target, rationale) = match component {
-        "prompt_prefill" | "prompt_prefill.forward" => (
-            "prefill_model_forward_allocation_attribution",
-            "prompt prefill dominates aggregate allocation counters; split model.forward tensor allocation before optimizing math",
+        "prompt_prefill" => (
+            "prefill_forward_buffer_boundary",
+            "prompt prefill dominates aggregate allocation counters; prompt_prefill.forward is the measured subcomponent and the next safe target is reusable transformer forward buffers",
+        ),
+        "prompt_prefill.forward" => (
+            "prefill_forward_buffer_boundary",
+            "prompt_prefill.forward dominates aggregate allocation counters; classify or reuse transformer forward workspace before changing dense math",
         ),
         "prompt_prefill.embed" => (
             "prefill_embedding_allocation_attribution",

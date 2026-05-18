@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T19:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-UX-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-UX-001-receipts-explain"
+pr = 5627
+head_sha = "d3660b99b36c658ec80465dbb41ba68e86f24658"
+merge_sha = "8866db1bc1b44f73ae451598f9a9bb8aa41681f9"
+summary = "Merged LNL258V-OPENVINO-UX-001 in PR #5627."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/receipts.rs",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5627 added OpenVINO route summaries to receipts explain, including route identity, backend/runtime/device identity, proof family, quality status, timing scope, promotion status, blockers, and claim limits.",
+  "The merge does not claim new inference, route promotion, OpenVINO speedup, power advantage, server readiness, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU execution, full BitNet accelerator inference, or QK256 accelerator decode.",
+]

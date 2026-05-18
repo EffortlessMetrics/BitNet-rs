@@ -258,12 +258,26 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-UX-001
 
-Status: proposed
+Status: merged
 Blocked by: `LNL258V-OPENVINO-STATUS-001`
 
 Teach `receipts explain` to summarize OpenVINO route ID, selected backend,
 device, proof family, quality status, timing scope, promotion status, blockers,
 and what the receipt does not prove.
+
+Production delta: operator UX only. `receipts explain` should make OpenVINO
+candidate/proof boundaries readable from existing receipts without validating,
+executing inference, changing route policy, or promoting GPU/NPU routes.
+
+Acceptance additions:
+
+- Text and JSON receipt explanations expose an OpenVINO block with route ID,
+  backend/runtime/device identity, proof family, selected runtime, quality
+  status, timing scope, promotion status, blockers, and claim limits.
+- Candidate GPU/NPU receipts explicitly explain that they do not prove route
+  promotion, speedup, native OpenCL/NPU execution, BitNet QK256/I2_S, full
+  BitNet accelerator inference, or QK256 accelerator decode.
+- Existing CUDA and model-coverage receipt explanation behavior remains intact.
 
 ## Phase C: Close Quality Gaps
 

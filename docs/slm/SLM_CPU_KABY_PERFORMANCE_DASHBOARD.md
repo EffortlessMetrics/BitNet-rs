@@ -345,6 +345,24 @@ hotspots. It is evidence for attribution only: it does not claim a runtime
 speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support,
 accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
 
+## Prefill Forward Buffer Boundary
+
+SLM-CPU-036 classifies the first reusable allocation surface under
+`prompt_prefill.forward` before changing dense math. The warm-session receipt
+now records the boundary as transformer forward workspace and owned tensor
+outputs that are not yet caller-reusable from the CLI warm-session loop:
+
+```text
+next_optimization_target = prefill_forward_buffer_boundary
+first_reusable_allocation_surface = transformer_forward_workspace_and_owned_tensor_outputs
+claim_scope = allocation-boundary classification only
+```
+
+This is a classification slice. It does not change Q8_0 GEMV, RMSNorm, RoPE,
+attention, output-head math, tokenizer behavior, or generated tokens, and it
+does not claim a speedup, sustained throughput, Q4/Q5 runtime support,
+accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:

@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T18:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-UX-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-UX-001-receipts-explain"
+summary = "Started LNL258V-OPENVINO-UX-001 to add OpenVINO route summaries to receipts explain."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/receipts.rs",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The UX work is scoped to explaining existing Lunar Lake OpenVINO receipts: route identity, selected backend, runtime API/device, proof family, selected runtime, quality status, timing scope, promotion status, blockers, and what the receipt does not prove.",
+  "No inference, route promotion, OpenVINO speedup, power advantage, server readiness, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU execution, full BitNet accelerator inference, or QK256 accelerator decode claim is in scope.",
+]
