@@ -603,6 +603,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = ROUTE_PROMOTION_LEDGER)]
         promotion_ledger: PathBuf,
 
+        /// Route profile comparison receipt used to fail closed on stale profile promotion.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: PathBuf,
+
         /// Workload profile to resolve when auto-routing is requested.
         #[arg(long, default_value = "ask_normal")]
         profile: String,
@@ -6867,13 +6872,24 @@ pub struct OperatorAskRouteSelection {
     pub why_not_npu: Vec<String>,
     pub candidate_routes: Vec<String>,
     pub promotion_ledger: Option<String>,
+    pub route_profile_comparison: Option<String>,
+    pub route_profile_status: Option<String>,
+    pub route_profile_blockers: Vec<String>,
     pub route: OperatorRoute,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AutoRouteProfileGuard {
+    comparison_path: String,
+    profile_status: String,
+    blockers: Vec<String>,
 }
 
 pub fn resolve_operator_ask_route_selection(
     root: &Path,
     operator_receipt: &Path,
     promotion_ledger: &Path,
+    route_profile_comparison: Option<&Path>,
     requested_route: &str,
     requested_device: &str,
     profile_id: &str,
@@ -6886,6 +6902,16 @@ pub fn resolve_operator_ask_route_selection(
     if !route_auto && !device_auto {
         let route = load_operator_ask_route(root, operator_receipt, &requested_route)?;
         validate_operator_ask_requested_device(&requested_device, &route)?;
+        let profile_guard = if let Some(route_profile_comparison) = route_profile_comparison {
+            Some(validate_ask_route_profile_guard(
+                root,
+                route_profile_comparison,
+                &route.route_id,
+                profile_id,
+            )?)
+        } else {
+            None
+        };
         return Ok(OperatorAskRouteSelection {
             requested_device,
             requested_route,
@@ -6905,6 +6931,11 @@ pub fn resolve_operator_ask_route_selection(
             why_not_npu: vec!["auto routing was not requested".to_string()],
             candidate_routes: vec![],
             promotion_ledger: None,
+            route_profile_comparison: profile_guard
+                .as_ref()
+                .map(|guard| guard.comparison_path.clone()),
+            route_profile_status: profile_guard.as_ref().map(|guard| guard.profile_status.clone()),
+            route_profile_blockers: profile_guard.map(|guard| guard.blockers).unwrap_or_default(),
             route,
         });
     }
@@ -6921,6 +6952,16 @@ pub fn resolve_operator_ask_route_selection(
         profile.promoted_route.as_deref().unwrap_or(ledger.default_route_id.as_str());
     let promotion = route_promotion(&ledger, selected_route_id)?;
     validate_auto_selected_promotion(promotion, profile_id)?;
+    let profile_guard = if let Some(route_profile_comparison) = route_profile_comparison {
+        Some(validate_ask_route_profile_guard(
+            root,
+            route_profile_comparison,
+            selected_route_id,
+            profile_id,
+        )?)
+    } else {
+        None
+    };
     let route = load_operator_ask_route(root, operator_receipt, selected_route_id)?;
     validate_operator_ask_requested_device(&requested_device, &route)?;
     let (why_not_cpu, why_not_gpu, why_not_npu) =
@@ -6941,6 +6982,9 @@ pub fn resolve_operator_ask_route_selection(
         why_not_npu,
         candidate_routes: profile.candidate_routes.clone(),
         promotion_ledger: Some(path_string(&ledger_path)),
+        route_profile_comparison: profile_guard.as_ref().map(|guard| guard.comparison_path.clone()),
+        route_profile_status: profile_guard.as_ref().map(|guard| guard.profile_status.clone()),
+        route_profile_blockers: profile_guard.map(|guard| guard.blockers).unwrap_or_default(),
         route,
     })
 }
@@ -7042,6 +7086,88 @@ fn validate_auto_selected_promotion(route: &RoutePromotion, profile_id: &str) ->
         bail!("route `{}` is missing a route reason", route.route_id);
     }
     Ok(())
+}
+
+fn validate_ask_route_profile_guard(
+    root: &Path,
+    route_profile_comparison: &Path,
+    selected_route_id: &str,
+    profile_id: &str,
+) -> Result<AutoRouteProfileGuard> {
+    let comparison_path = resolve_receipt_path(root, route_profile_comparison);
+    let comparison: LunarLakeRouteProfileComparison = read_json_receipt(&comparison_path)?;
+    if !comparison.profile_comparison_ready {
+        bail!("route-profile comparison is not ready: {}", comparison.gaps.join("; "));
+    }
+    if comparison.machine_id != "intel-258v" {
+        bail!(
+            "Lunar Lake ask route requires route-profile machine_id=intel-258v; got {}",
+            comparison.machine_id
+        );
+    }
+    if comparison.claim_boundary.hidden_fallback_allowed {
+        bail!("Lunar Lake ask route refuses route-profile receipts that allow hidden fallback");
+    }
+    if comparison.claim_boundary.arc_bitnet_full_inference_claimed
+        || comparison.claim_boundary.npu_bitnet_full_inference_claimed
+        || comparison.claim_boundary.qk256_accelerator_decode_claimed
+    {
+        bail!(
+            "Lunar Lake ask route refuses route-profile receipts with accelerator BitNet/QK256 claims"
+        );
+    }
+
+    let profile =
+        comparison.profiles.iter().find(|profile| profile.profile_id == profile_id).with_context(
+            || {
+                format!(
+                    "ask route profile `{profile_id}` not found in route-profile comparison {}",
+                    comparison_path.display()
+                )
+            },
+        )?;
+    let route = profile
+        .route_evidence
+        .iter()
+        .find(|route| route.route_id == selected_route_id)
+        .with_context(|| {
+            format!(
+                "route-profile comparison does not include route `{selected_route_id}` for profile `{profile_id}`"
+            )
+        })?;
+
+    let mut blockers = route.blockers.clone();
+    blockers.extend(profile.gaps.iter().cloned());
+    if !route.promotion_eligible_for_profile {
+        blockers.push(format!(
+            "route `{selected_route_id}` is not promotion-eligible for profile `{profile_id}` in route-profile comparison"
+        ));
+    }
+    if profile.profile_status != "promoted_route_ready" {
+        blockers.push(format!(
+            "profile `{profile_id}` route-profile status is `{}`",
+            profile.profile_status
+        ));
+    }
+    if route.fallback_used != Some(false) {
+        blockers.push(format!(
+            "route `{selected_route_id}` does not prove fallback_used=false in route-profile comparison"
+        ));
+    }
+    blockers.sort();
+    blockers.dedup();
+    if !blockers.is_empty() {
+        bail!(
+            "ask route `{selected_route_id}` for profile `{profile_id}` is blocked by route-profile comparison: {}",
+            blockers.join("; ")
+        );
+    }
+
+    Ok(AutoRouteProfileGuard {
+        comparison_path: path_string(&comparison_path),
+        profile_status: profile.profile_status.clone(),
+        blockers,
+    })
 }
 
 fn route_selection_explanations(
@@ -12411,40 +12537,105 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn auto_ask_selects_promoted_cpu_route_from_ledger() -> Result<()> {
-        let temp = tempfile::tempdir()?;
-        write_minimal_receipts(temp.path(), false)?;
+    fn write_auto_ask_selection_artifacts(root: &Path) -> Result<LunarLakeRouteProfileComparison> {
+        write_minimal_receipts(root, false)?;
+        write_json(
+            root,
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "tokens": {
+                    "prompt_count": 38,
+                    "generated_count": 8
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
         let operator = build_operator_readiness_receipt_with_created_utc(
-            temp.path(),
+            root,
             "2026-05-16T10:00:00Z".to_string(),
         )?;
-        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        fs::write(root.join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
         let regression = build_regression_bundle_with_created_utc(
-            temp.path(),
+            root,
             Path::new(OPERATOR_READINESS),
             "2026-05-16T10:05:00Z".to_string(),
         )?;
-        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        fs::write(root.join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
         let comparison = build_comparison_receipt_with_created_utc(
-            temp.path(),
+            root,
             Path::new(OPERATOR_READINESS),
             Path::new(REGRESSION_BUNDLE),
             "2026-05-16T10:10:00Z".to_string(),
         )?;
-        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        fs::write(root.join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
         let ledger = build_route_promotion_ledger_with_created_utc(
-            temp.path(),
+            root,
             Path::new(OPERATOR_READINESS),
             Path::new(OPERATOR_COMPARISON),
             "2026-05-16T10:15:00Z".to_string(),
         )?;
-        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        fs::write(root.join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+        let profiles = build_route_profile_comparison_with_created_utc(
+            root,
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-16T10:20:00Z".to_string(),
+        )?;
+        fs::write(root.join(ROUTE_PROFILE_COMPARISON), serde_json::to_vec_pretty(&profiles)?)?;
+        Ok(profiles)
+    }
+
+    fn block_regression_tiny_cpu_profile(
+        profiles: &mut LunarLakeRouteProfileComparison,
+    ) -> Result<()> {
+        let profile = profiles
+            .profiles
+            .iter_mut()
+            .find(|profile| profile.profile_id == "regression_tiny")
+            .context("missing regression_tiny profile")?;
+        profile.profile_status = "promoted_route_blocked".to_string();
+        profile.promotion_decision =
+            "dense_slm_default_cpu is listed as promoted for regression_tiny, but profile evidence is incomplete"
+                .to_string();
+        let route = profile
+            .route_evidence
+            .iter_mut()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing regression_tiny CPU route")?;
+        route.promotion_eligible_for_profile = false;
+        route.blockers.push("corpus_v2 profile regression_tiny has 1 quality failures".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_selects_promoted_cpu_route_from_ledger() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_auto_ask_selection_artifacts(temp.path())?;
 
         let selection = resolve_operator_ask_route_selection(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             "auto",
             "auto",
             "ask_normal",
@@ -12453,6 +12644,8 @@ mod tests {
         assert_eq!(selection.selection_source, "promotion_ledger_auto");
         assert_eq!(selection.selected_route, DEFAULT_ASK_ROUTE);
         assert_eq!(selection.promotion_status, "promoted");
+        assert_eq!(selection.route_profile_status.as_deref(), Some("promoted_route_ready"));
+        assert!(selection.route_profile_blockers.is_empty());
         assert_eq!(selection.selected_backend, "cpu-rust");
         assert_eq!(selection.runtime_api, "cpu");
         assert!(
@@ -12466,6 +12659,63 @@ mod tests {
             reason.contains("route status is `candidate`")
                 || reason.contains("route is not promoted for profile")
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_rejects_route_profile_blocked_promoted_route() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let mut profiles = write_auto_ask_selection_artifacts(temp.path())?;
+        block_regression_tiny_cpu_profile(&mut profiles)?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "auto",
+            "auto",
+            "regression_tiny",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("blocked by route-profile comparison"), "got: {err}");
+        assert!(
+            err.contains("corpus_v2 profile regression_tiny has 1 quality failures"),
+            "got: {err}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn direct_ask_rejects_route_profile_blocked_promoted_route() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let mut profiles = write_auto_ask_selection_artifacts(temp.path())?;
+        block_regression_tiny_cpu_profile(&mut profiles)?;
+        fs::write(
+            temp.path().join(ROUTE_PROFILE_COMPARISON),
+            serde_json::to_vec_pretty(&profiles)?,
+        )?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            DEFAULT_ASK_ROUTE,
+            "cpu",
+            "regression_tiny",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("blocked by route-profile comparison"), "got: {err}");
+        assert!(err.contains("profile `regression_tiny`"), "got: {err}");
         Ok(())
     }
 
@@ -12503,6 +12753,7 @@ mod tests {
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Path::new(ROUTE_PROMOTION_LEDGER),
+            None,
             "auto",
             "auto",
             "unlisted_profile",
@@ -12548,6 +12799,7 @@ mod tests {
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Path::new(ROUTE_PROMOTION_LEDGER),
+            None,
             "auto",
             "openvino-npu",
             "ask_normal",

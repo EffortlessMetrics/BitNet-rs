@@ -6847,6 +6847,71 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-OP-005"
+status = "in_progress"
+pr = 5662
+head_sha = "aa9c8a2443d4e0cbd6684d7a9bf9f25c8d83906e"
+branch = "codex/lunar-lake/LNL258V-OP-005-auto-route-profile-guard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-QUAL-007"]
+acceptance = "Make lunar-lake ask routing fail closed against the route-profile comparison receipt so a ledger-promoted route/profile is selected only when profile evidence is promoted_route_ready and the selected route is promotion-eligible, while preserving the working ask_normal CPU default, keeping blocked regression_tiny evidence blocked for auto and explicit CPU route selection, and making no inference, quality, speedup, route-promotion, Arc/NPU acceleration, native OpenCL/NPU, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs crates/bitnet-cli/src/main.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::auto_ask_selects_promoted_cpu_route_from_ledger -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::auto_ask_rejects_route_profile_blocked_promoted_route -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::direct_ask_rejects_route_profile_blocked_promoted_route -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-prompt-templates-core/**",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-tokenizers/**",
+  "README.md",
+]
+may_claim = [
+  "lunar-lake ask routing now checks route-profile comparison evidence before selecting a ledger-promoted profile.",
+  "ask_normal continues to select the promoted dense Qwen CPU route when profile evidence is promoted_route_ready.",
+  "Profiles blocked by route-profile comparison, including the current regression_tiny stop-token blocker, fail closed before generation for auto and explicit CPU route selection.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "Dense SLM answer quality is newly proven.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Native OpenCL execution is proven.",
+  "Native NPU execution is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-OPENVINO-QUAL-REPORT-001"
 status = "merged"
 pr = 5633
