@@ -1531,7 +1531,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-014"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-014-bitnet-250-repaired-run"
 stackable = false
 review_mode = "codex_premerge"
