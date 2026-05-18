@@ -1,0 +1,20 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:04:54Z"
+event = "merged"
+item = "SLM-CPU-033"
+pr = 5603
+branch = "codex/slm-cpu-033-forward-allocation-boundary"
+head_sha = "8896bf4c9"
+merge_sha = "03523b8120a41bf148d64d584b3bdc7394af383f"
+actor = "codex"
+summary = "Merged the Qwen3 Q8_0 Kaby aggregate allocation boundary slice and advanced SLM-CPU-034."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5603",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+]
+notes = [
+  "Aggregate warm-session allocation receipts now record dominant_hotspot and next_optimization_target.",
+  "SLM-CPU-034 is ready for bounded prompt_prefill/model.forward allocation attribution before changing dense math.",
+  "No sustained-throughput, runtime speedup, broad answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
