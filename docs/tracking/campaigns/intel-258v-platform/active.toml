@@ -6389,7 +6389,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-DOCS-001"
-status = "ready"
+status = "merged"
+pr = 5577
+head_sha = "33c5b6a97a8a0a4ece57e1cf4b85864bf3e07015"
+merge_sha = "a7c3f494806fe15e8a02c3df10fc0bd4fd5f0aa8"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-001-productization-route-contract"
 stackable = false
 review_mode = "codex_premerge"
