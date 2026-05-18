@@ -1,0 +1,111 @@
+id = "llama3-8b-158"
+title = "Llama3 8B 1.58 supported-model candidate"
+status = "active"
+
+objective = "Make HF1BitLLM/Llama3-8B-1.58-100B-tokens a first-class large BitNet-family candidate lane without inheriting Microsoft 2B, dense Llama3, backend, server, or speed proof."
+
+end_state = [
+  "Exact artifact inventory records revision, file hashes, tokenizer/config hashes, identity discrepancy, storage context, and cleanup status.",
+  "Tokenizer/prompt authority is audited as Llama3-derived and not assumed to be Microsoft 2B bitnetcpp-answer.",
+  "Conversion or approved runner authority is recorded for I2_S, TL1, TL2, or blocked diagnostic routes.",
+  "I2_S, TL1, and TL2 layout proofs are separated before CPU, accelerator, benchmark, or product claims.",
+]
+
+hard_constraints = [
+  "Do not commit model binaries.",
+  "Do not claim answer readiness from safetensors inventory alone.",
+  "Do not inherit official Microsoft 2B I2_S/QK256 proof.",
+  "Do not inherit dense Llama3 or dense Qwen proof.",
+  "Do not claim I2_S/QK256 route compatibility before layout proof.",
+  "Do not route TL1/TL2 through QK256/I2_S kernels.",
+  "Do not claim CPU, CUDA, Apple, server, or speed readiness before exact receipts.",
+]
+
+[[work_item]]
+id = "LLAMA3-158-000"
+status = "ready"
+branch = "codex/llama3-158-source-map-specs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add Llama3 8B 1.58 proposal, source map, implementation plan, active campaign, conservative model/kernel/Apple matrices, and spec contracts without runtime changes, model binaries, or support promotion beyond registered."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check llama3-8b-158",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0011-llama3-8b-158-supported-model.md",
+  "docs/bitnet/llama3-8b-158/**",
+  "plans/llama3-8b-158/**",
+  "docs/specs/BITNET-SPEC-LLAMA3-8B-158-*.md",
+  "docs/specs/INDEX.md",
+  "docs/tracking/campaigns/llama3-8b-158/**",
+  "docs/tracking/generated/**",
+  "ci/model-artifacts/model-kernel-compatibility.toml",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/apple-silicon/bitnet-candidate-matrix.md",
+  "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/**",
+  "benches/**",
+  "examples/**",
+]
+may_claim = [
+  "HF1BitLLM/Llama3-8B-1.58-100B-tokens is registered as a BitNet-family candidate after merge.",
+  "Upstream-listed x86 I2_S, x86 TL2, ARM I2_S, and ARM TL1 routes are recorded as verify-runner candidates after merge.",
+]
+must_not_claim = [
+  "The model is answer-ready.",
+  "The model has an approved BitNet-rs GGUF.",
+  "The model is compatible with existing QK256/I2_S kernels.",
+  "TL1/TL2 routes can use QK256/I2_S kernels.",
+  "CPU, CUDA, Apple, server, or speed support is proven.",
+]
+
+[[work_item]]
+id = "LLAMA3-158-001"
+status = "proposed"
+branch = "codex/llama3-158-artifact-inventory"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LLAMA3-158-000"]
+acceptance = "Record exact artifact inventory receipt or blocked receipt with revision, file list, sizes, SHA256 values, tokenizer/config hashes, identity discrepancy, storage context, cleanup status, and no answer/backend claims."
+commands = [
+  "bitnet model artifact-probe --hf-repo HF1BitLLM/Llama3-8B-1.58-100B-tokens --local-dir <cache> --json-out ci/model-artifacts/llama3-8b-158/artifact-inventory.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check llama3-8b-158",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/llama3-8b-158/**",
+  "docs/bitnet/llama3-8b-158/**",
+  "docs/tracking/campaigns/llama3-8b-158/**",
+]
+forbidden_paths = ["models/**", "crates/**"]
+may_claim = ["Exact artifact inventory exists after merge if hashes are recorded."]
+must_not_claim = ["Answer readiness, backend readiness, conversion proof, or speedup is proven."]
+
+[[work_item]]
+id = "LLAMA3-158-002"
+status = "proposed"
+branch = "codex/llama3-158-conversion-runner-authority"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LLAMA3-158-001"]
+acceptance = "Verify or block I2_S/TL1/TL2 conversion and reference runner paths with exact commands, tool commits, input hashes, output hashes when produced, runner command, route, and diagnostic-only claim boundary."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check llama3-8b-158",
+  "git diff --check",
+]
+allowed_paths = ["ci/model-artifacts/llama3-8b-158/**", "docs/bitnet/llama3-8b-158/**", "docs/tracking/campaigns/llama3-8b-158/**"]
+forbidden_paths = ["models/**", "crates/**"]
+may_claim = ["Conversion or runner path candidate status is recorded after merge."]
+must_not_claim = ["Reference-good, CPU-ready, CUDA-ready, Apple-ready, server-ready, or speedup is proven."]

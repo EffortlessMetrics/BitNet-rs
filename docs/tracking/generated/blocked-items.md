@@ -233,6 +233,7 @@
 | cpu-proof | CPU-AVX2-HOTPATH-001 | CPU-AVX2-HOTPATH-000 | ready |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
+| falcon-e-family | FE-001 | FE-000 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
 | intel-258v-platform | ARC140V-003 | ARC140V-002, CPU258V-003 | merged |
 | intel-258v-platform | ARC140V-004 | ARC140V-003, CPU258V-003 | merged |
@@ -370,7 +371,7 @@
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
-| intel-258v-platform | LNL258V-OP-006 | LNL258V-ROUTE-015 | in_progress |
+| intel-258v-platform | LNL258V-OP-006 | LNL258V-ROUTE-015 | merged |
 | intel-a770 | A770-003 | A770-000 | proposed |
 | intel-a770 | A770-004 | A770-003 | proposed |
 | intel-a770 | A770-005 | A770-004 | proposed |
@@ -386,6 +387,8 @@
 | intel-npu | NPU-010 | NPU-009 | merged |
 | intel-npu | NPU-011 | NPU-010 | merged |
 | intel-npu | NPU-012 | NPU-011 | merged |
+| llama3-8b-158 | LLAMA3-158-001 | LLAMA3-158-000 | proposed |
+| llama3-8b-158 | LLAMA3-158-002 | LLAMA3-158-001 | proposed |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |
@@ -515,6 +518,8 @@
 | nvidia-5070ti | CUDA-DENSE-020 | CUDA-DENSE-019 | merged |
 | nvidia-5070ti | CUDA-UX-002 | CUDA-UX-001, CUDA-PROD-001 | merged |
 | nvidia-5070ti | CUDA-DENSE-014 | CUDA-DENSE-013 | merged |
+| official-bitnet-2b | OFFICIAL-2B-001 | OFFICIAL-2B-000 | blocked |
+| official-bitnet-2b | OFFICIAL-2B-002 | OFFICIAL-2B-001 | blocked |
 | server-real-inference | SERVER-002 | SERVER-001 | merged |
 | server-real-inference | SERVER-003 | SERVER-002 | merged |
 | server-real-inference | SERVER-004 | SERVER-003 | merged |

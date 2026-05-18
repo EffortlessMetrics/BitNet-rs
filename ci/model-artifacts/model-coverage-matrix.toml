@@ -2,6 +2,7 @@ schema = 1
 artifact_kind = "model_coverage_matrix"
 updated = "2026-05-15"
 work_item = "MODEL-COVERAGE-005"
+source_map = "docs/bitnet/official-2b/README.md"
 claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
 
 [[tier]]
@@ -48,6 +49,7 @@ meaning = "Normal user CLI paths exist for verified ask/chat/bench receipt surfa
 
 [[entry]]
 id = "bitnet_official_2b_i2s_qk256"
+source_map = "docs/bitnet/official-2b/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "gguf_i2_s"
@@ -97,6 +99,7 @@ claim_boundary = "Official Microsoft 2B I2_S is the current BitNet QK256 x86/CUD
 
 [[entry]]
 id = "bitnet_official_2b_tl1_arm_candidate"
+source_map = "docs/bitnet/official-2b/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "gguf_tl1"
@@ -138,6 +141,7 @@ claim_boundary = "Official or derived TL1 BitNet rows are ARM-oriented candidate
 
 [[entry]]
 id = "bitnet_official_2b_tl2_x86_candidate"
+source_map = "docs/bitnet/official-2b/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "gguf_tl2"
@@ -180,6 +184,7 @@ claim_boundary = "Official or derived TL2 BitNet rows are separate x86 LUT candi
 
 [[entry]]
 id = "bitnet_official_2b_bf16_gpu_int2_candidate"
+source_map = "docs/bitnet/official-2b/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "bf16_master_to_gpu_packed_int2_w2a8"
@@ -754,33 +759,37 @@ claim_boundary = "1bitLLM large-family artifacts are diagnostic until artifact a
   dense_regular_llm_cuda_proof = false
 
 [[entry]]
-id = "bitnet_llama3_8b_158_diagnostic"
+id = "llama3_8b_158_100b_tokens_candidate"
 model_class = "bitnet"
-family = "llama3_1_58"
-artifact_kind = "ptq_or_native_158_variant"
-contract_id = "llama3_8b_158_diagnostic"
-status = "diagnostic_only"
+family = "llama3_bitnet_b1_58"
+artifact_kind = "safetensors_candidate"
+contract_id = "hf1bitllm_llama3_8b_158_100b_tokens"
+status = "registered_safetensors_no_approved_gguf"
 current_tier = "registered"
-verifier_surface = "model coverage matrix only"
-tokenizer_authority = "pending_family_specific_contract"
-prompt_authority = "pending_family_specific_contract"
-cpu_reference = "reference_runner_and_tensor_contract_required"
+verifier_surface = "bitnet model verify llama3-8b-1.58-100b-tokens"
+tokenizer_authority = "llama3_tokenizer_files_present_unproven"
+prompt_authority = "pending_llama3_prompt_audit"
+cpu_reference = "pending_reference_good"
 accelerator_routes = []
 required_receipts = [
-  "artifact_contract",
+  "artifact_inventory",
+  "conversion_path",
   "tokenizer_prompt_authority",
-  "kernel_route_map",
-  "reference_runner_evidence",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "tl1_tl2_layout_spec",
 ]
 forbidden_claims = [
-  "official_bitnet_answer_authority",
-  "i2_s_qk256_proof",
-  "dense_regular_llm_cuda_proof",
+  "official_microsoft_2b_proof_inheritance",
+  "dense_llama3_proof_inheritance",
+  "cpu_answer_ready",
+  "cuda_answer_ready",
+  "apple_answer_ready",
   "speedup",
   "server_ready",
 ]
-next_proof = "Per-model artifact contract, reference-runner evidence, tokenizer/prompt authority, and supported kernel route map."
-claim_boundary = "Llama3-family 1.58-bit variants are supported-upstream-style diagnostics, not official Microsoft 2B I2_S answer authority."
+next_proof = "Exact HF artifact inventory, tokenizer/prompt audit, conversion or approved runner route, reference-good corpus, and I2_S/TL layout proof."
+claim_boundary = "Registered large BitNet-family Llama3-derived candidate only. Upstream-listed x86 I2_S/TL2 and ARM I2_S/TL1 routes require BitNet-rs artifact, conversion/runner, tokenizer/prompt, layout, reference, CPU, backend, and performance receipts before support claims."
 
   [entry.claims]
   registered = true
@@ -1217,6 +1226,231 @@ forbidden_claims = [
 ]
 next_proof = "supply a concrete artifact contract and hardware envelope before runtime work."
 claim_boundary = "Docs-only modern LLM slots document future proof ladders and current hardware limits; they do not imply runtime support."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_1b_instruct_i2s_gguf_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "gguf_i2_s_candidate"
+contract_id = "tiiuae_falcon_e_1b_instruct_i2s_gguf"
+status = "registered_direct_gguf_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "microsoft_2b_proof_inheritance",
+  "falcon3_proof_inheritance",
+  "onebitllm_proof_inheritance",
+  "dense_falcon_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "a770_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Exact artifact inventory, tokenizer/prompt authority, reference-good output, I2_S layout proof, and strict Rust CPU answer corpus."
+claim_boundary = "Falcon-E 1B direct I2_S GGUF is registered only; no answer, backend, speed, server, or full-residency claim."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_3b_instruct_i2s_gguf_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "gguf_i2_s_candidate"
+contract_id = "tiiuae_falcon_e_3b_instruct_i2s_gguf"
+status = "registered_direct_gguf_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "falcon_e_1b_proof_inheritance",
+  "microsoft_2b_proof_inheritance",
+  "falcon3_proof_inheritance",
+  "onebitllm_proof_inheritance",
+  "dense_falcon_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "a770_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Exact artifact inventory, tokenizer/prompt authority, reference-good output, I2_S layout proof, and strict Rust CPU answer corpus."
+claim_boundary = "Falcon-E 3B direct I2_S GGUF is registered only and must not inherit Falcon-E 1B proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_1b_tl1_arm_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl1_arm_candidate"
+contract_id = "tiiuae_falcon_e_1b_tl1_arm_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["i2_s_qk256_proof_inheritance", "x86_tl2_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL1 layout spec and scalar oracle before ARM CPU/NEON proof."
+claim_boundary = "ARM TL1 is a registered future route only."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_3b_tl1_arm_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl1_arm_candidate"
+contract_id = "tiiuae_falcon_e_3b_tl1_arm_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["falcon_e_1b_proof_inheritance", "i2_s_qk256_proof_inheritance", "x86_tl2_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL1 layout spec and scalar oracle before ARM CPU/NEON proof."
+claim_boundary = "ARM TL1 3B is a registered future route only and must not inherit 1B proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_1b_tl2_x86_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl2_x86_candidate"
+contract_id = "tiiuae_falcon_e_1b_tl2_x86_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["i2_s_qk256_proof_inheritance", "arm_tl1_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL2 layout spec and scalar oracle before x86 backend proof."
+claim_boundary = "x86 TL2 is a registered future route only."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_3b_tl2_x86_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl2_x86_candidate"
+contract_id = "tiiuae_falcon_e_3b_tl2_x86_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["falcon_e_1b_proof_inheritance", "i2_s_qk256_proof_inheritance", "arm_tl1_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL2 layout spec and scalar oracle before x86 backend proof."
+claim_boundary = "x86 TL2 3B is a registered future route only and must not inherit 1B proof."
 
   [entry.claims]
   registered = true

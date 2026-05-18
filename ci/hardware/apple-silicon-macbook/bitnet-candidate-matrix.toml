@@ -55,8 +55,53 @@ notes = [
   proof_use = "follow-up ARM layout route after I2_S authority is clear"
 
 [[candidate]]
-id = "onebitllm_bitnet_b158_large_07b"
+id = "hf1bitllm_llama3_8b_158_100b_tokens"
 priority = 2
+model_family = "llama3_bitnet_b1_58"
+role = "large_llama3_bitnet_candidate"
+source_repo = "HF1BitLLM/Llama3-8B-1.58-100B-tokens"
+source_url = "https://huggingface.co/HF1BitLLM/Llama3-8B-1.58-100B-tokens"
+file = "model.safetensors"
+known_sha256 = "pending"
+known_size_bytes = 0
+storage_estimate = "about_3_86gb_safetensors_visible; exact bytes pending artifact inventory"
+format = "safetensors_candidate_no_approved_gguf"
+quantization = "i2_s_tl1_tl2_routes_pending_conversion_authority"
+tokenizer_authority = "llama3_tokenizer_files_present_unproven"
+pretokenizer_authority = "pending_llama3_prompt_audit"
+prompt_template = "pending_llama3_prompt_authority_not_microsoft_2b"
+reference_runner = "transformers_vllm_sglang_or_bitnetcpp_candidate"
+reference_status = "registered_no_reference_good_receipt"
+cleanup_required = true
+next_item = "LLAMA3-158-001"
+notes = [
+  "Upstream bitnet.cpp lists x86 I2_S, x86 TL2, ARM I2_S, and ARM TL1 support for this model, but BitNet-rs has not recorded an approved GGUF or conversion path.",
+  "The source repository is currently treated as safetensors/tokenizer/config visible; no official BitNet-rs-approved GGUF is recorded in this matrix.",
+  "Record the upstream 8.0B versus HF display-size discrepancy in the artifact contract before any artifact claim.",
+  "Do not inherit Microsoft 2B prompt, I2_S/QK256, CPU, CUDA, Apple, server, or speed proof.",
+]
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+  proof_use = "large Apple BitNet candidate only after artifact inventory, conversion/runner authority, tokenizer/prompt audit, reference-good output, and I2_S layout proof"
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+  proof_use = "ARM TL1 candidate only after TL1 layout fixtures and scalar oracle exist"
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
+  proof_use = "diagnostic_rejection_only"
+
+[[candidate]]
+id = "onebitllm_bitnet_b158_large_07b"
+priority = 3
 model_family = "bitnet_b1_58"
 role = "smaller_control_candidate"
 source_repo = "1bitLLM/bitnet_b1_58-large"
@@ -95,7 +140,7 @@ notes = [
 
 [[candidate]]
 id = "onebitllm_bitnet_b158_3b_tl_diagnostic"
-priority = 3
+priority = 4
 model_family = "bitnet_b1_58"
 role = "larger_diagnostic_candidate"
 source_repo = "1bitLLM/bitnet_b1_58-3B"
@@ -105,7 +150,7 @@ known_sha256 = "pending"
 known_size_bytes = 13297592664
 storage_estimate = "official_safetensors_shards_total_13297592664_bytes; current M3 Air preflight would leave about 4435547 KiB free after shards"
 format = "blocked_no_official_gguf"
-quantization = "tl1_or_tl2_only_until_compatibility_changes"
+quantization = "arm_tl1_candidate_only_until_compatibility_changes"
 tokenizer_authority = "official_tokenizer_files_present"
 pretokenizer_authority = "pending_runner_conversion_path"
 prompt_template = "blocked_until_gguf_or_converter_path"
@@ -117,7 +162,8 @@ notes = [
   "Compatibility ledger marks 3B I2_S unsupported upstream for ARM and x86.",
   "The official repository at revision af89e318d78a70802061246bf037199d2fb97020 contains safetensors shards and tokenizer/config files, but no .gguf artifact.",
   "Current M3 Air preflight records only 17427716 KiB available; downloading the official safetensors shards without cleanup or conversion approval would leave about 4435547 KiB, below the hard free-space floor.",
-  "Use only TL1/TL2 diagnostic routes if a verified runner path and coherent reference output exist.",
+  "Use only ARM TL1 diagnostic routes if a verified runner path and coherent reference output exist; ARM TL2 is unsupported by the compatibility ledger.",
+  "Treat 3B as a separate TL-model lane; do not inherit Microsoft 2B I2_S/QK256 proof or dense SLM proof.",
 ]
 
   [[candidate.route]]
@@ -135,12 +181,12 @@ notes = [
   [[candidate.route]]
   arch = "arm"
   kernel = "tl2"
-  status = "blocked_no_official_gguf_or_conversion_path"
-  proof_use = "diagnostic_route_until_runner_path_verified"
+  status = "unsupported_upstream"
+  proof_use = "diagnostic_rejection_only"
 
 [[candidate]]
 id = "falcon_e_1b_instruct_i2s_secondary"
-priority = 4
+priority = 5
 model_family = "falcon_e_1_58bit"
 role = "secondary_bitnet_like_family"
 source_repo = "tiiuae/Falcon-E-1B-Instruct-GGUF"
@@ -148,30 +194,31 @@ source_url = "https://huggingface.co/tiiuae/Falcon-E-1B-Instruct-GGUF"
 file = "ggml-model-i2_s.gguf"
 known_sha256 = "pending"
 known_size_bytes = 0
-storage_estimate = "1b_class; exact bytes pending candidate probe"
+storage_estimate = "HF repo listing reports 666 MB; exact bytes and SHA256 pending candidate probe"
 format = "gguf"
 quantization = "i2_s"
-tokenizer_authority = "pending"
-pretokenizer_authority = "pending"
-prompt_template = "pending_reference_runner_decision"
-reference_runner = "microsoft_bitnet_cpp_or_intended_falcon_e_runner"
-reference_status = "secondary_family_not_first_proof_target"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+pretokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_template = "pending_falcon_e_prompt_audit"
+reference_runner = "microsoft_bitnet_cpp_or_llama_cpp_falcon_e_runner"
+reference_status = "registered_only_pending_artifact_inventory_tokenizer_prompt_reference_good"
 cleanup_required = true
 next_item = "future_after_microsoft_and_1bitllm"
 notes = [
-  "Use after Microsoft and 1bitLLM behavior is understood.",
+  "Use after Microsoft and 1bitLLM behavior is understood in the Apple artifact lane, or in the dedicated Falcon-E family lane once FE-000 source-of-truth docs land.",
   "Different family and architecture assumptions mean it cannot replace Microsoft BitNet artifact authority.",
+  "Falcon-E 1B proof does not prove Falcon-E 3B, Falcon3, 1bitLLM, Microsoft BitNet, or dense Falcon behavior.",
 ]
 
   [[candidate.route]]
   arch = "arm"
   kernel = "i2_s"
-  status = "candidate_verify_runner"
-  proof_use = "secondary_family_diagnostic"
+  status = "listed_supported_verify_runner"
+  proof_use = "registered_candidate_only_until_artifact_tokenizer_reference_and_i2s_layout_receipts_pass"
 
 [[candidate]]
 id = "falcon_e_3b_instruct_i2s_secondary"
-priority = 5
+priority = 6
 model_family = "falcon_e_1_58bit"
 role = "secondary_larger_bitnet_like_family"
 source_repo = "tiiuae/Falcon-E-3B-Instruct-GGUF"
@@ -179,23 +226,24 @@ source_url = "https://huggingface.co/tiiuae/Falcon-E-3B-Instruct-GGUF"
 file = "ggml-model-i2_s.gguf"
 known_sha256 = "pending"
 known_size_bytes = 0
-storage_estimate = "3b_class; exact bytes pending candidate probe"
+storage_estimate = "HF repo listing reports 1,000 MB; exact bytes and SHA256 pending candidate probe"
 format = "gguf"
 quantization = "i2_s"
-tokenizer_authority = "pending"
-pretokenizer_authority = "pending"
-prompt_template = "pending_reference_runner_decision"
-reference_runner = "microsoft_bitnet_cpp_or_intended_falcon_e_runner"
-reference_status = "secondary_family_not_first_proof_target"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+pretokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_template = "pending_falcon_e_prompt_audit"
+reference_runner = "microsoft_bitnet_cpp_or_llama_cpp_falcon_e_runner"
+reference_status = "registered_only_pending_artifact_inventory_tokenizer_prompt_reference_good"
 cleanup_required = true
 next_item = "future_after_microsoft_and_1bitllm"
 notes = [
   "Use only after smaller/official candidate behavior is clear and MacBook storage is sufficient.",
   "Different family and architecture assumptions mean it cannot replace Microsoft BitNet artifact authority.",
+  "Falcon-E 3B requires its own artifact, tokenizer, prompt, reference, layout, answer, and backend receipts; Falcon-E 1B proof is not sufficient.",
 ]
 
   [[candidate.route]]
   arch = "arm"
   kernel = "i2_s"
-  status = "candidate_verify_runner"
-  proof_use = "secondary_family_diagnostic"
+  status = "listed_supported_verify_runner"
+  proof_use = "registered_candidate_only_until_artifact_tokenizer_reference_and_i2s_layout_receipts_pass"

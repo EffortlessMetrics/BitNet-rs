@@ -1,0 +1,65 @@
+id = "bitnet-b158-3b"
+title = "BitNet b1.58 3B TL candidate"
+status = "active"
+
+objective = "Make 1bitLLM/bitnet_b1_58-3B a first-class BitNet-rs TL-model candidate with guarded artifact, conversion, runner, TL layout, tokenizer, quality, backend, and performance authority before any answer or speed claim."
+
+end_state = [
+  "The 3B model is registered as a diagnostic TL candidate with exact source-map and claim-boundary docs.",
+  "Artifact inventory, conversion, TL layout, tokenizer/prompt, reference-quality, CPU, CUDA, Apple, and performance specs define promotion gates.",
+  "I2_S/QK256, Microsoft 2B, and dense SLM proof inheritance are explicitly forbidden for the 3B lane.",
+]
+
+hard_constraints = [
+  "Do not commit model binaries.",
+  "Do not claim 3B I2_S or QK256 support except diagnostic rejection receipts.",
+  "Do not claim x86 TL2 or ARM TL1 answer readiness until runner/conversion and reference-quality evidence pass.",
+  "Do not claim CPU, CUDA, Apple, server, or speed readiness before route-specific receipts with fallback=false exist.",
+]
+
+[[work_item]]
+id = "B158-3B-001"
+status = "ready"
+branch = "codex/bitnet-b158-3b/docs-rails-and-specs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = [
+  "Add the 3B TL model proposal, source map, campaign, and implementation plan.",
+  "Add artifact, conversion, TL layout, tokenizer/prompt, reference-quality, CPU, CUDA, Apple, and performance specs.",
+  "Update specs index and Apple candidate matrices without promoting model coverage or runtime claims.",
+  "Keep 3B I2_S/QK256 unsupported and TL1/TL2 verification pending.",
+]
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check bitnet-b158-3b",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0010-bitnet-b158-3b-tl-model.md",
+  "docs/bitnet/bitnet-b158-3b/**",
+  "plans/bitnet-b158-3b/**",
+  "docs/tracking/campaigns/bitnet-b158-3b/**",
+  "docs/specs/BITNET-SPEC-B158-3B-*.md",
+  "docs/specs/INDEX.md",
+  "docs/apple-silicon/bitnet-candidate-matrix.md",
+  "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "ci/model-artifacts/bitnet-b158-3b/**",
+]
+may_claim = [
+  "1bitLLM/bitnet_b1_58-3B is a registered diagnostic TL candidate with docs/spec promotion gates.",
+]
+must_not_claim = [
+  "3B I2_S/QK256 support is available.",
+  "x86 TL2 or ARM TL1 is answer-ready.",
+  "3B inherits official Microsoft 2B or dense SLM proof.",
+  "3B CPU, CUDA, Apple, server, or speedup support is proven.",
+]

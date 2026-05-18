@@ -28,15 +28,19 @@
 | apple-m4-slm-model-breadth | M4-MODEL-008 | TBD | blocked | none | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | #4081 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | apple-silicon-macbook | MB-AS-002 | TBD | blocked | MB-AS-004 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
+| bitnet-b158-3b | B158-3B-001 | TBD | ready | none | Do not commit model binaries. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | CPU-AVX512-000 | TBD | in_progress | CPU-SCALAR-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
-| intel-258v-platform | LNL258V-OP-006 | #5749 | in_progress | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
+| falcon-e-family | FE-000 | TBD | ready | FE-001 | Do not commit model binaries. |
+| intel-258v-platform | LNL258V-OP-006 | #5749 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | A770-003 | TBD | proposed | A770-004 | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-012 | #5634 | merged | none | Device-node detection is not inference. |
+| llama3-8b-158 | LLAMA3-158-000 | TBD | ready | LLAMA3-158-001 | Do not commit model binaries. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
+| official-bitnet-2b | OFFICIAL-2B-000 | TBD | ready | OFFICIAL-2B-001 | Do not commit model binaries. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-041 | #5754 | pr_open | SLM-CPU-027 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
