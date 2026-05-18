@@ -8,14 +8,14 @@ proves.
 Start from:
 
 ```powershell
-bitnet model status --device nvidia-rtx-5070-ti-cuda
-bitnet receipts explain --latest
+bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
+bitnet receipts explain --latest --format json
 ```
 
 Or explain a specific receipt:
 
 ```powershell
-bitnet receipts explain <path-to-receipt.json>
+bitnet receipts explain <path-to-receipt.json> --format json
 ```
 
 The model status command tells you what the repo currently allows each model
@@ -26,16 +26,20 @@ row to claim. The receipt tells you what the last command actually did.
 Paste the `receipts explain` summary plus:
 
 ```text
-model coverage row
+model_coverage_row
+current_tier
 model id or artifact SHA
 requested backend
-selected backend
+selected_backend
 runtime API
-route
+selected_route
 fallback_used
 quality gate result
 speedup_claim
 server_ready
+full_residency_claim
+bitnet_packed_i2s_qk256_proof
+dense_regular_llm_cuda_proof
 receipt path
 claim boundary / not allowed claims
 ```
@@ -185,7 +189,7 @@ dense regular-LLM CUDA, CPU reference, server, or benchmark triage.
 Re-run with an explicit receipt output path when the command supports it:
 
 ```powershell
-bitnet receipts explain --latest
+bitnet receipts explain --latest --format json
 ```
 
 If `--latest` cannot find the expected file, include:
