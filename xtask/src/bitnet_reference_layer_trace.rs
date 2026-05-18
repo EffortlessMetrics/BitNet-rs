@@ -7706,6 +7706,13 @@ fn compare_reference_to_rust_with_records_with_model(
             rust_records,
             model_path,
         );
+    report["attention_selected_pre_rope_attention_norm_history_source"] =
+        attention_selected_pre_rope_attention_norm_history_source(
+            &report["attention_selected_pre_rope_projection_history_source"],
+            reference_records,
+            rust_records,
+            model_path,
+        );
     report["attention_selected_historical_k_projection_subbucket_epsilon_source"] =
         attention_selected_historical_k_projection_subbucket_epsilon_source(
             &report["attention_selected_post_rope_raw_key_epsilon"],
@@ -29857,6 +29864,206 @@ fn attention_selected_historical_k_projection_replay_source(
     })
 }
 
+fn pre_rope_attention_norm_source_classification(classification: &str) -> &'static str {
+    match classification {
+        "no_selected_k_projection_replay_explained_rows" => {
+            "no_selected_pre_rope_projection_history_replay_explained_rows"
+        }
+        "selected_historical_k_attention_norm_source_missing_context" => {
+            "selected_pre_rope_attention_norm_history_source_missing_context"
+        }
+        "selected_historical_k_attention_norm_source_input_history_epsilon" => {
+            "selected_pre_rope_attention_norm_history_source_input_history_epsilon"
+        }
+        "selected_historical_k_attention_norm_source_output_replay_explains_epsilon" => {
+            "selected_pre_rope_attention_norm_history_source_output_replay_explains_epsilon"
+        }
+        "selected_historical_k_attention_norm_source_output_epsilon_unpinned" => {
+            "selected_pre_rope_attention_norm_history_source_output_epsilon_unpinned"
+        }
+        "selected_historical_k_attention_norm_source_clean" => {
+            "selected_pre_rope_attention_norm_history_source_clean"
+        }
+        _ => "selected_pre_rope_attention_norm_history_source_unpinned",
+    }
+}
+
+fn pre_rope_attention_norm_source_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_pre_rope_attention_norm_history_source_input_history_epsilon" => {
+            "localize selected pre-RoPE attention-norm input-history epsilon before changing RMSNorm, K projection, QK256, or ROPE runtime math"
+        }
+        "selected_pre_rope_attention_norm_history_source_output_replay_explains_epsilon" => {
+            "pin whether attention RMSNorm accumulation or trace serialization explains the selected pre-RoPE K projection source epsilon"
+        }
+        "selected_pre_rope_attention_norm_history_source_output_epsilon_unpinned" => {
+            "capture enough attention RMSNorm replay context to explain selected pre-RoPE output epsilon before changing runtime math"
+        }
+        "selected_pre_rope_attention_norm_history_source_missing_context" => {
+            "capture model and full attention-norm input/output histories before selected pre-RoPE K attention-norm attribution"
+        }
+        "no_selected_pre_rope_projection_history_replay_explained_rows" => {
+            "pin selected pre-RoPE projection history source before attention-norm attribution"
+        }
+        "selected_pre_rope_attention_norm_history_source_clean" => {
+            "selected pre-RoPE attention-norm source is clean; inspect upstream selection or downstream score residual before runtime math changes"
+        }
+        _ => "keep selected pre-RoPE attention-norm history source diagnostic-only",
+    }
+}
+
+fn pre_rope_attention_norm_runtime_candidate(candidate: Option<&str>) -> &'static str {
+    match candidate {
+        Some("localize_attention_norm_input_history_before_changing_rmsnorm_or_k_projection") => {
+            "localize_pre_rope_attention_norm_input_history_before_changing_rmsnorm_or_k_projection"
+        }
+        Some("pin_attention_rmsnorm_accumulation_or_serialization_policy") => {
+            "pin_pre_rope_attention_rmsnorm_accumulation_or_serialization_policy"
+        }
+        Some("pin_attention_norm_replay_delta_before_runtime_change") => {
+            "pin_pre_rope_attention_norm_replay_delta_before_runtime_change"
+        }
+        Some("none_from_selected_attention_norm_input_or_output") => {
+            "none_from_selected_pre_rope_attention_norm_input_or_output"
+        }
+        _ => "selected_pre_rope_attention_norm_source_context_missing",
+    }
+}
+
+fn attention_selected_pre_rope_attention_norm_history_source(
+    projection_history_source: &Value,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    model_path: Option<&Path>,
+) -> Value {
+    let selected_source_rows = projection_history_source
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter()
+                .filter(|row| {
+                    row.pointer("/classification").and_then(Value::as_str)
+                        == Some("selected_pre_rope_projection_history_replay_explains_pair_delta")
+                })
+                .cloned()
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let translated_rows = selected_source_rows
+        .iter()
+        .map(|row| {
+            let mut translated = row.clone();
+            if let Some(object) = translated.as_object_mut() {
+                object.insert(
+                    "classification".to_string(),
+                    json!("selected_historical_k_projection_replay_explains_raw_epsilon"),
+                );
+            }
+            translated
+        })
+        .collect::<Vec<_>>();
+    let translated_source = json!({
+        "rows": translated_rows,
+    });
+    let mut report = attention_selected_historical_k_attention_norm_source(
+        &translated_source,
+        reference_records,
+        rust_records,
+        model_path,
+    );
+
+    let classification = report
+        .pointer("/classification")
+        .and_then(Value::as_str)
+        .map(pre_rope_attention_norm_source_classification)
+        .unwrap_or("selected_pre_rope_attention_norm_history_source_unpinned");
+    if let Some(object) = report.as_object_mut() {
+        object.insert(
+            "policy".to_string(),
+            json!("Selected pre-RoPE attention-norm history source is diagnostic-only evidence for whether the K projection replay-explained pre-RoPE pair delta is already present at attention RMSNorm input or output for the selected token/dim; it does not change RMSNorm, QK256, ROPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion"),
+        );
+        object.insert("classification".to_string(), json!(classification));
+        object.insert(
+            "source_report".to_string(),
+            json!("attention_selected_pre_rope_projection_history_source"),
+        );
+        object.insert(
+            "next_diagnostic".to_string(),
+            json!(pre_rope_attention_norm_source_next_diagnostic(classification)),
+        );
+        if let Some(rows) = object.get_mut("rows").and_then(Value::as_array_mut) {
+            for (index, row) in rows.iter_mut().enumerate() {
+                let source_row = selected_source_rows.get(index);
+                if let Some(row_object) = row.as_object_mut() {
+                    let row_classification = row_object
+                        .get("classification")
+                        .and_then(Value::as_str)
+                        .map(pre_rope_attention_norm_source_classification)
+                        .unwrap_or("selected_pre_rope_attention_norm_history_source_unpinned");
+                    row_object.insert("classification".to_string(), json!(row_classification));
+                    row_object.insert(
+                        "runtime_change_candidate".to_string(),
+                        json!(pre_rope_attention_norm_runtime_candidate(
+                            row_object.get("runtime_change_candidate").and_then(Value::as_str)
+                        )),
+                    );
+                    row_object.insert(
+                        "source_report".to_string(),
+                        json!("attention_selected_pre_rope_projection_history_source"),
+                    );
+                    if let Some(source_row) = source_row {
+                        row_object.insert(
+                            "dominant_projection_pair_delta".to_string(),
+                            source_row
+                                .pointer("/dominant_projection_pair_delta")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "target_delta_rust_minus_reference".to_string(),
+                            source_row
+                                .pointer("/target_delta_rust_minus_reference")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "replay_delta_rust_minus_reference".to_string(),
+                            source_row
+                                .pointer("/replay_delta_rust_minus_reference")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "replay_delta_minus_target_delta".to_string(),
+                            source_row
+                                .pointer("/replay_delta_minus_target_delta")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "overall_projection_dim".to_string(),
+                            source_row
+                                .pointer("/overall_projection_dim")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "target_head_dim".to_string(),
+                            source_row.pointer("/target_head_dim").cloned().unwrap_or(Value::Null),
+                        );
+                        row_object.insert(
+                            "pre_rope_projection_history_source_row".to_string(),
+                            source_row.clone(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    report
+}
+
 fn attention_selected_historical_k_attention_norm_source(
     projection_replay_source: &Value,
     reference_records: &[ReferenceTraceRecord],
@@ -44860,6 +45067,115 @@ mod tests {
             report.pointer("/next_diagnostic"),
             Some(&json!(
                 "classify selected pre-RoPE projection-pair source before history attribution"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_pre_rope_attention_norm_history_source_blocks_without_context() {
+        let projection_history_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_projection_history_replay_explains_pair_delta",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "dominant_projection_input": "x0",
+                    "dominant_projection_input_dim": 13,
+                    "dominant_projection_pair_delta": -3.5762786865234375e-6_f64,
+                    "target_delta_rust_minus_reference": -3.5762786865234375e-6_f64,
+                    "replay_delta_rust_minus_reference": -3.5762786865234375e-6_f64,
+                    "replay_delta_minus_target_delta": 0.0,
+                    "overall_projection_dim": 13,
+                    "target_head_dim": 256,
+                }
+            ]
+        });
+
+        let report = attention_selected_pre_rope_attention_norm_history_source(
+            &projection_history_source,
+            &[],
+            &BTreeMap::new(),
+            None,
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_pre_rope_attention_norm_history_source_missing_context"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/source_report"),
+            Some(&json!("attention_selected_pre_rope_projection_history_source"))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/classification"),
+            Some(&json!("selected_pre_rope_attention_norm_history_source_missing_context"))
+        );
+        assert!(report.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| {
+                reasons.contains(&json!("model_path_missing_for_selected_attention_norm_replay"))
+                    && reasons.contains(&json!("reference_attention_norm_output_history_missing"))
+                    && reasons.contains(&json!("rust_attention_norm_output_history_missing"))
+            }
+        ));
+        assert_eq!(
+            report.pointer("/rows/0/dominant_projection_pair_delta"),
+            Some(&json!(-3.5762786865234375e-6_f64))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/target_delta_rust_minus_reference"),
+            Some(&json!(-3.5762786865234375e-6_f64))
+        );
+        assert_eq!(
+            report.pointer("/rows/0/pre_rope_projection_history_source_row/classification"),
+            Some(&json!("selected_pre_rope_projection_history_replay_explains_pair_delta"))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture model and full attention-norm input/output histories before selected pre-RoPE K attention-norm attribution"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_pre_rope_attention_norm_history_source_reports_no_rows() {
+        let projection_history_source = json!({
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_projection_history_source_missing_context",
+                    "head": 0,
+                    "kv_head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "dominant_projection_input_dim": 13,
+                }
+            ]
+        });
+
+        let report = attention_selected_pre_rope_attention_norm_history_source(
+            &projection_history_source,
+            &[],
+            &BTreeMap::new(),
+            None,
+        );
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("no_selected_pre_rope_projection_history_replay_explained_rows"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(0)));
+        assert_eq!(report.pointer("/rows").and_then(Value::as_array).map(Vec::len), Some(0));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected pre-RoPE projection history source before attention-norm attribution"
             ))
         );
     }
