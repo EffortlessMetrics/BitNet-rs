@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-18T05:00:00Z",
+  "created_utc": "2026-05-18T06:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -17,25 +17,22 @@
   "promotion_status": "candidate_only_not_promoted",
   "quality_summary": {
     "total": 12,
-    "passed": 8,
-    "failed": 4,
+    "passed": 9,
+    "failed": 3,
     "timeout": 0,
     "not_run": 0,
     "failed_profiles": [
-      "ask_normal",
       "ask_short",
       "prefill_heavy",
       "regression_tiny"
     ],
     "failed_categories": [
       "long_prompt_summarization",
-      "short_reasoning",
       "stop_and_eos",
       "yes_no"
     ],
     "failure_classes": {
       "answer_content_missing_required_terms": 1,
-      "case_sensitive_required_keyword_mismatch": 1,
       "exact_answer_instruction_not_followed": 1,
       "exact_answer_overgenerated": 1
     }
@@ -44,16 +41,12 @@
     {
       "profile_id": "ask_normal",
       "total": 3,
-      "passed": 2,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "short_reasoning_apples_left"
-      ],
+      "passed": 3,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "ask_short",
@@ -198,32 +191,6 @@
       "fallback_used": false,
       "classification": "answer_content_missing_required_terms",
       "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen route; adjust prompt/gate only if the expected answer contract is too narrow."
-    },
-    {
-      "id": "short_reasoning_apples_left",
-      "profile": "ask_normal",
-      "category": "short_reasoning",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "contains_any",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "required_keywords_missing"
-      ],
-      "failure_taxonomy": [
-        "required_keyword_missing"
-      ],
-      "missing_required_keywords": [
-        "yes"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "Yes, Tom will have one apple left after he gives away one of his apples",
-      "generated_tokens": 16,
-      "prompt_tokens": 51,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "case_sensitive_required_keyword_mismatch",
-      "recommended_fix": "The output contains the required term only with different casing; review whether the corpus gate should normalize case before rerunning."
     }
   ],
   "case_alignment": {
@@ -245,10 +212,9 @@
   "route_blocked": true,
   "blocker_summary": [
     "1 failed case(s) classified as answer_content_missing_required_terms",
-    "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
     "1 failed case(s) classified as exact_answer_instruction_not_followed",
     "1 failed case(s) classified as exact_answer_overgenerated",
-    "4 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, prefill_heavy, regression_tiny]",
+    "3 of 12 corpus-v2 cases failed across profiles [ask_short, prefill_heavy, regression_tiny]",
     "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
   ],
   "recommended_next_actions": [
