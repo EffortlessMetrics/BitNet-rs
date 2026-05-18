@@ -5044,6 +5044,7 @@ async fn run_simple_generation(
         let runtime_api = backend_identity.runtime_api.as_str();
         let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
         let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let qk256_cpu_hot_path = bitnet_qk256_dispatch::qk256_cpu_hot_path_counters();
         let strict_cuda_selected_artifact = strict_backend
             && canonical_bitnet_model
             && selected_backend == "nvidia-rtx-5070-ti-cuda"
@@ -5378,6 +5379,16 @@ async fn run_simple_generation(
                 "bitnet_linear_layers_total": bitnet_linear_coverage.bitnet_linear_layers_total,
                 "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
                 "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
+                "qk256_f32_scalar_gemv_invocations": qk256_cpu_hot_path.qk256_f32_scalar_gemv_invocations,
+                "qk256_f32_avx2_gemv_invocations": qk256_cpu_hot_path.qk256_f32_avx2_gemv_invocations,
+                "qk256_i8s_scaled_scalar_invocations": qk256_cpu_hot_path.qk256_i8s_scaled_scalar_invocations,
+                "qk256_i8s_scaled_avx2_invocations": qk256_cpu_hot_path.qk256_i8s_scaled_avx2_invocations,
+                "qk256_flat_bytes_extracted_count": qk256_cpu_hot_path.qk256_flat_bytes_extracted_count,
+                "input_rows_materialized_count": qk256_cpu_hot_path.input_rows_materialized_count,
+                "output_rows_allocated_count": qk256_cpu_hot_path.output_rows_allocated_count,
+                "requested_kernel": qk256_cpu_hot_path.requested_kernel.clone(),
+                "selected_kernel": qk256_cpu_hot_path.selected_kernel.clone(),
+                "qk256_execution_path": qk256_cpu_hot_path.qk256_execution_path,
                 "unsupported_ops": bitnet_linear_coverage.unsupported_ops.clone(),
                 "execution_claim": bitnet_linear_coverage.execution_claim,
             },
@@ -5387,6 +5398,7 @@ async fn run_simple_generation(
                 "layout": kernel_layout,
                 "dequantizes_before_compute": dequantizes_before_compute,
                 "kernel_id": selected_kernel.as_str(),
+                "hot_path_kernel_id": qk256_cpu_hot_path.selected_kernel.as_deref(),
             },
             "cpu": {
                 "model": cpu_model.as_str(),
@@ -5397,8 +5409,14 @@ async fn run_simple_generation(
             "strict_provenance": {
                 "requested_backend": requested_backend,
                 "selected_backend": selected_backend,
-                "requested_kernel": selected_kernel.as_str(),
-                "selected_kernel": selected_kernel.as_str(),
+                "requested_kernel": qk256_cpu_hot_path
+                    .requested_kernel
+                    .as_deref()
+                    .unwrap_or(selected_kernel.as_str()),
+                "selected_kernel": qk256_cpu_hot_path
+                    .selected_kernel
+                    .as_deref()
+                    .unwrap_or(selected_kernel.as_str()),
                 "loader_mode": loader_mode,
                 "tokenizer_source": tokenizer_source_str,
                 "tokenizer_strict": tokenizer_strict,
