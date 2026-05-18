@@ -128,6 +128,41 @@ Do not treat the 3B model as an `I2_S`/QK256 sibling of the official Microsoft
 route-specific receipts prove them; all answer, backend, server, and speed
 claims remain false before the shared artifact gate and these specs pass.
 
+## Llama3 8B 1.58 Supported-Model Candidate
+
+Use these specs before implementing or claiming support for
+`HF1BitLLM/Llama3-8B-1.58-100B-tokens`:
+
+1. [Artifact Contract](BITNET-SPEC-LLAMA3-8B-158-ARTIFACT-CONTRACT.md)
+   - Defines exact revision, file hashes, tokenizer/config hashes, HF metadata,
+     and the upstream/HF identity discrepancy required before artifact claims.
+2. [Conversion](BITNET-SPEC-LLAMA3-8B-158-CONVERSION.md)
+   - Defines safetensors, reference-runner, F16 structural, I2_S, TL1, TL2,
+     and third-party GGUF lanes and their claim boundaries.
+3. [Tokenizer and Prompt](BITNET-SPEC-LLAMA3-8B-158-TOKENIZER-PROMPT.md)
+   - Defines the Llama3-derived tokenizer/prompt audit and forbids unproven
+     Microsoft 2B prompt inheritance.
+4. [Route Compatibility](BITNET-SPEC-LLAMA3-8B-158-ROUTE-COMPATIBILITY.md)
+   - Records upstream-listed x86 I2_S/TL2 and ARM I2_S/TL1 routes as
+     `listed_supported_verify_runner` candidates only.
+5. [Reference Quality](BITNET-SPEC-LLAMA3-8B-158-REFERENCE-QUALITY.md)
+   - Defines the bounded reference-good corpora and pass criteria.
+6. [I2_S](BITNET-SPEC-LLAMA3-8B-158-I2S.md)
+   - Defines the model-specific I2_S/QK256 layout proof and kernel IDs.
+7. [TL1/TL2](BITNET-SPEC-LLAMA3-8B-158-TL1-TL2.md)
+   - Defines TL layout/oracle requirements separately from QK256.
+8. [CPU](BITNET-SPEC-LLAMA3-8B-158-CPU.md),
+   [CUDA](BITNET-SPEC-LLAMA3-8B-158-CUDA.md),
+   [Apple](BITNET-SPEC-LLAMA3-8B-158-APPLE.md), and
+   [Performance](BITNET-SPEC-LLAMA3-8B-158-PERFORMANCE.md)
+   - Define backend and benchmark gates after artifact, tokenizer, conversion,
+     reference-good, and layout proofs pass.
+
+Do not treat this model as “the official Microsoft 2B model but bigger.” The
+current allowed claim is registered candidate only: upstream route support is
+known, the HF safetensors artifact is visible, and BitNet-rs has conservative
+onboarding contracts.
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:

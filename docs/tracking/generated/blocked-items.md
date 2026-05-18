@@ -386,6 +386,8 @@
 | intel-npu | NPU-010 | NPU-009 | merged |
 | intel-npu | NPU-011 | NPU-010 | merged |
 | intel-npu | NPU-012 | NPU-011 | merged |
+| llama3-8b-158 | LLAMA3-158-001 | LLAMA3-158-000 | proposed |
+| llama3-8b-158 | LLAMA3-158-002 | LLAMA3-158-001 | proposed |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |
