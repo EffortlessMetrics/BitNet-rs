@@ -8206,9 +8206,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-019"
-status = "in_progress"
+status = "merged"
 pr = 5792
-head_sha = "a46f3aa8cc9a2a65876e4dacce3a1436866882ea"
+head_sha = "0ed82d80922cd21448b6e335da7bf68a3e490755"
+merge_sha = "9e87497e9422dac010410fdbd4ac0b1146c4397e"
 branch = "codex/lunar-lake/LNL258V-ROUTE-019-warm-resident"
 stackable = false
 review_mode = "codex_premerge"
