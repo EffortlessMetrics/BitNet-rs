@@ -13476,7 +13476,7 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_operator_ask_receipt_accepts_openvino_source_shape() {
+    fn lunar_lake_operator_ask_receipt_accepts_openvino_source_shape() -> anyhow::Result<()> {
         let route = commands::lunar_lake::OperatorRoute {
             route_id: "dense_slm_openvino_gpu_candidate".to_string(),
             workload: "ask".to_string(),
@@ -13549,7 +13549,7 @@ mod tests {
             },
             "timing": {"generation_wall_ms": 301.0}
         });
-        validate_lunar_lake_ask_source_receipt(&source, &route).expect("openvino source receipt");
+        validate_lunar_lake_ask_source_receipt(&source, &route)?;
         let answer = lunar_lake_source_answer_text(&source);
         let normalized = lunar_lake_source_normalized_answer(&source, &answer);
         let gate = evaluate_lunar_lake_answer_gate(&normalized, Some("4"));
@@ -13588,6 +13588,7 @@ mod tests {
         assert_eq!(receipt["prompt"]["token_ids"], serde_json::json!([1, 2, 3]));
         assert_eq!(receipt["tokens"]["generated_count"], 9);
         assert_eq!(receipt["answer"]["normalized_text"], "2 + 2 equals 4.");
+        Ok(())
     }
 
     #[test]

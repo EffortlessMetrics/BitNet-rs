@@ -1938,7 +1938,9 @@ mod tests {
 
         super::normalize_embed_and_lm_head(&mut tensor_map, &config, &device)?;
 
-        let normalized = tensor_map.get("token_embd.weight").expect("normalized embedding");
+        let normalized = tensor_map.get("token_embd.weight").ok_or_else(|| {
+            bitnet_common::BitNetError::Validation("missing normalized embedding".to_string())
+        })?;
         assert_eq!(normalized.shape().dims(), &[3, 4]);
         assert_eq!(
             normalized.to_vec2::<f32>()?,
