@@ -6560,3 +6560,43 @@ must_not_claim = [
   "OpenVINO GPU or NPU is promoted by this PR.",
   "OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, or server readiness is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-005"
+status = "pr_open"
+pr = 5605
+head_sha = "d7e08c1f94dcdc611ee00a9cbba3c058b6a7a6d8"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-005-promotion-bitnet-boundary"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-004"]
+acceptance = "Add OpenVINO route-promotion and BitNet-boundary specs that define candidate/promoted/blocked states, exact-profile promotion packages, CPU/GPU/NPU promotion gates, invalidation and auto-route behavior, and the separation between OpenVINO dense SLM proof, OpenVINO BitNet subgraphs, native OpenCL, NPU, server, and CPU BitNet reference proof families without route promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO route-promotion and BitNet proof-boundary requirements are documented.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, QK256 accelerator decode, or server readiness is proven.",
+]

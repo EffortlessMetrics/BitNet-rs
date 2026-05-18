@@ -342,6 +342,7 @@
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-002 | LNL258V-OPENVINO-DOCS-001 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-003 | LNL258V-OPENVINO-DOCS-002 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-004 | LNL258V-OPENVINO-DOCS-003 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-005 | LNL258V-OPENVINO-DOCS-004 | pr_open |
 | intel-a770 | A770-003 | A770-OPENCL-TRUTH-000 | proposed |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |

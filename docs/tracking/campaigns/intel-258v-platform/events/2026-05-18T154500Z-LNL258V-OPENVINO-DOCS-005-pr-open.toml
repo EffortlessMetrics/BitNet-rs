@@ -1,0 +1,23 @@
+timestamp = "2026-05-18T15:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5605
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-005-promotion-bitnet-boundary"
+head_sha = "d7e08c1f94dcdc611ee00a9cbba3c058b6a7a6d8"
+summary = "Opened PR #5605 for the OpenVINO route-promotion and BitNet-boundary contract specs."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5605",
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The PR defines exact-profile route promotion states/packages and separate OpenVINO dense SLM, OpenVINO BitNet subgraph, native OpenCL, NPU, server, and CPU BitNet reference proof families.",
+  "No route promotion, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, QK256 accelerator decode, or server-readiness claim is made.",
+]
