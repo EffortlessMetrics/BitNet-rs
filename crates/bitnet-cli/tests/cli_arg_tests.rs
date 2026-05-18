@@ -7156,6 +7156,10 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
         "reference_not_supplied"
     );
     assert_eq!(receipt["reference_comparison"]["enabled"], true);
+    assert_eq!(
+        receipt["reference_comparison"]["reference_comparison_plan"]["status"],
+        "reference_250_sidecar_not_yet_supplied"
+    );
     assert_eq!(receipt["reference_comparison"]["rust_runner"]["fallback_used"], false);
     assert_eq!(receipt["reference_comparison"]["summary"]["reference_not_supplied"], 100);
     assert_eq!(receipt["reference_comparison"]["claim_boundary"]["dense_slm_evidence_used"], false);
@@ -7200,7 +7204,7 @@ fn answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema()
     assert_eq!(receipt["corpus"]["name"], "apple-m4-bitnet-eval-seeded-corpus-250");
     assert_eq!(receipt["corpus"]["case_count"], 250);
     assert_eq!(receipt["corpus"]["metadata"]["seed"], 912587);
-    assert_eq!(receipt["corpus"]["metadata"]["work_item"], "M4-BITNET-EX-010");
+    assert_eq!(receipt["corpus"]["metadata"]["work_item"], "M4-BITNET-EX-013");
     assert_eq!(
         receipt["corpus"]["metadata"]["generator_policy"],
         "deterministic-static-fixture-bitnet-v2"
@@ -7209,7 +7213,7 @@ fn answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema()
         receipt["corpus"]["contract"]["contract_version"],
         "m4-eval-corpus-scorer-contract-v1"
     );
-    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.0.0");
+    assert_eq!(receipt["corpus"]["contract"]["corpus_version"], "2.1.0");
     assert_eq!(
         receipt["corpus"]["contract"]["scoring_schema"],
         "answer_corpus_mechanical_scoring_v1"
@@ -7218,9 +7222,19 @@ fn answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema()
         receipt["scoring_contract"]["expected_output_provenance"],
         "Closed-form deterministic fixture answers derived from the prompt data in this YAML; reference-runner answers may be added as comparison evidence but do not replace the mechanical expected-output authority."
     );
+    assert!(
+        receipt["scoring_contract"]["normalization_rules"]
+            .as_str()
+            .ok_or("missing normalization rules")?
+            .contains("normalize_match_text_v2")
+    );
     assert_eq!(
-        receipt["scoring_contract"]["normalization_rules"],
-        "answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1 for normalized_match only; exact_match remains strict after trim."
+        receipt["scoring_contract"]["expected_answer_authority"]["owner_work_item"],
+        "M4-BITNET-EX-013"
+    );
+    assert_eq!(
+        receipt["scoring_contract"]["reference_comparison_plan"]["status"],
+        "reference_250_sidecar_not_yet_supplied"
     );
     assert_eq!(receipt["model"]["repo"], "microsoft/bitnet-b1.58-2B-4T-gguf");
     assert_eq!(receipt["model"]["revision"], "a1f2f1c765812aa8af3f6eda4a313707064bba15");
@@ -7256,6 +7270,13 @@ fn answer_corpus_bitnet_250_dry_run_preserves_task_family_and_reference_schema()
 
     assert_eq!(receipt["task_family_summary"]["numeric_tolerance"]["scoring"]["total"], 35);
     assert_eq!(receipt["task_family_summary"]["fixed_table_qa"]["scoring"]["total"], 35);
+    assert!(
+        receipt["task_family_summary"]["fixed_table_qa"]["scoring"]["kinds"]
+            .as_array()
+            .ok_or("missing fixed table scoring kinds")?
+            .iter()
+            .any(|kind| kind == "contains_expected")
+    );
     assert_eq!(receipt["task_family_summary"]["required_forbidden_tokens"]["scoring"]["total"], 30);
     assert_eq!(receipt["cases"][0]["task_family"], "arithmetic_exact");
     assert!(
