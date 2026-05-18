@@ -2790,8 +2790,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-012"
-status = "in_progress"
+status = "pr_open"
 branch = "cuda-model-012-qwen3-product-cli-review"
+pr = 5660
+head_sha = "af2804f62bf62e7159b619b1cdad43168bc9308e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
