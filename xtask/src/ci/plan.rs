@@ -238,6 +238,7 @@ fn lane_catalog() -> Vec<SkippedLane> {
         skipped_lane("feature-matrix-pr", "Feature Matrix (PR smoke)", true),
         skipped_lane("feature-matrix-full", "Feature Matrix (full)", false),
         skipped_lane("bdd-grid-check", "BDD Grid Check", true),
+        skipped_lane("policy", "Policy", true),
         skipped_lane("macos-arm64-route", "Route macOS PR lane", false),
         skipped_lane("macos-arm64-clippy", "Clippy (macOS ARM64)", false),
         skipped_lane("performance-tracking-route", "Route Performance Tracking", false),
@@ -309,6 +310,9 @@ fn pick_lanes(
             "rust_core changed",
             true,
         ));
+    }
+    if policy_lane_changed(changed) {
+        lanes.push(lane("policy", "Policy", 6, "policy-relevant paths changed", true));
     }
     if has("bdd") || has("grid") || has("full-ci") {
         lanes.push(lane("bdd-grid-check", "BDD Grid Check", 4, "bdd/grid/full-ci label", true));
@@ -490,6 +494,19 @@ fn model_validation_changed(files: &[String]) -> bool {
             || path.starts_with("docs/model-contracts/")
             || path.starts_with("tests/fixtures/models/")
             || path.starts_with("models/")
+    })
+}
+
+fn policy_lane_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        path.starts_with("policy/")
+            || path == "Cargo.toml"
+            || path == "Cargo.lock"
+            || path == "rust-toolchain.toml"
+            || path == "clippy.toml"
+            || path == ".github/workflows/policy.yml"
+            || path.starts_with("xtask/")
+            || path.ends_with(".rs")
     })
 }
 
@@ -929,6 +946,7 @@ mod tests {
         assert_eq!(plan.posture, "rust");
         let names: Vec<&str> = plan.lanes.iter().map(|l| l.name.as_str()).collect();
         assert!(names.iter().any(|n| n.contains("CI (Core)")));
+        assert!(names.iter().any(|n| *n == "Policy"));
         assert!(names.iter().any(|n| n.contains("Feature Matrix (PR smoke)")));
         assert!(!names.iter().any(|n| n.contains("Compatibility (MSRV)")));
     }

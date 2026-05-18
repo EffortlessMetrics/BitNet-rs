@@ -1,8 +1,8 @@
 # PR Plan
 
-`xtask ci plan` emits the `ci-plan.json` artifact used by PR Plan and future
-routing consumers. The artifact is advisory until PR Gate is explicitly moved
-to consume it.
+`xtask ci plan` emits the `ci-plan.json` artifact used by PR Plan and PR Gate.
+PR Plan publishes the advisory artifact for visibility; PR Gate recomputes the
+same plan on the PR head and uses selected blocking lanes as its routing input.
 
 ## Stable Schema
 
@@ -47,13 +47,15 @@ The JSON artifact uses `schema_version = 1` and keeps these top-level fields:
 
 ## Boundaries
 
-This schema does not change workflow routing by itself. Workflows must not
-depend on new fields until the dedicated PR Gate consumption item lands.
+PR Gate consumes `selected_lanes[]` with `blocking = true`. Selected blocking
+lanes must produce successful check runs; selected blocking lanes that are
+skipped fail the gate. Unselected lanes may be skipped, and selected advisory
+lanes are reported without blocking the gate.
 
-The planner may estimate route jobs and policy lanes, but those estimates are
-visibility only. They are not branch-protection rules and they do not promote
-expensive macOS, Windows, Docker, GPU, coverage, model-validation, or
-performance lanes onto ordinary PRs.
+The planner may estimate route jobs and policy lanes, but those estimates do
+not promote expensive macOS, Windows, Docker, GPU, coverage, model-validation,
+or performance lanes onto ordinary PRs unless the plan selects them. Branch
+protection still remains a separate repository setting.
 
 ## Fixture Coverage
 
