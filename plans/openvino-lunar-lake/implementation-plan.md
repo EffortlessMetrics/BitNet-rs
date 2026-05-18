@@ -236,7 +236,7 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-STATUS-001
 
-Status: in progress
+Status: merged
 Blocked by: `LNL258V-OPENVINO-VALIDATE-001`
 
 Add `docs/status/OPENVINO_CAPABILITY_MATRIX.md` with claim-neutral rows for

@@ -1,0 +1,23 @@
+timestamp = "2026-05-18T18:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-STATUS-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-STATUS-001-capability-matrix"
+pr = 5620
+head_sha = "b26a98939658553efb366f4af5be8eccdee17b09"
+merge_sha = "0327286671e16d25a6626a047fda0391e366e5f9"
+summary = "Merged LNL258V-OPENVINO-STATUS-001 in PR #5620."
+
+artifacts = [
+  "docs/status/OPENVINO_CAPABILITY_MATRIX.md",
+  "docs/status/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5620 added the claim-neutral Lunar Lake OpenVINO capability matrix and linked route status, source receipts, validator commands, claim boundaries, and promotion blockers.",
+  "The merge does not claim new inference, route promotion, OpenVINO speedup, power advantage, server readiness, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU execution, full BitNet accelerator inference, or QK256 accelerator decode.",
+]
