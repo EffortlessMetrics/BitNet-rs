@@ -2740,10 +2740,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-011"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-model-011-qwen3-chat-user-path"
 pr = 5645
-head_sha = "e1458ca18e78d966bd653c30e677fb7922ed40d0"
+head_sha = "dcba77e42b0ba670ffb9c5b8b194a57130de33e1"
+merge_sha = "5e98c71c14cdf59c6119283d26f11ca03eb13562"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -2781,6 +2782,51 @@ must_not_claim = [
   "Qwen3 product CLI readiness exists.",
   "Qwen3 speedup exists.",
   "Qwen3 server readiness exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
+id = "CUDA-MODEL-012"
+status = "in_progress"
+branch = "cuda-model-012-qwen3-product-cli-review"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+acceptance = "Review Qwen3 0.6B Q8_0 product CLI promotion after normal ask and chat user-path receipts. If accepted, promote only current_tier/product_cli_ready while keeping server_ready=false, speedup_claim=false, benchmark_qualified=false, full_residency_claim=false, bitnet_packed_i2s_qk256_proof=false, and no Qwen2.5 proof inheritance."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli model_status_dashboard_lists_qwen3_as_product_cli_ready",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli receipts_explain_links_qwen3_dense_receipt_to_product_cli_coverage",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/**",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-cli/src/commands/receipts.rs",
+  "docs/model-artifacts/**",
+  "docs/reports/CUDA_MODEL_012_QWEN3_PRODUCT_CLI_PROMOTION_REVIEW.md",
+  "plans/native-rust-inference/dense-qwen3.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "Qwen3 0.6B is product CLI-ready for bounded normal ask/chat user paths on the RTX 5070 Ti dense_regular_llm_cuda route.",
+  "Qwen3 keeps dense_regular_llm_cuda_proof=true and bitnet_packed_i2s_qk256_proof=false.",
+]
+must_not_claim = [
+  "Qwen3 server readiness exists.",
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
   "Qwen3 full CUDA residency exists.",
   "Qwen3 broad dense GGUF readiness exists.",
   "Qwen3 proof inherits Qwen2.5 evidence.",

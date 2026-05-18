@@ -312,8 +312,8 @@ family = "qwen3"
 artifact_kind = "gguf_q8_0_contract"
 contract_id = "qwen3_0_6b_q8_0"
 capability_id = "qwen3-0.6b-instruct-q8_0"
-status = "cuda_answer_ready_candidate"
-current_tier = "accelerator_answer_ready"
+status = "cuda_answer_ready_cli_ready"
+current_tier = "product_cli_ready"
 verifier_surface = "bitnet model verify qwen3-0.6b-instruct-q8_0"
 tokenizer_authority = "gguf_metadata_strict"
 prompt_authority = "qwen_no_think_chatml_cpu_sanity"
@@ -333,17 +333,18 @@ required_receipts = [
   "benchmark_qualification_review",
   "ask_user_path_strict_cuda",
   "chat_user_path_strict_cuda",
+  "product_cli_promotion_review",
 ]
 forbidden_claims = [
-  "product_cli_ready",
   "bitnet_packed_i2s_qk256_proof",
   "speedup",
+  "benchmark_qualified_speed",
   "server_ready",
   "full_residency",
   "qwen2_5_proof_inheritance",
 ]
-next_proof = "CUDA-MODEL-012 product CLI promotion review, then separate server or performance comparator evidence before any server, speed, or residency promotion."
-claim_boundary = "Qwen3 0.6B Q8_0 has exact artifact, CPU answer sanity, all-layer plan, one-token, short-decode, warm-session, benchmark review, ask user-path, and chat user-path receipts for the dense_regular_llm_cuda RTX 5070 Ti route. It remains a candidate pending product review and does not inherit Qwen2.5 CUDA receipts, prove speed, server readiness, full residency, broad dense GGUF support, or BitNet QK256 behavior."
+next_proof = "Separate Qwen3 server smoke/readiness review or exact-profile performance comparator evidence before any server, speed, benchmark-qualified, or full-residency promotion."
+claim_boundary = "Qwen3 0.6B Q8_0 is product CLI-ready for the bounded ask/chat user paths on the dense_regular_llm_cuda RTX 5070 Ti route after exact artifact, CPU answer sanity, all-layer plan, one-token, short-decode, warm-session, benchmark review, ask user-path, chat user-path, and product promotion review receipts. It does not inherit Qwen2.5 CUDA receipts, prove speed, server readiness, full residency, broad dense GGUF support, benchmark-qualified speed, or BitNet QK256 behavior."
 
   [entry.claims]
   registered = true
@@ -352,7 +353,7 @@ claim_boundary = "Qwen3 0.6B Q8_0 has exact artifact, CPU answer sanity, all-lay
   cpu_answer_ready = true
   accelerator_answer_ready = true
   benchmark_qualified = false
-  product_cli_ready = false
+  product_cli_ready = true
   server_ready = false
   speedup_claim = false
   full_residency_claim = false

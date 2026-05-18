@@ -2123,7 +2123,7 @@ mod tests {
     }
 
     #[test]
-    fn receipts_explain_links_qwen3_dense_receipt_to_candidate_coverage() -> Result<()> {
+    fn receipts_explain_links_qwen3_dense_receipt_to_product_cli_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "dense_gguf_qwen_ask_strict_cuda_proof",
             "claim": "dense_gguf_qwen_ask_strict_cuda_proof_recorded",
@@ -2153,12 +2153,9 @@ mod tests {
         let explanation = explain_receipt(Path::new("dense-qwen3.json"), &receipt);
 
         assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
-        assert_eq!(
-            explanation.model_coverage.current_tier.as_deref(),
-            Some("accelerator_answer_ready")
-        );
+        assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
-        assert_eq!(explanation.model_coverage.product_cli_ready, Some(false));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
         assert_eq!(explanation.model_coverage.server_ready, Some(false));
         assert_eq!(explanation.model_coverage.server_ready_scope, None);
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
@@ -2166,11 +2163,11 @@ mod tests {
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
         assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
-        assert_eq!(explanation.current_tier.as_deref(), Some("accelerator_answer_ready"));
+        assert_eq!(explanation.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
         assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
         assert_eq!(explanation.fallback_used, Some(false));
-        assert_eq!(explanation.product_cli_ready, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(true));
         assert_eq!(explanation.server_ready, Some(false));
         assert_eq!(explanation.server_ready_scope, None);
         assert_eq!(explanation.speedup_claim, Some(false));
@@ -2180,11 +2177,11 @@ mod tests {
 
         let value = serde_json::to_value(&explanation)?;
         assert_eq!(value["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
-        assert_eq!(value["current_tier"], "accelerator_answer_ready");
+        assert_eq!(value["current_tier"], "product_cli_ready");
         assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(value["selected_route"], "dense_regular_llm_cuda");
         assert_eq!(value["fallback_used"], false);
-        assert_eq!(value["product_cli_ready"], false);
+        assert_eq!(value["product_cli_ready"], true);
         assert_eq!(value["server_ready"], false);
         assert!(value["server_ready_scope"].is_null());
         assert_eq!(value["speedup_claim"], false);
