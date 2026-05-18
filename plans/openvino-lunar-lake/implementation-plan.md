@@ -88,14 +88,22 @@ or server-readiness claim.
 
 ### Work item: LNL258V-OPENVINO-DOCS-002
 
-Status: proposed
+Status: in progress
 Linked proposal: `BITNET-PROP-0004`
-Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-CONTRACT`, future `BITNET-SPEC-OPENVINO-DENSE-SLM`
+Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-CONTRACT`, `BITNET-SPEC-OPENVINO-DENSE-SLM`
 Blocked by: `LNL258V-OPENVINO-DOCS-001`
 
 Add `docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md` defining dense SLM support
 through OpenVINO GenAI, exact model/export contract fields, the proof ladder,
 and profile-scoped promotion prerequisites. Do not promote any route.
+
+Acceptance additions:
+
+- Qwen2.5 0.5B Instruct has a precise OpenVINO artifact/export manifest
+  contract.
+- Future small LLM candidates must enter through the same manifest, smoke,
+  answer, phase, route-profile, and promotion-review ladder.
+- Dense SLM OpenVINO receipts remain separate from BitNet QK256/I2_S proof.
 
 ### Work item: LNL258V-OPENVINO-DOCS-003
 

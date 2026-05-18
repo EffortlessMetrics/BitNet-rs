@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T13:20:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-002"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-002-dense-slm-contract"
+summary = "Started LNL258V-OPENVINO-DOCS-002 to define the OpenVINO dense SLM model/export and proof-ladder contract for Qwen2.5 and future small LLM candidates."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "This is docs/spec-only work that defines manifest, smoke, operator ask, corpus-v2, phase, route-profile, promotion review, model status, and exact-profile server requirements.",
+  "No OpenVINO GPU/NPU route promotion, speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, cold one-off NPU usability, or server readiness is proven.",
+]
