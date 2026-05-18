@@ -605,6 +605,14 @@ factual-table misses, rewrite-normalized drops to 15/20, and no comparable
 repair scorer/template/normalization issues and rerun the 250-case receipt
 before approving a 500-case runtime campaign.
 
+The tracker keeps that repair-first decision explicit: `M4-BITNET-EX-013`
+repairs the 250-case scorer, template, normalization, and reference-comparison
+path without a runtime claim. `M4-BITNET-EX-014` reruns the repaired 250-case
+corpus on the accepted artifact, tokenizer, and backend identity as a bounded
+repaired baseline. `M4-BITNET-EX-015` repeats that repaired run for matching
+history and records whether the next honest step is 500-case expansion,
+continued repair, or freezing the current BitNet quality envelope.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:
@@ -901,6 +909,12 @@ Before the public M4 expectation envelope changes, a go/no-go matrix should say
 which dense SLM, BitNet, benchmark, stability, service, operator, and
 claim-boundary gates passed. A missing BitNet chat or serve gate remains a
 missing feature, not a documentation issue.
+
+`M4-CLAIM-LINT-001` adds static publication hygiene for M4 docs, generated
+status, operator envelope text, and operator-facing command strings. It should
+reject unsupported broad Apple Silicon, MacBook, full Metal, Neural Engine,
+MPSGraph, QK256, dense-as-BitNet, broad quality/performance, or speedup wording
+unless the wording is tied to a matching accepted receipt gate.
 
 ## Metal Boundary
 
