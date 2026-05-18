@@ -804,7 +804,6 @@ must_not_claim = [
   "A speedup or throughput claim is proven.",
 ]
 
-
 [[work_item]]
 id = "CPU-AVX512-000"
 status = "in_progress"
@@ -846,4 +845,50 @@ must_not_claim = [
   "AVX-512 is auto-selected.",
   "AVX-512 speedup or sustained performance is proven.",
   "CUDA, GPU, NPU, OpenCL, OpenVINO, Metal, WGPU, server, or answer-quality readiness is proven.",
+]
+
+[[work_item]]
+id = "CPU-SCALAR-000"
+status = "ready"
+branch = "codex/cpu-scalar-000-docs-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Docs-only scalar CPU contracts define precise scalar kernel IDs, hot-path counters, parity direction, performance profiles, implementation sequencing, and claim boundaries without runtime changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md",
+  "plans/cpu-scalar/implementation-plan.md",
+  "docs/bitnet/BITNET_CPU_PATH_PLAN.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "docs/tracking/campaigns/cpu-proof/active.toml",
+  "docs/tracking/campaigns/cpu-proof/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The scalar CPU BitNet contract and implementation sequence are documented after merge.",
+  "Precise scalar kernel IDs, hot-path counters, parity direction, and scalar performance receipt fields are specified after merge.",
+]
+must_not_claim = [
+  "Runtime scalar kernel IDs are implemented.",
+  "Scaled scalar kernel selection metadata is implemented.",
+  "Strict scalar answer-corpus proof exists.",
+  "Scalar performance is proven.",
+  "A speedup is proven.",
+  "GPU, NPU, or server inference is involved.",
 ]
