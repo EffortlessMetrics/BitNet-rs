@@ -18,7 +18,7 @@ Linked plan:
 - `plans/a770-bitnet-claim-boundary-implementation.md`
 
 Linked issues: n/a
-Linked PRs: #4744 through #5722 A770 diagnostic branch chain
+Linked PRs: #4744 through #5725 A770 diagnostic branch chain
 Support-tier impact: no promotion
 Policy impact: none
 
@@ -56,9 +56,10 @@ stacked on other `a770/*` branches and should not be merged linearly.
 
 Post-refresh note on 2026-05-18: #5717 clean-ported #4744's non-claiming
 dispatch-status slice to `main`, #4741 through #4744 are closed/superseded, and
-PR #5722 merged only into the A770 diagnostic branch chain. A follow-up queue
-refresh showed 153 open scoped PRs: 152 `a770/*`, 0 `codex/*`, and 1
-`claude/*`.
+PR #5722 merged only into the A770 diagnostic branch chain. PR #5725 then
+merged into the same branch chain as selected-key score-input bucket source
+evidence. A follow-up queue refresh showed 153 open scoped PRs: 152 `a770/*`,
+0 `codex/*`, and 1 `claude/*`.
 
 ## Disposition Rule
 
@@ -87,7 +88,7 @@ Use them as source material for replacement PRs only when the replacement:
 
 ## Immediate Queue Decisions
 
-### #5711 and #5722
+### #5711, #5722, and #5725
 
 `diag(bitnet): bind selected query boundary rows` is diagnostic-only and stacked
 on `a770/diag-rust-score-input-operand-drift`, not `main`.
@@ -105,6 +106,12 @@ the branch-chain lineage is flattened.
 PR #5722 added selected-key score history decision evidence on the same branch
 chain. It merged there, not to `main`, and remains diagnostic lineage evidence
 only.
+
+PR #5725 added selected-key score-input bucket source evidence on the same
+branch chain. It merged there, not to `main`, and is the current selected-key
+source-frontier lineage point for the next diagnostic slice. It is not A770
+execution, semantic quality, residency, performance, reference parity, or
+completion proof.
 
 ### #5092
 

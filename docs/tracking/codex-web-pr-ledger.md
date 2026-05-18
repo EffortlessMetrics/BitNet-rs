@@ -42,6 +42,10 @@ Snapshot source:
   follow-up `gh pr list` refresh showed 153 open scoped PRs: 152 `a770/*`, 0
   `codex/*`, and 1 `claude/*`. The only direct `main` PR in that scope remains
   draft perf PR #5092.
+- Queue refresh: #5725 subsequently merged into the same A770 branch chain as
+  selected-key score-input bucket source evidence. It is lineage evidence for
+  the next diagnostic slice, not mainline A770 execution, semantic quality,
+  residency, performance, reference parity, or completion proof.
 
 ## Initial Queue Summary
 
@@ -105,6 +109,7 @@ Snapshot source:
 | 2026-05-18 | #5717 | Merged | Clean `main` replacement for #4744. Local review added canonical A770 not-claims to `qk256_dispatch_status`; package fmt, `git diff --check`, OpenCL metadata, OneAPI metadata, and hosted GitHub PR Gate were green. The long local QK256 cargo test/check probes timed out without diagnostics and were recorded as environmental validation gaps. |
 | 2026-05-18 | #4741-#4744 | Closed as superseded | Backend route/fallback/status ideas were either replaced by #5697/#5717 or left as A770-003/A770-004 source material. None is a direct merge candidate. |
 | 2026-05-18 | #5722 | Merged into A770 branch chain only | Diagnostic selected-key score history evidence merged to `a770/diag-rust-score-input-operand-drift`, not `main`; it remains lineage evidence, not mainline proof. |
+| 2026-05-18 | #5725 | Merged into A770 branch chain only | Diagnostic selected-key score-input bucket source evidence merged to `a770/diag-rust-score-input-operand-drift`, not `main`; it remains lineage evidence for the next selected-key source-boundary diagnostic, not mainline proof. |
 
 ## New Open Cluster After Refresh
 
@@ -127,5 +132,5 @@ Snapshot source:
 | PR or cluster | Lane | Current signal | Disposition rule |
 |---:|---|---|---|
 | #5131 | A770 layer0 FFN diagnostic | Latest open A770 PR by the post-refresh list; stacked on `a770/diag-rmsnorm-f64-trace-effect`, not `main`. | Do not merge as-is. Salvage only through a durable trace/compare replacement PR after lineage flattening. |
-| #4745-#5131 plus merged branch-chain evidence through #5722 | A770 diagnostic branch chain | 152 open `a770/*` PRs remain, mostly one-PR-per-probe branch-chain diagnostics. #4741 through #4744 are closed/superseded; #5722 merged only into the A770 branch chain. | Use `docs/reports/2026-05-18-a770-diagnostic-lineage-map.md`; no probe-by-probe merges. |
+| #4745-#5131 plus merged branch-chain evidence through #5725 | A770 diagnostic branch chain | 152 open `a770/*` PRs remain, mostly one-PR-per-probe branch-chain diagnostics. #4741 through #4744 are closed/superseded; #5722 and #5725 merged only into the A770 branch chain. | Use `docs/reports/2026-05-18-a770-diagnostic-lineage-map.md`; no probe-by-probe merges. |
 | #5092 | Draft AVX2 QK256 perf | Only direct `main` PR in the scoped queue; still draft with a speedup claim. | Leave draft until parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
