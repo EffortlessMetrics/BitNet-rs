@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T15:15:00Z",
+  "created_utc": "2026-05-18T15:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -201,7 +201,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile regression_tiny"
             ],
@@ -223,7 +222,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile regression_tiny"
           ]
         },
@@ -318,7 +316,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile regression_tiny"
             ],
@@ -342,7 +339,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile regression_tiny"
           ]
         }
@@ -532,7 +528,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile ask_short"
             ],
@@ -554,7 +549,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile ask_short"
           ]
         },
@@ -649,7 +643,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile ask_short"
             ],
@@ -673,7 +666,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile ask_short"
           ]
         }
@@ -863,7 +855,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile ask_normal"
             ],
@@ -885,7 +876,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile ask_normal"
           ]
         },
@@ -980,7 +970,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile ask_normal"
             ],
@@ -1004,7 +993,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile ask_normal"
           ]
         }
@@ -1198,7 +1186,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile prefill_heavy",
               "route timing is not profile-specific for profile prefill_heavy",
@@ -1222,7 +1209,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
@@ -1318,7 +1304,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile prefill_heavy",
               "route timing is not profile-specific for profile prefill_heavy",
@@ -1344,7 +1329,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
@@ -1539,7 +1523,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile decode_heavy",
               "route timing is not profile-specific for profile decode_heavy",
@@ -1563,7 +1546,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
@@ -1659,7 +1641,6 @@
               "benchmark_qualified_speedup_or_power_advantage",
               "candidate route requires benchmark-qualified profile evidence",
               "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-              "profile_regression_bundle",
               "route is not promoted; candidate evidence remains blocked",
               "route not promoted for profile decode_heavy",
               "route timing is not profile-specific for profile decode_heavy",
@@ -1685,7 +1666,6 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
-            "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
