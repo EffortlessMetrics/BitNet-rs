@@ -29,6 +29,10 @@ Snapshot source:
 - Later refresh note: after this ledger branch opened, #5545, #5546, and #5547
   appeared as additional AVX2 BitNet hot-path planning variants. They belong
   to the same duplicate/overlap cluster as #5540 through #5544.
+- Queue refresh: after merging #5461 and #5571, a follow-up `gh pr list`
+  refresh showed 166 open scoped PRs: 4 `codex/*`, 160 `a770/*`, 1 `cuda-*`,
+  and 1 `claude/*`. Current non-A770 queue head: #5569, #5568, #5549, #5547,
+  and #5541.
 
 ## Initial Queue Summary
 
@@ -81,9 +85,22 @@ Snapshot source:
 | 2026-05-18 | #5536 | Merged before this ledger follow-up | GitHub reports merged as source-of-truth/generated tracker closeout; keep generator-proof requirement for similar PRs. |
 | 2026-05-18 | #5537 | Merged before this ledger follow-up | GitHub reports merged as Lunar Lake timing applicability/receipt update; keep JSON and generator-proof requirement for similar PRs. |
 | 2026-05-18 | #5465, #5466, #5472, #5473, #5474 | Merged by concurrent queue activity | GitHub reports these SRP refactors merged; remaining SRP queue still needs one-at-a-time review. |
+| 2026-05-18 | #5461 | Merged by concurrent queue activity after local review | Local review confirmed the API gateway facade preserved exports; package fmt, check, API-gateway tests, clippy, and GitHub merge state were inspected. A follow-up format issue from current `main` was split to #5571. |
+| 2026-05-18 | #5567 | Closed as superseded | The intended no-panic-family cleanup was already present on `origin/main`; closing avoided a redundant/conflicting cleanup PR. |
+| 2026-05-18 | #5571 | Merged by concurrent queue activity | One-file BDD grid rustfmt repair for the format gate. Local package fmt/check and GitHub merge state were inspected. |
 
 ## New Open Cluster After Refresh
 
 | PRs | Intent | Disposition |
 |---|---|---|
 | #5540, #5541, #5542, #5543, #5544, #5545, #5546, #5547 | AVX2/QK256 hot-path audit, diagnostic counters, receipt fields, and implementation planning. | Treat as a duplicate/overlap cluster. Compare claims and proofs, keep at most one canonical implementation plus one docs/plan PR if evidence supports it, and close superseded attempts. |
+
+## Current Queue Head
+
+| PR | Lane | Current signal | Disposition rule |
+|---:|---|---|---|
+| #5569 | Apple M4 source-of-truth tracker | Mergeable tracker/generated update. Proof commands in the body include campaign check, campaign generate `--check`, campaign doctor, and diff check. | Process only with generator proof; no runtime/model/quality/perf claim. |
+| #5568 | CUDA UX receipt/status schema tests | Mergeable two-file code/test change, but GitHub Policy failed on the current run. | Triage policy report before review or merge. Preserve receipt/status claim boundaries. |
+| #5549 | Apple M4 prompt generation identity receipts | Conflicting receipt/schema/docs/generated update. | Do not merge as-is; refresh or salvage only after resolving conflicts and rerunning campaign generators. |
+| #5547 | AVX2 hot-path docs/plan | Conflicting member of the AVX2 duplicate planning cluster. | Compare against #5541 and related #5540-#5547 attempts; keep one canonical plan if still useful. |
+| #5541 | AVX2 QK256 hot-path counters and receipt fields | Mergeable code/test change, but Policy failed and the PR body lacks final test completion evidence. | Triage Policy and rerun exact QK256 proof before considering as the canonical implementation. |
