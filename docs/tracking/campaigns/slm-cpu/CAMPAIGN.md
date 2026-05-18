@@ -84,7 +84,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-031 | merged | #5499 reused a single CPU KV cache across warm-session prompts while preserving prompt isolation through explicit clears. |
 | SLM-CPU-032 | merged | #5514 reused rendered prompt token IDs across repeated warm-session prompts and recorded prompt-token cache hit/miss counts. |
 | SLM-CPU-033 | merged | #5603 records the dominant aggregate allocation hotspot and next evidence-scoped optimization target after prompt-token caching; this is diagnostic prioritization only, not a speedup or sustained-throughput claim. |
-| SLM-CPU-034 | in_progress | Attributes the dominant `prompt_prefill` / `model.forward` allocation boundary before changing dense math. |
+| SLM-CPU-034 | merged | #5612 attributes the dominant `prompt_prefill` / `model.forward` allocation boundary before changing dense math. |
+| SLM-CPU-035 | ready | Regenerate the real i5-8250U Qwen3 Q8_0 warm-session artifact so the receipt records `prompt_prefill_breakdown.embed` and `prompt_prefill_breakdown.forward`. |
 
 ## Review Policy
 
