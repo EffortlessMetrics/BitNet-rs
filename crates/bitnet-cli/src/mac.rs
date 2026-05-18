@@ -14256,6 +14256,8 @@ fn validate_mac_receipt_value(
         validate_slm_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
         validate_bitnet_eval_answer_corpus_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_golden_token_canaries" {
+        validate_apple_m4_golden_token_canaries_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_bitnet_eval_larger_corpus_decision" {
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
@@ -17718,6 +17720,207 @@ fn validate_one_shot_receipt(
     Ok((Some(1), Some(generated)))
 }
 
+fn validate_apple_m4_golden_token_canaries_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_exact_string_at(path, receipt, &["canary_contract", "work_item"], "M4-CANARY-001")?;
+    require_bool_at(path, receipt, &["canary_contract", "live_runtime_claim"], false)?;
+    require_bool_at(path, receipt, &["canary_contract", "drift_localization_only"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+
+    let cases = receipt["cases"].as_array().ok_or_else(|| {
+        anyhow!("{} golden-token canary receipt is missing cases", path.display())
+    })?;
+    if cases.is_empty() {
+        anyhow::bail!("{} golden-token canary receipt has no cases", path.display());
+    }
+
+    let mut has_dense_slm = false;
+    let mut has_bitnet = false;
+    let mut generated_total = 0usize;
+    for (index, case) in cases.iter().enumerate() {
+        let case_id = require_non_empty_string_at(path, case, &["case_id"])?;
+        let model_family = require_non_empty_string_at(path, case, &["model_family"])?;
+        match model_family {
+            "dense_slm" => has_dense_slm = true,
+            "bitnet" => has_bitnet = true,
+            _ => {
+                anyhow::bail!(
+                    "{} golden-token canary case {index} ({case_id}) has unsupported model_family {model_family:?}",
+                    path.display()
+                );
+            }
+        }
+
+        require_non_empty_string_at(path, case, &["prompt", "text"])?;
+        let template_family =
+            require_non_empty_string_at(path, case, &["prompt", "template_family"])?;
+        require_non_empty_string_at(path, case, &["prompt", "template_identity"])?;
+        let rendered_sha = require_non_empty_string_at(path, case, &["prompt", "rendered_sha256"])?;
+        if !is_sha256_hex(rendered_sha) {
+            anyhow::bail!(
+                "{} golden-token canary case {index} ({case_id}) has invalid prompt.rendered_sha256",
+                path.display()
+            );
+        }
+
+        let input_count = require_u64_at(path, case, &["tokens", "input_count"], true)? as usize;
+        let input_ids_len = require_non_empty_u64_array_at(path, case, &["tokens", "input_ids"])?;
+        if input_count != input_ids_len {
+            anyhow::bail!(
+                "{} golden-token canary case {index} ({case_id}) input_count does not match input_ids length",
+                path.display()
+            );
+        }
+        let generated_count =
+            require_u64_at(path, case, &["tokens", "generated_count"], true)? as usize;
+        let generated_ids_len =
+            require_non_empty_u64_array_at(path, case, &["tokens", "generated_ids"])?;
+        if generated_count != generated_ids_len {
+            anyhow::bail!(
+                "{} golden-token canary case {index} ({case_id}) generated_count does not match generated_ids length",
+                path.display()
+            );
+        }
+        generated_total = generated_total.saturating_add(generated_count);
+
+        require_non_empty_string_at(path, case, &["generated", "text"])?;
+        require_non_empty_string_at(path, case, &["generated", "stop_reason"])?;
+        require_bool_at(path, case, &["generated", "valid_utf8"], true)?;
+        require_exact_string_at(path, case, &["sampler", "mode"], "greedy")?;
+        let temperature = require_number_at(path, case, &["sampler", "temperature"], false)?;
+        if temperature != 0.0 {
+            anyhow::bail!(
+                "{} golden-token canary case {index} ({case_id}) sampler.temperature must be 0.0",
+                path.display()
+            );
+        }
+        require_u64_exact(path, case, &["sampler", "top_k"], 1)?;
+        require_u64_exact(path, case, &["sampler", "seed"], 0)?;
+
+        require_exact_string_at(path, case, &["backend", "requested_backend"], APPLE_M4_CPU_NEON)?;
+        require_exact_string_at(path, case, &["backend", "selected_backend"], APPLE_M4_CPU_NEON)?;
+        require_exact_string_at(path, case, &["backend", "runtime_api"], "cpu")?;
+        require_bool_at(path, case, &["backend", "fallback_used"], false)?;
+
+        let model_id = require_non_empty_string_at(path, case, &["model", "id"])?;
+        let model_sha = require_non_empty_string_at(path, case, &["model", "sha256"])?;
+        if !is_sha256_hex(model_sha) {
+            anyhow::bail!(
+                "{} golden-token canary case {index} ({case_id}) has invalid model.sha256",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, case, &["tokenizer", "source"])?;
+        require_non_empty_string_at(path, case, &["tokenizer", "pretokenizer_authority"])?;
+        require_non_empty_string_at(path, case, &["tokenizer", "identity"])?;
+        if model_family == "bitnet" {
+            if template_family != BITNET_M4_PROMPT_TEMPLATE {
+                anyhow::bail!(
+                    "{} golden-token BitNet canary case {index} ({case_id}) must use {BITNET_M4_PROMPT_TEMPLATE}",
+                    path.display()
+                );
+            }
+            if model_id != BITNET_M4_MODEL_ID || model_sha != BITNET_M4_EXPECTED_MODEL_SHA256 {
+                anyhow::bail!(
+                    "{} golden-token BitNet canary case {index} ({case_id}) does not use the accepted Microsoft I2_S model identity",
+                    path.display()
+                );
+            }
+            require_exact_string_at(
+                path,
+                case,
+                &["tokenizer", "sha256"],
+                BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            )?;
+            require_exact_string_at(
+                path,
+                case,
+                &["tokenizer", "pretokenizer_authority"],
+                "llama-bpe",
+            )?;
+        } else if template_family != QWEN_PROMPT_TEMPLATE {
+            anyhow::bail!(
+                "{} golden-token dense SLM canary case {index} ({case_id}) must use {QWEN_PROMPT_TEMPLATE}",
+                path.display()
+            );
+        } else if case["tokenizer"]["sha256"].is_string() {
+            let tokenizer_sha = require_non_empty_string_at(path, case, &["tokenizer", "sha256"])?;
+            if !is_sha256_hex(tokenizer_sha) {
+                anyhow::bail!(
+                    "{} golden-token canary case {index} ({case_id}) has invalid tokenizer.sha256",
+                    path.display()
+                );
+            }
+        }
+
+        require_bool_at(path, case, &["claim_boundary", "runtime_canary"], true)?;
+        require_bool_at(path, case, &["claim_boundary", "drift_localization_only"], true)?;
+        require_bool_at(path, case, &["claim_boundary", "live_runtime_claim"], false)?;
+        require_bool_at(path, case, &["claim_boundary", "broad_quality_claim"], false)?;
+        require_bool_at(path, case, &["claim_boundary", "broad_performance_claim"], false)?;
+        require_bool_at(path, case, &["claim_boundary", "speedup_claim"], false)?;
+        require_bool_at(path, case, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    }
+
+    if !has_dense_slm || !has_bitnet {
+        anyhow::bail!(
+            "{} golden-token canary receipt must include at least one dense_slm case and one bitnet case",
+            path.display()
+        );
+    }
+    require_u64_exact(path, receipt, &["summary", "cases"], cases.len() as u64)?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["summary", "generated_token_count"],
+        generated_total as u64,
+    )?;
+
+    Ok((Some(cases.len()), Some(generated_total)))
+}
+
+fn require_non_empty_u64_array_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+) -> Result<usize> {
+    let label = json_path_label(segments);
+    let values = json_value_at(value, segments).as_array().ok_or_else(|| {
+        anyhow!("{} SLM eval summary is missing array {label}", receipt_path.display())
+    })?;
+    if values.is_empty() {
+        anyhow::bail!("{} SLM eval summary {label} must not be empty", receipt_path.display());
+    }
+    for item in values {
+        if item.as_u64().is_none() {
+            anyhow::bail!(
+                "{} SLM eval summary {label} must contain only unsigned integer token IDs",
+                receipt_path.display()
+            );
+        }
+    }
+    Ok(values.len())
+}
+
 fn validate_warm_session_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -18477,6 +18680,43 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_golden_token_canaries() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let receipt = test_golden_token_canary_receipt();
+
+        let summary =
+            validate_mac_receipt_value(Path::new("golden-token-canaries.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_golden_token_canaries");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(7));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_rejects_golden_token_canary_missing_generated_ids()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_golden_token_canary_receipt();
+        receipt["cases"][0]["tokens"]["generated_ids"] = serde_json::json!([]);
+
+        let err =
+            match validate_mac_receipt_value(Path::new("golden-token-canaries.json"), &receipt) {
+                Ok(summary) => {
+                    return Err(format!(
+                        "golden-token canary without generated IDs should fail, got {summary:?}"
+                    )
+                    .into());
+                }
+                Err(err) => err.to_string(),
+            };
+
+        assert!(err.contains("generated_ids"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn mac_receipts_check_accepts_bitnet_larger_corpus_decision()
     -> Result<(), Box<dyn std::error::Error>> {
         let receipt = test_bitnet_larger_corpus_decision_receipt();
@@ -18512,6 +18752,155 @@ mod tests {
             profile_set_allocation_scope(APPLE_M3_AIR_CPU_NEON),
             "selected Apple M3 Air CPU/NEON SLM warm-session profile set"
         );
+    }
+
+    fn test_golden_token_canary_receipt() -> serde_json::Value {
+        serde_json::json!({
+            "artifact_kind": "apple_m4_golden_token_canaries",
+            "schema_version": "1.0.0",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "machine": {
+                "id": "apple-m4-mac-mini"
+            },
+            "canary_contract": {
+                "work_item": "M4-CANARY-001",
+                "live_runtime_claim": false,
+                "drift_localization_only": true
+            },
+            "claim_boundary": {
+                "dense_slm_and_bitnet_evidence_separated": true,
+                "bitnet_chat_enabled": false,
+                "bitnet_serve_enabled": false,
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+                "bitnet_quality_claimed": false
+            },
+            "summary": {
+                "cases": 2,
+                "generated_token_count": 7
+            },
+            "cases": [
+                {
+                    "case_id": "dense-qwen25-q8-arithmetic-001",
+                    "model_family": "dense_slm",
+                    "prompt": {
+                        "text": "Compute 85 + 67. Answer with only the number.",
+                        "template_family": QWEN_PROMPT_TEMPLATE,
+                        "template_identity": "qwen2.5-chat-template:gguf_metadata",
+                        "rendered_sha256": "7500e70a9b28111044bfcab7d487aa650465d410462f185ed9526ef82aba3415"
+                    },
+                    "tokens": {
+                        "input_count": 43,
+                        "input_ids": [
+                            151644, 8948, 198, 2610, 525, 1207, 16948, 11, 3465, 553, 54364,
+                            14817, 13, 1446, 525, 264, 10950, 17847, 13, 151645, 198, 151644,
+                            872, 198, 46254, 220, 23, 20, 488, 220, 21, 22, 13, 21806, 448,
+                            1172, 279, 1372, 13, 151645, 198, 151644, 77091
+                        ],
+                        "generated_count": 5,
+                        "generated_ids": [198, 16, 20, 17, 151645]
+                    },
+                    "generated": {
+                        "text": "\n152<|im_end|>",
+                        "stop_reason": "eos_token",
+                        "valid_utf8": true
+                    },
+                    "sampler": {
+                        "mode": "greedy",
+                        "temperature": 0.0,
+                        "top_k": 1,
+                        "seed": 0
+                    },
+                    "backend": {
+                        "requested_backend": APPLE_M4_CPU_NEON,
+                        "selected_backend": APPLE_M4_CPU_NEON,
+                        "runtime_api": "cpu",
+                        "fallback_used": false
+                    },
+                    "model": {
+                        "id": "qwen2.5-0.5b-instruct-q8_0",
+                        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+                    },
+                    "tokenizer": {
+                        "source": "gguf_metadata",
+                        "pretokenizer_authority": "present",
+                        "identity": "embedded-gguf-tokenizer:qwen2.5:qwen2"
+                    },
+                    "claim_boundary": {
+                        "runtime_canary": true,
+                        "drift_localization_only": true,
+                        "live_runtime_claim": false,
+                        "broad_quality_claim": false,
+                        "broad_performance_claim": false,
+                        "speedup_claim": false,
+                        "full_metal_inference_claimed": false
+                    }
+                },
+                {
+                    "case_id": "bitnet-i2s-arithmetic-001",
+                    "model_family": "bitnet",
+                    "prompt": {
+                        "text": "Answer with a single digit: 2+2=",
+                        "template_family": BITNET_M4_PROMPT_TEMPLATE,
+                        "template_identity": "bitnetcpp-answer:external-tokenizer-llama-bpe",
+                        "rendered_sha256": "a4a27c8dfd02f3285e44a0bbedd55a37451d1b3513861fc30a035e2f7ed4725d"
+                    },
+                    "tokens": {
+                        "input_count": 18,
+                        "input_ids": [
+                            128000, 1502, 25, 22559, 449, 264, 3254, 16099, 25, 220, 17, 10,
+                            17, 28, 128009, 72803, 25, 220
+                        ],
+                        "generated_count": 2,
+                        "generated_ids": [19, 128009]
+                    },
+                    "generated": {
+                        "text": "4",
+                        "stop_reason": "eos_token",
+                        "valid_utf8": true
+                    },
+                    "sampler": {
+                        "mode": "greedy",
+                        "temperature": 0.0,
+                        "top_k": 1,
+                        "seed": 0
+                    },
+                    "backend": {
+                        "requested_backend": APPLE_M4_CPU_NEON,
+                        "selected_backend": APPLE_M4_CPU_NEON,
+                        "runtime_api": "cpu",
+                        "fallback_used": false
+                    },
+                    "model": {
+                        "id": BITNET_M4_MODEL_ID,
+                        "sha256": BITNET_M4_EXPECTED_MODEL_SHA256
+                    },
+                    "tokenizer": {
+                        "source": "external_tokenizer_json",
+                        "pretokenizer_authority": "llama-bpe",
+                        "identity": "external-tokenizer-json:llama-bpe",
+                        "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256
+                    },
+                    "claim_boundary": {
+                        "runtime_canary": true,
+                        "drift_localization_only": true,
+                        "live_runtime_claim": false,
+                        "broad_quality_claim": false,
+                        "broad_performance_claim": false,
+                        "speedup_claim": false,
+                        "full_metal_inference_claimed": false
+                    }
+                }
+            ]
+        })
     }
 
     fn test_m3_warm_session_receipt() -> serde_json::Value {
