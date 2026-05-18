@@ -3,7 +3,9 @@
 This file provides Codex-specific guidance for working in the BitNet-rs
 repository. `CLAUDE.md` remains the broader repository guide; this file records
 the campaign authority model that Codex should apply while operating work-item
-branches.
+branches. See
+[`docs/development/AGENTIC_PR_OPERATIONS.md`](docs/development/AGENTIC_PR_OPERATIONS.md)
+for the durable agentic PR operations reference.
 
 ## Campaign Work Item Authority
 

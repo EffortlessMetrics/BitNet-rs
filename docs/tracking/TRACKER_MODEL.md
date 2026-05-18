@@ -142,6 +142,8 @@ This campaign work item policy is the authority for campaign branches. If an
 older agent runbook describes default human approvals, maintainer-ready handoff,
 or manual intervention for ordinary commit, push, PR, PR branch refresh, CI
 repair, merge, or closeout work, follow the campaign work item policy instead.
+The durable operations reference is
+[`docs/development/AGENTIC_PR_OPERATIONS.md`](../development/AGENTIC_PR_OPERATIONS.md).
 
 Allowed `review_mode` values are:
 
