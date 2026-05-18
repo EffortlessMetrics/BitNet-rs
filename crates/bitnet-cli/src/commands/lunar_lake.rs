@@ -59,6 +59,7 @@ const CPU_SLM_RUNTIME_COMPARISON: &str = "lunar-lake-cpu-slm-runtime-comparison.
 const OPENVINO_GPU_CORPUS_V2_DIAGNOSIS: &str = "lunar-lake-openvino-gpu-corpus-v2-diagnosis.json";
 const OPENVINO_NPU_COLD_START_DIAGNOSIS: &str = "lunar-lake-openvino-npu-cold-start-diagnosis.json";
 const OPENVINO_NPU_RESIDENT_SESSION: &str = "lunar-lake-openvino-npu-resident-session.json";
+const OPENVINO_NPU_CACHE_EXPERIMENT: &str = "lunar-lake-openvino-npu-cache-experiment.json";
 const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
     "lunar-lake-openvino-generation-budget-sensitivity.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
@@ -272,6 +273,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = OPENVINO_NPU_RESIDENT_SESSION)]
         npu_resident_session: Option<PathBuf>,
+
+        /// Optional OpenVINO NPU cache experiment receipt to attach cached-cold blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_NPU_CACHE_EXPERIMENT)]
+        npu_cache_experiment: Option<PathBuf>,
 
         /// Optional OpenVINO generation-budget sensitivity receipt to attach exact-answer blockers.
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
@@ -1967,6 +1973,7 @@ impl LunarLakeCommand {
                 npu_quality_diagnosis,
                 npu_cold_start_diagnosis,
                 npu_resident_session,
+                npu_cache_experiment,
                 openvino_budget_sensitivity,
                 json_out,
                 created_utc,
@@ -1989,6 +1996,7 @@ impl LunarLakeCommand {
                         npu_quality_diagnosis.as_deref(),
                         npu_cold_start_diagnosis.as_deref(),
                         npu_resident_session.as_deref(),
+                        npu_cache_experiment.as_deref(),
                         openvino_budget_sensitivity.as_deref(),
                         created_utc,
                     )?;
@@ -3561,6 +3569,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
         None,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -3579,6 +3588,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
     npu_quality_diagnosis: Option<&Path>,
     npu_cold_start_diagnosis: Option<&Path>,
     npu_resident_session: Option<&Path>,
+    npu_cache_experiment: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
     build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
@@ -3593,6 +3603,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
         npu_quality_diagnosis,
         npu_cold_start_diagnosis,
         npu_resident_session,
+        npu_cache_experiment,
         None,
         created_utc,
     )
@@ -3611,6 +3622,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     npu_quality_diagnosis: Option<&Path>,
     npu_cold_start_diagnosis: Option<&Path>,
     npu_resident_session: Option<&Path>,
+    npu_cache_experiment: Option<&Path>,
     openvino_budget_sensitivity: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
@@ -3630,6 +3642,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
         npu_quality_diagnosis,
         npu_cold_start_diagnosis,
         npu_resident_session,
+        npu_cache_experiment,
         openvino_budget_sensitivity,
         &mut gaps,
     )?;
@@ -8024,6 +8037,7 @@ fn load_route_diagnostics_index(
     npu_quality_diagnosis: Option<&Path>,
     npu_cold_start_diagnosis: Option<&Path>,
     npu_resident_session: Option<&Path>,
+    npu_cache_experiment: Option<&Path>,
     openvino_budget_sensitivity: Option<&Path>,
     gaps: &mut Vec<String>,
 ) -> Result<RouteDiagnosticsIndex> {
@@ -8053,6 +8067,9 @@ fn load_route_diagnostics_index(
     };
     if let Some(path) = npu_cold_start_diagnosis {
         load_npu_cold_start_diagnostic(root, path, npu_resident_session_ready, &mut index, gaps)?;
+    }
+    if let Some(path) = npu_cache_experiment {
+        load_npu_cache_experiment(root, path, &mut index, gaps)?;
     }
     if let Some(path) = openvino_budget_sensitivity {
         load_openvino_generation_budget_sensitivity(root, path, &mut index, gaps)?;
@@ -8231,6 +8248,95 @@ fn load_npu_resident_session(
         && bool_at_any(&json, &["resident_session.warm_resident_asks.fallback_used"]) != Some(true);
     index.add("dense_slm_openvino_npu_candidate", source_receipt, blockers);
     Ok(resident_session_ready)
+}
+
+fn load_npu_cache_experiment(
+    root: &Path,
+    path: &Path,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!("NPU cache experiment receipt missing: {}", path_string(&path)));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("lunar_lake_openvino_npu_cache_experiment")
+    {
+        gaps.push(format!(
+            "NPU cache experiment receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+
+    let source_receipt = path_string(&path);
+    let mut blockers = Vec::new();
+    if string_at(&json, "selected_backend").as_deref() != Some("openvino-npu") {
+        blockers.push("NPU cache experiment selected_backend is not openvino-npu".to_string());
+    }
+    if string_at(&json, "runtime_device").as_deref() != Some("NPU") {
+        blockers.push("NPU cache experiment runtime_device is not NPU".to_string());
+    }
+    if bool_at_any(&json, &["fallback_used"]) != Some(false) {
+        blockers.push("NPU cache experiment fallback_used=false is not proven".to_string());
+    }
+    if bool_at_any(&json, &["comparison.cache_experiment_ready"]) != Some(true) {
+        blockers.push("NPU cache experiment is not ready".to_string());
+    }
+    if bool_at_any(&json, &["comparison.first_answer_gate_passed"]) != Some(true)
+        || bool_at_any(&json, &["comparison.second_answer_gate_passed"]) != Some(true)
+    {
+        blockers.push("NPU cache experiment answer gates did not both pass".to_string());
+    }
+    let cache_effective_by_timing =
+        bool_at_any(&json, &["cache.cache_effective_by_timing"]) == Some(true);
+    let cache_files_created = bool_at_any(&json, &["cache.cache_files_created"]) == Some(true);
+    let cache_files_reused_or_stable =
+        bool_at_any(&json, &["cache.cache_files_reused_or_stable"]) == Some(true);
+    let runtime_metric_available =
+        bool_at_any(&json, &["cache.cache_hit_runtime_metric_available"]) == Some(true);
+    if !runtime_metric_available
+        && !(cache_effective_by_timing && cache_files_created && cache_files_reused_or_stable)
+    {
+        blockers.push(
+            "NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric"
+                .to_string(),
+        );
+    }
+    if !cache_effective_by_timing {
+        let classification = string_at(&json, "comparison.classification")
+            .unwrap_or_else(|| "cache_not_materially_proven_for_pipeline_construct".to_string());
+        blockers.push(format!(
+            "NPU cached cold process does not materially reduce pipeline construction: {classification}"
+        ));
+    }
+    if bool_at_any(&json, &["generated_token_visibility.direct_generated_token_ids_available"])
+        == Some(false)
+    {
+        blockers.push(
+            "OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                .to_string(),
+        );
+    }
+    if bool_at_any(&json, &["claim_boundary.route_promotion_changed"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.speedup_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.power_advantage_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.acceleration_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.native_npu_inference_claim"]) == Some(true)
+        || bool_at_any(&json, &["claim_boundary.bitnet_qk256_i2s_behavior_changed"]) == Some(true)
+    {
+        gaps.push(format!(
+            "NPU cache experiment receipt violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+
+    blockers.sort();
+    blockers.dedup();
+    index.add("dense_slm_openvino_npu_candidate", source_receipt, blockers);
+    Ok(())
 }
 
 fn load_npu_cold_start_diagnostic(
@@ -11279,6 +11385,7 @@ mod tests {
             Some(Path::new("lunar-lake-openvino-npu-corpus-v2-diagnosis.json")),
             Some(Path::new(OPENVINO_NPU_COLD_START_DIAGNOSIS)),
             None,
+            None,
             Some(Path::new(OPENVINO_GENERATION_BUDGET_SENSITIVITY)),
             "2026-05-16T07:30:00Z".to_string(),
         )?;
@@ -11604,6 +11711,7 @@ mod tests {
             Some(Path::new(OPENVINO_NPU_COLD_START_DIAGNOSIS)),
             Some(Path::new(OPENVINO_NPU_RESIDENT_SESSION)),
             None,
+            None,
             &mut gaps,
         )?;
         assert!(gaps.is_empty(), "{gaps:?}");
@@ -11623,6 +11731,151 @@ mod tests {
                 .contains(&"NPU cache or resident warm-route proof is missing".to_string()),
             "{:?}",
             evidence.blockers
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn npu_cache_experiment_adds_cache_context_without_promoting_npu() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            OPENVINO_NPU_CACHE_EXPERIMENT,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
+                "selected_backend": "openvino-npu",
+                "runtime_device": "NPU",
+                "fallback_used": false,
+                "cache": {
+                    "cache_hit_runtime_metric_available": false,
+                    "cache_effective_by_timing": false
+                },
+                "comparison": {
+                    "cache_experiment_ready": true,
+                    "first_answer_gate_passed": true,
+                    "second_answer_gate_passed": true,
+                    "classification": "cache_not_materially_proven_for_pipeline_construct"
+                },
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_npu_inference_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let mut gaps = Vec::new();
+        let diagnostics = load_route_diagnostics_index(
+            temp.path(),
+            None,
+            None,
+            None,
+            None,
+            Some(Path::new(OPENVINO_NPU_CACHE_EXPERIMENT)),
+            None,
+            &mut gaps,
+        )?;
+        assert!(gaps.is_empty(), "{gaps:?}");
+        let evidence = diagnostics.get("dense_slm_openvino_npu_candidate", "low_power");
+        assert!(
+            evidence
+                .source_receipts
+                .iter()
+                .any(|source| source.ends_with(OPENVINO_NPU_CACHE_EXPERIMENT)),
+            "{:?}",
+            evidence.source_receipts
+        );
+        assert!(evidence.blockers.contains(
+            &"NPU cache hit evidence is inferred from cache files/timing, not an OpenVINO runtime metric"
+                .to_string()
+        ));
+        assert!(evidence.blockers.iter().any(|blocker| {
+            blocker.contains(
+                "NPU cached cold process does not materially reduce pipeline construction",
+            )
+        }));
+        Ok(())
+    }
+
+    #[test]
+    fn npu_cache_experiment_accepts_file_and_timing_cache_evidence() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            OPENVINO_NPU_CACHE_EXPERIMENT,
+            json!({
+                "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
+                "selected_backend": "openvino-npu",
+                "runtime_device": "NPU",
+                "fallback_used": false,
+                "cache": {
+                    "cache_hit_runtime_metric_available": false,
+                    "cache_files_created": true,
+                    "cache_files_reused_or_stable": true,
+                    "cache_effective_by_timing": true
+                },
+                "comparison": {
+                    "cache_experiment_ready": true,
+                    "first_answer_gate_passed": true,
+                    "second_answer_gate_passed": true,
+                    "classification": "cache_materially_reduces_pipeline_construct"
+                },
+                "generated_token_visibility": {
+                    "direct_generated_token_ids_available": false
+                },
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_npu_inference_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let mut gaps = Vec::new();
+        let diagnostics = load_route_diagnostics_index(
+            temp.path(),
+            None,
+            None,
+            None,
+            None,
+            Some(Path::new(OPENVINO_NPU_CACHE_EXPERIMENT)),
+            None,
+            &mut gaps,
+        )?;
+        assert!(gaps.is_empty(), "{gaps:?}");
+        let evidence = diagnostics.get("dense_slm_openvino_npu_candidate", "low_power");
+        assert!(
+            evidence
+                .source_receipts
+                .iter()
+                .any(|source| source.ends_with(OPENVINO_NPU_CACHE_EXPERIMENT)),
+            "{:?}",
+            evidence.source_receipts
+        );
+        assert!(
+            !evidence.blockers.iter().any(|blocker| blocker.contains("NPU cache hit evidence")),
+            "{:?}",
+            evidence.blockers
+        );
+        assert!(
+            !evidence.blockers.iter().any(|blocker| blocker.contains("NPU cached cold process")),
+            "{:?}",
+            evidence.blockers
+        );
+        assert!(
+            evidence.blockers.contains(
+                &"OpenVINO generated token IDs are retokenized, not direct pipeline internals"
+                    .to_string()
+            )
         );
         Ok(())
     }

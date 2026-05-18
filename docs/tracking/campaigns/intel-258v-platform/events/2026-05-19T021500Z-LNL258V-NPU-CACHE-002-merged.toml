@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T02:15:00Z"
+event = "merged"
+item = "LNL258V-NPU-CACHE-002"
+branch = "codex/lunar-lake/LNL258V-NPU-CACHE-002"
+pr = 5738
+head_sha = "3348b3d44e5be3d9c8fd318f483b0d418e93e154"
+merge_sha = "8f13b69026621d2c816b63f0a38ac13ee624ea99"
+actor = "codex"
+summary = "Merged LNL258V-NPU-CACHE-002 to classify file-and-timing cache evidence as sufficient for route-profile cache proof."
+
+notes = [
+  "The route-profile loader now treats a ready fallback-free NPU cache experiment with cache file creation/reuse and material second-process timing improvement as accepted cache evidence.",
+  "The OpenVINO direct cache-hit runtime metric remains unavailable and recorded in the cache receipt, but it is no longer a route-profile blocker when the file-and-timing evidence is sufficient.",
+  "NPU remains unpromoted; cold one-off startup, direct-token visibility, benchmark-qualified advantage, profile-regression, timing, and power evidence blockers remain.",
+]

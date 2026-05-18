@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T01:05:00Z",
+  "created_utc": "2026-05-19T02:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -13,6 +13,7 @@
   "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
   "route_diagnosis_receipts": [
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json"
@@ -331,7 +332,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json"
           ],
           "blockers": [
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -657,7 +659,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json"
           ],
           "blockers": [
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -983,7 +986,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json"
           ],
           "blockers": [
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -1318,7 +1322,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json"
           ],
           "blockers": [
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -1654,7 +1659,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json"
           ],
           "blockers": [
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -1952,7 +1958,8 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json"
           ],
           "blockers": [
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
