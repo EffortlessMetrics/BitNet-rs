@@ -8,6 +8,7 @@
 bitnet receipts explain <receipt.json>
 bitnet receipts explain --latest
 bitnet receipts explain <receipt.json> --json
+bitnet receipts explain --latest --format json
 ```
 
 The command reads existing BitNet-rs JSON receipts and prints a compact proof
@@ -35,7 +36,8 @@ May claim:
   UX;
 - `--latest` can select the newest local JSON receipt under
   `target/bitnet/receipts`;
-- `--json` emits the normalized explanation object for tooling.
+- `--json` and `--format json` emit the normalized explanation object for
+  tooling.
 
 Must not claim:
 
@@ -67,7 +69,7 @@ Dense regular-LLM CUDA fixture receipt:
 cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- `
   receipts explain `
   ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-residency.json `
-  --json
+  --format json
 ```
 
 ## Next Step
