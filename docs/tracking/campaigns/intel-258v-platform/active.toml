@@ -5936,9 +5936,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BENCH-005"
-status = "pr_open"
+status = "merged"
 pr = 5550
-head_sha = "184519dd642cd06527fb77266110318564750360"
+head_sha = "945cde6e3dfabbfc9e82e5f5bd306be6002b3774"
+merge_sha = "ccbb1f2b5b69a9a3d41d43c304da0e3f32873aef"
 branch = "codex/lunar-lake/LNL258V-BENCH-005-profile-timing-coverage"
 stackable = false
 review_mode = "codex_premerge"
