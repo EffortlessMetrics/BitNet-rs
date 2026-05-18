@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-18T15:40:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-013"
+branch = "codex/lunar-lake/LNL258V-ROUTE-013-profile-regression-blocker"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-013 to clear stale profile_regression_bundle blockers when passing fallback-free corpus-v2 profile evidence is present."
+
+notes = [
+  "Candidate OpenVINO GPU/NPU routes remain benchmark-unqualified and unpromoted unless separate promotion evidence clears the remaining blockers.",
+  "No new inference, route promotion, speedup, power-advantage, accelerator, native OpenCL/NPU, or BitNet QK256/I2_S claim is made.",
+]

@@ -9159,6 +9159,9 @@ fn evaluate_profile_route(
     } else if quality_index.has_route(route_id) {
         blockers.push("corpus_v2 profile quality evidence missing".to_string());
     }
+    if profile_regression_bundle_evidence_satisfied(profile_quality.as_ref()) {
+        blockers.retain(|blocker| blocker != "profile_regression_bundle");
+    }
     blockers.sort();
     blockers.dedup();
 
@@ -9203,6 +9206,14 @@ fn evaluate_profile_route(
         route_advantage_context: None,
         evidence,
         blockers,
+    })
+}
+
+fn profile_regression_bundle_evidence_satisfied(
+    profile_quality: Option<&ProfileQualityEvidence>,
+) -> bool {
+    profile_quality.is_some_and(|quality| {
+        quality.profile_present && quality.fallback_used == Some(false) && quality.failed == 0
     })
 }
 
@@ -11292,6 +11303,33 @@ mod tests {
             regression_gpu.blockers
         );
         Ok(())
+    }
+
+    #[test]
+    fn profile_regression_bundle_blocker_requires_clean_profile_quality() {
+        let clean = ProfileQualityEvidence {
+            source_receipt: "clean.json".to_string(),
+            route_id: "dense_slm_openvino_gpu_candidate".to_string(),
+            profile_id: "ask_short".to_string(),
+            profile_present: true,
+            cases_total: 4,
+            passed: 4,
+            failed: 0,
+            fallback_used: Some(false),
+            status: "passed".to_string(),
+            notes: Vec::new(),
+        };
+        assert!(profile_regression_bundle_evidence_satisfied(Some(&clean)));
+
+        let missing_profile = ProfileQualityEvidence { profile_present: false, ..clean.clone() };
+        assert!(!profile_regression_bundle_evidence_satisfied(Some(&missing_profile)));
+
+        let failed = ProfileQualityEvidence { failed: 1, passed: 3, ..clean.clone() };
+        assert!(!profile_regression_bundle_evidence_satisfied(Some(&failed)));
+
+        let fallback = ProfileQualityEvidence { fallback_used: Some(true), ..clean };
+        assert!(!profile_regression_bundle_evidence_satisfied(Some(&fallback)));
+        assert!(!profile_regression_bundle_evidence_satisfied(None));
     }
 
     #[test]

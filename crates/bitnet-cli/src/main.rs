@@ -5490,6 +5490,8 @@ async fn run_simple_generation(
                 "execution_backend": execution_backend,
                 "execution_backend_matched": execution_backend_matched,
                 "fallback_used": proof_fallback_used,
+                "backend_fallback_used": backend_identity.fallback_used,
+                "backend_fallback_reason": backend_identity.fallback_reason.as_deref(),
                 "loader_fallback_used": loader_fallback_used,
                 "tokenizer_fallback_used": tokenizer_fallback_used,
                 "strict_backend": strict_backend,

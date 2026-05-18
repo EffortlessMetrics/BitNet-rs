@@ -610,7 +610,7 @@ impl TransformerForwardWorkspace {
         self.feed_forward_output_slot.take().ok_or_else(|| {
             BitNetError::Validation(
                 "TransformerForwardWorkspace feed-forward output slot must be populated before take"
-                    .into(),
+                    .to_string(),
             )
         })
     }
