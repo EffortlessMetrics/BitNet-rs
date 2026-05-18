@@ -2,7 +2,7 @@ schema_version = "1.0"
 policy = "ci-lane-whitelist"
 owner = "release/ci"
 status = "advisory"
-updated = "2026-05-07"
+updated = "2026-05-18"
 
 # Linear LEM (Linux-Equivalent Minutes) budget bands for ordinary PRs.
 # These are the planning targets, not enforcement. Enforcement is
@@ -216,6 +216,138 @@ expensive_reason = "macOS is treated as 10x Linux in LEM planning."
 duplicate_of = ["ci-core-clippy"]
 review_after = "2026-06-07"
 expires = "2026-11-07"
+
+[[lane]]
+id = "macos-arm64-route"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "Route macOS PR lane"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Select macOS proof only for labels, main/manual/merge-group, or Mac/Metal-specific paths."
+failure_mode = "Ordinary PRs silently launch expensive Apple Silicon runners or selected Apple proof is invisible."
+proof_obligation = "Evaluate event, labels, and Mac/Metal paths and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch", "merge_group"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-build-test"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Build & Test (CPU)"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 25
+owner = "platform/apple"
+intent = "Validate CPU build, unit tests, and CPU golden path on Apple Silicon when Apple proof is selected."
+failure_mode = "Apple Silicon CPU build or runtime failures are missed for selected Mac proof."
+proof_obligation = "Run selected core CPU build, unit tests, and bitnet-inference CPU golden path on macOS arm64."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = ["ci-core-build-test"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-metal-build"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Build (Metal)"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 25
+owner = "platform/apple"
+intent = "Compile Metal feature surfaces on Apple Silicon when Metal or Apple proof is selected."
+failure_mode = "Metal feature compilation breaks outside Linux-only ordinary PR proof."
+proof_obligation = "Run cargo check for the selected CPU and Metal package set on macOS arm64."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-workflow-clippy"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Clippy"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 15
+owner = "platform/apple"
+intent = "Run core Clippy on Apple Silicon when Apple proof is selected."
+failure_mode = "Apple Silicon-specific lint or compile-shape failures are missed for selected Mac proof."
+proof_obligation = "Run Clippy for selected core crates on macOS arm64 with CPU features."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = ["ci-core-clippy", "macos-arm64-clippy"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-format"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Format"
+kind = "lint"
+tier = "selected-support"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 5
+owner = "core/rust"
+intent = "Preserve the selected macOS workflow format check without consuming Apple Silicon capacity."
+failure_mode = "The selected macOS workflow can pass platform jobs while formatting is unchecked in that workflow."
+proof_obligation = "Run cargo fmt --all -- --check when the macOS workflow is selected."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-success"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS arm64 Success"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Keep the branch-protection-compatible macOS summary check green when macOS is unselected."
+failure_mode = "Unselected macOS lanes leave a missing or failed branch-protection summary check."
+proof_obligation = "Pass on unselected PRs; on selected runs, fail unless all selected macOS workflow jobs succeed."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch", "merge_group"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "feature-matrix-full"
