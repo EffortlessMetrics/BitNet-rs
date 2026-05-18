@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T03:35:00Z",
+  "created_utc": "2026-05-19T04:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -84,7 +84,6 @@
       "benchmark_qualified_speedup_or_power_advantage",
       "candidate route requires benchmark-qualified profile evidence",
       "corpus_v2 profile quality evidence missing",
-      "lunar-lake ask runtime does not execute OpenVINO routes yet",
       "power advantage evidence missing for low_power promotion",
       "profile_regression_bundle",
       "route not promoted for profile ask_normal",
@@ -159,23 +158,6 @@
           "low_power"
         ],
         "next_action": "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
-      },
-      {
-        "blocker": "lunar-lake ask runtime does not execute OpenVINO routes yet",
-        "occurrence_count": 12,
-        "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
-          "dense_slm_openvino_npu_candidate"
-        ],
-        "profile_ids": [
-          "ask_normal",
-          "ask_short",
-          "decode_heavy",
-          "low_power",
-          "prefill_heavy",
-          "regression_tiny"
-        ],
-        "next_action": "add an OpenVINO execution path to bitnet lunar-lake ask before promoting this route"
       },
       {
         "blocker": "power advantage evidence missing for low_power promotion",
@@ -611,7 +593,7 @@
         "fallback_observed=false",
         "profile_specific_timing=14/20",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=16"
+        "promotion_blocker_summary_count=15"
       ]
     },
     {
