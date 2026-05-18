@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T03:35:00Z"
+event = "in_progress"
+item = "LNL258V-OP-006"
+branch = "codex/lunar-lake/LNL258V-OP-006-openvino-ask-runtime-blocker"
+actor = "codex"
+summary = "Started LNL258V-OP-006 to block OpenVINO route promotion until bitnet lunar-lake ask can execute OpenVINO routes."
+
+notes = [
+  "The branch adds a machine-readable OpenVINO operator-runtime blocker to route-profile and benchmark evidence while keeping benchmark-qualified GPU latency evidence intact.",
+  "The refreshed artifacts keep GPU/NPU routes candidate-only and point the next action at adding OpenVINO execution to bitnet lunar-lake ask.",
+  "The claim boundary remains no route promotion, no speedup claim, no power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]

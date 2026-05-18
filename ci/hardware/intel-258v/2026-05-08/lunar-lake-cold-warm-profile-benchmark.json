@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T03:15:00Z",
+  "created_utc": "2026-05-19T03:35:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -166,6 +166,7 @@
           "promotion_blocked": true,
           "blockers": [
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile regression_tiny"
           ]
         },
@@ -231,7 +232,8 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -258,13 +260,14 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile regression_tiny"
           ]
         }
       ],
       "profile_gaps": [
-        "regression_tiny route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; route not promoted for profile regression_tiny",
-        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile regression_tiny"
+        "regression_tiny route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile regression_tiny",
+        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile regression_tiny"
       ]
     },
     {
@@ -424,6 +427,7 @@
           "promotion_blocked": true,
           "blockers": [
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile ask_short"
           ]
         },
@@ -489,7 +493,8 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -516,13 +521,14 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile ask_short"
           ]
         }
       ],
       "profile_gaps": [
-        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; route not promoted for profile ask_short",
-        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile ask_short"
+        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile ask_short",
+        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile ask_short"
       ]
     },
     {
@@ -682,6 +688,7 @@
           "promotion_blocked": true,
           "blockers": [
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile ask_normal"
           ]
         },
@@ -747,7 +754,8 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -774,13 +782,14 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile ask_normal"
           ]
         }
       ],
       "profile_gaps": [
-        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; route not promoted for profile ask_normal",
-        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile ask_normal"
+        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile ask_normal",
+        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile ask_normal"
       ]
     },
     {
@@ -924,6 +933,7 @@
               "baseline route dense_slm_default_cpu is not promotion-eligible for profile prefill_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet",
               "route timing is not profile-specific for profile prefill_heavy",
               "timing evidence is not profile-specific for profile prefill_heavy"
             ],
@@ -952,6 +962,7 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile prefill_heavy",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
@@ -1020,6 +1031,7 @@
               "baseline route dense_slm_default_cpu is not promotion-eligible for profile prefill_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet",
               "route timing is not profile-specific for profile prefill_heavy",
               "timing evidence is not profile-specific for profile prefill_heavy"
             ],
@@ -1048,14 +1060,15 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile prefill_heavy",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         }
       ],
       "profile_gaps": [
-        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy",
-        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy"
+        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy",
+        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy"
       ]
     },
     {
@@ -1199,6 +1212,7 @@
               "baseline route dense_slm_default_cpu is not promotion-eligible for profile decode_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet",
               "route timing is not profile-specific for profile decode_heavy",
               "timing evidence is not profile-specific for profile decode_heavy"
             ],
@@ -1227,6 +1241,7 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile decode_heavy",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
@@ -1295,6 +1310,7 @@
               "baseline route dense_slm_default_cpu is not promotion-eligible for profile decode_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet",
               "route timing is not profile-specific for profile decode_heavy",
               "timing evidence is not profile-specific for profile decode_heavy"
             ],
@@ -1323,14 +1339,15 @@
             "benchmark-qualified speedup or power advantage missing",
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "route not promoted for profile decode_heavy",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
         }
       ],
       "profile_gaps": [
-        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy",
-        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy"
+        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy",
+        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; lunar-lake ask runtime does not execute OpenVINO routes yet; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy"
       ]
     },
     {
@@ -1556,6 +1573,7 @@
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
               "corpus_v2 profile quality evidence missing",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet",
               "power advantage evidence missing for low_power promotion",
               "profile_regression_bundle",
               "timing coverage has missing profile fields"
@@ -1586,6 +1604,7 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "power advantage evidence missing for low_power promotion",
             "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power",
             "profile_regression_bundle",
@@ -1658,6 +1677,7 @@
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
               "corpus_v2 profile quality evidence missing",
+              "lunar-lake ask runtime does not execute OpenVINO routes yet",
               "power advantage evidence missing for low_power promotion",
               "profile_regression_bundle",
               "timing coverage has missing profile fields"
@@ -1688,6 +1708,7 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile quality evidence missing",
+            "lunar-lake ask runtime does not execute OpenVINO routes yet",
             "power advantage evidence missing for low_power promotion",
             "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power",
             "profile_regression_bundle",
@@ -1697,8 +1718,8 @@
         }
       ],
       "profile_gaps": [
-        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; power advantage evidence missing for low_power promotion; profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
-        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; power advantage evidence missing for low_power promotion; profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; lunar-lake ask runtime does not execute OpenVINO routes yet; power advantage evidence missing for low_power promotion; profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
+        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; lunar-lake ask runtime does not execute OpenVINO routes yet; power advantage evidence missing for low_power promotion; profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields"
       ]
     },
     {
