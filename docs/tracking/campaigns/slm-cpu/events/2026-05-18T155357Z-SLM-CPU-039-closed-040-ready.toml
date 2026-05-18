@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T15:53:57Z"
+event = "in_progress"
+item = "SLM-CPU-040"
+branch = "codex/slm-cpu-040-workspace-down-proj-storage"
+actor = "codex"
+summary = "Closed the stale SLM-CPU-039 campaign row and queued the next workspace-backed down-projection storage slice."
+
+notes = [
+  "SLM-CPU-039 is merged in active.toml and main; CAMPAIGN.md now records it as merged instead of ready.",
+  "SLM-CPU-040 is ready to attempt or narrowly reject one reusable workspace-backed FeedForward::down_proj output storage hook behind behavior-preservation tests.",
+  "The new item preserves the Qwen3 Q8_0 generated-ID and strict-receipt oracle and makes no speedup, sustained-throughput, Q4/Q5, accelerator, server, Qwen3.5, or BitNet QK256 claim.",
+]
