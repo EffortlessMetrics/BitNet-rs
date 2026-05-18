@@ -62,7 +62,9 @@ pub struct ReceiptExplanation {
     pub selected_backend: Option<String>,
     pub selected_route: Option<String>,
     pub fallback_used: Option<bool>,
+    pub product_cli_ready: Option<bool>,
     pub server_ready: Option<bool>,
+    pub server_ready_scope: Option<String>,
     pub speedup_claim: Option<bool>,
     pub full_residency_claim: Option<bool>,
     pub bitnet_packed_i2s_qk256_proof: Option<bool>,
@@ -88,9 +90,11 @@ pub struct ModelCoverageExplanation {
     pub current_tier: Option<String>,
     pub status: Option<String>,
     pub route: Option<String>,
+    pub product_cli_ready: Option<bool>,
     pub speedup_claim: Option<bool>,
     pub benchmark_qualified: Option<bool>,
     pub server_ready: Option<bool>,
+    pub server_ready_scope: Option<String>,
     pub full_residency_claim: Option<bool>,
     pub bitnet_packed_i2s_qk256_proof: Option<bool>,
     pub dense_regular_llm_cuda_proof: Option<bool>,
@@ -213,6 +217,7 @@ struct ModelCoverageEntry {
 #[derive(Debug, Clone, Deserialize)]
 struct ModelCoverageClaims {
     benchmark_qualified: bool,
+    product_cli_ready: bool,
     server_ready: bool,
     speedup_claim: bool,
     full_residency_claim: bool,
@@ -311,7 +316,9 @@ pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
         selected_backend: None,
         selected_route: None,
         fallback_used: None,
+        product_cli_ready: None,
         server_ready: None,
+        server_ready_scope: None,
         speedup_claim: None,
         full_residency_claim: None,
         bitnet_packed_i2s_qk256_proof: None,
@@ -344,7 +351,9 @@ fn apply_receipt_json_contract_aliases(explanation: &mut ReceiptExplanation) {
         .clone()
         .or_else(|| explanation.model_coverage.route.clone());
     explanation.fallback_used = explanation.backend.fallback_used;
+    explanation.product_cli_ready = explanation.model_coverage.product_cli_ready;
     explanation.server_ready = explanation.model_coverage.server_ready;
+    explanation.server_ready_scope = explanation.model_coverage.server_ready_scope.clone();
     explanation.speedup_claim =
         explanation.model_coverage.speedup_claim.or(explanation.claim_limits.speedup_claim);
     explanation.full_residency_claim = explanation
@@ -654,9 +663,11 @@ fn model_coverage_explanation(
             .selected_route
             .clone()
             .or_else(|| entry.accelerator_routes.first().cloned());
+        coverage.product_cli_ready = Some(entry.claims.product_cli_ready);
         coverage.speedup_claim = Some(entry.claims.speedup_claim);
         coverage.benchmark_qualified = Some(entry.claims.benchmark_qualified);
         coverage.server_ready = Some(entry.claims.server_ready);
+        coverage.server_ready_scope = model_coverage_server_ready_scope(entry);
         coverage.full_residency_claim = Some(entry.claims.full_residency_claim);
         coverage.bitnet_packed_i2s_qk256_proof = Some(entry.claims.bitnet_packed_i2s_qk256_proof);
         coverage.dense_regular_llm_cuda_proof = Some(entry.claims.dense_regular_llm_cuda_proof);
@@ -667,6 +678,10 @@ fn model_coverage_explanation(
     }
 
     coverage
+}
+
+fn model_coverage_server_ready_scope(entry: &ModelCoverageEntry) -> Option<String> {
+    entry.claims.server_ready.then(|| "exact_profile".to_string())
 }
 
 fn find_model_coverage_matrix() -> Option<PathBuf> {
@@ -1036,9 +1051,14 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
         print_option_indented("current_tier", explanation.model_coverage.current_tier.as_deref());
         print_option_indented("status", explanation.model_coverage.status.as_deref());
         print_option_indented("route", explanation.model_coverage.route.as_deref());
+        print_bool_indented("product_cli_ready", explanation.model_coverage.product_cli_ready);
         print_bool_indented("speedup_claim", explanation.model_coverage.speedup_claim);
         print_bool_indented("benchmark_qualified", explanation.model_coverage.benchmark_qualified);
         print_bool_indented("server_ready", explanation.model_coverage.server_ready);
+        print_option_indented(
+            "server_ready_scope",
+            explanation.model_coverage.server_ready_scope.as_deref(),
+        );
         print_bool_indented(
             "bitnet_packed_i2s_qk256_proof",
             explanation.model_coverage.bitnet_packed_i2s_qk256_proof,
@@ -1340,9 +1360,11 @@ fn has_model_coverage(coverage: &ModelCoverageExplanation) -> bool {
         || coverage.current_tier.is_some()
         || coverage.status.is_some()
         || coverage.route.is_some()
+        || coverage.product_cli_ready.is_some()
         || coverage.speedup_claim.is_some()
         || coverage.benchmark_qualified.is_some()
         || coverage.server_ready.is_some()
+        || coverage.server_ready_scope.is_some()
         || coverage.bitnet_packed_i2s_qk256_proof.is_some()
         || coverage.dense_regular_llm_cuda_proof.is_some()
         || coverage.claim_boundary.is_some()
@@ -1564,7 +1586,7 @@ mod tests {
     }
 
     #[test]
-    fn receipts_explain_links_bitnet_receipt_to_model_coverage() {
+    fn receipts_explain_links_bitnet_receipt_to_model_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "bitnet_cuda_answer",
             "model": {
@@ -1592,8 +1614,10 @@ mod tests {
         assert_eq!(explanation.model_coverage.row.as_deref(), Some("bitnet_official_2b_i2s_qk256"));
         assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready_scope, None);
         assert_eq!(explanation.server_ready, Some(false));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(true));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(false));
@@ -1602,6 +1626,8 @@ mod tests {
         assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
         assert_eq!(explanation.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
         assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(true));
+        assert_eq!(explanation.server_ready_scope, None);
         assert_eq!(explanation.speedup_claim, Some(false));
         assert_eq!(explanation.full_residency_claim, Some(false));
         assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(true));
@@ -1613,10 +1639,25 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("not dense SLM CUDA proof"))
         );
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(value["current_tier"], "product_cli_ready");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_route"], "bitnet_qk256_cuda");
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["product_cli_ready"], true);
+        assert_eq!(value["server_ready"], false);
+        assert!(value["server_ready_scope"].is_null());
+        assert_eq!(value["speedup_claim"], false);
+        assert_eq!(value["full_residency_claim"], false);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], false);
+        Ok(())
     }
 
     #[test]
-    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() {
+    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
             "claim": "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
@@ -1645,8 +1686,10 @@ mod tests {
         assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
         assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.server_ready, Some(true));
+        assert_eq!(explanation.model_coverage.server_ready_scope.as_deref(), Some("exact_profile"));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
         assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
@@ -1654,7 +1697,9 @@ mod tests {
         assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
         assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
         assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(true));
         assert_eq!(explanation.server_ready, Some(true));
+        assert_eq!(explanation.server_ready_scope.as_deref(), Some("exact_profile"));
         assert_eq!(explanation.speedup_claim, Some(false));
         assert_eq!(explanation.full_residency_claim, Some(false));
         assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
@@ -1666,10 +1711,25 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("not BitNet packed I2_S/QK256 proof"))
         );
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
+        assert_eq!(value["current_tier"], "product_cli_ready");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["product_cli_ready"], true);
+        assert_eq!(value["server_ready"], true);
+        assert_eq!(value["server_ready_scope"], "exact_profile");
+        assert_eq!(value["speedup_claim"], false);
+        assert_eq!(value["full_residency_claim"], false);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        Ok(())
     }
 
     #[test]
-    fn receipts_explain_links_qwen3_dense_receipt_to_candidate_coverage() {
+    fn receipts_explain_links_qwen3_dense_receipt_to_candidate_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "dense_gguf_qwen_ask_strict_cuda_proof",
             "claim": "dense_gguf_qwen_ask_strict_cuda_proof_recorded",
@@ -1704,7 +1764,9 @@ mod tests {
             Some("accelerator_answer_ready")
         );
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(false));
         assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready_scope, None);
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.full_residency_claim, Some(false));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
@@ -1714,11 +1776,28 @@ mod tests {
         assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
         assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
         assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(false));
         assert_eq!(explanation.server_ready, Some(false));
+        assert_eq!(explanation.server_ready_scope, None);
         assert_eq!(explanation.speedup_claim, Some(false));
         assert_eq!(explanation.full_residency_claim, Some(false));
         assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
         assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["current_tier"], "accelerator_answer_ready");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["product_cli_ready"], false);
+        assert_eq!(value["server_ready"], false);
+        assert!(value["server_ready_scope"].is_null());
+        assert_eq!(value["speedup_claim"], false);
+        assert_eq!(value["full_residency_claim"], false);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        Ok(())
     }
 
     #[test]

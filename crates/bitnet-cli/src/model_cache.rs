@@ -635,6 +635,7 @@ struct ModelStatusRow {
     cpu_answer_ready: bool,
     accelerator_answer_ready: bool,
     benchmark_qualified: bool,
+    product_cli_ready: bool,
     speedup_claim: bool,
     server_ready: bool,
     full_residency_claim: bool,
@@ -646,6 +647,7 @@ struct ModelStatusRow {
     warm_session: String,
     benchmark: String,
     server: String,
+    server_ready_scope: Option<String>,
     server_scope: Option<String>,
     server_endpoint: Option<String>,
     server_streaming: Option<bool>,
@@ -1475,8 +1477,11 @@ fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool
         return true;
     }
 
+    let actionable_candidate = entry.status.contains("candidate")
+        || entry.status.contains("blocked")
+        || entry.id.ends_with("_candidate");
     !entry.claims.product_cli_ready
-        && entry.status.contains("candidate")
+        && actionable_candidate
         && matches!(entry.model_class.as_str(), "dense_slm" | "small_llm")
 }
 
@@ -1507,6 +1512,7 @@ fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow 
         cpu_answer_ready: entry.claims.cpu_answer_ready,
         accelerator_answer_ready: entry.claims.accelerator_answer_ready,
         benchmark_qualified: entry.claims.benchmark_qualified,
+        product_cli_ready: entry.claims.product_cli_ready,
         speedup_claim: entry.claims.speedup_claim,
         server_ready: entry.claims.server_ready,
         full_residency_claim: entry.claims.full_residency_claim,
@@ -1518,6 +1524,7 @@ fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow 
         warm_session,
         benchmark,
         server: server.label,
+        server_ready_scope: server.scope.clone(),
         server_scope: server.scope,
         server_endpoint: server.endpoint,
         server_streaming: server.streaming,
@@ -3558,12 +3565,14 @@ mod tests {
         assert_eq!(bitnet.route.as_deref(), Some("bitnet_qk256_cuda"));
         assert!(bitnet.cpu_answer_ready);
         assert!(bitnet.accelerator_answer_ready);
+        assert!(bitnet.product_cli_ready);
         assert!(bitnet.bitnet_packed_i2s_qk256_proof);
         assert!(!bitnet.dense_regular_llm_cuda_proof);
         assert!(!bitnet.benchmark_qualified);
         assert!(!bitnet.speedup_claim);
         assert!(!bitnet.server_ready);
         assert_eq!(bitnet.server, "smoke only, not broad-ready");
+        assert_eq!(bitnet.server_ready_scope, None);
         assert_eq!(bitnet.server_scope, None);
         assert_eq!(bitnet.server_endpoint.as_deref(), Some("/v1/chat/completions"));
         assert_eq!(bitnet.server_streaming, Some(false));
@@ -3592,12 +3601,14 @@ mod tests {
         assert_eq!(dense.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert!(dense.cpu_answer_ready);
         assert!(dense.accelerator_answer_ready);
+        assert!(dense.product_cli_ready);
         assert!(dense.dense_regular_llm_cuda_proof);
         assert!(!dense.bitnet_packed_i2s_qk256_proof);
         assert!(!dense.benchmark_qualified);
         assert!(!dense.speedup_claim);
         assert!(dense.server_ready);
         assert_eq!(dense.server, "exact-profile ready (/v1/chat/completions, streaming=false)");
+        assert_eq!(dense.server_ready_scope.as_deref(), Some("exact_profile"));
         assert_eq!(dense.server_scope.as_deref(), Some("exact_profile"));
         assert_eq!(dense.server_endpoint.as_deref(), Some("/v1/chat/completions"));
         assert_eq!(dense.server_streaming, Some(false));
@@ -3624,6 +3635,7 @@ mod tests {
         assert_eq!(qwen3.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert!(qwen3.cpu_answer_ready);
         assert!(qwen3.accelerator_answer_ready);
+        assert!(!qwen3.product_cli_ready);
         assert!(qwen3.dense_regular_llm_cuda_proof);
         assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
         assert!(!qwen3.speedup_claim);
@@ -3638,6 +3650,33 @@ mod tests {
         assert!(qwen3.next_proof.contains("user-facing ask/chat product UX"));
         assert!(qwen3.claim_boundary.contains("dense_regular_llm_cuda RTX 5070 Ti route"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_lists_smollm2_structural_blocker() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
+
+        let smollm2 = model_status_row_for(&dashboard, "dense_smollm2_360m_candidate")?;
+        assert_eq!(smollm2.display_name, "smollm2-360m-instruct");
+        assert_eq!(smollm2.current_tier, "structurally_valid");
+        assert_eq!(smollm2.category, "candidate");
+        assert_eq!(smollm2.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(smollm2.selected_route, None);
+        assert_eq!(smollm2.fallback_used, None);
+        assert!(!smollm2.product_cli_ready);
+        assert!(!smollm2.cpu_answer_ready);
+        assert!(!smollm2.accelerator_answer_ready);
+        assert!(!smollm2.dense_regular_llm_cuda_proof);
+        assert!(!smollm2.bitnet_packed_i2s_qk256_proof);
+        assert!(!smollm2.speedup_claim);
+        assert!(!smollm2.server_ready);
+        assert_eq!(smollm2.server_ready_scope, None);
+        assert!(!smollm2.full_residency_claim);
+        assert!(smollm2.next_proof.contains("same-prompt SmolLM2"));
+        assert!(smollm2.claim_boundary.contains("no CPU answer readiness"));
         Ok(())
     }
 
@@ -3669,10 +3708,13 @@ mod tests {
                     && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
                     && model["selected_route"] == "dense_regular_llm_cuda"
                     && model["fallback_used"] == false
+                    && model["product_cli_ready"] == true
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["speedup_claim"] == false
                     && model["server_ready"] == true
+                    && model["server_ready_scope"] == "exact_profile"
                     && model["server_scope"] == "exact_profile"
+                    && model["full_residency_claim"] == false
                     && model["server_endpoint"] == "/v1/chat/completions"
                     && model["server_streaming"] == false
                     && model["server_smoke"] == true
@@ -3691,10 +3733,13 @@ mod tests {
                     && model["selected_route"] == "dense_regular_llm_cuda"
                     && model["fallback_used"] == false
                     && model["tier"] == "accelerator_answer_ready"
+                    && model["product_cli_ready"] == false
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["accelerator_answer_ready"] == true
                     && model["speedup_claim"] == false
                     && model["server_ready"] == false
+                    && model["server_ready_scope"].is_null()
+                    && model["full_residency_claim"] == false
                     && model["server_smoke"] == false
                     && model["bitnet_packed_i2s_qk256_proof"] == false
                     && model["dense_regular_llm_cuda_proof"] == true
@@ -3704,12 +3749,33 @@ mod tests {
             models.iter().any(|model| {
                 model["id"] == "bitnet_official_2b_i2s_qk256"
                     && model["selected_route"] == "bitnet_qk256_cuda"
+                    && model["product_cli_ready"] == true
                     && model["server_ready"] == false
+                    && model["server_ready_scope"].is_null()
                     && model["server_scope"].is_null()
+                    && model["full_residency_claim"] == false
                     && model["server_endpoint"] == "/v1/chat/completions"
                     && model["server_streaming"] == false
                     && model["server_smoke"] == true
                     && model["server_reason"] == "broad production readiness not qualified"
+            })
+        }));
+        assert!(value["models"].as_array().is_some_and(|models| {
+            models.iter().any(|model| {
+                model["id"] == "dense_smollm2_360m_candidate"
+                    && model["model_coverage_row"] == "dense_smollm2_360m_candidate"
+                    && model["category"] == "candidate"
+                    && model["current_tier"] == "structurally_valid"
+                    && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
+                    && model["selected_route"].is_null()
+                    && model["fallback_used"].is_null()
+                    && model["product_cli_ready"] == false
+                    && model["speedup_claim"] == false
+                    && model["server_ready"] == false
+                    && model["server_ready_scope"].is_null()
+                    && model["full_residency_claim"] == false
+                    && model["bitnet_packed_i2s_qk256_proof"] == false
+                    && model["dense_regular_llm_cuda_proof"] == false
             })
         }));
         Ok(())
