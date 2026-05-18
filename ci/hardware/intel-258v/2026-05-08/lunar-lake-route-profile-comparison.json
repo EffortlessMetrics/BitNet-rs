@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T10:00:00Z",
+  "created_utc": "2026-05-18T11:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -1900,6 +1900,35 @@
       "gaps": []
     }
   ],
+  "timing_coverage": {
+    "route_count": 20,
+    "profile_specific_route_count": 6,
+    "proxy_or_missing_route_count": 14,
+    "promotion_eligible_route_count": 4,
+    "promotion_eligible_profile_specific_route_count": 4,
+    "candidate_route_count": 12,
+    "candidate_proxy_or_missing_route_count": 12,
+    "promotion_eligible_routes_have_profile_specific_timing": true,
+    "proxy_or_missing_timing_routes_blocked": true,
+    "proxy_or_missing_routes": [
+      "ask_normal:dense_slm_openvino_gpu_candidate",
+      "ask_normal:dense_slm_openvino_npu_candidate",
+      "ask_short:dense_slm_openvino_gpu_candidate",
+      "ask_short:dense_slm_openvino_npu_candidate",
+      "decode_heavy:dense_slm_default_cpu",
+      "decode_heavy:dense_slm_openvino_gpu_candidate",
+      "decode_heavy:dense_slm_openvino_npu_candidate",
+      "low_power:dense_slm_openvino_gpu_candidate",
+      "low_power:dense_slm_openvino_npu_candidate",
+      "prefill_heavy:dense_slm_default_cpu",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate",
+      "prefill_heavy:dense_slm_openvino_npu_candidate",
+      "regression_tiny:dense_slm_openvino_gpu_candidate",
+      "regression_tiny:dense_slm_openvino_npu_candidate"
+    ],
+    "promotion_eligible_proxy_or_missing_routes": [],
+    "unblocked_proxy_or_missing_routes": []
+  },
   "gaps": [],
   "claim_boundary": {
     "cpu_is_truth_path": true,

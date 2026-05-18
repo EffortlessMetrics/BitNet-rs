@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T11:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-005"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-BENCH-005-profile-timing-coverage"
+summary = "Started aggregate profile timing applicability coverage for Lunar Lake benchmark and regression receipts."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "Route-profile comparison already records per-route timing applicability; this item adds aggregate coverage so benchmark and regression receipts can summarize it.",
+  "Promotion-eligible routes must have profile-specific timing, and proxy or missing timing must remain blocked from promotion.",
+  "No new inference, route promotion, speedup, power-advantage, Arc/NPU acceleration, or BitNet QK256/I2_S behavior-change claim is in scope.",
+]

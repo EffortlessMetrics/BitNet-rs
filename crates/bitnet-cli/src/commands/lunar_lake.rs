@@ -744,6 +744,8 @@ pub struct RegressionSurfaceSummary {
     pub benchmark_qualified_advantage_claimed: bool,
     pub cold_warm_benchmark_ready: bool,
     #[serde(default)]
+    pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default)]
     pub durability_stability_proven: bool,
     pub strict_ready: bool,
     pub gaps: Vec<String>,
@@ -775,6 +777,7 @@ impl Default for RegressionSurfaceSummary {
             candidate_routes_remain_unpromoted: false,
             benchmark_qualified_advantage_claimed: false,
             cold_warm_benchmark_ready: false,
+            timing_coverage: TimingApplicabilityCoverageSummary::default(),
             durability_stability_proven: false,
             strict_ready: false,
             gaps: vec![
@@ -823,6 +826,8 @@ pub struct RouteProfileRegressionSummary {
     pub profile_comparison_ready: bool,
     pub default_route_id: String,
     pub profiles: Vec<String>,
+    #[serde(default)]
+    pub timing_coverage: TimingApplicabilityCoverageSummary,
     pub candidate_routes_remain_unpromoted: bool,
     pub benchmark_qualified_advantage_claimed: bool,
     pub fallback_observed: bool,
@@ -836,6 +841,8 @@ pub struct ColdWarmRegressionSummary {
     pub path: String,
     pub benchmark_gate_ready: bool,
     pub profiles: Vec<String>,
+    #[serde(default)]
+    pub timing_coverage: TimingApplicabilityCoverageSummary,
     pub promoted_routes_have_critical_timing: bool,
     pub candidate_routes_remain_unpromoted: bool,
     pub fallback_observed: bool,
@@ -988,6 +995,8 @@ pub struct LunarLakeRouteProfileComparison {
     pub profile_comparison_ready: bool,
     pub default_route_id: String,
     pub profiles: Vec<WorkloadProfileEvaluation>,
+    #[serde(default)]
+    pub timing_coverage: TimingApplicabilityCoverageSummary,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
 }
@@ -1027,7 +1036,7 @@ pub struct ProfileRouteEvidence {
     pub blockers: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ProfileTimingApplicability {
     pub profile_id: String,
     pub required_prompt_tokens: String,
@@ -1036,6 +1045,22 @@ pub struct ProfileTimingApplicability {
     pub measured_output_tokens: Option<u64>,
     pub timing_matches_profile: bool,
     pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TimingApplicabilityCoverageSummary {
+    pub route_count: usize,
+    pub profile_specific_route_count: usize,
+    pub proxy_or_missing_route_count: usize,
+    pub promotion_eligible_route_count: usize,
+    pub promotion_eligible_profile_specific_route_count: usize,
+    pub candidate_route_count: usize,
+    pub candidate_proxy_or_missing_route_count: usize,
+    pub promotion_eligible_routes_have_profile_specific_timing: bool,
+    pub proxy_or_missing_timing_routes_blocked: bool,
+    pub proxy_or_missing_routes: Vec<String>,
+    pub promotion_eligible_proxy_or_missing_routes: Vec<String>,
+    pub unblocked_proxy_or_missing_routes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -1174,6 +1199,8 @@ pub struct LunarLakeColdWarmBenchmark {
     pub phase_comparison_receipt: String,
     pub benchmark_gate_ready: bool,
     pub profiles: Vec<ColdWarmProfileBenchmark>,
+    #[serde(default)]
+    pub timing_coverage: TimingApplicabilityCoverageSummary,
     pub gaps: Vec<String>,
     pub claim_boundary: BenchmarkClaimBoundary,
 }
@@ -1197,6 +1224,8 @@ pub struct ColdWarmRouteBenchmark {
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
     pub timing: ProfileTimingSummary,
+    #[serde(default)]
+    pub timing_applicability: ProfileTimingApplicability,
     pub telemetry: BenchmarkTelemetry,
     pub critical_timing_present: bool,
     pub benchmark_qualified_advantage: bool,
@@ -2614,6 +2643,10 @@ fn build_regression_surface_summary(
         cold_warm_benchmark_ready: cold_warm_benchmark
             .map(|summary| summary.regression_ready)
             .unwrap_or(false),
+        timing_coverage: cold_warm_benchmark
+            .map(|summary| summary.timing_coverage.clone())
+            .or_else(|| route_profile_comparison.map(|summary| summary.timing_coverage.clone()))
+            .unwrap_or_default(),
         durability_stability_proven: durability_bundle
             .map(|summary| summary.stability_proven)
             .unwrap_or(false),
@@ -2649,6 +2682,18 @@ fn build_regression_surface_summary(
                 .gaps
                 .push("OpenVINO GPU/NPU candidate route became promotion-eligible".to_string());
         }
+        if !route_profiles.timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
+            summary.gaps.push(format!(
+                "route profile comparison has promotion-eligible proxy timing: {}",
+                route_profiles.timing_coverage.promotion_eligible_proxy_or_missing_routes.join(",")
+            ));
+        }
+        if !route_profiles.timing_coverage.proxy_or_missing_timing_routes_blocked {
+            summary.gaps.push(format!(
+                "route profile comparison has unblocked proxy timing: {}",
+                route_profiles.timing_coverage.unblocked_proxy_or_missing_routes.join(",")
+            ));
+        }
     } else {
         summary.gaps.push("route profile comparison is not indexed".to_string());
     }
@@ -2675,6 +2720,18 @@ fn build_regression_surface_summary(
         }
         if !benchmark.promoted_routes_have_critical_timing {
             summary.gaps.push("promoted routes are missing critical cold/warm timing".to_string());
+        }
+        if !benchmark.timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
+            summary.gaps.push(format!(
+                "cold/warm benchmark has promotion-eligible proxy timing: {}",
+                benchmark.timing_coverage.promotion_eligible_proxy_or_missing_routes.join(",")
+            ));
+        }
+        if !benchmark.timing_coverage.proxy_or_missing_timing_routes_blocked {
+            summary.gaps.push(format!(
+                "cold/warm benchmark has unblocked proxy timing: {}",
+                benchmark.timing_coverage.unblocked_proxy_or_missing_routes.join(",")
+            ));
         }
     } else {
         summary.gaps.push("cold/warm benchmark qualification is not indexed".to_string());
@@ -2871,6 +2928,11 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     let mut benchmark_qualified_advantage_claimed = false;
     let mut candidate_promotion_eligible = false;
     let mut blockers = BTreeSet::new();
+    let timing_coverage = if comparison.timing_coverage.route_count > 0 {
+        comparison.timing_coverage.clone()
+    } else {
+        timing_applicability_coverage(&comparison.profiles)
+    };
     for profile in &comparison.profiles {
         for route in &profile.route_evidence {
             if route.fallback_used == Some(true) {
@@ -2901,12 +2963,25 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     if blockers.is_empty() {
         gaps.push("OpenVINO GPU/NPU candidate blockers are missing".to_string());
     }
+    if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
+        gaps.push(format!(
+            "promotion-eligible routes lack profile-specific timing: {}",
+            timing_coverage.promotion_eligible_proxy_or_missing_routes.join(",")
+        ));
+    }
+    if !timing_coverage.proxy_or_missing_timing_routes_blocked {
+        gaps.push(format!(
+            "proxy or missing timing routes lack promotion blockers: {}",
+            timing_coverage.unblocked_proxy_or_missing_routes.join(",")
+        ));
+    }
 
     Ok(RouteProfileRegressionSummary {
         path: path_string(path),
         profile_comparison_ready: comparison.profile_comparison_ready,
         default_route_id: comparison.default_route_id,
         profiles,
+        timing_coverage,
         candidate_routes_remain_unpromoted: !candidate_promotion_eligible,
         benchmark_qualified_advantage_claimed,
         fallback_observed,
@@ -2948,6 +3023,7 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
     let mut promoted_routes_have_critical_timing = true;
     let mut candidate_routes_remain_unpromoted = true;
     let mut telemetry_gaps = BTreeSet::new();
+    let timing_coverage = benchmark.timing_coverage.clone();
     for profile in &benchmark.profiles {
         for route in &profile.routes {
             if route.fallback_used == Some(true) {
@@ -2995,11 +3071,24 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
             "OpenVINO GPU/NPU candidate route was promoted in cold/warm benchmark".to_string(),
         );
     }
+    if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
+        gaps.push(format!(
+            "promotion-eligible routes lack profile-specific timing: {}",
+            timing_coverage.promotion_eligible_proxy_or_missing_routes.join(",")
+        ));
+    }
+    if !timing_coverage.proxy_or_missing_timing_routes_blocked {
+        gaps.push(format!(
+            "proxy or missing timing routes lack promotion blockers: {}",
+            timing_coverage.unblocked_proxy_or_missing_routes.join(",")
+        ));
+    }
 
     Ok(ColdWarmRegressionSummary {
         path: path_string(path),
         benchmark_gate_ready: benchmark.benchmark_gate_ready,
         profiles,
+        timing_coverage,
         promoted_routes_have_critical_timing,
         candidate_routes_remain_unpromoted,
         fallback_observed,
@@ -3158,6 +3247,15 @@ fn route_profile_regression_notes(summary: &RouteProfileRegressionSummary) -> Ve
             summary.benchmark_qualified_advantage_claimed
         ),
         format!("fallback_observed={}", summary.fallback_observed),
+        format!(
+            "profile_specific_timing={}/{}",
+            summary.timing_coverage.profile_specific_route_count,
+            summary.timing_coverage.route_count
+        ),
+        format!(
+            "proxy_or_missing_timing_routes_blocked={}",
+            summary.timing_coverage.proxy_or_missing_timing_routes_blocked
+        ),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -3181,6 +3279,15 @@ fn cold_warm_regression_notes(summary: &ColdWarmRegressionSummary) -> Vec<String
         ),
         format!("fallback_observed={}", summary.fallback_observed),
         format!("telemetry_gap_count={}", summary.telemetry_gaps.len()),
+        format!(
+            "profile_specific_timing={}/{}",
+            summary.timing_coverage.profile_specific_route_count,
+            summary.timing_coverage.route_count
+        ),
+        format!(
+            "proxy_or_missing_timing_routes_blocked={}",
+            summary.timing_coverage.proxy_or_missing_timing_routes_blocked
+        ),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -3521,6 +3628,20 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
         }
     }
 
+    let timing_coverage = timing_applicability_coverage(&profiles);
+    if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
+        gaps.push(format!(
+            "promotion-eligible routes lack profile-specific timing: {}",
+            timing_coverage.promotion_eligible_proxy_or_missing_routes.join(",")
+        ));
+    }
+    if !timing_coverage.proxy_or_missing_timing_routes_blocked {
+        gaps.push(format!(
+            "proxy or missing timing routes lack promotion blockers: {}",
+            timing_coverage.unblocked_proxy_or_missing_routes.join(",")
+        ));
+    }
+
     let profile_comparison_ready = gaps.is_empty();
     Ok(LunarLakeRouteProfileComparison {
         schema_version: "1.0.0".to_string(),
@@ -3541,6 +3662,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
         profile_comparison_ready,
         default_route_id: ledger.default_route_id,
         profiles,
+        timing_coverage,
         gaps,
         claim_boundary: ledger.claim_boundary,
     })
@@ -3585,6 +3707,23 @@ pub fn build_cold_warm_benchmark_with_created_utc(
         .iter()
         .map(|profile| cold_warm_profile_benchmark(profile, telemetry_context.as_ref(), &mut gaps))
         .collect::<Vec<_>>();
+    let timing_coverage = if comparison.timing_coverage.route_count > 0 {
+        comparison.timing_coverage.clone()
+    } else {
+        timing_applicability_coverage(&comparison.profiles)
+    };
+    if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
+        gaps.push(format!(
+            "promotion-eligible routes lack profile-specific timing: {}",
+            timing_coverage.promotion_eligible_proxy_or_missing_routes.join(",")
+        ));
+    }
+    if !timing_coverage.proxy_or_missing_timing_routes_blocked {
+        gaps.push(format!(
+            "proxy or missing timing routes lack promotion blockers: {}",
+            timing_coverage.unblocked_proxy_or_missing_routes.join(",")
+        ));
+    }
 
     let benchmark_gate_ready = gaps.is_empty();
     Ok(LunarLakeColdWarmBenchmark {
@@ -3598,6 +3737,7 @@ pub fn build_cold_warm_benchmark_with_created_utc(
         phase_comparison_receipt: path_string(&phase_comparison_path),
         benchmark_gate_ready,
         profiles,
+        timing_coverage,
         gaps,
         claim_boundary: BenchmarkClaimBoundary {
             new_inference_executed: false,
@@ -5924,6 +6064,7 @@ fn cold_warm_route_benchmark(
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
         timing: route.timing.clone(),
+        timing_applicability: route.timing_applicability.clone(),
         telemetry,
         critical_timing_present,
         benchmark_qualified_advantage,
@@ -8944,6 +9085,63 @@ fn timing_applicability_for_profile(
     }
 }
 
+fn timing_applicability_coverage(
+    profiles: &[WorkloadProfileEvaluation],
+) -> TimingApplicabilityCoverageSummary {
+    let mut summary = TimingApplicabilityCoverageSummary {
+        promotion_eligible_routes_have_profile_specific_timing: true,
+        proxy_or_missing_timing_routes_blocked: true,
+        ..TimingApplicabilityCoverageSummary::default()
+    };
+
+    for profile in profiles {
+        for route in &profile.route_evidence {
+            summary.route_count += 1;
+            let route_key = format!("{}:{}", profile.profile_id, route.route_id);
+            let timing_matches_profile = route.timing_applicability.timing_matches_profile;
+            if timing_matches_profile {
+                summary.profile_specific_route_count += 1;
+            } else {
+                summary.proxy_or_missing_route_count += 1;
+                summary.proxy_or_missing_routes.push(route_key.clone());
+                let timing_blocker_present = route
+                    .blockers
+                    .iter()
+                    .any(|blocker| blocker.contains("timing evidence is not profile-specific"));
+                if !timing_blocker_present {
+                    summary.proxy_or_missing_timing_routes_blocked = false;
+                    summary.unblocked_proxy_or_missing_routes.push(route_key.clone());
+                }
+            }
+
+            if route.promotion_eligible_for_profile {
+                summary.promotion_eligible_route_count += 1;
+                if timing_matches_profile {
+                    summary.promotion_eligible_profile_specific_route_count += 1;
+                } else {
+                    summary.promotion_eligible_routes_have_profile_specific_timing = false;
+                    summary.promotion_eligible_proxy_or_missing_routes.push(route_key.clone());
+                }
+            }
+
+            if is_openvino_candidate_route(&route.route_id) {
+                summary.candidate_route_count += 1;
+                if !timing_matches_profile {
+                    summary.candidate_proxy_or_missing_route_count += 1;
+                }
+            }
+        }
+    }
+
+    summary.proxy_or_missing_routes.sort();
+    summary.proxy_or_missing_routes.dedup();
+    summary.promotion_eligible_proxy_or_missing_routes.sort();
+    summary.promotion_eligible_proxy_or_missing_routes.dedup();
+    summary.unblocked_proxy_or_missing_routes.sort();
+    summary.unblocked_proxy_or_missing_routes.dedup();
+    summary
+}
+
 fn token_count_matches_requirement(
     measured: Option<u64>,
     requirement: &str,
@@ -9956,6 +10154,10 @@ mod tests {
 
         assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
         assert_eq!(profiles.artifact_kind, "lunar_lake_route_profile_comparison");
+        assert!(profiles.timing_coverage.route_count > 0);
+        assert!(profiles.timing_coverage.promotion_eligible_routes_have_profile_specific_timing);
+        assert!(profiles.timing_coverage.proxy_or_missing_timing_routes_blocked);
+        assert!(profiles.timing_coverage.candidate_proxy_or_missing_route_count > 0);
         let Some(ask_normal) =
             profiles.profiles.iter().find(|profile| profile.profile_id == "ask_normal")
         else {
@@ -10624,6 +10826,9 @@ mod tests {
 
         assert!(benchmark.benchmark_gate_ready, "{:?}", benchmark.gaps);
         assert_eq!(benchmark.artifact_kind, "lunar_lake_cold_warm_profile_benchmark");
+        assert!(benchmark.timing_coverage.route_count > 0);
+        assert!(benchmark.timing_coverage.promotion_eligible_routes_have_profile_specific_timing);
+        assert!(benchmark.timing_coverage.proxy_or_missing_timing_routes_blocked);
         let Some(ask_normal) =
             benchmark.profiles.iter().find(|profile| profile.profile_id == "ask_normal")
         else {
@@ -10637,6 +10842,7 @@ mod tests {
         assert!(cpu.critical_timing_present);
         assert!(!cpu.promotion_blocked);
         assert_eq!(cpu.timing.total_response_ms, Some(217.0));
+        assert!(cpu.timing_applicability.timing_matches_profile);
         assert!(cpu.telemetry.telemetry_receipt.is_some());
         assert_eq!(cpu.telemetry.memory_context, "not_recorded_in_committed_receipts");
         assert!(!cpu.blockers.iter().any(|blocker| blocker == "total response latency is missing"));
@@ -11737,15 +11943,25 @@ mod tests {
         let Some(corpus) = bundle.answer_corpus_v2.as_ref() else {
             bail!("missing answer_corpus_v2 summary");
         };
-        assert_eq!(corpus.case_count, 11);
+        assert_eq!(corpus.case_count, 12);
         assert!(corpus.profiles.contains(&"prefill_heavy".to_string()));
         let Some(route_profiles) = bundle.route_profile_comparison.as_ref() else {
             bail!("missing route_profile_comparison summary");
         };
         assert!(route_profiles.candidate_routes_remain_unpromoted);
         assert!(!route_profiles.benchmark_qualified_advantage_claimed);
+        assert!(
+            route_profiles.timing_coverage.promotion_eligible_routes_have_profile_specific_timing
+        );
+        assert!(route_profiles.timing_coverage.proxy_or_missing_timing_routes_blocked);
         assert!(bundle.regression_surface.strict_default);
         assert!(bundle.regression_surface.strict_ready, "{:?}", bundle.regression_surface.gaps);
+        assert!(
+            bundle
+                .regression_surface
+                .timing_coverage
+                .promotion_eligible_routes_have_profile_specific_timing
+        );
         assert!(bundle.regression_surface.answer_corpus_v2_indexed);
         assert!(bundle.regression_surface.route_profile_comparison_indexed);
         assert!(bundle.regression_surface.cold_warm_benchmark_indexed);
@@ -11757,6 +11973,8 @@ mod tests {
         };
         assert!(cold_warm.promoted_routes_have_critical_timing);
         assert!(cold_warm.candidate_routes_remain_unpromoted);
+        assert!(cold_warm.timing_coverage.promotion_eligible_routes_have_profile_specific_timing);
+        assert!(cold_warm.timing_coverage.proxy_or_missing_timing_routes_blocked);
         let Some(durability) = bundle.durability_bundle.as_ref() else {
             bail!("missing durability bundle summary");
         };
