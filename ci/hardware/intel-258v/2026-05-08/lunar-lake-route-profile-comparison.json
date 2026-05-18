@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T02:30:00Z",
+  "created_utc": "2026-05-19T03:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -143,10 +143,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
-              "corpus_v2_profile_regression_evidence_indexed"
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
             ],
             "known_gaps": [
-              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -162,7 +162,7 @@
               "output timing count 8 satisfies `<=32`"
             ]
           },
-          "benchmark_qualified_advantage": false,
+          "benchmark_qualified_advantage": true,
           "promotion_eligible_for_profile": false,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -193,19 +193,14 @@
             "route_total_response_ms": 4470.872499986319,
             "route_to_baseline_total_response_ratio": 0.15975081806243777,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": false,
-            "qualification_status": "diagnostic_only_not_benchmark_qualified",
-            "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile regression_tiny"
-            ],
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile regression_tiny",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -215,8 +210,6 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile regression_tiny"
           ]
         },
@@ -306,14 +299,12 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile regression_tiny"
+              "benchmark_qualified_speedup_or_power_advantage"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile regression_tiny"
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile regression_tiny",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -460,10 +451,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_supplemented_from_corpus_v2_case_yes_no_clear_sky",
-              "corpus_v2_profile_regression_evidence_indexed"
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
             ],
             "known_gaps": [
-              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -479,7 +470,7 @@
               "output timing count 1 satisfies `<=32`"
             ]
           },
-          "benchmark_qualified_advantage": false,
+          "benchmark_qualified_advantage": true,
           "promotion_eligible_for_profile": false,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -510,19 +501,14 @@
             "route_total_response_ms": 3940.211999993073,
             "route_to_baseline_total_response_ratio": 0.14078954171478913,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": false,
-            "qualification_status": "diagnostic_only_not_benchmark_qualified",
-            "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile ask_short"
-            ],
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_short",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -532,8 +518,6 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile ask_short"
           ]
         },
@@ -623,14 +607,12 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile ask_short"
+              "benchmark_qualified_speedup_or_power_advantage"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_short"
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_short",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -777,10 +759,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_supplemented_from_corpus_v2_case_instruction_single_sentence_rust",
-              "corpus_v2_profile_regression_evidence_indexed"
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
             ],
             "known_gaps": [
-              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -796,7 +778,7 @@
               "output timing count 24 satisfies `<=128`"
             ]
           },
-          "benchmark_qualified_advantage": false,
+          "benchmark_qualified_advantage": true,
           "promotion_eligible_for_profile": false,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -827,19 +809,14 @@
             "route_total_response_ms": 4264.595299994573,
             "route_to_baseline_total_response_ratio": 0.15238023179624222,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": false,
-            "qualification_status": "diagnostic_only_not_benchmark_qualified",
-            "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile ask_normal"
-            ],
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_normal",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -849,8 +826,6 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile ask_normal"
           ]
         },
@@ -940,14 +915,12 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile ask_normal"
+              "benchmark_qualified_speedup_or_power_advantage"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_normal"
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile ask_normal",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -1151,18 +1124,17 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
+              "baseline route dense_slm_default_cpu is not promotion-eligible for profile prefill_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile prefill_heavy",
               "route timing is not profile-specific for profile prefill_heavy",
               "timing evidence is not profile-specific for profile prefill_heavy"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -1263,17 +1235,16 @@
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "baseline route dense_slm_default_cpu is not promotion-eligible for profile prefill_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile prefill_heavy",
               "route timing is not profile-specific for profile prefill_heavy",
               "timing evidence is not profile-specific for profile prefill_heavy"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy"
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -1478,18 +1449,17 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
+              "baseline route dense_slm_default_cpu is not promotion-eligible for profile decode_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile decode_heavy",
               "route timing is not profile-specific for profile decode_heavy",
               "timing evidence is not profile-specific for profile decode_heavy"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -1590,17 +1560,16 @@
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "baseline route dense_slm_default_cpu is not promotion-eligible for profile decode_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile decode_heavy",
               "route timing is not profile-specific for profile decode_heavy",
               "timing evidence is not profile-specific for profile decode_heavy"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy"
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -1882,19 +1851,18 @@
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+              "baseline route dense_slm_default_cpu is not promotion-eligible for profile low_power",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
               "corpus_v2 profile quality evidence missing",
               "power advantage evidence missing for low_power promotion",
               "profile_regression_bundle",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile low_power",
               "timing coverage has missing profile fields"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile low_power"
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile low_power",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -1990,20 +1958,19 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
+              "baseline route dense_slm_default_cpu is not promotion-eligible for profile low_power",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "candidate route requires benchmark-qualified profile evidence",
               "corpus_v2 profile quality evidence missing",
               "power advantage evidence missing for low_power promotion",
               "profile_regression_bundle",
-              "route is not promoted; candidate evidence remains blocked",
-              "route not promoted for profile low_power",
               "timing coverage has missing profile fields"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile low_power",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
@@ -2143,7 +2110,7 @@
     },
     {
       "blocker": "benchmark_qualified_speedup_or_power_advantage",
-      "occurrence_count": 12,
+      "occurrence_count": 9,
       "route_ids": [
         "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
@@ -2160,7 +2127,7 @@
     },
     {
       "blocker": "candidate route requires benchmark-qualified profile evidence",
-      "occurrence_count": 12,
+      "occurrence_count": 9,
       "route_ids": [
         "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
