@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T20:38:36Z"
+event = "pr_open"
+item = "SLM-CPU-042"
+pr = 5773
+head_sha = "d6d3c28c46e7f92d89e6943c7a2ef3438ade631a"
+branch = "codex/slm-cpu-042-q8-dense-linear-locality"
+actor = "codex"
+summary = "Opened the Qwen3 Q8_0 dense linear locality boundary slice."
+
+notes = [
+  "The PR records the current eager dense standard quant load boundary: Q8_0 blocks are dequantized to a host Vec<f32> before Candle tensor construction.",
+  "Warm-session allocation audit now points the next performance target at q8_dense_linear_locality_boundary after SLM-CPU-041 proved reusable output storage is blocked by Candle Tensor matmul/bias-add owned returns.",
+  "The slice is instrumentation and prioritization only; it does not claim speedup, sustained throughput, Q4/Q5 runtime support, accelerator execution, Qwen3.5 support, or BitNet QK256 changes.",
+]
