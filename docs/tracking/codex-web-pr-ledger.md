@@ -33,6 +33,10 @@ Snapshot source:
   refresh showed 166 open scoped PRs: 4 `codex/*`, 160 `a770/*`, 1 `cuda-*`,
   and 1 `claude/*`. Current non-A770 queue head: #5569, #5568, #5549, #5547,
   and #5541.
+- Queue refresh: after #5697, #5709, and #5710 merged, a follow-up
+  `gh pr list` refresh showed 154 open scoped PRs: 153 `a770/*`, 0
+  `codex/*`, and 1 `claude/*`. The only direct `main` PR in that scope is
+  draft perf PR #5092; the A770 queue remains a stacked diagnostic chain.
 
 ## Initial Queue Summary
 
@@ -88,6 +92,10 @@ Snapshot source:
 | 2026-05-18 | #5461 | Merged by concurrent queue activity after local review | Local review confirmed the API gateway facade preserved exports; package fmt, check, API-gateway tests, clippy, and GitHub merge state were inspected. A follow-up format issue from current `main` was split to #5571. |
 | 2026-05-18 | #5567 | Closed as superseded | The intended no-panic-family cleanup was already present on `origin/main`; closing avoided a redundant/conflicting cleanup PR. |
 | 2026-05-18 | #5571 | Merged by concurrent queue activity | One-file BDD grid rustfmt repair for the format gate. Local package fmt/check and GitHub merge state were inspected. |
+| 2026-05-18 | #5697 | Merged by concurrent queue activity after local review | The CLI proof summary now exposes `backend_fallback_used` and `backend_fallback_reason`; local package fmt/checks passed before merge, and GitHub Policy/PR Gate were green at merge. |
+| 2026-05-18 | #5706 | Closed as duplicate | The same no-panic-family transformer cleanup landed in #5697, so the standalone repair branch was no longer needed. |
+| 2026-05-18 | #5709 | Merged | Tracker-only M4-ROBUSTNESS-001 closeout after #5699. Campaign tracker, PR Gate, CI core, docs, and link checks were green. |
+| 2026-05-18 | #5710 | Merged | Tracker-only SLM-CPU-040 setup after SLM-CPU-039. Campaign tracker, generated dashboards, PR Gate, CI core, docs, and link checks were green. |
 
 ## New Open Cluster After Refresh
 
@@ -104,3 +112,11 @@ Snapshot source:
 | #5549 | Apple M4 prompt generation identity receipts | Conflicting receipt/schema/docs/generated update. | Do not merge as-is; refresh or salvage only after resolving conflicts and rerunning campaign generators. |
 | #5547 | AVX2 hot-path docs/plan | Conflicting member of the AVX2 duplicate planning cluster. | Compare against #5541 and related #5540-#5547 attempts; keep one canonical plan if still useful. |
 | #5541 | AVX2 QK256 hot-path counters and receipt fields | Mergeable code/test change, but Policy failed and the PR body lacks final test completion evidence. | Triage Policy and rerun exact QK256 proof before considering as the canonical implementation. |
+
+## Latest Queue Head
+
+| PR or cluster | Lane | Current signal | Disposition rule |
+|---:|---|---|---|
+| #5711 | A770 selected-query boundary diagnostic | Stacked on `a770/diag-rust-score-input-operand-drift`, not `main`; body reports `claim_allowed = false` and missing boundary rows. | Do not merge as-is. Salvage only through a durable trace/compare replacement PR after lineage flattening. |
+| #4744-#5131 plus #5711 | A770 diagnostic branch chain | 153 open `a770/*` PRs remain, mostly one-PR-per-probe branch-chain diagnostics. | Use `docs/reports/2026-05-18-a770-diagnostic-lineage-map.md`; no probe-by-probe merges. |
+| #5092 | Draft AVX2 QK256 perf | Only direct `main` PR in the scoped queue; still draft with a speedup claim. | Leave draft until parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
