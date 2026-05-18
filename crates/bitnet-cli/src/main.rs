@@ -5010,6 +5010,14 @@ async fn run_simple_generation(
         let runtime_api = backend_identity.runtime_api.as_str();
         let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
         let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let qk256_kernel_observed = bitnet_linear_coverage.selected_kernel != "qk256-not-observed";
+        let receipt_requested_kernel =
+            bitnet_linear_coverage.requested_kernel.unwrap_or(selected_kernel.as_str());
+        let receipt_selected_kernel = if qk256_kernel_observed {
+            bitnet_linear_coverage.selected_kernel
+        } else {
+            selected_kernel.as_str()
+        };
         let strict_cuda_selected_artifact = strict_backend
             && canonical_bitnet_model
             && selected_backend == "nvidia-rtx-5070-ti-cuda"
@@ -5344,6 +5352,34 @@ async fn run_simple_generation(
                 "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
                 "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
                 "unsupported_ops": bitnet_linear_coverage.unsupported_ops.clone(),
+                "requested_kernel": bitnet_linear_coverage.requested_kernel,
+                "selected_kernel": bitnet_linear_coverage.selected_kernel,
+                "scaled_i8s_path_exercised": bitnet_linear_coverage.qk256_i8s_scaled_path_exercised,
+                "qk256_hot_path": {
+                    "requested_kernel": bitnet_linear_coverage.requested_kernel,
+                    "selected_kernel": bitnet_linear_coverage.selected_kernel,
+                    "scaled_i8s_path_exercised": bitnet_linear_coverage.qk256_i8s_scaled_path_exercised,
+                    "fallback_used": bitnet_linear_coverage.qk256_i8s_scaled_avx2_requested_invocations
+                        > bitnet_linear_coverage.qk256_i8s_scaled_avx2_invocations,
+                    "fallback_reason": if bitnet_linear_coverage.qk256_i8s_scaled_avx2_requested_invocations
+                        > bitnet_linear_coverage.qk256_i8s_scaled_avx2_invocations {
+                        Some("qk256_i8s_scaled_avx2_not_implemented")
+                    } else {
+                        None
+                    },
+                },
+                "qk256_kernel_invocations": {
+                    "qk256_f32_scalar_gemv_invocations": bitnet_linear_coverage.qk256_f32_scalar_gemv_invocations,
+                    "qk256_f32_avx2_gemv_invocations": bitnet_linear_coverage.qk256_f32_avx2_gemv_invocations,
+                    "qk256_i8s_scaled_scalar_invocations": bitnet_linear_coverage.qk256_i8s_scaled_scalar_invocations,
+                    "qk256_i8s_scaled_avx2_invocations": bitnet_linear_coverage.qk256_i8s_scaled_avx2_invocations,
+                    "qk256_i8s_scaled_avx2_requested_invocations": bitnet_linear_coverage.qk256_i8s_scaled_avx2_requested_invocations,
+                },
+                "qk256_materialization_counts": {
+                    "qk256_flat_bytes_extracted_count": bitnet_linear_coverage.qk256_flat_bytes_extracted_count,
+                    "input_rows_materialized_count": bitnet_linear_coverage.input_rows_materialized_count,
+                    "output_rows_allocated_count": bitnet_linear_coverage.output_rows_allocated_count,
+                },
                 "execution_claim": bitnet_linear_coverage.execution_claim,
             },
             "kernel": {
@@ -5352,6 +5388,8 @@ async fn run_simple_generation(
                 "layout": kernel_layout,
                 "dequantizes_before_compute": dequantizes_before_compute,
                 "kernel_id": selected_kernel.as_str(),
+                "requested_kernel": receipt_requested_kernel,
+                "selected_kernel": receipt_selected_kernel,
             },
             "cpu": {
                 "model": cpu_model.as_str(),
@@ -5362,8 +5400,8 @@ async fn run_simple_generation(
             "strict_provenance": {
                 "requested_backend": requested_backend,
                 "selected_backend": selected_backend,
-                "requested_kernel": selected_kernel.as_str(),
-                "selected_kernel": selected_kernel.as_str(),
+                "requested_kernel": receipt_requested_kernel,
+                "selected_kernel": receipt_selected_kernel,
                 "loader_mode": loader_mode,
                 "tokenizer_source": tokenizer_source_str,
                 "tokenizer_strict": tokenizer_strict,
@@ -7483,6 +7521,35 @@ fn qk256_dispatch_coverage_delta(
             .difference(&unsupported_before)
             .cloned()
             .collect::<Vec<_>>(),
+        requested_kernel: after.requested_kernel,
+        selected_kernel: after.selected_kernel,
+        qk256_i8s_scaled_path_exercised: after.qk256_i8s_scaled_scalar_invocations
+            > before.qk256_i8s_scaled_scalar_invocations
+            || after.qk256_i8s_scaled_avx2_invocations > before.qk256_i8s_scaled_avx2_invocations,
+        qk256_f32_scalar_gemv_invocations: after
+            .qk256_f32_scalar_gemv_invocations
+            .saturating_sub(before.qk256_f32_scalar_gemv_invocations),
+        qk256_f32_avx2_gemv_invocations: after
+            .qk256_f32_avx2_gemv_invocations
+            .saturating_sub(before.qk256_f32_avx2_gemv_invocations),
+        qk256_i8s_scaled_scalar_invocations: after
+            .qk256_i8s_scaled_scalar_invocations
+            .saturating_sub(before.qk256_i8s_scaled_scalar_invocations),
+        qk256_i8s_scaled_avx2_invocations: after
+            .qk256_i8s_scaled_avx2_invocations
+            .saturating_sub(before.qk256_i8s_scaled_avx2_invocations),
+        qk256_i8s_scaled_avx2_requested_invocations: after
+            .qk256_i8s_scaled_avx2_requested_invocations
+            .saturating_sub(before.qk256_i8s_scaled_avx2_requested_invocations),
+        qk256_flat_bytes_extracted_count: after
+            .qk256_flat_bytes_extracted_count
+            .saturating_sub(before.qk256_flat_bytes_extracted_count),
+        input_rows_materialized_count: after
+            .input_rows_materialized_count
+            .saturating_sub(before.input_rows_materialized_count),
+        output_rows_allocated_count: after
+            .output_rows_allocated_count
+            .saturating_sub(before.output_rows_allocated_count),
         execution_claim: if after.bitnet_linear_layers_on_cuda > before.bitnet_linear_layers_on_cuda
         {
             "cuda_inference_contribution"
@@ -7501,6 +7568,34 @@ fn qk256_dispatch_coverage_receipt(
         "bitnet_linear_layers_on_cuda": coverage.bitnet_linear_layers_on_cuda,
         "bitnet_linear_layers_cpu_fallback": coverage.bitnet_linear_layers_cpu_fallback,
         "unsupported_ops": coverage.unsupported_ops,
+        "requested_kernel": coverage.requested_kernel,
+        "selected_kernel": coverage.selected_kernel,
+        "scaled_i8s_path_exercised": coverage.qk256_i8s_scaled_path_exercised,
+        "qk256_hot_path": {
+            "requested_kernel": coverage.requested_kernel,
+            "selected_kernel": coverage.selected_kernel,
+            "scaled_i8s_path_exercised": coverage.qk256_i8s_scaled_path_exercised,
+            "fallback_used": coverage.qk256_i8s_scaled_avx2_requested_invocations
+                > coverage.qk256_i8s_scaled_avx2_invocations,
+            "fallback_reason": if coverage.qk256_i8s_scaled_avx2_requested_invocations
+                > coverage.qk256_i8s_scaled_avx2_invocations {
+                Some("qk256_i8s_scaled_avx2_not_implemented")
+            } else {
+                None
+            },
+        },
+        "qk256_kernel_invocations": {
+            "qk256_f32_scalar_gemv_invocations": coverage.qk256_f32_scalar_gemv_invocations,
+            "qk256_f32_avx2_gemv_invocations": coverage.qk256_f32_avx2_gemv_invocations,
+            "qk256_i8s_scaled_scalar_invocations": coverage.qk256_i8s_scaled_scalar_invocations,
+            "qk256_i8s_scaled_avx2_invocations": coverage.qk256_i8s_scaled_avx2_invocations,
+            "qk256_i8s_scaled_avx2_requested_invocations": coverage.qk256_i8s_scaled_avx2_requested_invocations,
+        },
+        "qk256_materialization_counts": {
+            "qk256_flat_bytes_extracted_count": coverage.qk256_flat_bytes_extracted_count,
+            "input_rows_materialized_count": coverage.input_rows_materialized_count,
+            "output_rows_allocated_count": coverage.output_rows_allocated_count,
+        },
         "execution_claim": coverage.execution_claim,
     })
 }
@@ -12505,15 +12600,35 @@ mod tests {
         assert!(!uses_report_only_cuda_benchmark_receipt(None));
     }
 
+    fn qk256_test_coverage(
+        total: u64,
+        on_cuda: u64,
+        cpu_fallback: u64,
+        unsupported_ops: Vec<String>,
+    ) -> bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+        bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: total,
+            bitnet_linear_layers_on_cuda: on_cuda,
+            bitnet_linear_layers_cpu_fallback: cpu_fallback,
+            unsupported_ops,
+            requested_kernel: None,
+            selected_kernel: "qk256-not-observed",
+            qk256_i8s_scaled_path_exercised: false,
+            qk256_f32_scalar_gemv_invocations: 0,
+            qk256_f32_avx2_gemv_invocations: 0,
+            qk256_i8s_scaled_scalar_invocations: 0,
+            qk256_i8s_scaled_avx2_invocations: 0,
+            qk256_i8s_scaled_avx2_requested_invocations: 0,
+            qk256_flat_bytes_extracted_count: 0,
+            input_rows_materialized_count: 0,
+            output_rows_allocated_count: 0,
+            execution_claim: "cuda_inference_contribution",
+        }
+    }
+
     #[test]
     fn cuda_execution_residency_receipt_preserves_claim_boundary() {
-        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
-            bitnet_linear_layers_total: 42,
-            bitnet_linear_layers_on_cuda: 42,
-            bitnet_linear_layers_cpu_fallback: 0,
-            unsupported_ops: Vec::new(),
-            execution_claim: "cuda_inference_contribution",
-        };
+        let coverage = qk256_test_coverage(42, 42, 0, Vec::new());
         let residency = bitnet_qk256_dispatch::Qk256CudaWeightResidency {
             weight_handle_count: 21,
             weights_uploaded_once: true,
@@ -12550,13 +12665,7 @@ mod tests {
 
     #[test]
     fn cuda_execution_residency_receipt_marks_non_linear_phases_not_resident() {
-        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
-            bitnet_linear_layers_total: 2,
-            bitnet_linear_layers_on_cuda: 1,
-            bitnet_linear_layers_cpu_fallback: 1,
-            unsupported_ops: vec!["qk256_cpu_fallback".to_string()],
-            execution_claim: "cuda_inference_contribution",
-        };
+        let coverage = qk256_test_coverage(2, 1, 1, vec!["qk256_cpu_fallback".to_string()]);
 
         let receipt = cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
             coverage: &coverage,
@@ -12592,13 +12701,7 @@ mod tests {
 
     #[test]
     fn qk256_kernel_stats_receipt_records_measured_cuda_accounting() {
-        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
-            bitnet_linear_layers_total: 4,
-            bitnet_linear_layers_on_cuda: 4,
-            bitnet_linear_layers_cpu_fallback: 0,
-            unsupported_ops: Vec::new(),
-            execution_claim: "cuda_inference_contribution",
-        };
+        let coverage = qk256_test_coverage(4, 4, 0, Vec::new());
         let runtime_stats = bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
             host_to_device_bytes: 4096,
             device_to_host_bytes: 2048,
@@ -12619,13 +12722,7 @@ mod tests {
 
     #[test]
     fn cuda_execution_residency_receipt_records_measured_qk256_accounting() {
-        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
-            bitnet_linear_layers_total: 4,
-            bitnet_linear_layers_on_cuda: 4,
-            bitnet_linear_layers_cpu_fallback: 0,
-            unsupported_ops: Vec::new(),
-            execution_claim: "cuda_inference_contribution",
-        };
+        let coverage = qk256_test_coverage(4, 4, 0, Vec::new());
         let runtime_stats = bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
             host_to_device_bytes: 4096,
             device_to_host_bytes: 2048,
