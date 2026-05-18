@@ -5854,10 +5854,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OV-QUAL-004"
-status = "pr_open"
+status = "merged"
 pr = 5522
+merge_sha = "8d6a29274ae6c15d14ec629b271eb0a8586b65b9"
 branch = "codex/lunar-lake/LNL258V-OV-QUAL-004-align-openvino-scoring"
-head_sha = "37ec2a29299e4fc9e6884ee21f9523fa0917d517"
+head_sha = "4a7fed9e0c5d438e7934fcc7a9848f209c2705bd"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
