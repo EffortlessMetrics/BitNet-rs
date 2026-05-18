@@ -6015,6 +6015,81 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-QUAL-010"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-QUAL-010-long-decode-fixtures"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-QUAL-009"]
+acceptance = "Tighten the remaining Lunar Lake corpus-v2 prefill_heavy and decode_heavy fixtures to tested cross-runtime wording that passes dense GGUF CPU and OpenVINO CPU/GPU/NPU candidate routes, rerun CPU and OpenVINO corpus-v2 evidence plus dependent diagnosis/profile/regression/comparison artifacts, update the failure report and implementation plan, and preserve no route promotion, no speedup, no power advantage, no Arc/NPU acceleration, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --dry-run --device cpu --model C:/does-not-exist/qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --json-out target/bitnet/receipts/lunar-lake-answer-corpus-v2-long-decode-dry-run.json",
+  "target/debug/bitnet.exe answer-corpus --device cpu --model C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --per-prompt-timeout-seconds 240 --json-out ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  ".venv/Scripts/python.exe scripts/openvino_genai_corpus_v2.py --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --devices CPU GPU.0 NPU --json-out ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json --created-utc 2026-05-19T00:15:00Z",
+  ".venv/Scripts/python.exe scripts/openvino_genai_generation_budget_sensitivity.py --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --devices CPU GPU.0 NPU --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json --created-utc 2026-05-19T00:15:00Z",
+  "target/debug/bitnet.exe lunar-lake quality-diagnose --artifact-root ci/hardware/intel-258v/2026-05-08 --cpu-corpus-v2 slm-answer-corpus-qwen25-cpu-corpus-v2.json --route-profile-comparison lunar-lake-route-profile-comparison.json --json-out ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake open-vino-quality-diagnose --artifact-root ci/hardware/intel-258v/2026-05-08 --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --runtime-device CPU --json-out lunar-lake-openvino-cpu-corpus-v2-diagnosis.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake open-vino-quality-diagnose --artifact-root ci/hardware/intel-258v/2026-05-08 --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --runtime-device GPU.0 --json-out lunar-lake-openvino-gpu-corpus-v2-diagnosis.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake open-vino-quality-diagnose --artifact-root ci/hardware/intel-258v/2026-05-08 --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --runtime-device NPU --json-out lunar-lake-openvino-npu-corpus-v2-diagnosis.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake npu-cold-start-diagnosis --artifact-root ci/hardware/intel-258v/2026-05-08 --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --json-out lunar-lake-openvino-npu-cold-start-diagnosis.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake profile-compare --artifact-root ci/hardware/intel-258v/2026-05-08 --promotion-ledger lunar-lake-route-promotion.json --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --cpu-corpus-v2 slm-answer-corpus-qwen25-cpu-corpus-v2.json --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --telemetry-context lunar-lake-power-thermal-context.json --gpu-quality-diagnosis lunar-lake-openvino-gpu-corpus-v2-diagnosis.json --npu-quality-diagnosis lunar-lake-openvino-npu-corpus-v2-diagnosis.json --npu-cold-start-diagnosis lunar-lake-openvino-npu-cold-start-diagnosis.json --openvino-budget-sensitivity lunar-lake-openvino-generation-budget-sensitivity.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-19T00:15:00Z --strict",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json --json-out target/lnl258v-openvino-validate/corpus-v2-validation.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json --json-out target/lnl258v-openvino-validate/route-profile-validation.json",
+  "npx --yes markdownlint-cli2@0.18.1 --config .markdownlint.jsonc docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md plans/openvino-lunar-lake/implementation-plan.md",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/**",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "README.md",
+]
+may_claim = [
+  "The canonical Lunar Lake corpus-v2 prefill_heavy and decode_heavy fixtures now use tested cross-runtime wording.",
+  "Dense GGUF CPU and OpenVINO CPU/GPU/NPU corpus-v2 evidence was rerun after the fixture changes.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Native OpenCL execution is proven.",
+  "Native NPU execution is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-BENCH-005"
 status = "merged"
 pr = 5550

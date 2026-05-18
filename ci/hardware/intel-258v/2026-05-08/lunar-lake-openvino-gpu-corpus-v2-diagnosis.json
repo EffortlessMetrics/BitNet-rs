@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-18T23:45:00Z",
+  "created_utc": "2026-05-19T00:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -17,22 +17,13 @@
   "promotion_status": "candidate_only_not_promoted",
   "quality_summary": {
     "total": 12,
-    "passed": 10,
-    "failed": 2,
+    "passed": 12,
+    "failed": 0,
     "timeout": 0,
     "not_run": 0,
-    "failed_profiles": [
-      "decode_heavy",
-      "prefill_heavy"
-    ],
-    "failed_categories": [
-      "decode_heavy",
-      "long_prompt_summarization"
-    ],
-    "failure_classes": {
-      "answer_content_missing_required_terms": 1,
-      "readable_output_missing_required_terms": 1
-    }
+    "failed_profiles": [],
+    "failed_categories": [],
+    "failure_classes": {}
   },
   "profile_diagnoses": [
     {
@@ -58,30 +49,22 @@
     {
       "profile_id": "decode_heavy",
       "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "decode_heavy_short_list"
-      ],
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "prefill_heavy",
       "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "long_prompt_summary_route_policy"
-      ],
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "regression_tiny",
@@ -104,60 +87,7 @@
       "route_blockers": []
     }
   ],
-  "failed_cases": [
-    {
-      "id": "long_prompt_summary_route_policy",
-      "profile": "prefill_heavy",
-      "category": "long_prompt_summarization",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "contains_any",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "required_keywords_missing"
-      ],
-      "failure_taxonomy": [
-        "required_keyword_missing"
-      ],
-      "missing_required_keywords": [
-        "Lunar"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
-      "generated_tokens": 40,
-      "prompt_tokens": 87,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "answer_content_missing_required_terms",
-      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen route; adjust prompt/gate only if the expected answer contract is too narrow."
-    },
-    {
-      "id": "decode_heavy_short_list",
-      "profile": "decode_heavy",
-      "category": "decode_heavy",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "readable",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "required_keywords_missing"
-      ],
-      "failure_taxonomy": [
-        "required_keyword_missing"
-      ],
-      "missing_required_keywords": [
-        "model"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "1. **Fallback Route Check**\n2. **Route Selection Criteria**\n3. **Route Validation Process**\n4. **Route Optimization Strategy**\n5. **Route Monitoring System**\n6. **Route Adaptation Algorithm**",
-      "generated_tokens": 43,
-      "prompt_tokens": 49,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "readable_output_missing_required_terms",
-      "recommended_fix": "Readable output was produced but missed required route-policy terms; tune the prompt or expected keywords before route promotion."
-    }
-  ],
+  "failed_cases": [],
   "case_alignment": {
     "fixture_verified": true,
     "expected_case_count": 12,
@@ -174,11 +104,8 @@
       "retokenized_generated_text_not_pipeline_internal_ids"
     ]
   },
-  "route_blocked": true,
+  "route_blocked": false,
   "blocker_summary": [
-    "1 failed case(s) classified as answer_content_missing_required_terms",
-    "1 failed case(s) classified as readable_output_missing_required_terms",
-    "2 of 12 corpus-v2 cases failed across profiles [decode_heavy, prefill_heavy]",
     "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
   ],
   "recommended_next_actions": [

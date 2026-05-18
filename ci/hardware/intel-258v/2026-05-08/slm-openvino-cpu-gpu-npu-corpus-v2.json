@@ -3,7 +3,7 @@
   "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
   "campaign": "intel-258v-platform",
   "item": "LNL258V-OV-QUAL-004",
-  "created_utc": "2026-05-18T23:45:00Z",
+  "created_utc": "2026-05-19T00:15:00Z",
   "machine_id": "intel-258v",
   "proof_stage": "candidate_route_corpus_v2_executed_no_promotion_change",
   "comparison_scope": "same_machine_qwen2_5_openvino_genai_candidate_routes_against_lunar_lake_answer_corpus_v2",
@@ -220,8 +220,8 @@
     "file": {
       "path": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
       "exists": true,
-      "bytes": 5987,
-      "sha256": "57feb773585ee29d77e8296fd564943270a6716e2e9fc820fd4f7d5bbda28450"
+      "bytes": 6062,
+      "sha256": "7c605db2cb50eee4f2ce9ff118950e72fdef3ebe9174e3aa87101f636fa3380d"
     }
   },
   "generation": {
@@ -239,13 +239,13 @@
         "fallback_used": false,
         "fallback_status": "no_fallback_used_cpu_device_requested_and_llmpipeline_constructed",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
-        "pipeline_construct_wall_ms": 2428.799000015715,
+        "pipeline_construct_wall_ms": 2465.177299978677,
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": false,
         "quality_summary": {
           "cases_total": 12,
-          "passed": 10,
-          "failed": 2,
+          "passed": 12,
+          "failed": 0,
           "fallback_used": false,
           "profile_summary": {
             "ask_normal": {
@@ -260,13 +260,13 @@
             },
             "decode_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "prefill_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "regression_tiny": {
               "total": 4,
@@ -287,8 +287,8 @@
             },
             "decode_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "instruction_following": {
               "total": 1,
@@ -297,8 +297,8 @@
             },
             "long_prompt_summarization": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "math": {
               "total": 2,
@@ -483,42 +483,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 1027.4571999907494,
-              "first_streamed_text_chunk_ms": 980.0693999859504,
+              "generation_wall_ms": 1021.9729999953415,
+              "first_streamed_text_chunk_ms": 973.1319999846164,
               "first_streamed_text_chunk": "2",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 18.761999130249023,
+                  "mean_ms": 21.225000381469727,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 1027.072998046875,
+                  "mean_ms": 1021.72900390625,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 1003.6840209960938,
+                  "mean_ms": 995.4849853515625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 954.114990234375,
+                  "mean_ms": 946.1841430664062,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.218643188476562,
-                  "std_ms": 2.8265538215637207
+                  "mean_ms": 10.605485916137695,
+                  "std_ms": 3.206434965133667
                 },
                 "inter_token_latency": {
-                  "mean_ms": 125.80587768554688,
-                  "std_ms": 305.9234619140625
+                  "mean_ms": 124.80662536621094,
+                  "std_ms": 302.20025634765625
                 },
                 "throughput": {
-                  "mean_ms": 97.8603515625,
-                  "std_ms": 27.068910598754883
+                  "mean_ms": 94.29082489013672,
+                  "std_ms": 28.50764274597168
                 },
                 "detokenization": {
-                  "mean_ms": 0.15330000221729279,
+                  "mean_ms": 0.14589999616146088,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 39,
@@ -675,42 +675,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 119.84549998305738,
-              "first_streamed_text_chunk_ms": 118.78190000425093,
+              "generation_wall_ms": 130.08499998250045,
+              "first_streamed_text_chunk_ms": 129.1475000034552,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 2,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 13.017000198364258,
+                  "mean_ms": 11.263999938964844,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 119.76799774169922,
+                  "mean_ms": 130.0070037841797,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 104.25499725341797,
+                  "mean_ms": 116.20800018310547,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 95.00920104980469,
+                  "mean_ms": 102.6123046875,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 11.676400184631348,
-                  "std_ms": 0.7356001138687134
+                  "mean_ms": 13.050350189208984,
+                  "std_ms": 3.019850015640259
                 },
                 "inter_token_latency": {
-                  "mean_ms": 35.038333892822266,
-                  "std_ms": 33.062400817871094
+                  "mean_ms": 39.06700134277344,
+                  "std_ms": 36.947242736816406
                 },
                 "throughput": {
-                  "mean_ms": 85.64283752441406,
-                  "std_ms": 5.395402431488037
+                  "mean_ms": 76.62629699707031,
+                  "std_ms": 17.731319427490234
                 },
                 "detokenization": {
-                  "mean_ms": 0.20760001242160797,
+                  "mean_ms": 0.1533999890089035,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -874,42 +874,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 141.07500002137385,
-              "first_streamed_text_chunk_ms": 112.81780002173036,
+              "generation_wall_ms": 147.9620000172872,
+              "first_streamed_text_chunk_ms": 119.52530001872219,
               "first_streamed_text_chunk": "red",
               "streamed_chunks_count": 5,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 12.642999649047852,
+                  "mean_ms": 12.545000076293945,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 140.9759979248047,
+                  "mean_ms": 147.88999938964844,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 125.07499694824219,
+                  "mean_ms": 132.0330047607422,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 89.58329772949219,
+                  "mean_ms": 92.44720458984375,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.004819869995117,
-                  "std_ms": 2.3549857139587402
+                  "mean_ms": 10.826020240783691,
+                  "std_ms": 2.6981170177459717
                 },
                 "inter_token_latency": {
-                  "mean_ms": 21.108165740966797,
-                  "std_ms": 24.95345687866211
+                  "mean_ms": 22.283000946044922,
+                  "std_ms": 25.80415153503418
                 },
                 "throughput": {
-                  "mean_ms": 99.95182800292969,
-                  "std_ms": 23.527170181274414
+                  "mean_ms": 92.37004852294922,
+                  "std_ms": 23.02094268798828
                 },
                 "detokenization": {
-                  "mean_ms": 0.13580000400543213,
+                  "mean_ms": 0.133899986743927,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -1073,26 +1073,26 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 113.54610000853427,
-              "first_streamed_text_chunk_ms": 113.22800000198185,
+              "generation_wall_ms": 101.52419999940321,
+              "first_streamed_text_chunk_ms": 101.20110001298599,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 13.331000328063965,
+                  "mean_ms": 12.791000366210938,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 113.43000030517578,
+                  "mean_ms": 101.4469985961914,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 97.88400268554688,
+                  "mean_ms": 86.3030014038086,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 111.81279754638672,
+                  "mean_ms": 99.98360443115234,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
@@ -1100,7 +1100,7 @@
                   "std_ms": -1.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 98.26399993896484,
+                  "mean_ms": 86.73999786376953,
                   "std_ms": 0.0
                 },
                 "throughput": {
@@ -1108,7 +1108,7 @@
                   "std_ms": -1000.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.17010000348091125,
+                  "mean_ms": 0.18449999392032623,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -1264,42 +1264,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 170.95420000259764,
-              "first_streamed_text_chunk_ms": 125.03570000990294,
+              "generation_wall_ms": 157.173799991142,
+              "first_streamed_text_chunk_ms": 108.11859997920692,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 12.696000099182129,
+                  "mean_ms": 12.017999649047852,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 170.8800048828125,
+                  "mean_ms": 157.09800720214844,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 154.19000244140625,
+                  "mean_ms": 141.4149932861328,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 99.18710327148438,
+                  "mean_ms": 80.88648986816406,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.048700332641602,
-                  "std_ms": 2.0613813400268555
+                  "mean_ms": 10.698057174682617,
+                  "std_ms": 2.465402603149414
                 },
                 "inter_token_latency": {
-                  "mean_ms": 19.55299949645996,
-                  "std_ms": 25.317672729492188
+                  "mean_ms": 17.93000030517578,
+                  "std_ms": 19.32501220703125
                 },
                 "throughput": {
-                  "mean_ms": 99.5153579711914,
-                  "std_ms": 20.41448974609375
+                  "mean_ms": 93.47491455078125,
+                  "std_ms": 21.541603088378906
                 },
                 "detokenization": {
-                  "mean_ms": 0.15479999780654907,
+                  "mean_ms": 0.13769999146461487,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 35,
@@ -1481,42 +1481,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 316.92670000484213,
-              "first_streamed_text_chunk_ms": 113.05939999874681,
+              "generation_wall_ms": 327.0178000093438,
+              "first_streamed_text_chunk_ms": 119.22729999059811,
               "first_streamed_text_chunk": "R",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 12.486000061035156,
+                  "mean_ms": 13.104999542236328,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 316.85198974609375,
+                  "mean_ms": 326.9419860839844,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 295.42401123046875,
+                  "mean_ms": 305.5350036621094,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 84.931396484375,
+                  "mean_ms": 92.35600280761719,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.023239135742188,
-                  "std_ms": 1.9252629280090332
+                  "mean_ms": 10.144625663757324,
+                  "std_ms": 1.7240309715270996
                 },
                 "inter_token_latency": {
-                  "mean_ms": 12.595499992370605,
-                  "std_ms": 12.57995319366455
+                  "mean_ms": 13.00391674041748,
+                  "std_ms": 13.86308765411377
                 },
                 "throughput": {
-                  "mean_ms": 99.76815032958984,
-                  "std_ms": 19.1634578704834
+                  "mean_ms": 98.5743637084961,
+                  "std_ms": 16.75224494934082
                 },
                 "detokenization": {
-                  "mean_ms": 0.14180000126361847,
+                  "mean_ms": 0.13760000467300415,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -1669,42 +1669,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 103.56810002122074,
-              "first_streamed_text_chunk_ms": 103.27070002676919,
+              "generation_wall_ms": 106.98290000436828,
+              "first_streamed_text_chunk_ms": 106.6657000046689,
               "first_streamed_text_chunk": "done",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 12.604999542236328,
+                  "mean_ms": 12.857999801635742,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 103.49299621582031,
+                  "mean_ms": 106.90299987792969,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 88.79900360107422,
+                  "mean_ms": 91.7509994506836,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 86.79609680175781,
+                  "mean_ms": 90.00969696044922,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.388099670410156,
+                  "mean_ms": 15.58120059967041,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 44.68199920654297,
-                  "std_ms": 29.309999465942383
+                  "mean_ms": 46.209999084472656,
+                  "std_ms": 30.638999938964844
                 },
                 "throughput": {
-                  "mean_ms": 64.98528289794922,
+                  "mean_ms": 64.1799087524414,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.1526000052690506,
+                  "mean_ms": 0.16449999809265137,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 38,
@@ -1877,42 +1877,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 148.4141999972053,
-              "first_streamed_text_chunk_ms": 148.10489999945275,
+              "generation_wall_ms": 126.88180000986904,
+              "first_streamed_text_chunk_ms": 126.5883999876678,
               "first_streamed_text_chunk": "amber",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 14.458999633789062,
+                  "mean_ms": 13.13599967956543,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 148.33799743652344,
+                  "mean_ms": 126.80500030517578,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 131.7550048828125,
+                  "mean_ms": 111.28600311279297,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 131.51229858398438,
+                  "mean_ms": 112.02720642089844,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.524299621582031,
+                  "mean_ms": 13.447799682617188,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 66.1500015258789,
-                  "std_ms": 50.63600158691406
+                  "mean_ms": 55.94599914550781,
+                  "std_ms": 42.51300048828125
                 },
                 "throughput": {
-                  "mean_ms": 64.41514587402344,
+                  "mean_ms": 74.36161041259766,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.1647000014781952,
+                  "mean_ms": 0.1508999913930893,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 58,
@@ -2088,42 +2088,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 248.91770002432168,
-              "first_streamed_text_chunk_ms": 94.80700001586229,
+              "generation_wall_ms": 261.3996999862138,
+              "first_streamed_text_chunk_ms": 98.37890000198968,
               "first_streamed_text_chunk": "{\n",
               "streamed_chunks_count": 12,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 13.163000106811523,
+                  "mean_ms": 13.289999961853027,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 248.83399963378906,
+                  "mean_ms": 261.3210144042969,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 227.77499389648438,
+                  "mean_ms": 241.66299438476562,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 94.21009063720703,
+                  "mean_ms": 97.39720153808594,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 9.577530860900879,
-                  "std_ms": 2.175312042236328
+                  "mean_ms": 10.159693717956543,
+                  "std_ms": 1.7607496976852417
                 },
                 "inter_token_latency": {
-                  "mean_ms": 13.754470825195312,
-                  "std_ms": 16.91910743713379
+                  "mean_ms": 14.484000205993652,
+                  "std_ms": 17.438539505004883
                 },
                 "throughput": {
-                  "mean_ms": 104.41104125976562,
-                  "std_ms": 23.71452522277832
+                  "mean_ms": 98.42816162109375,
+                  "std_ms": 17.058326721191406
                 },
                 "detokenization": {
-                  "mean_ms": 0.1808999925851822,
+                  "mean_ms": 0.16920000314712524,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 44,
@@ -2143,12 +2143,12 @@
             "id": "long_prompt_summary_route_policy",
             "profile": "prefill_heavy",
             "category": "long_prompt_summarization",
-            "question": "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
+            "question": "Summarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
             "prompt_template": "qwen2.5",
             "prompt": {
               "template_family": "qwen2.5",
-              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nRead this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
-              "rendered_sha256": "18faf7acfda6eee989fc98ba30c9ade35f1ca8e026536b8d5543a7108406f388",
+              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nSummarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
+              "rendered_sha256": "7d75b1d90fd412637083b949dd60fd019b35b39760ac8574af6bdaff821d0d5c",
               "prompt_token_ids": [
                 151644,
                 8948,
@@ -2174,17 +2174,27 @@
                 151644,
                 872,
                 198,
-                4418,
+                9190,
+                5612,
+                551,
                 419,
-                2805,
                 4842,
                 5185,
-                323,
-                62079,
-                432,
                 304,
                 825,
                 11652,
+                11,
+                323,
+                2924,
+                279,
+                4734,
+                4244,
+                78095,
+                11,
+                13940,
+                11,
+                323,
+                6021,
                 25,
                 78095,
                 11678,
@@ -2238,9 +2248,9 @@
                 77091,
                 198
               ],
-              "prompt_token_count": 87
+              "prompt_token_count": 97
             },
-            "prompt_token_count": 87,
+            "prompt_token_count": 97,
             "max_new_tokens": 40,
             "generation_config": {
               "do_sample": false,
@@ -2253,11 +2263,14 @@
                 "parallel_sampling": false
               }
             },
-            "generated_text": "The use of Dense Qwen CPU as the default route is being evaluated to determine if it offers any advantages over other options such as OpenVINO GPU and NPU.",
-            "decoded_preview": "The use of Dense Qwen CPU as the default route is being evaluated to determine if it offers any advantages over other options such as OpenVINO GPU and NPU.",
-            "normalized_output": "the use of dense qwen cpu as the default route is being evaluated to determine if it offers any advantages over other options such as openvino gpu and npu",
+            "generated_text": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+            "decoded_preview": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+            "normalized_output": "lunar lake's use of dense qwen cpu as the default route is determined based on the latest information from their system",
             "generated_token_ids": [
-              785,
+              43,
+              84992,
+              11678,
+              594,
               990,
               315,
               42522,
@@ -2269,45 +2282,29 @@
               1638,
               6021,
               374,
-              1660,
-              25070,
-              311,
-              8253,
-              421,
-              432,
-              6081,
-              894,
-              22146,
-              916,
-              1008,
-              2606,
-              1741,
-              438,
-              5264,
-              53,
-              47975,
-              22670,
-              323,
-              451,
-              6325,
+              10838,
+              3118,
+              389,
+              279,
+              5535,
+              1995,
+              504,
+              862,
+              1849,
               13
             ],
             "generated_token_ids_available_from_pipeline": false,
             "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-            "generated_token_count": 34,
+            "generated_token_count": 25,
             "stop_eos": {
               "raw_special_token_seen": false,
               "eos_marker_seen": false,
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -2322,6 +2319,7 @@
                   "route"
                 ],
                 "matched": [
+                  "Lunar",
                   "CPU",
                   "route"
                 ],
@@ -2329,19 +2327,13 @@
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "normalized_answer": "The use of Dense Qwen CPU as the default route is being evaluated to determine if it offers any advantages over other options such as OpenVINO GPU and NPU.",
-                  "required_keywords_missing": [
-                    "Lunar"
-                  ],
+                  "normalized_answer": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -2354,6 +2346,7 @@
                 "route"
               ],
               "matched": [
+                "Lunar",
                 "CPU",
                 "route"
               ],
@@ -2361,63 +2354,57 @@
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "normalized_answer": "The use of Dense Qwen CPU as the default route is being evaluated to determine if it offers any advantages over other options such as OpenVINO GPU and NPU.",
-                "required_keywords_missing": [
-                  "Lunar"
-                ],
+                "normalized_answer": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 468.35430001374334,
-              "first_streamed_text_chunk_ms": 166.5581000270322,
-              "first_streamed_text_chunk": "The",
-              "streamed_chunks_count": 34,
+              "generation_wall_ms": 449.49739999719895,
+              "first_streamed_text_chunk_ms": 222.15710001182742,
+              "first_streamed_text_chunk": "L",
+              "streamed_chunks_count": 25,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 13.559000015258789,
+                  "mean_ms": 13.736000061035156,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 468.27801513671875,
+                  "mean_ms": 449.41900634765625,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 439.39300537109375,
+                  "mean_ms": 423.4580078125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 144.39581298828125,
+                  "mean_ms": 199.33241271972656,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 9.488152503967285,
-                  "std_ms": 1.471706748008728
+                  "mean_ms": 9.951436042785645,
+                  "std_ms": 1.6178735494613647
                 },
                 "inter_token_latency": {
-                  "mean_ms": 12.930913925170898,
-                  "std_ms": 20.236570358276367
+                  "mean_ms": 16.68680763244629,
+                  "std_ms": 33.78874969482422
                 },
                 "throughput": {
-                  "mean_ms": 105.39459228515625,
-                  "std_ms": 16.347749710083008
+                  "mean_ms": 100.48800659179688,
+                  "std_ms": 16.33702850341797
                 },
                 "detokenization": {
-                  "mean_ms": 0.14710000157356262,
+                  "mean_ms": 0.148499995470047,
                   "std_ms": 0.0
                 },
-                "num_input_tokens": 87,
-                "num_generated_tokens": 35
+                "num_input_tokens": 97,
+                "num_generated_tokens": 26
               }
             },
             "fallback_used": false,
@@ -2427,7 +2414,7 @@
             "runtime_device": "CPU",
             "backend_lane": "dense_slm_openvino_cpu",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
-            "status": "quality_failed"
+            "status": "passed"
           },
           {
             "id": "short_reasoning_apples_left",
@@ -2594,42 +2581,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 264.72360000479966,
-              "first_streamed_text_chunk_ms": 138.67099999333732,
+              "generation_wall_ms": 262.5098999997135,
+              "first_streamed_text_chunk_ms": 134.12839997909032,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 15,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 12.843000411987305,
+                  "mean_ms": 12.517999649047852,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 264.6400146484375,
+                  "mean_ms": 262.42498779296875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 245.4239959716797,
+                  "mean_ms": 243.08999633789062,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 111.32559967041016,
+                  "mean_ms": 105.39080047607422,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 10.129059791564941,
-                  "std_ms": 1.9945054054260254
+                  "mean_ms": 10.376112937927246,
+                  "std_ms": 2.1557507514953613
                 },
                 "inter_token_latency": {
-                  "mean_ms": 15.621500015258789,
-                  "std_ms": 21.43536949157715
+                  "mean_ms": 15.499687194824219,
+                  "std_ms": 19.992788314819336
                 },
                 "throughput": {
-                  "mean_ms": 98.72584533691406,
-                  "std_ms": 19.44002914428711
+                  "mean_ms": 96.37520599365234,
+                  "std_ms": 20.023000717163086
                 },
                 "detokenization": {
-                  "mean_ms": 0.1826000064611435,
+                  "mean_ms": 0.1598999947309494,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 51,
@@ -2649,12 +2636,12 @@
             "id": "decode_heavy_short_list",
             "profile": "decode_heavy",
             "category": "decode_heavy",
-            "question": "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases.",
+            "question": "Use these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.",
             "prompt_template": "qwen2.5",
             "prompt": {
               "template_family": "qwen2.5",
-              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nList six local inference route checks and include the words fallback and model. Use short comma-separated phrases.<|im_end|>\n<|im_start|>assistant\n",
-              "rendered_sha256": "1218e23d76623e5dc614d609bfd6877e0e1d1dd50c7a6f466ee7c24f014a3cfa",
+              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nUse these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.<|im_end|>\n<|im_start|>assistant\n",
+              "rendered_sha256": "00f0ce18247cc9568b6a5f81a53bed70f28fd9f8f1e5cfa111f8bdea011e6622",
               "prompt_token_ids": [
                 151644,
                 8948,
@@ -2680,25 +2667,33 @@
                 151644,
                 872,
                 198,
-                852,
-                4743,
-                2205,
-                44378,
-                6021,
-                12341,
-                323,
-                2924,
-                279,
-                4244,
-                32772,
-                323,
-                1614,
-                13,
-                5443,
-                2805,
-                31683,
-                72692,
+                10253,
+                1493,
+                4734,
                 31747,
+                304,
+                264,
+                2805,
+                4226,
+                25,
+                32772,
+                1779,
+                11,
+                1614,
+                1779,
+                11,
+                45958,
+                1779,
+                11,
+                6021,
+                2874,
+                11,
+                18405,
+                22567,
+                11,
+                7304,
+                902,
+                32772,
                 13,
                 151645,
                 198,
@@ -2706,9 +2701,9 @@
                 77091,
                 198
               ],
-              "prompt_token_count": 49
+              "prompt_token_count": 57
             },
-            "prompt_token_count": 49,
+            "prompt_token_count": 57,
             "max_new_tokens": 64,
             "generation_config": {
               "do_sample": false,
@@ -2721,64 +2716,45 @@
                 "parallel_sampling": false
               }
             },
-            "generated_text": "1. **Fallback Route Check**\n2. **Route Validation**\n3. **Route Optimization**\n4. **Route Monitoring**\n5. **Route Analysis**\n6. **Route Evaluation**",
-            "decoded_preview": "1. **Fallback Route Check**\n2. **Route Validation**\n3. **Route Optimization**\n4. **Route Monitoring**\n5. **Route Analysis**\n6. **Route Evaluation**",
-            "normalized_output": "1. **fallback route check** 2. **route validation** 3. **route optimization** 4. **route monitoring** 5. **route analysis** 6. **route evaluation**",
+            "generated_text": "Fallback checks, model checks, and tokenizers should be performed with strict adherence to ensure optimal performance and accuracy.",
+            "decoded_preview": "Fallback checks, model checks, and tokenizers should be performed with strict adherence to ensure optimal performance and accuracy.",
+            "normalized_output": "fallback checks, model checks, and tokenizers should be performed with strict adherence to ensure optimal performance and accuracy",
             "generated_token_ids": [
-              16,
-              13,
-              3070,
               87206,
-              9572,
-              4248,
-              1019,
-              17,
-              13,
-              3070,
-              4899,
-              18954,
-              1019,
-              18,
-              13,
-              3070,
-              4899,
-              57739,
-              1019,
-              19,
-              13,
-              3070,
-              4899,
-              50703,
-              1019,
-              20,
-              13,
-              3070,
-              4899,
-              18320,
-              1019,
-              21,
-              13,
-              3070,
-              4899,
-              39288,
-              334
+              12341,
+              11,
+              1614,
+              12341,
+              11,
+              323,
+              3950,
+              12230,
+              1265,
+              387,
+              10660,
+              448,
+              7304,
+              70528,
+              311,
+              5978,
+              22823,
+              5068,
+              323,
+              13403,
+              13
             ],
             "generated_token_ids_available_from_pipeline": false,
             "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-            "generated_token_count": 37,
+            "generated_token_count": 22,
             "stop_eos": {
               "raw_special_token_seen": false,
               "eos_marker_seen": false,
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -2788,24 +2764,18 @@
               "answer_gate": {
                 "kind": "readable",
                 "min_words": 8,
-                "observed_words": 19,
+                "observed_words": 18,
                 "passed": true
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "normalized_answer": "1. **Fallback Route Check** 2. **Route Validation** 3. **Route Optimization** 4. **Route Monitoring** 5. **Route Analysis** 6. **Route Evaluation**",
-                  "required_keywords_missing": [
-                    "model"
-                  ],
+                  "normalized_answer": "Fallback checks, model checks, and tokenizers should be performed with strict adherence to ensure optimal performance and accuracy.",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -2813,68 +2783,62 @@
             "answer_gate": {
               "kind": "readable",
               "min_words": 8,
-              "observed_words": 19,
+              "observed_words": 18,
               "passed": true
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "normalized_answer": "1. **Fallback Route Check** 2. **Route Validation** 3. **Route Optimization** 4. **Route Monitoring** 5. **Route Analysis** 6. **Route Evaluation**",
-                "required_keywords_missing": [
-                  "model"
-                ],
+                "normalized_answer": "Fallback checks, model checks, and tokenizers should be performed with strict adherence to ensure optimal performance and accuracy.",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 435.0484999886248,
-              "first_streamed_text_chunk_ms": 120.96349999774247,
-              "first_streamed_text_chunk": "1",
-              "streamed_chunks_count": 27,
+              "generation_wall_ms": 331.40090000233613,
+              "first_streamed_text_chunk_ms": 134.53389998176135,
+              "first_streamed_text_chunk": "Fallback",
+              "streamed_chunks_count": 22,
               "openvino_perf_metrics": {
-                "load_time_ms": 2404.0,
+                "load_time_ms": 2413.0,
                 "tokenization": {
-                  "mean_ms": 11.626999855041504,
+                  "mean_ms": 12.95199966430664,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 434.97100830078125,
+                  "mean_ms": 331.3169860839844,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 410.18499755859375,
+                  "mean_ms": 308.3900146484375,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 98.4197998046875,
+                  "mean_ms": 109.41939544677734,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 9.05912971496582,
-                  "std_ms": 1.2803850173950195
+                  "mean_ms": 10.020927429199219,
+                  "std_ms": 1.4504895210266113
                 },
                 "inter_token_latency": {
-                  "mean_ms": 11.079447746276855,
-                  "std_ms": 12.476288795471191
+                  "mean_ms": 13.753870010375977,
+                  "std_ms": 17.65587043762207
                 },
                 "throughput": {
-                  "mean_ms": 110.38587951660156,
-                  "std_ms": 15.601545333862305
+                  "mean_ms": 99.7911605834961,
+                  "std_ms": 14.444375038146973
                 },
                 "detokenization": {
-                  "mean_ms": 0.17080000042915344,
+                  "mean_ms": 0.1558999866247177,
                   "std_ms": 0.0
                 },
-                "num_input_tokens": 49,
-                "num_generated_tokens": 38
+                "num_input_tokens": 57,
+                "num_generated_tokens": 23
               }
             },
             "fallback_used": false,
@@ -2884,7 +2848,7 @@
             "runtime_device": "CPU",
             "backend_lane": "dense_slm_openvino_cpu",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
-            "status": "quality_failed"
+            "status": "passed"
           }
         ],
         "phase_coverage": {
@@ -2910,13 +2874,13 @@
         "fallback_used": false,
         "fallback_status": "no_fallback_used_gpu0_device_requested_and_llmpipeline_constructed",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
-        "pipeline_construct_wall_ms": 4800.714000011794,
+        "pipeline_construct_wall_ms": 4390.662899997551,
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": false,
         "quality_summary": {
           "cases_total": 12,
-          "passed": 10,
-          "failed": 2,
+          "passed": 12,
+          "failed": 0,
           "fallback_used": false,
           "profile_summary": {
             "ask_normal": {
@@ -2931,13 +2895,13 @@
             },
             "decode_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "prefill_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "regression_tiny": {
               "total": 4,
@@ -2958,8 +2922,8 @@
             },
             "decode_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "instruction_following": {
               "total": 1,
@@ -2968,8 +2932,8 @@
             },
             "long_prompt_summarization": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "math": {
               "total": 2,
@@ -3154,42 +3118,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 566.0029999853577,
-              "first_streamed_text_chunk_ms": 502.0719000021927,
+              "generation_wall_ms": 534.9463000020478,
+              "first_streamed_text_chunk_ms": 470.10239999508485,
               "first_streamed_text_chunk": "2",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 18.3439998626709,
+                  "mean_ms": 17.054000854492188,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 565.8109741210938,
+                  "mean_ms": 534.8330078125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 540.8469848632812,
+                  "mean_ms": 511.21099853515625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 342.5126037597656,
+                  "mean_ms": 306.2801818847656,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 31.643213272094727,
-                  "std_ms": 45.379146575927734
+                  "mean_ms": 32.4576416015625,
+                  "std_ms": 47.69586944580078
                 },
                 "inter_token_latency": {
-                  "mean_ms": 68.11524963378906,
-                  "std_ms": 105.54676055908203
+                  "mean_ms": 64.40550231933594,
+                  "std_ms": 95.8355941772461
                 },
                 "throughput": {
-                  "mean_ms": 31.602354049682617,
-                  "std_ms": 45.32054901123047
+                  "mean_ms": 30.809385299682617,
+                  "std_ms": 45.27378845214844
                 },
                 "detokenization": {
-                  "mean_ms": 0.18029999732971191,
+                  "mean_ms": 0.12939999997615814,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 39,
@@ -3346,42 +3310,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 422.54379999940284,
-              "first_streamed_text_chunk_ms": 421.8229000107385,
+              "generation_wall_ms": 404.35909997904673,
+              "first_streamed_text_chunk_ms": 403.4479999972973,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 2,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 14.779000282287598,
+                  "mean_ms": 12.147000312805176,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 422.4540100097656,
+                  "mean_ms": 404.2869873046875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 405.1679992675781,
+                  "mean_ms": 389.3630065917969,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 361.4956359863281,
+                  "mean_ms": 344.1283874511719,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 29.715749740600586,
-                  "std_ms": 16.714149475097656
+                  "mean_ms": 29.323650360107422,
+                  "std_ms": 16.414548873901367
                 },
                 "inter_token_latency": {
-                  "mean_ms": 135.29666137695312,
-                  "std_ms": 149.94789123535156
+                  "mean_ms": 130.02667236328125,
+                  "std_ms": 143.21417236328125
                 },
                 "throughput": {
-                  "mean_ms": 33.65218734741211,
-                  "std_ms": 18.92827033996582
+                  "mean_ms": 34.10216522216797,
+                  "std_ms": 19.089426040649414
                 },
                 "detokenization": {
-                  "mean_ms": 0.08190000057220459,
+                  "mean_ms": 0.07890000194311142,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -3545,42 +3509,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 179.68000000109896,
-              "first_streamed_text_chunk_ms": 139.39950001076795,
+              "generation_wall_ms": 175.11960002593696,
+              "first_streamed_text_chunk_ms": 131.56960002379492,
               "first_streamed_text_chunk": "red",
               "streamed_chunks_count": 5,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 13.072999954223633,
+                  "mean_ms": 14.548999786376953,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 179.58099365234375,
+                  "mean_ms": 175.02200317382812,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 162.2989959716797,
+                  "mean_ms": 155.8780059814453,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 73.8428955078125,
+                  "mean_ms": 69.41830444335938,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 20.84149932861328,
-                  "std_ms": 15.840415954589844
+                  "mean_ms": 20.60845947265625,
+                  "std_ms": 14.044739723205566
                 },
                 "inter_token_latency": {
-                  "mean_ms": 27.33099937438965,
-                  "std_ms": 20.58734703063965
+                  "mean_ms": 26.21299934387207,
+                  "std_ms": 18.053821563720703
                 },
                 "throughput": {
-                  "mean_ms": 47.98119354248047,
-                  "std_ms": 36.46772384643555
+                  "mean_ms": 48.52376174926758,
+                  "std_ms": 33.06911849975586
                 },
                 "detokenization": {
-                  "mean_ms": 0.21930000185966492,
+                  "mean_ms": 0.3308999836444855,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -3744,26 +3708,26 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 75.60089998878539,
-              "first_streamed_text_chunk_ms": 75.10929999989457,
+              "generation_wall_ms": 86.13689997582696,
+              "first_streamed_text_chunk_ms": 85.68910000030883,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 13.939000129699707,
+                  "mean_ms": 13.105999946594238,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 75.48899841308594,
+                  "mean_ms": 86.05799865722656,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 53.42300033569336,
+                  "mean_ms": 64.96099853515625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 72.04940032958984,
+                  "mean_ms": 84.5331039428711,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
@@ -3771,7 +3735,7 @@
                   "std_ms": -1.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 57.87900161743164,
+                  "mean_ms": 71.125,
                   "std_ms": 0.0
                 },
                 "throughput": {
@@ -3779,7 +3743,7 @@
                   "std_ms": -1000.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.26739999651908875,
+                  "mean_ms": 0.24500000476837158,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -3935,42 +3899,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 360.90619998867624,
-              "first_streamed_text_chunk_ms": 290.8653999911621,
+              "generation_wall_ms": 340.63099999912083,
+              "first_streamed_text_chunk_ms": 273.8007000007201,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 15.121999740600586,
+                  "mean_ms": 15.92199993133545,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 360.78900146484375,
+                  "mean_ms": 340.5090026855469,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 340.6499938964844,
+                  "mean_ms": 320.2909851074219,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 218.86911010742188,
+                  "mean_ms": 209.40159606933594,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 20.019227981567383,
-                  "std_ms": 14.451142311096191
+                  "mean_ms": 18.494314193725586,
+                  "std_ms": 11.491323471069336
                 },
                 "inter_token_latency": {
-                  "mean_ms": 42.85049819946289,
-                  "std_ms": 62.12076187133789
+                  "mean_ms": 40.287376403808594,
+                  "std_ms": 58.83243942260742
                 },
                 "throughput": {
-                  "mean_ms": 49.95197677612305,
-                  "std_ms": 36.05849075317383
+                  "mean_ms": 54.07067108154297,
+                  "std_ms": 33.596466064453125
                 },
                 "detokenization": {
-                  "mean_ms": 0.19300000369548798,
+                  "mean_ms": 0.11480000615119934,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 35,
@@ -4151,42 +4115,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 447.56699999561533,
-              "first_streamed_text_chunk_ms": 151.88939997460693,
+              "generation_wall_ms": 383.0667000147514,
+              "first_streamed_text_chunk_ms": 118.1806999957189,
               "first_streamed_text_chunk": "R",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 15.38599967956543,
+                  "mean_ms": 7.578999996185303,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 447.47100830078125,
+                  "mean_ms": 382.9909973144531,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 422.89801025390625,
+                  "mean_ms": 366.53399658203125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 85.36470031738281,
+                  "mean_ms": 61.549400329589844,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.687539100646973,
-                  "std_ms": 7.698663234710693
+                  "mean_ms": 13.915934562683105,
+                  "std_ms": 6.298931121826172
                 },
                 "inter_token_latency": {
-                  "mean_ms": 17.88020896911621,
-                  "std_ms": 13.181907653808594
+                  "mean_ms": 15.509541511535645,
+                  "std_ms": 10.088128089904785
                 },
                 "throughput": {
-                  "mean_ms": 63.7448616027832,
-                  "std_ms": 31.282804489135742
+                  "mean_ms": 71.86006927490234,
+                  "std_ms": 32.526859283447266
                 },
                 "detokenization": {
-                  "mean_ms": 0.26809999346733093,
+                  "mean_ms": 0.22839999198913574,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -4339,42 +4303,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 130.70009998045862,
-              "first_streamed_text_chunk_ms": 130.28579999809153,
+              "generation_wall_ms": 105.68579999380745,
+              "first_streamed_text_chunk_ms": 105.43279998819344,
               "first_streamed_text_chunk": "done",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 13.307999610900879,
+                  "mean_ms": 7.4079999923706055,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 130.63099670410156,
+                  "mean_ms": 105.61000061035156,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 115.09300231933594,
+                  "mean_ms": 96.25,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 70.58899688720703,
+                  "mean_ms": 59.65629959106445,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 58.627899169921875,
+                  "mean_ms": 44.57539749145508,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 57.810001373291016,
-                  "std_ms": 0.6830000281333923
+                  "mean_ms": 48.34700012207031,
+                  "std_ms": 3.7780001163482666
                 },
                 "throughput": {
-                  "mean_ms": 17.056726455688477,
+                  "mean_ms": 22.43389892578125,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.21400000154972076,
+                  "mean_ms": 0.1298999935388565,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 38,
@@ -4547,42 +4511,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 167.7563000121154,
-              "first_streamed_text_chunk_ms": 167.4778000160586,
+              "generation_wall_ms": 113.89219999546185,
+              "first_streamed_text_chunk_ms": 113.46039999625646,
               "first_streamed_text_chunk": "amber",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 16.187999725341797,
+                  "mean_ms": 14.657999992370605,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 167.64599609375,
+                  "mean_ms": 113.8010025024414,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 149.08599853515625,
+                  "mean_ms": 96.43900299072266,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 102.52720642089844,
+                  "mean_ms": 66.40010070800781,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 63.780601501464844,
+                  "mean_ms": 45.41169738769531,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 74.84249877929688,
-                  "std_ms": 11.226499557495117
+                  "mean_ms": 48.490501403808594,
+                  "std_ms": 3.0885000228881836
                 },
                 "throughput": {
-                  "mean_ms": 15.67874813079834,
+                  "mean_ms": 22.0207576751709,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.13489998877048492,
+                  "mean_ms": 0.2151000052690506,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 58,
@@ -4758,42 +4722,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 319.6718000108376,
-              "first_streamed_text_chunk_ms": 68.98179999552667,
+              "generation_wall_ms": 350.1584999903571,
+              "first_streamed_text_chunk_ms": 86.64500000304542,
               "first_streamed_text_chunk": "{\n",
               "streamed_chunks_count": 12,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 12.331999778747559,
+                  "mean_ms": 15.006999969482422,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 319.6000061035156,
+                  "mean_ms": 350.04998779296875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 300.75201416015625,
+                  "mean_ms": 327.5679931640625,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 68.45379638671875,
+                  "mean_ms": 86.00430297851562,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 15.619199752807617,
-                  "std_ms": 9.570305824279785
+                  "mean_ms": 16.419588088989258,
+                  "std_ms": 11.071249961853027
                 },
                 "inter_token_latency": {
-                  "mean_ms": 17.97223472595215,
-                  "std_ms": 13.289082527160645
+                  "mean_ms": 19.525470733642578,
+                  "std_ms": 16.697736740112305
                 },
                 "throughput": {
-                  "mean_ms": 64.02376556396484,
-                  "std_ms": 39.22909164428711
+                  "mean_ms": 60.90286636352539,
+                  "std_ms": 41.06502914428711
                 },
                 "detokenization": {
-                  "mean_ms": 0.15479999780654907,
+                  "mean_ms": 0.17649999260902405,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 44,
@@ -4813,12 +4777,12 @@
             "id": "long_prompt_summary_route_policy",
             "profile": "prefill_heavy",
             "category": "long_prompt_summarization",
-            "question": "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
+            "question": "Summarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
             "prompt_template": "qwen2.5",
             "prompt": {
               "template_family": "qwen2.5",
-              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nRead this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
-              "rendered_sha256": "18faf7acfda6eee989fc98ba30c9ade35f1ca8e026536b8d5543a7108406f388",
+              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nSummarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
+              "rendered_sha256": "7d75b1d90fd412637083b949dd60fd019b35b39760ac8574af6bdaff821d0d5c",
               "prompt_token_ids": [
                 151644,
                 8948,
@@ -4844,17 +4808,27 @@
                 151644,
                 872,
                 198,
-                4418,
+                9190,
+                5612,
+                551,
                 419,
-                2805,
                 4842,
                 5185,
-                323,
-                62079,
-                432,
                 304,
                 825,
                 11652,
+                11,
+                323,
+                2924,
+                279,
+                4734,
+                4244,
+                78095,
+                11,
+                13940,
+                11,
+                323,
+                6021,
                 25,
                 78095,
                 11678,
@@ -4908,9 +4882,9 @@
                 77091,
                 198
               ],
-              "prompt_token_count": 87
+              "prompt_token_count": 97
             },
-            "prompt_token_count": 87,
+            "prompt_token_count": 97,
             "max_new_tokens": 40,
             "generation_config": {
               "do_sample": false,
@@ -4923,11 +4897,14 @@
                 "parallel_sampling": false
               }
             },
-            "generated_text": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
-            "decoded_preview": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
-            "normalized_output": "the use of dense qwen cpu as the default route is determined based on the availability of openvino gpu and npu, while openvino gpu and npu remain candidates for further evaluation",
+            "generated_text": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on its performance metrics.",
+            "decoded_preview": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on its performance metrics.",
+            "normalized_output": "lunar lake's use of dense qwen cpu as the default route is determined based on its performance metrics",
             "generated_token_ids": [
-              785,
+              43,
+              84992,
+              11678,
+              594,
               990,
               315,
               42522,
@@ -4942,48 +4919,23 @@
               10838,
               3118,
               389,
-              279,
-              18048,
-              315,
-              5264,
-              53,
-              47975,
-              22670,
-              323,
-              451,
-              6325,
-              11,
-              1393,
-              5264,
-              53,
-              47975,
-              22670,
-              323,
-              451,
-              6325,
-              7146,
-              11178,
-              369,
-              4623,
-              16460,
+              1181,
+              5068,
+              16734,
               13
             ],
             "generated_token_ids_available_from_pipeline": false,
             "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-            "generated_token_count": 40,
+            "generated_token_count": 22,
             "stop_eos": {
               "raw_special_token_seen": false,
               "eos_marker_seen": false,
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -4998,6 +4950,7 @@
                   "route"
                 ],
                 "matched": [
+                  "Lunar",
                   "CPU",
                   "route"
                 ],
@@ -5005,19 +4958,13 @@
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "normalized_answer": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
-                  "required_keywords_missing": [
-                    "Lunar"
-                  ],
+                  "normalized_answer": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on its performance metrics.",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -5030,6 +4977,7 @@
                 "route"
               ],
               "matched": [
+                "Lunar",
                 "CPU",
                 "route"
               ],
@@ -5037,63 +4985,57 @@
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "normalized_answer": "The use of Dense Qwen CPU as the default route is determined based on the availability of OpenVINO GPU and NPU, while OpenVINO GPU and NPU remain candidates for further evaluation.",
-                "required_keywords_missing": [
-                  "Lunar"
-                ],
+                "normalized_answer": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on its performance metrics.",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 958.6955000122543,
-              "first_streamed_text_chunk_ms": 448.72769998619333,
-              "first_streamed_text_chunk": "The",
-              "streamed_chunks_count": 39,
+              "generation_wall_ms": 699.8619000078179,
+              "first_streamed_text_chunk_ms": 424.6551000105683,
+              "first_streamed_text_chunk": "L",
+              "streamed_chunks_count": 22,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 13.383999824523926,
+                  "mean_ms": 12.918000221252441,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 958.6199951171875,
+                  "mean_ms": 699.7670288085938,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 929.97802734375,
+                  "mean_ms": 676.8209838867188,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 379.7197265625,
+                  "mean_ms": 364.73748779296875,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 14.801854133605957,
-                  "std_ms": 6.7885942459106445
+                  "mean_ms": 15.142077445983887,
+                  "std_ms": 6.895340919494629
                 },
                 "inter_token_latency": {
-                  "mean_ms": 23.528974533081055,
-                  "std_ms": 55.26546859741211
+                  "mean_ms": 29.6978702545166,
+                  "std_ms": 68.94951629638672
                 },
                 "throughput": {
-                  "mean_ms": 67.5591049194336,
-                  "std_ms": 30.984724044799805
+                  "mean_ms": 66.0411376953125,
+                  "std_ms": 30.073556900024414
                 },
                 "detokenization": {
-                  "mean_ms": 0.08830000460147858,
+                  "mean_ms": 0.20999999344348907,
                   "std_ms": 0.0
                 },
-                "num_input_tokens": 87,
-                "num_generated_tokens": 40
+                "num_input_tokens": 97,
+                "num_generated_tokens": 23
               }
             },
             "fallback_used": false,
@@ -5103,7 +5045,7 @@
             "runtime_device": "GPU.0",
             "backend_lane": "dense_slm_openvino_gpu_arc140v",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
-            "status": "quality_failed"
+            "status": "passed"
           },
           {
             "id": "short_reasoning_apples_left",
@@ -5270,42 +5212,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 332.1325999859255,
-              "first_streamed_text_chunk_ms": 152.2261000063736,
+              "generation_wall_ms": 293.2464999903459,
+              "first_streamed_text_chunk_ms": 131.01310000638478,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 15,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 15.232999801635742,
+                  "mean_ms": 13.678999900817871,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 332.0409851074219,
+                  "mean_ms": 293.15399169921875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 309.6300048828125,
+                  "mean_ms": 273.43798828125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 84.77720642089844,
+                  "mean_ms": 69.49879455566406,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 16.388893127441406,
-                  "std_ms": 10.472840309143066
+                  "mean_ms": 14.838226318359375,
+                  "std_ms": 8.86180305480957
                 },
                 "inter_token_latency": {
-                  "mean_ms": 19.619375228881836,
-                  "std_ms": 16.35065460205078
+                  "mean_ms": 17.340686798095703,
+                  "std_ms": 13.069143295288086
                 },
                 "throughput": {
-                  "mean_ms": 61.01693344116211,
-                  "std_ms": 38.99107360839844
+                  "mean_ms": 67.39350128173828,
+                  "std_ms": 40.2492790222168
                 },
                 "detokenization": {
-                  "mean_ms": 0.14000000059604645,
+                  "mean_ms": 0.1128000020980835,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 51,
@@ -5325,12 +5267,12 @@
             "id": "decode_heavy_short_list",
             "profile": "decode_heavy",
             "category": "decode_heavy",
-            "question": "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases.",
+            "question": "Use these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.",
             "prompt_template": "qwen2.5",
             "prompt": {
               "template_family": "qwen2.5",
-              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nList six local inference route checks and include the words fallback and model. Use short comma-separated phrases.<|im_end|>\n<|im_start|>assistant\n",
-              "rendered_sha256": "1218e23d76623e5dc614d609bfd6877e0e1d1dd50c7a6f466ee7c24f014a3cfa",
+              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nUse these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.<|im_end|>\n<|im_start|>assistant\n",
+              "rendered_sha256": "00f0ce18247cc9568b6a5f81a53bed70f28fd9f8f1e5cfa111f8bdea011e6622",
               "prompt_token_ids": [
                 151644,
                 8948,
@@ -5356,25 +5298,33 @@
                 151644,
                 872,
                 198,
-                852,
-                4743,
-                2205,
-                44378,
-                6021,
-                12341,
-                323,
-                2924,
-                279,
-                4244,
-                32772,
-                323,
-                1614,
-                13,
-                5443,
-                2805,
-                31683,
-                72692,
+                10253,
+                1493,
+                4734,
                 31747,
+                304,
+                264,
+                2805,
+                4226,
+                25,
+                32772,
+                1779,
+                11,
+                1614,
+                1779,
+                11,
+                45958,
+                1779,
+                11,
+                6021,
+                2874,
+                11,
+                18405,
+                22567,
+                11,
+                7304,
+                902,
+                32772,
                 13,
                 151645,
                 198,
@@ -5382,9 +5332,9 @@
                 77091,
                 198
               ],
-              "prompt_token_count": 49
+              "prompt_token_count": 57
             },
-            "prompt_token_count": 49,
+            "prompt_token_count": 57,
             "max_new_tokens": 64,
             "generation_config": {
               "do_sample": false,
@@ -5397,70 +5347,42 @@
                 "parallel_sampling": false
               }
             },
-            "generated_text": "1. **Fallback Route Check**\n2. **Route Selection Criteria**\n3. **Route Validation Process**\n4. **Route Optimization Strategy**\n5. **Route Monitoring System**\n6. **Route Adaptation Algorithm**",
-            "decoded_preview": "1. **Fallback Route Check**\n2. **Route Selection Criteria**\n3. **Route Validation Process**\n4. **Route Optimization Strategy**\n5. **Route Monitoring System**\n6. **Route Adaptation Algorithm**",
-            "normalized_output": "1. **fallback route check** 2. **route selection criteria** 3. **route validation process** 4. **route optimization strategy** 5. **route monitoring system** 6. **route adaptation algorithm**",
+            "generated_text": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
+            "decoded_preview": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
+            "normalized_output": "fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback",
             "generated_token_ids": [
-              16,
-              13,
-              3070,
               87206,
-              9572,
-              4248,
-              1019,
-              17,
-              13,
-              3070,
-              4899,
-              24145,
-              14243,
-              1019,
-              18,
-              13,
-              3070,
-              4899,
-              18954,
-              8603,
-              1019,
-              19,
-              13,
-              3070,
-              4899,
-              57739,
-              27745,
-              1019,
-              20,
-              13,
-              3070,
-              4899,
-              50703,
-              739,
-              1019,
-              21,
-              13,
-              3070,
-              4899,
-              58431,
-              367,
-              40325,
-              334
+              12341,
+              11,
+              1614,
+              12341,
+              11,
+              45958,
+              12341,
+              11,
+              6021,
+              7966,
+              11,
+              18405,
+              56480,
+              11,
+              7304,
+              902,
+              32772,
+              13
             ],
             "generated_token_ids_available_from_pipeline": false,
             "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-            "generated_token_count": 43,
+            "generated_token_count": 19,
             "stop_eos": {
               "raw_special_token_seen": false,
               "eos_marker_seen": false,
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -5470,24 +5392,18 @@
               "answer_gate": {
                 "kind": "readable",
                 "min_words": 8,
-                "observed_words": 24,
+                "observed_words": 13,
                 "passed": true
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "normalized_answer": "1. **Fallback Route Check** 2. **Route Selection Criteria** 3. **Route Validation Process** 4. **Route Optimization Strategy** 5. **Route Monitoring System** 6. **Route Adaptation Algorithm**",
-                  "required_keywords_missing": [
-                    "model"
-                  ],
+                  "normalized_answer": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -5495,68 +5411,62 @@
             "answer_gate": {
               "kind": "readable",
               "min_words": 8,
-              "observed_words": 24,
+              "observed_words": 13,
               "passed": true
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "normalized_answer": "1. **Fallback Route Check** 2. **Route Selection Criteria** 3. **Route Validation Process** 4. **Route Optimization Strategy** 5. **Route Monitoring System** 6. **Route Adaptation Algorithm**",
-                "required_keywords_missing": [
-                  "model"
-                ],
+                "normalized_answer": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 679.1061999974772,
-              "first_streamed_text_chunk_ms": 133.47100000828505,
-              "first_streamed_text_chunk": "1",
-              "streamed_chunks_count": 33,
+              "generation_wall_ms": 369.73040000884794,
+              "first_streamed_text_chunk_ms": 126.03650000528432,
+              "first_streamed_text_chunk": "Fallback",
+              "streamed_chunks_count": 19,
               "openvino_perf_metrics": {
-                "load_time_ms": 4800.0,
+                "load_time_ms": 4390.0,
                 "tokenization": {
-                  "mean_ms": 13.381999969482422,
+                  "mean_ms": 7.840000152587891,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 678.9970092773438,
+                  "mean_ms": 369.65899658203125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 649.35498046875,
+                  "mean_ms": 352.7489929199219,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 70.70600128173828,
+                  "mean_ms": 63.05430221557617,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 14.118695259094238,
-                  "std_ms": 5.723839282989502
+                  "mean_ms": 16.031221389770508,
+                  "std_ms": 8.194408416748047
                 },
                 "inter_token_latency": {
-                  "mean_ms": 15.018022537231445,
-                  "std_ms": 8.556946754455566
+                  "mean_ms": 17.90814971923828,
+                  "std_ms": 11.665129661560059
                 },
                 "throughput": {
-                  "mean_ms": 70.82807159423828,
-                  "std_ms": 28.714305877685547
+                  "mean_ms": 62.37828063964844,
+                  "std_ms": 31.884849548339844
                 },
                 "detokenization": {
-                  "mean_ms": 0.2513999938964844,
+                  "mean_ms": 0.2501000165939331,
                   "std_ms": 0.0
                 },
-                "num_input_tokens": 49,
-                "num_generated_tokens": 44
+                "num_input_tokens": 57,
+                "num_generated_tokens": 20
               }
             },
             "fallback_used": false,
@@ -5566,7 +5476,7 @@
             "runtime_device": "GPU.0",
             "backend_lane": "dense_slm_openvino_gpu_arc140v",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
-            "status": "quality_failed"
+            "status": "passed"
           }
         ],
         "phase_coverage": {
@@ -5592,13 +5502,13 @@
         "fallback_used": false,
         "fallback_status": "no_fallback_used_npu_device_requested_and_llmpipeline_constructed",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
-        "pipeline_construct_wall_ms": 30757.372099993518,
+        "pipeline_construct_wall_ms": 30972.865799994906,
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": false,
         "quality_summary": {
           "cases_total": 12,
-          "passed": 11,
-          "failed": 1,
+          "passed": 12,
+          "failed": 0,
           "fallback_used": false,
           "profile_summary": {
             "ask_normal": {
@@ -5618,8 +5528,8 @@
             },
             "prefill_heavy": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "regression_tiny": {
               "total": 4,
@@ -5650,8 +5560,8 @@
             },
             "long_prompt_summarization": {
               "total": 1,
-              "passed": 0,
-              "failed": 1
+              "passed": 1,
+              "failed": 0
             },
             "math": {
               "total": 2,
@@ -5836,42 +5746,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 475.9660999989137,
-              "first_streamed_text_chunk_ms": 344.088699988788,
+              "generation_wall_ms": 507.36039999173954,
+              "first_streamed_text_chunk_ms": 366.4804000000004,
               "first_streamed_text_chunk": "2",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 8.531999588012695,
+                  "mean_ms": 15.677000045776367,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 475.8659973144531,
+                  "mean_ms": 507.13800048828125,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 465.2049865722656,
+                  "mean_ms": 488.7969970703125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 253.54330444335938,
+                  "mean_ms": 270.0706787109375,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 31.696813583374023,
-                  "std_ms": 8.52534008026123
+                  "mean_ms": 33.698673248291016,
+                  "std_ms": 10.260636329650879
                 },
                 "inter_token_latency": {
-                  "mean_ms": 58.1506233215332,
-                  "std_ms": 70.95503234863281
+                  "mean_ms": 61.09962463378906,
+                  "std_ms": 73.58356475830078
                 },
                 "throughput": {
-                  "mean_ms": 31.548912048339844,
-                  "std_ms": 8.485559463500977
+                  "mean_ms": 29.674758911132812,
+                  "std_ms": 9.03542709350586
                 },
                 "detokenization": {
-                  "mean_ms": 0.07500000298023224,
+                  "mean_ms": 0.23600000143051147,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 39,
@@ -6028,42 +5938,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 219.68280000146478,
-              "first_streamed_text_chunk_ms": 219.36940000159666,
+              "generation_wall_ms": 217.89800000260584,
+              "first_streamed_text_chunk_ms": 217.4992999935057,
               "first_streamed_text_chunk": "1",
               "streamed_chunks_count": 2,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 13.41100025177002,
+                  "mean_ms": 10.524999618530273,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 219.5679931640625,
+                  "mean_ms": 217.7949981689453,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 204.88999938964844,
+                  "mean_ms": 206.18099975585938,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 164.0513916015625,
+                  "mean_ms": 162.4390106201172,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 27.499500274658203,
-                  "std_ms": 0.11330077797174454
+                  "mean_ms": 27.360000610351562,
+                  "std_ms": 0.6926991939544678
                 },
                 "inter_token_latency": {
-                  "mean_ms": 68.29666900634766,
-                  "std_ms": 57.92928695678711
+                  "mean_ms": 68.72699737548828,
+                  "std_ms": 58.67000961303711
                 },
                 "throughput": {
-                  "mean_ms": 36.364295959472656,
-                  "std_ms": 0.14982464909553528
+                  "mean_ms": 36.549705505371094,
+                  "std_ms": 0.9253637790679932
                 },
                 "detokenization": {
-                  "mean_ms": 0.08699999749660492,
+                  "mean_ms": 0.12300000339746475,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -6227,42 +6137,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 314.47559999651276,
-              "first_streamed_text_chunk_ms": 234.4046000216622,
+              "generation_wall_ms": 298.00179999438114,
+              "first_streamed_text_chunk_ms": 213.57669998542406,
               "first_streamed_text_chunk": "red",
               "streamed_chunks_count": 5,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 13.128999710083008,
+                  "mean_ms": 8.043000221252441,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 314.3760070800781,
+                  "mean_ms": 297.9119873046875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 298.5350036621094,
+                  "mean_ms": 288.1159973144531,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 178.10650634765625,
+                  "mean_ms": 159.88800048828125,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 27.083518981933594,
-                  "std_ms": 0.7462144494056702
+                  "mean_ms": 27.429439544677734,
+                  "std_ms": 1.6924492120742798
                 },
                 "inter_token_latency": {
-                  "mean_ms": 49.75583267211914,
-                  "std_ms": 51.318931579589844
+                  "mean_ms": 48.01933288574219,
+                  "std_ms": 46.346126556396484
                 },
                 "throughput": {
-                  "mean_ms": 36.92282485961914,
-                  "std_ms": 1.017310380935669
+                  "mean_ms": 36.45718002319336,
+                  "std_ms": 2.2494781017303467
                 },
                 "detokenization": {
-                  "mean_ms": 0.12999999523162842,
+                  "mean_ms": 0.24899999797344208,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 41,
@@ -6426,26 +6336,26 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 177.40430001867935,
-              "first_streamed_text_chunk_ms": 176.55240002204664,
+              "generation_wall_ms": 163.12580002704635,
+              "first_streamed_text_chunk_ms": 162.8977000073064,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 12.95300006866455,
+                  "mean_ms": 10.944999694824219,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 177.30799865722656,
+                  "mean_ms": 163.02699279785156,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 162.48300170898438,
+                  "mean_ms": 151.281005859375,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 175.9237060546875,
+                  "mean_ms": 162.4727020263672,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
@@ -6453,7 +6363,7 @@
                   "std_ms": -1.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 162.48300170898438,
+                  "mean_ms": 151.281005859375,
                   "std_ms": 0.0
                 },
                 "throughput": {
@@ -6461,7 +6371,7 @@
                   "std_ms": -1000.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.6119999885559082,
+                  "mean_ms": 0.09799999743700027,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 49,
@@ -6617,42 +6527,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 357.03160002594814,
-              "first_streamed_text_chunk_ms": 224.0849000227172,
+              "generation_wall_ms": 401.3201000052504,
+              "first_streamed_text_chunk_ms": 236.02670000400394,
               "first_streamed_text_chunk": "The",
               "streamed_chunks_count": 7,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 12.942000389099121,
+                  "mean_ms": 11.375,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 356.9110107421875,
+                  "mean_ms": 401.2330017089844,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 340.4259948730469,
+                  "mean_ms": 386.42999267578125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 170.01889038085938,
+                  "mean_ms": 166.48410034179688,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 26.608884811401367,
-                  "std_ms": 0.44672951102256775
+                  "mean_ms": 33.38819885253906,
+                  "std_ms": 1.133235216140747
                 },
                 "inter_token_latency": {
-                  "mean_ms": 42.55324935913086,
-                  "std_ms": 43.07942581176758
+                  "mean_ms": 48.303749084472656,
+                  "std_ms": 40.209842681884766
                 },
                 "throughput": {
-                  "mean_ms": 37.5814323425293,
-                  "std_ms": 0.6309446692466736
+                  "mean_ms": 29.950702667236328,
+                  "std_ms": 1.0165624618530273
                 },
                 "detokenization": {
-                  "mean_ms": 0.16300000250339508,
+                  "mean_ms": 0.20600000023841858,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 35,
@@ -6833,42 +6743,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 780.3378999815322,
-              "first_streamed_text_chunk_ms": 219.32759997434914,
+              "generation_wall_ms": 885.8958999917377,
+              "first_streamed_text_chunk_ms": 232.2103999904357,
               "first_streamed_text_chunk": "R",
               "streamed_chunks_count": 23,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 12.420000076293945,
+                  "mean_ms": 10.743000030517578,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 780.2429809570312,
+                  "mean_ms": 885.7999877929688,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 758.9650268554688,
+                  "mean_ms": 869.4929809570312,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 164.27749633789062,
+                  "mean_ms": 168.69760131835938,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 26.752595901489258,
-                  "std_ms": 0.6470279097557068
+                  "mean_ms": 31.1285343170166,
+                  "std_ms": 2.0891005992889404
                 },
                 "inter_token_latency": {
-                  "mean_ms": 31.6235408782959,
-                  "std_ms": 24.983856201171875
+                  "mean_ms": 36.22887420654297,
+                  "std_ms": 25.401409149169922
                 },
                 "throughput": {
-                  "mean_ms": 37.37955093383789,
-                  "std_ms": 0.9040472507476807
+                  "mean_ms": 32.1248664855957,
+                  "std_ms": 2.1559665203094482
                 },
                 "detokenization": {
-                  "mean_ms": 0.07699999958276749,
+                  "mean_ms": 0.23399999737739563,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 36,
@@ -7021,42 +6931,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 192.17049999861047,
-              "first_streamed_text_chunk_ms": 191.28420000197366,
+              "generation_wall_ms": 201.59119999152608,
+              "first_streamed_text_chunk_ms": 201.3483999762684,
               "first_streamed_text_chunk": "done",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 15.864999771118164,
+                  "mean_ms": 13.395000457763672,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 192.0449981689453,
+                  "mean_ms": 201.4739990234375,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 173.8780059814453,
+                  "mean_ms": 187.08900451660156,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 162.93260192871094,
+                  "mean_ms": 170.65260314941406,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 27.487699508666992,
+                  "mean_ms": 30.26059913635254,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 86.93900299072266,
-                  "std_ms": 59.737998962402344
+                  "mean_ms": 93.54450225830078,
+                  "std_ms": 63.44150161743164
                 },
                 "throughput": {
-                  "mean_ms": 36.37990951538086,
+                  "mean_ms": 33.04627227783203,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.49300000071525574,
+                  "mean_ms": 0.12200000137090683,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 38,
@@ -7229,42 +7139,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 194.2669999843929,
-              "first_streamed_text_chunk_ms": 192.13499999023043,
+              "generation_wall_ms": 193.33179999375716,
+              "first_streamed_text_chunk_ms": 193.12399998307228,
               "first_streamed_text_chunk": "amber",
               "streamed_chunks_count": 1,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 16.066999435424805,
+                  "mean_ms": 9.907999992370605,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 194.15699768066406,
+                  "mean_ms": 193.2480010986328,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 174.45399475097656,
+                  "mean_ms": 182.51499938964844,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 162.41261291503906,
+                  "mean_ms": 162.7110137939453,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 28.895401000976562,
+                  "mean_ms": 30.044401168823242,
                   "std_ms": 0.0
                 },
                 "inter_token_latency": {
-                  "mean_ms": 87.22699737548828,
-                  "std_ms": 58.61199951171875
+                  "mean_ms": 91.25749969482422,
+                  "std_ms": 61.32849884033203
                 },
                 "throughput": {
-                  "mean_ms": 34.607582092285156,
+                  "mean_ms": 33.28407287597656,
                   "std_ms": 0.0
                 },
                 "detokenization": {
-                  "mean_ms": 0.2529999911785126,
+                  "mean_ms": 0.06800000369548798,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 58,
@@ -7440,42 +7350,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 631.8504999799188,
-              "first_streamed_text_chunk_ms": 165.13859998667613,
+              "generation_wall_ms": 652.7215000241995,
+              "first_streamed_text_chunk_ms": 161.53140002279542,
               "first_streamed_text_chunk": "{\n",
               "streamed_chunks_count": 12,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 8.08899974822998,
+                  "mean_ms": 5.940000057220459,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 631.7659912109375,
+                  "mean_ms": 652.6530151367188,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 619.6649780273438,
+                  "mean_ms": 642.281982421875,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 164.79310607910156,
+                  "mean_ms": 160.97340393066406,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 29.128419876098633,
-                  "std_ms": 1.4469307661056519
+                  "mean_ms": 30.68956184387207,
+                  "std_ms": 2.279944658279419
                 },
                 "inter_token_latency": {
-                  "mean_ms": 36.45088195800781,
-                  "std_ms": 30.01344108581543
+                  "mean_ms": 37.78129577636719,
+                  "std_ms": 29.294414520263672
                 },
                 "throughput": {
-                  "mean_ms": 34.33073425292969,
-                  "std_ms": 1.70535147190094
+                  "mean_ms": 32.58436965942383,
+                  "std_ms": 2.420710802078247
                 },
                 "detokenization": {
-                  "mean_ms": 0.2029999941587448,
+                  "mean_ms": 0.13300000131130219,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 44,
@@ -7495,12 +7405,12 @@
             "id": "long_prompt_summary_route_policy",
             "profile": "prefill_heavy",
             "category": "long_prompt_summarization",
-            "question": "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
+            "question": "Summarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.",
             "prompt_template": "qwen2.5",
             "prompt": {
               "template_family": "qwen2.5",
-              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nRead this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
-              "rendered_sha256": "18faf7acfda6eee989fc98ba30c9ade35f1ca8e026536b8d5543a7108406f388",
+              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nSummarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path.<|im_end|>\n<|im_start|>assistant\n",
+              "rendered_sha256": "7d75b1d90fd412637083b949dd60fd019b35b39760ac8574af6bdaff821d0d5c",
               "prompt_token_ids": [
                 151644,
                 8948,
@@ -7526,17 +7436,27 @@
                 151644,
                 872,
                 198,
-                4418,
+                9190,
+                5612,
+                551,
                 419,
-                2805,
                 4842,
                 5185,
-                323,
-                62079,
-                432,
                 304,
                 825,
                 11652,
+                11,
+                323,
+                2924,
+                279,
+                4734,
+                4244,
+                78095,
+                11,
+                13940,
+                11,
+                323,
+                6021,
                 25,
                 78095,
                 11678,
@@ -7590,9 +7510,9 @@
                 77091,
                 198
               ],
-              "prompt_token_count": 87
+              "prompt_token_count": 97
             },
-            "prompt_token_count": 87,
+            "prompt_token_count": 97,
             "max_new_tokens": 40,
             "generation_config": {
               "do_sample": false,
@@ -7605,50 +7525,48 @@
                 "parallel_sampling": false
               }
             },
-            "generated_text": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
-            "decoded_preview": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
-            "normalized_output": "the lunar lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks",
+            "generated_text": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+            "decoded_preview": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+            "normalized_output": "lunar lake's use of dense qwen cpu as the default route is determined based on the latest information from their system",
             "generated_token_ids": [
-              785,
-              78095,
+              43,
+              84992,
               11678,
-              2083,
+              594,
+              990,
+              315,
+              42522,
+              1207,
+              16948,
+              13940,
+              438,
+              279,
+              1638,
+              6021,
               374,
-              23966,
-              2155,
-              24231,
-              2606,
-              311,
-              29436,
-              862,
-              1614,
-              4862,
-              1882,
+              10838,
               3118,
               389,
-              3151,
-              5068,
-              16734,
-              323,
-              62019,
+              279,
+              5535,
+              1995,
+              504,
+              862,
+              1849,
               13
             ],
             "generated_token_ids_available_from_pipeline": false,
             "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-            "generated_token_count": 23,
+            "generated_token_count": 25,
             "stop_eos": {
               "raw_special_token_seen": false,
               "eos_marker_seen": false,
               "stop_policy": "OpenVINO GenAI LLMPipeline greedy generation with exported Qwen2.5 tokenizer"
             },
             "quality": {
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "non_empty_answer": true,
               "printable_utf8": true,
               "no_replacement_chars": true,
@@ -7663,25 +7581,21 @@
                   "route"
                 ],
                 "matched": [
-                  "Lunar"
+                  "Lunar",
+                  "CPU",
+                  "route"
                 ],
                 "passed": true
               },
               "scoring": {
                 "kind": "required_keywords",
-                "passed": false,
-                "failed_rules": [
-                  "required_keywords_missing"
-                ],
-                "failure_taxonomy": [
-                  "required_keyword_missing"
-                ],
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "normalized_answer": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
-                  "required_keywords_missing": [
-                    "CPU"
-                  ],
+                  "normalized_answer": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+                  "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
               }
@@ -7694,69 +7608,65 @@
                 "route"
               ],
               "matched": [
-                "Lunar"
+                "Lunar",
+                "CPU",
+                "route"
               ],
               "passed": true
             },
             "scoring": {
               "kind": "required_keywords",
-              "passed": false,
-              "failed_rules": [
-                "required_keywords_missing"
-              ],
-              "failure_taxonomy": [
-                "required_keyword_missing"
-              ],
+              "passed": true,
+              "failed_rules": [],
+              "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "normalized_answer": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
-                "required_keywords_missing": [
-                  "CPU"
-                ],
+                "normalized_answer": "Lunar Lake's use of Dense Qwen CPU as the default route is determined based on the latest information from their system.",
+                "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 843.5429000237491,
-              "first_streamed_text_chunk_ms": 229.447900026571,
-              "first_streamed_text_chunk": "The",
-              "streamed_chunks_count": 23,
+              "generation_wall_ms": 933.57819999801,
+              "first_streamed_text_chunk_ms": 242.79699998442084,
+              "first_streamed_text_chunk": "L",
+              "streamed_chunks_count": 25,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 11.70199966430664,
+                  "mean_ms": 13.319000244140625,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 843.4580078125,
+                  "mean_ms": 933.4879760742188,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 826.6409912109375,
+                  "mean_ms": 914.8389892578125,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 164.58570861816406,
+                  "mean_ms": 178.5052032470703,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 29.474899291992188,
-                  "std_ms": 1.8953073024749756
+                  "mean_ms": 30.177968978881836,
+                  "std_ms": 2.042393684387207
                 },
                 "inter_token_latency": {
-                  "mean_ms": 34.44337463378906,
-                  "std_ms": 24.71440887451172
+                  "mean_ms": 35.18611526489258,
+                  "std_ms": 26.019094467163086
                 },
                 "throughput": {
-                  "mean_ms": 33.92717361450195,
-                  "std_ms": 2.1815991401672363
+                  "mean_ms": 33.136756896972656,
+                  "std_ms": 2.2426393032073975
                 },
                 "detokenization": {
-                  "mean_ms": 0.34200000762939453,
+                  "mean_ms": 0.11999999731779099,
                   "std_ms": 0.0
                 },
-                "num_input_tokens": 87,
-                "num_generated_tokens": 24
+                "num_input_tokens": 97,
+                "num_generated_tokens": 26
               }
             },
             "fallback_used": false,
@@ -7766,7 +7676,7 @@
             "runtime_device": "NPU",
             "backend_lane": "dense_slm_openvino_npu",
             "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
-            "status": "quality_failed"
+            "status": "passed"
           },
           {
             "id": "short_reasoning_apples_left",
@@ -7933,42 +7843,42 @@
               }
             },
             "timing": {
-              "generation_wall_ms": 620.8058000192977,
-              "first_streamed_text_chunk_ms": 223.75830000964925,
+              "generation_wall_ms": 711.596200009808,
+              "first_streamed_text_chunk_ms": 228.000900009647,
               "first_streamed_text_chunk": "Yes",
               "streamed_chunks_count": 15,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 8.555000305175781,
+                  "mean_ms": 11.616000175476074,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 620.5170288085938,
+                  "mean_ms": 711.4910278320312,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 607.583984375,
+                  "mean_ms": 696.3250122070312,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 161.85549926757812,
+                  "mean_ms": 167.3625030517578,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 30.51813316345215,
-                  "std_ms": 1.488160252571106
+                  "mean_ms": 36.235382080078125,
+                  "std_ms": 15.12719440460205
                 },
                 "inter_token_latency": {
-                  "mean_ms": 37.9739990234375,
-                  "std_ms": 29.73759651184082
+                  "mean_ms": 43.52031326293945,
+                  "std_ms": 32.39718246459961
                 },
                 "throughput": {
-                  "mean_ms": 32.76740264892578,
-                  "std_ms": 1.5978418588638306
+                  "mean_ms": 27.597335815429688,
+                  "std_ms": 11.521066665649414
                 },
                 "detokenization": {
-                  "mean_ms": 0.07999999821186066,
+                  "mean_ms": 0.09700000286102295,
                   "std_ms": 0.0
                 },
                 "num_input_tokens": 51,
@@ -7988,12 +7898,12 @@
             "id": "decode_heavy_short_list",
             "profile": "decode_heavy",
             "category": "decode_heavy",
-            "question": "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases.",
+            "question": "Use these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.",
             "prompt_template": "qwen2.5",
             "prompt": {
               "template_family": "qwen2.5",
-              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nList six local inference route checks and include the words fallback and model. Use short comma-separated phrases.<|im_end|>\n<|im_start|>assistant\n",
-              "rendered_sha256": "1218e23d76623e5dc614d609bfd6877e0e1d1dd50c7a6f466ee7c24f014a3cfa",
+              "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nUse these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback.<|im_end|>\n<|im_start|>assistant\n",
+              "rendered_sha256": "00f0ce18247cc9568b6a5f81a53bed70f28fd9f8f1e5cfa111f8bdea011e6622",
               "prompt_token_ids": [
                 151644,
                 8948,
@@ -8019,25 +7929,33 @@
                 151644,
                 872,
                 198,
-                852,
-                4743,
-                2205,
-                44378,
-                6021,
-                12341,
-                323,
-                2924,
-                279,
-                4244,
-                32772,
-                323,
-                1614,
-                13,
-                5443,
-                2805,
-                31683,
-                72692,
+                10253,
+                1493,
+                4734,
                 31747,
+                304,
+                264,
+                2805,
+                4226,
+                25,
+                32772,
+                1779,
+                11,
+                1614,
+                1779,
+                11,
+                45958,
+                1779,
+                11,
+                6021,
+                2874,
+                11,
+                18405,
+                22567,
+                11,
+                7304,
+                902,
+                32772,
                 13,
                 151645,
                 198,
@@ -8045,9 +7963,9 @@
                 77091,
                 198
               ],
-              "prompt_token_count": 49
+              "prompt_token_count": 57
             },
-            "prompt_token_count": 49,
+            "prompt_token_count": 57,
             "max_new_tokens": 64,
             "generation_config": {
               "do_sample": false,
@@ -8060,78 +7978,33 @@
                 "parallel_sampling": false
               }
             },
-            "generated_text": "Local inference route checks include:\n1. Fallback Route Check - This is an automated system that automatically routes traffic through its network of fallback routers.\n2. Model-Based Route Selection - The use of machine learning models to determine the best path for data packets based on routing tables.\n3. Traffic Balancing - This technique involves",
-            "decoded_preview": "Local inference route checks include:\n1. Fallback Route Check - This is an automated system that automatically routes traffic through its network of fallback routers.\n2. Model-Based Route Selection - The use of machine learning models to de",
-            "normalized_output": "local inference route checks include: 1. fallback route check - this is an automated system that automatically routes traffic through its network of fallback routers. 2. model-based route selection - the use of machine learning models to determine the best path for data packets based on routing tables. 3. traffic balancing - this technique involves",
+            "generated_text": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
+            "decoded_preview": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
+            "normalized_output": "fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback",
             "generated_token_ids": [
-              7319,
-              44378,
-              6021,
+              87206,
               12341,
-              2924,
-              510,
-              16,
-              13,
-              434,
-              3420,
-              9572,
-              4248,
-              481,
-              1096,
-              374,
-              458,
-              27498,
-              1849,
-              429,
-              9463,
-              11291,
-              9442,
-              1526,
-              1181,
-              3922,
-              315,
+              11,
+              1614,
+              12341,
+              11,
+              45958,
+              12341,
+              11,
+              6021,
+              7966,
+              11,
+              18405,
+              56480,
+              11,
+              7304,
+              902,
               32772,
-              59175,
-              624,
-              17,
-              13,
-              4903,
-              60339,
-              9572,
-              24145,
-              481,
-              576,
-              990,
-              315,
-              5662,
-              6832,
-              4119,
-              311,
-              8253,
-              279,
-              1850,
-              1815,
-              369,
-              821,
-              27035,
-              3118,
-              389,
-              29058,
-              12632,
-              624,
-              18,
-              13,
-              36981,
-              19420,
-              8974,
-              481,
-              1096,
-              14762,
-              17601
+              13
             ],
             "generated_token_ids_available_from_pipeline": false,
             "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-            "generated_token_count": 64,
+            "generated_token_count": 19,
             "stop_eos": {
               "raw_special_token_seen": false,
               "eos_marker_seen": false,
@@ -8150,7 +8023,7 @@
               "answer_gate": {
                 "kind": "readable",
                 "min_words": 8,
-                "observed_words": 55,
+                "observed_words": 13,
                 "passed": true
               },
               "scoring": {
@@ -8160,7 +8033,7 @@
                 "failure_taxonomy": [],
                 "details": {
                   "kind": "required_keywords",
-                  "normalized_answer": "Local inference route checks include: 1. Fallback Route Check - This is an automated system that automatically routes traffic through its network of fallback routers. 2. Model-Based Route Selection - The use of machine learning models to determine the best path for data packets based on routing tables. 3. Traffic Balancing - This technique involves",
+                  "normalized_answer": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
                   "required_keywords_missing": [],
                   "forbidden_tokens_observed": []
                 }
@@ -8169,7 +8042,7 @@
             "answer_gate": {
               "kind": "readable",
               "min_words": 8,
-              "observed_words": 55,
+              "observed_words": 13,
               "passed": true
             },
             "scoring": {
@@ -8179,52 +8052,52 @@
               "failure_taxonomy": [],
               "details": {
                 "kind": "required_keywords",
-                "normalized_answer": "Local inference route checks include: 1. Fallback Route Check - This is an automated system that automatically routes traffic through its network of fallback routers. 2. Model-Based Route Selection - The use of machine learning models to determine the best path for data packets based on routing tables. 3. Traffic Balancing - This technique involves",
+                "normalized_answer": "Fallback checks, model checks, tokenizer checks, route reasons, timing receipts, strict no fallback.",
                 "required_keywords_missing": [],
                 "forbidden_tokens_observed": []
               }
             },
             "timing": {
-              "generation_wall_ms": 2136.448199977167,
-              "first_streamed_text_chunk_ms": 223.91639999113977,
-              "first_streamed_text_chunk": "Local",
-              "streamed_chunks_count": 57,
+              "generation_wall_ms": 732.1939000103157,
+              "first_streamed_text_chunk_ms": 219.59720001905225,
+              "first_streamed_text_chunk": "Fallback",
+              "streamed_chunks_count": 19,
               "openvino_perf_metrics": {
-                "load_time_ms": 30757.0,
+                "load_time_ms": 30972.0,
                 "tokenization": {
-                  "mean_ms": 7.9629998207092285,
+                  "mean_ms": 7.798999786376953,
                   "std_ms": 0.0
                 },
                 "generate": {
-                  "mean_ms": 2136.37890625,
+                  "mean_ms": 732.1190185546875,
                   "std_ms": 0.0
                 },
                 "inference": {
-                  "mean_ms": 2115.258056640625,
+                  "mean_ms": 720.0869750976562,
                   "std_ms": 0.0
                 },
                 "time_to_first_token": {
-                  "mean_ms": 162.95849609375,
+                  "mean_ms": 161.26409912109375,
                   "std_ms": 0.0
                 },
                 "time_per_output_token": {
-                  "mean_ms": 31.31371307373047,
-                  "std_ms": 8.640554428100586
+                  "mean_ms": 30.013757705688477,
+                  "std_ms": 1.3850467205047607
                 },
                 "inter_token_latency": {
-                  "mean_ms": 33.050907135009766,
-                  "std_ms": 17.560218811035156
+                  "mean_ms": 36.00434875488281,
+                  "std_ms": 26.88709259033203
                 },
                 "throughput": {
-                  "mean_ms": 31.934890747070312,
-                  "std_ms": 8.811959266662598
+                  "mean_ms": 33.31805419921875,
+                  "std_ms": 1.5375304222106934
                 },
                 "detokenization": {
-                  "mean_ms": 0.12600000202655792,
+                  "mean_ms": 0.0989999994635582,
                   "std_ms": 0.0
                 },
-                "num_input_tokens": 49,
-                "num_generated_tokens": 64
+                "num_input_tokens": 57,
+                "num_generated_tokens": 20
               }
             },
             "fallback_used": false,
@@ -8253,8 +8126,8 @@
     ],
     "quality_summary": {
       "cases_total": 36,
-      "passed": 31,
-      "failed": 5,
+      "passed": 36,
+      "failed": 0,
       "fallback_used": false,
       "profile_summary": {
         "ask_normal": {
@@ -8269,13 +8142,13 @@
         },
         "decode_heavy": {
           "total": 3,
-          "passed": 1,
-          "failed": 2
+          "passed": 3,
+          "failed": 0
         },
         "prefill_heavy": {
           "total": 3,
-          "passed": 0,
-          "failed": 3
+          "passed": 3,
+          "failed": 0
         },
         "regression_tiny": {
           "total": 12,
@@ -8296,8 +8169,8 @@
         },
         "decode_heavy": {
           "total": 3,
-          "passed": 1,
-          "failed": 2
+          "passed": 3,
+          "failed": 0
         },
         "instruction_following": {
           "total": 3,
@@ -8306,8 +8179,8 @@
         },
         "long_prompt_summarization": {
           "total": 3,
-          "passed": 0,
-          "failed": 3
+          "passed": 3,
+          "failed": 0
         },
         "math": {
           "total": 6,
