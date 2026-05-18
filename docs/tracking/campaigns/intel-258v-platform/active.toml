@@ -6778,9 +6778,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-007"
-status = "pr_open"
+status = "merged"
 pr = 5656
-head_sha = "de5de3ea6ff1f205b2921d237baac76b761c6da8"
+head_sha = "449a5f2f1ba8df35ab7b4b7cb14bc22ed8309291"
+merge_sha = "54101e97e2cb968463f014bb4f9a47d5a959ead4"
 branch = "codex/lunar-lake/LNL258V-QUAL-007-keyword-term-normalization"
 stackable = false
 review_mode = "codex_premerge"
