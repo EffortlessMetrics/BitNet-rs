@@ -801,3 +801,85 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-AVX2-HOTPATH-000"
+status = "in_progress"
+branch = "codex/cpu-avx2-hotpath-000-docs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Document the AVX2 BitNet hot-path implementation plan, behavior spec, status page, and tracker rails without runtime changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "git diff --check",
+]
+allowed_paths = [
+  "plans/cpu-avx2-bitnet/**",
+  "docs/specs/BITNET-SPEC-CPU-AVX2-HOTPATH.md",
+  "docs/bitnet/BITNET_CPU_AVX2_STATUS.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "benches/**",
+  "tests/**",
+  "ci/**",
+]
+may_claim = [
+  "The CPU AVX2 BitNet hot-path plan, spec, status page, and tracker rails are documented after merge.",
+]
+must_not_claim = [
+  "The scaled I2_S x I8_S AVX2 kernel exists.",
+  "Strict AVX2 inference uses the optimized scaled BitNet path.",
+  "CPU performance is proven.",
+  "GPU, NPU, OpenVINO, server, dense SLM, Qwen, or broad chat quality is proven.",
+]
+
+[[work_item]]
+id = "CPU-AVX2-HOTPATH-001"
+status = "ready"
+branch = "codex/cpu-avx2-hotpath-001-counters"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-AVX2-HOTPATH-000"]
+acceptance = "Strict scalar and strict AVX2 answer-corpus receipts include QK256 hot-path counters that distinguish no-scale F32 GEMV from scaled I2_S x I8_S GEMV, preserve requested/selected kernel and fallback fields, preserve scalar-vs-AVX2 answer parity, and make no speed claim."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 --test qk256_avx2_parity_tests",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 i2s_qk256 --lib",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "tests/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Strict CPU answer receipts can expose which QK256 hot path actually executed after merge.",
+  "Receipts can distinguish no-scale F32 QK256 GEMV from scaled I2_S x I8_S GEMV after merge.",
+]
+must_not_claim = [
+  "The scaled I2_S x I8_S AVX2 kernel is implemented.",
+  "Strict AVX2 inference is optimized.",
+  "CPU performance is proven.",
+  "GPU, NPU, OpenVINO, server, dense SLM, Qwen, or broad chat quality is proven.",
+]
