@@ -179,6 +179,8 @@ Recorded report:
   `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json`
 - Strict regression context mismatch:
   `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json`
+- 500-case expansion decision:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/larger-corpus-decision.json`
 
 The live run records 250 mechanically scored cases, 196 passes, 54
 quality-failed cases, zero timeouts, generated token IDs for every case, 2,086
@@ -207,6 +209,15 @@ artifact/tokenizer/backend identity only. It is not a broad BitNet quality
 benchmark, not a performance envelope, not dense SLM evidence, and not chat,
 serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon
 proof.
+
+`M4-BITNET-EX-012` records the follow-on decision: do not expand BitNet to 500
+cases yet. The 250-case run completed without timeouts or fallback, but the
+evidence still exposes repair targets before the next runtime-cost increase:
+numeric tolerance has two format-only failures, fixed-table QA has twelve
+factual-table misses, rewrite-normalized dropped from 90% in the latest
+100-case run to 75%, and required/forbidden-token, extraction, and constrained
+summary families remain visibly weak. The decision requires a repair-focused
+250-case refresh before approving a 500-case BitNet campaign.
 
 ## M4 Benchmark Report Slice
 

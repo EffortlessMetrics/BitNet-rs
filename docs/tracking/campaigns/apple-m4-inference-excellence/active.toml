@@ -1351,7 +1351,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-012"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-012-bitnet-500-decision"
 stackable = false
 review_mode = "codex_premerge"
@@ -1366,6 +1366,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
   "ci/hardware/apple-m4-mac-mini/**/bitnet-eval-250/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",

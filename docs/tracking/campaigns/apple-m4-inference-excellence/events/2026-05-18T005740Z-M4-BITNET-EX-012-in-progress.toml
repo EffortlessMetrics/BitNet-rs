@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T00:57:40Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-012"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-012-bitnet-500-decision"
+
+notes = [
+  "Started the BitNet 500-case expansion-or-repair decision from the merged 100-case matching history and 250-case accepted artifact/tokenizer/backend evidence.",
+  "This is a decision and receipt-validation item only; it does not approve a 500-case run, claim broad BitNet quality or performance, or enable BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claims.",
+]

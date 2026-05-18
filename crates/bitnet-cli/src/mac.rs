@@ -12857,6 +12857,8 @@ fn validate_mac_receipt_value(
         validate_slm_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
         validate_bitnet_eval_answer_corpus_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_bitnet_eval_larger_corpus_decision" {
+        validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_benchmark_v1" {
@@ -14601,6 +14603,225 @@ fn validate_bitnet_eval_answer_corpus_receipt(
     Ok((Some(quality_total as usize), Some(generated_tokens as usize)))
 }
 
+fn validate_bitnet_larger_corpus_decision_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_bitnet_eval_larger_corpus_decision",
+    )?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-BITNET-EX-012")?;
+    require_exact_string_at(path, receipt, &["machine_id"], "apple-m4-mac-mini")?;
+
+    require_exact_string_at(path, receipt, &["accepted_identity", "model", "family"], "bitnet")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["accepted_identity", "model", "sha256"],
+        BITNET_M4_EXPECTED_MODEL_SHA256,
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["accepted_identity", "model", "quant_format"],
+        "I2_S",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["accepted_identity", "tokenizer", "source"],
+        "external_tokenizer_json",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["accepted_identity", "tokenizer", "sha256"],
+        BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["accepted_identity", "tokenizer", "ggml_pre"],
+        "llama-bpe",
+    )?;
+    require_bool_at(path, receipt, &["accepted_identity", "tokenizer", "strict"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["accepted_identity", "prompt_template"],
+        BITNET_M4_PROMPT_TEMPLATE,
+    )?;
+
+    for field in [
+        "use_dense_slm_evidence",
+        "publish_broad_bitnet_quality_envelope",
+        "enable_bitnet_chat",
+        "enable_bitnet_serve",
+        "enable_bitnet_metal",
+    ] {
+        require_bool_at(path, receipt, &["decision", field], false)?;
+    }
+    let expand_now =
+        require_bool_value_at(path, receipt, &["decision", "expand_to_500_cases_now"])?;
+    let repair_first =
+        require_bool_value_at(path, receipt, &["decision", "repair_corpus_scorer_template_first"])?;
+    if expand_now == repair_first {
+        anyhow::bail!(
+            "{} BitNet larger-corpus decision must choose exactly one of expand_to_500_cases_now or repair_corpus_scorer_template_first",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["decision", "summary"])?;
+
+    for field in [
+        "current_100_case_answer_corpus",
+        "current_100_case_task_family_rollup",
+        "current_100_case_reference_vs_rust",
+        "current_100_case_regression",
+        "current_250_case_answer_corpus",
+        "current_250_case_summary",
+        "current_250_case_receipts_check",
+        "current_250_case_regression_context_mismatch",
+    ] {
+        require_non_empty_string_at(path, receipt, &["source_artifacts", field])?;
+    }
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["evidence_100_case", "corpus_name"],
+        "apple-m4-bitnet-eval-seeded-corpus",
+    )?;
+    let cases_100 = require_u64_at(path, receipt, &["evidence_100_case", "cases_total"], true)?;
+    let passed_100 = require_u64_at(path, receipt, &["evidence_100_case", "cases_passed"], false)?;
+    let failed_100 = require_u64_at(path, receipt, &["evidence_100_case", "cases_failed"], false)?;
+    require_u64_exact(path, receipt, &["evidence_100_case", "timeouts"], 0)?;
+    require_u64_exact(path, receipt, &["evidence_100_case", "not_run"], 0)?;
+    require_bool_at(path, receipt, &["evidence_100_case", "fallback_used"], false)?;
+    require_bool_at(path, receipt, &["evidence_100_case", "mechanical_scoring_only"], true)?;
+    if cases_100 != 100 || passed_100 + failed_100 != cases_100 {
+        anyhow::bail!(
+            "{} BitNet larger-corpus decision must record a complete 100-case comparison",
+            path.display()
+        );
+    }
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["evidence_250_case", "corpus_name"],
+        "apple-m4-bitnet-eval-seeded-corpus-250",
+    )?;
+    let cases_250 = require_u64_at(path, receipt, &["evidence_250_case", "cases_total"], true)?;
+    let passed_250 = require_u64_at(path, receipt, &["evidence_250_case", "cases_passed"], false)?;
+    let failed_250 = require_u64_at(path, receipt, &["evidence_250_case", "cases_failed"], false)?;
+    require_u64_exact(path, receipt, &["evidence_250_case", "timeouts"], 0)?;
+    require_u64_exact(path, receipt, &["evidence_250_case", "not_run"], 0)?;
+    require_bool_at(path, receipt, &["evidence_250_case", "fallback_used"], false)?;
+    require_bool_at(path, receipt, &["evidence_250_case", "mechanical_scoring_only"], true)?;
+    let generated_tokens =
+        require_u64_at(path, receipt, &["evidence_250_case", "generated_tokens"], true)?;
+    if cases_250 != 250 || passed_250 + failed_250 != cases_250 {
+        anyhow::bail!(
+            "{} BitNet larger-corpus decision must record a complete 250-case comparison",
+            path.display()
+        );
+    }
+
+    for field in ["first_token_ms", "input_tok_s", "output_tok_s", "decode_steady_state_tok_s"] {
+        for percentile in ["p50", "p90", "p99"] {
+            require_positive_number_at(
+                path,
+                receipt,
+                &["evidence_250_case", "timing", field, percentile],
+            )?;
+        }
+    }
+
+    let family_comparison = receipt["task_family_comparison"].as_array().ok_or_else(|| {
+        anyhow!(
+            "{} BitNet larger-corpus decision is missing task_family_comparison array",
+            path.display()
+        )
+    })?;
+    if family_comparison.len() != 10 {
+        anyhow::bail!(
+            "{} BitNet larger-corpus decision must compare exactly 10 task families",
+            path.display()
+        );
+    }
+    for family in family_comparison {
+        require_non_empty_string_at(path, family, &["family"])?;
+        require_u64_at(path, family, &["cases_100"], true)?;
+        require_u64_at(path, family, &["cases_250"], true)?;
+        require_unit_rate_at(path, family, &["pass_rate_100"])?;
+        require_unit_rate_at(path, family, &["pass_rate_250"])?;
+        let failed_250 = require_u64_at(path, family, &["failed_250"], false)?;
+        if failed_250 > 0 {
+            require_non_empty_string_array_at(path, family, &["failure_taxonomy_250"])?;
+        }
+    }
+
+    require_u64_exact(path, receipt, &["reference_vs_rust", "case_count_100"], 100)?;
+    require_u64_exact(path, receipt, &["reference_vs_rust", "case_count_250"], 250)?;
+    require_bool_at(path, receipt, &["reference_vs_rust", "reference_available_for_250"], false)?;
+    require_non_empty_string_at(path, receipt, &["reference_vs_rust", "case_count_250_status"])?;
+
+    require_bool_at(path, receipt, &["regression_context", "strict_100_vs_250_regression"], false)?;
+    require_bool_at(path, receipt, &["regression_context", "context_mismatch_recorded"], true)?;
+    require_non_empty_string_at(path, receipt, &["regression_context", "mismatch_field"])?;
+
+    if receipt["rationale"].as_array().is_none_or(|items| items.len() < 3) {
+        anyhow::bail!(
+            "{} BitNet larger-corpus decision must record at least three rationale entries",
+            path.display()
+        );
+    }
+    if receipt["recommended_next_items"].as_array().is_none_or(|items| items.is_empty()) {
+        anyhow::bail!(
+            "{} BitNet larger-corpus decision must record recommended next items",
+            path.display()
+        );
+    }
+    if repair_first
+        && !receipt["recommended_next_items"].as_array().unwrap().iter().any(|item| {
+            item["id"].as_str().is_some_and(|id| id.contains("REPAIR"))
+                || item["summary"].as_str().is_some_and(|summary| summary.contains("repair"))
+        })
+    {
+        anyhow::bail!(
+            "{} BitNet repair-first decision must include a repair next item",
+            path.display()
+        );
+    }
+
+    for claim in [
+        "broad_bitnet_quality_claim",
+        "bitnet_performance_claim",
+        "dense_slm_evidence_used",
+        "bitnet_chat_enabled",
+        "bitnet_serve_enabled",
+        "fresh_runtime_chat_or_serve_proof",
+        "full_metal_inference",
+        "qk256",
+        "neural_engine",
+        "mpsgraph",
+        "macbook_runtime_proof",
+        "broad_apple_silicon_performance",
+        "speedup_claim",
+    ] {
+        require_bool_at(path, receipt, &["claim_boundary", claim], false)?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_eval_history"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "larger_corpus_decision"], true)?;
+
+    Ok((Some(cases_250 as usize), Some(generated_tokens as usize)))
+}
+
 fn validate_bitnet_benchmark_v1_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -15946,6 +16167,17 @@ fn require_bool_at(
     Ok(())
 }
 
+fn require_bool_value_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+) -> Result<bool> {
+    let label = json_path_label(segments);
+    json_value_at(value, segments).as_bool().ok_or_else(|| {
+        anyhow!("{} SLM eval summary {label} must be a boolean", receipt_path.display())
+    })
+}
+
 fn require_u64_at(
     receipt_path: &Path,
     value: &serde_json::Value,
@@ -15963,6 +16195,23 @@ fn require_u64_at(
         );
     }
     Ok(number)
+}
+
+fn require_u64_exact(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    expected: u64,
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let observed = require_u64_at(receipt_path, value, segments, false)?;
+    if observed != expected {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be {expected}, got {observed}",
+            receipt_path.display()
+        );
+    }
+    Ok(())
 }
 
 fn require_number_at(
@@ -16271,6 +16520,22 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_bitnet_larger_corpus_decision()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_bitnet_larger_corpus_decision_receipt();
+
+        let summary =
+            validate_mac_receipt_value(Path::new("larger-corpus-decision.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_bitnet_eval_larger_corpus_decision");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(250));
+        assert_eq!(summary.generated_tokens, Some(2086));
+        Ok(())
+    }
+
+    #[test]
     fn mac_receipts_check_accepts_bitnet_benchmark_v1() -> Result<(), Box<dyn std::error::Error>> {
         let receipt = test_bitnet_benchmark_v1_receipt();
 
@@ -16520,6 +16785,134 @@ mod tests {
                     }
                 }
             ]
+        })
+    }
+
+    fn test_bitnet_larger_corpus_decision_receipt() -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_bitnet_eval_larger_corpus_decision",
+            "work_item": "M4-BITNET-EX-012",
+            "machine_id": "apple-m4-mac-mini",
+            "created_at": "2026-05-18T0100Z",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "decision": {
+                "expand_to_500_cases_now": false,
+                "repair_corpus_scorer_template_first": true,
+                "use_dense_slm_evidence": false,
+                "publish_broad_bitnet_quality_envelope": false,
+                "enable_bitnet_chat": false,
+                "enable_bitnet_serve": false,
+                "enable_bitnet_metal": false,
+                "summary": "Repair corpus, scorer, and template issues before expanding BitNet to 500 cases."
+            },
+            "accepted_identity": {
+                "model": {
+                    "family": "bitnet",
+                    "sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+                    "quant_format": "I2_S"
+                },
+                "tokenizer": {
+                    "source": "external_tokenizer_json",
+                    "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+                    "ggml_pre": "llama-bpe",
+                    "strict": true
+                },
+                "prompt_template": BITNET_M4_PROMPT_TEMPLATE
+            },
+            "source_artifacts": {
+                "current_100_case_answer_corpus": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+                "current_100_case_task_family_rollup": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/task-family-pass-rates.json",
+                "current_100_case_reference_vs_rust": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/reference-vs-rust-comparison.json",
+                "current_100_case_regression": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/regression-vs-2026-05-15T2214Z.json",
+                "current_250_case_answer_corpus": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+                "current_250_case_summary": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json",
+                "current_250_case_receipts_check": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json",
+                "current_250_case_regression_context_mismatch": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json"
+            },
+            "evidence_100_case": {
+                "corpus_name": "apple-m4-bitnet-eval-seeded-corpus",
+                "cases_total": 100,
+                "cases_passed": 79,
+                "cases_failed": 21,
+                "timeouts": 0,
+                "not_run": 0,
+                "fallback_used": false,
+                "mechanical_scoring_only": true
+            },
+            "evidence_250_case": {
+                "corpus_name": "apple-m4-bitnet-eval-seeded-corpus-250",
+                "cases_total": 250,
+                "cases_passed": 196,
+                "cases_failed": 54,
+                "timeouts": 0,
+                "not_run": 0,
+                "fallback_used": false,
+                "mechanical_scoring_only": true,
+                "generated_tokens": 2086,
+                "timing": {
+                    "first_token_ms": {"p50": 17087, "p90": 58187, "p99": 70389},
+                    "input_tok_s": {"p50": 1.600581680484173, "p90": 2.3892907890905897, "p99": 2.407711224894193},
+                    "output_tok_s": {"p50": 0.23074704355350445, "p90": 0.7687503002930861, "p99": 1.2106537530266344},
+                    "decode_steady_state_tok_s": {"p50": 1.423, "p90": 2.088, "p99": 2.097}
+                }
+            },
+            "task_family_comparison": [
+                {"family": "arithmetic_exact", "cases_100": 10, "pass_rate_100": 1.0, "cases_250": 15, "pass_rate_250": 0.9333333333333333, "failed_250": 1, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "numeric_tolerance", "cases_100": 10, "pass_rate_100": 0.5, "cases_250": 35, "pass_rate_250": 0.6857142857142857, "failed_250": 11, "failure_taxonomy_250": ["answer_content", "format_only"]},
+                {"family": "fixed_table_qa", "cases_100": 10, "pass_rate_100": 0.6, "cases_250": 35, "pass_rate_250": 0.6571428571428571, "failed_250": 12, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "format_constrained_json", "cases_100": 10, "pass_rate_100": 1.0, "cases_250": 20, "pass_rate_250": 1.0, "failed_250": 0, "failure_taxonomy_250": []},
+                {"family": "closed_label_classification", "cases_100": 10, "pass_rate_100": 0.9, "cases_250": 20, "pass_rate_250": 0.9, "failed_250": 2, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "synthetic_extraction", "cases_100": 10, "pass_rate_100": 0.7, "cases_250": 25, "pass_rate_250": 0.76, "failed_250": 6, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "ordering_sorting", "cases_100": 10, "pass_rate_100": 0.8, "cases_250": 20, "pass_rate_250": 0.85, "failed_250": 3, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "rewrite_normalized", "cases_100": 10, "pass_rate_100": 0.9, "cases_250": 20, "pass_rate_250": 0.75, "failed_250": 5, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "constrained_summary", "cases_100": 10, "pass_rate_100": 0.8, "cases_250": 30, "pass_rate_250": 0.8, "failed_250": 6, "failure_taxonomy_250": ["answer_content"]},
+                {"family": "required_forbidden_tokens", "cases_100": 10, "pass_rate_100": 0.7, "cases_250": 30, "pass_rate_250": 0.7333333333333333, "failed_250": 8, "failure_taxonomy_250": ["answer_content"]}
+            ],
+            "reference_vs_rust": {
+                "case_count_100": 100,
+                "text_matches_100": 54,
+                "mechanical_scoring_matches_100": 83,
+                "case_count_250": 250,
+                "reference_available_for_250": false,
+                "case_count_250_status": "not_available_for_250_case_runtime_receipt"
+            },
+            "regression_context": {
+                "strict_100_vs_250_regression": false,
+                "context_mismatch_recorded": true,
+                "mismatch_field": "corpus.name"
+            },
+            "rationale": [
+                "The 250-case run is complete with zero timeouts, zero not_run cases, and fallback_used=false.",
+                "Aggregate pass rate stayed close to the latest 100-case run, but weak families remain visible.",
+                "The 250-case evidence exposed numeric formatting, fixed-table, extraction, rewrite, and instruction-following repair targets before a 500-case run."
+            ],
+            "recommended_next_items": [
+                {
+                    "id": "M4-BITNET-REPAIR-001",
+                    "summary": "Repair corpus, scorer, and template issues exposed by the 250-case BitNet run before approving 500 cases."
+                }
+            ],
+            "claim_boundary": {
+                "bitnet_eval_history": true,
+                "larger_corpus_decision": true,
+                "broad_bitnet_quality_claim": false,
+                "bitnet_performance_claim": false,
+                "dense_slm_evidence_used": false,
+                "bitnet_chat_enabled": false,
+                "bitnet_serve_enabled": false,
+                "fresh_runtime_chat_or_serve_proof": false,
+                "full_metal_inference": false,
+                "qk256": false,
+                "neural_engine": false,
+                "mpsgraph": false,
+                "macbook_runtime_proof": false,
+                "broad_apple_silicon_performance": false,
+                "speedup_claim": false
+            }
         })
     }
 
