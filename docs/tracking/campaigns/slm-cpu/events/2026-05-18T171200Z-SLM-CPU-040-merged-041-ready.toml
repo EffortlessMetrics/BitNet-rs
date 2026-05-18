@@ -1,0 +1,18 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T17:12:00Z"
+event = "merged"
+item = "SLM-CPU-040"
+pr = 5715
+head_sha = "153ea5a22ad0d6949c27c7229eba068a2ed89b12"
+merge_sha = "1060a032a7a0c01e1e48b8676328874a873ef88d"
+branch = "codex/slm-cpu-040-workspace-down-proj-storage"
+actor = "codex"
+summary = "Recorded SLM-CPU-040 as merged and queued SLM-CPU-041 as the next behavior-preserving linear output-storage API boundary slice."
+
+notes = [
+  "SLM-CPU-040 reaches the exact FeedForward::down_proj output boundary and classifies reusable storage as blocked by candle_nn::Linear::forward returning an owned Tensor.",
+  "SLM-CPU-041 is ready to add or adopt a behavior-preserving dense linear output-storage API boundary, or further narrow the no-reuse blocker without changing math semantics.",
+  "The next slice must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false before claiming any improvement.",
+  "No sustained-throughput, broad-answer-quality, Q4/Q5 runtime, accelerator, server, Qwen3.5, or BitNet QK256 claim is made.",
+]
