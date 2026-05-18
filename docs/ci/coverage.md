@@ -30,9 +30,11 @@ Coverage runs are gated by branch, label, or manual dispatch:
 - Timeout: 60 minutes
 - Threshold: 70% line coverage on pushes to `main`
 
-The workflow lives in `.github/workflows/coverage.yml`. It runs
-`cargo llvm-cov nextest` inside the pinned Rust CI image and emits JSON, LCOV,
-and text reports.
+The workflow lives in `.github/workflows/coverage.yml`. It runs as a job
+container using the pinned Rust CI image, then runs `cargo llvm-cov nextest`
+and emits JSON, LCOV, and text reports. The hosted runner is not cleaned before
+coverage starts; the image keeps the large Rust coverage toolchain out of the
+runner payload instead.
 
 ## Artifacts
 
@@ -41,6 +43,7 @@ The `coverage-report` artifact is uploaded on every run and contains:
 - `coverage.json`
 - `coverage.txt`
 - `lcov.info`
+- `target/bitnet/reports/coverage-receipt.json`
 
 Artifacts are retained for 7 days.
 

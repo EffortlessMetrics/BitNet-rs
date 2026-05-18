@@ -46,3 +46,37 @@ must_not_claim = [
   "Coverage thresholds are complete.",
   "Runtime behavior changed.",
 ]
+
+[[work_item]]
+id = "CI-COVERAGE-002"
+status = "pr_open"
+branch = "codex/coverage-container-cleanup-3394"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Run coverage as a rust-ci job container and remove hosted-runner disk cleanup and nested Docker execution from the coverage workflow."
+commands = [
+  "cargo fmt --all -- --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/images/rust-ci/**",
+  ".github/workflows/coverage.yml",
+  "docs/ci/coverage.md",
+  "docs/tracking/campaigns/ci-coverage/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Coverage no longer relies on hosted-runner disk cleanup before collection.",
+  "Coverage runs inside the pinned rust-ci job container.",
+]
+must_not_claim = [
+  "Coverage thresholds are complete.",
+  "Runtime behavior changed.",
+  "Coverage proves test quality or model correctness.",
+]
