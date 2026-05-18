@@ -8281,7 +8281,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-PROFILE-RUN-002"
-status = "in_progress"
+status = "pr_open"
+pr = 5803
+head_sha = "ee10c82dcafb65bb9c19552a424d326c23da3d50"
 branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-002-validator"
 stackable = false
 review_mode = "codex_premerge"
