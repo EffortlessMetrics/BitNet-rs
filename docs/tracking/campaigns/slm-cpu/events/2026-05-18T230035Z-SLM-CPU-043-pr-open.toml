@@ -1,0 +1,15 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T23:00:35Z"
+event = "pr_open"
+item = "SLM-CPU-043"
+pr = 5794
+head_sha = "2661f94be70693fc3ffad5d8fb9b2bad947775ad"
+branch = "codex/slm-cpu-043-q8-packed-linear-prototype"
+actor = "codex"
+summary = "Opened the Q8_0 dense linear sidecar prototype slice."
+
+notes = [
+  "The PR adds a fixture-level Q8_0 packed sidecar prototype that dequantizes inside matvec and compares against the eager F32 fixture output.",
+  "The slice does not replace the production dense runtime and does not claim speedup, sustained throughput, Q4/Q5 runtime support, accelerator execution, Qwen3.5 support, or BitNet QK256 changes.",
+]
