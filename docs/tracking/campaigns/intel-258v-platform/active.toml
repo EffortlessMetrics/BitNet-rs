@@ -6749,6 +6749,62 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-OPENVINO-QUAL-POLICY-001"
+status = "pr_open"
+pr = 5639
+head_sha = "49bf440931942b7b7eae6a19aeb19fa9bedbc039"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-POLICY-001-exact-answer"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-QUAL-REPORT-001", "LNL258V-OV-QUAL-005"]
+acceptance = "Codify OpenVINO Lunar Lake exact-answer generation policy for normalized-match corpus-v2 failures, distinguishing fixture-budget overgeneration from true exact-answer instruction misses, naming the current yes_no_clear_sky and stop_token_one_word_done policy outcomes from committed sensitivity evidence, and keeping GPU/NPU routes blocked until fixture or generation-policy changes are rerun without new inference, route promotion, speedup, power, acceleration, or BitNet QK256/I2_S claims."
+commands = [
+  "npx --yes markdownlint-cli2@0.18.1 --config .markdownlint.jsonc docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md plans/openvino-lunar-lake/implementation-plan.md",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/quality/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO exact-answer generation policy distinguishes fixture-budget overgeneration from true exact-answer instruction misses.",
+  "The current yes_no_clear_sky and stop_token_one_word_done OpenVINO corpus-v2 failures have policy outcomes documented from committed sensitivity evidence.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted.",
+]
+must_not_claim = [
+  "New model inference is executed.",
+  "OpenVINO corpus fixtures are changed.",
+  "OpenVINO generation behavior is changed.",
+  "OpenVINO GPU or NPU answer quality is newly proven.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Native OpenCL execution is proven.",
+  "Native NPU execution is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-OPENVINO-STATUS-001"
 status = "merged"
 pr = 5620
