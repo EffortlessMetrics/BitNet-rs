@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T20:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-POLICY-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-POLICY-001-exact-answer"
+pr = 5639
+head_sha = "01c2feb1ffd716df23904a6ed88b1b49dfa6edb9"
+merge_sha = "bdc19ba7b3cbaef8dc23fae5a81e58ccbb739a18"
+summary = "Merged PR #5639 for the OpenVINO exact-answer generation policy."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5639 codified exact-answer policy for fixture-budget overgeneration and true instruction misses using committed OpenVINO generation-budget sensitivity evidence.",
+  "The merge does not change corpus fixtures, OpenVINO generation behavior, route promotion, speedup or power claims, native OpenCL/NPU claims, accelerator claims, or BitNet QK256/I2_S behavior.",
+]

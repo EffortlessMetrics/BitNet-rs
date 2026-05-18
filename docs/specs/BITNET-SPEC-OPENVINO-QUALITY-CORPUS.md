@@ -177,6 +177,47 @@ Changing generation config resets quality comparability for route-promotion
 review. NPU receipts must follow the extra constraints in
 `BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE`.
 
+## Exact-Answer Generation Policy
+
+Exact-answer cases are promotion gates, not broad chat-quality tests. A route
+must pass them under the accepted fixture policy before the matching profile can
+be promoted.
+
+Normalized exact-answer failures are classified into two policy paths:
+
+| Failure type | Required handling |
+| --- | --- |
+| fixture-budget overgeneration | The expected answer appears but extra text violates the exact gate; adjust fixture budget, stop policy, or generation policy only through an accepted spec/update, then rerun the affected routes. |
+| true exact-answer instruction miss | The expected answer does not appear under tested budgets; do not treat smaller budgets as a fix, and keep the route blocked until prompt, template, generation policy, or model behavior is corrected and rerun. |
+
+Generation-budget sensitivity evidence may explain why a failure happened, but
+it does not by itself pass the case. A smaller-budget pass means the fixture or
+stop/max-token policy may be too permissive for that exact-answer case; it is
+not route-promotion evidence until the canonical fixture is changed and rerun.
+
+Max-token truncation is not the same thing as EOS or stop-token correctness.
+Receipts must keep `stop_reason`, `max_new_tokens`, stop sequences, and
+generated-token source visible so later reviewers can distinguish:
+
+- an answer that naturally stops after the exact token;
+- an answer clipped by a stricter token budget;
+- an answer that ignores the instruction and produces the wrong token;
+- an answer whose decoded text passes but whose direct token IDs are
+  unavailable.
+
+For the current Lunar Lake corpus-v2 evidence:
+
+- `yes_no_clear_sky` is fixture-budget overgeneration-sensitive because
+  `max_new_tokens=1` passes on CPU, GPU.0, and NPU while the fixture budget
+  fails.
+- `stop_token_one_word_done` is a true exact-answer instruction miss for the
+  tested budgets because no tested budget passes on CPU, GPU.0, or NPU.
+
+No OpenVINO GPU/NPU route may be promoted for a profile containing either case
+until the canonical fixture or generation policy is updated and the route passes
+the rerun, or a later accepted spec marks the case diagnostic-only for that
+profile.
+
 ## Failure Taxonomy
 
 Failures must be classified with one primary class:

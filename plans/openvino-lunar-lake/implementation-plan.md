@@ -307,10 +307,37 @@ Acceptance additions:
 - Claim boundaries separate OpenVINO dense SLM evidence from native OpenCL,
   native NPU, and BitNet QK256/I2_S proof.
 
+### Work item: LNL258V-OPENVINO-QUAL-POLICY-001
+
+Status: merged
+Linked PR: #5639
+Blocked by: `LNL258V-OPENVINO-QUAL-REPORT-001`, `LNL258V-OV-QUAL-005`
+
+Codify exact-answer generation policy for normalized-match OpenVINO corpus-v2
+failures. The policy must distinguish fixture-budget overgeneration from true
+exact-answer instruction misses, define when smaller-budget evidence may
+justify a fixture or generation-policy change, and keep GPU/NPU routes blocked
+until the accepted policy is rerun.
+
+Production delta: spec and tracker wiring only. Do not edit corpus fixtures,
+runner scripts, runtime code, committed hardware receipts, route promotion
+artifacts, or OpenVINO generation behavior.
+
+Acceptance additions:
+
+- The quality-corpus spec defines exact-answer policy for overgeneration versus
+  instruction misses.
+- The spec names the current `yes_no_clear_sky` and
+  `stop_token_one_word_done` policy outcomes from committed sensitivity
+  evidence.
+- Route promotion remains blocked until canonical fixture or generation policy
+  changes are rerun, or a later accepted spec marks a case diagnostic-only.
+- Claim boundaries preserve no inference, route promotion, speedup, power,
+  accelerator, or BitNet QK256/I2_S claims.
+
 ### Remaining Phase C Items
 
-1. Codify generation-budget sensitivity evidence for normalized-match failures.
-2. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
+1. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
 
 No route can promote until profile cases pass or an explicit spec marks a case
 diagnostic-only.
