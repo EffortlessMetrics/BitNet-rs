@@ -2,6 +2,35 @@
 
 Essential guidance for working with the bitnet-rs codebase.
 
+## Repo Source-Of-Truth Stack
+
+BitNet-rs uses this linked source-of-truth stack:
+
+```text
+Roadmap → Proposal → Spec → ADR → Plan → Active goal → PR → Proof
+```
+
+Before making changes, read:
+
+1. `docs/reference/SPEC_SYSTEM.md`;
+2. `.bitnet-rs/goals/active.toml` when present, otherwise the campaign
+   `active.toml` explicitly named by the task;
+3. the linked implementation plan;
+4. the linked spec for the selected work item;
+5. any linked ADRs.
+
+Work on exactly one ready work item at a time. Do not create a new lane, mix
+proposal/spec/ADR/plan/runtime changes, broaden support claims, or hand-edit
+generated status unless the selected work item explicitly requires it. A change
+is ready only when the intended artifact exists, linked docs are updated, proof
+commands have run or are honestly marked unavailable, claim boundaries are
+respected, and `git diff --check` passes.
+
+Stop and report instead of guessing when the active goal is missing or stale,
+linked specs are missing, proof commands cannot run, generated status differs
+from committed status, requested work conflicts with an ADR, or unrelated staged
+changes exist.
+
 ## Project Identity
 
 - **Name:** bitnet-rs — 1-bit LLM inference engine in Rust
