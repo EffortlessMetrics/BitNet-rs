@@ -61,6 +61,8 @@ const BITNET_M4_EXPECTED_TOKENIZER_SHA256: &str =
 const BITNET_M4_PROMPT_TEMPLATE: &str = "bitnetcpp-answer";
 const BITNET_M4_MODEL_ID: &str = "microsoft-bitnet-b1.58-2B-4T-i2s";
 const BITNET_M4_DEFAULT_TOKENIZER_PATH: &str = "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json";
+const BITNET_M4_EVAL_CORPUS_NAMES: &[&str] =
+    &["apple-m4-bitnet-eval-seeded-corpus", "apple-m4-bitnet-eval-seeded-corpus-250"];
 const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
 const OPERATOR_PROFILE_TOKENS: &[usize] = &[16, 32, 64];
 const PERFORMANCE_PROFILE_TOKENS: &[usize] = &[16, 32, 64, 128];
@@ -14362,12 +14364,22 @@ fn validate_bitnet_eval_answer_corpus_receipt(
     require_exact_string_at(path, receipt, &["tokenizer", "authority", "ggml_pre"], "llama-bpe")?;
     require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
 
-    require_exact_string_at(
-        path,
-        receipt,
-        &["corpus", "name"],
-        "apple-m4-bitnet-eval-seeded-corpus",
-    )?;
+    let corpus_name = require_non_empty_string_at(path, receipt, &["corpus", "name"])?;
+    if !BITNET_M4_EVAL_CORPUS_NAMES.contains(&corpus_name) {
+        anyhow::bail!(
+            "{} BitNet eval receipt corpus.name must be one of {:?}, got {corpus_name:?}",
+            path.display(),
+            BITNET_M4_EVAL_CORPUS_NAMES
+        );
+    }
+    if let Some(corpus_id) = receipt["corpus"]["id"].as_str() {
+        if corpus_id != corpus_name {
+            anyhow::bail!(
+                "{} BitNet eval receipt corpus.id must match corpus.name when present",
+                path.display()
+            );
+        }
+    }
     let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
     let quality_total = require_u64_at(path, receipt, &["quality_summary", "total"], true)?;
     let quality_passed = require_u64_at(path, receipt, &["quality_summary", "passed"], false)?;
@@ -16232,6 +16244,23 @@ mod tests {
         let receipt = test_bitnet_eval_answer_corpus_receipt();
 
         let summary = validate_mac_receipt_value(Path::new("bitnet-eval.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_local_answer_corpus");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(3));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_bitnet_eval_250_answer_corpus()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_bitnet_eval_answer_corpus_receipt();
+        receipt["corpus"]["id"] = serde_json::json!("apple-m4-bitnet-eval-seeded-corpus-250");
+        receipt["corpus"]["name"] = serde_json::json!("apple-m4-bitnet-eval-seeded-corpus-250");
+
+        let summary = validate_mac_receipt_value(Path::new("bitnet-eval-250.json"), &receipt)?;
 
         assert_eq!(summary.artifact_kind, "bitnet_apple_m4_local_answer_corpus");
         assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);

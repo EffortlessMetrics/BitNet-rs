@@ -1306,7 +1306,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-011"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-011-bitnet-250-run"
 stackable = false
 review_mode = "codex_premerge"
@@ -1315,14 +1315,15 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-BITNET-EX-010"]
 acceptance = "Run the accepted Microsoft I2_S BitNet GGUF and accepted external tokenizer on the 250-case BitNet corpus through apple-m4-cpu-neon, publishing aggregate and child receipts, task-family rollup, timing, token IDs, fallback=false evidence, receipt validation, and either a compatible regression comparison or an explicit context-mismatch reason for the 100-case baseline."
 commands = [
-  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet answer-corpus --device apple-m4-cpu-neon --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --per-prompt-timeout-seconds 300",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --json",
-  "bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-eval/answer-corpus.json --json",
+  "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/<baseline-date>/bitnet-eval/answer-corpus.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
   "ci/quality/**",
   "ci/hardware/apple-m4-mac-mini/**/bitnet-eval-250/**",
   "docs/slm/**",

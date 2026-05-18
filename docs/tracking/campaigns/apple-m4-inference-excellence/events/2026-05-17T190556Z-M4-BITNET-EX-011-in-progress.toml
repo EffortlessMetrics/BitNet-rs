@@ -1,0 +1,13 @@
+timestamp = "2026-05-17T19:05:56Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-011"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-011-bitnet-250-run"
+
+notes = [
+  "Started the bounded 250-case accepted BitNet apple-m4-cpu-neon answer-corpus run using the accepted Microsoft I2_S GGUF and external tokenizer.",
+  "This is a receipt-generation item only; it does not claim broad BitNet quality, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon performance.",
+]
