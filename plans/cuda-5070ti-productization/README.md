@@ -18,6 +18,8 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
   [`BITNET-PROP-0002`](../../docs/proposals/BITNET-PROP-0002-9950x3d-5070ti-cuda-productization.md)
 - Contract spec:
   [`BITNET-SPEC-0007`](../../docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
+- CUDA route contract:
+  [`BITNET-SPEC-CUDA-ROUTE-CONTRACT`](../../docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - Server readiness spec:
   [`BITNET-SPEC-0010`](../../docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md)
 - Bench ADR:
@@ -47,13 +49,18 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
 ## Claim Boundary
 
 This plan does not claim new runtime behavior. It only defines the order,
-acceptance, receipts, and rollback paths for future PRs.
+acceptance, receipts, and rollback paths for future PRs. CUDA-route proof now
+flows through the narrower route contract so future receipts can distinguish
+BitNet QK256 CUDA, dense regular-LLM CUDA, diagnostics, layer planning, and
+server shared-engine profiles without proof-family conflation.
 
 Do not use this plan to claim:
 
 - dense Qwen proof as BitNet proof;
 - BitNet QK256 proof as dense SLM proof;
 - generic `cuda` as RTX 5070 Ti proof;
+- CUDA receipts without a selected route, execution plan, and proof-family
+  booleans as promotable product proof;
 - hardware execution as answer quality;
 - benchmark baselines as accepted speedup;
 - server readiness from CLI receipts.

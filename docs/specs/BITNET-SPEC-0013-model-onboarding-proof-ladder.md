@@ -24,6 +24,7 @@ This spec relies on existing authorities instead of replacing them:
 - [Native Rust inference product proposal](../proposals/BITNET-PROP-0003-native-rust-inference-product.md)
 - [Source-of-truth and claim boundaries](BITNET-SPEC-0001-source-of-truth-and-claim-boundaries.md)
 - [9950X3D + RTX 5070 Ti CUDA product contract](BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
+- [CUDA Route Contract](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - [Server readiness proof boundary](BITNET-SPEC-0010-server-readiness-proof-boundary.md)
 - [Answer Artifact Gate](../model-artifacts/ANSWER_ARTIFACT_GATE.md)
 - [Model Coverage Matrix](../model-artifacts/MODEL_COVERAGE_MATRIX.md)
@@ -218,6 +219,14 @@ Must not claim:
 - concurrency readiness without concurrency proof;
 - speedup or full residency without separate proof.
 
+## CUDA Route Contract
+
+CUDA model rows and receipts that claim CUDA execution must follow the narrower
+[BITNET-SPEC-CUDA-ROUTE-CONTRACT](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md).
+In particular, generic `cuda` must resolve to the strict backend before proof,
+`selected_route` must use the documented CUDA route IDs, strict CUDA fallback is
+a hard failure, and proof-family booleans must stay non-interchangeable.
+
 ## Promotion Rules
 
 - A model must not skip `reference_good` or `cpu_answer_ready` before
@@ -225,6 +234,8 @@ Must not claim:
   substitute and updates the model coverage row.
 - Dense CUDA evidence cannot satisfy BitNet I2_S/QK256 proof.
 - BitNet I2_S/QK256 evidence cannot satisfy dense SLM or small dense LLM proof.
+- CUDA receipts without a selected route and execution plan cannot promote
+  accelerator, product, server, speed, or residency claims.
 - Qwen2.5 evidence cannot satisfy Qwen3, SmolLM2, Llama, Gemma, or Phi rows.
 - Structural validity cannot satisfy answer readiness.
 - Hardware detection cannot satisfy selected-backend execution proof.
