@@ -266,6 +266,12 @@ Those control jobs do not start `macos-14`. Applying `macos`,
 `apple-silicon`, `metal`, or `full-ci` selects the expensive Apple jobs; main,
 manual, merge-queue, and Mac/Metal-path changes still preserve Apple proof.
 
+Performance Baseline Tracking uses the same selected-lane shape. Ordinary PRs
+only run its cheap route job. Applying `performance`, `perf`, or `full-ci`
+selects the historical workspace smoke; the full benchmark matrix remains
+scheduled/manual evidence unless a later rollout explicitly promotes PR
+benchmark selection.
+
 ## Label Matrix
 
 | Label | Workflow | Duration | Blocking on `main` | Blocking on PRs |
