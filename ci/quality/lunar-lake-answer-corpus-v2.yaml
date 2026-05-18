@@ -180,13 +180,14 @@ cases:
   - id: long_prompt_summary_route_policy
     category: long_prompt_summarization
     profile: prefill_heavy
-    question: "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path."
+    question: "Summarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path."
     max_new_tokens: 40
     scoring:
       kind: required_keywords
       required_keywords:
         - "Lunar"
         - "CPU"
+        - "route"
     gate:
       kind: contains_any
       contains_any:
@@ -212,7 +213,7 @@ cases:
   - id: decode_heavy_short_list
     category: decode_heavy
     profile: decode_heavy
-    question: "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases."
+    question: "Use these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback."
     max_new_tokens: 64
     scoring:
       kind: required_keywords

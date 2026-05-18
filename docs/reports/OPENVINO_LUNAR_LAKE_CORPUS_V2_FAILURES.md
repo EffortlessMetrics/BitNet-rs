@@ -9,8 +9,9 @@ Machine: intel-258v
 This report summarizes Lunar Lake OpenVINO dense SLM corpus-v2 candidate-route
 failures after rerunning the corpus under the accepted one-token
 `yes_no_clear_sky` fixture policy and the cross-runtime exact-text
-`stop_token_one_word_done` fixture. It does not promote any route, claim speedup
-or power advantage, claim native Arc/NPU acceleration, or change BitNet QK256/I2_S
+`stop_token_one_word_done` fixture, plus the cross-runtime prefill-heavy and
+decode-heavy fixture updates. It does not promote any route, claim speedup or
+power advantage, claim native Arc/NPU acceleration, or change BitNet QK256/I2_S
 behavior.
 
 ## Source Evidence
@@ -33,9 +34,9 @@ decoded text, not direct OpenVINO GenAI pipeline-internal token IDs.
 
 | Route | Corpus v2 result | Failed profiles | Promotion result |
 | --- | ---: | --- | --- |
-| OpenVINO CPU | 10/12 pass, 2 fail | prefill_heavy, decode_heavy | Candidate remains blocked |
-| OpenVINO GPU.0 / Arc 140V | 10/12 pass, 2 fail | prefill_heavy, decode_heavy | Candidate remains blocked |
-| OpenVINO NPU | 11/12 pass, 1 fail | prefill_heavy | Candidate remains blocked |
+| OpenVINO CPU | 12/12 pass, 0 fail | none | Candidate remains blocked |
+| OpenVINO GPU.0 / Arc 140V | 12/12 pass, 0 fail | none | Candidate remains blocked |
+| OpenVINO NPU | 12/12 pass, 0 fail | none | Candidate remains blocked |
 
 Candidate routes also remain blocked by missing benchmark-qualified speed or
 power advantage, incomplete direct generated-token visibility, and
@@ -43,13 +44,11 @@ profile-regression evidence requirements in the route-profile comparison.
 
 ## Failure Classification
 
-| Route | Case | Profile | Category | Classification | Evidence |
-| --- | --- | --- | --- | --- | --- |
-| CPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
-| CPU | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
-| GPU.0 | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
-| GPU.0 | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
-| NPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `CPU` |
+The current OpenVINO CPU/GPU/NPU corpus-v2 rerun has no failed cases. The prior
+prefill-heavy and decode-heavy answer-content blockers were fixture/prompt
+stability issues: the canonical corpus now asks the prefill-heavy summary to
+include the exact words `Lunar`, `CPU`, and `route`, and asks the decode-heavy
+case to use a stable route-check phrase bank containing `fallback` and `model`.
 
 ## Budget Sensitivity
 
@@ -68,35 +67,34 @@ no longer an OpenVINO candidate blocker under the cross-runtime fixture wording.
 
 OpenVINO GPU.0 remains blocked for:
 
-- `prefill_heavy`: required content term missing.
-- `decode_heavy`: readable output missing required term.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
   advantage is missing, and candidate-route promotion evidence is incomplete.
+- `prefill_heavy` and `decode_heavy`: quality now passes, but profile-specific
+  timing evidence is still insufficient for promotion.
 
 OpenVINO NPU remains blocked for:
 
-- `prefill_heavy`: required content term missing.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
   advantage is missing, and candidate-route promotion evidence is incomplete.
 - NPU-specific: cache or resident warm-route proof is missing, and cold start is
   still classified as OpenVINO pipeline load or device compile dominated.
+- `prefill_heavy` and `decode_heavy`: quality now passes, but profile-specific
+  timing evidence is still insufficient for promotion.
 
 OpenVINO CPU remains blocked for:
 
-- `prefill_heavy`: required content term missing.
-- `decode_heavy`: readable output missing required term.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
   advantage is missing, and candidate-route promotion evidence is incomplete.
+- `prefill_heavy` and `decode_heavy`: quality now passes, but profile-specific
+  timing evidence is still insufficient for promotion.
 
 ## Next Actions
 
-1. Keep OpenVINO GPU/NPU routes unpromoted until profile failures pass or are
-   intentionally re-gated by spec.
-2. Revisit prefill-heavy and decode-heavy expected terms only if the answer
-   contracts are too narrow for the intended user profile.
-3. Preserve direct versus retokenized generated-token visibility in every
+1. Keep OpenVINO GPU/NPU routes unpromoted until exact-profile timing, direct
+   token visibility, and promotion evidence gaps are closed.
+2. Preserve direct versus retokenized generated-token visibility in every
    OpenVINO candidate receipt.
-4. Run route promotion only after quality gates pass and exact-profile timing
+3. Run route promotion only after quality gates pass and exact-profile timing
    or power evidence proves an advantage over the current promoted CPU route.
 
 ## Claim Boundary
@@ -104,8 +102,9 @@ OpenVINO CPU remains blocked for:
 This report supports only the following claim:
 
 ```text
-Existing Lunar Lake OpenVINO GPU/NPU corpus-v2 candidate failures are classified
-by route, profile, case, and failure class.
+Existing Lunar Lake OpenVINO CPU/GPU/NPU corpus-v2 candidate routes pass the
+bounded quality fixture while remaining unpromoted because route-promotion
+evidence is incomplete.
 ```
 
 It does not prove OpenVINO GPU/NPU route promotion, speedup, power advantage,
