@@ -168243,6 +168243,18 @@ receiver_fingerprint = '.expect("slice length checked"),'
 [[baseline]]
 path = "crates/bitnet-models/src/formats/gguf/loader.rs"
 family = "expect"
+snippet = '.expect("tied lm_head should be valid when token embeddings are present");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("tied lm_head should be valid when token embeddings are present");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/formats/gguf/loader.rs"
+family = "expect"
 snippet = 'GgufLoader::f16_values_to_f32(&data, &[3, 2], "token_embd.weight").expect("f16 parse");'
 count = 1
 
@@ -169131,6 +169143,18 @@ receiver_fingerprint = "skip_gguf_value_seek(&mut cur, t1).unwrap();"
 [[baseline]]
 path = "crates/bitnet-models/src/gguf_simple.rs"
 family = "expect"
+snippet = 'let config = extract_config_from_gguf(&reader).expect("extract config");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let config = extract_config_from_gguf(&reader).expect("extract config");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "expect"
 snippet = 'let dir = TempDir::new().expect("tempdir");'
 count = 2
 
@@ -169155,6 +169179,18 @@ receiver_fingerprint = 'let err = result.err().expect("error").to_string();'
 [[baseline]]
 path = "crates/bitnet-models/src/gguf_simple.rs"
 family = "expect"
+snippet = 'let reader = GgufReader::new(&data).expect("metadata-only gguf reader");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("metadata-only gguf reader");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "expect"
 snippet = 'std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");'
 count = 2
 
@@ -169163,6 +169199,30 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "panic_macro"
+snippet = 'other => panic!("test helper does not write {other:?}"),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'other => panic!("test helper does not write {other:?}"),'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "panic_macro"
+snippet = 'panic!("test helper only writes string arrays");'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'panic!("test helper only writes string arrays");'
 
 [[baseline]]
 path = "crates/bitnet-models/src/gguf_simple.rs"
@@ -197675,6 +197735,42 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'self.bpe_piece_to_gguf_id.as_ref().expect("BPE piece-to-ID map should be present");'
+
+[[baseline]]
+path = "crates/bitnet-tokenizers/src/hf_tokenizer.rs"
+family = "expect"
+snippet = 'HfTokenizer::from_file(&path).expect("fixture tokenizer should load")'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'HfTokenizer::from_file(&path).expect("fixture tokenizer should load")'
+
+[[baseline]]
+path = "crates/bitnet-tokenizers/src/hf_tokenizer.rs"
+family = "expect"
+snippet = 'let ids = tokenizer.encode("<s>▁t", false, true).expect("encode should succeed");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let ids = tokenizer.encode("<s>▁t", false, true).expect("encode should succeed");'
+
+[[baseline]]
+path = "crates/bitnet-tokenizers/src/hf_tokenizer.rs"
+family = "expect"
+snippet = 'let ids = tokenizer.encode("▁t", true, true).expect("encode should succeed");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let ids = tokenizer.encode("▁t", true, true).expect("encode should succeed");'
 
 [[baseline]]
 path = "crates/bitnet-tokenizers/src/lib.rs"
