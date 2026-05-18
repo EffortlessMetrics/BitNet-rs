@@ -25,7 +25,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # The tier-0 lane is bounded by timeout-minutes. Let started report-refresh
+  # runs finish so PR Gate receives a real result instead of paying most of the
+  # CI cost and replacing it with a cancellation.
+  cancel-in-progress: false
 
 permissions:
   contents: read
