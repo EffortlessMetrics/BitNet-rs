@@ -1,0 +1,51 @@
+{
+  "artifact_kind": "bitnet_apple_m4_eval_regression_context_mismatch",
+  "schema_version": "1.0.0",
+  "timestamp": "2026-05-18T00:22:13Z",
+  "campaign": "apple-m4-inference-excellence",
+  "work_item": "M4-BITNET-EX-011",
+  "observed_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+  "baseline_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+  "command": "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json --json",
+  "command_exit_code": 1,
+  "matched_context": false,
+  "context_mismatch": {
+    "field": "corpus.name",
+    "observed": "apple-m4-bitnet-eval-seeded-corpus-250",
+    "baseline": "apple-m4-bitnet-eval-seeded-corpus",
+    "reason": "The observed receipt is the 250-case BitNet corpus introduced by M4-BITNET-EX-010, while the baseline is the earlier 100-case BitNet corpus. Strict regression comparison is intentionally blocked because corpus identity, selected case IDs, and case count differ."
+  },
+  "observed_summary": {
+    "case_count": 250,
+    "passed": 196,
+    "failed": 54,
+    "timeout": 0,
+    "not_run": 0,
+    "selected_backend": "apple-m4-cpu-neon",
+    "fallback_used": false
+  },
+  "baseline_summary": {
+    "case_count": 100,
+    "passed": 79,
+    "failed": 21,
+    "timeout": 0,
+    "not_run": 0,
+    "selected_backend": "apple-m4-cpu-neon",
+    "fallback_used": false
+  },
+  "claim_boundary": {
+    "strict_regression_performed": false,
+    "context_mismatch_recorded": true,
+    "bitnet_quality_claimed": false,
+    "bitnet_performance_claimed": false,
+    "dense_slm_evidence_used": false,
+    "chat_enabled": false,
+    "serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "mpsgraph_claimed": false,
+    "macbook_evidence": false,
+    "broad_apple_silicon_claimed": false
+  }
+}

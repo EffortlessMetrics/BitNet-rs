@@ -1,0 +1,14 @@
+[
+  {
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+    "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+    "requested_backend": "apple-m4-cpu-neon",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "prompt_count": 250,
+    "generated_tokens": 2086,
+    "passed": true,
+    "regression": null
+  }
+]

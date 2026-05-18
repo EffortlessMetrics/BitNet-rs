@@ -164,12 +164,49 @@ for the 500-case expansion-or-repair decision.
 mechanical scoring authority, but no new runtime pass-rate or performance
 claim.
 
-The receipt records generated text, generated token IDs, tokenizer authority,
-model SHA, per-case timing, task-family scoring, and failure taxonomy for the
-bounded corpus. It also keeps the explicit claim boundary: this is not a broad
-BitNet quality benchmark, not a performance envelope, not dense SLM evidence,
-and not chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad
-Apple Silicon proof.
+`M4-BITNET-EX-011` runs that 250-case corpus through the accepted Microsoft
+I2_S BitNet GGUF, accepted external tokenizer, and `apple-m4-cpu-neon` backend.
+
+Recorded report:
+
+- Aggregate receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json`
+- Child receipts:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus-runs/*.json`
+- Derived compact summary:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json`
+- Receipt validation:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json`
+- Strict regression context mismatch:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json`
+
+The live run records 250 mechanically scored cases, 196 passes, 54
+quality-failed cases, zero timeouts, generated token IDs for every case, 2,086
+generated tokens, and `fallback_used=false`. The compact summary records p50,
+p90, and p99 timing for model load, tokenizer load, prompt tokenization,
+prefill, first token, decode, input tok/s, output tok/s, and sampling overhead.
+
+| Task family | Passed | Quality failed |
+|---|---:|---:|
+| arithmetic_exact | 14 | 1 |
+| numeric_tolerance | 24 | 11 |
+| fixed_table_qa | 23 | 12 |
+| format_constrained_json | 20 | 0 |
+| closed_label_classification | 18 | 2 |
+| synthetic_extraction | 19 | 6 |
+| ordering_sorting | 17 | 3 |
+| rewrite_normalized | 15 | 5 |
+| constrained_summary | 24 | 6 |
+| required_forbidden_tokens | 22 | 8 |
+
+The regression command intentionally does not compare this receipt against the
+100-case baseline because the corpus identity, selected case IDs, and case
+count differ. The context-mismatch artifact records that boundary explicitly.
+This is bounded BitNet runtime evidence for one accepted
+artifact/tokenizer/backend identity only. It is not a broad BitNet quality
+benchmark, not a performance envelope, not dense SLM evidence, and not chat,
+serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon
+proof.
 
 ## M4 Benchmark Report Slice
 

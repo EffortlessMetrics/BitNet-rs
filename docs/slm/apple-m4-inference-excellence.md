@@ -490,6 +490,48 @@ constrained_summary=30, and required_forbidden_tokens=30. This is corpus
 definition and dry-run validation only; runtime pass rates wait for
 `M4-BITNET-EX-011`.
 
+`M4-BITNET-EX-011` runs that 250-case BitNet corpus on the M4 Mac mini through
+the accepted Microsoft I2_S GGUF, accepted external tokenizer, and
+`apple-m4-cpu-neon` backend:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus-runs/*.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json
+```
+
+The receipt records 250 mechanically scored cases, 196 passes, 54
+quality-failed cases, zero timeouts, `fallback_used=false`, generated token IDs
+for every case, and 2,086 generated tokens. The compact summary records timing
+and throughput p50/p90/p99 from per-case receipts; first-token p50 is 17,087 ms,
+input tok/s p50 is 1.601, output tok/s p50 is 0.231, and decode steady-state
+tok/s p50 is 1.423. These numbers describe this bounded run only, not a
+performance envelope.
+
+| Task family | Current Rust pass rate | Main failure categories |
+|---|---:|---|
+| arithmetic_exact | 14 / 15 | `answer_content=1` |
+| numeric_tolerance | 24 / 35 | `answer_content=11`, `format_only=2` |
+| fixed_table_qa | 23 / 35 | `factual_table=12` |
+| format_constrained_json | 20 / 20 | none |
+| closed_label_classification | 18 / 20 | `answer_content=2` |
+| synthetic_extraction | 19 / 25 | `extraction=6` |
+| ordering_sorting | 17 / 20 | `answer_content=3` |
+| rewrite_normalized | 15 / 20 | `answer_content=5` |
+| constrained_summary | 24 / 30 | `answer_content=6` |
+| required_forbidden_tokens | 22 / 30 | `answer_content=8` |
+
+Strict regression against the 100-case `2026-05-17T1417Z` baseline is blocked
+by design because the corpus name, case count, and selected case IDs differ.
+The context-mismatch artifact records `matched_context=false` instead of
+pretending the two runs are comparable. This is bounded 250-case BitNet runtime
+evidence only; it does not use dense Qwen evidence, does not make a broad
+BitNet quality or performance claim, and does not enable chat, serve, Metal,
+QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon performance, or
+speedup claims.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:
