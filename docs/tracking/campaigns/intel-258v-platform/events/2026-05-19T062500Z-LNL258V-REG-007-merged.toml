@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:25:00Z"
+event = "merged"
+item = "LNL258V-REG-007"
+pr = 5788
+head_sha = "c4fc3616bd644a5911daf079236cb5127cec7a6a"
+merge_sha = "98c22a7939cd87a17024a7bebdc0bf1f507aa396"
+branch = "codex/lunar-lake/LNL258V-REG-007-bitnet-intake-regression"
+actor = "codex"
+summary = "Merged LNL258V-REG-007 after gating strict Lunar Lake regression on BitNet semantic-intake evidence."
+
+notes = [
+  "The merged regression v2 bundle indexes lunar-lake-bitnet-semantic-intake.json and fails closed when merged shared BitNet semantic fixes require 258V reruns.",
+  "The merged PR did not run inference, promote routes, claim speedup or power advantage, claim Arc/NPU acceleration, treat dense SLM receipts as BitNet proof, or change BitNet QK256/I2_S behavior.",
+]

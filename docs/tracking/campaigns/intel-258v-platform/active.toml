@@ -6555,9 +6555,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-007"
-status = "in_progress"
+status = "merged"
 pr = 5788
-head_sha = "05fe893d3dc1d6db56f7ec95674cc6c6993619e8"
+head_sha = "c4fc3616bd644a5911daf079236cb5127cec7a6a"
+merge_sha = "98c22a7939cd87a17024a7bebdc0bf1f507aa396"
 branch = "codex/lunar-lake/LNL258V-REG-007-bitnet-intake-regression"
 stackable = false
 review_mode = "codex_premerge"
