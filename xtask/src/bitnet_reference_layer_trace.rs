@@ -1571,6 +1571,12 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &f64_qk_score_input_bucket_residual,
                 &f64_downstream,
             );
+        let selected_query_pre_score_rope_source =
+            attention_selected_f64_query_pre_score_rope_source(
+                &selected_query_score_input_bucket_source,
+                &reference_records,
+                cpu_f64_records,
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1582,6 +1588,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             f64_qk_score_input_bucket_residual;
         cpu_comparison["attention_selected_f64_query_score_input_bucket_source"] =
             selected_query_score_input_bucket_source;
+        cpu_comparison["attention_selected_f64_query_pre_score_rope_source"] =
+            selected_query_pre_score_rope_source;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -31809,6 +31817,232 @@ fn attention_selected_f64_query_score_input_bucket_source(
     })
 }
 
+fn selected_query_pre_score_rope_source_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_query_pre_score_rope_source_reference_pre_rope_missing" => {
+            "capture reference selected query pre-RoPE projection/source operands before changing Rust query RoPE or score-input math"
+        }
+        "selected_query_pre_score_rope_source_rust_trace_view_layout" => {
+            "pin Rust selected query full-tensor versus head-history trace layout before changing runtime math"
+        }
+        "selected_query_pre_score_rope_source_rust_capture_precision" => {
+            "pin Rust selected query post-RoPE capture precision before changing query RoPE math"
+        }
+        "selected_query_pre_score_rope_source_pinned" => {
+            "selected query pre-score RoPE source is pinned; rerun f64 score-input residual attribution"
+        }
+        "selected_query_pre_score_rope_source_not_active" => {
+            "localize selected query score-input bucket source before pre-score RoPE source attribution"
+        }
+        "selected_query_pre_score_rope_source_missing_context" => {
+            "capture selected query source identity and Rust query trace records before changing runtime math"
+        }
+        _ => {
+            "keep selected query pre-score RoPE source diagnostic-only until source binding is pinned"
+        }
+    }
+}
+
+fn reference_query_pre_rope_candidate_count(reference_records: &[ReferenceTraceRecord]) -> usize {
+    reference_records
+        .iter()
+        .filter(|record| {
+            let stage = record.stage.as_str();
+            record.values_available
+                && !record.first_values.is_empty()
+                && stage.contains('q')
+                && (stage.contains("pre_rope")
+                    || stage.contains("q_projection")
+                    || stage.contains("query_projection"))
+        })
+        .count()
+}
+
+fn rust_query_flat_selected_value(
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    stage: &str,
+    head: usize,
+    dim: usize,
+    head_dim: usize,
+) -> Option<f32> {
+    let record = rust_records.get(stage)?;
+    let index = head.checked_mul(head_dim)?.checked_add(dim)?;
+    record.first_values.get(index).copied()
+}
+
+fn rust_query_history_selected_value(
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+    stage_prefix: &str,
+    head: usize,
+    dim: usize,
+    token: usize,
+) -> Option<f32> {
+    let stage = format!("{stage_prefix}{head}_history_ref_layout");
+    let record = rust_records.get(&stage)?;
+    let token_count = *record.shape.get(1)?;
+    let index = dim.checked_mul(token_count)?.checked_add(token)?;
+    record.first_values.get(index).copied()
+}
+
+fn selected_query_value_bits(value: Option<f32>) -> Value {
+    match value {
+        Some(value) => json!({
+            "value": value,
+            "bits_u32": value.to_bits(),
+            "bits_hex": u32_bits_hex(value.to_bits()),
+        }),
+        None => Value::Null,
+    }
+}
+
+fn value_delta_abs(left: Option<f32>, right: Option<f32>) -> Option<f64> {
+    left.zip(right).map(|(left, right)| (f64::from(right) - f64::from(left)).abs())
+}
+
+fn attention_selected_f64_query_pre_score_rope_source(
+    selected_query_source: &Value,
+    reference_records: &[ReferenceTraceRecord],
+    rust_records: &BTreeMap<String, RustTraceRecord>,
+) -> Value {
+    let source_classification =
+        selected_query_source.pointer("/classification").and_then(Value::as_str);
+    let head = selected_query_source
+        .pointer("/head")
+        .and_then(Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok());
+    let selected_dim = selected_query_source
+        .pointer("/selected_dim")
+        .and_then(Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok());
+    let selected_token = selected_query_source
+        .pointer("/selected_token")
+        .and_then(Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok());
+    let head_dim = selected_query_source
+        .pointer("/selected_qk_bucket_row/head_dim")
+        .and_then(Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok())
+        .or_else(|| {
+            rust_records
+                .get("attention_q_rope")
+                .and_then(rust_query_head_dim_count)
+                .map(|(head_dim, _)| head_dim)
+        })
+        .or_else(|| {
+            head.and_then(|head| {
+                let stage = format!("attention_q_rope_head{head}_history_ref_layout");
+                rust_records.get(&stage).and_then(|record| record.shape.first().copied())
+            })
+        });
+
+    let rust_pre_rope = head.zip(selected_dim).zip(head_dim).and_then(|((head, dim), head_dim)| {
+        rust_query_flat_selected_value(rust_records, "attention_q", head, dim, head_dim)
+    });
+    let rust_rope_flat =
+        head.zip(selected_dim).zip(head_dim).and_then(|((head, dim), head_dim)| {
+            rust_query_flat_selected_value(rust_records, "attention_q_rope", head, dim, head_dim)
+        });
+    let rust_rope_history =
+        head.zip(selected_dim).zip(selected_token).and_then(|((head, dim), token)| {
+            rust_query_history_selected_value(
+                rust_records,
+                "attention_q_rope_head",
+                head,
+                dim,
+                token,
+            )
+        });
+    let boundary_reference_value = selected_query_source
+        .pointer("/reference_to_rust_rope/first_f16_bucket_mismatch_layout/left")
+        .and_then(Value::as_f64);
+    let boundary_rust_value = selected_query_source
+        .pointer("/reference_to_rust_rope/first_f16_bucket_mismatch_layout/right")
+        .and_then(Value::as_f64);
+    let rust_history_matches_boundary = rust_rope_history
+        .zip(boundary_rust_value)
+        .is_some_and(|(value, boundary)| (f64::from(value) - boundary).abs() <= 1.0e-7);
+    let rust_flat_matches_history = rust_rope_flat
+        .zip(rust_rope_history)
+        .is_some_and(|(flat, history)| flat.to_bits() == history.to_bits());
+    let reference_pre_rope_candidate_count =
+        reference_query_pre_rope_candidate_count(reference_records);
+    let active =
+        source_classification == Some("selected_query_score_input_bucket_source_reference_to_rope");
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !active {
+        blocked_reasons.push("selected_query_source_not_reference_to_rope".to_string());
+    }
+    if head.is_none() {
+        blocked_reasons.push("selected_query_head_missing".to_string());
+    }
+    if selected_dim.is_none() {
+        blocked_reasons.push("selected_query_dim_missing".to_string());
+    }
+    if selected_token.is_none() {
+        blocked_reasons.push("selected_query_token_missing".to_string());
+    }
+    if head_dim.is_none() {
+        blocked_reasons.push("selected_query_head_dim_missing".to_string());
+    }
+    if rust_pre_rope.is_none() {
+        blocked_reasons.push("rust_attention_q_selected_value_missing".to_string());
+    }
+    if rust_rope_flat.is_none() {
+        blocked_reasons.push("rust_attention_q_rope_selected_value_missing".to_string());
+    }
+    if rust_rope_history.is_none() {
+        blocked_reasons
+            .push("rust_attention_q_rope_head_history_selected_value_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if !active {
+        "selected_query_pre_score_rope_source_not_active"
+    } else if !blocked_reasons.is_empty() {
+        "selected_query_pre_score_rope_source_missing_context"
+    } else if !rust_flat_matches_history {
+        "selected_query_pre_score_rope_source_rust_trace_view_layout"
+    } else if !rust_history_matches_boundary {
+        "selected_query_pre_score_rope_source_rust_capture_precision"
+    } else if reference_pre_rope_candidate_count == 0 {
+        "selected_query_pre_score_rope_source_reference_pre_rope_missing"
+    } else {
+        "selected_query_pre_score_rope_source_pinned"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected f64 query pre-score RoPE source is diagnostic-only evidence for whether the selected query bucket has enough Rust pre-RoPE/post-RoPE trace binding and reference pre-RoPE source binding; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "selected_query_source_classification": source_classification,
+        "head": head,
+        "selected_dim": selected_dim,
+        "selected_token": selected_token,
+        "head_dim": head_dim,
+        "reference_pre_rope_candidate_count": reference_pre_rope_candidate_count,
+        "reference_pre_rope_available": reference_pre_rope_candidate_count > 0,
+        "rust_pre_rope_stage": "attention_q",
+        "rust_rope_flat_stage": "attention_q_rope",
+        "rust_rope_history_stage": head.map(|head| format!("attention_q_rope_head{head}_history_ref_layout")),
+        "rust_pre_rope_value": selected_query_value_bits(rust_pre_rope),
+        "rust_rope_flat_value": selected_query_value_bits(rust_rope_flat),
+        "rust_rope_history_value": selected_query_value_bits(rust_rope_history),
+        "boundary_reference_value": boundary_reference_value,
+        "boundary_rust_value": boundary_rust_value,
+        "rust_pre_rope_to_rope_abs_delta": value_delta_abs(rust_pre_rope, rust_rope_history),
+        "rust_rope_flat_to_history_abs_delta": value_delta_abs(rust_rope_flat, rust_rope_history),
+        "rust_rope_history_to_boundary_abs_delta": rust_rope_history.zip(boundary_rust_value).map(|(value, boundary)| (f64::from(value) - boundary).abs()),
+        "rust_flat_matches_history": rust_flat_matches_history,
+        "rust_history_matches_boundary": rust_history_matches_boundary,
+        "source_row": selected_query_source.clone(),
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": selected_query_pre_score_rope_source_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -47728,6 +47962,126 @@ mod tests {
             Some(&json!(
                 "capture selected query score-input boundary rows before changing runtime math"
             ))
+        );
+    }
+
+    fn selected_query_source_fixture() -> Value {
+        json!({
+            "classification": "selected_query_score_input_bucket_source_reference_to_rope",
+            "head": 5,
+            "selected_dim": 69,
+            "selected_token": 17,
+            "selected_qk_bucket_row": {
+                "head_dim": 128
+            },
+            "reference_to_rust_rope": {
+                "exact_selected_bucket": true,
+                "first_f16_bucket_mismatch_layout": {
+                    "dim": 69,
+                    "index": 1259,
+                    "left": -0.2525634765625_f64,
+                    "right": -0.2525635361671448_f64,
+                    "token": 17
+                }
+            }
+        })
+    }
+
+    fn selected_query_rust_records(
+        pre_rope: f32,
+        rope_flat: f32,
+        rope_history: f32,
+    ) -> BTreeMap<String, RustTraceRecord> {
+        let mut records = BTreeMap::new();
+        let flat_index = 5 * 128 + 69;
+        let history_index = 69 * 18 + 17;
+        let mut attention_q = vec![0.0; 20 * 128];
+        attention_q[flat_index] = pre_rope;
+        let mut attention_q_rope = vec![0.0; 20 * 128];
+        attention_q_rope[flat_index] = rope_flat;
+        let mut attention_q_rope_head = vec![0.0; 128 * 18];
+        attention_q_rope_head[history_index] = rope_history;
+
+        let mut attention_q_record = test_rust_trace_record("attention_q", attention_q);
+        attention_q_record.shape = vec![1, 1, 20 * 128];
+        records.insert("attention_q".to_string(), attention_q_record);
+
+        let mut attention_q_rope_record =
+            test_rust_trace_record("attention_q_rope", attention_q_rope);
+        attention_q_rope_record.shape = vec![1, 20, 1, 128];
+        records.insert("attention_q_rope".to_string(), attention_q_rope_record);
+
+        let mut history_record = test_rust_trace_record(
+            "attention_q_rope_head5_history_ref_layout",
+            attention_q_rope_head,
+        );
+        history_record.shape = vec![128, 18];
+        records.insert("attention_q_rope_head5_history_ref_layout".to_string(), history_record);
+
+        records
+    }
+
+    #[test]
+    fn selected_query_pre_score_rope_source_reports_reference_pre_rope_missing() {
+        let selected_source = selected_query_source_fixture();
+        let records =
+            selected_query_rust_records(0.75, -0.2525635361671448_f32, -0.2525635361671448_f32);
+
+        let report =
+            attention_selected_f64_query_pre_score_rope_source(&selected_source, &[], &records);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_pre_score_rope_source_reference_pre_rope_missing"))
+        );
+        assert_eq!(report.pointer("/head"), Some(&json!(5)));
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(69)));
+        assert_eq!(report.pointer("/selected_token"), Some(&json!(17)));
+        assert_eq!(report.pointer("/rust_flat_matches_history"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rust_history_matches_boundary"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture reference selected query pre-RoPE projection/source operands before changing Rust query RoPE or score-input math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_pre_score_rope_source_reports_trace_view_layout() {
+        let selected_source = selected_query_source_fixture();
+        let records = selected_query_rust_records(0.75, -0.5, -0.2525635361671448_f32);
+
+        let report =
+            attention_selected_f64_query_pre_score_rope_source(&selected_source, &[], &records);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_pre_score_rope_source_rust_trace_view_layout"))
+        );
+        assert_eq!(report.pointer("/rust_flat_matches_history"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_query_pre_score_rope_source_blocks_when_not_active() {
+        let mut selected_source = selected_query_source_fixture();
+        selected_source["classification"] =
+            json!("selected_query_score_input_bucket_source_f16_conversion");
+        let records =
+            selected_query_rust_records(0.75, -0.2525635361671448_f32, -0.2525635361671448_f32);
+
+        let report =
+            attention_selected_f64_query_pre_score_rope_source(&selected_source, &[], &records);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_pre_score_rope_source_not_active"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_source_not_reference_to_rope"))
         );
     }
 
