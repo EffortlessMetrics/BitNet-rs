@@ -387,13 +387,28 @@ status = workspace_owned_output_reuse_deferred
 optimization_deferred = true
 ```
 
-The next safe implementation target is replacing `FeedForward::down_proj`
-output construction with reusable workspace-backed storage behind tests that
-preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected
-CPU backend/kernel, model SHA, and `fallback=false`. This remains an
-allocation-boundary proof only; it makes no speedup, sustained-throughput,
-broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256
-claim.
+SLM-CPU-040 reaches the next narrower hook: the exact
+`FeedForward::down_proj` output boundary. The workspace observes this boundary
+before the output is returned, but reusable storage remains blocked because
+`candle_nn::Linear::forward` constructs and returns a new `Tensor`; it does not
+expose an out-parameter or reusable output-storage API that can be filled by
+`TransformerForwardWorkspace` without changing the linear implementation.
+
+```text
+first_reusable_allocation_surface = feed_forward.down_proj.output
+workspace_storage_owner = TransformerForwardWorkspace
+reuse_status = feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear
+next_optimization_target = feed_forward_down_proj_output_storage_boundary
+status = down_proj_output_storage_reuse_blocked
+optimization_deferred = true
+```
+
+The next safe implementation target is adding or adopting a
+behavior-preserving linear output-storage API before replacing
+`FeedForward::down_proj` output construction with reusable workspace-backed
+storage. This remains an allocation-boundary proof only; it makes no speedup,
+sustained-throughput, broad-answer-quality, Q4/Q5 runtime, accelerator,
+Qwen3.5, or BitNet QK256 claim.
 
 This is a classification slice. It does not change Q8_0 GEMV, RMSNorm, RoPE,
 attention, output-head math, tokenizer behavior, or generated tokens, and it

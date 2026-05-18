@@ -343,6 +343,15 @@ impl FeedForward {
         x: &Tensor,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
+        self.forward_impl(x, raw_tensors, None)
+    }
+
+    fn forward_impl(
+        &self,
+        x: &Tensor,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        workspace: Option<&mut TransformerForwardWorkspace>,
+    ) -> Result<Tensor> {
         let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.gate_proj", Some(self.layer_idx), &gate)?;
@@ -398,6 +407,9 @@ impl FeedForward {
         }
 
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
+        if let Some(workspace) = workspace {
+            workspace.record_down_proj_output_storage_boundary(&output);
+        }
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.down_proj", Some(self.layer_idx), &output)?;
         }
@@ -418,7 +430,7 @@ impl FeedForward {
         workspace: &mut TransformerForwardWorkspace,
     ) -> Result<Tensor> {
         workspace.record_feed_forward_input(x);
-        let output = self.forward(x, raw_tensors)?;
+        let output = self.forward_impl(x, raw_tensors, Some(workspace))?;
         workspace.record_feed_forward_output(&output);
         workspace.store_feed_forward_output(output);
         workspace.take_feed_forward_output()
@@ -500,6 +512,7 @@ pub struct TransformerForwardWorkspace {
     feed_forward_output_slot: Option<Tensor>,
     feed_forward_output_surface: Option<TransformerWorkspaceOutputSurface>,
     workspace_owned_output_count: usize,
+    down_proj_output_storage_attempts: usize,
     tensor_reuse_enabled: bool,
 }
 
@@ -550,6 +563,10 @@ impl TransformerForwardWorkspace {
         self.workspace_owned_output_count
     }
 
+    pub fn down_proj_output_storage_attempts(&self) -> usize {
+        self.down_proj_output_storage_attempts
+    }
+
     pub fn first_output_surface(&self) -> Option<&TransformerWorkspaceOutputSurface> {
         self.feed_forward_output_surface.as_ref()
     }
@@ -558,7 +575,7 @@ impl TransformerForwardWorkspace {
         if self.tensor_reuse_enabled {
             "typed_transformer_forward_workspace_reuse_enabled"
         } else if self.feed_forward_output_surface.is_some() {
-            "feed_forward_output_workspace_owned_reuse_not_enabled"
+            "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
         } else {
             "api_boundary_present_owned_tensor_reuse_not_enabled"
         }
@@ -591,15 +608,20 @@ impl TransformerForwardWorkspace {
         self.last_output_shape = tensor.dims().to_vec();
     }
 
+    fn record_down_proj_output_storage_boundary(&mut self, tensor: &Tensor) {
+        self.down_proj_output_storage_attempts += 1;
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+
     fn store_feed_forward_output(&mut self, tensor: Tensor) {
         let last_shape = tensor.dims().to_vec();
         self.last_output_shape = last_shape.clone();
         self.feed_forward_output_surface = Some(TransformerWorkspaceOutputSurface {
-            name: "feed_forward.output",
+            name: "feed_forward.down_proj.output",
             storage_owner: "TransformerForwardWorkspace",
-            status: "workspace_owns_returned_tensor_reuse_not_enabled",
-            reason: "FeedForward::forward_with_workspace now routes the owned output tensor through TransformerForwardWorkspace before returning it, but Candle tensor storage is still produced by the existing owned-output math path",
-            next_api_hook: "replace FeedForward::down_proj output construction with reusable workspace-backed storage after behavior-preservation artifacts stay identical",
+            status: "down_proj_output_storage_reuse_blocked_by_candle_linear_api",
+            reason: "FeedForward::forward_with_workspace reaches the exact down_proj output boundary, but candle_nn::Linear::forward constructs and returns a new Tensor and does not expose an out-parameter or reusable output-storage hook",
+            next_api_hook: "add or adopt a behavior-preserving linear output-storage API before replacing FeedForward::down_proj output construction with reusable workspace-backed storage",
             last_shape,
         });
         self.workspace_owned_output_count += 1;

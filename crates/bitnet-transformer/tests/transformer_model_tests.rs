@@ -213,18 +213,22 @@ fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<
     assert_eq!(workspace.feed_forward_calls(), model.config.model.num_layers);
     assert_eq!(workspace.last_output_shape(), with_workspace.dims());
     assert_eq!(workspace.last_output_shape(), &[1, 1, hidden]);
-    assert_eq!(workspace.reuse_status(), "feed_forward_output_workspace_owned_reuse_not_enabled");
+    assert_eq!(
+        workspace.reuse_status(),
+        "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
+    );
     assert_eq!(workspace.workspace_owned_output_count(), model.config.model.num_layers);
+    assert_eq!(workspace.down_proj_output_storage_attempts(), model.config.model.num_layers);
     let Some(surface) = workspace.first_output_surface() else {
         anyhow::bail!("workspace should classify one output surface");
     };
-    assert_eq!(surface.name, "feed_forward.output");
+    assert_eq!(surface.name, "feed_forward.down_proj.output");
     assert_eq!(surface.storage_owner, "TransformerForwardWorkspace");
-    assert_eq!(surface.status, "workspace_owns_returned_tensor_reuse_not_enabled");
+    assert_eq!(surface.status, "down_proj_output_storage_reuse_blocked_by_candle_linear_api");
     assert_eq!(surface.last_shape, vec![1, 1, hidden]);
     assert!(
         !workspace.tensor_reuse_enabled(),
-        "SLM-CPU-039 routes one output through the workspace before enabling reusable storage"
+        "SLM-CPU-040 proves the down_proj output hook still lacks reusable Candle storage"
     );
     Ok(())
 }
