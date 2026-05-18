@@ -20,6 +20,8 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
   [`BITNET-SPEC-0007`](../../docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
 - Server readiness spec:
   [`BITNET-SPEC-0010`](../../docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md)
+- CUDA route contract:
+  [`BITNET-SPEC-CUDA-ROUTE-CONTRACT`](../../docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - Bench ADR:
   [`BITNET-ADR-0004`](../../docs/adr/BITNET-ADR-0004-9950x3d-5070ti-cuda-product-bench.md)
 - CUDA campaign:
@@ -54,6 +56,7 @@ Do not use this plan to claim:
 - dense Qwen proof as BitNet proof;
 - BitNet QK256 proof as dense SLM proof;
 - generic `cuda` as RTX 5070 Ti proof;
+- route IDs across proof families;
 - hardware execution as answer quality;
 - benchmark baselines as accepted speedup;
 - server readiness from CLI receipts.

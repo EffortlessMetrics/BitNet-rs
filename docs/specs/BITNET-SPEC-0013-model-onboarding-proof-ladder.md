@@ -24,6 +24,7 @@ This spec relies on existing authorities instead of replacing them:
 - [Native Rust inference product proposal](../proposals/BITNET-PROP-0003-native-rust-inference-product.md)
 - [Source-of-truth and claim boundaries](BITNET-SPEC-0001-source-of-truth-and-claim-boundaries.md)
 - [9950X3D + RTX 5070 Ti CUDA product contract](BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
+- [CUDA route contract](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - [Server readiness proof boundary](BITNET-SPEC-0010-server-readiness-proof-boundary.md)
 - [Answer Artifact Gate](../model-artifacts/ANSWER_ARTIFACT_GATE.md)
 - [Model Coverage Matrix](../model-artifacts/MODEL_COVERAGE_MATRIX.md)
@@ -143,6 +144,7 @@ Required evidence:
 - CPU/reference evidence from an earlier tier;
 - fallback rejection;
 - route-specific kernel or execution-plan evidence;
+- CUDA route contract fields when the accelerator route uses CUDA;
 - answer quality result;
 - durable receipt path.
 
@@ -225,6 +227,8 @@ Must not claim:
   substitute and updates the model coverage row.
 - Dense CUDA evidence cannot satisfy BitNet I2_S/QK256 proof.
 - BitNet I2_S/QK256 evidence cannot satisfy dense SLM or small dense LLM proof.
+- CUDA receipts must preserve the route IDs and proof-family fields required by
+  the CUDA route contract before route-specific claims are promoted.
 - Qwen2.5 evidence cannot satisfy Qwen3, SmolLM2, Llama, Gemma, or Phi rows.
 - Structural validity cannot satisfy answer readiness.
 - Hardware detection cannot satisfy selected-backend execution proof.
@@ -260,6 +264,26 @@ machine-readable before user-facing status surfaces summarize them.
 | Dense SLM | `dense_regular_llm_cuda` for Qwen/SmolLM rows | Own tokenizer, prompt, CPU, CUDA, benchmark, and server receipts |
 | Small dense LLM | Llama, Gemma, Phi candidates | Own architecture, tokenizer, prompt, memory, and route proof |
 | Server readiness | `/v1/chat/completions` or later endpoints | Own endpoint/profile/readiness proof |
+
+## CUDA Route Contract
+
+CUDA route claims are governed by
+[BITNET-SPEC-CUDA-ROUTE-CONTRACT](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md).
+The initial CUDA route IDs are:
+
+```text
+bitnet_qk256_cuda
+dense_regular_llm_cuda
+dense_gguf_linear_cuda_parity
+dense_gguf_layer_plan
+server_shared_engine_cuda
+```
+
+A generic `cuda` selector is only a user convenience until a receipt resolves it
+to the strict selected backend. Dense CUDA, BitNet QK256 CUDA, dense GGUF
+planner/parity routes, and server shared-engine CUDA each require their own
+execution plan, proof-family booleans, fallback status, and forbidden-claim
+summary before user-facing status surfaces may promote the claim.
 
 ## Proof Commands
 

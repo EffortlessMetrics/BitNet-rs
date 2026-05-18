@@ -22,6 +22,7 @@ bitnet receipts explain --latest
 | Human-readable model coverage | `docs/model-artifacts/MODEL_COVERAGE_MATRIX.md` |
 | RTX 5070 Ti campaign state | `docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md` |
 | Strict CUDA product contract | `docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md` |
+| CUDA route and proof-family contract | `docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md` |
 | Server readiness boundary | `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md` |
 | User quickstart | `docs/tutorials/9950x3d-5070ti-cuda-quickstart.md` |
 | BitNet CUDA guide | `docs/tutorials/rtx5070ti-bitnet-cuda.md` |
@@ -50,6 +51,10 @@ bitnet receipts explain --latest
 - Dense SLM CUDA proof is first-class CUDA product evidence, but it never proves
   BitNet packed I2_S/QK256 behavior.
 - BitNet QK256 CUDA proof never proves dense regular-LLM CUDA behavior.
+- CUDA route claims must name the selected route and proof family from
+  `docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md`; route IDs such as
+  `bitnet_qk256_cuda`, `dense_regular_llm_cuda`, and
+  `server_shared_engine_cuda` are not interchangeable.
 - Generic `cuda`, WGPU, Vulkan, CPU fallback, or hardware visibility is not
   strict RTX 5070 Ti CUDA proof.
 - `speedup_claim=false` remains correct until a governed benchmark
