@@ -669,6 +669,16 @@ repaired baseline. `M4-BITNET-EX-015` repeats that repaired run for matching
 history and records whether the next honest step is 500-case expansion,
 continued repair, or freezing the current BitNet quality envelope.
 
+`M4-BITNET-EX-013` now stages the repair as a dry-run-only corpus/scorer
+contract update. The repaired 250-case corpus is version `2.1.0` and keeps the
+same accepted Microsoft I2_S GGUF identity, external tokenizer authority, and
+`bitnetcpp-answer` prompt template. It records closed-form YAML expected
+answers as authority, uses `contains_expected` for fixed-table prose answers,
+uses final-answer numeric extraction for numeric tolerance, keeps rewrite
+normalization limited to casing, punctuation, and whitespace, and records the
+reference-vs-Rust 250-case sidecar as not yet supplied. This does not refresh
+runtime pass rates or approve the 500-case expansion.
+
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
 route:
