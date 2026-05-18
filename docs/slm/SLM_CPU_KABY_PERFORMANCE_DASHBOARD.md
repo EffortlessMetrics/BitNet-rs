@@ -435,6 +435,29 @@ attention, output-head math, tokenizer behavior, or generated tokens, and it
 does not claim a speedup, sustained throughput, Q4/Q5 runtime support,
 accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
 
+SLM-CPU-042 moves the next target from reusable output storage to the first
+Q8_0 dense linear locality boundary that can be inspected without changing
+runtime behavior. The current dense standard GGUF load path eagerly dequantizes
+Q8_0 blocks into a host `Vec<f32>`, reshapes projection and embedding tensors
+for Candle without transposing the dequantized values, and then constructs a
+Candle tensor from that F32 slice:
+
+```text
+locality_boundary = eager_dense_standard_quant_dequant_to_f32_before_candle_tensor
+dequantizes_before_compute = true
+materializes_f32_tensor = true
+values_transposed = false
+shape_reshaped_without_transpose = true for GGML projection/embedding layouts
+next_optimization_target = q8_dense_linear_locality_boundary
+```
+
+This boundary is instrumentation only. A later runtime optimization may replace
+the eager F32 materialization or improve Q8_0 dense linear locality only if it
+preserves generated IDs, decoded text, strict GGUF tokenizer authority, selected
+CPU backend/kernel, model SHA, and `fallback=false` in before/after receipts.
+It does not reopen the Candle output-storage blocker, claim a speedup, or
+broaden support to Q4/Q5, accelerators, Qwen3.5, or BitNet QK256.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:

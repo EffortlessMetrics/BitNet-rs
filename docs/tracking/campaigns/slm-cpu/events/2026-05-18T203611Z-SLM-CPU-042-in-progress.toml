@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T20:36:11Z"
+event = "in_progress"
+item = "SLM-CPU-042"
+branch = "codex/slm-cpu-042-q8-dense-linear-locality"
+actor = "codex"
+summary = "Started the Qwen3 Q8_0 dense linear locality boundary slice after SLM-CPU-041 proved reusable Candle output storage remains blocked."
+
+notes = [
+  "The implementation target is instrumentation and receipt-facing prioritization for the current eager dense standard GGUF quantization load path.",
+  "The slice must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false before any future optimization can claim improvement.",
+  "No sustained-throughput, broad-answer-quality, Q4/Q5 runtime, accelerator, server, Qwen3.5, or BitNet QK256 claim is made.",
+]

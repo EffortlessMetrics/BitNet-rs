@@ -14185,6 +14185,16 @@ mod tests {
             "dense_linear_output_storage_api_boundary"
         );
         assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]
+                ["target"],
+            "q8_dense_linear_locality_boundary"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]
+                ["current_path"],
+            "eager_dense_standard_quant_dequant_to_f32_before_candle_tensor"
+        );
+        assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["weight_accessible"],
             true
         );
@@ -14241,7 +14251,7 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "dense_linear_output_storage_api_boundary"
+            "q8_dense_linear_locality_boundary"
         );
         assert_eq!(
             audit["next_optimization_target"]["status"],
@@ -14279,7 +14289,7 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "dense_linear_output_storage_api_boundary"
+            "q8_dense_linear_locality_boundary"
         );
         assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
         assert_eq!(

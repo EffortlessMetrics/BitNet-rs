@@ -2528,7 +2528,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-042"
-status = "ready"
+status = "in_progress"
 branch = "codex/slm-cpu-042-q8-dense-linear-locality"
 stackable = false
 review_mode = "codex_premerge"
