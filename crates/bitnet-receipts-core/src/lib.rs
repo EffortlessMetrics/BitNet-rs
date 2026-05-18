@@ -8085,6 +8085,7 @@ fn is_lunar_lake_openvino_artifact_kind(artifact_kind: &str) -> bool {
             | "intel_258v_dense_slm_openvino_generation_budget_sensitivity"
             | "intel_258v_dense_slm_openvino_phase_comparison"
             | "intel_258v_dense_slm_openvino_phase_runner"
+            | "intel_258v_dense_slm_openvino_profile_run"
             | "lunar_lake_openvino_corpus_v2_diagnosis"
             | "lunar_lake_openvino_npu_cold_start_diagnosis"
             | "lunar_lake_openvino_npu_cache_experiment"
@@ -9577,6 +9578,86 @@ mod tests {
                 "speedup_claim": false,
                 "power_advantage_claim": false,
                 "acceleration_claim": false,
+                "native_npu_inference_claim": false,
+                "bitnet_qk256_i2s_behavior_changed": false
+            }
+        });
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_profile_run_receipt() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "intel_258v_dense_slm_openvino_profile_run",
+            "machine_id": "intel-258v",
+            "proof_stage": "openvino_heavy_profile_timing_evidence",
+            "generation": {
+                "fallback_used": false,
+                "devices": [
+                    {
+                        "runtime_device": "GPU.0",
+                        "requested_backend": "openvino-gpu",
+                        "selected_backend": "openvino-gpu",
+                        "runtime_api": "openvino_genai",
+                        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+                        "fallback_used": false,
+                        "cases": [
+                            {
+                                "id": "prefill_heavy_route_policy_long_context",
+                                "profile": "prefill_heavy",
+                                "requested_backend": "openvino-gpu",
+                                "selected_backend": "openvino-gpu",
+                                "runtime_api": "openvino_genai",
+                                "runtime_device": "GPU.0",
+                                "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+                                "fallback_used": false,
+                                "prompt_token_count": 2731,
+                                "generated_token_ids": [111, 222, 333],
+                                "generated_token_ids_available_from_pipeline": true,
+                                "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+                                "generated_token_count": 3
+                            }
+                        ]
+                    },
+                    {
+                        "runtime_device": "NPU",
+                        "requested_backend": "openvino-npu",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+                        "fallback_used": false,
+                        "cases": [
+                            {
+                                "id": "decode_heavy_route_policy_long_generation",
+                                "profile": "decode_heavy",
+                                "requested_backend": "openvino-npu",
+                                "selected_backend": "openvino-npu",
+                                "runtime_api": "openvino_genai",
+                                "runtime_device": "NPU",
+                                "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+                                "fallback_used": false,
+                                "prompt_token_count": 66,
+                                "generated_token_ids": [444, 555, 666],
+                                "generated_token_ids_available_from_pipeline": true,
+                                "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+                                "generated_token_count": 3
+                            }
+                        ]
+                    }
+                ]
+            },
+            "verification": {
+                "fallback_used": false,
+                "route_promotion_changed": false,
+                "candidate_routes_remain_unpromoted": true
+            },
+            "claim_boundary": {
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "route_promotion_changed": false,
                 "native_npu_inference_claim": false,
                 "bitnet_qk256_i2s_behavior_changed": false
             }

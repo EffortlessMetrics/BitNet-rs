@@ -100,7 +100,7 @@ def run_device(
     ov_core: Any,
     npu_max_prompt_len: int,
 ) -> dict[str, Any]:
-    selected_backend, backend_lane, runtime = DEVICE_BACKENDS.get(
+    selected_backend, backend_lane, selected_runtime = DEVICE_BACKENDS.get(
         device,
         (
             f"openvino-{device.lower()}",
@@ -209,8 +209,9 @@ def run_device(
                 "requested_backend": selected_backend,
                 "selected_backend": selected_backend,
                 "backend_lane": backend_lane,
-                "runtime_api": runtime,
+                "runtime_api": "openvino_genai",
                 "runtime_device": device,
+                "selected_kernel_or_runtime": selected_runtime,
             }
         )
 
@@ -220,8 +221,8 @@ def run_device(
         "requested_backend": selected_backend,
         "selected_backend": selected_backend,
         "backend_lane": backend_lane,
-        "runtime_api": runtime,
-        "selected_kernel_or_runtime": "openvino-genai-llmpipeline",
+        "runtime_api": "openvino_genai",
+        "selected_kernel_or_runtime": selected_runtime,
         "pipeline_construct_wall_ms": construct_wall_ms,
         "pipeline_config": pipeline_config,
         "fallback_used": False,
