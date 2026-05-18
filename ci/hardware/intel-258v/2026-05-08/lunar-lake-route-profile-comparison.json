@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T09:00:00Z",
+  "created_utc": "2026-05-18T10:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -47,6 +47,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -66,6 +67,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -114,6 +127,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -133,6 +147,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -180,7 +206,8 @@
             "route not promoted for profile regression_tiny",
             "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
             "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile regression_tiny"
           ]
         },
         {
@@ -197,6 +224,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -216,6 +244,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -267,7 +307,8 @@
             "route not promoted for profile regression_tiny",
             "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
             "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile regression_tiny"
           ]
         }
       ],
@@ -301,6 +342,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -320,6 +362,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -368,6 +422,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -387,6 +442,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -433,6 +500,7 @@
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
             "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_short",
             "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
             "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
@@ -451,6 +519,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -470,6 +539,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -520,6 +601,7 @@
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
             "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_short",
             "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
             "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
@@ -555,6 +637,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -574,6 +657,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -622,6 +717,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -641,6 +737,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -680,7 +788,8 @@
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_normal"
           ]
         },
         {
@@ -697,6 +806,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -716,6 +826,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -759,7 +881,8 @@
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile ask_normal",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile ask_normal"
           ]
         }
       ],
@@ -794,6 +917,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -813,6 +937,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt timing count 38 does not satisfy `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -846,7 +982,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "route not promoted for profile prefill_heavy"
+            "route not promoted for profile prefill_heavy",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
         {
@@ -863,6 +1000,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -882,6 +1020,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -927,7 +1077,8 @@
             "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
         {
@@ -944,6 +1095,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -963,6 +1115,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1012,7 +1176,8 @@
             "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         }
       ],
@@ -1047,6 +1212,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -1066,6 +1232,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt timing count 38 satisfies `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1099,7 +1277,8 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
-            "route not promoted for profile decode_heavy"
+            "route not promoted for profile decode_heavy",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
         {
@@ -1116,6 +1295,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -1135,6 +1315,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1180,7 +1372,8 @@
             "decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
         {
@@ -1197,6 +1390,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -1216,6 +1410,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1259,7 +1465,8 @@
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         }
       ],
@@ -1292,6 +1499,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -1311,6 +1519,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "structured",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=256",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=256`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1379,6 +1599,7 @@
               "slm-phase-warm-session-qwen25-cpu.json",
               "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
+            "prompt_tokens": 38,
             "cold_load_ms": 14250.931,
             "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
@@ -1398,6 +1619,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1438,6 +1671,7 @@
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -1457,6 +1691,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1490,7 +1736,8 @@
             "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile low_power"
           ]
         },
         {
@@ -1507,6 +1754,7 @@
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
               "slm-openvino-cpu-gpu-npu-phase-runner.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -1526,6 +1774,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1555,7 +1815,8 @@
             "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
             "route not promoted for profile low_power",
-            "timing coverage has missing profile fields"
+            "timing coverage has missing profile fields",
+            "timing evidence is not profile-specific for profile low_power"
           ]
         }
       ],
@@ -1585,6 +1846,7 @@
               "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
               "cpu-reference-bundle-after-semantic-fix.json"
             ],
+            "prompt_tokens": null,
             "cold_load_ms": null,
             "tokenize_ms": null,
             "prefill_ms": null,
@@ -1600,6 +1862,19 @@
             ],
             "known_gaps": [
               "BitNet route remains a strict reference route, not a general dense SLM ask route"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "bitnet_strict_reference",
+            "required_prompt_tokens": "fixed BitNet corpus",
+            "required_output_tokens": "bounded",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": null,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt requirement `fixed BitNet corpus` is not a numeric promotion gate",
+              "output requirement `bounded` is not a numeric promotion gate",
+              "profile token requirement is descriptive, not mechanically checked"
             ]
           },
           "benchmark_qualified_advantage": false,

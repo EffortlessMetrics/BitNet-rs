@@ -1016,6 +1016,7 @@ pub struct ProfileRouteEvidence {
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
     pub timing: ProfileTimingSummary,
+    pub timing_applicability: ProfileTimingApplicability,
     pub benchmark_qualified_advantage: bool,
     pub promotion_eligible_for_profile: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1024,6 +1025,17 @@ pub struct ProfileRouteEvidence {
     pub telemetry: Option<BenchmarkTelemetry>,
     pub evidence: Vec<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileTimingApplicability {
+    pub profile_id: String,
+    pub required_prompt_tokens: String,
+    pub required_output_tokens: String,
+    pub measured_prompt_tokens: Option<u64>,
+    pub measured_output_tokens: Option<u64>,
+    pub timing_matches_profile: bool,
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -1136,6 +1148,7 @@ pub struct CorpusV2DiagnosisClaimBoundary {
 pub struct ProfileTimingSummary {
     pub timing_scope: String,
     pub source_receipts: Vec<String>,
+    pub prompt_tokens: Option<u64>,
     pub cold_load_ms: Option<f64>,
     pub tokenize_ms: Option<f64>,
     pub prefill_ms: Option<f64>,
@@ -8800,6 +8813,7 @@ fn evaluate_profile_route(
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("route `{route_id}` not found in promotion ledger"))?;
     let timing = profile_timing_for_route(root, route_id, phase_comparison, telemetry_context)?;
+    let timing_applicability = timing_applicability_for_profile(profile, &timing);
     let mut blockers = route.missing_evidence.clone();
     let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
     let telemetry = telemetry_context.map(telemetry_for_profile_route);
@@ -8816,6 +8830,12 @@ fn evaluate_profile_route(
     }
     if timing.known_gaps.iter().any(|gap| gap.contains("missing")) {
         blockers.push("timing coverage has missing profile fields".to_string());
+    }
+    if !timing_applicability.timing_matches_profile {
+        blockers.push(format!(
+            "timing evidence is not profile-specific for profile {}",
+            profile.profile_id
+        ));
     }
     if profile.profile_id == "low_power" {
         if telemetry_context.is_some_and(power_context_is_recorded) {
@@ -8879,6 +8899,7 @@ fn evaluate_profile_route(
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
         timing,
+        timing_applicability,
         benchmark_qualified_advantage: false,
         promotion_eligible_for_profile,
         profile_quality,
@@ -8886,6 +8907,81 @@ fn evaluate_profile_route(
         evidence,
         blockers,
     })
+}
+
+fn timing_applicability_for_profile(
+    profile: &WorkloadProfile,
+    timing: &ProfileTimingSummary,
+) -> ProfileTimingApplicability {
+    let mut notes = Vec::new();
+    let prompt_match = token_count_matches_requirement(
+        timing.prompt_tokens,
+        &profile.prompt_tokens,
+        "prompt",
+        &mut notes,
+    );
+    let output_match = token_count_matches_requirement(
+        timing.output_tokens,
+        &profile.output_tokens,
+        "output",
+        &mut notes,
+    );
+    let statuses = [prompt_match, output_match];
+    if statuses.iter().any(Option::is_none) {
+        notes
+            .push("profile token requirement is descriptive, not mechanically checked".to_string());
+    }
+    let timing_matches_profile = statuses.into_iter().all(|status| status.unwrap_or(true));
+
+    ProfileTimingApplicability {
+        profile_id: profile.profile_id.clone(),
+        required_prompt_tokens: profile.prompt_tokens.clone(),
+        required_output_tokens: profile.output_tokens.clone(),
+        measured_prompt_tokens: timing.prompt_tokens,
+        measured_output_tokens: timing.output_tokens,
+        timing_matches_profile,
+        notes,
+    }
+}
+
+fn token_count_matches_requirement(
+    measured: Option<u64>,
+    requirement: &str,
+    label: &str,
+    notes: &mut Vec<String>,
+) -> Option<bool> {
+    let requirement = requirement.trim();
+    let Some((operator, threshold)) = parse_token_requirement(requirement) else {
+        notes.push(format!("{label} requirement `{requirement}` is not a numeric promotion gate"));
+        return None;
+    };
+    let Some(measured) = measured else {
+        notes.push(format!("{label} token count missing for numeric requirement `{requirement}`"));
+        return Some(false);
+    };
+    let matches = match operator {
+        "<=" => measured <= threshold,
+        ">=" => measured >= threshold,
+        _ => false,
+    };
+    if matches {
+        notes.push(format!("{label} timing count {measured} satisfies `{requirement}`"));
+    } else {
+        notes.push(format!("{label} timing count {measured} does not satisfy `{requirement}`"));
+    }
+    Some(matches)
+}
+
+fn parse_token_requirement(requirement: &str) -> Option<(&'static str, u64)> {
+    let requirement = requirement.trim();
+    for operator in ["<=", ">="] {
+        let Some(rest) = requirement.strip_prefix(operator) else {
+            continue;
+        };
+        let value = rest.trim().parse::<u64>().ok()?;
+        return Some((operator, value));
+    }
+    None
 }
 
 fn profile_timing_for_route(
@@ -8905,6 +9001,7 @@ fn profile_timing_for_route(
         "bitnet_reference_cpu" => Ok(ProfileTimingSummary {
             timing_scope: "bitnet_reference_cpu_not_dense_slm_profile".to_string(),
             source_receipts: vec![BITNET_PERF_APPLIED.to_string(), BITNET_CPU_BUNDLE.to_string()],
+            prompt_tokens: None,
             cold_load_ms: None,
             tokenize_ms: None,
             prefill_ms: None,
@@ -8926,6 +9023,7 @@ fn profile_timing_for_route(
         _ => Ok(ProfileTimingSummary {
             timing_scope: "unknown_route".to_string(),
             source_receipts: vec![],
+            prompt_tokens: None,
             cold_load_ms: None,
             tokenize_ms: None,
             prefill_ms: None,
@@ -8954,6 +9052,16 @@ fn dense_cpu_profile_timing(
     let prefill_ms = number_at_any(&ask, &["timing.prefill_ms"]);
     let output_tokens = number_at_any(&ask, &["tokens.generated_count", "timing.decode_tokens"])
         .map(|value| value as u64);
+    let prompt_tokens = number_at_any(
+        &ask,
+        &[
+            "tokens.prompt_count",
+            "tokens.prompt",
+            "source_receipt.execution.prompt_tokens",
+            "source_receipt.strict_provenance.prompt_tokens",
+        ],
+    )
+    .map(|value| value as u64);
     let generation_total_ms = number_at_any(&ask, &["timing.decode_total_ms"]);
     let throughput_tokens_per_s = number_at_any(&ask, &["timing.decode_steady_state_tok_s"])
         .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
@@ -9001,6 +9109,7 @@ fn dense_cpu_profile_timing(
             DENSE_CPU_PHASE.to_string(),
             DENSE_PHASE_COMPARISON.to_string(),
         ],
+        prompt_tokens,
         cold_load_ms,
         tokenize_ms,
         prefill_ms,
@@ -9032,6 +9141,16 @@ fn openvino_profile_timing(
     Ok(ProfileTimingSummary {
         timing_scope: timing_scope.to_string(),
         source_receipts: vec![receipt_name.to_string(), DENSE_OV_PHASE.to_string()],
+        prompt_tokens: number_at_any(
+            &ask,
+            &[
+                "tokens.prompt_count",
+                "tokens.prompt",
+                "prompt.prompt_token_count",
+                "prompt_token_count",
+            ],
+        )
+        .map(|value| value as u64),
         cold_load_ms: number_at_any(
             &ask,
             &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
@@ -9782,6 +9901,7 @@ mod tests {
                     "total_ms": 150.0
                 },
                 "tokens": {
+                    "prompt_count": 38,
                     "generated_count": 8
                 }
             }),
@@ -9844,11 +9964,46 @@ mod tests {
         assert!(ask_normal.route_evidence.iter().any(|route| {
             route.route_id == DEFAULT_ASK_ROUTE && route.promotion_eligible_for_profile
         }));
+        let cpu_ask_normal = ask_normal
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing ask_normal CPU route")?;
+        assert_eq!(cpu_ask_normal.timing_applicability.measured_prompt_tokens, Some(38));
+        assert!(cpu_ask_normal.timing_applicability.timing_matches_profile);
         assert!(ask_normal.route_evidence.iter().any(|route| {
             route.route_id == "dense_slm_openvino_gpu_candidate"
                 && route.route_status == "candidate"
                 && !route.benchmark_qualified_advantage
         }));
+        let gpu_ask_normal = ask_normal
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing ask_normal GPU route")?;
+        assert_eq!(gpu_ask_normal.timing_applicability.measured_output_tokens, None);
+        assert!(!gpu_ask_normal.timing_applicability.timing_matches_profile);
+        assert!(gpu_ask_normal.blockers.contains(
+            &"timing evidence is not profile-specific for profile ask_normal".to_string()
+        ));
+        let prefill_heavy = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "prefill_heavy")
+            .context("missing prefill_heavy profile")?;
+        let cpu_prefill_heavy = prefill_heavy
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing prefill_heavy CPU route")?;
+        assert!(!cpu_prefill_heavy.timing_applicability.timing_matches_profile);
+        assert!(
+            cpu_prefill_heavy
+                .timing_applicability
+                .notes
+                .iter()
+                .any(|note| { note.contains("prompt timing count 38 does not satisfy `>=2048`") })
+        );
         let Some(low_power) =
             profiles.profiles.iter().find(|profile| profile.profile_id == "low_power")
         else {
@@ -9974,7 +10129,7 @@ mod tests {
                     "decode_total_ms": 90.0,
                     "decode_steady_state_tok_s": 10.0
                 },
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -10384,7 +10539,7 @@ mod tests {
                     "decode_total_ms": 90.0,
                     "decode_steady_state_tok_s": 10.0
                 },
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -10531,7 +10686,7 @@ mod tests {
                     "decode_steady_state_tok_s": 10.0
                 },
                 "latency": {"total_ms": 217.0},
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -11279,7 +11434,7 @@ mod tests {
                     "decode_steady_state_tok_s": 10.0
                 },
                 "latency": {"total_ms": 150.0},
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -11447,7 +11602,7 @@ mod tests {
                     "decode_steady_state_tok_s": 10.0
                 },
                 "latency": {"total_ms": 150.0},
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
@@ -11633,7 +11788,7 @@ mod tests {
                     "decode_steady_state_tok_s": 10.0
                 },
                 "latency": {"total_ms": 150.0},
-                "tokens": {"generated_count": 8}
+                "tokens": {"prompt_count": 38, "generated_count": 8}
             }),
         )?;
         write_json(
