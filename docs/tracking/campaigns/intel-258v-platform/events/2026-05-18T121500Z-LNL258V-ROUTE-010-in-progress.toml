@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T12:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-010"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-010-openvino-token-context"
+summary = "Started LNL258V-ROUTE-010 to supplement OpenVINO candidate route timing with corpus-v2 prompt-token context while preserving candidate-only GPU/NPU route boundaries."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "OpenVINO operator ask receipts still do not expose direct prompt token IDs, so route-profile timing can now cite the matching corpus-v2 prompt-token context when available.",
+  "GPU and NPU remain candidate routes with quality, benchmark, token-visibility, and promotion-evidence blockers intact.",
+  "No new inference, route promotion, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim is in scope.",
+]
