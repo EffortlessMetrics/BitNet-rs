@@ -1694,6 +1694,13 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &selected_query_downstream_score_residual_frontier,
                 &selected_qk_downstream_score_residual_frontier,
             );
+        let selected_key_score_history_bucket_decision_frontier =
+            attention_selected_key_score_history_bucket_decision_frontier(
+                &selected_score_residual_decision_frontier,
+                &selected_qk_downstream_score_residual_frontier,
+                &selected_key_mixed_qk_frontier,
+                &cpu_comparison,
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1743,6 +1750,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_key_f64_score_history_frontier;
         cpu_comparison["attention_selected_score_residual_decision_frontier"] =
             selected_score_residual_decision_frontier;
+        cpu_comparison["attention_selected_key_score_history_bucket_decision_frontier"] =
+            selected_key_score_history_bucket_decision_frontier;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -34873,6 +34882,298 @@ fn attention_selected_score_residual_decision_frontier(
     })
 }
 
+fn selected_key_score_history_bucket_decision_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_key_score_history_bucket_decision_post_rope_capture_replay" => {
+            "pin selected post-RoPE trace capture versus runtime replay before changing score accumulation, softmax, or value mix"
+        }
+        "selected_key_score_history_bucket_decision_pre_rope_projection" => {
+            "localize selected K projection input/output bucket crossing before changing RoPE or score math"
+        }
+        "selected_key_score_history_bucket_decision_projection_subbucket_midpoint" => {
+            "localize selected K projection sub-bucket midpoint before changing RoPE or score math"
+        }
+        "selected_key_score_history_bucket_decision_post_rope_f16_midpoint" => {
+            "decide whether selected post-RoPE F16 midpoint sensitivity is acceptable capture precision before runtime math changes"
+        }
+        "selected_key_score_history_bucket_decision_post_rope_runtime_replay" => {
+            "pin selected post-RoPE runtime replay before changing score-input history expansion"
+        }
+        "selected_key_score_history_bucket_decision_attention_norm_history" => {
+            "pin selected pre-RoPE attention-norm history before changing K projection or score math"
+        }
+        "selected_key_score_history_bucket_decision_score_input_expansion" => {
+            "localize selected post-RoPE to score-input history expansion before changing score accumulation"
+        }
+        "selected_key_score_history_bucket_decision_exact_key_boundary" => {
+            "follow the exact selected key boundary report before changing score accumulation, softmax, or value mix"
+        }
+        "selected_key_score_history_bucket_decision_post_rope_history" => {
+            "localize selected post-RoPE history bucket source before changing score accumulation, softmax, or value mix"
+        }
+        "selected_key_score_history_bucket_decision_mixed_qk_product" => {
+            "replay selected mixed Q/K product before changing score accumulation"
+        }
+        "selected_key_score_history_bucket_decision_raw_score_accumulation" => {
+            "replay selected raw QK score accumulation before changing score accumulation policy"
+        }
+        "selected_key_score_history_bucket_decision_score_history_serialization" => {
+            "pin score-history serialization/capture before changing score accumulation or softmax"
+        }
+        "selected_key_score_history_bucket_decision_softmax_probability" => {
+            "localize selected softmax probability formation before value-mix changes"
+        }
+        "selected_key_score_history_bucket_decision_value_mix" => {
+            "localize selected value-mix inputs before changing value-mix runtime math"
+        }
+        "selected_key_score_history_bucket_decision_clean" => {
+            "selected key score-history bucket decision is clean; rerun downstream probability, value-mix, and logits parity"
+        }
+        "selected_key_score_history_bucket_decision_not_key_history" => {
+            "follow the non-key selected score residual decision frontier"
+        }
+        "selected_key_score_history_bucket_decision_missing_context" => {
+            "capture selected key slot, post-RoPE history, post-RoPE replay, and Q/K downstream context before runtime changes"
+        }
+        _ => "keep selected key score-history bucket decision diagnostic-only",
+    }
+}
+
+fn attention_selected_key_score_history_bucket_decision_frontier(
+    selected_score_decision: &Value,
+    selected_qk_downstream: &Value,
+    selected_key_mixed_qk: &Value,
+    base_comparison: &Value,
+) -> Value {
+    let score_decision_classification = selected_report_classification(selected_score_decision);
+    let qk_downstream_classification = selected_report_classification(selected_qk_downstream);
+    let selected_key_mixed_qk_classification =
+        selected_report_classification(selected_key_mixed_qk);
+    let slot_probe = base_comparison
+        .pointer("/attention_selected_key_dim_token_slot_probe")
+        .unwrap_or(&Value::Null);
+    let post_rope_source = base_comparison
+        .pointer("/attention_selected_post_rope_history_bucket_source")
+        .unwrap_or(&Value::Null);
+    let post_rope_capture = base_comparison
+        .pointer("/attention_selected_post_rope_capture_replay_source")
+        .unwrap_or(&Value::Null);
+    let rust_post_rope_capture = base_comparison
+        .pointer("/attention_selected_rust_post_rope_capture_source")
+        .unwrap_or(&Value::Null);
+    let post_rope_runtime = base_comparison
+        .pointer("/attention_selected_post_rope_runtime_replay_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_pair = base_comparison
+        .pointer("/attention_selected_pre_rope_projection_pair_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_history = base_comparison
+        .pointer("/attention_selected_pre_rope_projection_history_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_norm = base_comparison
+        .pointer("/attention_selected_pre_rope_attention_norm_history_source")
+        .unwrap_or(&Value::Null);
+
+    let slot_probe_classification = selected_report_classification(slot_probe);
+    let post_rope_source_classification = selected_report_classification(post_rope_source);
+    let post_rope_capture_classification = selected_report_classification(post_rope_capture);
+    let rust_post_rope_capture_classification =
+        selected_report_classification(rust_post_rope_capture);
+    let post_rope_runtime_classification = selected_report_classification(post_rope_runtime);
+    let pre_rope_pair_classification = selected_report_classification(pre_rope_pair);
+    let pre_rope_history_classification = selected_report_classification(pre_rope_history);
+    let pre_rope_norm_classification = selected_report_classification(pre_rope_norm);
+    let active_key_history = matches!(
+        score_decision_classification,
+        Some("selected_score_residual_decision_frontier_selected_key_history")
+            | Some("selected_score_residual_decision_frontier_selected_qk_history")
+    );
+    let key_context_present = [
+        qk_downstream_classification,
+        selected_key_mixed_qk_classification,
+        slot_probe_classification,
+        post_rope_source_classification,
+        post_rope_capture_classification,
+        rust_post_rope_capture_classification,
+        post_rope_runtime_classification,
+        pre_rope_pair_classification,
+        pre_rope_history_classification,
+        pre_rope_norm_classification,
+    ]
+    .iter()
+    .any(Option::is_some);
+
+    let classification = if score_decision_classification.is_none() {
+        "selected_key_score_history_bucket_decision_missing_context"
+    } else if !active_key_history {
+        "selected_key_score_history_bucket_decision_not_key_history"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_score_history_serialization")
+    ) {
+        "selected_key_score_history_bucket_decision_score_history_serialization"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_softmax_probability")
+    ) {
+        "selected_key_score_history_bucket_decision_softmax_probability"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_value_mix")
+    ) {
+        "selected_key_score_history_bucket_decision_value_mix"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_clean")
+    ) {
+        "selected_key_score_history_bucket_decision_clean"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_raw_score_accumulation")
+    ) {
+        "selected_key_score_history_bucket_decision_raw_score_accumulation"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_key_score_input_expansion")
+    ) || slot_probe_classification
+        == Some("selected_key_dim_token_slot_probe_score_input_bucket_crossing")
+    {
+        "selected_key_score_history_bucket_decision_score_input_expansion"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_mixed_qk_product")
+    ) || matches!(
+        selected_key_mixed_qk_classification,
+        Some("selected_key_mixed_qk_frontier_post_rope_bucket_crossing")
+    ) {
+        "selected_key_score_history_bucket_decision_mixed_qk_product"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_key_pre_rope")
+    ) || matches!(
+        post_rope_source_classification,
+        Some("selected_post_rope_history_bucket_source_pre_rope_bucket_crossing")
+            | Some("selected_post_rope_history_bucket_source_projection_bucket_crossing")
+    ) || matches!(
+        pre_rope_pair_classification,
+        Some("selected_pre_rope_projection_pair_source_raw_projection_pair_delta")
+            | Some("selected_pre_rope_projection_pair_source_projection_bucket_crossing")
+    ) || pre_rope_history_classification
+        == Some("selected_pre_rope_projection_history_replay_explains_pair_delta")
+    {
+        "selected_key_score_history_bucket_decision_pre_rope_projection"
+    } else if post_rope_source_classification
+        == Some("selected_post_rope_history_bucket_source_projection_subbucket_midpoint")
+    {
+        "selected_key_score_history_bucket_decision_projection_subbucket_midpoint"
+    } else if post_rope_source_classification
+        == Some("selected_post_rope_history_bucket_source_f16_midpoint_sensitive")
+    {
+        "selected_key_score_history_bucket_decision_post_rope_f16_midpoint"
+    } else if matches!(
+        post_rope_source_classification,
+        Some("selected_post_rope_history_bucket_source_capture_replay_mismatch")
+    ) || matches!(
+        post_rope_capture_classification,
+        Some(
+            "selected_post_rope_capture_replay_source_reference_capture_mismatch"
+                | "selected_post_rope_capture_replay_source_rust_capture_mismatch"
+                | "selected_post_rope_capture_replay_source_both_sides_mismatch"
+                | "selected_post_rope_capture_replay_source_runtime_replay_delta"
+        )
+    ) || matches!(
+        rust_post_rope_capture_classification,
+        Some(
+            "selected_rust_post_rope_capture_source_capture_mismatch"
+                | "selected_rust_post_rope_capture_source_runtime_replay_unclean"
+        )
+    ) {
+        "selected_key_score_history_bucket_decision_post_rope_capture_replay"
+    } else if matches!(
+        post_rope_runtime_classification,
+        Some("selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing")
+    ) {
+        "selected_key_score_history_bucket_decision_post_rope_runtime_replay"
+    } else if matches!(
+        pre_rope_norm_classification,
+        Some(
+            "selected_pre_rope_attention_norm_history_source_output_replay_explains_epsilon"
+                | "selected_pre_rope_attention_norm_history_source_input_history_epsilon"
+                | "selected_pre_rope_attention_norm_history_source_output_epsilon_unpinned"
+        )
+    ) {
+        "selected_key_score_history_bucket_decision_attention_norm_history"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_key_exact_boundary")
+    ) {
+        "selected_key_score_history_bucket_decision_exact_key_boundary"
+    } else if matches!(
+        qk_downstream_classification,
+        Some("selected_qk_downstream_score_residual_key_post_rope_history")
+    ) || slot_probe_classification
+        == Some("selected_key_dim_token_slot_probe_post_rope_bucket_crossing")
+    {
+        "selected_key_score_history_bucket_decision_post_rope_history"
+    } else if !key_context_present {
+        "selected_key_score_history_bucket_decision_missing_context"
+    } else {
+        "selected_key_score_history_bucket_decision_missing_context"
+    };
+
+    let blocked_reasons =
+        if classification == "selected_key_score_history_bucket_decision_missing_context" {
+            json!(["selected_key_score_history_bucket_decision_missing_context"])
+        } else {
+            json!([])
+        };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected key score-history bucket decision frontier is diagnostic-only evidence for turning a selected-key final score decision into the next selected key bucket optic; it consumes existing key slot, post-RoPE history, post-RoPE replay, mixed-QK, and Q/K downstream reports without adding trace capture, changing runtime math, or promoting reference parity, A770 semantic quality, attention score residency, softmax residency, value-mix residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_score_residual_decision_classification": score_decision_classification,
+        "selected_qk_downstream_score_residual_classification": qk_downstream_classification,
+        "selected_key_mixed_qk_frontier_classification": selected_key_mixed_qk_classification,
+        "selected_key_slot_probe_classification": slot_probe_classification,
+        "selected_post_rope_history_bucket_source_classification": post_rope_source_classification,
+        "selected_post_rope_capture_replay_source_classification": post_rope_capture_classification,
+        "selected_rust_post_rope_capture_source_classification": rust_post_rope_capture_classification,
+        "selected_post_rope_runtime_replay_source_classification": post_rope_runtime_classification,
+        "selected_pre_rope_projection_pair_source_classification": pre_rope_pair_classification,
+        "selected_pre_rope_projection_history_source_classification": pre_rope_history_classification,
+        "selected_pre_rope_attention_norm_history_source_classification": pre_rope_norm_classification,
+        "selected_query_head": value_u64(selected_score_decision, "/selected_query_head")
+            .or_else(|| value_u64(selected_qk_downstream, "/selected_query_head"))
+            .or_else(|| value_u64(selected_key_mixed_qk, "/selected_query_head")),
+        "selected_query_dim": value_u64(selected_score_decision, "/selected_query_dim")
+            .or_else(|| value_u64(selected_qk_downstream, "/selected_query_dim"))
+            .or_else(|| value_u64(selected_key_mixed_qk, "/selected_query_dim")),
+        "selected_query_token": value_u64(selected_score_decision, "/selected_query_token")
+            .or_else(|| value_u64(selected_qk_downstream, "/selected_query_token"))
+            .or_else(|| value_u64(selected_key_mixed_qk, "/selected_query_token")),
+        "selected_query_key_slot": value_u64(selected_score_decision, "/selected_query_key_slot")
+            .or_else(|| value_u64(selected_qk_downstream, "/selected_query_key_slot"))
+            .or_else(|| value_u64(selected_key_mixed_qk, "/selected_query_key_slot")),
+        "active_key_history": active_key_history,
+        "key_context_present": key_context_present,
+        "first_qk_downstream_row": selected_qk_downstream.pointer("/first_slot_probe_row").cloned().unwrap_or(Value::Null),
+        "first_slot_probe_row": compact_selected_key_slot_probe_row(slot_probe.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_post_rope_history_row": compact_selected_key_mixed_qk_source_row(post_rope_source.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_post_rope_capture_row": compact_selected_key_mixed_qk_source_row(post_rope_capture.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_rust_post_rope_capture_row": compact_selected_key_mixed_qk_source_row(rust_post_rope_capture.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_post_rope_runtime_row": compact_selected_key_mixed_qk_source_row(post_rope_runtime.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_pre_rope_projection_pair_row": compact_selected_key_mixed_qk_source_row(pre_rope_pair.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_pre_rope_projection_history_row": compact_selected_key_mixed_qk_source_row(pre_rope_history.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_pre_rope_attention_norm_row": compact_selected_key_mixed_qk_source_row(pre_rope_norm.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": selected_key_score_history_bucket_decision_next_diagnostic(classification),
+    })
+}
+
 fn selected_query_history_residual_next_diagnostic(classification: &str) -> &'static str {
     match classification {
         "selected_query_history_residual_query_score_input_source" => {
@@ -56591,6 +56892,197 @@ mod tests {
         assert_eq!(
             report.pointer("/blocked_reasons/0"),
             Some(&json!("selected_score_residual_decision_frontier_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    fn selected_key_score_history_decision_score(classification: &str) -> Value {
+        json!({
+            "classification": classification,
+            "selected_query_head": 5,
+            "selected_query_dim": 69,
+            "selected_query_token": 17,
+            "selected_query_key_slot": 17
+        })
+    }
+
+    fn selected_key_score_history_decision_qk(classification: &str) -> Value {
+        json!({
+            "classification": classification,
+            "selected_query_head": 5,
+            "selected_query_dim": 69,
+            "selected_query_token": 17,
+            "selected_query_key_slot": 17,
+            "first_slot_probe_row": {
+                "classification": "selected_key_dim_token_slot_probe_post_rope_bucket_crossing",
+                "head": 5,
+                "key_slot": 17,
+                "query_token": 17,
+                "contributor_dim": 69
+            }
+        })
+    }
+
+    fn selected_key_score_history_decision_base(post_rope_classification: &str) -> Value {
+        json!({
+            "attention_selected_key_dim_token_slot_probe": {
+                "classification": "selected_key_dim_token_slot_probe_post_rope_bucket_crossing",
+                "rows": [
+                    {
+                        "classification": "selected_key_dim_token_slot_probe_post_rope_bucket_crossing",
+                        "head": 5,
+                        "kv_head": 1,
+                        "key_slot": 17,
+                        "query_token": 17,
+                        "contributor_dim": 69
+                    }
+                ]
+            },
+            "attention_selected_post_rope_history_bucket_source": {
+                "classification": post_rope_classification,
+                "rows": [
+                    {
+                        "classification": post_rope_classification,
+                        "head": 5,
+                        "kv_head": 1,
+                        "key_slot": 17,
+                        "query_token": 17,
+                        "contributor_dim": 69
+                    }
+                ]
+            },
+            "attention_selected_post_rope_capture_replay_source": {
+                "classification": "selected_post_rope_capture_replay_source_clean",
+                "rows": [
+                    {
+                        "classification": "selected_post_rope_capture_replay_source_clean",
+                        "head": 5,
+                        "kv_head": 1,
+                        "key_slot": 17,
+                        "query_token": 17,
+                        "contributor_dim": 69
+                    }
+                ]
+            },
+            "attention_selected_rust_post_rope_capture_source": {
+                "classification": "selected_rust_post_rope_capture_source_clean",
+                "rows": [
+                    {
+                        "classification": "selected_rust_post_rope_capture_source_clean",
+                        "head": 5,
+                        "kv_head": 1,
+                        "key_slot": 17,
+                        "query_token": 17,
+                        "contributor_dim": 69
+                    }
+                ]
+            },
+            "attention_selected_post_rope_runtime_replay_source": {
+                "classification": "selected_post_rope_runtime_replay_source_clean",
+                "rows": [
+                    {
+                        "classification": "selected_post_rope_runtime_replay_source_clean",
+                        "head": 5,
+                        "kv_head": 1,
+                        "key_slot": 17,
+                        "query_token": 17,
+                        "contributor_dim": 69
+                    }
+                ]
+            }
+        })
+    }
+
+    #[test]
+    fn selected_key_score_history_bucket_decision_reports_post_rope_capture_replay() {
+        let report = attention_selected_key_score_history_bucket_decision_frontier(
+            &selected_key_score_history_decision_score(
+                "selected_score_residual_decision_frontier_selected_key_history",
+            ),
+            &selected_key_score_history_decision_qk(
+                "selected_qk_downstream_score_residual_key_post_rope_history",
+            ),
+            &json!({
+                "classification": "selected_key_mixed_qk_frontier_post_rope_capture_replay_mismatch"
+            }),
+            &selected_key_score_history_decision_base(
+                "selected_post_rope_history_bucket_source_capture_replay_mismatch",
+            ),
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_score_history_bucket_decision_post_rope_capture_replay"))
+        );
+        assert_eq!(
+            report.pointer("/selected_post_rope_history_bucket_source_classification"),
+            Some(&json!("selected_post_rope_history_bucket_source_capture_replay_mismatch"))
+        );
+        assert_eq!(report.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_key_score_history_bucket_decision_reports_score_input_expansion() {
+        let report = attention_selected_key_score_history_bucket_decision_frontier(
+            &selected_key_score_history_decision_score(
+                "selected_score_residual_decision_frontier_selected_key_history",
+            ),
+            &selected_key_score_history_decision_qk(
+                "selected_qk_downstream_score_residual_key_score_input_expansion",
+            ),
+            &json!({ "classification": "selected_key_mixed_qk_frontier_post_rope_bucket_crossing" }),
+            &selected_key_score_history_decision_base(
+                "selected_post_rope_history_bucket_source_unpinned",
+            ),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_score_history_bucket_decision_score_input_expansion"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_key_score_history_bucket_decision_reports_not_key_history() {
+        let report = attention_selected_key_score_history_bucket_decision_frontier(
+            &selected_key_score_history_decision_score(
+                "selected_score_residual_decision_frontier_selected_query_history",
+            ),
+            &selected_key_score_history_decision_qk(
+                "selected_qk_downstream_score_residual_selected_query_history",
+            ),
+            &json!({}),
+            &selected_key_score_history_decision_base(
+                "selected_post_rope_history_bucket_source_unpinned",
+            ),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_score_history_bucket_decision_not_key_history"))
+        );
+        assert_eq!(report.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_key_score_history_bucket_decision_reports_missing_context() {
+        let report = attention_selected_key_score_history_bucket_decision_frontier(
+            &json!({}),
+            &json!({}),
+            &json!({}),
+            &json!({}),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_score_history_bucket_decision_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_key_score_history_bucket_decision_missing_context"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
