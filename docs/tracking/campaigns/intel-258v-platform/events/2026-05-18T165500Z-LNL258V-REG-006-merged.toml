@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-18T16:55:00Z"
+event = "merged"
+item = "LNL258V-REG-006"
+branch = "codex/lunar-lake/LNL258V-REG-006-blocker-summary"
+pr = 5718
+head_sha = "3ab5cfdbc5dc711bdd3ae5721aa75c1e97f3d1a3"
+merge_sha = "5e604a73696349aac309c9b60fc6ddfc59b77350"
+actor = "codex"
+summary = "Merged LNL258V-REG-006 to surface grouped route promotion blockers in strict Lunar Lake regression v2."
+
+notes = [
+  "The regression bundle now carries candidate GPU/NPU blocker route/profile coverage and next-action hints from route-profile comparison.",
+  "The merge preserved no-new-inference, no route promotion, no speedup, no power-advantage, no acceleration, and no BitNet QK256/I2_S behavior-change boundaries.",
+]

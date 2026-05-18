@@ -6282,7 +6282,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-006"
-status = "in_progress"
+status = "merged"
+pr = 5718
+head_sha = "3ab5cfdbc5dc711bdd3ae5721aa75c1e97f3d1a3"
+merge_sha = "5e604a73696349aac309c9b60fc6ddfc59b77350"
 branch = "codex/lunar-lake/LNL258V-REG-006-blocker-summary"
 stackable = false
 review_mode = "codex_premerge"
