@@ -55,6 +55,9 @@ const MAC_BENCHMARK_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-eval-v2/mac-ben
 const MAC_BENCHMARK_PREFLIGHT_DEFAULT_RECEIPT: &str =
     "target/apple-m4-slm-eval-v2/benchmark-preflight.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
+const MAC_ROBUSTNESS_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-robustness-corpus.yaml";
+const MAC_ROBUSTNESS_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/robustness/summary.json";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
 const MAC_CHAT_SMOKE_SYSTEM_PROMPT: &str = "You are a concise local assistant.";
@@ -146,6 +149,15 @@ const M4_SLM_BENCHMARK_V2_LEGACY_AGGREGATE_SPEED_METRICS: &[&str] = &[
     "decode_tok_s",
     "total_wall_ms",
 ];
+const M4_ROBUSTNESS_REQUIRED_CATEGORIES: &[&str] = &[
+    "false_premise",
+    "ambiguous",
+    "instruction_conflict",
+    "prompt_injection_style",
+    "format_trap",
+    "unsupported_request",
+];
+const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 enum MacValidateProfileSet {
@@ -155,6 +167,21 @@ enum MacValidateProfileSet {
     Operator,
     /// Run release-mode 16/32/64/128 warm-answer timing profiles.
     Performance,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum MacEvalSuite {
+    /// Dry-run the dense SLM and BitNet negative/robustness corpus.
+    #[value(name = "m4-robustness")]
+    M4Robustness,
+}
+
+impl MacEvalSuite {
+    const fn id(self) -> &'static str {
+        match self {
+            Self::M4Robustness => "m4-robustness",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -257,6 +284,56 @@ impl BitnetWarmProfile {
             Self::Resident100 => 100,
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct MacRobustnessCorpus {
+    schema: u64,
+    artifact_kind: String,
+    name: String,
+    description: String,
+    #[serde(default)]
+    metadata: serde_json::Value,
+    #[serde(default)]
+    defaults: MacRobustnessDefaults,
+    cases: Vec<MacRobustnessCase>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct MacRobustnessDefaults {
+    #[serde(default)]
+    families: Vec<String>,
+    #[serde(default)]
+    family_prompt_templates: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MacRobustnessCase {
+    id: String,
+    category: String,
+    question: String,
+    #[serde(default)]
+    families: Vec<String>,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+    scoring: MacRobustnessScoring,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct MacRobustnessScoring {
+    kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    expected: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    expected_normalized: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    required_keywords: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    forbidden_tokens: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    schema: Option<serde_json::Value>,
 }
 
 /// Run Apple M4 local operator flows with strict receipts.
@@ -950,6 +1027,29 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Dry-run supported Apple M4 eval suites and write receipt-backed summaries.
+    Eval {
+        /// Eval suite to dry-run.
+        #[arg(long, value_enum)]
+        suite: MacEvalSuite,
+
+        /// Deterministic robustness corpus.
+        #[arg(long, value_name = "PATH", default_value = MAC_ROBUSTNESS_DEFAULT_CORPUS)]
+        corpus: PathBuf,
+
+        /// Do not invoke model generation; validate suite shape and emit not-run rows.
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+
+        /// Output eval summary receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_ROBUSTNESS_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
     /// Run release-mode dense SLM benchmark profiles for v2 M4 receipts.
     Benchmark {
         /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
@@ -1541,6 +1641,10 @@ impl MacCommand {
                 })
                 .await
             }
+            MacAction::Eval { suite, corpus, dry_run, json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac eval")?;
+                run_mac_eval(suite, corpus, dry_run, json_out, json)
+            }
             MacAction::Benchmark {
                 model_id,
                 cache_dir,
@@ -1620,6 +1724,407 @@ fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Res
             "missing Mac question; pass it positionally, e.g. `bitnet mac ask \"What is 2+2?\"`, or with --question"
         ),
     }
+}
+
+fn run_mac_eval(
+    suite: MacEvalSuite,
+    corpus_path: PathBuf,
+    dry_run: bool,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    if !dry_run {
+        anyhow::bail!(
+            "mac eval --suite {} currently supports only --dry-run; live robustness execution needs a separate receipt-gated item",
+            suite.id()
+        );
+    }
+    let (corpus, corpus_sha256) = load_mac_robustness_corpus(&corpus_path)?;
+    let receipt = mac_robustness_eval_summary_receipt(suite, &corpus_path, corpus_sha256, &corpus);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        println!(
+            "Apple M4 eval suite: {} (dry-run, cases={}, receipt={})",
+            suite.id(),
+            receipt["expanded_case_count"].as_u64().unwrap_or(0),
+            json_out.display()
+        );
+        println!(
+            "Claim boundary: robustness cases are mechanically scored and separated by dense SLM vs BitNet; no broad safety, alignment, factuality, Metal, QK256, Neural Engine, MPSGraph, or speedup claim."
+        );
+    }
+    Ok(())
+}
+
+fn load_mac_robustness_corpus(path: &Path) -> Result<(MacRobustnessCorpus, String)> {
+    let bytes =
+        std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let corpus: MacRobustnessCorpus = serde_yaml::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    validate_mac_robustness_corpus(path, &corpus)?;
+    Ok((corpus, sha256_hex(&bytes)))
+}
+
+fn validate_mac_robustness_corpus(path: &Path, corpus: &MacRobustnessCorpus) -> Result<()> {
+    if corpus.schema != 1 {
+        anyhow::bail!("{} unsupported robustness corpus schema {}", path.display(), corpus.schema);
+    }
+    if corpus.artifact_kind != "apple_m4_robustness_corpus" {
+        anyhow::bail!(
+            "{} unexpected robustness corpus artifact_kind {}",
+            path.display(),
+            corpus.artifact_kind
+        );
+    }
+    if corpus.cases.is_empty() {
+        anyhow::bail!("{} robustness corpus must contain at least one case", path.display());
+    }
+    for required_family in M4_ROBUSTNESS_MODEL_FAMILIES {
+        if !corpus.defaults.families.iter().any(|family| family == required_family) {
+            anyhow::bail!(
+                "{} robustness corpus defaults.families must include {}",
+                path.display(),
+                required_family
+            );
+        }
+        if robustness_prompt_template(corpus, required_family).is_empty() {
+            anyhow::bail!(
+                "{} robustness corpus must pin prompt template for {}",
+                path.display(),
+                required_family
+            );
+        }
+    }
+    let mut case_ids = std::collections::BTreeSet::new();
+    let mut categories = std::collections::BTreeSet::new();
+    for case in &corpus.cases {
+        if !case_ids.insert(case.id.as_str()) {
+            anyhow::bail!(
+                "{} robustness corpus case id `{}` is duplicated",
+                path.display(),
+                case.id
+            );
+        }
+        if !M4_ROBUSTNESS_REQUIRED_CATEGORIES.contains(&case.category.as_str()) {
+            anyhow::bail!(
+                "{} robustness corpus case `{}` has unsupported category `{}`",
+                path.display(),
+                case.id,
+                case.category
+            );
+        }
+        categories.insert(case.category.as_str());
+        let families = robustness_case_families(corpus, case);
+        if families.is_empty() {
+            anyhow::bail!(
+                "{} robustness corpus case `{}` has no model families",
+                path.display(),
+                case.id
+            );
+        }
+        for family in families {
+            if !M4_ROBUSTNESS_MODEL_FAMILIES.contains(&family) {
+                anyhow::bail!(
+                    "{} robustness corpus case `{}` has unsupported model family `{}`",
+                    path.display(),
+                    case.id,
+                    family
+                );
+            }
+        }
+        validate_mac_robustness_scoring(path, case)?;
+    }
+    for required_category in M4_ROBUSTNESS_REQUIRED_CATEGORIES {
+        if !categories.contains(required_category) {
+            anyhow::bail!(
+                "{} robustness corpus must include category {}",
+                path.display(),
+                required_category
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Result<()> {
+    let scoring = &case.scoring;
+    match scoring.kind.as_str() {
+        "exact_match" | "normalized_match" => {
+            if scoring.expected.as_ref().is_none_or(|value| value.trim().is_empty())
+                && scoring.expected_normalized.as_ref().is_none_or(|value| value.trim().is_empty())
+            {
+                anyhow::bail!(
+                    "{} robustness case `{}` scoring `{}` requires expected or expected_normalized",
+                    path.display(),
+                    case.id,
+                    scoring.kind
+                );
+            }
+        }
+        "required_keywords" => {
+            if scoring.required_keywords.as_ref().is_none_or(Vec::is_empty) {
+                anyhow::bail!(
+                    "{} robustness case `{}` required_keywords scoring needs required_keywords",
+                    path.display(),
+                    case.id
+                );
+            }
+        }
+        "forbidden_tokens" => {
+            if scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty) {
+                anyhow::bail!(
+                    "{} robustness case `{}` forbidden_tokens scoring needs forbidden_tokens",
+                    path.display(),
+                    case.id
+                );
+            }
+        }
+        "required_forbidden_tokens" => {
+            if scoring.required_keywords.as_ref().is_none_or(Vec::is_empty)
+                && scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty)
+            {
+                anyhow::bail!(
+                    "{} robustness case `{}` required_forbidden_tokens scoring needs required_keywords or forbidden_tokens",
+                    path.display(),
+                    case.id
+                );
+            }
+        }
+        "json_schema" => {
+            if scoring.schema.is_none() {
+                anyhow::bail!(
+                    "{} robustness case `{}` json_schema scoring needs schema",
+                    path.display(),
+                    case.id
+                );
+            }
+        }
+        other => anyhow::bail!(
+            "{} robustness case `{}` has unsupported scoring kind `{other}`",
+            path.display(),
+            case.id
+        ),
+    }
+    Ok(())
+}
+
+fn mac_robustness_eval_summary_receipt(
+    suite: MacEvalSuite,
+    corpus_path: &Path,
+    corpus_sha256: String,
+    corpus: &MacRobustnessCorpus,
+) -> serde_json::Value {
+    let expanded_cases = M4_ROBUSTNESS_MODEL_FAMILIES
+        .iter()
+        .flat_map(|family| robustness_case_rows_for_family(corpus, family))
+        .collect::<Vec<_>>();
+    let family_summaries = M4_ROBUSTNESS_MODEL_FAMILIES
+        .iter()
+        .map(|family| {
+            let rows = robustness_case_rows_for_family(corpus, family);
+            serde_json::json!({
+                "model_family": family,
+                "receipt_family": format!("{family}_robustness"),
+                "prompt_template": robustness_prompt_template(corpus, family),
+                "model_identity": robustness_model_identity(family),
+                "dry_run": true,
+                "cases_total": rows.len(),
+                "cases_executed": 0,
+                "generated_tokens": 0,
+                "scoring_summary": robustness_scoring_summary(&rows),
+                "category_summary": robustness_category_summary(&rows),
+                "cases": rows,
+                "claim_boundary": {
+                    "mechanical_scoring_only": true,
+                    "required_llm_judge": false,
+                    "robustness_cases_prove_broad_safety": false,
+                    "robustness_cases_prove_broad_alignment": false,
+                    "robustness_cases_prove_broad_factuality": false,
+                    "dense_slm_evidence_proves_bitnet": false,
+                    "bitnet_evidence_proves_dense_slm": false,
+                    "bitnet_chat_enabled": false,
+                    "bitnet_serve_enabled": false,
+                    "full_metal_inference_claimed": false,
+                    "qk256_apple_claimed": false,
+                    "neural_engine_execution_claimed": false,
+                    "mpsgraph_inference_claimed": false,
+                    "speedup_claim": false
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_robustness_eval_summary",
+        "suite": suite.id(),
+        "work_item": "M4-ROBUSTNESS-001",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "model_family": "dense_slm_and_bitnet",
+        "dry_run": true,
+        "expanded_case_count": expanded_cases.len(),
+        "generated_tokens": 0,
+        "corpus": {
+            "schema": corpus.schema,
+            "artifact_kind": &corpus.artifact_kind,
+            "name": &corpus.name,
+            "description": &corpus.description,
+            "path": corpus_path.display().to_string(),
+            "sha256": corpus_sha256,
+            "case_count": corpus.cases.len(),
+            "categories": M4_ROBUSTNESS_REQUIRED_CATEGORIES,
+            "metadata": &corpus.metadata,
+            "mechanical_scoring_only": true,
+            "required_llm_judge": false
+        },
+        "scoring_summary": robustness_scoring_summary(&expanded_cases),
+        "category_summary": robustness_category_summary(&expanded_cases),
+        "families": family_summaries,
+        "cases": expanded_cases,
+        "claim_boundary": {
+            "mechanical_scoring_only": true,
+            "required_llm_judge": false,
+            "broad_safety_claim": false,
+            "broad_alignment_claim": false,
+            "broad_factuality_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "robustness_cases_prove_broad_safety": false,
+            "robustness_cases_prove_broad_alignment": false,
+            "robustness_cases_prove_broad_factuality": false,
+            "dense_slm_evidence_proves_bitnet": false,
+            "bitnet_evidence_proves_dense_slm": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "speedup_claim": false
+        },
+        "full_metal_inference_claimed": false,
+        "qk256_apple_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false
+    })
+}
+
+fn robustness_case_rows_for_family(
+    corpus: &MacRobustnessCorpus,
+    family: &str,
+) -> Vec<serde_json::Value> {
+    corpus
+        .cases
+        .iter()
+        .filter(|case| robustness_case_families(corpus, case).contains(&family))
+        .map(|case| {
+            serde_json::json!({
+                "id": &case.id,
+                "model_family": family,
+                "category": &case.category,
+                "status": "not_run",
+                "prompt": {
+                    "template_family": robustness_prompt_template(corpus, family),
+                    "text": &case.question,
+                    "max_new_tokens": case
+                        .max_new_tokens
+                        .or(corpus.defaults.max_new_tokens)
+                        .unwrap_or(32)
+                },
+                "quality": {
+                    "passed": null,
+                    "not_run_reason": "dry_run_requested"
+                },
+                "scoring": serde_json::to_value(&case.scoring).unwrap_or(serde_json::Value::Null),
+            })
+        })
+        .collect()
+}
+
+fn robustness_case_families<'a>(
+    corpus: &'a MacRobustnessCorpus,
+    case: &'a MacRobustnessCase,
+) -> Vec<&'a str> {
+    let families =
+        if case.families.is_empty() { &corpus.defaults.families } else { &case.families };
+    families.iter().map(String::as_str).collect()
+}
+
+fn robustness_prompt_template<'a>(corpus: &'a MacRobustnessCorpus, family: &str) -> &'a str {
+    corpus.defaults.family_prompt_templates.get(family).map(String::as_str).unwrap_or(
+        match family {
+            "dense_slm" => QWEN_PROMPT_TEMPLATE,
+            "bitnet" => BITNET_M4_PROMPT_TEMPLATE,
+            _ => "",
+        },
+    )
+}
+
+fn robustness_model_identity(family: &str) -> serde_json::Value {
+    match family {
+        "dense_slm" => serde_json::json!({
+            "family": "dense_slm",
+            "default_model_id": model_cache::M4_SLM_RUNTIME_MODEL_ID,
+            "supported_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+            "supported_model_count": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len(),
+            "identity_scope": "catalog_supported_dense_m4_models"
+        }),
+        "bitnet" => serde_json::json!({
+            "family": "bitnet",
+            "model_id": BITNET_M4_MODEL_ID,
+            "model_sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "tokenizer_sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+            "identity_scope": "accepted_bitnet_m4_artifact"
+        }),
+        _ => serde_json::Value::Null,
+    }
+}
+
+fn robustness_scoring_summary(rows: &[serde_json::Value]) -> serde_json::Value {
+    let mut kinds = std::collections::BTreeSet::new();
+    for row in rows {
+        if let Some(kind) = row["scoring"]["kind"].as_str() {
+            kinds.insert(kind.to_string());
+        }
+    }
+    serde_json::json!({
+        "enabled": !rows.is_empty(),
+        "total": rows.len(),
+        "passed": 0,
+        "failed": 0,
+        "not_run": rows.len(),
+        "kinds": kinds.into_iter().collect::<Vec<_>>()
+    })
+}
+
+fn robustness_category_summary(rows: &[serde_json::Value]) -> serde_json::Value {
+    let mut categories = serde_json::Map::new();
+    for required_category in M4_ROBUSTNESS_REQUIRED_CATEGORIES {
+        let total =
+            rows.iter().filter(|row| row["category"].as_str() == Some(required_category)).count();
+        categories.insert(
+            (*required_category).to_string(),
+            serde_json::json!({
+                "total": total,
+                "passed": 0,
+                "failed": 0,
+                "not_run": total
+            }),
+        );
+    }
+    serde_json::Value::Object(categories)
 }
 
 fn run_status(cache_dir: Option<PathBuf>, json_out: PathBuf, json: bool) -> Result<()> {
@@ -14501,6 +15006,8 @@ fn validate_mac_receipt_value(
         validate_slm_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_reference_vs_rust_comparison_v1" {
         validate_dense_slm_reference_vs_rust_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_robustness_eval_summary" {
+        validate_m4_robustness_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_chat_smoke" {
         validate_dense_slm_chat_smoke_receipt(path, receipt, requested_backend.as_str())?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
@@ -14649,6 +15156,194 @@ fn prompt_template_family_matches(observed: &str, identity_family: &str) -> bool
     let observed = observed.parse::<bitnet_inference::TemplateType>();
     let identity = identity_family.parse::<bitnet_inference::TemplateType>();
     matches!((observed, identity), (Ok(observed), Ok(identity)) if observed == identity)
+}
+
+fn validate_m4_robustness_eval_summary_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["suite"], "m4-robustness")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-ROBUSTNESS-001")?;
+    require_bool_at(path, receipt, &["dry_run"], true)?;
+    require_bool_at(path, receipt, &["corpus", "mechanical_scoring_only"], true)?;
+    require_bool_at(path, receipt, &["corpus", "required_llm_judge"], false)?;
+    require_non_empty_string_at(path, receipt, &["corpus", "path"])?;
+    require_non_empty_string_at(path, receipt, &["corpus", "sha256"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["corpus", "artifact_kind"],
+        "apple_m4_robustness_corpus",
+    )?;
+
+    for claim_path in [
+        &["claim_boundary", "broad_safety_claim"][..],
+        &["claim_boundary", "broad_alignment_claim"][..],
+        &["claim_boundary", "broad_factuality_claim"][..],
+        &["claim_boundary", "broad_model_quality_claim"][..],
+        &["claim_boundary", "broad_performance_claim"][..],
+        &["claim_boundary", "robustness_cases_prove_broad_safety"][..],
+        &["claim_boundary", "robustness_cases_prove_broad_alignment"][..],
+        &["claim_boundary", "robustness_cases_prove_broad_factuality"][..],
+        &["claim_boundary", "dense_slm_evidence_proves_bitnet"][..],
+        &["claim_boundary", "bitnet_evidence_proves_dense_slm"][..],
+        &["claim_boundary", "bitnet_quality_claimed"][..],
+        &["claim_boundary", "bitnet_chat_enabled"][..],
+        &["claim_boundary", "bitnet_serve_enabled"][..],
+        &["claim_boundary", "full_metal_inference_claimed"][..],
+        &["claim_boundary", "qk256_apple_claimed"][..],
+        &["claim_boundary", "neural_engine_execution_claimed"][..],
+        &["claim_boundary", "mpsgraph_inference_claimed"][..],
+        &["claim_boundary", "speedup_claim"][..],
+    ] {
+        require_bool_at(path, receipt, claim_path, false)?;
+    }
+
+    let top_total = require_u64_at(path, receipt, &["scoring_summary", "total"], true)?;
+    require_u64_exact(path, receipt, &["scoring_summary", "passed"], 0)?;
+    require_u64_exact(path, receipt, &["scoring_summary", "failed"], 0)?;
+    let top_not_run = require_u64_at(path, receipt, &["scoring_summary", "not_run"], true)?;
+    if top_not_run != top_total {
+        anyhow::bail!(
+            "{} robustness dry-run receipt scoring_summary.not_run must equal total",
+            path.display()
+        );
+    }
+    require_u64_exact(path, receipt, &["generated_tokens"], 0)?;
+    let expanded_case_count = require_u64_at(path, receipt, &["expanded_case_count"], true)?;
+    if expanded_case_count != top_total {
+        anyhow::bail!(
+            "{} robustness dry-run expanded_case_count must match scoring_summary.total",
+            path.display()
+        );
+    }
+
+    for category in M4_ROBUSTNESS_REQUIRED_CATEGORIES {
+        let total = require_u64_at(path, receipt, &["category_summary", category, "total"], true)?;
+        require_u64_exact(path, receipt, &["category_summary", category, "passed"], 0)?;
+        require_u64_exact(path, receipt, &["category_summary", category, "failed"], 0)?;
+        let not_run =
+            require_u64_at(path, receipt, &["category_summary", category, "not_run"], true)?;
+        if not_run != total {
+            anyhow::bail!(
+                "{} robustness category_summary.{category}.not_run must equal total",
+                path.display()
+            );
+        }
+    }
+
+    let families = receipt["families"].as_array().ok_or_else(|| {
+        anyhow!("{} robustness receipt must include families array", path.display())
+    })?;
+    if families.len() != M4_ROBUSTNESS_MODEL_FAMILIES.len() {
+        anyhow::bail!(
+            "{} robustness receipt must include dense_slm and bitnet family summaries",
+            path.display()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut observed_total = 0_u64;
+    for family in families {
+        let family_name = require_non_empty_string_at(path, family, &["model_family"])?;
+        if !M4_ROBUSTNESS_MODEL_FAMILIES.contains(&family_name) {
+            anyhow::bail!(
+                "{} robustness receipt has unsupported model_family {family_name}",
+                path.display()
+            );
+        }
+        if !seen.insert(family_name) {
+            anyhow::bail!(
+                "{} robustness receipt has duplicate model_family {family_name}",
+                path.display()
+            );
+        }
+        let expected_template = match family_name {
+            "dense_slm" => QWEN_PROMPT_TEMPLATE,
+            "bitnet" => BITNET_M4_PROMPT_TEMPLATE,
+            _ => anyhow::bail!(
+                "{} robustness receipt has unsupported model_family {family_name}",
+                path.display()
+            ),
+        };
+        require_exact_string_at(path, family, &["prompt_template"], expected_template)?;
+        require_bool_at(path, family, &["dry_run"], true)?;
+        require_u64_exact(path, family, &["cases_executed"], 0)?;
+        require_u64_exact(path, family, &["generated_tokens"], 0)?;
+        let cases_total = require_u64_at(path, family, &["cases_total"], true)?;
+        observed_total = observed_total.saturating_add(cases_total);
+        let scoring_total = require_u64_at(path, family, &["scoring_summary", "total"], true)?;
+        if scoring_total != cases_total {
+            anyhow::bail!(
+                "{} robustness family {family_name} scoring total must match cases_total",
+                path.display()
+            );
+        }
+        require_u64_exact(path, family, &["scoring_summary", "passed"], 0)?;
+        require_u64_exact(path, family, &["scoring_summary", "failed"], 0)?;
+        let family_not_run = require_u64_at(path, family, &["scoring_summary", "not_run"], true)?;
+        if family_not_run != cases_total {
+            anyhow::bail!(
+                "{} robustness family {family_name} not_run must match cases_total",
+                path.display()
+            );
+        }
+        for category in M4_ROBUSTNESS_REQUIRED_CATEGORIES {
+            require_u64_at(path, family, &["category_summary", category, "total"], true)?;
+        }
+        require_bool_at(path, family, &["claim_boundary", "mechanical_scoring_only"], true)?;
+        require_bool_at(path, family, &["claim_boundary", "required_llm_judge"], false)?;
+        require_bool_at(
+            path,
+            family,
+            &["claim_boundary", "robustness_cases_prove_broad_safety"],
+            false,
+        )?;
+        require_bool_at(
+            path,
+            family,
+            &["claim_boundary", "dense_slm_evidence_proves_bitnet"],
+            false,
+        )?;
+        require_bool_at(path, family, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+        require_bool_at(path, family, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+        let cases = family["cases"].as_array().ok_or_else(|| {
+            anyhow!("{} robustness family {family_name} must include cases", path.display())
+        })?;
+        if cases.len() as u64 != cases_total {
+            anyhow::bail!(
+                "{} robustness family {family_name} cases length must match cases_total",
+                path.display()
+            );
+        }
+        for case in cases {
+            require_non_empty_string_at(path, case, &["id"])?;
+            require_exact_string_at(path, case, &["model_family"], family_name)?;
+            let category = require_non_empty_string_at(path, case, &["category"])?;
+            if !M4_ROBUSTNESS_REQUIRED_CATEGORIES.contains(&category) {
+                anyhow::bail!(
+                    "{} robustness case has unsupported category {category}",
+                    path.display()
+                );
+            }
+            require_exact_string_at(path, case, &["status"], "not_run")?;
+            require_exact_string_at(path, case, &["prompt", "template_family"], expected_template)?;
+            require_non_empty_string_at(path, case, &["prompt", "text"])?;
+            require_non_empty_string_at(path, case, &["scoring", "kind"])?;
+        }
+    }
+    for family in M4_ROBUSTNESS_MODEL_FAMILIES {
+        if !seen.contains(family) {
+            anyhow::bail!("{} robustness receipt is missing model_family {family}", path.display());
+        }
+    }
+    if observed_total != expanded_case_count {
+        anyhow::bail!(
+            "{} robustness family totals must sum to expanded_case_count",
+            path.display()
+        );
+    }
+    Ok((Some(expanded_case_count as usize), Some(0)))
 }
 
 fn prompt_generation_identity_sha256_field<'a>(

@@ -687,7 +687,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ROBUSTNESS-001"
-status = "proposed"
+status = "pr_open"
+pr = 5699
+head_sha = "71aa445a19a84048ac277553fb642333fdaf13e8"
 branch = "codex/apple-m4-inference-excellence/M4-ROBUSTNESS-001-negative-corpus"
 stackable = false
 review_mode = "codex_premerge"

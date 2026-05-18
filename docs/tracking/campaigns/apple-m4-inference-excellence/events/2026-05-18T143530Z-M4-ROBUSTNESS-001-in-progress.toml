@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T14:35:30Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROBUSTNESS-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ROBUSTNESS-001-negative-corpus"
+
+notes = [
+  "Started the dense SLM and BitNet robustness/negative eval lane.",
+  "Scope is bounded to a deterministic corpus, model-free dry-run summary, mechanical scoring plan, separate dense SLM and BitNet receipt families, and receipts-check validation.",
+  "No broad safety, alignment, factuality, dense-to-BitNet transfer, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, broad performance, or speedup claim.",
+]
