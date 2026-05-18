@@ -1040,9 +1040,15 @@ fn reconcile_github_pull_requests(campaigns: &[LoadedCampaign]) -> Vec<Problem> 
         };
         if open_pr_numbers.contains(recorded_pr) {
             if !claims.contains_key(item_id) {
-                problems.push(Problem::error(format!(
-                    "item `{item_id}` is pr_open for GitHub PR #{recorded_pr}, but that open PR does not claim the item in its title, body, or labels"
-                )));
+                match fetch_pull_request(&client, &context, *recorded_pr) {
+                    Ok(pr) if pull_request_claims_item(&pr, item_id) => continue,
+                    Ok(_) => problems.push(Problem::error(format!(
+                        "item `{item_id}` is pr_open for GitHub PR #{recorded_pr}, but that open PR does not claim the item in its title, body, or labels"
+                    ))),
+                    Err(err) => problems.push(github_reconciliation_problem(format!(
+                        "fetch GitHub PR #{recorded_pr} for `{item_id}` claim check failed: {err}"
+                    ))),
+                }
             }
             continue;
         }
