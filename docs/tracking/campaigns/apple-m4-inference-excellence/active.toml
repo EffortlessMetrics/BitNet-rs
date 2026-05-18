@@ -687,9 +687,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ROBUSTNESS-001"
-status = "pr_open"
+status = "merged"
 pr = 5699
-head_sha = "71aa445a19a84048ac277553fb642333fdaf13e8"
+head_sha = "150459610c0e6166c502662668ec6c2ced860288"
+merge_sha = "7578f1de8ded04742fd491174b813789ac6ebbdc"
 branch = "codex/apple-m4-inference-excellence/M4-ROBUSTNESS-001-negative-corpus"
 stackable = false
 review_mode = "codex_premerge"
