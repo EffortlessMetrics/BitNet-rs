@@ -1,0 +1,27 @@
+timestamp = "2026-05-18T08:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-007"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-007-budget-sensitivity-index"
+pr = 5531
+head_sha = "f0c6207f16c64fff868d5b6d405911977b30f6a6"
+merge_sha = "949adf3621ae394aae5c35dad91ebcee54120366"
+summary = "Merged LNL258V-ROUTE-007 OpenVINO budget-sensitivity route-profile indexing."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5531 merged route-profile consumption of lunar-lake-openvino-generation-budget-sensitivity.json.",
+  "Candidate GPU/NPU rows now distinguish fixture-budget overgeneration from exact-answer cases with no passing tested generation budget.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
