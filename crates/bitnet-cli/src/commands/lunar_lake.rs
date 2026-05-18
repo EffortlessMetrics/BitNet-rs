@@ -8953,7 +8953,13 @@ fn evaluate_profile_route(
         .iter()
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("route `{route_id}` not found in promotion ledger"))?;
-    let timing = profile_timing_for_route(root, route_id, phase_comparison, telemetry_context)?;
+    let timing = profile_timing_for_route(
+        root,
+        route_id,
+        phase_comparison,
+        telemetry_context,
+        quality_index,
+    )?;
     let timing_applicability = timing_applicability_for_profile(profile, &timing);
     let mut blockers = route.missing_evidence.clone();
     let profile_quality = quality_index.get(route_id, &profile.profile_id).cloned();
@@ -8969,7 +8975,7 @@ fn evaluate_profile_route(
     if route.status == "candidate" {
         blockers.push("candidate route requires benchmark-qualified profile evidence".to_string());
     }
-    if timing.known_gaps.iter().any(|gap| gap.contains("missing")) {
+    if timing.known_gaps.iter().any(|gap| timing_gap_is_missing_profile_field(gap)) {
         blockers.push("timing coverage has missing profile fields".to_string());
     }
     if !timing_applicability.timing_matches_profile {
@@ -9085,6 +9091,13 @@ fn timing_applicability_for_profile(
     }
 }
 
+fn timing_gap_is_missing_profile_field(gap: &str) -> bool {
+    gap.contains("operator ask prompt token count missing")
+        || gap.contains("prompt token count missing")
+        || gap.contains("output token count missing")
+        || gap.starts_with("no timing extractor for route")
+}
+
 fn timing_applicability_coverage(
     profiles: &[WorkloadProfileEvaluation],
 ) -> TimingApplicabilityCoverageSummary {
@@ -9187,15 +9200,24 @@ fn profile_timing_for_route(
     route_id: &str,
     phase_comparison: &Value,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
+    quality_index: &ProfileQualityIndex,
 ) -> Result<ProfileTimingSummary> {
     match route_id {
         DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison, telemetry_context),
-        "dense_slm_openvino_gpu_candidate" => {
-            openvino_profile_timing(root, DENSE_OV_GPU_OPERATOR_ASK, "openvino_gpu_operator_ask")
-        }
-        "dense_slm_openvino_npu_candidate" => {
-            openvino_profile_timing(root, DENSE_OV_NPU_OPERATOR_ASK, "openvino_npu_operator_ask")
-        }
+        "dense_slm_openvino_gpu_candidate" => openvino_profile_timing(
+            root,
+            DENSE_OV_GPU_OPERATOR_ASK,
+            "openvino_gpu_operator_ask",
+            route_id,
+            quality_index,
+        ),
+        "dense_slm_openvino_npu_candidate" => openvino_profile_timing(
+            root,
+            DENSE_OV_NPU_OPERATOR_ASK,
+            "openvino_npu_operator_ask",
+            route_id,
+            quality_index,
+        ),
         "bitnet_reference_cpu" => Ok(ProfileTimingSummary {
             timing_scope: "bitnet_reference_cpu_not_dense_slm_profile".to_string(),
             source_receipts: vec![BITNET_PERF_APPLIED.to_string(), BITNET_CPU_BUNDLE.to_string()],
@@ -9326,6 +9348,8 @@ fn openvino_profile_timing(
     root: &Path,
     receipt_name: &str,
     timing_scope: &str,
+    route_id: &str,
+    quality_index: &ProfileQualityIndex,
 ) -> Result<ProfileTimingSummary> {
     let path = root.join(receipt_name);
     let ask: Value = read_json_receipt(&path)?;
@@ -9335,20 +9359,58 @@ fn openvino_profile_timing(
         &ask,
         &["timing.generation_wall_ms", "timing.openvino_perf_metrics.generate.mean_ms"],
     );
+    let direct_prompt_tokens = number_at_any(
+        &ask,
+        &[
+            "tokens.prompt_count",
+            "tokens.prompt",
+            "prompt.prompt_token_count",
+            "prompt_token_count",
+        ],
+    )
+    .map(|value| value as u64);
+    let corpus_context = if direct_prompt_tokens.is_none() {
+        openvino_corpus_operator_timing_context(route_id, quality_index)?
+    } else {
+        None
+    };
+    let prompt_tokens = direct_prompt_tokens
+        .or_else(|| corpus_context.as_ref().and_then(|context| context.prompt_tokens));
+    let output_tokens =
+        output_tokens.or_else(|| corpus_context.as_ref().and_then(|context| context.output_tokens));
+    let mut source_receipts = vec![receipt_name.to_string(), DENSE_OV_PHASE.to_string()];
+    let mut phase_coverage = vec![
+        "bounded_operator_ask_math_brief".to_string(),
+        "openvino_genai_perf_metrics".to_string(),
+        "pipeline_construct_and_generation_wall_time".to_string(),
+    ];
+    let mut known_gaps = vec![
+        "benchmark-qualified speedup or power advantage missing".to_string(),
+        "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
+            .to_string(),
+        "generated token IDs are not available directly from OpenVINO GenAI internals".to_string(),
+    ];
+    if let Some(context) = corpus_context.as_ref() {
+        if !source_receipts.contains(&context.source_receipt) {
+            source_receipts.push(context.source_receipt.clone());
+        }
+        phase_coverage.push(format!(
+            "operator_prompt_token_count_supplemented_from_corpus_v2_case_{}",
+            context.case_id
+        ));
+    } else if direct_prompt_tokens.is_none() {
+        known_gaps.push("OpenVINO operator ask prompt token count missing".to_string());
+    }
+    if quality_index.has_route(route_id) {
+        phase_coverage.push("corpus_v2_profile_regression_evidence_indexed".to_string());
+    } else {
+        known_gaps.push("profile regression bundle missing".to_string());
+    }
 
     Ok(ProfileTimingSummary {
         timing_scope: timing_scope.to_string(),
-        source_receipts: vec![receipt_name.to_string(), DENSE_OV_PHASE.to_string()],
-        prompt_tokens: number_at_any(
-            &ask,
-            &[
-                "tokens.prompt_count",
-                "tokens.prompt",
-                "prompt.prompt_token_count",
-                "prompt_token_count",
-            ],
-        )
-        .map(|value| value as u64),
+        source_receipts,
+        prompt_tokens,
         cold_load_ms: number_at_any(
             &ask,
             &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
@@ -9370,20 +9432,66 @@ fn openvino_profile_timing(
         ),
         output_tokens,
         throughput_tokens_per_s: throughput_from_tokens(output_tokens, generation_total_ms),
-        phase_coverage: vec![
-            "bounded_operator_ask_math_brief".to_string(),
-            "openvino_genai_perf_metrics".to_string(),
-            "pipeline_construct_and_generation_wall_time".to_string(),
-        ],
-        known_gaps: vec![
-            "profile regression bundle missing".to_string(),
-            "benchmark-qualified speedup or power advantage missing".to_string(),
-            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
-                .to_string(),
-            "generated token IDs are not available directly from OpenVINO GenAI internals"
-                .to_string(),
-        ],
+        phase_coverage,
+        known_gaps,
     })
+}
+
+#[derive(Debug, Clone)]
+struct OpenVinoCorpusOperatorTimingContext {
+    source_receipt: String,
+    case_id: String,
+    prompt_tokens: Option<u64>,
+    output_tokens: Option<u64>,
+}
+
+fn openvino_corpus_operator_timing_context(
+    route_id: &str,
+    quality_index: &ProfileQualityIndex,
+) -> Result<Option<OpenVinoCorpusOperatorTimingContext>> {
+    let Some(source) = &quality_index.openvino_source else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(source);
+    let json: Value = read_json_receipt(&path)?;
+    let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) else {
+        return Ok(None);
+    };
+    let Some(device) =
+        devices.iter().find(|device| openvino_device_route_id(device) == Some(route_id))
+    else {
+        return Ok(None);
+    };
+    let Some(cases) = device.get("cases").and_then(Value::as_array) else {
+        return Ok(None);
+    };
+    let Some(case) = cases
+        .iter()
+        .find(|case| string_at(case, "id").as_deref() == Some("math_2_plus_2_brief"))
+        .or_else(|| {
+            cases
+                .iter()
+                .find(|case| string_at(case, "profile").as_deref() == Some("regression_tiny"))
+        })
+        .or_else(|| cases.first())
+    else {
+        return Ok(None);
+    };
+    let prompt_tokens = u64_at(case, "prompt_token_count")
+        .or_else(|| u64_at(case, "prompt.prompt_token_count"))
+        .or_else(|| u64_at(case, "tokens.prompt"));
+    let output_tokens = u64_at(case, "generated_token_count")
+        .or_else(|| u64_at(case, "tokens.generated"))
+        .or_else(|| u64_at(case, "tokens.output"));
+    if prompt_tokens.is_none() && output_tokens.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(OpenVinoCorpusOperatorTimingContext {
+        source_receipt: source.clone(),
+        case_id: string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string()),
+        prompt_tokens,
+        output_tokens,
+    }))
 }
 
 fn throughput_from_tokens(tokens: Option<u64>, total_ms: Option<f64>) -> Option<f64> {
@@ -10621,6 +10729,23 @@ mod tests {
             bail!("missing GPU route evidence");
         };
         assert_eq!(gpu_route.profile_quality.as_ref().map(|quality| quality.passed), Some(1));
+        assert_eq!(gpu_route.timing_applicability.measured_prompt_tokens, Some(39));
+        assert_eq!(gpu_route.timing_applicability.measured_output_tokens, Some(8));
+        assert!(gpu_route.timing_applicability.timing_matches_profile);
+        assert!(
+            gpu_route.timing.phase_coverage.iter().any(|coverage| {
+                coverage
+                    == "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief"
+            }),
+            "{:?}",
+            gpu_route.timing.phase_coverage
+        );
+        assert!(
+            !gpu_route.timing.known_gaps.contains(&"profile regression bundle missing".to_string())
+        );
+        assert!(!gpu_route.blockers.contains(
+            &"timing evidence is not profile-specific for profile ask_short".to_string()
+        ));
         assert!(gpu_route.blockers.iter().any(|blocker| {
             blocker.contains("corpus_v2 profile ask_short has 1 quality failures")
         }));
@@ -12851,17 +12976,22 @@ cases:
             {"id": "decode_heavy_short_list"}
         ]);
         let stale_openvino_case_ids = json!([
-            {"id": "math_2_plus_2_brief"},
-            {"id": "copy_exact_color_triplet"},
-            {"id": "yes_no_clear_sky"},
-            {"id": "short_factual_capital_france"},
-            {"id": "instruction_single_sentence_rust"},
-            {"id": "stop_token_one_word_done"},
-            {"id": "transcript_context_code_word"},
-            {"id": "structured_json_city_country"},
-            {"id": "long_prompt_summary_route_policy"},
-            {"id": "short_reasoning_heavier_object"},
-            {"id": "decode_heavy_short_list"}
+            {
+                "id": "math_2_plus_2_brief",
+                "profile": "regression_tiny",
+                "prompt_token_count": 39,
+                "generated_token_count": 8
+            },
+            {"id": "copy_exact_color_triplet", "profile": "regression_tiny"},
+            {"id": "yes_no_clear_sky", "profile": "ask_short"},
+            {"id": "short_factual_capital_france", "profile": "ask_short"},
+            {"id": "instruction_single_sentence_rust", "profile": "ask_normal"},
+            {"id": "stop_token_one_word_done", "profile": "regression_tiny"},
+            {"id": "transcript_context_code_word", "profile": "ask_normal"},
+            {"id": "structured_json_city_country", "profile": "structured"},
+            {"id": "long_prompt_summary_route_policy", "profile": "prefill_heavy"},
+            {"id": "short_reasoning_heavier_object", "profile": "ask_normal"},
+            {"id": "decode_heavy_short_list", "profile": "decode_heavy"}
         ]);
         write_json(
             root,

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-18T11:05:00Z",
+  "created_utc": "2026-05-18T12:35:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -96,9 +96,10 @@
             "timing_scope": "openvino_gpu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -111,10 +112,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -124,11 +126,11 @@
             "profile_id": "regression_tiny",
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=64`",
+              "prompt timing count 39 satisfies `<=64`",
               "output timing count 9 satisfies `<=32`"
             ]
           },
@@ -155,13 +157,10 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile regression_tiny has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile regression_tiny",
             "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile regression_tiny"
+            "stop_token_one_word_done has no passing tested generation budget"
           ]
         },
         {
@@ -176,9 +175,10 @@
             "timing_scope": "openvino_npu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -191,10 +191,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -204,11 +205,11 @@
             "profile_id": "regression_tiny",
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=64`",
+              "prompt timing count 39 satisfies `<=64`",
               "output timing count 9 satisfies `<=32`"
             ]
           },
@@ -238,19 +239,16 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile regression_tiny has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile regression_tiny",
             "stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed",
-            "stop_token_one_word_done has no passing tested generation budget",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile regression_tiny"
+            "stop_token_one_word_done has no passing tested generation budget"
           ]
         }
       ],
       "profile_gaps": [
-        "regression_tiny route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile regression_tiny has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile regression_tiny; stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; timing evidence is not profile-specific for profile regression_tiny",
-        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile regression_tiny has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile regression_tiny; stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed; stop_token_one_word_done has no passing tested generation budget; timing coverage has missing profile fields; timing evidence is not profile-specific for profile regression_tiny"
+        "regression_tiny route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile regression_tiny has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile regression_tiny; stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed; stop_token_one_word_done has no passing tested generation budget",
+        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile regression_tiny has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile regression_tiny has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile regression_tiny; stop_token_one_word_done failed corpus-v2 diagnosis: exact_answer_instruction_not_followed; stop_token_one_word_done has no passing tested generation budget"
       ]
     },
     {
@@ -340,9 +338,10 @@
             "timing_scope": "openvino_gpu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -355,10 +354,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -368,11 +368,11 @@
             "profile_id": "ask_short",
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=64`",
+              "prompt timing count 39 satisfies `<=64`",
               "output timing count 9 satisfies `<=32`"
             ]
           },
@@ -399,11 +399,8 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_short has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile ask_short",
             "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
             "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
@@ -420,9 +417,10 @@
             "timing_scope": "openvino_npu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -435,10 +433,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -448,11 +447,11 @@
             "profile_id": "ask_short",
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=64`",
+              "prompt timing count 39 satisfies `<=64`",
               "output timing count 9 satisfies `<=32`"
             ]
           },
@@ -482,19 +481,16 @@
             "candidate route requires benchmark-qualified profile evidence",
             "corpus_v2 profile ask_short has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile ask_short",
             "yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated",
             "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
           ]
         }
       ],
       "profile_gaps": [
-        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; timing coverage has missing profile fields; timing evidence is not profile-specific for profile ask_short; yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
-        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_short; timing coverage has missing profile fields; timing evidence is not profile-specific for profile ask_short; yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+        "ask_short route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile ask_short; yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1",
+        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile ask_short has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile ask_short has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile ask_short; yes_no_clear_sky failed corpus-v2 diagnosis: exact_answer_overgenerated; yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
       ]
     },
     {
@@ -584,9 +580,10 @@
             "timing_scope": "openvino_gpu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -599,10 +596,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -612,11 +610,11 @@
             "profile_id": "ask_normal",
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=512`",
+              "prompt timing count 39 satisfies `<=512`",
               "output timing count 9 satisfies `<=128`"
             ]
           },
@@ -640,11 +638,8 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
-            "route not promoted for profile ask_normal",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile ask_normal"
+            "route not promoted for profile ask_normal"
           ]
         },
         {
@@ -659,9 +654,10 @@
             "timing_scope": "openvino_npu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -674,10 +670,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -687,11 +684,11 @@
             "profile_id": "ask_normal",
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=512`",
+              "prompt timing count 39 satisfies `<=512`",
               "output timing count 9 satisfies `<=128`"
             ]
           },
@@ -718,17 +715,14 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
-            "route not promoted for profile ask_normal",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile ask_normal"
+            "route not promoted for profile ask_normal"
           ]
         }
       ],
       "profile_gaps": [
-        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; timing coverage has missing profile fields; timing evidence is not profile-specific for profile ask_normal",
-        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile ask_normal; timing coverage has missing profile fields; timing evidence is not profile-specific for profile ask_normal"
+        "ask_normal route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile ask_normal",
+        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile ask_normal"
       ]
     },
     {
@@ -821,9 +815,10 @@
             "timing_scope": "openvino_gpu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -836,10 +831,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -849,11 +845,11 @@
             "profile_id": "prefill_heavy",
             "required_prompt_tokens": ">=2048",
             "required_output_tokens": "<=64",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
             "timing_matches_profile": false,
             "notes": [
-              "prompt token count missing for numeric requirement `>=2048`",
+              "prompt timing count 39 does not satisfy `>=2048`",
               "output timing count 9 satisfies `<=64`"
             ]
           },
@@ -881,10 +877,8 @@
             "corpus_v2 profile prefill_heavy has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
             "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "timing coverage has missing profile fields",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
@@ -900,9 +894,10 @@
             "timing_scope": "openvino_npu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -915,10 +910,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -928,11 +924,11 @@
             "profile_id": "prefill_heavy",
             "required_prompt_tokens": ">=2048",
             "required_output_tokens": "<=64",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
             "timing_matches_profile": false,
             "notes": [
-              "prompt token count missing for numeric requirement `>=2048`",
+              "prompt timing count 39 does not satisfy `>=2048`",
               "output timing count 9 satisfies `<=64`"
             ]
           },
@@ -963,17 +959,15 @@
             "corpus_v2 profile prefill_heavy has 1 quality failures",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
             "long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile prefill_heavy",
-            "timing coverage has missing profile fields",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         }
       ],
       "profile_gaps": [
-        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; timing coverage has missing profile fields; timing evidence is not profile-specific for profile prefill_heavy",
-        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms; profile regression bundle missing; profile_regression_bundle; route not promoted for profile prefill_heavy; timing coverage has missing profile fields; timing evidence is not profile-specific for profile prefill_heavy"
+        "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms; profile_regression_bundle; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy",
+        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile prefill_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile prefill_heavy has 1 quality failures; generated token IDs are not available directly from OpenVINO GenAI internals; long_prompt_summary_route_policy failed corpus-v2 diagnosis: answer_content_missing_required_terms; profile_regression_bundle; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy"
       ]
     },
     {
@@ -1066,9 +1060,10 @@
             "timing_scope": "openvino_gpu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -1081,10 +1076,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -1094,11 +1090,11 @@
             "profile_id": "decode_heavy",
             "required_prompt_tokens": "<=256",
             "required_output_tokens": ">=512",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
             "timing_matches_profile": false,
             "notes": [
-              "prompt token count missing for numeric requirement `<=256`",
+              "prompt timing count 39 satisfies `<=256`",
               "output timing count 9 does not satisfy `>=512`"
             ]
           },
@@ -1126,10 +1122,8 @@
             "corpus_v2 profile decode_heavy has 1 quality failures",
             "decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "timing coverage has missing profile fields",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
@@ -1145,9 +1139,10 @@
             "timing_scope": "openvino_npu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -1160,10 +1155,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -1173,11 +1169,11 @@
             "profile_id": "decode_heavy",
             "required_prompt_tokens": "<=256",
             "required_output_tokens": ">=512",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
             "timing_matches_profile": false,
             "notes": [
-              "prompt token count missing for numeric requirement `<=256`",
+              "prompt timing count 39 satisfies `<=256`",
               "output timing count 9 does not satisfy `>=512`"
             ]
           },
@@ -1204,17 +1200,15 @@
             "benchmark_qualified_speedup_or_power_advantage",
             "candidate route requires benchmark-qualified profile evidence",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
-            "profile regression bundle missing",
             "profile_regression_bundle",
             "route not promoted for profile decode_heavy",
-            "timing coverage has missing profile fields",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
         }
       ],
       "profile_gaps": [
-        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile decode_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile decode_heavy has 1 quality failures; decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; timing coverage has missing profile fields; timing evidence is not profile-specific for profile decode_heavy",
-        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile regression bundle missing; profile_regression_bundle; route not promoted for profile decode_heavy; timing coverage has missing profile fields; timing evidence is not profile-specific for profile decode_heavy"
+        "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO candidate profile has 1 answer-gate failure(s); OpenVINO diagnosis profile decode_heavy has 1 corpus-v2 quality failure(s); OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile decode_heavy has 1 quality failures; decode_heavy_short_list failed corpus-v2 diagnosis: readable_output_missing_required_terms; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy",
+        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; generated token IDs are not available directly from OpenVINO GenAI internals; profile_regression_bundle; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy"
       ]
     },
     {
@@ -1386,9 +1380,10 @@
             "timing_scope": "openvino_npu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
             "tokenize_ms": 17.43000030517578,
             "prefill_ms": null,
@@ -1401,10 +1396,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -1414,11 +1410,11 @@
             "profile_id": "low_power",
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=512`",
+              "prompt timing count 39 satisfies `<=512`",
               "output timing count 9 satisfies `<=128`"
             ]
           },
@@ -1447,11 +1443,8 @@
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
             "power advantage evidence missing for low_power promotion",
-            "profile regression bundle missing",
             "profile_regression_bundle",
-            "route not promoted for profile low_power",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile low_power"
+            "route not promoted for profile low_power"
           ]
         },
         {
@@ -1466,9 +1459,10 @@
             "timing_scope": "openvino_gpu_operator_ask",
             "source_receipts": [
               "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json"
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": null,
+            "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
             "tokenize_ms": 22.948999404907227,
             "prefill_ms": null,
@@ -1481,10 +1475,11 @@
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time"
+              "pipeline_construct_and_generation_wall_time",
+              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
-              "profile regression bundle missing",
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
@@ -1494,11 +1489,11 @@
             "profile_id": "low_power",
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
-            "measured_prompt_tokens": null,
+            "measured_prompt_tokens": 39,
             "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt token count missing for numeric requirement `<=512`",
+              "prompt timing count 39 satisfies `<=512`",
               "output timing count 9 satisfies `<=128`"
             ]
           },
@@ -1524,17 +1519,14 @@
             "corpus_v2 profile quality evidence missing",
             "generated token IDs are not available directly from OpenVINO GenAI internals",
             "power advantage evidence missing for low_power promotion",
-            "profile regression bundle missing",
             "profile_regression_bundle",
-            "route not promoted for profile low_power",
-            "timing coverage has missing profile fields",
-            "timing evidence is not profile-specific for profile low_power"
+            "route not promoted for profile low_power"
           ]
         }
       ],
       "profile_gaps": [
-        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields; timing evidence is not profile-specific for profile low_power",
-        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile regression bundle missing; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields; timing evidence is not profile-specific for profile low_power"
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cache or resident warm-route proof is missing; NPU cold start is openvino_pipeline_load_or_device_compile_dominated; NPU corpus-v2 context has 5 failed cases; OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile_regression_bundle; route not promoted for profile low_power",
+        "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO generated token IDs are retokenized, not direct pipeline internals; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; generated token IDs are not available directly from OpenVINO GenAI internals; power advantage evidence missing for low_power promotion; profile_regression_bundle; route not promoted for profile low_power"
       ]
     },
     {
@@ -1611,29 +1603,21 @@
   ],
   "timing_coverage": {
     "route_count": 20,
-    "profile_specific_route_count": 6,
-    "proxy_or_missing_route_count": 14,
+    "profile_specific_route_count": 14,
+    "proxy_or_missing_route_count": 6,
     "promotion_eligible_route_count": 4,
     "promotion_eligible_profile_specific_route_count": 4,
     "candidate_route_count": 12,
-    "candidate_proxy_or_missing_route_count": 12,
+    "candidate_proxy_or_missing_route_count": 4,
     "promotion_eligible_routes_have_profile_specific_timing": true,
     "proxy_or_missing_timing_routes_blocked": true,
     "proxy_or_missing_routes": [
-      "ask_normal:dense_slm_openvino_gpu_candidate",
-      "ask_normal:dense_slm_openvino_npu_candidate",
-      "ask_short:dense_slm_openvino_gpu_candidate",
-      "ask_short:dense_slm_openvino_npu_candidate",
       "decode_heavy:dense_slm_default_cpu",
       "decode_heavy:dense_slm_openvino_gpu_candidate",
       "decode_heavy:dense_slm_openvino_npu_candidate",
-      "low_power:dense_slm_openvino_gpu_candidate",
-      "low_power:dense_slm_openvino_npu_candidate",
       "prefill_heavy:dense_slm_default_cpu",
       "prefill_heavy:dense_slm_openvino_gpu_candidate",
-      "prefill_heavy:dense_slm_openvino_npu_candidate",
-      "regression_tiny:dense_slm_openvino_gpu_candidate",
-      "regression_tiny:dense_slm_openvino_npu_candidate"
+      "prefill_heavy:dense_slm_openvino_npu_candidate"
     ],
     "promotion_eligible_proxy_or_missing_routes": [],
     "unblocked_proxy_or_missing_routes": []

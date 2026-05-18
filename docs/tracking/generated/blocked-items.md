@@ -337,6 +337,7 @@
 | intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |
 | intel-258v-platform | LNL258V-ROUTE-008 | LNL258V-ROUTE-007 | merged |
 | intel-258v-platform | LNL258V-ROUTE-009 | LNL258V-ROUTE-008 | merged |
+| intel-258v-platform | LNL258V-ROUTE-010 | LNL258V-BENCH-005 | pr_open |
 | intel-258v-platform | LNL258V-OV-QUAL-005 | LNL258V-OV-QUAL-004 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-002 | LNL258V-OPENVINO-DOCS-001 | proposed |
 | intel-a770 | A770-003 | A770-OPENCL-TRUTH-000 | proposed |
