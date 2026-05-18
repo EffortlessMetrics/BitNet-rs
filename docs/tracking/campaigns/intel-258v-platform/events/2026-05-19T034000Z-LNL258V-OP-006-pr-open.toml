@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T03:40:00Z"
+event = "pr_open"
+item = "LNL258V-OP-006"
+branch = "codex/lunar-lake/LNL258V-OP-006-openvino-ask-runtime-blocker"
+pr = 5749
+head_sha = "9299adc019210fd9ecac7e14f1d1361bce8cfe45"
+actor = "codex"
+summary = "Opened PR #5749 for LNL258V-OP-006 to block OpenVINO route promotion until bitnet lunar-lake ask has an OpenVINO execution path."
+
+notes = [
+  "The PR adds a machine-readable OpenVINO ask-runtime blocker to route-profile and benchmark artifacts.",
+  "Benchmark-qualified GPU latency evidence remains indexed for qualifying profiles, but GPU/NPU candidate routes stay unpromoted.",
+  "The PR preserves no route promotion, no speedup claim, no power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]
