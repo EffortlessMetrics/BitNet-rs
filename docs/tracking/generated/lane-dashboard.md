@@ -29,7 +29,7 @@
 | apple-m4-slm-performance | Apple M4 SLM performance | M4-SLM-PERF-007 | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | apple-silicon-macbook | Apple Silicon MacBook cross-reference | MB-AS-002 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
 | bitnet-b158-3b | BitNet b1.58 3B TL candidate | B158-3B-001 | Do not commit model binaries. |
-| ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
+| ci-coverage | CI coverage | CI-COVERAGE-002 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | BitNet CPU proof | CPU-AVX512-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
@@ -43,6 +43,6 @@
 | nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-014 | CUDA visibility is not kernel execution. |
 | official-bitnet-2b | Official Microsoft BitNet 2B productization | OFFICIAL-2B-000 | Do not commit model binaries. |
 | server-real-inference | Server real inference | SERVER-005 | Do not reintroduce simulated inference. |
-| slm-cpu | Small dense model CPU proof | SLM-CPU-042 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | Small dense model CPU proof | SLM-CPU-043 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM inference proof lane | WASM-002 | WASM detection is not inference. |

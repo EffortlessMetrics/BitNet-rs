@@ -29,7 +29,7 @@
 | apple-m4-slm-performance | M4-SLM-PERF-007 | #4081 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | apple-silicon-macbook | MB-AS-002 | TBD | blocked | MB-AS-004 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
 | bitnet-b158-3b | B158-3B-001 | TBD | ready | none | Do not commit model binaries. |
-| ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
+| ci-coverage | CI-COVERAGE-002 | #5775 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | CPU-AVX512-000 | TBD | in_progress | CPU-SCALAR-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
@@ -43,6 +43,6 @@
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | official-bitnet-2b | OFFICIAL-2B-000 | TBD | ready | OFFICIAL-2B-001 | Do not commit model binaries. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-042 | #5773 | pr_open | SLM-CPU-027 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-043 | TBD | ready | SLM-CPU-027 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-002 | TBD | ready | WASM-003 | WASM detection is not inference. |
