@@ -49,8 +49,8 @@ use allocation_audit::{
 };
 #[cfg(feature = "full-cli")]
 use allocation_audit::{
-    WarmSessionPromptAllocationAudit, warm_session_aggregate_allocation_audit_json,
-    warm_session_prompt_allocation_audit_json,
+    WarmSessionPromptAllocationAudit, WarmSessionPromptSetupAllocationAudit,
+    warm_session_aggregate_allocation_audit_json, warm_session_prompt_allocation_audit_json,
 };
 use exit::*;
 use prompt_audit::*;
@@ -8092,14 +8092,20 @@ async fn run_slm_warm_session(
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
+        let prompt_setup_buffer_reset_alloc_start = AllocationAuditSnapshot::current();
         let buffer_reuse_evidence = session_buffers.reset(
             encoded_prompt_tokens.len(),
             max_new_tokens,
             max_stop_len,
             logits_capacity,
         );
+        let prompt_setup_buffer_reset_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_buffer_reset_alloc_start);
+        let prompt_setup_token_seed_alloc_start = AllocationAuditSnapshot::current();
         session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
         ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
+        let prompt_setup_token_seed_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_token_seed_alloc_start);
         let tokens = &mut session_buffers.tokens;
         let generated_tokens = &mut session_buffers.generated_tokens;
         let decode_step_ms = &mut session_buffers.decode_step_ms;
@@ -8120,8 +8126,12 @@ async fn run_slm_warm_session(
         let stop_tail = &mut session_buffers.stop_tail;
         let logits_scratch = &mut session_buffers.logits_scratch;
         let prompt_token_count = tokens.len();
+        let prompt_setup_kv_cache_alloc_start = AllocationAuditSnapshot::current();
         let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
         let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+        let prompt_setup_kv_cache_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_kv_cache_alloc_start);
+        let prompt_setup_sampler_alloc_start = AllocationAuditSnapshot::current();
         let mut prompt_sampler = if sampler_reuse_enabled {
             sampler_reused_prompt_count += 1;
             None
@@ -8134,6 +8144,8 @@ async fn run_slm_warm_session(
         if let Some(sampler) = session_sampler.as_mut() {
             sampler.reset();
         }
+        let prompt_setup_sampler_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_sampler_alloc_start);
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
@@ -8509,6 +8521,12 @@ async fn run_slm_warm_session(
                 requested_backend: backend_identity.requested_backend.as_str(),
                 prompt_tokenize: prompt_tokenize_alloc,
                 prompt_setup: prompt_setup_alloc,
+                prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                    buffer_reset: prompt_setup_buffer_reset_alloc,
+                    token_seed: prompt_setup_token_seed_alloc,
+                    kv_cache: prompt_setup_kv_cache_alloc,
+                    sampler_setup: prompt_setup_sampler_alloc,
+                },
                 prompt_prefill: prefill_step_allocs,
                 decode_total: decode_step_allocs,
                 embed: embed_step_allocs,
@@ -13306,6 +13324,79 @@ mod tests {
         assert_eq!(summary["mean_alloc_bytes_per_token"], 96.0);
         assert_eq!(summary["max_alloc_count_per_token"], 3);
         assert_eq!(summary["max_alloc_bytes_per_token"], 128);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_allocation_audit_reports_prompt_setup_breakdown() {
+        let prompt_tokenize = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 64,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let prompt_setup = AllocationAuditSnapshot {
+            alloc_count: 4,
+            alloc_bytes: 400,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let buffer_reset = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 40,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let token_seed = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 60,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let kv_cache = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 250,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let sampler_setup = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 50,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+
+        let audit = warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
+            enabled: true,
+            requested_backend: "cpu",
+            prompt_tokenize,
+            prompt_setup,
+            prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                buffer_reset,
+                token_seed,
+                kv_cache,
+                sampler_setup,
+            },
+            prompt_prefill: &[],
+            decode_total: &[],
+            embed: &[],
+            forward: &[],
+            logits: &[],
+            sample: &[],
+            token_vector_update: &[],
+            token_decode: &[],
+            stop_tail_update: &[],
+            receipt_construction: AllocationAuditSnapshot::default(),
+        });
+
+        assert_eq!(audit["prompt_setup"]["alloc_bytes_total"], 400);
+        assert_eq!(audit["prompt_setup_breakdown"]["buffer_reset"]["alloc_bytes_total"], 40);
+        assert_eq!(audit["prompt_setup_breakdown"]["token_seed"]["alloc_bytes_total"], 60);
+        assert_eq!(audit["prompt_setup_breakdown"]["kv_cache"]["alloc_bytes_total"], 250);
+        assert_eq!(audit["prompt_setup_breakdown"]["sampler_setup"]["alloc_bytes_total"], 50);
+        assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
+            hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_setup.kv_cache")
+        }));
     }
 
     #[test]

@@ -15233,12 +15233,14 @@ fn validate_bitnet_larger_corpus_decision_receipt(
             path.display()
         );
     }
-    if repair_first
-        && !receipt["recommended_next_items"].as_array().unwrap().iter().any(|item| {
-            item["id"].as_str().is_some_and(|id| id.contains("REPAIR"))
-                || item["summary"].as_str().is_some_and(|summary| summary.contains("repair"))
-        })
-    {
+    let repair_next_item_present =
+        receipt["recommended_next_items"].as_array().is_some_and(|items| {
+            items.iter().any(|item| {
+                item["id"].as_str().is_some_and(|id| id.contains("REPAIR"))
+                    || item["summary"].as_str().is_some_and(|summary| summary.contains("repair"))
+            })
+        });
+    if repair_first && !repair_next_item_present {
         anyhow::bail!(
             "{} BitNet repair-first decision must include a repair next item",
             path.display()
