@@ -2016,6 +2016,19 @@ impl TransformerModel {
             }
         }
 
+        #[cfg(feature = "trace")]
+        if let Some(final_layer_idx) = self.layers.len().checked_sub(1) {
+            let suffix = format!("blk{final_layer_idx}/post_layer");
+            trace_tensor_token_axis_record(
+                &suffix,
+                &x,
+                _trace_base_seq,
+                1,
+                Some(final_layer_idx as isize),
+                "post_layer",
+            )?;
+        }
+
         let eps = self.config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
         let normalized = norm_forward(&self.norm, &x, eps, self.config.model.norm_type)?;
         #[cfg(feature = "trace")]
