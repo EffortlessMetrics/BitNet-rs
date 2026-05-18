@@ -6,10 +6,11 @@ Machine: intel-258v
 
 ## Scope
 
-This report summarizes existing Lunar Lake OpenVINO dense SLM corpus-v2
-candidate-route failures. It does not run new inference, change scoring, change
-generation policy, promote any route, claim speedup or power advantage, or
-change BitNet QK256/I2_S behavior.
+This report summarizes Lunar Lake OpenVINO dense SLM corpus-v2 candidate-route
+failures after rerunning the corpus under the accepted one-token
+`yes_no_clear_sky` fixture policy. It does not promote any route, claim speedup
+or power advantage, claim native Arc/NPU acceleration, or change BitNet
+QK256/I2_S behavior.
 
 ## Source Evidence
 
@@ -30,8 +31,8 @@ decoded text, not direct OpenVINO GenAI pipeline-internal token IDs.
 
 | Route | Corpus v2 result | Failed profiles | Promotion result |
 | --- | ---: | --- | --- |
-| OpenVINO GPU.0 / Arc 140V | 8/12 pass, 4 fail | ask_short, regression_tiny, prefill_heavy, decode_heavy | Candidate remains blocked |
-| OpenVINO NPU | 9/12 pass, 3 fail | ask_short, regression_tiny, prefill_heavy | Candidate remains blocked |
+| OpenVINO GPU.0 / Arc 140V | 9/12 pass, 3 fail | regression_tiny, prefill_heavy, decode_heavy | Candidate remains blocked |
+| OpenVINO NPU | 10/12 pass, 2 fail | regression_tiny, prefill_heavy | Candidate remains blocked |
 
 Both routes also remain blocked by missing benchmark-qualified speed or power
 advantage, incomplete direct generated-token visibility, and profile-regression
@@ -41,11 +42,9 @@ evidence requirements in the route-profile comparison.
 
 | Route | Case | Profile | Category | Classification | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| GPU.0 | yes_no_clear_sky | ask_short | yes_no | exact_answer_overgenerated | Expected `yes`; observed `yes, it's usually clear and blue` |
 | GPU.0 | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `okay, understood` |
 | GPU.0 | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
 | GPU.0 | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
-| NPU | yes_no_clear_sky | ask_short | yes_no | exact_answer_overgenerated | Expected `yes`; observed `yes, it's usually clear and blue` |
 | NPU | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `okay, understood` |
 | NPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `CPU` |
 
@@ -55,18 +54,17 @@ The generation-budget sensitivity receipt isolates the normalized-match cases:
 
 | Case | CPU | GPU.0 | NPU | Interpretation |
 | --- | --- | --- | --- | --- |
-| yes_no_clear_sky | passes at max_new_tokens=1 only | passes at max_new_tokens=1 only | passes at max_new_tokens=1 only | Overgeneration-sensitive fixture failure |
+| yes_no_clear_sky | passes at max_new_tokens=1 only | passes at max_new_tokens=1 only | passes at max_new_tokens=1 only | Accepted one-token fixture policy; rerun now passes |
 | stop_token_one_word_done | no tested budget passes | no tested budget passes | no tested budget passes | True exact-answer instruction miss for tested budgets |
 
-This means the yes/no failure should be treated as a stop/max-token or fixture
-budget issue before treating it as a model-quality failure. The one-word `done`
-case is not explained by the tested smaller budgets.
+This means the yes/no failure was a stop/max-token fixture-budget issue rather
+than a standing route-quality blocker after rerun. The one-word `done` case is
+not explained by the tested smaller budgets.
 
 ## Profile Blockers
 
 OpenVINO GPU.0 remains blocked for:
 
-- `ask_short`: yes/no exact-answer overgeneration.
 - `regression_tiny`: one-word stop/EOS instruction miss.
 - `prefill_heavy`: required content term missing.
 - `decode_heavy`: readable output missing required term.
@@ -75,7 +73,6 @@ OpenVINO GPU.0 remains blocked for:
 
 OpenVINO NPU remains blocked for:
 
-- `ask_short`: yes/no exact-answer overgeneration.
 - `regression_tiny`: one-word stop/EOS instruction miss.
 - `prefill_heavy`: required content term missing.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
@@ -85,9 +82,9 @@ OpenVINO NPU remains blocked for:
 
 ## Next Actions
 
-1. Keep OpenVINO GPU/NPU routes unpromoted until profile failures are rerun or
+1. Keep OpenVINO GPU/NPU routes unpromoted until profile failures pass or are
    intentionally re-gated by spec.
-2. Fix or document exact-answer generation policy for `yes_no_clear_sky` and
+2. Fix or document exact-answer generation policy for
    `stop_token_one_word_done`.
 3. Revisit prefill-heavy and decode-heavy expected terms only if the answer
    contracts are too narrow for the intended user profile.
