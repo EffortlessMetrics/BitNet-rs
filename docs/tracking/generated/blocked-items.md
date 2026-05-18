@@ -373,6 +373,7 @@
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
+| intel-258v-platform | LNL258V-PROFILE-RUN-001 | LNL258V-ROUTE-019 | pr_open |
 | intel-258v-platform | LNL258V-ROUTE-019 | LNL258V-REG-007 | merged |
 | intel-258v-platform | LNL258V-BITNET-INTAKE-001 | LNL258V-ROUTE-018 | merged |
 | intel-258v-platform | LNL258V-ROUTE-018 | LNL258V-ROUTE-017 | merged |
